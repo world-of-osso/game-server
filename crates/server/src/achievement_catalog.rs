@@ -372,14 +372,12 @@ impl MythicRequirements {
     }
 }
 
-#[path = "achievement_difficulty_rules.rs"]
-mod difficulty_rules;
+#[path = "achievement_conditions.rs"]
+mod conditions;
 #[path = "achievement_mythic_predicates.rs"]
 mod mythic_predicates;
 #[path = "achievement_overlays.rs"]
 mod overlays;
-#[path = "achievement_player_facts.rs"]
-mod player_facts;
 #[path = "achievement_single_modifiers.rs"]
 mod single_modifiers;
 
@@ -395,6 +393,14 @@ impl DifficultyRule {
     fn admits(self, difficulty: u32) -> bool {
         self.ids.contains(&difficulty) == self.allowed
     }
+}
+
+/// A compiled criteria ModifierTree: an optional difficulty rule and raw player-fact
+/// leaves `(ModifierTreeType, Asset)`, all of which must hold.
+#[derive(Debug, Clone, Copy)]
+struct CompiledConditions {
+    difficulty: Option<DifficultyRule>,
+    facts: &'static [(u32, u32)],
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -1156,12 +1162,12 @@ fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTr
     descendants
 }
 
-/// Every leaf must name data the server has, else the tree can never hold (empty).
+/// Every leaf must name data the server has, else the tree can never hold (None).
 fn resolve_player_facts(
     conn: &Connection,
     leaves: &[(u32, u32)],
     area_children: &HashMap<u32, Vec<u32>>,
-) -> rusqlite::Result<Vec<PlayerFact>> {
+) -> rusqlite::Result<Option<Vec<PlayerFact>>> {
     let mut facts = Vec::with_capacity(leaves.len());
     for &(kind, asset) in leaves {
         let exists = |table: &str| {
@@ -1190,11 +1196,11 @@ fn resolve_player_facts(
             _ => unreachable!("generated player facts use only 8/17/25/26/32/69/71"),
         };
         let Some(fact) = fact else {
-            return Ok(Vec::new());
+            return Ok(None);
         };
         facts.push(fact);
     }
-    Ok(facts)
+    Ok(Some(facts))
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
@@ -1238,14 +1244,16 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         } else {
             None
         };
-        let difficulty = difficulty_rules::difficulty_rule(criteria_id, conditional[0]);
         // Single-modifier families already compile their own player leaf.
-        let facts = match player_facts::player_facts(criteria_id, conditional[0]) {
-            Some(leaves) if modifier_asset.is_none() => {
-                resolve_player_facts(conn, leaves, &area_children)?
-            }
-            _ => Vec::new(),
+        let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
+            .filter(|_| modifier_asset.is_none());
+        let resolved = match compiled {
+            Some(compiled) => resolve_player_facts(conn, compiled.facts, &area_children)?
+                .map(|facts| (compiled.difficulty, facts)),
+            None => None,
         };
+        let condition_tree = resolved.is_some();
+        let (difficulty, facts) = resolved.unwrap_or_default();
         let supported_predicate = (mythic.is_some() || modifier_asset.is_some())
             && conditional.iter().skip(1).all(|value| *value == 0);
         Ok((
@@ -1301,7 +1309,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                             && row.get::<_, bool>(8)?
                             && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
                         && (conditional.iter().all(|value| *value == 0)
-                            || ((difficulty.is_some() || !facts.is_empty())
+                            || (condition_tree
                                 && conditional.iter().skip(1).all(|value| *value == 0)))),
                 difficulty,
                 player_facts: facts,

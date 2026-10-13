@@ -1975,6 +1975,36 @@ fn achievements_criteria_player_level_gates_reach_level_credit() {
     assert_eq!(progress(&world), Some(10), "level 10");
 }
 
+/// What the Eck? 1864: criterion7136 KillCreature29306 behind All4 of legacy Heroic
+/// (Difficulty2/4/39) and PlayerHasAura Eck Residue55817; both must hold.
+#[test]
+fn achievements_criteria_mixed_difficulty_and_aura_tree_needs_both() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    for (difficulty, aura, expected) in [(2, true, Some(1)), (2, false, None), (1, true, None)] {
+        let conditions = PlayerConditions {
+            difficulty,
+            player: Some(ReferencePlayer {
+                auras: aura.then_some(55817).into_iter().collect(),
+                ..Default::default()
+            }),
+        };
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::KillCreature(29306),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&7136).copied(),
+            expected,
+            "difficulty {difficulty}, aura {aura}"
+        );
+    }
+}
+
 /// Scenario and Adventure Guide credit use the same reference-player conditions:
 /// criterion16784 (legacy Heroic Erudax) under Erudax kills5733 needs a Heroic copy.
 #[test]
