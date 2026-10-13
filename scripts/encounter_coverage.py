@@ -32,7 +32,7 @@ PARTIAL_GAPS = {
         'Fel Spray area geometry/damage, root/visual kits, door/boundary and source-empty loot unproved'],
     'boss_the_golden_serpent': [
         'TC script schedule (partial; Retail 12.1 timeline inputs unavailable); Retail alerts disabled',
-        'source intro supported: group1256 spawns on last TempleEvent death, gravity-disabled MovePath13532200/01/02, emerge removal and hostile landing; group1255 withheld until Serpentine Seal gossip summons Zul (SerpentBossEvent +10s spawn); Shadow-Borne temple trash schedules and Gust Slash orbiting AT supported; Minion of Zul appearance/Bound by Shadow/fixate supported; pool GO state unported; fly/hover anim state unproved',
+        'source intro supported: group1256 spawns on last TempleEvent death, gravity-disabled MovePath13532200/01/02, emerge removal and hostile landing; group1255 withheld until Serpentine Seal gossip summons Zul (SerpentBossEvent +10s spawn); Shadow-Borne temple trash schedules and Gust Slash orbiting AT supported; Minion of Zul appearance/Bound by Shadow/fixate supported; pool GO state/collision supported; native state-to-animation mapping unported; fly/hover anim state unproved',
         'Molten Gold source static sphere/Player enter-exit and periodic damage supported; native area visuals unproved',
         'delayed follow/absorption/announcement supported: real-bake,3D reach,subyard repath,root/cast pause and4s retirement fixtures; source near-point collision/floor and full motion-priority equivalence unproved',
         'source-empty loot unproved',
