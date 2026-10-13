@@ -533,7 +533,11 @@ pub(crate) fn record_delivered_killing_blow(world: &mut World, killer: Entity) {
     let player = world
         .get::<crate::hunter_pet::HunterPet>(killer)
         .map_or(killer, |pet| pet.owner);
-    if world.get::<Player>(player).is_some() {
+    let in_world = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .any(|(link, _)| link.0 == player);
+    if in_world && world.get::<Player>(player).is_some() {
         record_criteria_event(world, player, CriteriaEvent::DeliveredKillingBlow);
     }
 }

@@ -316,6 +316,77 @@ fn pet_lifecycle_fel_domination_accelerates_one_authored_summon() {
 }
 
 #[test]
+fn achievements_criteria_killing_blow_from_authentic_summoned_imp_credits_owner_and_persists() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("pet-killing-blow.redb");
+    let mut h = ImpHarness::login(&path);
+    let db = &h.h.app.world().resource::<GameDatabase>().db;
+    let (character, _) = persistence::create_character(db, 1, "ImpKillproof", 1, WARLOCK).unwrap();
+    assert_eq!(character, 1);
+    h.h.app
+        .world_mut()
+        .entity_mut(h.h.caster)
+        .insert(PlayerAchievementState::default());
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&AchievementPlugin, &mut h.h.app);
+    let pet = h.summon();
+    assert!(
+        !h.h.app
+            .world()
+            .get::<PlayerAchievementState>(h.h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5529)
+    );
+    h.h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.h.npc)
+        .unwrap()
+        .current = 1.0;
+    h.order(shared::protocol::COMMAND_ATTACK, Some(h.h.npc));
+    h.advance(200);
+    assert_eq!(h.h.health(h.h.npc), 0.0);
+    assert!(
+        h.h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Death
+                && event.source == Some(pet.to_bits())
+                && event.target == Some(h.h.npc.to_bits()))
+    );
+    assert_eq!(
+        h.h.app
+            .world()
+            .get::<PlayerAchievementState>(h.h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5529),
+        Some(&1)
+    );
+    h.advance(20);
+    assert_eq!(
+        h.h.app
+            .world()
+            .get::<PlayerAchievementState>(h.h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5529),
+        Some(&1)
+    );
+    drop(h);
+    let reopened = redb::Database::open(&path).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&reopened, character)
+            .criteria_progress
+            .get(&5529),
+        Some(&1)
+    );
+}
+
+#[test]
 fn warlock_summon_imp_spawns_owned_pet_and_firebolt_bar() {
     let dir = tempfile::tempdir().unwrap();
     let mut h = ImpHarness::login(&dir.path().join("pets.redb"));
