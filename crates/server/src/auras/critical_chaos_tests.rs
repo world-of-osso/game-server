@@ -46,7 +46,7 @@ fn class_completeness_native_critical_chaos_scales_chaos_strike_proc_chance_with
             target: unit,
             spell_id: CRITICAL_CHAOS,
             effect_mask: u32::MAX,
-            source: AuraSource::Cast,
+            source: AuraSource::KnownSpell,
         },
     );
     assert_eq!(
