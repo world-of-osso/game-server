@@ -90,7 +90,7 @@ pub(super) fn launch(
     }
     let delays = hit_delays(world, caster, spell, &plan);
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
-        debug!(caster = ?caster, speed = spell.speed, launch_delay = spell.launch_delay, min_duration = spell.min_duration, delays = ?delays, "Azerite launch delays");
+        debug!(caster = ?caster, misc = ?spell.misc, delays = ?delays, "Azerite launch delays");
     }
     let launched = now(world);
     let (plan, reflected) = split_reflected(plan, &reflections, caster);
