@@ -271,3 +271,5 @@ Debug logs and root cause analyses.
 - [Auction subcategory/sort proof](systems/auction-house.md#subcategory--current-bid--available--2026-10-08) — class/subclass/inventory alternatives and stable Bid/Quantity paging.
 
 - [Category charge-recovery rates](systems/auras.md#category-charge-recovery-rates) — native148 real Aimed Shot charges, live clocks, serial expiry and source-bounded negative/per-cast controls; broader parity remains open.
+
+- [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.

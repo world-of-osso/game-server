@@ -1080,3 +1080,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 [Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.
 
 - 2026-10-13: [Category charge rates](systems/auras.md#category-charge-recovery-rates): native148 through existing category clocks, authentic Trueshot/Aimed Shot RED/GREEN, negative native Fiery Brand and bounded refresh API proof.
+
+- 2026-10-13: Charred Warblades native3%/1000ms delayed self-heal producer; real-damage RED at eb9fbf29 (500HP stays500 instead of504); GREEN verification pending.
