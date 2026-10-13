@@ -121,7 +121,7 @@ fn class_completeness_native_versatility_mark_increases_real_healing() {
     assert_eq!(heal.amount, 7025);
 }
 
-fn receive_native_damage(h: &mut Harness, spell_id: u32) -> u32 {
+fn receive_native_damage(h: &mut Harness, spell_id: u32) -> i32 {
     let unit = h.caster;
     *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
         current: 20_000.0,
