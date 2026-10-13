@@ -12,6 +12,8 @@ use crate::spell_info::SpellStore;
 use crate::stats::CharacterStats;
 
 const KNOW_YOUR_ENEMY: u32 = 388_118;
+const PENETRATING_SHOTS: u32 = 459_783;
+const AIMED_SHOT: u32 = 19_434;
 const PRECISE_KILLER: u32 = 1_272_989;
 const INNER_DEMONS: u32 = 202_388;
 const CJ_BALL: u32 = 314_633;
@@ -53,7 +55,7 @@ fn apply_native(h: &mut Harness, spell_id: u32) {
             caster: unit,
             target: unit,
             spell_id,
-            effect_mask: if spell_id == KNOW_YOUR_ENEMY {
+            effect_mask: if matches!(spell_id, KNOW_YOUR_ENEMY | PENETRATING_SHOTS) {
                 u32::MAX
             } else {
                 1
@@ -74,6 +76,31 @@ fn cast_damage(h: &mut Harness, spell_id: u32) -> &CombatLogEvent {
         .rev()
         .find(|event| event.spell_id == Some(spell_id) && event.kind == CombatLogKind::Damage)
         .unwrap()
+}
+
+#[test]
+fn class_completeness_native_penetrating_shots_increases_actual_ranged_critical_damage() {
+    let mut h = harness(Vec::new(), &[PENETRATING_SHOTS, AIMED_SHOT], 3).unwrap();
+    set_crit(&mut h, 100.0);
+    apply_native(&mut h, PENETRATING_SHOTS);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.npc)
+        .unwrap()
+        .x = 10.0;
+    h.cast_and_deliver(AIMED_SHOT, Some(h.npc));
+    h.advance(100);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let damage = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| event.spell_id == Some(AIMED_SHOT) && event.kind == CombatLogKind::Damage)
+        .expect("native Aimed Shot must land after cast and missile travel");
+    assert!(damage.crit);
+    // Native AP9.72 ×100AP ×2crit ×1.25, with authored variance±2.5%.
+    // Unmodified crits1944±2.5% cannot enter this interval.
+    assert!((2369..=2491).contains(&damage.amount), "{damage:?}");
 }
 
 #[test]
