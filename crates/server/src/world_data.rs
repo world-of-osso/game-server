@@ -1004,6 +1004,9 @@ fn startup_load_world_data(mut commands: Commands) {
     commands.insert_resource(crate::pvp::arena_dalaran::Catalog::load(&conn).expect(
         "Load source Dalaran spout identities/pipe triggers; run scripts/import-arenas.py",
     ));
+    commands.insert_resource(crate::pvp::arena_cage::Catalog::load(&conn).expect(
+        "Load Cage of Carnage entrance areatrigger actions; run scripts/import-battlegrounds.py",
+    ));
     commands.insert_resource(
         crate::pvp::arena::Catalog::load(&conn)
             .expect("Load source-backed arena maps; run scripts/import-arenas.py before startup"),

@@ -50,6 +50,7 @@ pub(super) fn update_matches(world: &mut World) {
     super::arena_objects::update_gates(world, now);
     super::arena_sight::update_sight(world, now);
     super::arena_dalaran::update(world, now);
+    super::arena_cage::update(world, now);
     for id in changed {
         super::arena_rated_results::apply_result(world, id);
         finish_match(world, id);

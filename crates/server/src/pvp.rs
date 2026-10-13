@@ -25,6 +25,8 @@ mod pvp_war_mode;
 
 #[path = "pvp_arena.rs"]
 pub(crate) mod arena;
+#[path = "pvp_arena_cage.rs"]
+pub(crate) mod arena_cage;
 #[path = "pvp_arena_combat.rs"]
 pub(crate) mod arena_combat;
 #[path = "pvp_arena_dalaran.rs"]
@@ -317,6 +319,8 @@ impl Plugin for PvpPlugin {
         app.init_resource::<arena_objects::SightTimers>();
         app.init_resource::<arena_dalaran::Catalog>();
         app.init_resource::<arena_dalaran::Timers>();
+        app.init_resource::<arena_cage::Catalog>();
+        app.init_resource::<arena_cage::Timers>();
         app.add_systems(
             Update,
             arena::receive_queue_requests.before(process_battleground_invitation_responses),
