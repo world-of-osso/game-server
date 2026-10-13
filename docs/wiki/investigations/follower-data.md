@@ -76,6 +76,14 @@ Durable evidence: engine `data/diagnostics/follower-ai3-2026-10-11/`: `{modern,f
 
 Private appearance cache strictly adds138 displays while preserving13,218; existing M2 baker produces142 displays/1,420 eye poses. Maintained frozen-root local-CASC importer publishes768 additive private asset receipts/422 aliases over six fragments. These restore the selected encounter/party render dependencies, not general asset closure. All cache/model/texture/product overlays remain private; no promotion to canonical data. The incomplete loot/walk gates keep the full requested goal open.
 
+## Native class-level and follow navigation — 2026-10-13
+
+All eleven authenticated profiles now have real-source basic-role tests (`profile_behavior_tests.rs`): damage, healer-first triage, both tanks' actual taunts and native resource publication. Initial probe passed10 and crashed Austin's real Cobra Shot193455 during missile resolution: its sourced SpellXDescriptionVariables331 scalar requires `Level`, while NPC initialization supplied only `UnitLevel`. fa4aa3fd adds the exact owner-derived `Level` alongside replicated `UnitLevel`; no default, panic guard or persisted-character identity. Eleven basic-role cases pass. This does not certify full rotations, pets, interrupts or defensives.
+
+Two fixed-order Stockade regressions reproduced actual follow failures: straight movement crossed an authored wall at tick19, and recreating `FollowOwner` every idle AI tick stopped at4.8527yards rather than the actual4yard follow point. 59b264e8 retains in-progress follow state and uses existing baked `Navigation` for follower follow/chase. Missing or blocked bakes hold position, never straight movement; ordinary existing non-follower behavior is unchanged. Three actual-LOS/ground/route-progress/unbaked tests pass.
+
+Ruby lacked static LOS/navigation in the prior private overlay. Existing source collectors now produce all12 authored WDT tiles for private LOS and NAV, zero missing/unreadable geometry. Nav payload is214,541,560bytes. Source data remains unchanged; no authored coordinates/connectors were invented. Inputs are local terrain/WMO/M2 plus read-only world snapshot; private output/hash ledger lives in `/home/osso/.worktrees/follower-dungeons-2026-10-13/ground/` and `ruby-ground-manifest.json`. Canonical publication commands belong only in the lead handoff. New strict-nav/full-route live proof remains pending.
+
 ## Native Group Finder catalog — 2026-10-13
 
 `lfg/follower_catalog.rs` answers authenticated `QueryFollowerDungeons` with sorted IDs/names/maps from prepared catalog destinations. Known205 IDs lacking an authored entrance/Normal population are not offered; an empty prepared catalog produces an empty reply, never fabricated choices. Actual registered host-loopback RED→GREEN exercises both populated and empty replies. Existing admission validation remains authoritative. [Native UI and its proof boundary](../../../../game-engine/docs/wiki/systems/follower-dungeons.md) owns the Group Finder role/type/list rendering; no new full-dungeon or all-class claim follows from catalog publication.
@@ -106,6 +114,7 @@ Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-202
 ## Sources
 
 - [Reference importer](../../../scripts/follower_import.py), [profile importer](../../../scripts/follower_profiles.py), [SQL tests](../../../scripts/tests/test_follower_profiles.py)
+- [All labelled profiles](../../../crates/server/src/followers/profile_behavior_tests.rs), [real follow regression](../../../crates/server/src/followers/navigation_tests.rs), [native Cobra Shot scalar](../../../crates/server/src/spell_cast/scripts.rs)
 - [Group Finder catalog](../../../crates/server/src/lfg/follower_catalog.rs), [catalog loopback](../../../crates/server/src/followers/wire_tests.rs)
 - [Runtime bridge](../../../crates/server/src/followers/mod.rs), [group presence](../../../crates/server/src/group/mod.rs), [member health](../../../crates/server/src/group/member_state.rs)
 - Local pinned Spell/Difficulty CSVs, canonical read-only world.db, full TDB1210.26091 SQL, diagnostics receipts

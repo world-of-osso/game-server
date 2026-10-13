@@ -1031,3 +1031,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-13 — Prepared follower Group Finder catalog
 
 [Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.
+
+## 2026-10-13 — Native follower class level and routed follow
+
+[Profile/navigation proof](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13): eleven actual labelled basic-role casts/resource publications; Cobra Shot193455 missile-resolution Level panic RED→11GREEN. Real Stockade follow crossed wall at tick19 and lost moving-state progress4.8527yd; native route/progress fix GREEN3. Strict follower missing-bake standing, ordinary behavior retained. Private Ruby12LOS+12NAV/authored zero-gap geometry package staged; advanced AI and new whole-route live proof open.
