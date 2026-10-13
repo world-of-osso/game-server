@@ -676,6 +676,169 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_death_exact_level_rejects_lower_and_higher_levels() {
+    for (level, expected) in [(1, None), (2, Some(16188)), (3, Some(16402))] {
+        let mut h =
+            crate::spell_cast::test_harness::harness_with_plugins(vec![], &[], 1, false, |app| {
+                app.add_plugins((AchievementPlugin, crate::death::DeathPlugin));
+            })
+            .unwrap();
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("level-death.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) = persistence::create_character(&db, 1, "Leveldeath", 1, 1).unwrap();
+        h.app.insert_resource(GameDatabase { db });
+        h.app
+            .world_mut()
+            .get_mut::<InWorld>(h.connection)
+            .unwrap()
+            .character_id = character;
+        h.app.world_mut().entity_mut(h.caster).insert((
+            persistence::ClientId(character),
+            PlayerAchievementState::default(),
+            Level(level),
+        ));
+        h.app.update();
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+        h.advance(3);
+        assert_eq!(h.health(h.caster), 0.0);
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap();
+        for criterion in [16188, 16402] {
+            assert_eq!(
+                state.criteria_progress.get(&criterion).copied(),
+                (expected == Some(criterion)).then_some(1),
+                "level {level}, criterion {criterion}"
+            );
+        }
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+        h.advance(3);
+        drop(h);
+        let reopened = redb::Database::open(&path).unwrap();
+        let saved = persistence::load_achievements(&reopened, character);
+        for criterion in [16188, 16402] {
+            assert_eq!(
+                saved.criteria_progress.get(&criterion).copied(),
+                (expected == Some(criterion)).then_some(1),
+                "reopened level {level}"
+            );
+        }
+    }
+}
+
+#[test]
+fn achievements_criteria_native_instance_death_uses_allocated_capacity_and_persists() {
+    for (map_id, difficulty, allocated, expected) in [
+        (33, 1, true, Some(6847)),
+        (533, 3, true, Some(6845)),
+        (533, 4, true, Some(6846)),
+        (0, 1, true, None),
+        (533, 3, false, None),
+    ] {
+        let mut h =
+            crate::spell_cast::test_harness::harness_with_plugins(vec![], &[], 1, false, |app| {
+                app.add_plugins((AchievementPlugin, crate::death::DeathPlugin));
+            })
+            .unwrap();
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        let store = crate::maps::store::load_map_store(&conn).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("instance-death.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) = persistence::create_character(&db, 1, "Copydeath", 1, 1).unwrap();
+        h.app.insert_resource(GameDatabase { db });
+        h.app
+            .world_mut()
+            .get_mut::<InWorld>(h.connection)
+            .unwrap()
+            .character_id = character;
+        let mut copies = crate::maps::InstanceManager::default();
+        let map = if allocated {
+            copies
+                .create_map(
+                    &store,
+                    map_id,
+                    crate::maps::instances::InstanceEntrant {
+                        character_id: character,
+                        leader: character,
+                        difficulty_id: difficulty,
+                        raid_difficulty: crate::maps::RaidDifficulty {
+                            primary: 14,
+                            legacy: difficulty,
+                        },
+                        ..Default::default()
+                    },
+                    crate::maps::instances::Now {
+                        elapsed: 0.0,
+                        unix: 1780000000,
+                    },
+                )
+                .unwrap()
+                .map
+        } else {
+            InMap {
+                map_id,
+                instance_id: 999999,
+            }
+        };
+        h.app.insert_resource(store);
+        h.app.insert_resource(copies);
+        h.app.world_mut().entity_mut(h.caster).insert((
+            persistence::ClientId(character),
+            PlayerAchievementState::default(),
+            map,
+        ));
+        h.app.world_mut().entity_mut(h.npc).insert(map);
+        h.app.update();
+        // A real Unit::Kill commits health/death; no synthetic criteria credit.
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+        h.advance(3);
+        assert_eq!(h.health(h.caster), 0.0);
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap();
+        for criterion in [
+            6847, 7849, 6845, 6846, 8838, 8918, 8919, 50010, 50011, 69351,
+        ] {
+            assert_eq!(
+                state.criteria_progress.get(&criterion).copied(),
+                (expected == Some(criterion)).then_some(1),
+                "map {map:?}, difficulty {difficulty}, criterion {criterion}"
+            );
+        }
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+        h.app
+            .world_mut()
+            .write_message(crate::death::PlayerDeathTransition { player: h.caster });
+        h.advance(3);
+        drop(h);
+        let reopened = redb::Database::open(&path).unwrap();
+        let saved = persistence::load_achievements(&reopened, character);
+        for criterion in [
+            6847, 7849, 6845, 6846, 8838, 8918, 8919, 50010, 50011, 69351,
+        ] {
+            assert_eq!(
+                saved.criteria_progress.get(&criterion).copied(),
+                (expected == Some(criterion)).then_some(1),
+                "idle/reopened {map:?}"
+            );
+        }
+    }
+}
+
+#[test]
 fn achievements_criteria_native_player_death_records_once_with_actual_killer_and_map() {
     prove_death_criteria(false);
     prove_death_criteria(true);
