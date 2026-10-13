@@ -291,7 +291,9 @@ def select_rows(rows, record_ids):
 
 def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
     """Observed WDC5 0x5: record bytes, IDs, copies, offsets, relations, sparse IDs."""
-    if header["flags"] != 5:
+    # Secondary-key flag 0x2 does not change the sparse record/relationship layout.
+    # Local CollectableSource*Sparse uses 0x7, the same index/offset-map contract.
+    if header["flags"] not in (5, 7):
         raise ValueError(f"sparse DB2 flags {header['flags']:#x} are not supported")
     sections = [
         struct.unpack_from("<Q8I", data, 204 + 40 * i)
