@@ -2,6 +2,7 @@ mod achievement;
 mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
+mod admission_geometry;
 mod adventure_guide;
 mod appearance_collection;
 mod area_table;

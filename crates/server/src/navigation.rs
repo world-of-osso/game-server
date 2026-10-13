@@ -73,6 +73,33 @@ impl Navigation {
         }
     }
 
+    pub(crate) fn preparation_directory(&self, map_id: u32) -> PathBuf {
+        self.dir.join(map_id.to_string())
+    }
+
+    pub(crate) fn install_prepared(
+        &mut self,
+        map_id: u32,
+        baked: bool,
+        tile: Option<navigation::PreparedNavigationTile>,
+    ) -> Result<(), String> {
+        let maps = self.maps.get_mut().expect("navigation maps lock");
+        if !maps.contains_key(&map_id) {
+            let map = if baked {
+                Some(navigation::NavigationMap::open(
+                    &self.dir.join(map_id.to_string()),
+                )?)
+            } else {
+                None
+            };
+            maps.insert(map_id, map);
+        }
+        if let (Some(map), Some(tile)) = (maps.get_mut(&map_id).unwrap(), tile) {
+            map.install_prepared(tile)?;
+        }
+        Ok(())
+    }
+
     /// None means an entirely unbaked map, never a missing tile on a baked map.
     fn query_path(&self, map_id: u32, from: Vec3, to: Vec3) -> Result<Option<Vec<Vec3>>, String> {
         let mut maps = self.maps.lock().unwrap();

@@ -61,7 +61,7 @@ impl Plugin for GridActivityPlugin {
 }
 
 #[derive(Resource, Default)]
-struct GridIndex {
+pub(crate) struct GridIndex {
     /// Creatures whose `SpawnPoint` was added since the last registration.
     pending: Vec<Entity>,
     creatures_by_grid: HashMap<GridCoord, Vec<Entity>>,
@@ -71,6 +71,22 @@ struct GridIndex {
 }
 
 impl GridIndex {
+    pub(crate) fn preparation_entities(&self, map: InMap, position: &Position) -> Vec<Entity> {
+        let grid = grid_of(map, position.x, position.z);
+        let active = neighbourhoods(std::iter::once(&grid));
+        let entities: HashSet<_> = active
+            .iter()
+            .flat_map(|grid| {
+                self.creatures_by_grid
+                    .get(grid)
+                    .into_iter()
+                    .flatten()
+                    .copied()
+            })
+            .collect();
+        entities.into_iter().collect()
+    }
+
     fn is_active(&self, creature: Entity) -> bool {
         self.home_grids
             .get(&creature)

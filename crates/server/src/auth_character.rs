@@ -11,6 +11,10 @@ use shared::protocol::{
 use shared::reputation::default_faction_registry;
 use std::collections::HashSet;
 
+#[cfg(test)]
+#[path = "admission_geometry_tests.rs"]
+mod admission_geometry_tests;
+
 use crate::auth::{Authenticated, InWorld, SentTiles};
 use crate::interest::NetworkVisibility;
 use crate::item_templates::ItemTemplates;
@@ -188,9 +192,19 @@ pub fn process_select_character(
     mut commands: Commands,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
     mut maps: crate::maps::LoginMaps,
+    mut geometry: crate::admission_geometry::AdmissionGeometry,
 ) {
+    geometry.poll();
     let Some(db) = db.as_ref() else { return };
-    let requests: Vec<_> = collect_select_requests(&mut receivers);
+    let mut requests = collect_select_requests(&mut receivers);
+    for request in geometry.completed_requests() {
+        if !requests
+            .iter()
+            .any(|(connection, _, _)| *connection == request.0)
+        {
+            requests.push(request);
+        }
+    }
     for (entity, account_id, req) in requests {
         save_and_despawn_stale_player(&db.db, &existing_players, req.character_id, &mut commands);
         handle_select(
@@ -205,6 +219,7 @@ pub fn process_select_character(
             &mut commands,
             &mut player_deaths,
             &mut maps,
+            &mut geometry,
         );
     }
 }
@@ -304,6 +319,7 @@ fn handle_select(
     commands: &mut Commands,
     player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
     maps: &mut crate::maps::LoginMaps,
+    geometry: &mut crate::admission_geometry::AdmissionGeometry,
 ) {
     let character_id = selection.request.character_id;
     if !validate_ownership(db, selection.account_id, character_id) {
@@ -340,6 +356,34 @@ fn handle_select(
         );
         return;
     };
+    match geometry.ensure_ready(place.map, place.position) {
+        Ok(true) => {
+            commands
+                .entity(selection.connection)
+                .remove::<crate::admission_geometry::PendingCharacterSelection>();
+        }
+        Ok(false) => {
+            commands.entity(selection.connection).insert(
+                crate::admission_geometry::PendingCharacterSelection {
+                    character_id,
+                    account_id: selection.account_id,
+                    map_id: place.map.map_id,
+                },
+            );
+            return;
+        }
+        Err(error) => {
+            commands
+                .entity(selection.connection)
+                .remove::<crate::admission_geometry::PendingCharacterSelection>();
+            send_enter_error(
+                selection.connection,
+                enter_senders,
+                &format!("Character geometry unavailable: {error}"),
+            );
+            return;
+        }
+    }
     (data.x, data.y, data.z) =
         crate::terrain_height::bevy_to_wow(place.position.x, place.position.y, place.position.z);
     let saved_death = persistence::load_player_death_state(&db.db, character_id);

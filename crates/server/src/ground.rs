@@ -20,6 +20,9 @@ use shared::ground::{
     placement_rotation,
 };
 
+#[path = "ground/preparation.rs"]
+pub(crate) mod preparation;
+
 use crate::liquid::LiquidSample;
 use crate::terrain_height::{TerrainHeightMap, parse_adt_heights};
 
@@ -71,6 +74,7 @@ struct TileFiles {
     obj0: u32,
 }
 
+#[derive(Clone)]
 struct TileSource {
     data_dir: PathBuf,
     /// Indexed `col * 64 + row`, as `(row, col)` tiles are.
@@ -566,6 +570,10 @@ fn load_terrain(
     fdid: u32,
 ) -> Result<(TerrainHeightMap, Option<[i16; 9]>), String> {
     let data = read_client_file(data_dir, "terrain", fdid, "adt")?;
+    parse_terrain(&data)
+}
+
+fn parse_terrain(data: &[u8]) -> Result<(TerrainHeightMap, Option<[i16; 9]>), String> {
     let flight_min = find_chunk(&data, b"MFBO")?
         .map(|mfbo| -> Result<[i16; 9], String> {
             let mut mins = [0; 9];

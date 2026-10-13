@@ -8,11 +8,42 @@ const MAX_PATH: usize = 2048;
 const MAX_NODES: i32 = 8192;
 const NEAREST_EXTENTS: [f32; 3] = [0.8, 2.0, 0.8];
 
+/// Validated disk packets, transferable from a loader to a live navigation mesh.
+pub struct PreparedNavigationTile {
+    tile: (u32, u32),
+    present: bool,
+    packets: Vec<Vec<u8>>,
+}
+
+impl PreparedNavigationTile {
+    pub fn read(dir: &Path, tile: (u32, u32)) -> Result<Self, String> {
+        let path = dir.join(format!("{}_{}.nav", tile.0, tile.1));
+        let (bytes, present) = match std::fs::read(&path) {
+            Ok(bytes) => (bytes, true),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (Vec::new(), false),
+            Err(error) => return Err(format!("{}: {error}", path.display())),
+        };
+        let mut packets = Vec::new();
+        if !bytes.is_empty() {
+            for packet in decode_packets(&bytes)? {
+                validate_packet(packet)?;
+                packets.push(packet.to_vec());
+            }
+        }
+        Ok(Self {
+            tile,
+            present,
+            packets,
+        })
+    }
+}
+
 /// Owns a mesh and its mutable query scratch space; callers serialize queries with &mut.
 /// Artifacts are trusted outputs of nav-bake, not network-supplied Detour buffers.
 pub struct NavigationMap {
     dir: PathBuf,
     loaded: HashSet<(u32, u32)>,
+    missing: HashSet<(u32, u32)>,
     mesh: *mut dtNavMesh,
     query: *mut dtNavMeshQuery,
 }
@@ -28,6 +59,7 @@ impl NavigationMap {
             Self {
                 dir: dir.to_path_buf(),
                 loaded: HashSet::new(),
+                missing: HashSet::new(),
                 mesh: dtAllocNavMesh(),
                 query: dtAllocNavMeshQuery(),
             }
@@ -51,6 +83,22 @@ impl NavigationMap {
             )?;
         }
         Ok(map)
+    }
+
+    /// Install one validated tile without file IO. Missing artifacts still count as
+    /// prepared: endpoint queries retain their normal no-walkable-polygon result.
+    pub fn install_prepared(&mut self, prepared: PreparedNavigationTile) -> Result<(), String> {
+        if self.loaded.contains(&prepared.tile) {
+            return Ok(());
+        }
+        for packet in prepared.packets {
+            self.add_packet(&packet)?;
+        }
+        if !prepared.present {
+            self.missing.insert(prepared.tile);
+        }
+        self.loaded.insert(prepared.tile);
+        Ok(())
     }
 
     pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
@@ -192,8 +240,11 @@ impl NavigationMap {
         self.load_tile(b)?;
         for row in a.0.min(b.0).saturating_sub(1)..=(a.0.max(b.0) + 1).min(63) {
             for col in a.1.min(b.1).saturating_sub(1)..=(a.1.max(b.1) + 1).min(63) {
-                if self.dir.join(format!("{row}_{col}.nav")).is_file() {
-                    self.load_tile((row, col))?;
+                let tile = (row, col);
+                if !self.loaded.contains(&tile)
+                    && self.dir.join(format!("{row}_{col}.nav")).is_file()
+                {
+                    self.load_tile(tile)?;
                 }
             }
         }
@@ -201,6 +252,14 @@ impl NavigationMap {
     }
 
     fn load_tile(&mut self, tile: (u32, u32)) -> Result<(), String> {
+        if self.missing.contains(&tile) {
+            return Err(format!(
+                "{}: navigation artifact absent during preparation",
+                self.dir
+                    .join(format!("{}_{}.nav", tile.0, tile.1))
+                    .display()
+            ));
+        }
         if self.loaded.contains(&tile) {
             return Ok(());
         }

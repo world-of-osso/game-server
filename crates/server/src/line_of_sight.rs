@@ -159,6 +159,22 @@ impl LineOfSight {
             .all(|hull| !hull.blocks(a, b))
     }
 
+    pub(crate) fn preparation_directory(&self, map_id: u32) -> PathBuf {
+        self.dir.join(map_id.to_string())
+    }
+
+    pub(crate) fn install_prepared(&mut self, map_id: u32, prepared: LosMap) {
+        let maps = self.maps.get_mut().expect("LOS maps lock");
+        match maps.entry(map_id) {
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                entry.insert(prepared);
+            }
+            std::collections::hash_map::Entry::Occupied(mut entry) => {
+                entry.get_mut().merge_preloaded(prepared);
+            }
+        }
+    }
+
     /// Whether the segment `a..b` crosses no baked or enabled live GO triangle.
     pub fn clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
         self.rays.fetch_add(1, Ordering::Relaxed);
