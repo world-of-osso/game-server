@@ -1907,6 +1907,12 @@ fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
         ReactState::Passive,
     ));
     h.advance(0.1);
+    let threshold = h.health(disciple).max * 0.8;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(disciple)
+        .unwrap()
+        .current = threshold;
     crate::creature_aggro::add_threat(h.app.world_mut(), disciple, enemy, 1.0);
     h.advance(4.7);
     assert_ne!(casting(&h, disciple), Some(1090), "Sleep waits at least5s");
@@ -1917,7 +1923,12 @@ fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
         h.advance(0.05);
         waited += 0.05;
     }
-    assert_eq!(h.health(disciple).current, h.health(disciple).max);
+    h.advance(6.0);
+    assert_eq!(
+        h.health(disciple).current,
+        threshold,
+        "exactly80% forbids potion"
+    );
     h.set_health_pct(disciple, 75.0);
     let wounded = h.health(disciple).current;
     let mut healed = false;
