@@ -165,6 +165,38 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
 }
 
 #[test]
+fn arena_entry_preserves_long_category_while_resetting_item_override() {
+    let mut item_spell = cooldown_spell(1, 120_000, 120_000, false);
+    item_spell.categories.as_mut().unwrap().category = 2;
+    let long_spell = cooldown_spell(2, 600_000, 600_000, false);
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(SpellStore::fixture(vec![item_spell, long_spell.clone()]));
+    let mut history = SpellHistory::default();
+    history.spell_ready_at.insert(1, 120.0);
+    history.spell_ready_at.insert(2, 600.0);
+    history.category_ready_at.insert(2, 600.0);
+    history.category_ready_at.insert(9999, 120.0);
+    history.item_cooldown_sources.insert(
+        1,
+        ItemCooldownSource {
+            recovery_ms: 120_000,
+            category_ms: 120_000,
+            category: 9999,
+        },
+    );
+    let player = world.spawn(history).id();
+    reset_arena_cooldowns(&mut world, player);
+    let history = world.get::<SpellHistory>(player).unwrap();
+    assert!(!history.category_ready_at.contains_key(&9999));
+    assert_eq!(
+        history.category_ready_at[&2], 600.0,
+        "item's unused base category must not clear another spell's long timer"
+    );
+    assert!(history.on_cooldown(&long_spell, 0.0));
+}
+
+#[test]
 fn arena_entry_resets_active_pet_even_for_long_excluded_cooldowns() {
     let spell = cooldown_spell(1, 600_000, 600_000, true);
     let mut world = World::new();
