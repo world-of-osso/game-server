@@ -7,25 +7,28 @@ use shared::components::Player;
 const CLIENT_EXECUTABLE: u32 = 0x1;
 
 #[derive(Debug, Clone)]
-pub(super) struct IdentityCondition {
+pub(crate) struct IdentityCondition {
     class_mask: u32,
     race_mask: u64,
 }
 
 impl IdentityCondition {
     pub(super) fn permits(&self, player: &Player) -> bool {
-        let class = player
-            .class
+        self.permits_race_class(player.race, player.class)
+    }
+
+    pub(crate) fn permits_race_class(&self, race: u8, class: u8) -> bool {
+        let class = class
             .checked_sub(1)
             .and_then(|bit| 1_u32.checked_shl(u32::from(bit)));
-        let race = crate::race_class::race_bit(player.race)
-            .and_then(|bit| 1_u64.checked_shl(u32::from(bit)));
+        let race =
+            crate::race_class::race_bit(race).and_then(|bit| 1_u64.checked_shl(u32::from(bit)));
         (self.class_mask == 0 || class.is_some_and(|bit| self.class_mask & bit != 0))
             && (self.race_mask == 0 || race.is_some_and(|bit| self.race_mask & bit != 0))
     }
 }
 
-pub(super) fn load_condition(
+pub(crate) fn load_condition(
     conn: &Connection,
     id: u32,
 ) -> rusqlite::Result<Result<IdentityCondition, String>> {

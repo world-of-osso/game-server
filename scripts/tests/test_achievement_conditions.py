@@ -1,4 +1,5 @@
 import copy
+import sqlite3
 import sys
 import unittest
 from pathlib import Path
@@ -79,6 +80,30 @@ class Conditions(unittest.TestCase):
         for name, modifiers in cases.items():
             with self.subTest(name):
                 self.assertEqual(self.compile(modifiers), {})
+
+    def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
+        with sqlite3.connect(':memory:') as db:
+            db.executescript('''
+                CREATE TABLE tdb_conditions(SourceTypeOrReferenceId INTEGER, SourceEntry INTEGER);
+                CREATE TABLE player_condition(
+                    ID INTEGER, Flags INTEGER, ClassMask INTEGER,
+                    RaceMasks_0 INTEGER, RaceMasks_1 INTEGER,
+                    Gender INTEGER, NativeGender INTEGER, PrevQuestID_0 INTEGER,
+                    Failure_description_lang TEXT);
+                INSERT INTO player_condition VALUES
+                    (923,1,0,1309324210,-1440044374,-1,-1,0,''),
+                    (62,0,8,0,0,-1,-1,0,''),
+                    (100,0,8,0,0,-1,-1,77,''),
+                    (101,128,8,0,0,-1,-1,0,''),
+                    (102,0,8,0,0,0,-1,0,''),
+                    (103,0,8,0,0,-1,-1,0,'');
+                INSERT INTO tdb_conditions VALUES(34,103);
+            ''')
+            self.assertEqual(rules.load_identity_condition_ids(db), {923, 62})
+
+    def test_player_condition_leaf_preserves_the_authored_id(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 2, 923)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((2, 923),)]})
 
     def test_ungated_types_and_timed_criteria_stay_disabled(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 8, 46598)}

@@ -432,6 +432,8 @@ pub(crate) struct ReferencePlayer {
 /// A TC player-only ModifierTree leaf resolved at catalog load.
 #[derive(Debug, Clone)]
 enum PlayerFact {
+    /// Bounded native PlayerCondition2 class/race rule; all other fields reject at load.
+    Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
     /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
     Area(BTreeSet<u32>),
@@ -445,6 +447,7 @@ enum PlayerFact {
 impl PlayerFact {
     fn holds(&self, player: &ReferencePlayer) -> bool {
         match self {
+            Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
             Self::Race(race) => player.race == *race,
@@ -1167,7 +1170,7 @@ fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTr
 }
 
 /// Every leaf must name data the server has, else the tree can never hold (None).
-fn resolve_player_facts(
+fn load_player_facts(
     conn: &Connection,
     leaves: &[(u32, u32)],
     area_children: &HashMap<u32, Vec<u32>>,
@@ -1182,6 +1185,9 @@ fn resolve_player_facts(
         };
         let small = u8::try_from(asset).ok();
         let fact = match kind {
+            2 => crate::game_objects::identity_conditions::load_condition(conn, asset)?
+                .ok()
+                .map(PlayerFact::Identity),
             8 => exists("spell")?.then_some(PlayerFact::Aura(asset)),
             17 => exists("area_table")?
                 .then(|| PlayerFact::Area(collect_area_descendants(asset, area_children))),
@@ -1197,7 +1203,7 @@ fn resolve_player_facts(
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(PlayerFact::MinLevel),
             71 => Some(PlayerFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated player facts use only 8/17/25/26/32/69/71"),
+            _ => unreachable!("generated player facts use only 2/8/17/25/26/32/69/71"),
         };
         let Some(fact) = fact else {
             return Ok(None);
@@ -1252,7 +1258,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
             .filter(|_| modifier_asset.is_none());
         let resolved = match compiled {
-            Some(compiled) => resolve_player_facts(conn, compiled.facts, &area_children)?
+            Some(compiled) => load_player_facts(conn, compiled.facts, &area_children)?
                 .map(|facts| (compiled.difficulty, facts)),
             None => None,
         };
