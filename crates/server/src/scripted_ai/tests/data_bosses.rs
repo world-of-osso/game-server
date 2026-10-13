@@ -143,7 +143,9 @@ fn encounter_fixture(
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
-    app.insert_resource(super::super::ragefire_chasm::gordoth_intro::load_trigger(&conn).unwrap());
+    app.insert_resource(
+        super::super::ragefire_chasm::intro_triggers::load_triggers(&conn).unwrap(),
+    );
     app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
@@ -1710,6 +1712,158 @@ fn encounter_coverage_adarogg_source_inferno_charge_and_fire_breath() {
         h.casts(2, boss, 119297),
         2,
         "Inferno repeats within15-20s of10s"
+    );
+}
+
+fn spell_gos(h: &Harness, caster: Entity, spell_id: u32) -> Vec<shared::protocol::SpellGo> {
+    h.inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == caster.to_bits() && go.spell_id == spell_id)
+        .cloned()
+        .collect()
+}
+
+fn hits_entry(h: &mut Harness, go: &shared::protocol::SpellGo, entry: u32) -> bool {
+    let entries = h.creatures_of(entry);
+    go.hit_targets
+        .iter()
+        .any(|hit| entries.iter().any(|unit| unit.to_bits() == *hit))
+}
+
+/// TC at_adarogg_intro7904: an ordinary player's actual DB2 box entry makes both
+/// StringId houndmasters yell, then Adjules Chow Time at +2s/+1s/+1.2s with the
+/// two authored MovePoints. Only once per instance.
+#[test]
+fn encounter_coverage_adarogg_intro_trigger_yells_and_chows_once() {
+    let (mut h, _, _) =
+        encounter_fixture(ADAROGG, 389, 0, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(ADAROGG)[0];
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (x, y, z, length): (f32, f32, f32, f32) = conn
+        .query_row(
+            "SELECT Pos_0,Pos_1,Pos_2,Box_length FROM area_trigger WHERE ID=7904 AND Box_yaw=0",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    let at = |wx: f32| {
+        let (px, py, pz) = crate::terrain_height::wow_to_bevy(wx, y, z);
+        Position {
+            x: px,
+            y: py,
+            z: pz,
+        }
+    };
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(at(x + length / 2.0 + 0.5));
+    h.advance(0.1);
+    let yells = |h: &Harness, text: &str| {
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|chat| chat.content.contains(text))
+            .count()
+    };
+    assert_eq!(yells(&h, "cornered"), 0, "outside the box length");
+    h.app.world_mut().entity_mut(player).insert(at(x));
+    h.advance(0.1);
+    assert_eq!(yells(&h, "He's cornered!"), 1, "houndmaster_1 group0");
+    assert_eq!(yells(&h, "We've got him now!"), 1, "houndmaster_2 group1");
+    h.advance(1.8);
+    assert!(spell_gos(&h, boss, 120113).is_empty(), "first chow waits2s");
+    h.advance(0.2);
+    let chows = spell_gos(&h, boss, 120113);
+    assert_eq!(chows.len(), 1);
+    assert!(
+        hits_entry(&mut h, &chows[0], 61666),
+        "condition: Corrupted Houndmaster"
+    );
+    let target = |h: &Harness| {
+        h.app
+            .world()
+            .get::<crate::scripted_ai::movement::PointMovement>(boss)
+            .map(|movement| {
+                crate::terrain_height::bevy_to_wow(
+                    movement.target.x,
+                    movement.target.y,
+                    movement.target.z,
+                )
+            })
+    };
+    let first = target(&h).expect("MovePoint AdaroggIntroPoints[0]");
+    assert!((first.0 + 282.31488).abs() < 0.001 && (first.1 + 53.24906).abs() < 0.001);
+    h.advance(1.0);
+    assert_eq!(spell_gos(&h, boss, 120113).len(), 2);
+    let second = target(&h).expect("MovePoint AdaroggIntroPoints[1]");
+    assert!((second.0 + 281.1894).abs() < 0.001 && (second.1 + 54.73433).abs() < 0.001);
+    h.advance(1.2);
+    assert_eq!(
+        spell_gos(&h, boss, 120113).len(),
+        3,
+        "third chow with MovePath"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(at(x + length / 2.0 + 0.5));
+    h.advance(0.1);
+    h.app.world_mut().entity_mut(player).insert(at(x));
+    h.advance(2.5);
+    assert_eq!(yells(&h, "He's cornered!"), 1, "OnlyOnce survives re-entry");
+    assert_eq!(spell_gos(&h, boss, 120113).len(), 3);
+}
+
+/// Source WaypointPathEnded(PATH_INTRO2): Eat Trogg at +1s then once more after
+/// 2-3s, never a third time. Map389 has no navigation for the ground path itself,
+/// so the fixture places Adarogg at that path's authored last node.
+#[test]
+fn encounter_coverage_adarogg_path_end_eats_two_troggs() {
+    let (mut h, _, _) =
+        encounter_fixture(ADAROGG, 389, 0, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(ADAROGG)[0];
+    let (px, py, pz) = crate::terrain_height::wow_to_bevy(-286.479, -74.899, -60.5504);
+    h.app.world_mut().entity_mut(boss).insert(Position {
+        x: px,
+        y: py,
+        z: pz,
+    });
+    dispatch(
+        h.app.world_mut(),
+        boss,
+        Hook::WaypointPathEnded {
+            node_id: 2,
+            path_id: 6_140_801,
+        },
+    );
+    h.advance(0.9);
+    assert!(spell_gos(&h, boss, 120064).is_empty(), "Eat Trogg waits1s");
+    h.advance(0.2);
+    let eats = spell_gos(&h, boss, 120064);
+    assert_eq!(eats.len(), 1);
+    assert!(
+        hits_entry(&mut h, &eats[0], 61659),
+        "condition: Slain Trogg"
+    );
+    h.advance(1.8);
+    assert_eq!(
+        spell_gos(&h, boss, 120064).len(),
+        1,
+        "repeat waits at least2s"
+    );
+    h.advance(1.3);
+    assert_eq!(spell_gos(&h, boss, 120064).len(), 2, "repeat within3s");
+    h.advance(6.0);
+    assert_eq!(
+        spell_gos(&h, boss, 120064).len(),
+        2,
+        "_eatCounter stops at two"
     );
 }
 
