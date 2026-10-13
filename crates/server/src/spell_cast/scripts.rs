@@ -145,6 +145,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
             Some(crate::scripted_ai::murder_row::cast_blink_at_selected_target)
         }
         (124491, 0) => Some(start_switch_capture),
+        (crate::pvp::arena_cage::REACTION_LOW_HEALTH, 0) => {
+            Some(crate::pvp::arena_cage::reaction_low_health)
+        }
         (crate::pvp::arena_cage::WARNING_TELEPORT, 0) => {
             Some(crate::pvp::arena_cage::warning_teleport)
         }
