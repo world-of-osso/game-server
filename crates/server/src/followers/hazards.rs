@@ -76,6 +76,34 @@ pub(super) fn target_is_hazardous(world: &mut World, unit: Entity, target: Entit
         .any(|field| contains(field, point(at)))
 }
 
+pub(super) fn path_crosses_hostile_field(world: &mut World, unit: Entity, target: Entity) -> bool {
+    let fields = hostile_fields(world, unit);
+    if fields.is_empty() {
+        return false;
+    }
+    let (Some(from), Some(to), Some(map)) = (
+        world.get::<Position>(unit).copied(),
+        world.get::<Position>(target).copied(),
+        world.get::<InMap>(unit).copied(),
+    ) else {
+        return false;
+    };
+    let Some(nav) = world.get_resource::<Navigation>() else {
+        return false;
+    };
+    match nav.query_path(map.map_id, point(from), point(to)) {
+        Ok(Some(mut path)) => {
+            path.insert(0, point(from));
+            !route_leaves_fields(&path, &fields)
+        }
+        Ok(None) => false,
+        Err(error) => {
+            debug!("Follower {unit} field-aware approach query: {error}");
+            false
+        }
+    }
+}
+
 pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
     let Some(from) = world.get::<Position>(unit).copied() else {
         return false;

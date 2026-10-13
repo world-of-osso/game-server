@@ -30,6 +30,57 @@ fn follower_does_not_flee_friendly_consecration() {
     assert_eq!(*h.app.world().get::<Position>(unit).unwrap(), FROM);
 }
 
+#[test]
+fn follower_does_not_follow_an_outside_owner_through_hostile_consecration() {
+    let start = Position { x: 103.0, ..FROM };
+    let (mut h, unit, _) = stockade_fixture(start);
+    let source = hostile_field(&mut h, unit);
+    h.app
+        .world_mut()
+        .entity_mut(source)
+        .insert(crate::networking::CombatTarget(None));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        Position { x: 125.0, ..FROM },
+        crate::networking::CombatTarget(None),
+    ));
+    for tick in 0..100 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(unit).unwrap();
+        assert!(
+            point(at).distance(point(FROM)) > 8.0,
+            "follow tick{tick} entered the hostile field at{at:?}"
+        );
+    }
+}
+
+#[test]
+fn follower_does_not_chase_an_outside_enemy_through_hostile_consecration() {
+    let start = Position { x: 103.0, ..FROM };
+    let (mut h, unit, _) = stockade_fixture(start);
+    let source = hostile_field(&mut h, unit);
+    h.app
+        .world_mut()
+        .entity_mut(source)
+        .insert(crate::networking::CombatTarget(None));
+    let target = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert((Position { x: 125.0, ..FROM }, InMap::continent(34)));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    for tick in 0..100 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(unit).unwrap();
+        assert!(
+            point(at).distance(point(FROM)) > 8.0,
+            "chase tick{tick} entered the hostile field at{at:?}"
+        );
+    }
+}
+
 fn point(position: Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }
@@ -40,7 +91,7 @@ const FROM: Position = Position {
     z: -76.0,
 };
 
-fn hostile_field(h: &mut crate::spell_cast::test_harness::Harness, unit: Entity) {
+fn hostile_field(h: &mut crate::spell_cast::test_harness::Harness, unit: Entity) -> Entity {
     let from = FROM;
     let enemy = spawn_npc(&mut h.app, 0.0);
     h.app
@@ -57,6 +108,7 @@ fn hostile_field(h: &mut crate::spell_cast::test_harness::Harness, unit: Entity)
         .insert(crate::networking::CombatTarget(Some(unit)));
     prepare_enemy_spec(h, enemy, 66);
     crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 26573, Some(enemy), false).unwrap();
+    enemy
 }
 
 #[test]
