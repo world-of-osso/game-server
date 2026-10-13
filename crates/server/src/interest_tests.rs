@@ -219,7 +219,9 @@ fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_
     });
     run_fixed_ticks(&mut app, 1);
     assert!(!visible(&app), "expiry hides stationary target again");
-    for (distance, expected) in [(12.0, true), (15.0, false), (1.0, true)] {
+    // Level-20 Prowl: base 85 + (20 - BaseLevel 13) * RealPointsPerLevel 5 = 120 hides
+    // against 30 + 19 * 5 = 125 detection, so 5 points * 0.3 + 1.5 reach = 3yd.
+    for (distance, expected) in [(2.9, true), (3.2, false), (1.0, true)] {
         *app.world_mut().get_mut::<Position>(target).unwrap() = pos(distance, 0.0, 0.0);
         crate::interest::mark_interest_position_changed(
             app.world().get_resource::<InterestDirtyQueue>(),
