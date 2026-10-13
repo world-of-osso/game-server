@@ -5,7 +5,7 @@ use shared::casting::CastState;
 use shared::components::Position;
 use shared::protocol::CombatLogKind;
 
-fn start_enemy_fireball(
+pub(super) fn start_enemy_fireball(
     h: &mut crate::spell_cast::test_harness::Harness,
     unit: bevy::prelude::Entity,
 ) {
