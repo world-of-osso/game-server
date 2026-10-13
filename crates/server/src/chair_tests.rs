@@ -73,7 +73,9 @@ fn a_bench_seats_each_user_on_the_nearest_free_seat_high_and_facing_its_way() {
     assert_eq!(spawn.chair, Some(Chair::new(4, 2)));
     let mut world = World::new();
     let bench = spawn_chair(&mut world, &spawn);
-    let near_last = bench_seat(&spawn, 3.0).extend(spawn.position.z) + Vec3::X * 2.0;
+    // Approach along the chair's facing, perpendicular to the line of seats.
+    let facing = Vec3::new(spawn.orientation.cos(), spawn.orientation.sin(), 0.0);
+    let near_last = bench_seat(&spawn, 3.0).extend(spawn.position.z) + facing * 2.0;
     let first = spawn_player(&mut world, near_last);
     let second = spawn_player(&mut world, near_last);
 
