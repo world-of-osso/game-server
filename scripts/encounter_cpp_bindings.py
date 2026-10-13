@@ -2,7 +2,7 @@
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
 Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
-Adarogg, Gordoth and Wailing Caverns Cobrahn primaries.
+Adarogg, Gordoth and Wailing Caverns primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
@@ -94,7 +94,7 @@ GORDOTH_PRIMARY = dict(
     actor_id=1345,
     display_id=42100,
 )
-COBRAHN_SOURCES = {
+WAILING_SOURCES = {
     "Kalimdor/WailingCaverns/wailing_caverns.h": "ea7fbb0733c7dac751470e0c36fb7ab40e8f5a92a3b7790ba22959b26b955f0d",
     "Kalimdor/WailingCaverns/instance_wailing_caverns.cpp": "01d26ba675612d4a4b06a5c7306da5cd1be29ff2388b80d4685ef61ed667c5fc",
 }
@@ -115,8 +115,24 @@ PROFILES = {
     "koranthal": (KORANTHAL_PRIMARY, KORANTHAL_SOURCES),
     "adarogg": (ADAROGG_PRIMARY, ADAROGG_SOURCES),
     "gordoth": (GORDOTH_PRIMARY, GORDOTH_SOURCES),
-    "cobrahn": (COBRAHN_PRIMARY, COBRAHN_SOURCES),
+    "cobrahn": (COBRAHN_PRIMARY, WAILING_SOURCES),
 }
+
+# Normal DB2 bits, not the source SAI ordinals. Journal actors/models are exact
+# local matches; Wailing header/instance maps the same eight encounter identities.
+WAILING_ROWS = {
+    "anacondra": (3671, 585, 0, 474, 1045, 4313, "SmartAI"),
+    "kresh": (3653, 587, 2, 477, 1048, 5126, ""),
+    "pythas": (3670, 588, 3, 476, 1047, 4214, "SmartAI"),
+    "skum": (3674, 589, 4, 478, 1049, 4203, "SmartAI"),
+    "serpentis": (3673, 590, 5, 479, 1050, 4215, "SmartAI"),
+    "verdan": (5775, 591, 6, 480, 1051, 4256, "SmartAI"),
+    "mutanus": (3654, 592, 7, 481, 1052, 4088, "SmartAI"),
+}
+for name, (entry, encounter, bit, journal, actor, display, ai) in WAILING_ROWS.items():
+    PROFILES[name] = (dict(map_id=43, entry=entry, encounter_id=encounter, bit=bit,
+                           script="", ai=ai, journal_id=journal, actor_id=actor,
+                           display_id=display), WAILING_SOURCES)
 
 
 def prepare_bindings(connection, bindings):

@@ -63,7 +63,7 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 
 ## Wailing Caverns source slices
 
-- [x] `encounter_cpp_bindings.py --encounter cobrahn` prepares source3669→586/bit1 (Journal475/actor1046/display4213), checking pinned header/instance hashes and exact SmartAI identity. Copy-only SQL preserves unrelated bindings and is idempotent; no canonical mutation.
+- [x] `encounter_cpp_bindings.py --encounter anacondra|cobrahn|kresh|pythas|skum|serpentis|verdan|mutanus` prepares all eight exact local Normal identities (encounters585–592/bits0–7), checking pinned header/instance hashes and source AI identity. Source8 primaries match journal/model rows; no guessed actors or placements. Copy-only SQL preserves unrelated bindings and is idempotent; no canonical mutation. Cobrahn3669→586/bit1 is Journal475/actor1046/display4213.
 - [x] Cobrahn Lightning Bolt20805 existing SmartAI row first0ms/repeat6–8s produces real Nature damage after its3s cast plus missile flight (speed24yd/s, minimum5yd unit distance). Fixture pins only the successful branch of its80% chance, retaining the selected source repeat, spell and target. Generic bound BossAi engage/death emits successful encounter586, never585.
 - [ ] Source death action34 remains unsupported. Cobrahn source/compatibility ordinal0 differs from DB2 lockout bit1; generic BossAi lifecycle masks that missing source callback and is not proof of its interpretation. Aggro text, other chance outcomes, loot/lockout/native and full-instance acceptance remain open.
 - [ ] Full Wailing Caverns four-druid completion, disciple action0/escort, Mutanus spawning, loot/lockout/native gates remain open. No correction of authored SmartScript parameters or replacement with Classic schedules.
