@@ -115,6 +115,7 @@ fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
 #[test]
 fn follower_lantha_felguard_interrupts_with_learned_axe_toss_without_canceling_owner_cast() {
     let (mut f, pet) = felguard_at_level(17); // SpellLevels89766: learned at17, CreatureFamily29/SkillLine761.
+    let before = count_persisted_rows(f.h.app.world());
     let charm =
         f.h.app
             .world()
@@ -166,7 +167,11 @@ fn follower_lantha_felguard_interrupts_with_learned_axe_toss_without_canceling_o
         "authored Axe Toss child347008 interrupt missing: {:?}",
         f.h.inbox.log
     );
-    assert_eq!(count_persisted_rows(f.h.app.world()), 0);
+    assert_eq!(
+        count_persisted_rows(f.h.app.world()),
+        before,
+        "NPC pet kick must preserve existing fixture persistence without adding NPC rows"
+    );
 }
 
 #[test]
@@ -186,6 +191,112 @@ fn follower_lantha_felguard_does_not_invent_axe_toss_below_its_authored_level() 
             .go
             .iter()
             .any(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
+    );
+}
+
+#[test]
+fn follower_lantha_felguard_cooldown_preserves_damage_priority() {
+    let (mut f, pet) = felguard_at_level(17);
+    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
+    super::update_ai(f.h.app.world_mut());
+    f.h.advance(160);
+    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
+    super::update_ai(f.h.app.world_mut());
+    f.h.advance(8);
+    assert!(
+        f.h.app
+            .world()
+            .get::<shared::casting::CastState>(f.h.npc)
+            .is_some()
+    );
+    assert_eq!(
+        f.h.inbox
+            .go
+            .iter()
+            .filter(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
+            .count(),
+        1
+    );
+    assert_lantha_damage_priority(&f);
+}
+
+#[test]
+fn follower_lantha_felguard_does_not_waste_axe_toss_on_non_interruptible_fireball() {
+    let (mut f, pet) = felguard_at_level(17);
+    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
+    f.h.app
+        .world_mut()
+        .get_mut::<shared::casting::CastState>(f.h.npc)
+        .unwrap()
+        .interruptible = false;
+    super::update_ai(f.h.app.world_mut());
+    f.h.advance(8);
+    assert!(
+        f.h.app
+            .world()
+            .get::<shared::casting::CastState>(f.h.npc)
+            .is_some()
+    );
+    assert!(
+        !f.h.inbox
+            .go
+            .iter()
+            .any(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
+    );
+}
+
+#[test]
+fn follower_lantha_felguard_stun_blocks_axe_toss_without_stopping_owner_damage() {
+    let (mut f, pet) = felguard_at_level(17);
+    let stunner = crate::spell_cast::test_harness::spawn_npc(&mut f.h.app, 0.0);
+    super::utility_tests::prepare_enemy_spec(&mut f.h, stunner, 66);
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), stunner, 853, Some(pet), false).unwrap();
+    assert!(
+        f.h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(pet)
+            .unwrap()
+            .is_stunned()
+    );
+    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
+    super::update_ai(f.h.app.world_mut());
+    f.h.advance(8);
+    assert!(
+        f.h.app
+            .world()
+            .get::<shared::casting::CastState>(f.h.npc)
+            .is_some()
+    );
+    assert!(
+        !f.h.inbox
+            .go
+            .iter()
+            .any(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
+    );
+    assert_lantha_damage_priority(&f);
+}
+
+fn assert_lantha_damage_priority(f: &PetFixture) {
+    let profile =
+        &f.h.app
+            .world()
+            .get::<super::Follower>(f.unit)
+            .unwrap()
+            .profile;
+    let spells = [profile.attack_spell, profile.cooldown_spell];
+    let casting =
+        f.h.app
+            .world()
+            .get::<shared::casting::CastState>(f.unit)
+            .is_some_and(|cast| spells.contains(&cast.spell_id));
+    let launched =
+        f.h.inbox
+            .go
+            .iter()
+            .any(|cast| cast.caster == f.unit.to_bits() && spells.contains(&cast.spell_id));
+    assert!(
+        casting || launched,
+        "failed pet readiness must leave the actual sourced damage priority available"
     );
 }
 
