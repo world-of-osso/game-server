@@ -159,6 +159,8 @@ pub const FLY: u32 = 201;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
 pub const ADV_FLYING: u32 = 446;
+/// Unit::SpellCriticalDamageBonus / CalculateMeleeDamage, school-mask multiplier.
+pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
@@ -252,6 +254,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DECREASE_SPEED
         | MOD_CASTING_SPEED_NOT_STACK
         | MOD_DAMAGE_PERCENT_DONE
+        | MOD_CRIT_DAMAGE_BONUS
         | MOD_THREAT
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
