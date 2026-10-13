@@ -94,7 +94,7 @@ pub(crate) fn face_player(world: &mut World, player: Entity, yaw: f32) {
         fall.epoch = epoch;
     }
     world
-        .get_mut::<Rotation>(player)
+        .get_mut::<shared::components::Rotation>(player)
         .expect("validated player rotation")
         .y = yaw;
     world
