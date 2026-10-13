@@ -73,6 +73,8 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 
 ### Continued source-backed coverage
 
+- Modifier122 PlayerMapInstanceType compares the reference map's authored raw InstanceType, not guessed map/copy/difficulty categories. World0 is valid; unknown types and absent reference map cannot qualify. Arena4/Battleground3 predicates remain distinct through native killing-blow, kill-reward and queued death events. This does not enable missing type18 raid-death production.
+
 - Type70 BG/arena kill rewards use committed lethal damage, controlling player and accepted in-progress match. Killer receives one credit; same-team online in-world recipients require that copy and group reward distance, using corpse position when dead and combat reaches in the distance. Nonlethal/dead replay, self/world/inactive/unaccepted cases cannot credit this path. World honor eligibility, lifetime honor counters and scoreboard honorable-kill availability remain separate missing producers; no generic killing-blow substitute.
 
 - Modifier29 LessThanTappers uses the full authoritative group roster at the criteria event, including offline members; known solo satisfies the positive limit. Count must be strictly less than Asset. Missing group authority/reference player cannot qualify. Difficulty/other predicates remain conjunctive; physical proximity does not replace group size.

@@ -108,6 +108,13 @@ class Conditions(unittest.TestCase):
         modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 29, 9)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
 
+    def test_map_instance_type_preserves_exact_type_including_world_zero(self):
+        for instance_type in (0, 1, 2, 3, 4, 5):
+            modifiers = {10: node(0, 4), 11: node(10, 2, 122, instance_type)}
+            self.assertEqual(self.compile(modifiers), {1: [None, ((122, instance_type),)]})
+        modifiers[11]['Asset'] = '128'
+        self.assertEqual(self.compile(modifiers), {}, 'unknown out-of-range type stays disabled')
+
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
         with closing(sqlite3.connect(':memory:')) as db:
             db.executescript('''
