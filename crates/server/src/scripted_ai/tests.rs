@@ -49,9 +49,9 @@ const OTHER_COPY: InMap = InMap {
     instance_id: 2,
 };
 /// Spells the scripts cast, the spell Wildly Stabbing triggers, and a player
-/// Fireball (133) to hit bosses with.
-const SPELLS: [u32; 12] = [
-    86604, 86620, 86736, 12466, 86633, 86636, 86726, 86727, 86729, 55964, 55966, 133,
+/// Fireball (133) to hit bosses with, and Eye of Divinity's native type4 detection.
+const SPELLS: [u32; 13] = [
+    86604, 86620, 86736, 12466, 86633, 86636, 86726, 86727, 86729, 55964, 55966, 133, 23101,
 ];
 
 struct Data {
@@ -919,6 +919,19 @@ fn randolph_moloch_vanishes_below_71_percent_and_shadowsteps_behind_a_player() {
         return;
     };
     let player = h.player();
+    // TC Object.cpp:1003 requires reciprocal type4 flags for an invisible caster
+    // to detect a unit. Eye of Divinity's1000 cannot reveal Vanish's9999, but
+    // supplies that flag. FULL_MASK does not include IGNORE_TARGET_CHECK.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: player,
+            target: player,
+            spell_id: 23101,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     h.engage(moloch);
     h.advance(0.1);
     assert!(said(h.inbox(0)).iter().any(|(_, _, text)| text
@@ -986,6 +999,51 @@ fn randolph_moloch_vanishes_below_71_percent_and_shadowsteps_behind_a_player() {
     h.hit_pct(moloch, 3.0);
     h.advance(6.0);
     assert_eq!(vanishes(&h), 2);
+}
+
+#[test]
+fn randolph_moloch_shadowstep_requires_reciprocal_detection_until_vanish_expires() {
+    let Some((mut h, moloch)) = Harness::new(NPC_RANDOLPH_MOLOCH, &[]) else {
+        return;
+    };
+    let player = h.player();
+    h.engage(moloch);
+    h.advance(0.1);
+    h.set_health_pct(moloch, 72.0);
+    h.hit_pct(moloch, 3.0);
+    h.advance(1.3);
+    assert!(h.has_aura(moloch, 55964));
+    h.advance(2.0);
+    // The source event attempts55966 while Vanish still lasts. A plain player
+    // lacks type4 detection, so TC CheckTarget rejects it, even when triggered.
+    assert_eq!(h.casts(0, moloch, 55966), 0);
+    assert_eq!(
+        crate::spell_cast::creature_cast(h.app.world_mut(), moloch, 55966, Some(player), true),
+        Err(crate::spell_cast::CastFailure::InvalidTarget)
+    );
+    assert!(h.has_aura(moloch, 55964));
+    h.advance(0.5);
+    assert!(!h.has_aura(moloch, 55964));
+    assert_eq!(
+        h.casts(0, moloch, 55966),
+        0,
+        "the source event does not retry"
+    );
+    // The same native cast succeeds after invisibility expires, without a
+    // fabricated target-check exemption or detection aura on the boss.
+    assert_eq!(
+        crate::spell_cast::creature_cast(h.app.world_mut(), moloch, 55966, Some(player), true),
+        Ok(())
+    );
+    // Observe the instant teleport before aggressive pursuit resumes next tick.
+    let behind = h.wow_position(player) + Vec3::new(4.0, 0.0, 0.0);
+    let moloch_at = h.wow_position(moloch);
+    assert!(
+        Vec2::new(moloch_at.x - behind.x, moloch_at.y - behind.y).length() < 0.5,
+        "{moloch_at} vs {behind}"
+    );
+    h.advance(0.1);
+    assert_eq!(h.casts(0, moloch, 55966), 1);
 }
 
 #[test]
