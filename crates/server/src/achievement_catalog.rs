@@ -372,6 +372,8 @@ impl MythicRequirements {
     }
 }
 
+#[path = "achievement_aura_rules.rs"]
+mod aura_rules;
 #[path = "achievement_difficulty_rules.rs"]
 mod difficulty_rules;
 #[path = "achievement_mythic_predicates.rs"]
@@ -382,8 +384,7 @@ mod overlays;
 mod single_modifiers;
 
 /// Compiled TC DungeonDifficulty68/LegacyDungeonDifficulty20 tree: the player's current
-/// map difficulty must
-/// (`allowed`) or must not be one of `ids`.
+/// map difficulty must (`allowed`) or must not be one of `ids`.
 #[derive(Debug, Clone, Copy)]
 struct DifficultyRule {
     allowed: bool,
@@ -396,6 +397,15 @@ impl DifficultyRule {
     }
 }
 
+/// TC ModifierTree facts of the reference player at the criteria update.
+#[derive(Debug, Default)]
+pub(crate) struct PlayerConditions {
+    /// Difficulty.db2 ID of the current map copy; 0 on continents.
+    pub difficulty: u32,
+    /// Spell IDs of the player's active auras.
+    pub auras: BTreeSet<u32>,
+}
+
 #[derive(Debug, Clone)]
 struct Criteria {
     kind: u32,
@@ -405,8 +415,20 @@ struct Criteria {
     /// Compiled sole PlayerClass26/BattlePetSpecies91 requirement.
     modifier_asset: Option<u32>,
     difficulty: Option<DifficultyRule>,
+    /// Compiled sole PlayerHasAura8 spell.
+    aura: Option<u32>,
     exploration_bits: Vec<u32>,
     area_members: BTreeSet<u32>,
+}
+
+impl Criteria {
+    fn conditions_hold(&self, conditions: &PlayerConditions) -> bool {
+        self.difficulty
+            .is_none_or(|rule| rule.admits(conditions.difficulty))
+            && self
+                .aura
+                .is_none_or(|spell| conditions.auras.contains(&spell))
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -527,11 +549,16 @@ impl AchievementCatalog {
         completed_map: Option<u32>,
         race: u8,
     ) -> Vec<AchievementToastSnapshot> {
-        self.update_at(state, event, completed_map, race, 0)
+        self.update_at(
+            state,
+            event,
+            completed_map,
+            race,
+            &PlayerConditions::default(),
+        )
     }
 
-    /// Apply one event by a player whose current map copy has Difficulty.db2 ID
-    /// `difficulty`, and return newly earned toasts. Map achievements are granted
+    /// Apply one event by a player with `conditions`, and return newly earned toasts. Map achievements are granted
     /// only at the complete-run boundary, not on a partial dungeon's boss kill.
     pub fn update_at(
         &self,
@@ -539,7 +566,7 @@ impl AchievementCatalog {
         event: CriteriaEvent,
         completed_map: Option<u32>,
         race: u8,
-        difficulty: u32,
+        conditions: &PlayerConditions,
     ) -> Vec<AchievementToastSnapshot> {
         if !state.signed_reputation {
             state
@@ -549,11 +576,7 @@ impl AchievementCatalog {
         }
         for &id in self.event_criteria.get(&event.kind()).into_iter().flatten() {
             let criteria = &self.criteria[&id];
-            if !event.matches(criteria)
-                || criteria
-                    .difficulty
-                    .is_some_and(|rule| !rule.admits(difficulty))
-            {
+            if !event.matches(criteria) || !criteria.conditions_hold(conditions) {
                 continue;
             }
             Self::update_counter(state, id, event);
@@ -862,8 +885,9 @@ impl AchievementCatalog {
         root: u32,
         state: &mut PlayerAchievementState,
         event: CriteriaEvent,
+        conditions: &PlayerConditions,
     ) -> bool {
-        self.update_roots_event(std::iter::once(root), state, event)
+        self.update_roots_event(std::iter::once(root), state, event, conditions)
     }
 
     /// Multiple visible activities may share criteria; one actual event counts once.
@@ -872,6 +896,7 @@ impl AchievementCatalog {
         roots: impl Iterator<Item = u32>,
         state: &mut PlayerAchievementState,
         event: CriteriaEvent,
+        conditions: &PlayerConditions,
     ) -> bool {
         let ids: BTreeSet<_> = roots
             .flat_map(|root| self.criterion_tree_ids(root))
@@ -879,11 +904,9 @@ impl AchievementCatalog {
             .collect();
         let mut changed = false;
         for id in ids {
-            if self
-                .criteria
-                .get(&id)
-                .is_some_and(|row| row.supported && event.matches(row))
-            {
+            if self.criteria.get(&id).is_some_and(|row| {
+                row.supported && event.matches(row) && row.conditions_hold(conditions)
+            }) {
                 Self::update_counter(state, id, event);
                 changed = true;
             }
@@ -1105,6 +1128,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         .flat_map(|template| shared::battleground::pvp_stat_columns(template.map_id))
         .map(|column| column.stat)
         .collect();
+    let mut known_spell = conn.prepare("SELECT EXISTS(SELECT 1 FROM spell WHERE ID = ?1)")?;
     let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM area_table a WHERE a.ID = c.Asset), EXISTS(SELECT 1 FROM taxi_nodes t WHERE t.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
@@ -1133,6 +1157,13 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             None
         };
         let difficulty = difficulty_rules::difficulty_rule(criteria_id, conditional[0]);
+        // TC Unit::HasAura can only hold a spell the server knows.
+        let aura = match aura_rules::aura_rule(criteria_id, conditional[0]) {
+            Some(spell) if known_spell.query_row([spell], |row| row.get::<_, bool>(0))? => {
+                Some(spell)
+            }
+            _ => None,
+        };
         let supported_predicate = (mythic.is_some() || modifier_asset.is_some())
             && conditional.iter().skip(1).all(|value| *value == 0);
         Ok((
@@ -1188,9 +1219,10 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                             && row.get::<_, bool>(8)?
                             && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
                         && (conditional.iter().all(|value| *value == 0)
-                            || (difficulty.is_some()
+                            || ((difficulty.is_some() || aura.is_some())
                                 && conditional.iter().skip(1).all(|value| *value == 0)))),
                 difficulty,
+                aura,
             },
         ))
     })?;

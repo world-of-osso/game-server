@@ -26,15 +26,30 @@ fn scenarios_active_tree_uses_fresh_criteria_and_completes_once() {
     let def = gnomeregan();
     let mut run = ScenarioRun::default();
     assert_eq!(run.snapshot(&def, &catalog).stage, 1);
-    assert!(!run.apply(&def, &catalog, CriteriaEvent::KillCreature(7361)));
+    assert!(!run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7361),
+        &PlayerConditions::default()
+    ));
     assert!(!run.snapshot(&def, &catalog).completed);
-    assert!(run.apply(&def, &catalog, CriteriaEvent::KillCreature(7800)));
+    assert!(run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7800),
+        &PlayerConditions::default()
+    ));
     let snapshot = run.snapshot(&def, &catalog);
     assert!(snapshot.completed);
     assert_eq!(snapshot.stage, 2);
     assert_eq!(snapshot.num_stages, 1);
     assert!(snapshot.criteria.is_empty());
-    assert!(!run.apply(&def, &catalog, CriteriaEvent::KillCreature(7800)));
+    assert!(!run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7800),
+        &PlayerConditions::default()
+    ));
     assert_eq!(run.criteria.criteria_progress[&18529], 1);
     assert_eq!(ScenarioRun::default().snapshot(&def, &catalog).stage, 1);
 }
@@ -52,11 +67,26 @@ fn scenarios_ordered_progress_does_not_credit_future_steps_or_lifetime_achieveme
         root: 36988,
     });
     let mut run = ScenarioRun::default();
-    assert!(!run.apply(&def, &catalog, CriteriaEvent::KillCreature(7361)));
-    assert!(run.apply(&def, &catalog, CriteriaEvent::KillCreature(7800)));
+    assert!(!run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7361),
+        &PlayerConditions::default()
+    ));
+    assert!(run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7800),
+        &PlayerConditions::default()
+    ));
     assert_eq!(run.snapshot(&def, &catalog).stage, 2);
     assert!(!run.snapshot(&def, &catalog).completed);
-    assert!(run.apply(&def, &catalog, CriteriaEvent::KillCreature(7361)));
+    assert!(run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7361),
+        &PlayerConditions::default()
+    ));
     assert!(run.snapshot(&def, &catalog).completed);
     assert!(run.criteria.earned_ids.is_empty());
 }

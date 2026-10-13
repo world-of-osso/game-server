@@ -16,7 +16,9 @@ use crate::persistence::{self, GameDatabase};
 
 #[path = "achievement_catalog.rs"]
 mod catalog;
-pub(crate) use catalog::{AchievementCatalog, CriteriaEvent, load_achievement_catalog};
+pub(crate) use catalog::{
+    AchievementCatalog, CriteriaEvent, PlayerConditions, load_achievement_catalog,
+};
 #[path = "achievement_account.rs"]
 mod account_store;
 #[path = "dungeon_progress.rs"]
@@ -848,13 +850,32 @@ fn connection_for_player(world: &mut World, player: Entity) -> Option<Entity> {
         .find_map(|(connection, link)| (link.0 == player).then_some(connection))
 }
 
-/// TC Map::GetDifficultyID of the player's current map: its copy's difficulty, else 0.
-fn current_difficulty(world: &World, player: Entity) -> u32 {
+/// TC Map::GetDifficultyID of a map: its copy's difficulty, else 0.
+fn map_difficulty(world: &World, map: Option<InMap>) -> u32 {
     let instances = world.get_resource::<crate::maps::InstanceManager>();
-    world
-        .get::<InMap>(player)
-        .and_then(|map| instances?.copy_difficulty(*map))
+    map.and_then(|map| instances?.copy_difficulty(map))
         .map_or(0, |difficulty| difficulty.difficulty_id)
+}
+
+/// The reference player's ModifierTree facts at this criteria update.
+pub(crate) fn player_conditions(world: &World, player: Entity) -> PlayerConditions {
+    PlayerConditions {
+        difficulty: map_difficulty(world, world.get::<InMap>(player).copied()),
+        auras: world
+            .get::<crate::auras::ActiveAuras>(player)
+            .into_iter()
+            .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
+            .collect(),
+    }
+}
+
+/// Map-wide credit has no reference player: only the copy's difficulty is known,
+/// so aura-gated criteria cannot hold.
+pub(crate) fn map_conditions(world: &World, map: InMap) -> PlayerConditions {
+    PlayerConditions {
+        difficulty: map_difficulty(world, Some(map)),
+        auras: BTreeSet::new(),
+    }
 }
 
 fn update_player_events(
@@ -867,7 +888,7 @@ fn update_player_events(
         return None;
     }
     let race = world.get::<Player>(player)?.race;
-    let difficulty = current_difficulty(world, player);
+    let conditions = player_conditions(world, player);
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let owner = world
         .query::<(&Authenticated, &PlayerLink, &InWorld)>()
@@ -880,7 +901,7 @@ fn update_player_events(
         let mut toasts: Vec<_> = events
             .iter()
             .flat_map(|event| {
-                catalog.update_at(&mut state, *event, completed_map, race, difficulty)
+                catalog.update_at(&mut state, *event, completed_map, race, &conditions)
             })
             .collect();
         for toast in &toasts {
@@ -1062,8 +1083,9 @@ pub(crate) fn record_encounter_defeat(
     if let Some(creature) = creature {
         events.push(CriteriaEvent::KillCreature(creature));
     }
+    let conditions = map_conditions(world, map);
     for &event in &events {
-        scenario::record_map(world, map, event);
+        scenario::record_map(world, map, event, &conditions);
     }
     for player in crate::scripted_ai::instance_script::players_in_map(world, map) {
         for &event in &events {
