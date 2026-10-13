@@ -63,12 +63,8 @@ pub(crate) fn check_cast(world: &mut World, caster: Entity, spell: u32) -> Resul
     }
 }
 
-/// Auras owned by the player are checked at their owner's position, regardless of caster.
-pub(crate) fn remove_outside_auras(world: &mut World, owner: Entity) {
-    if world.get::<Player>(owner).is_none() {
-        return;
-    }
-    let restricted: Vec<_> = world
+fn restricted_auras(world: &World, owner: Entity) -> Vec<(u32, u32)> {
+    world
         .get::<crate::auras::ActiveAuras>(owner)
         .map(|auras| {
             auras
@@ -81,7 +77,15 @@ pub(crate) fn remove_outside_auras(world: &mut World, owner: Entity) {
                 })
                 .collect()
         })
-        .unwrap_or_default();
+        .unwrap_or_default()
+}
+
+/// Auras owned by the player are checked at their owner's position, regardless of caster.
+pub(crate) fn remove_outside_auras(world: &mut World, owner: Entity) {
+    if world.get::<Player>(owner).is_none() {
+        return;
+    }
+    let restricted = restricted_auras(world, owner);
     if restricted.is_empty() {
         return;
     }
