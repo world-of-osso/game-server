@@ -114,6 +114,8 @@ mod hazard_tests;
 #[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
+mod pet_tests;
+#[cfg(test)]
 mod profile_behavior_tests;
 #[cfg(test)]
 mod tests;

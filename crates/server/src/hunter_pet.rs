@@ -144,7 +144,8 @@ fn default_pet_specialization(world: &World, family: u32) -> Option<u32> {
 /// login. `summoned` is the pet out in the world.
 #[derive(Component, Debug, Clone)]
 pub struct PetStable {
-    pub character_id: u64,
+    /// None for runtime-only authenticated NPC companions; never a synthetic ID.
+    pub character_id: Option<u64>,
     pub stored: StoredPetStable,
     pub summoned: Option<Entity>,
 }
@@ -305,7 +306,7 @@ fn check_summon_pet(
     effect: &SpellEffect,
 ) -> Result<(), CastFailure> {
     if effect.misc_values[0] != 0 {
-        let class = world.get::<Player>(caster).map(|player| player.class);
+        let class = owner_class(world, caster);
         let demon = DEMON_SUMMONS.contains(&spell.id) && class == Some(CLASS_WARLOCK);
         let elemental = spell.id == SUMMON_WATER_ELEMENTAL && class == Some(CLASS_MAGE);
         if !(demon || elemental) {
@@ -406,7 +407,11 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
 /// `Player::GetOrInitPetStable`: attach this character's pet storage once.
 pub(crate) fn init_pet_stable(world: &mut World, owner: Entity) -> Option<()> {
     if world.get::<PetStable>(owner).is_none() {
-        let character_id = character_id(world, owner)?;
+        let character_id = if world.get::<crate::followers::Follower>(owner).is_some() {
+            None
+        } else {
+            Some(character_id(world, owner)?)
+        };
         world.entity_mut(owner).insert(PetStable {
             character_id,
             stored: StoredPetStable::default(),
@@ -436,7 +441,7 @@ fn character_id(world: &mut World, player: Entity) -> Option<u64> {
 /// Authored demon summons create/load through the existing controlled-pet path.
 pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     let owner = ctx.caster;
-    if world.get::<Player>(owner).is_none() {
+    if owner_class(world, owner).is_none() {
         return;
     }
     let Some((at, facing)) = close_point(world, owner) else {
@@ -737,9 +742,7 @@ fn spawn_pet(
         .active
         .get(usize::from(slot))?
         .clone()?;
-    let demon = world
-        .get::<Player>(owner)
-        .is_some_and(|player| player.class == CLASS_WARLOCK);
+    let demon = owner_class(world, owner) == Some(CLASS_WARLOCK);
     let summoned = is_summoned_pet_owner(world, owner);
     if summoned {
         // Pet::LoadPetFromDB: SUMMON_PET always takes the owner's level.
@@ -758,17 +761,15 @@ fn spawn_pet(
             pet_max_health(data, template, stored.level),
             CreatureClassification::from_rank(template.rank)
                 .expect("creature_template.rank is validated when loaded"),
-            world
-                .get::<Player>(owner)
-                .filter(|player| player.class == CLASS_MAGE)
-                .map(|_| authored_pet_mana(data, template, stored.level)),
+            (owner_class(world, owner) == Some(CLASS_MAGE))
+                .then(|| authored_pet_mana(data, template, stored.level)),
         )
     };
     let map = *world.get::<InMap>(owner)?;
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
-    let power = match world.get::<Player>(owner)?.class {
+    let power = match owner_class(world, owner)? {
         CLASS_HUNTER => PowerType::Focus,
         CLASS_WARLOCK => demon_spell_power(world),
         CLASS_MAGE => PowerType::Mana,
@@ -836,10 +837,17 @@ fn spawn_pet(
     Some((pet.id(), stored))
 }
 
-pub(crate) fn is_summoned_pet_owner(world: &World, owner: Entity) -> bool {
+fn owner_class(world: &World, owner: Entity) -> Option<u8> {
+    if let Some(player) = world.get::<Player>(owner) {
+        return Some(player.class);
+    }
     world
-        .get::<Player>(owner)
-        .is_some_and(|player| matches!(player.class, CLASS_WARLOCK | CLASS_MAGE))
+        .get::<crate::followers::Follower>(owner)
+        .map(|follower| follower.profile.class_id)
+}
+
+pub(crate) fn is_summoned_pet_owner(world: &World, owner: Entity) -> bool {
+    matches!(owner_class(world, owner), Some(CLASS_WARLOCK | CLASS_MAGE))
 }
 
 fn authored_pet_mana(data: &WorldData, template: &CreatureTemplate, level: u8) -> f32 {
@@ -920,7 +928,9 @@ pub(crate) fn save_stable(world: &World, owner: Entity) {
     ) else {
         return;
     };
-    save_pet_stable(&db.db, stable.character_id, &stable.stored);
+    if let Some(character_id) = stable.character_id {
+        save_pet_stable(&db.db, character_id, &stable.stored);
+    }
 }
 
 /// At world entry: the stored stable, and `Player::LoadPet` re-summons the pet that was
@@ -955,7 +965,7 @@ fn restore_pet_stable(
     };
     let current = stored.current;
     entity.insert(PetStable {
-        character_id,
+        character_id: Some(character_id),
         stored,
         summoned: None,
     });
