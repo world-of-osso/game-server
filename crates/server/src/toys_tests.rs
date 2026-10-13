@@ -4344,7 +4344,10 @@ fn toyfx18_summoned_objects_replicate_ready_collision_state() {
         Some(&shared::protocol::GameObjectCollision(true))
     );
     learn_effect_toy(&mut h, character, 45011);
-    assert_eq!(activate(&mut h, 45011)[0].error, None);
+    assert_eq!(
+        activate_at(&mut h, 45011, Some([4.0, 0.0, 0.0]))[0].error,
+        None
+    );
     h.advance(70);
     let world = h.app.world_mut();
     let banners: Vec<_> = world
