@@ -1,6 +1,7 @@
 //! Partial Golden Serpent port from TC a352b1fa boss_golden_serpent.cpp.
 //! TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
-//! Also the Serpentine Seal -> Shadow of Zul temple event from kings_rest.cpp.
+//! Also the Serpentine Seal -> Shadow of Zul temple event and Shadow-Borne temple
+//! trash from kings_rest.cpp.
 //! Intro fly anim tier/hover state, GO state visuals, near-point collision-angle
 //! search and native visuals remain gaps.
 mod gold_follow;
@@ -8,6 +9,7 @@ mod golden_serpent;
 mod molten_gold;
 mod serpentine_seal;
 mod shadow_of_zul;
+mod temple_trash;
 use super::{CreatureAi, Ctx, DamageTaken};
 use bevy::prelude::*;
 pub(crate) use gold_follow::{
@@ -42,7 +44,7 @@ pub(crate) fn is_creature_script(name: &str) -> bool {
     matches!(
         name,
         ANIMATED_GOLD_SCRIPT | GOLDEN_SERPENT_SCRIPT | shadow_of_zul::SCRIPT
-    )
+    ) || temple_trash::is_script(name)
 }
 
 pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Box<dyn CreatureAi>> {
@@ -59,6 +61,9 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
     }
     if name == shadow_of_zul::SCRIPT {
         return Some(Box::new(shadow_of_zul::ShadowOfZul::default()));
+    }
+    if temple_trash::is_script(name) {
+        return temple_trash::creature_ai(name);
     }
     Some(Box::new(AnimatedGold::default()))
 }
