@@ -119,6 +119,7 @@ fn strafe_run_frame(client: &mut Position) -> PlayerInput {
     client.x += step.x;
     client.z += step.z;
     PlayerInput {
+        transport: None,
         // `movement_to_direction(MoveDirection::Forward, yaw)`: what the client sends.
         direction: forward.to_array(),
         facing_yaw: yaw,

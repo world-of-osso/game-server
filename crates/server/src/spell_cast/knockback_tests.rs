@@ -210,6 +210,7 @@ fn arena_knockback_source_effect_drives_ballistic_player_motion_and_rejects_owne
         .get_mut::<MessageSender<PlayerInput>>(h.connection)
         .unwrap()
         .send::<InputChannel>(PlayerInput {
+            transport: None,
             direction: [1.0, 0.0, 0.0],
             facing_yaw: 0.0,
             jumping: false,
@@ -249,6 +250,7 @@ fn arena_knockback_source_effect_drives_ballistic_player_motion_and_rejects_owne
         .get_mut::<MessageSender<PlayerInput>>(h.connection)
         .unwrap()
         .send::<InputChannel>(PlayerInput {
+            transport: None,
             direction: [1.0, 0.0, 0.0],
             facing_yaw: 0.0,
             jumping: false,
