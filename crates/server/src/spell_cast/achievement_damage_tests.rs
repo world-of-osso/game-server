@@ -154,6 +154,10 @@ fn achievements_criteria_kill_any_creature_uses_real_taps_group_range_and_corpse
         template_id: 299,
         name,
     });
+    *h.app.world_mut().get_mut::<Health>(other).unwrap() = Health {
+        current: 100.0,
+        max: 100.0,
+    };
     // Moving the previously distant group member into another copy cannot make it eligible.
     let remote = actors[4].1;
     h.app.world_mut().entity_mut(remote).insert((
@@ -168,6 +172,7 @@ fn achievements_criteria_kill_any_creature_uses_real_taps_group_range_and_corpse
         },
     ));
     crate::combat::deal_direct_damage(h.app.world_mut(), h.caster, other, 1000.0);
+    assert_eq!(h.health(other), 0.0);
     h.advance(3);
     assert_eq!(
         h.app
