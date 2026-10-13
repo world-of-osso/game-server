@@ -132,6 +132,7 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
         history.category_ready_at.insert(spell.id, 5.0);
     }
     history.gcd_ready_at.insert(133, 5.0);
+    history.school_locked_until[2] = 5.0;
     history.charges.insert(
         10,
         ChargeState {
@@ -160,4 +161,28 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
         "TC cooldown reset does not reset charges"
     );
     assert_eq!(history.gcd_ready_at[&133], 5.0);
+    assert_eq!(history.school_locked_until[2], 5.0);
+}
+
+#[test]
+fn arena_entry_resets_active_pet_even_for_long_excluded_cooldowns() {
+    let spell = cooldown_spell(1, 600_000, 600_000, true);
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(SpellStore::fixture(vec![spell.clone()]));
+    let mut history = SpellHistory::default();
+    history.spell_ready_at.insert(1, 600.0);
+    history.category_ready_at.insert(1, 600.0);
+    let pet = world.spawn(history).id();
+    let player = world
+        .spawn(crate::hunter_pet::PetStable {
+            character_id: 1,
+            stored: Default::default(),
+            summoned: Some(pet),
+        })
+        .id();
+    reset_arena_cooldowns(&mut world, player);
+    let history = world.get::<SpellHistory>(pet).unwrap();
+    assert!(!history.on_cooldown(&spell, 0.0));
+    assert!(history.category_ready_at.is_empty());
 }
