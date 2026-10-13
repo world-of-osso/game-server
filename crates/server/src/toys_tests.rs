@@ -3948,33 +3948,12 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
     assert_eq!(spells.len(), 69);
     for (spell, group) in spells {
         let spell: u32 = spell.parse().unwrap();
-        let toy = h
-            .app
-            .world()
-            .resource::<ToyCatalog>()
-            .0
-            .values()
-            .find(|toy| toy.snapshot.spell_id == Some(spell))
-            .unwrap()
-            .clone();
         for absent in [false, true] {
             if absent {
                 h.app.world_mut().entity_mut(h.caster).remove::<Position>();
             }
-            let failure = crate::spell_cast::cast_toy_spell(
-                h.app.world_mut(),
-                h.caster,
-                &toy,
-                None,
-                1,
-                &UseToy {
-                    item_id: toy.snapshot.item_id,
-                    target_entity: None,
-                    destination: None,
-                    witness: None,
-                },
-            )
-            .unwrap_err();
+            let failure = crate::spell_cast::cast_granted(h.app.world_mut(), h.caster, spell, None)
+                .unwrap_err();
             assert_eq!(
                 failure.to_contract(),
                 (
