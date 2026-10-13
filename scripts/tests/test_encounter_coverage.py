@@ -80,6 +80,17 @@ class CoverageTests(unittest.TestCase):
         self.assertNotIn('Helix Gearbreaker [47297]', rendered)
         self.assertIn('pinned TC has no Deadmines boss AI', rendered)
 
+    def test_wailing_instance_state_action_is_not_universal_support(self):
+        row = dict(id=0, event_type=6, action_type=34, target_type=1,
+                   event_flags=0, action_param1=3, action_param2=3, action_param3=1)
+        self.assertEqual(coverage.row_gaps(row, map_id=43), [])
+        self.assertEqual(coverage.row_gaps(row, map_id=36), ['action 34'])
+        row['action_param3'] = 0
+        self.assertEqual(coverage.row_gaps(row, map_id=43), ['action 34'])
+        row['action_param3'] = 1
+        row['action_param1'] = 8
+        self.assertEqual(coverage.row_gaps(row, map_id=43), ['action 34'])
+
     def test_ambiguous_display_does_not_assign_kill_credit(self):
         actors = [['Council', '', 30, 9, 123, 0, 0, 0, 9]]
         candidates = {(43, 123): [3669, 3670]}
