@@ -4,6 +4,8 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Full-roster criterion limit](systems/dungeon-achievements.md#full-roster-limit-verified-2026-10-13): LessThanTappers29 uses full native group membership, not physical tappers; authored Malygos solo/8/9 roster RED/GREEN, offline-member and persistence controls. +8 ordinary; complete raw inventory counts reconciled. Full boss mechanics/rendering unclaimed.
+
 - 2026-10-13 — [Rated arena map criteria](systems/dungeon-achievements.md#rated-map-wins-and-participation-verified-2026-10-13): committed WinArena32/ParticipateInArena33, qualified native team-size24/ranked60, real-channel2v2/3v3 RED/GREEN and persistence controls; +World Wide Winner699/+40 statistics.5v5/rating39 mapping remain disabled.
 
 - 2026-10-13 — [Per-request emote targets](systems/dungeon-achievements.md#per-request-emote-targets-verified-2026-10-13): native target-entry snapshots, text-only Love225, emote-only TargetCreatureId4; real-channel RED/GREEN and persistence controls. Structural census gains five account achievements; spawn completeness and other target modifiers unclaimed.
