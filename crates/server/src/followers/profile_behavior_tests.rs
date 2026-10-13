@@ -49,6 +49,13 @@ fn assert_profile_combat(entry: u32) {
             .current = 100.0;
     }
     if profile.role == GroupRole::Tank {
+        // Taunts retain native creature-melee miss rolls. This success fixture
+        // fixes only the hit modifier; the real miss boundary is tested below.
+        h.app
+            .world_mut()
+            .get_mut::<crate::auras::AuraStatMods>(unit)
+            .unwrap()
+            .melee_hit_chance_pct = 100.0;
         h.app.world_mut().entity_mut(enemy).insert((
             shared::components::ThreatTable::default(),
             crate::creature_ai::CreatureState::Pursuing {
@@ -121,6 +128,42 @@ fn assert_profile_combat(entry: u32) {
             .is_some_and(|powers| !powers.entries.is_empty()),
         "{} native class resources must be replicated",
         profile.name
+    );
+}
+
+#[test]
+fn follower_real_taunt_miss_keeps_the_attacked_ally_as_victim() {
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<crate::auras::AuraStatMods>(unit)
+        .unwrap()
+        .melee_hit_chance_pct = -100.0;
+    h.app.world_mut().entity_mut(enemy).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Pursuing {
+            target: h.caster.to_bits(),
+        },
+        crate::networking::CombatTarget(Some(h.caster)),
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, h.caster, 100.0);
+    update_ai(h.app.world_mut());
+    h.advance(4);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(enemy)
+            .unwrap()
+            .0,
+        Some(h.caster)
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| event.spell_id == Some(62124)
+            && event.kind
+                == shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Miss)),
+        "actual taunt miss log missing: {:?}",
+        h.inbox.log
     );
 }
 
