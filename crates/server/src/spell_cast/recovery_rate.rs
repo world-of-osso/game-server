@@ -126,23 +126,8 @@ fn retime_running_cooldowns(world: &mut World, unit: Entity, aura: &AuraInstance
     };
     let current_time = now(world);
     let store = world.resource::<SpellStore>();
-    let spell_updates: Vec<_> = snapshot
-        .spell_ready_at
-        .iter()
-        .filter_map(|(&id, &deadline)| {
-            calculate_deadline_or_warn(store, aura, id, deadline, current_time, apply)
-                .map(|deadline| (id, deadline))
-        })
-        .collect();
-    let category_updates: Vec<_> = snapshot
-        .category_spell_ids
-        .iter()
-        .filter_map(|(&category, &id)| {
-            let deadline = snapshot.category_ready_at.get(&category)?;
-            calculate_deadline_or_warn(store, aura, id, *deadline, current_time, apply)
-                .map(|deadline| (category, id, deadline))
-        })
-        .collect();
+    let spell_updates = collect_spell_updates(store, &snapshot, aura, current_time, apply);
+    let category_updates = collect_category_updates(store, &snapshot, aura, current_time, apply);
     let affected: BTreeSet<_> = spell_updates
         .iter()
         .map(|(id, _)| *id)
@@ -150,6 +135,41 @@ fn retime_running_cooldowns(world: &mut World, unit: Entity, aura: &AuraInstance
         .collect();
     write_deadlines(world, unit, spell_updates, category_updates);
     publish_cooldowns(world, unit, &affected, current_time);
+}
+
+fn collect_spell_updates(
+    store: &SpellStore,
+    history: &SpellHistory,
+    aura: &AuraInstance,
+    current_time: f64,
+    apply: bool,
+) -> Vec<(u32, f64)> {
+    history
+        .spell_ready_at
+        .iter()
+        .filter_map(|(&id, &deadline)| {
+            calculate_deadline_or_warn(store, aura, id, deadline, current_time, apply)
+                .map(|deadline| (id, deadline))
+        })
+        .collect()
+}
+
+fn collect_category_updates(
+    store: &SpellStore,
+    history: &SpellHistory,
+    aura: &AuraInstance,
+    current_time: f64,
+    apply: bool,
+) -> Vec<(u32, u32, f64)> {
+    history
+        .category_spell_ids
+        .iter()
+        .filter_map(|(&category, &id)| {
+            let deadline = history.category_ready_at.get(&category)?;
+            calculate_deadline_or_warn(store, aura, id, *deadline, current_time, apply)
+                .map(|deadline| (category, id, deadline))
+        })
+        .collect()
 }
 
 fn write_deadlines(
@@ -169,39 +189,44 @@ fn write_deadlines(
     }
 }
 
+fn build_cooldown_update(
+    history: &SpellHistory,
+    id: u32,
+    current_time: f64,
+) -> SpellCooldownUpdate {
+    let category = history
+        .category_spell_ids
+        .iter()
+        .find_map(|(&category, &owner)| (owner == id).then_some(category))
+        .unwrap_or(0);
+    let category_deadline = history
+        .category_ready_at
+        .get(&category)
+        .copied()
+        .unwrap_or(current_time);
+    let spell_deadline = history
+        .spell_ready_at
+        .get(&id)
+        .copied()
+        .unwrap_or(current_time);
+    let remaining_ms =
+        ((spell_deadline.max(category_deadline) - current_time).max(0.0) * 1000.0).round() as u32;
+    SpellCooldownUpdate {
+        spell_id: id,
+        category,
+        duration_ms: remaining_ms,
+        remaining_ms,
+        is_gcd: false,
+    }
+}
+
 fn publish_cooldowns(world: &mut World, unit: Entity, affected: &BTreeSet<u32>, current_time: f64) {
     let history = world
         .get::<SpellHistory>(unit)
         .expect("updated cooldown owner");
     let updates: Vec<_> = affected
         .iter()
-        .map(|&id| {
-            let category = history
-                .category_spell_ids
-                .iter()
-                .find_map(|(&category, &owner)| (owner == id).then_some(category))
-                .unwrap_or(0);
-            let category_deadline = history
-                .category_ready_at
-                .get(&category)
-                .copied()
-                .unwrap_or(current_time);
-            let spell_deadline = history
-                .spell_ready_at
-                .get(&id)
-                .copied()
-                .unwrap_or(current_time);
-            let remaining_ms = ((spell_deadline.max(category_deadline) - current_time).max(0.0)
-                * 1000.0)
-                .round() as u32;
-            SpellCooldownUpdate {
-                spell_id: id,
-                category,
-                duration_ms: remaining_ms,
-                remaining_ms,
-                is_gcd: false,
-            }
-        })
+        .map(|&id| build_cooldown_update(history, id, current_time))
         .collect();
     for update in updates {
         send_to_owner(world, unit, update);
