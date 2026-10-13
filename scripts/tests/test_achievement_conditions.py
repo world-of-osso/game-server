@@ -81,6 +81,15 @@ class Conditions(unittest.TestCase):
             with self.subTest(name):
                 self.assertEqual(self.compile(modifiers), {})
 
+    def test_target_creature_requires_a_per_request_emote_producer(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 4, 1412)}
+        emote = copy.deepcopy(self.criteria)
+        emote[1]['Type'] = '54'
+        self.assertEqual(self.compile(modifiers, emote), {1: [None, ((4, 1412),)]})
+        self.assertEqual(self.compile(modifiers), {}, 'other producers have no target snapshot')
+        modifiers[11] = node(10, 2, 5, 0)
+        self.assertEqual(self.compile(modifiers, emote), {}, 'player/dead/faction targets remain unsupported')
+
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
         with sqlite3.connect(':memory:') as db:
             db.executescript('''
