@@ -337,6 +337,8 @@ fn spawn_object(
         map,
         template.info,
         bounds,
+        // EffectTransmitted/EffectSummonObjectWild create GO_STATE_READY objects.
+        shared::protocol::GameObjectCollision(true),
         SummonedObject {
             owner,
             spell_id,
