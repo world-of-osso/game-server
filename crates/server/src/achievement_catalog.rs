@@ -15,9 +15,9 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
-    66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162, 165,
-    13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    0, 1, 78, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69,
+    73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162,
+    165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -27,6 +27,7 @@ const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
+    KillAnyCreature,
     ReachLevel(u8),
     ActivelyReachLevel(u8),
     ReachMaxLevel(u8),
@@ -129,6 +130,7 @@ impl CriteriaEvent {
     fn kind(self) -> u32 {
         match self {
             Self::KillCreature(_) => 0,
+            Self::KillAnyCreature => 78,
             Self::ReachLevel(_) => 5,
             Self::ActivelyReachLevel(_) => 196,
             Self::ReachMaxLevel(_) => 221,
@@ -242,7 +244,8 @@ impl CriteriaEvent {
                         .max_level_class
                         .is_none_or(|required| required == class)
             }
-            Self::DeliveredKillingBlow
+            Self::KillAnyCreature
+            | Self::DeliveredKillingBlow
             | Self::TotalExaltedFactions(_)
             | Self::TotalReveredFactions(_)
             | Self::TotalHonoredFactions(_)
@@ -1111,7 +1114,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 78) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
