@@ -13,6 +13,8 @@ Facing-only requirements225826/406870, procedural/positioner rendering and gener
 
 ## Contract
 
+- Druid and Priest Statue Set64361/91743 admits only the source complete-zero self cosmetic aura: instant cast,10000ms ordinary aura, ground model253570 at source scale.5. Preserve900000ms item recovery across natural aura removal; no creature, gameplay bonus or generic aura4 admission. Native certification requires actual learning/use and visible model lifecycle per skin.
+
 - War Banners169275/169276 use source300104/300144 permanent cosmetic self auras without gameplay/model replacement. Preserve source interrupt mask0x10001002, including real entering-combat removal, and ordinary learning/eligibility/cooldowns. Client visual87545/87561 requires authored CurrentPvpFaction2/1 (36349/36348), not a race-only condition; BG and arena team replication is required. No generic dummy-aura admission.
 
 - Toy membership comes only from local Retail 12.1.0.69933 Toy.db2. Import every decrypted row, retain unresolved item/spell joins, and expose them as unavailable. No synthetic membership or spells.

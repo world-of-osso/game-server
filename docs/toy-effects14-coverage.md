@@ -1,5 +1,9 @@
 # Toy effects14 — active whole-goal coverage
 
+## Fountain of Knowledge — source admission in progress (2026-10-13)
+
+64361/91743 has one zero-payload caster dummy aura, instant cast,10000ms source duration and900000ms item recovery. Visual19687 starts19008 on AuraStart7 and ends on AuraEnd8: ordinary model253570 at ground19, effect-name scale.5, offsets0, Positioner0, attachment flags12; kit types2/5 only. No casting-requirements row, visual condition or TDB1210 root script binding. These facts derive from pinned69933/TDB1210, not inferred summon gameplay. Evidence `fountain23-source-db.json`, `fountain23-existing-visual-source.json`, `fountain23-script-source.json` in continuation root. Real learning/use RED refuses aura4. Exact91743 admission only; asset/native proof remains pending.
+
 ## Blazing Diamond Pendant — bounded lifecycle proof (2026-10-13)
 
 115503/171352 is the exact source Molten Path contract: one zero-payload self dummy aura, natural5000ms cast and120000ms duration; group4031 contains11 authored areas. Visual44786 starts kit48964 on AuraStart7 and ends on AuraEnd8; Type2 attachment305309 uses ground19/zero offsets/scale1, ordinary model937030 and no positioner/conditional binding. TDB1210 scanned4066 root script bindings, none for171352; this absence alone does not authorize admission. Description promises only magma-covered feet in Draenor; no gameplay damage, speed or model replacement.
