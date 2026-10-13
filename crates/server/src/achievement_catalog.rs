@@ -15,9 +15,9 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62, 63,
-    65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157,
-    158, 160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62,
+    63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
+    157, 158, 160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -44,6 +44,8 @@ pub(crate) enum CriteriaEvent {
     LootItem(u32, u32),
     ParticipateInBattleground(u32),
     DieOnMap(u32),
+    /// Native dungeon/raid copy maximum, not the number of players currently inside.
+    DieInInstance(u32),
     DieAnywhere,
     KilledByCreature(u32),
     KilledByPlayer,
@@ -162,6 +164,7 @@ impl CriteriaEvent {
             Self::ParticipateInBattleground(_) => 15,
             Self::DieOnMap(_) => 16,
             Self::DieAnywhere => 17,
+            Self::DieInInstance(_) => 18,
             Self::KilledByCreature(_) => 20,
             Self::KilledByPlayer => 23,
             Self::DieFromEnvironmentalDamage(_) => 26,
@@ -337,6 +340,7 @@ impl CriteriaEvent {
             | Self::WinBattleground(asset)
             | Self::ParticipateInBattleground(asset)
             | Self::DieOnMap(asset)
+            | Self::DieInInstance(asset)
             | Self::TrackedWorldStateUIModified(asset)
             | Self::KilledByCreature(asset)
             | Self::DieFromEnvironmentalDamage(asset)
@@ -1355,7 +1359,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_predicate
-                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 16 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
+                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 16 | 18 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         // TC completion1288-1293 makes type20 statistic-only; new ordinary61917

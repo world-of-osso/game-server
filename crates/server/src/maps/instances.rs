@@ -587,6 +587,11 @@ impl InstanceManager {
         Ok(())
     }
 
+    /// The allocated copy's admission capacity, not current player occupancy.
+    pub(crate) fn copy_capacity(&self, map: InMap) -> Option<u32> {
+        self.copies.get(&map).map(|copy| copy.max_players)
+    }
+
     pub fn copy_difficulty(&self, map: InMap) -> Option<&MapDifficulty> {
         self.copies.get(&map).map(|copy| &copy.difficulty)
     }
