@@ -9,6 +9,10 @@
 
 - [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
 
+- [Category cooldowns](systems/auras.md#category-cooldown-offsets) — native341 signed offsets, real Counterspell/Prayer/pet lockouts and lifecycle proof; whole class coverage remains open.
+
+- [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage) — native crit-scaled25% bonus, real ranged damage and lifecycle proof; whole class/rendered coverage remains open.
+
 - [Victim melee critical chance](../class-completeness6.md#victim-melee-critical-chance--batch30) — native187 victim-owned percentages, ranged-weapon distinction, real damage and lifecycle controls; whole class goal remains open.
 - [Master arena/class regressions](investigations/master-arena-fixture-regressions.md) — duplicate Arcane school discount, source-correct reciprocal Moloch controls, and mastery cap/tie fixture isolation; qualified bisect evidence.
 
@@ -37,7 +41,7 @@
 - [Retail follower bridge](investigations/follower-data.md) — approved Normal-population bridge; both-skin205 queue/five-role party/follow/combat/first-boss kills and owner XP; source-empty loot and walked-route gates remain open.
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.
-- [Data-selected boss lifecycle](systems/boss-scripts.md#data-selected-encounters--2026-10-11) — authentic registration/ordinals, SmartAI gaps and Skum proof; [Murder Row continuation](systems/boss-scripts.md#murder-row-continuation-2026-10-12) tracks source-bound partial combat/phase coverage and generic victim ownership; [Kings' Rest admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12) records source sphere gameplay/companion hooks and partial TC primary combat, with fresh intro/follow/12.1 timeline/native gaps.
+- [Data-selected boss lifecycle](systems/boss-scripts.md#data-selected-encounters--2026-10-11) — authentic registration/ordinals, SmartAI gaps and Skum proof; [Murder Row continuation](systems/boss-scripts.md#murder-row-continuation-2026-10-12) tracks source-bound partial combat/phase coverage and generic victim ownership; [Kings' Rest admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12) records source sphere gameplay/companion hooks and partial TC primary combat, with fresh intro/follow/12.1 timeline/native gaps; [Gordoth](systems/boss-scripts.md#gordoth-combat-slice) adds ordinary-player static-box entry/OnlyOnce, preserving GM/cage/native gaps.
 
 - [Raid entry and saved instances](systems/raid-entry.md) — native both-skin private proof, persistent difficulty/locks, Tuesday reset, source-derived credit and explicit data gaps.
 
