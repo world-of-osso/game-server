@@ -1,3 +1,7 @@
+## 2026-10-13 — PlayerMap Some alternatives
+
+[Complete map alternatives](systems/dungeon-achievements.md#player-map-alternatives) retain every sourced leaf and reject a missing map at load. Native Warsong2106 lethal damage credits5538 once to its killer and survives reopen; source489 catalog evaluation is not legacy-map playability. Type56 is independent of accepted battleground reward70. Focused5/5, compiler23/23; census5430 ordinary/1812 statistics is structural only.
+
 ## 2026-10-13 — Target-creature Some alternatives
 
 [Complete target alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) preserve one-of native request matching. Source-backed Love alternatives and six Wave selectors add seven structural account definitions; unknown qualifiers and NPC content closure remain explicit.
