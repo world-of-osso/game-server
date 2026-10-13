@@ -4177,6 +4177,120 @@ fn toyfx18_weather_machine_refuses_unaudited_weather_shape() {
     }
 }
 
+/// TC spell_gen_upper_deck_create_foam_sword item choices.
+const FOAM_SWORDS: [u32; 5] = [45061, 45176, 45177, 45178, 45179];
+
+fn foam_swords(h: &Harness, character: u64) -> u32 {
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    persistence::load_inventory(db, character)
+        .items
+        .iter()
+        .filter(|item| FOAM_SWORDS.contains(&item.item_id))
+        .map(|item| item.stack_count)
+        .sum()
+}
+
+fn place_foam_sword_rack(h: &mut Harness, character: u64) -> Entity {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
+    learn_effect_toy(h, character, 45063);
+    assert_eq!(activate_at(h, 45063, Some([2.0, 0.0, 0.0]))[0].error, None);
+    h.advance(5);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 62985));
+    let world = h.app.world_mut();
+    let racks: Vec<_> = world
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+        .iter(world)
+        .filter(|(_, info)| info.entry == 194342)
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_eq!(racks.len(), 1);
+    racks[0]
+}
+
+#[test]
+fn toyfx18_foam_sword_rack_grants_one_source_sword_until_it_expires() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("foam.redb"));
+    let rack = place_foam_sword_rack(&mut h, character);
+    assert_eq!(foam_swords(&h, character), 0);
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, rack).unwrap();
+    h.advance(3);
+    assert_eq!(foam_swords(&h, character), 1);
+    // "player can only have one of these items": a second use creates nothing.
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, rack).unwrap();
+    h.advance(3);
+    assert_eq!(foam_swords(&h, character), 1);
+    // SpellDuration 180000ms: the wild rack despawns on its own (virtual clock).
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(std::time::Duration::from_secs(7200));
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_secs(180),
+        ));
+    h.advance(2);
+    assert!(h.app.world().get_entity(rack).is_err());
+}
+
+#[test]
+fn toyfx18_foam_sword_rack_counts_a_banked_sword() {
+    use crate::persistence::banks::{BankData, BankOwner, save_bank_move};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("foam-bank.redb"));
+    let rack = place_foam_sword_rack(&mut h, character);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut tab = crate::bank::new_tab(1);
+    tab.slots[0] = Some(InventoryItemData {
+        item_guid: persistence::next_id(db, "item_instance"),
+        item_id: 45178,
+        name: "Foam Sword".into(),
+        quality: 0,
+        required_level: 1,
+        stack_count: 1,
+        vendor_sell_price: 0,
+        unique_auction: false,
+    });
+    let bank = BankData {
+        tabs: vec![tab],
+        money: 0,
+    };
+    save_bank_move(db, character, BankOwner::Character(character, &bank), None);
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, rack).unwrap();
+    h.advance(3);
+    assert_eq!(foam_swords(&h, character), 0);
+}
+
+#[test]
+fn toyfx18_wild_display_with_unscripted_object_spell_stays_unavailable() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("blaster.redb"));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    // 441724 casts dummy 445930, which TDB1210 binds to no script.
+    let reasons = toy_catalog::unsupported_types(h.app.world(), 445938);
+    assert!(reasons.contains("effect 3"), "{reasons:?}");
+    assert!(toy_catalog::unsupported_types(h.app.world(), 62985).is_empty());
+}
+
 /// TC spell_item_wormhole_pandaria WormholeTargetLocations.
 const WORMHOLE_PANDARIA_DESTINATIONS: [u32; 9] = [
     126756, 126757, 126758, 126759, 126760, 126761, 126762, 126763, 126764,
