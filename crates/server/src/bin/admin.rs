@@ -274,6 +274,15 @@ enum AdminRequest {
     },
     EconomyStatus,
     Ping,
+    /// Private-server test setup: credit Trader's Tender to an account.
+    TradingPostGrantTender {
+        username: String,
+        amount: u32,
+    },
+    /// Private-server test setup: refund window (seconds) for new purchases; 0 disables.
+    TradingPostRefundWindow {
+        seconds: u32,
+    },
 }
 
 /// Mirror of the server's `CombatLogSummary` (same field order: msgpack
@@ -475,6 +484,13 @@ enum AdminResponse {
     },
     Pong,
     Error(String),
+    TradingPostTenderGranted {
+        username: String,
+        tender: u32,
+    },
+    TradingPostRefundWindowSet {
+        seconds: u32,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -547,6 +563,8 @@ fn print_usage() {
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
     eprintln!("  game-server-admin set-gold <character_name> <copper>");
+    eprintln!("  game-server-admin trading-post-grant-tender <username> <amount>");
+    eprintln!("  game-server-admin trading-post-refund-window <seconds>");
     eprintln!("  game-server-admin grant-item <character_name> <item_id> <count>");
     eprintln!("  game-server-admin mail-deliver-now <character_name>");
     eprintln!("  game-server-admin quest-complete <character_name> <quest_id>");
@@ -664,6 +682,19 @@ fn parse_request(args: &[String]) -> AdminRequest {
         }
         "combat-log" => parse_combat_log(args),
         "set-gold" => parse_set_gold(args),
+        "trading-post-grant-tender" => {
+            require_args(args, 4, "trading-post-grant-tender <username> <amount>");
+            AdminRequest::TradingPostGrantTender {
+                username: args[2].clone(),
+                amount: parse_number(&args[3], "amount"),
+            }
+        }
+        "trading-post-refund-window" => {
+            require_args(args, 3, "trading-post-refund-window <seconds>");
+            AdminRequest::TradingPostRefundWindow {
+                seconds: parse_number(&args[2], "seconds"),
+            }
+        }
         "grant-item" => parse_grant_item(args),
         "grant-keystone" => {
             require_args(
@@ -1266,6 +1297,29 @@ mod tests {
         assert!(matches!(
             durability,
             AdminRequest::SetDurability { ref character_name, percent: 40 } if character_name == "Shopper"
+        ));
+    }
+
+    #[test]
+    fn parse_trading_post_setup_requests() {
+        let grant = parse_request(&args(&[
+            "game-server-admin",
+            "trading-post-grant-tender",
+            "fb_tradingpost",
+            "700",
+        ]));
+        assert!(matches!(
+            grant,
+            AdminRequest::TradingPostGrantTender { ref username, amount: 700 } if username == "fb_tradingpost"
+        ));
+        let window = parse_request(&args(&[
+            "game-server-admin",
+            "trading-post-refund-window",
+            "600",
+        ]));
+        assert!(matches!(
+            window,
+            AdminRequest::TradingPostRefundWindow { seconds: 600 }
         ));
     }
 

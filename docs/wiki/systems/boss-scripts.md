@@ -98,6 +98,7 @@ Sources: read-only canonical world.db `tdb_smart_scripts`3669, `content_creature
 
 - Removing `NetworkVisibility` to hide an entity made it visible to every client that connected later (`on_replication_client_added` only hides entities that have it): all invisibility-aura creatures of both continents replicated to new clients, and the client grew to 36 GB until earlyoom killed it. Hiding is an interest flag now. Decayed corpses still use the old removal.
 - TrinityCore's Hogger and Moloch `Reset` skip `BossAI::_Reset`; ported with `_Reset` so wipes reset them.
+- Moloch's native55964 type4 invisibility remains at the scripted55966 attempt. TC a352b1fa `SpellDefines.h:293–301` excludes IGNORE_TARGET_CHECK from FULL_MASK; `Spell.cpp:5959` and `Object.cpp:1003–1005` retain reciprocal unit detection. The success fixture uses native23101 Eye of Divinity (type4/1000), which supplies reciprocal flags without revealing9999-point Vanish. A plain-player control requires rejection, no scripted retry, and successful native teleport after expiry. This supersedes any pre-reciprocity claim that ordinary players always receive the teleport; [contract](../../specs/boss-scripts.md).
 - Teleport points outside the Stockade WMO faces fall to the void ([stockade-floor-fall](../../../../game-engine/docs/wiki/investigations/stockade-floor-fall.md)); live tests stand on creature spawn points.
 
 ## Related
