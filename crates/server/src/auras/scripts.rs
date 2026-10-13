@@ -50,6 +50,10 @@ pub(super) fn run_remove(
     }
 }
 
+pub(super) fn has_proc_script(world: &World, spell_id: u32) -> bool {
+    script(world, spell_id).is_some_and(|script| script.on_proc.is_some())
+}
+
 pub(super) fn run_proc(
     world: &mut World,
     unit: Entity,
@@ -443,6 +447,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         AuraScript {
             on_apply: Some(apply_turtle_pacify),
             on_remove: Some(remove_turtle_pacify),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::pvp::arena_cage::REACTION_TRIGGER,
+        AuraScript {
+            on_proc: Some(crate::pvp::arena_cage::reaction_dead),
             ..Default::default()
         },
     );

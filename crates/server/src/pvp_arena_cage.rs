@@ -3,6 +3,9 @@
 //! Starting Area Marker on entry and remove it on exit; from 5s after the start
 //! and every 5s after, marked players without Warning receive it, and Warning's
 //! removal while still marked casts Warning Teleport to their team's exit.
+//! Naminze Boltfingers (232750) announces stage 2 of preparation and the start,
+//! and reacts to low health (472885 aura468 -> 472883) and deaths (472885 proc)
+//! behind her 10s VO cooldown auras.
 use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
@@ -16,6 +19,18 @@ const MAP: u32 = 2759;
 pub(crate) const STARTING_AREA_MARKER: u32 = 228_212;
 pub(crate) const WARNING: u32 = 1_214_676;
 pub(crate) const WARNING_TELEPORT: u32 = 371_319;
+pub(crate) const NAMINZE: u32 = 232_750;
+pub(crate) const REACTION_TRIGGER: u32 = 472_885;
+pub(crate) const REACTION_LOW_HEALTH: u32 = 472_883;
+const VO_COOLDOWN: u32 = 472_905;
+const VO_COOLDOWN_DEATH: u32 = 472_913;
+const LOW_HEALTH_COOLDOWN: u32 = 234_031;
+const TEXT_PREPARE: u8 = 0;
+const TEXT_START: u8 = 1;
+const TEXT_ALMOST_DEAD: u8 = 2;
+const TEXT_KILL: u8 = 3;
+/// TC Arena StartDelayTimes[BG_STARTING_EVENT_SECOND]: stage 2 at 30s remaining.
+const PREPARE_STAGE2_AT_SECS: f64 = 60.0 - 30.0;
 const WARNING_INTERVAL_SECS: f64 = 5.0;
 /// TC CageOfCarnage::Positions; ALLIANCE (team A, AllianceStartLoc) is Purple.
 const PURPLE_WARNING_TELEPORT: (Vec3, f32) = (Vec3::new(442.311, 343.167, -34.1166), 1.745_329_3);
@@ -74,10 +89,35 @@ impl Catalog {
 struct Clock {
     marked: BTreeSet<Entity>,
     next_warning: Option<f64>,
+    joined: BTreeSet<Entity>,
+    prepared: bool,
+    announced_start: bool,
+}
+
+#[derive(Clone, Copy)]
+struct MatchTimes {
+    preparation_started: Option<f64>,
+    started: Option<f64>,
 }
 
 #[derive(Resource, Default)]
 pub(crate) struct Timers(BTreeMap<InMap, Clock>);
+
+pub(super) fn reset_map(world: &mut World, map: InMap) {
+    world.resource_mut::<Timers>().0.remove(&map);
+    if map.map_id != MAP {
+        return;
+    }
+    for player in players_on(world, map) {
+        // Warning removal must not teleport a player to the previous team's exit.
+        crate::auras::remove_auras(world, player, crate::auras::RemoveReason::Expired, |aura| {
+            aura.spell_id == STARTING_AREA_MARKER
+        });
+        crate::auras::remove_auras(world, player, crate::auras::RemoveReason::Expired, |aura| {
+            aura.spell_id == WARNING
+        });
+    }
+}
 
 pub(super) fn update(world: &mut World, now: f64) {
     let maps: BTreeMap<_, _> = world
@@ -88,7 +128,11 @@ pub(super) fn update(world: &mut World, now: f64) {
             let map = matched.map.filter(|map| map.map_id == MAP)?;
             let arena = matched.arena.as_ref()?;
             let running = matched.instance.phase == BgPhase::InProgress;
-            Some((map, running.then_some(arena.started).flatten()))
+            let times = MatchTimes {
+                preparation_started: arena.preparation_started,
+                started: running.then_some(arena.started).flatten(),
+            };
+            Some((map, times))
         })
         .collect();
     if maps.is_empty() && !world.contains_resource::<Timers>() {
@@ -96,10 +140,12 @@ pub(super) fn update(world: &mut World, now: f64) {
     }
     world.resource_scope(|world, mut timers: Mut<Timers>| {
         timers.0.retain(|map, _| maps.contains_key(map));
-        for (map, started) in maps {
+        for (map, times) in maps {
             let clock = timers.0.entry(map).or_default();
+            update_joined(world, map, clock);
             update_presence(world, map, clock);
-            match started {
+            update_announcements(world, map, now, times, clock);
+            match times.started {
                 Some(start) => update_warnings(world, map, now - start, clock),
                 None => clock.next_warning = None,
             }
@@ -153,6 +199,92 @@ fn update_warnings(world: &mut World, map: InMap, elapsed: f64, clock: &mut Cloc
         {
             crate::spell_cast::cast_triggered(world, player, WARNING, Some(player), 0);
         }
+    }
+}
+
+/// TC OnPlayerJoined: every entrant casts Undermine Arena Reaction Trigger once.
+fn update_joined(world: &mut World, map: InMap, clock: &mut Clock) {
+    for player in players_on(world, map) {
+        if clock.joined.insert(player) {
+            crate::spell_cast::cast_triggered(world, player, REACTION_TRIGGER, Some(player), 0);
+        }
+    }
+}
+
+/// TC OnPrepareStage2 (30s before the gates) and OnStart talks.
+fn update_announcements(
+    world: &mut World,
+    map: InMap,
+    now: f64,
+    times: MatchTimes,
+    clock: &mut Clock,
+) {
+    let stage2 = times
+        .preparation_started
+        .is_some_and(|start| now - start >= PREPARE_STAGE2_AT_SECS);
+    if stage2 && times.started.is_none() && !clock.prepared {
+        clock.prepared = true;
+        if let Some(naminze) = naminze(world, map) {
+            crate::scripted_ai::creature_text::talk(world, naminze, TEXT_PREPARE);
+        }
+    }
+    if times.started.is_some() && !clock.announced_start {
+        clock.announced_start = true;
+        if let Some(naminze) = naminze(world, map) {
+            crate::scripted_ai::creature_text::talk(world, naminze, TEXT_START);
+        }
+    }
+}
+
+fn naminze(world: &mut World, map: InMap) -> Option<Entity> {
+    world
+        .query::<(Entity, &InMap, &shared::components::Npc)>()
+        .iter(world)
+        .find(|(_, copy, npc)| **copy == map && npc.template_id == NAMINZE)
+        .map(|(entity, ..)| entity)
+}
+
+/// TC HandleReactionLowHealth / HandleKill: one talk per VO cooldown aura.
+fn react(world: &mut World, victim: Entity, group: u8, cooldown: u32) {
+    let Some(map) = world.get::<InMap>(victim).copied() else {
+        return;
+    };
+    let Some(naminze) = naminze(world, map) else {
+        return;
+    };
+    if crate::auras::has_aura(world, naminze, cooldown) {
+        return;
+    }
+    crate::scripted_ai::creature_text::talk(world, naminze, group);
+    crate::spell_cast::cast_triggered(world, naminze, cooldown, Some(naminze), 1);
+}
+
+fn in_cage(world: &World, unit: Entity) -> bool {
+    world
+        .get::<InMap>(unit)
+        .is_some_and(|map| map.map_id == MAP)
+}
+
+/// TC spell_undermine_arena_reaction_trigger_low_health (472883 effect0 hit).
+pub(crate) fn reaction_low_health(world: &mut World, caster: Entity, target: Entity, _index: u8) {
+    if !in_cage(world, caster) || crate::auras::has_aura(world, target, LOW_HEALTH_COOLDOWN) {
+        return;
+    }
+    crate::spell_cast::cast_triggered(world, target, LOW_HEALTH_COOLDOWN, Some(target), 1);
+    if world.get::<Player>(target).is_some() {
+        react(world, target, TEXT_ALMOST_DEAD, VO_COOLDOWN);
+    }
+}
+
+/// TC spell_undermine_arena_reaction_trigger (472885 proc): the owner's death.
+pub(crate) fn reaction_dead(
+    world: &mut World,
+    victim: Entity,
+    _aura: &crate::auras::AuraInstance,
+    _killer: Option<Entity>,
+) {
+    if in_cage(world, victim) && world.get::<Player>(victim).is_some() {
+        react(world, victim, TEXT_KILL, VO_COOLDOWN_DEATH);
     }
 }
 

@@ -20,6 +20,7 @@ pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 mod fear;
 pub(crate) mod handlers;
+pub(crate) mod health_pct_trigger;
 pub mod invisibility;
 mod linked;
 pub(crate) mod linked_summon;
@@ -116,6 +117,7 @@ impl Plugin for AuraPlugin {
                     sync_passive_auras,
                     update_auras,
                     procs::process_aura_events,
+                    health_pct_trigger::trigger_on_health_pct,
                     sync_unit_auras,
                 )
                     .chain()
