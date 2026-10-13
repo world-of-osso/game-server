@@ -1,5 +1,22 @@
 # Toy effects14 — active whole-goal coverage
 
+## Honest object spells and summoned-object collision (2026-10-12)
+
+Read-only canonical census355→354/1166. The only removal is Costume Chest 139337; nothing was added. `m1-canonical-after.json`.
+
+- **Costume Chest:** the catalog classified a wild spellcaster object's spell but not an effect50 one. Costume Chest's object252775 casts 222360, a caster dummy with no SpellXSpellVisual, no TC a352b1fa script and no TDB1210 binding, so it is now unavailable. Both object effects now recurse into the object spell.
+- **Banners kept:** master's other spellcaster banners use object spells 424023 (Chilling Celebration) and 1215373 (Kaja'Cola Enthusiast). Both pass the kit-chain audit (`audit_kits.py`, `banner-kit-audit.json`: ordinary models, no condition/positioner/script, self cosmetic descriptions) and are admitted as visual-only. A behaviour test shows the placed banner's use applies the 3600000ms aura with model/health unchanged.
+- **Collision regression:** master's client draws no game object until `GameObjectCollision` replicates, and only world spawns carried it. After the engine master merge, every effect50/76 toy object and ritual portal was invisible natively. TC EffectTransmitted/EffectSummonObjectWild create them GO_STATE_READY, so both spawn sites now replicate `GameObjectCollision(true)`. Type6 cooking traps are unchanged (never drawn).
+- **Known risk:** master's arena hull sync panics when an enabled type0/5/6/35 object's model is absent from `data/models`, so a generic toy object placed inside an arena could reach that path. Lead decision recorded in the handoff.
+
+Native private5911, both skins:
+
+- Azerite Firework Launcher 166877: kit model1983536 on the caster, no aura.
+- Celebration Banner 210042: ground-placed, right-click applies aura424023. Its display84868/model5357398 closure is 28 authenticated assets, published privately.
+- Foam Sword Rack re-proven after the collision fix: Modern Toyfourmod got new sword45176; Forever, already holding a sword, got no second one.
+
+PNGs in `toys/{castkit18,banner18,foam18}/`.
+
 ## Cast-event visual kits (2026-10-12)
 
 Read-only canonical census352→355/1166 (+122119/127668/166877, zero removed; `castkit-canonical-after.json`). The existing dummy-visual audit (`data/diagnostics/toy-effects14-2026-10-11/dummy-visual-audit.json`) found 54 of 77 effect3/77 shape candidates with complete ordinary model chains. Every other remaining candidate's description promises behaviour (teleport, discovery, throw-and-return, disguise, transform, cost) or is TDB-script-bound, so only three were admitted:
