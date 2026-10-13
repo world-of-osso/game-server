@@ -1908,6 +1908,74 @@ fn encounter_coverage_anacondra_thorns_application_and_source_repeat() {
     );
 }
 
+/// Thorns must retaliate against damaging melee swings, not arbitrary spells.
+#[test]
+fn encounter_coverage_anacondra_thorns_retaliates_only_while_applied() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(3671, 43, 0, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(7.3);
+    assert!(h.has_aura(boss, 8148));
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(ReactState::Passive);
+    h.advance(0.1);
+    h.hit(boss, 1.0);
+    h.advance(0.1);
+    let retaliations = |h: &Harness| {
+        h.inbox(0)
+            .log
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(8148)
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+            })
+            .count()
+    };
+    assert_eq!(
+        retaliations(&h),
+        0,
+        "spell damage does not trigger melee shield"
+    );
+    let health = h.health(player).current;
+    let boss_health = h.health(boss).current;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::combat::AutoAttack::new(boss));
+    h.advance(8.5);
+    assert!(
+        h.health(boss).current < boss_health,
+        "real melee swings damaged shield owner"
+    );
+    assert!(
+        retaliations(&h) > 0,
+        "actual Thorns Nature damage reaches attacker"
+    );
+    assert!(h.health(player).current < health);
+    let before_removal = retaliations(&h);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Dispelled,
+        |aura| aura.spell_id == 8148,
+    );
+    h.advance(8.5);
+    assert_eq!(
+        retaliations(&h),
+        before_removal,
+        "removed Thorns cannot retaliate"
+    );
+}
+
 /// Real deaths/evades use each bound encounter, never another Wailing boss.
 /// Generic BossAi lifecycle is not proof of source action34. Mutanus has no
 /// content_creature placement and must instead use its source summon group.
