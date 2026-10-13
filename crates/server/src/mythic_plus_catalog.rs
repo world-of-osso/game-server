@@ -1,6 +1,46 @@
 //! Azure Vault qualification from the imported catalog and existing criteria trees.
 use crate::mythic_plus_runtime::ChallengeDefinition;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
+use std::collections::HashMap;
+
+/// Display metadata does not imply a qualified challenge run or active season.
+#[derive(Clone, Debug)]
+pub struct ChallengeSummary {
+    pub name: String,
+    pub time_limit_ms: u64,
+}
+
+fn summary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ChallengeSummary> {
+    let name: String = row.get(0)?;
+    let seconds: u64 = row.get(1)?;
+    if name.is_empty() || seconds == 0 {
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+    Ok(ChallengeSummary {
+        name,
+        time_limit_ms: seconds * 1000,
+    })
+}
+
+pub fn load_summary(
+    conn: &Connection,
+    challenge: u32,
+) -> rusqlite::Result<Option<ChallengeSummary>> {
+    conn.query_row(
+        "SELECT Name_lang,CriteriaCount_0 FROM map_challenge_mode WHERE ID=?1 AND MaxMedals=3",
+        [challenge],
+        summary_from_row,
+    )
+    .optional()
+}
+
+pub fn load_summaries(conn: &Connection) -> rusqlite::Result<HashMap<u32, ChallengeSummary>> {
+    let mut statement = conn
+        .prepare("SELECT Name_lang,CriteriaCount_0,ID FROM map_challenge_mode WHERE MaxMedals=3")?;
+    statement
+        .query_map([], |row| Ok((row.get(2)?, summary_from_row(row)?)))?
+        .collect()
+}
 
 pub fn load_azure(conn: &Connection) -> rusqlite::Result<Option<ChallengeDefinition>> {
     let exists: bool = conn.query_row(
