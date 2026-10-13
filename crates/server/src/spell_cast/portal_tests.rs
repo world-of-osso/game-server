@@ -6,10 +6,14 @@ use shared::components::{Health, Position};
 use shared::protocol::{GameObjectInfo, InteractionChannel, UseGameObject};
 
 fn portal_fixture() -> Harness {
+    portal_fixture_for(8)
+}
+
+fn portal_fixture_for(class: u8) -> Harness {
     let mut h = harness_with_plugins(
         Vec::new(),
         &[10059, 17334, 121857, 11416, 44089, 121851],
-        8,
+        class,
         false,
         |app| {
             app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
@@ -271,7 +275,9 @@ fn unsupported_effects(h: &Harness) -> Vec<(u32, u32)> {
 #[test]
 fn class_completeness_native_class_trans_doors_spawn_their_authored_objects() {
     for (spell_id, entry) in CLASS_TRANS_DOORS {
-        let mut h = portal_fixture();
+        // Death Gate is the Death Knight's; the rest are Mage/Warlock casts.
+        let class = if spell_id == 50977 { 6 } else { 8 };
+        let mut h = portal_fixture_for(class);
         let spell = world_db().unwrap().store.get(spell_id).unwrap().clone();
         super::execute_cast(h.app.world_mut(), h.caster, &spell, None).expect("native cast");
         assert_eq!(transmitted_objects(&mut h, entry), 1, "{spell_id}");
@@ -280,12 +286,17 @@ fn class_completeness_native_class_trans_doors_spawn_their_authored_objects() {
 }
 
 #[test]
-fn class_completeness_unsupported_trans_door_template_is_a_recorded_effect_gap() {
+fn class_completeness_unsupported_trans_door_template_rejects_the_cast() {
     let mut h = portal_fixture();
     // Fault injection: the native portal pointed at an entry absent from TDB.
     let mut spell = world_db().unwrap().store.get(10059).unwrap().clone();
     spell.effects[0].misc_values[0] = i32::MAX;
-    super::execute_cast(h.app.world_mut(), h.caster, &spell, None).expect("native cast");
+    let result = super::execute_cast(h.app.world_mut(), h.caster, &spell, None);
+    assert!(
+        matches!(&result, Err(super::CastFailure::Unsupported(reason))
+            if reason == "missing gameobject template 2147483647"),
+        "{result:?}"
+    );
     assert_eq!(transmitted_objects(&mut h, 176296), 0);
-    assert_eq!(unsupported_effects(&h), vec![(10059, 50)]);
+    assert_eq!(unsupported_effects(&h), Vec::new());
 }
