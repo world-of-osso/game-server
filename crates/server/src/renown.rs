@@ -12,7 +12,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, TableDefinition};
 use serde::{Deserialize, Serialize};
 use shared::protocol::{
     InstanceChannel, MajorFactionSnapshot, RenownRequest, RenownReward, RenownSnapshot,
