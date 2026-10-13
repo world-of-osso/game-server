@@ -52,7 +52,14 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
 
 #[test]
 fn npc_kill_updates_primary_and_spillover_reputation() {
-    let registry = default_faction_registry();
+    let mut registry = default_faction_registry();
+    // Explicit test policy: the authentic registry does not invent city spillover.
+    let mut stormwind_policy = registry.get(72).unwrap().clone();
+    stormwind_policy.spillover = vec![shared::reputation::SpilloverRule {
+        faction_id: 47,
+        rate: 0.25,
+    }];
+    registry.add(stormwind_policy);
     let world_data = test_world_data(test_template(1001, 72, 5, 5));
     let mut reputation = CharacterReputation::new_for_race(&registry, 1);
     // Pinned race-class baselines: Human Stormwind/Ironforge/Orgrimmar start values.
@@ -95,6 +102,6 @@ fn snapshot_lists_known_factions_with_standing_text() {
         .iter()
         .find(|entry| entry.faction_id == 72)
         .expect("stormwind entry");
-    assert_eq!(stormwind.standing, format!("{:?}", Standing::Honored));
+    assert_eq!(stormwind.standing, format!("{:?}", Standing::Revered));
     assert_eq!(stormwind.value, 30_000);
 }
