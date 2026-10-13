@@ -3785,16 +3785,18 @@ fn toyfx19_gladiator_banners_respect_faction_and_cancel_persistent_cosmetic_aura
                 .any(|aura| aura.spell_id == spell)
         );
 
-        let (mut wrong, character) = setup_for_race(
-            &directory
-                .path()
-                .join(format!("gladiator-wrong-{item}.redb")),
-            wrong_race,
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Player>(h.caster)
+            .unwrap()
+            .race = wrong_race;
+        h.inbox.go.clear();
+        assert_eq!(
+            activate(&mut h, item)[0].error.as_deref(),
+            Some("toy race/class restriction")
         );
-        learn_effect_toy(&mut wrong, character, item);
-        assert!(activate(&mut wrong, item)[0].error.is_some());
-        wrong.advance(40);
-        assert!(!wrong.inbox.go.iter().any(|go| go.spell_id == spell));
+        h.advance(40);
+        assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
     }
 }
 
