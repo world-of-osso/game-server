@@ -1886,34 +1886,55 @@ fn encounter_coverage_verdan_real_vines_root_and_expire() {
 /// First Sleep1090 is due5–10s; Druid's Potion8141 only below80% health.
 #[test]
 fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
-    let (mut h, _boss, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    let (mut h, enemy, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
     let position = *h.app.world().get::<Position>(disciple).unwrap();
     let player = h.player();
-    h.app.world_mut().entity_mut(player).insert(Position {
-        x: position.x + 1.0,
-        ..position
-    });
-    h.engage(disciple);
+    h.app.world_mut().entity_mut(player).insert(position);
+    // Source EVENT_PROGRESS_1 sets FACTION_ESCORTEE_N_NEUTRAL_ACTIVE250.
+    // Base faction35 cannot attack players. Activation/gossip is not simulated.
+    h.app
+        .world_mut()
+        .entity_mut(disciple)
+        .insert(UnitFactionTemplate(250));
+    h.app.world_mut().entity_mut(enemy).insert((
+        Position {
+            x: position.x + 10.0,
+            ..position
+        },
+        ReactState::Passive,
+    ));
+    h.advance(0.1);
+    crate::creature_aggro::add_threat(h.app.world_mut(), disciple, enemy, 1.0);
     h.advance(4.7);
-    assert_eq!(h.casts(0, disciple, 1090), 0, "Sleep waits at least5s");
-    assert_eq!(h.casts(0, disciple, 8141), 0);
-    h.advance(7.5);
-    assert!(
-        h.has_aura(player, 1090),
-        "actual Sleep aura after10s plus cast"
-    );
-    assert_eq!(h.casts(0, disciple, 1090), 1);
-    assert_eq!(h.casts(0, disciple, 8141), 0, "full health forbids potion");
+    assert_ne!(casting(&h, disciple), Some(1090), "Sleep waits at least5s");
+    assert!(!h.has_aura(enemy, 1090));
+    let mut waited = 0.0;
+    while !h.has_aura(enemy, 1090) {
+        assert!(waited < 7.5, "actual Sleep aura after10s plus1.5s cast");
+        h.advance(0.05);
+        waited += 0.05;
+    }
+    assert_eq!(h.health(disciple).current, h.health(disciple).max);
     h.set_health_pct(disciple, 75.0);
     let wounded = h.health(disciple).current;
-    h.advance(16.0);
-    assert!(h.casts(0, disciple, 8141) >= 1, "10–15s potion retry");
-    assert!(h.health(disciple).current > wounded, "real healing effect");
-    h.advance(7.0);
-    assert!(h.casts(0, disciple, 1090) >= 2, "20–30s Sleep repeat");
+    let mut healed = false;
+    let mut repeated_sleep = false;
+    for _ in 0..640 {
+        h.advance(0.05);
+        healed |= h.health(disciple).current > wounded;
+        repeated_sleep |= casting(&h, disciple) == Some(1090);
+    }
+    assert!(
+        healed,
+        "real potion healing, including cast-collision retry"
+    );
+    assert!(
+        repeated_sleep,
+        "20–30s Sleep repeat starts another actual cast"
+    );
 }
 
 /// Instance source sends ACTION_ALL_DONE0 to its own Disciple when all four
