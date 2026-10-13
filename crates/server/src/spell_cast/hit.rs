@@ -136,7 +136,16 @@ fn incoming_miss_chance(
     let modifier = world.get::<ActiveAuras>(unit).map_or(0.0, |auras| {
         attacker_hit_modifier(auras, defense, spell.school_mask())
     });
-    baseline - modifier
+    // Creature melee baseline already consumes caster aura54. Other physical
+    // spell paths must also subtract it (Unit::MeleeSpellMissChance, Unit.cpp12525).
+    let caster_modifier = if !creature_melee && matches!(defense, DEFENSE_MELEE | DEFENSE_RANGED) {
+        world
+            .get::<ActiveAuras>(caster)
+            .map_or(0.0, |auras| auras.modifier(handlers::MOD_HIT_CHANCE))
+    } else {
+        0.0
+    };
+    baseline - caster_modifier - modifier
 }
 
 fn attacker_hit_modifier(auras: &ActiveAuras, defense: u32, school: u32) -> f32 {

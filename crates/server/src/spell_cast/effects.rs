@@ -27,7 +27,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::casting::CastState;
-use shared::components::{Health, Npc, PowerType};
+use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 use shared::spell_data::CastFailReason;
 
@@ -195,7 +195,10 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         if world
             .get::<crate::hunter_pet::SummonedDemon>(unit)
             .is_some()
+            || crate::hunter_pet::is_summoned_pet_owner(world, pet.owner)
         {
+            // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
+            // Water Elemental's separate40% branch is for non-pet guardians, not56.
             return demon_power_stats(world, pet.owner);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
@@ -384,6 +387,63 @@ pub(crate) fn spell_scaling_value(spell: &SpellInfo, effect: &SpellEffect, level
     }
 }
 
+///TC a352b1fa SpellInfo.cpp869-956: whether the effect uses an expected-stat
+///budget, which excludes the separate RealPointsPerLevel branch.
+fn uses_expected_stat(effect: &SpellEffect) -> bool {
+    match effect.effect {
+        2 | 7 | 8 | 9 | 10 | 17 | 58 | 75 => true,
+        30 | 62 => effect.misc_values[0] == 0,
+        6 | 27 | 35 | 65 | 119 | 128 | 129 | 143 | 174 | 202 | 271 => match effect.aura {
+            24 | 35 | 73 | 85 | 162 | 418 => effect.misc_values[0] == 0,
+            3 | 8 | 13 | 14 | 15 | 22 | 29 | 34 | 43 | 53 | 59 | 62 | 64 | 69 | 83 | 84 | 97
+            | 99 | 102 | 115 | 123 | 124 | 131 | 135 | 161 | 180 | 189 | 230 | 250 | 301 | 465 => {
+                true
+            }
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+///Native CalcValue: clamp caster level to MaxLevel, subtract max(BaseLevel,
+///SpellLevel), then add the authored per-level points before point modifiers.
+fn level_scaled_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
+    if effect.coefficient != 0.0
+        || uses_expected_stat(effect)
+        || effect.real_points_per_level == 0.0
+    {
+        return 0.0;
+    }
+    let level = if world.get::<Player>(caster).is_some() {
+        world
+            .get::<shared::components::Level>(caster)
+            .map(|level| u32::from(level.0))
+    } else {
+        world
+            .get::<shared::components::UnitLevel>(caster)
+            .map(|level| u32::from(level.0))
+    };
+    let Some(level) = level else {
+        return 0.0;
+    }; // Non-unit casters have no level contribution.
+    let maximum = spell.levels.as_ref().map_or(0, |levels| levels.max_level);
+    let capped = if maximum > 0 {
+        level.min(maximum)
+    } else {
+        level
+    };
+    let baseline = spell
+        .levels
+        .as_ref()
+        .map_or(0, |levels| levels.base_level.max(levels.spell_level));
+    capped.saturating_sub(baseline) as f32 * effect.real_points_per_level
+}
+
 /// Base points (`calc_base_value`) with the caster's Points and PointsIndexN mods.
 pub(crate) fn modded_base_points(
     world: &World,
@@ -391,7 +451,9 @@ pub(crate) fn modded_base_points(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let base_points = calc_base_value(world, caster, spell, effect);
+    let base_points = calc_base_value(world, caster, spell, effect)
+        + level_scaled_points(world, caster, spell, effect)
+        + crate::auras::mastery::effect_bonus(world, caster, spell, effect);
     let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, base_points);
     match SpellModOp::points_index(effect.index) {
         Some(op) => spell_mods::modify(world, caster, spell, op, base),
@@ -481,7 +543,14 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
         world.get::<CreatureArmor>(target),
         world.get::<CharacterStats>(target),
     ) {
-        (Some(armor), _) => target_scaling.armor_against(armor.0, &caster_scaling),
+        (Some(armor), _) => {
+            let multiplier = crate::auras::base_armor::pet_multiplier(
+                world.get::<crate::stats::StatModifiers>(target),
+                world.get::<crate::hunter_pet::HunterPet>(target),
+                world.get::<super::summon::SummonedCreature>(target),
+            );
+            target_scaling.armor_against(armor.0 * multiplier, &caster_scaling)
+        }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
@@ -532,7 +601,7 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         effect.variance,
     ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
-    deal_damage(world, ctx, target, amount, crit, false);
+    deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
 /// 58 WEAPON_DAMAGE and 121 NORMALIZED_WEAPON_DMG: weapon hit + BasePoints.
@@ -541,7 +610,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let base =
         (weapon_hit(world, ctx.caster, normalized) + effect.base_points) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
-    deal_damage(world, ctx, target, amount, crit, false);
+    deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
 /// 31 WEAPON_PERCENT_DAMAGE: BasePoints% of a weapon hit.
@@ -549,7 +618,7 @@ fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffec
     let base =
         weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0 * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
-    deal_damage(world, ctx, target, amount, crit, false);
+    deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
 fn log_amount(ctx: &EffectCtx, target: Entity, kind: CombatLogKind) -> CombatLogEvent {
@@ -610,7 +679,42 @@ pub fn deal_damage(
     crit: bool,
     periodic: bool,
 ) {
-    deal_damage_and_report(world, ctx, target, amount, crit, periodic, false);
+    let damage = DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source: false,
+        effect: None,
+    };
+    deal_damage_and_report(world, ctx, target, damage);
+}
+
+pub(crate) fn deal_effect_damage(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+) {
+    let damage = DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source: false,
+        effect: Some(effect),
+    };
+    deal_damage_and_report(world, ctx, target, damage);
+}
+
+struct DamageInput<'a> {
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+    resolved_source: bool,
+    /// Authored effect for native damage; script/copy amounts carry no effect selector.
+    effect: Option<&'a SpellEffect>,
 }
 
 /// Leech copies effective damage, after mitigation/absorption and excluding overkill.
@@ -618,15 +722,22 @@ pub fn deal_damage(
 pub(crate) fn deal_leech(
     world: &mut World,
     ctx: &EffectCtx,
+    effect: &SpellEffect,
     target: Entity,
     amount: f32,
-    multiplier: f32,
     crit: bool,
     periodic: bool,
 ) {
-    let dealt = deal_damage_and_report(world, ctx, target, amount, crit, periodic, false);
+    let damage = DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source: false,
+        effect: Some(effect),
+    };
+    let dealt = deal_damage_and_report(world, ctx, target, damage);
     if dealt > 0.0 {
-        let healing = (dealt * multiplier).max(0.0).round();
+        let healing = (dealt * effect.amplitude).max(0.0).round();
         apply_resolved_heal(world, ctx, ctx.caster, healing, false, periodic);
     }
 }
@@ -637,23 +748,34 @@ fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target
         effect.variance,
     ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
-    deal_leech(world, ctx, target, amount, effect.amplitude, crit, false);
+    deal_leech(world, ctx, effect, target, amount, crit, false);
 }
 
 /// A named copy has already consumed the source's damage modifiers and crit.
 pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
-    deal_damage_and_report(world, ctx, target, amount, false, false, true);
+    let damage = DamageInput {
+        amount,
+        crit: false,
+        periodic: false,
+        resolved_source: true,
+        effect: None,
+    };
+    deal_damage_and_report(world, ctx, target, damage);
 }
 
 fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
-    amount: f32,
-    crit: bool,
-    periodic: bool,
-    resolved_source: bool,
+    damage: DamageInput,
 ) -> f32 {
+    let DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source,
+        effect,
+    } = damage;
     if !super::targets::is_alive(world, target) {
         return 0.0;
     }
@@ -675,6 +797,7 @@ fn deal_damage_and_report(
     } else {
         stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
             * versatility_multiplier(world, ctx.caster)
+            * crate::auras::summon_damage::multiplier(world, ctx.caster)
     };
     let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
     let amount = (if resolved_source {
@@ -685,8 +808,18 @@ fn deal_damage_and_report(
         * taken)
         .max(0.0)
         .round();
+    let amount = if periodic {
+        amount
+    } else {
+        crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, false, amount)
+    };
     let amount = if reduced_by_armor(ctx.spell) {
         armor_reduced(world, ctx.caster, target, amount)
+    } else {
+        amount
+    };
+    let amount = if periodic {
+        crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, true, amount)
     } else {
         amount
     };
