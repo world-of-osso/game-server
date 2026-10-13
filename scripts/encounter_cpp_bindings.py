@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
-Pinned TC instance/header rows identify Kystia, Golden Serpent and Koranthal primaries.
+Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
+Adarogg and Gordoth primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
@@ -61,10 +62,44 @@ KORANTHAL_PRIMARY = dict(
     actor_id=1321,
     display_id=42101,
 )
+RAGEFIRE_INSTANCE_SOURCES = {
+    "Kalimdor/RagefireChasm/instance_ragefire_chasm.cpp": "5271197a0157eb46f06bd3f2fb3ebb916f484622fb09af8ca12a87534aa45a72",
+    "Kalimdor/RagefireChasm/ragefire_chasm.h": "29da8a54bc8a15786835fcee8b5f14fd1bffac2803f480b056eaf6ed5d304f08",
+}
+ADAROGG_SOURCES = {
+    "Kalimdor/RagefireChasm/boss_adarogg.cpp": "1962c785a8f405b4dcf779ab1b2ce3caef7ea26c8a84e8ef685f7b8a20f38237",
+    **RAGEFIRE_INSTANCE_SOURCES,
+}
+ADAROGG_PRIMARY = dict(
+    map_id=389,
+    entry=61408,
+    encounter_id=1443,
+    bit=0,
+    script="boss_adarogg",
+    journal_id=694,
+    actor_id=1343,
+    display_id=38759,
+)
+GORDOTH_SOURCES = {
+    "Kalimdor/RagefireChasm/boss_lava_guard_gordoth.cpp": "305aca6990850c74372f4461ab7659f0e35d243c015136d3e2bcca6a0641d395",
+    **RAGEFIRE_INSTANCE_SOURCES,
+}
+GORDOTH_PRIMARY = dict(
+    map_id=389,
+    entry=61528,
+    encounter_id=1446,
+    bit=3,
+    script="boss_lava_guard_gordoth",
+    journal_id=697,
+    actor_id=1345,
+    display_id=42100,
+)
 PROFILES = {
     "kystia": (PRIMARY, SOURCES),
     "golden-serpent": (GOLDEN_PRIMARY, GOLDEN_SOURCES),
     "koranthal": (KORANTHAL_PRIMARY, KORANTHAL_SOURCES),
+    "adarogg": (ADAROGG_PRIMARY, ADAROGG_SOURCES),
+    "gordoth": (GORDOTH_PRIMARY, GORDOTH_SOURCES),
 }
 
 

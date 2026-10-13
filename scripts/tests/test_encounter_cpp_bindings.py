@@ -1,6 +1,7 @@
 import sqlite3
 import unittest
-from encounter_cpp_bindings import GOLDEN_PRIMARY, prepare_bindings, binding_sql
+from encounter_cpp_bindings import (ADAROGG_PRIMARY, GOLDEN_PRIMARY, GORDOTH_PRIMARY, KORANTHAL_PRIMARY,
+                                    prepare_bindings, binding_sql)
 
 
 class PrimaryActorTests(unittest.TestCase):
@@ -50,6 +51,18 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [binding])
         self.assertEqual(self.db.execute('SELECT count(*) FROM raid_encounter_creature').fetchone()[0],1)
+
+    def test_ragefire_primaries_bind_source_bits_beside_existing_koranthal(self):
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(1443,389,0),(1444,389,1),(1446,389,3);
+            INSERT INTO tdb_creature_template VALUES(61408,'boss_adarogg'),
+                (61412,'boss_dark_shaman_koranthal'),(61528,'boss_lava_guard_gordoth');
+            INSERT INTO raid_encounter_creature VALUES(389,61412,1444,1,695,1321,42101);
+        ''')
+        rows = prepare_bindings(self.db, [ADAROGG_PRIMARY, GORDOTH_PRIMARY, KORANTHAL_PRIMARY])
+        self.db.executescript(binding_sql(rows))
+        self.assertEqual(self.db.execute('SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=389 ORDER BY bit').fetchall(),
+                         [(61408,1443,0,694,1343,38759),(61412,1444,1,695,1321,42101),(61528,1446,3,697,1345,42100)])
 
 
 if __name__ == '__main__':
