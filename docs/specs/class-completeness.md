@@ -134,6 +134,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [x] Aura286 multiplies matching native class-mask cooldown durations by100/(100+amount), with amount floored at−99. Application/removal scales only remaining spell/category time; category timers retain their owning spell for exact mask matching. Existing charge recovery remains separate.
 - [x] Native Trueshot288613 rate60 starts Rapid Fire257044's16s cooldown at10s. Native Deadly Pursuit1259614 rate200 scales Sprint2983's category44 cooldown120s→40s; real active-timer recasts prove application/removal boundaries.
+- [x] Unchanged refreshes do not apply the factor twice; changed native Hot Hand modifiers replace the old factor, expiry restores remaining time, and affected owners receive current spell/category cooldown updates. Other recipients and out-of-mask spells remain unchanged.
 - [ ] Full Trueshot/Deadly Pursuit ability behavior, global ModTimeRate interactions and native-rendered parity remain unproved.
 
 ## Tests asserting this spec
