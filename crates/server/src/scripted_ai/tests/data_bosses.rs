@@ -884,6 +884,118 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
 }
 
+/// TC spell_ruby_life_pools_ice_shield ticks every1s and refreshes an existing
+/// 372749 aura, without reapplying/refilling its absorb or creating a missing shield.
+#[test]
+fn encounter_coverage_ruby_ice_shield_refreshes_existing_duration_only() {
+    let (mut h, target, _) =
+        encounter_fixture(188011, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let target = target.unwrap();
+    let caster = h.player();
+    for spell_id in [372749, 384933] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    let shield = |h: &Harness| {
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 372749)
+            .unwrap()
+            .clone()
+    };
+    let initial = shield(&h);
+    h.advance(0.1);
+    let first_tick = shield(&h);
+    assert!(
+        first_tick.expires_at.unwrap() > initial.expires_at.unwrap(),
+        "DB2 EXTRA_INITIAL_PERIOD ticks immediately"
+    );
+    h.advance(0.8);
+    assert_eq!(
+        shield(&h).expires_at,
+        first_tick.expires_at,
+        "next tick waits 1s"
+    );
+    h.advance(0.2);
+    let refreshed = shield(&h);
+    assert!(
+        refreshed.expires_at.unwrap() >= initial.expires_at.unwrap() + 0.95,
+        "1s periodic tick refreshes max duration"
+    );
+    assert_eq!(refreshed.instance_id, initial.instance_id);
+    assert_eq!(
+        refreshed.effects, initial.effects,
+        "no absorb reset/reapplication"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 372749,
+    );
+    h.advance(1.1);
+    assert!(
+        !h.has_aura(target, 372749),
+        "periodic callback never creates a missing shield"
+    );
+}
+
+/// TC spell_ruby_life_pools_excavate: effect0 periodic dummy casts373497 triggered
+/// from its original caster on its bearer, and stops when that aura is removed.
+#[test]
+fn encounter_coverage_ruby_excavate_periodic_cast_uses_original_caster_and_target() {
+    let (mut h, target, _) =
+        encounter_fixture(189162, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let target = target.unwrap();
+    let caster = h.player();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target,
+            spell_id: 372793,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(0.1);
+    assert_eq!(h.casts(0, caster, 373497), 1, "DB2 EXTRA_INITIAL_PERIOD");
+    h.advance(0.8);
+    assert_eq!(h.casts(0, caster, 373497), 1, "next tick waits1s");
+    let casts: Vec<_> = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(373497))
+        .collect();
+    assert_eq!(
+        casts[0].target,
+        Some(target.to_bits()),
+        "not the caster/self"
+    );
+    h.advance(0.2);
+    assert_eq!(h.casts(0, caster, 373497), 2);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 372793,
+    );
+    h.advance(1.1);
+    assert_eq!(h.casts(0, caster, 373497), 2, "no more ticks after removal");
+}
+
 /// TC kings_rest.cpp npc_kings_rest_minion_of_zul: only TempleEvent minions run the
 /// temple_basic visual; every minion appears with Bound by Shadow 269935.
 #[test]

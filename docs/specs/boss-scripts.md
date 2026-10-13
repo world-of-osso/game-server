@@ -23,6 +23,16 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Ruby Life Pools source hooks
+
+Pinned TC `ruby_life_pools.cpp` has four spell scripts and no boss AIs. Local Melidrussa/Kokia/Kyrakka/Erkhart templates have empty AIName/ScriptName; no boss schedules are inferred.
+
+- [x] Ice Shield384933 effect0 periodic dummy refreshes existing372749 duration without reapplying/refilling the shield; missing shield stays missing. Respect local DB2's immediate initial tick, then1s period.
+- [x] Excavate372793 effect0 periodic dummy casts373497 triggered from the original caster on the bearer; stops after removal. Respect local DB2's immediate initial tick, then1s period.
+- [ ] Executed371652 effect0 apply sets the source unit flags (FAKE_DEAD, FEIGN_DEATH, PREVENT_EMOTES_FROM_CHAT_TEXT).
+- [ ] Storm Infusion395029 effect1 TARGET_DEST_DEST offsets destination by local(9,0,4).
+- [ ] Source spell-hook gates do not certify SAI path prerequisites, boss combat/credit/loot/lockout or native visuals.
+
 ## What it must do
 
 ### Framework
