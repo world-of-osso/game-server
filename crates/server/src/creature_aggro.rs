@@ -429,13 +429,12 @@ pub(crate) fn update_victim_system(
         });
         // ReselectVictim: a listed fixate target is always preferred; removing its
         // threat reference clears the fixate.
-        let fixated = fixate.map(|fixate| fixate.0.to_bits()).filter(|&fixated| {
-            let listed = threat.entries().iter().any(|entry| entry.entity == fixated);
-            if !listed {
-                commands.entity(creature).remove::<Fixate>();
-            }
-            listed
-        });
+        let fixated = fixate
+            .map(|fixate| fixate.0.to_bits())
+            .filter(|&fixated| threat.entries().iter().any(|entry| entry.entity == fixated));
+        if fixate.is_some() && fixated.is_none() {
+            commands.entity(creature).remove::<Fixate>();
+        }
         let Some(victim) = fixated
             .or(taunted)
             .or_else(|| threat.aggro_target(current, top_in_melee))
