@@ -155,6 +155,7 @@ pub struct AuraApplication {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuraEffectState {
     pub index: u8,
+    pub immunity: Option<Box<crate::spell_info::SpellImmunityDefinition>>,
     pub aura_type: u32,
     /// Per-stack amount computed at application: `BasePoints` with the
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
@@ -501,6 +502,7 @@ fn build_effect(
     };
     AuraEffectState {
         index: effect.index,
+        immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
         misc_values: effect.misc_values,
@@ -611,8 +613,15 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
         let duration_gap = mechanic_duration::positive_source_gap(effect)
             || mechanic_duration::invalid_mechanic_source_gap(effect);
         let duration_supported = !duration_gap;
-        let handled =
-            handlers::is_handled(effect.aura_type) && supported_amount && duration_supported;
+        let immunity_supported = effect.aura_type != handlers::MECHANIC_IMMUNITY_MASK
+            || effect
+                .immunity
+                .as_ref()
+                .is_some_and(|definition| !definition.has_unmodeled_fields());
+        let handled = handlers::is_handled(effect.aura_type)
+            && supported_amount
+            && duration_supported
+            && immunity_supported;
         if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
             continue;
         }
@@ -628,6 +637,19 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
 }
 
 fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if effect.aura_type == handlers::MECHANIC_IMMUNITY_MASK {
+        return if effect.immunity.is_some() {
+            format!(
+                "has unmodeled school/dispel/aura/other fields in definition {}",
+                effect.misc_values[0]
+            )
+        } else {
+            format!(
+                "requires missing native creature_immunities definition {}",
+                effect.misc_values[0]
+            )
+        };
+    }
     if linked::is_linked(effect.aura_type) {
         format!(
             "nonzero linked amount {} for child {} remains a source gap",

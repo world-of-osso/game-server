@@ -55,11 +55,13 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 ## Immunity definition source compatibility
 
 - [x] The creature-immunity importer reads all235 authentic TDB1210 rows, verifies the pinned full-row fingerprint, and transactionally replaces only `creature_immunities` in an existing database copy. Invalid/incomplete input changes no database state; repeated imports are idempotent. Canonical publication belongs to lead.
-- [ ] Explicit compatibility requirement: the immunity loader warns and returns empty definitions when the table is absent, without crashing spell loading. Missing definition IDs remain named unsupported inputs; no immunity masks are invented from the aura147 ID itself.
+- [x] Native147 resolves its MiscValue0 through authentic creature-immunity definitions before using mechanic/effect immunity and the parent's authored purge flag. Definition IDs are not mistaken for masks. Missing IDs and unmodeled nonzero school/dispel/aura/other definition fields remain named partials.
+- [x] Explicit compatibility requirement: the immunity loader warns and returns empty definitions when the table is absent, without crashing spell loading. Missing definition IDs remain named unsupported inputs; no immunity masks are invented from the aura147 ID itself.
 
 ## Tests asserting this spec
 
 - `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
+- `crates/server/src/spell_info/immunity_tests.rs`: authentic definition1733 root purge/admission and explicitly requested absent-table compatibility.
 
 - `crates/server/src/spell_cast/class_completeness_tests.rs`: native owner/label, charge/cooldown, level80 resources and immune/partial-school boundaries.
 - `crates/server/src/spell_cast/class_completeness_probe.rs`: executed membership receipts (manifest supplied explicitly).
