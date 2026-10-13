@@ -9,6 +9,14 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-13 — Exact-level criterion facts
+
+[Level39](systems/dungeon-achievements.md#exact-reference-player-levels--verified-2026-10-13) reuses inclusive minimum/maximum facts. Native level1/2/3 deaths and reopen prove raw orphan counters without linking them to current achievements; census unchanged.
+
+## 2026-10-13 — Instance-death criteria capacity
+
+[Type18](systems/dungeon-achievements.md#instance-death-capacity--verified-2026-10-13) uses allocated dungeon-copy capacity. Native party5/raid10/25 death, negative capacity/copy cases and reopened persistence pass; three statistics become structural, with no delve-content claim.
+
 ## 2026-10-13 — Known-solo achievement predicates
 
 [Solo35](systems/dungeon-achievements.md#solo-group-predicates--verified-2026-10-13) requires native roster authority, not absence of visible peers. Actual marker casts and real joined groups prove credit/exclusion and reopened persistence; originating timed quest content remains unclaimed.
