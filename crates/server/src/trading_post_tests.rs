@@ -207,3 +207,85 @@ fn trading_post_source_vendor_wire_purchase_refuses_closed_and_out_of_range_inte
         crate::persistence::appearance_store::load_account_appearances(h.db(), ACCOUNT).has(37866)
     );
 }
+
+fn open_tawny(h: &mut Harness) {
+    let (name, flags, faction) = h
+        .conn
+        .query_row(
+            "SELECT name,npcflag,faction FROM tdb_creature_template WHERE entry=185468",
+            [],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)? as u64,
+                    row.get::<_, u32>(2)?,
+                ))
+            },
+        )
+        .unwrap();
+    let npc = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 185468,
+                name,
+            },
+            NpcFlags(flags),
+            Position {
+                x: 0.,
+                y: 0.,
+                z: 0.,
+            },
+            Health {
+                current: 100.,
+                max: 100.,
+            },
+            UnitFactionTemplate(faction),
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+    h.take::<InteractionOpened>();
+    h.send::<_, InteractionChannel>(SelectGossipOption {
+        npc: npc.to_bits(),
+        option_id: 0,
+    });
+}
+
+#[test]
+fn trading_post_admin_tender_and_refund_window_enable_wire_refund() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderadmin").unwrap();
+    prepare(&mut h, 1790812800 + 100);
+    let (account, _) =
+        crate::persistence_accounts::register_account(h.db(), "fb_tender", "fbtest").unwrap();
+    assert_eq!(
+        account, ACCOUNT,
+        "harness character belongs to the first account"
+    );
+    assert!(admin_grant_tender(h.db(), "no_such_account", 700).is_err());
+    assert_eq!(admin_grant_tender(h.db(), "fb_tender", 700).unwrap(), 700);
+    h.app.insert_resource(RefundWindow(600));
+    open_tawny(&mut h);
+    let purchased = request(&mut h, TradingPostRequest::Purchase { vendor_item_id: 4 });
+    assert!(purchased.error.is_none(), "{:?}", purchased.error);
+    assert_eq!(purchased.tender, 600);
+    let row = purchased.items.iter().find(|row| row.id == 4).unwrap();
+    assert!(row.purchased && row.collected);
+    assert_eq!(row.refund_seconds, 600);
+    assert!(
+        purchased
+            .source_gaps
+            .iter()
+            .any(|gap| gap.contains("600") && gap.contains("administrator"))
+    );
+    let refunded = request(&mut h, TradingPostRequest::Refund { vendor_item_id: 4 });
+    assert!(refunded.error.is_none(), "{:?}", refunded.error);
+    assert_eq!(refunded.tender, 700);
+    let row = refunded.items.iter().find(|row| row.id == 4).unwrap();
+    assert!(!row.purchased && !row.collected);
+    assert!(
+        !crate::persistence::appearance_store::load_account_appearances(h.db(), ACCOUNT).has(37866)
+    );
+}
