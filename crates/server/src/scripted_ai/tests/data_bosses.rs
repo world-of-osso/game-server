@@ -240,12 +240,11 @@ fn encounter_fixture(
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
-    if [3674, 3669].contains(&entry) {
+    if [3674, 3669, 3670].contains(&entry) {
         // Pin the successful branch of the authored80% chance; keep the
         // selected source timer, spell and target. Production is unchanged.
         for row in std::sync::Arc::make_mut(scripts.0.get_mut(&entry).unwrap()) {
-            if row.action_type == 11 {
-                assert_eq!(row.chance, 80);
+            if row.action_type == 11 && row.chance == 80 {
                 row.chance = 100;
             }
         }
@@ -1721,6 +1720,64 @@ fn encounter_coverage_cobrahn_lightning_damage_repeat_and_generic_lifecycle() {
             .ends
             .iter()
             .any(|end| end.encounter_id == 586 && end.success)
+    );
+    assert!(h.inbox(0).ends.iter().all(|end| end.encounter_id != 585));
+}
+
+/// Actual Pythas SmartAI: immediate20805/repeat6–8s (successful80% branch),
+/// Thunderclap8147 first6–8s/repeat12–30s; casting defers its due event.
+#[test]
+fn encounter_coverage_pythas_real_lightning_thunderclap_and_source_death_target() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(3670, 43, 3, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.1);
+    assert_eq!(casting(&h, boss), Some(20805));
+    h.advance(5.6);
+    assert_eq!(h.casts(0, boss, 8147), 0, "Thunderclap waits at least6s");
+    h.advance(6.0);
+    assert!(h.casts(0, boss, 20805) >= 1);
+    assert_eq!(h.casts(0, boss, 8147), 1);
+    assert!(h.inbox(0).log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(8147)
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(player.to_bits())
+    }));
+    h.advance(5.0);
+    assert_eq!(
+        h.casts(0, boss, 8147),
+        1,
+        "repeat waits at least12s after first attempt"
+    );
+    // First attempt by11s + repeat at most30s + a3s Lightning cast deferral.
+    h.advance(28.0);
+    assert!(
+        h.casts(0, boss, 8147) >= 2,
+        "source repeat actually executes"
+    );
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    let pythas = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 588).unwrap();
+    let anacondra = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 585).unwrap();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, pythas),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, anacondra),
+        Some(EncounterState::NotStarted)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 588 && end.success)
     );
     assert!(h.inbox(0).ends.iter().all(|end| end.encounter_id != 585));
 }
