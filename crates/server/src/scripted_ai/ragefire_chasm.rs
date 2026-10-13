@@ -291,15 +291,22 @@ impl CreatureAi for Gordoth {
             return;
         }
         ctx.do_cast(GROUND_SLAM);
-        // SetHomePosition needs an explicit home independent of original spawn;
-        // that state/return path is not modelled yet. Preserve the spawn record.
-        ctx.world
-            .entity_mut(ctx.me)
-            .insert(shared::components::Rotation {
+        let facing = GORDOTH_JUMP_POSITION[3] + std::f32::consts::FRAC_PI_2;
+        ctx.world.entity_mut(ctx.me).insert((
+            crate::creature_ai::HomePosition {
+                position: shared::components::Position {
+                    x: GORDOTH_JUMP_POSITION[0],
+                    y: GORDOTH_JUMP_POSITION[2],
+                    z: -GORDOTH_JUMP_POSITION[1],
+                },
+                orientation: facing,
+            },
+            shared::components::Rotation {
                 x: 0.0,
-                y: GORDOTH_JUMP_POSITION[3] + std::f32::consts::FRAC_PI_2,
+                y: facing,
                 z: 0.0,
-            });
+            },
+        ));
         Self::destroy_landing_vials(ctx);
         Self::explode_landing_researchers(ctx);
     }
