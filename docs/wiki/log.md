@@ -1,3 +1,7 @@
+## 2026-10-13 — Source Toy facing
+
+[Coverage](../toy-effects14-coverage.md#source-toy-facing--bounded-gate-2026-10-13): explicit unit180° arc, strict exact3D target-radius exemption and completion refusal before item recovery. Bounded gate and native proof status remain claim-specific.
+
 ## 2026-10-13 — Source Toy area-group lifecycle
 
 [Coverage](../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13): real-area guards, source ancestry, cast completion and interrupted owned-aura removal; category preservation and both native skins. Whole1166 goal remains open.

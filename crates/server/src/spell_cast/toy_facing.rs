@@ -11,6 +11,7 @@ use super::{CastFailure, targets};
 const MIN_MELEE_REACH: f32 = 2.0;
 const PLAYER_BOUNDING_RADIUS: f32 = 0.389;
 const IN_FRONT: u32 = 1;
+const PET_BOUNDING_RADIUS: f32 = 1.0;
 
 #[derive(Deserialize)]
 struct Requirements {
@@ -30,6 +31,9 @@ fn bounding_radius(world: &World, target: Entity) -> Result<f32, CastFailure> {
     let scale = world.get::<UnitScale>(target).map_or(1.0, |scale| scale.0);
     if world.get::<Player>(target).is_some() {
         return Ok(PLAYER_BOUNDING_RADIUS * scale);
+    }
+    if world.get::<crate::hunter_pet::HunterPet>(target).is_some() {
+        return Ok(PET_BOUNDING_RADIUS * scale);
     }
     let display = world
         .get::<ModelDisplay>(target)
@@ -59,7 +63,9 @@ pub(super) fn check_cast(
     if !required || world.get::<Player>(caster).is_none() {
         return Ok(());
     }
-    let Some(target) = target.filter(|&unit| unit != caster) else {
+    let Some(target) = target
+        .filter(|&unit| unit != caster && world.get::<shared::components::Health>(unit).is_some())
+    else {
         return Ok(());
     };
     let from = targets::position(world, caster).ok_or(CastFailure::InvalidTarget)?;
@@ -67,15 +73,19 @@ pub(super) fn check_cast(
     let rotation = world
         .get::<Rotation>(caster)
         .ok_or_else(|| CastFailure::Unsupported("facing caster has no rotation".into()))?;
-    let orientation = rotation.y - std::f32::consts::FRAC_PI_2;
     let offset = to - from;
-    let angle = (-offset.z).atan2(offset.x) - orientation;
-    let relative_angle =
-        (angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
-    if relative_angle.abs() <= std::f32::consts::FRAC_PI_2 {
+    if in_front(rotation.y, offset) {
         return Ok(());
     }
     check_boundary(world, caster, target, offset.length_squared())
+}
+
+fn in_front(yaw: f32, offset: Vec3) -> bool {
+    let orientation = yaw - std::f32::consts::FRAC_PI_2;
+    let angle = (-offset.z).atan2(offset.x) - orientation;
+    let relative_angle =
+        (angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+    relative_angle.abs() <= std::f32::consts::FRAC_PI_2
 }
 
 fn check_boundary(
