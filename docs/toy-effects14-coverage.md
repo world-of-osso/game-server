@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source RequiredAreasID lifecycle (2026-10-13)
+
+Pinned69933 exports preserve69 Toy root bindings and42 complete groups; read-only producer retains source hashes in `spell_cast/toy_required_areas.json`. TC a352b1fa SpellInfo.cpp2164 and DB2Stores.cpp1868 require exact area/ParentAreaID ancestry, not map membership. Direct ID equality precedes row lookup; terrain absence cannot establish an area. Player.cpp26509 interrupts restricted player-owned auras at the owner's area, regardless of caster. Reuse ordinary interrupted removal and cooldown history.
+
+| Boundary | Proof |
+|---|---|
+| All69 cast-start refusals | Real Northshire MCNK9; missing position and missing ground data; no SpellGo or cooldown |
+| Parent membership/completion | TDB459999/77488 site, ADT843253 area6797→parent6719; natural171352 five-second cast leaves Draenor, fails completion before spending |
+| Aura/retained category | Real Goldshire87→Kharanos131 retains61810; Northshire9 removes it; source10s category1203 expires naturally, not reset |
+| Native area lifecycle | Actual Eagger Basket188698 bag learning/journal use, rejection/activation/exit in Modern and Forever; remaining cooldown decreases normally |
+| Preserved exclusions | War Banners unrestricted regression; WMO actual-area lookup, facing-only/procedural effects remain separate gaps; no new visual admission |
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `area21-proof-ledger.json`, `area21-*-site.json`, source exports/receipts and native `*-area21/receipts.json`. Native source metadata and output, not every one of the69 toys' effects, are certified. Independent verifier's ancestry counterexample was source-checked and reproduced before correction; other findings were evaluated against literal scope. Whole1166 scope remains open; Pendant115503 admission/native lifecycle remains separate.
+
 ## Current PvP faction and War Banners (2026-10-13)
 
 Canonical census356→358:169275/169276 added, nothing removed (`war20-canonical-after.json` versus `gladiator19-canonical-after.json`). Statue prepared-copy promotion remains separate, not included in this canonical count. Whole1166 goal remains open.

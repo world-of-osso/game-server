@@ -1,3 +1,7 @@
+## 2026-10-13 — Source Toy area-group lifecycle
+
+[Coverage](../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13): real-area guards, source ancestry, cast completion and interrupted owned-aura removal; category preservation and both native skins. Whole1166 goal remains open.
+
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.

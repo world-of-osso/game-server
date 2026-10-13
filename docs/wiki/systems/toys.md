@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source area-group lifecycle (2026-10-13)
+
+Cast start and completion consume the pinned Toy root manifest; actual terrain-area lookup and source ParentAreaID ancestry precede cooldown/effect spending. Player-owned restricted auras use ordinary interrupted removal on exit; within-group travel retains them and category history is unchanged. [Source, exact boundaries and proof](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13); [contract](../../specs/toys.md#source-area-group-closure--active2026-10-13).
+
 ## Current PvP faction and War Banner proof (2026-10-13)
 
 `CurrentPvpFaction` carries the authoritative source condition value independently of faction reactions. Login derives the known racial value; accepted BG/arena entry assigns team after successful teleport; successful return restores it. Invitations and refused source transport entry do not assign the team prematurely. Client parser/codec consumes this scalar for36349/36348. Exact sources, coverage matrix, census and private asset boundaries live in [War Banner coverage](../../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13); [match contract](../../specs/battleground-lifecycle.md#current-pvp-faction) owns lifecycle requirements.

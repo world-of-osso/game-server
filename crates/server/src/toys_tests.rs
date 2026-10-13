@@ -3903,6 +3903,8 @@ fn toyfx21_allowed_area_exit_interrupts_aura_preserves_category_and_rejection_do
             .iter()
             .any(|a| a.spell_id == 61810)
     );
+    // TDB1210 creature305516/41478, actual ADT777997 Kharanos Area131.
+    place_toy_caster_on_source_area(&mut h, 777997, [-5437.77, -437.216], 131);
     h.advance(2);
     assert!(
         h.app
@@ -3911,7 +3913,7 @@ fn toyfx21_allowed_area_exit_interrupts_aura_preserves_category_and_rejection_do
             .unwrap()
             .iter()
             .any(|a| a.spell_id == 61810),
-        "remaining in the permitted area keeps the aura"
+        "moving between permitted group members keeps the aura"
     );
     place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.advance(2);
