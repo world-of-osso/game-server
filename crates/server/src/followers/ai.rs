@@ -187,11 +187,15 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 
 fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
-    world.entity_mut(unit).insert((
-        CreatureState::Idle,
-        CombatTarget(None),
-        FollowOwner::new(owner),
-    ));
+    let following_owner = world
+        .get::<FollowOwner>(unit)
+        .is_some_and(|follow| follow.owner == owner);
+    world
+        .entity_mut(unit)
+        .insert((CreatureState::Idle, CombatTarget(None)));
+    if !following_owner {
+        world.entity_mut(unit).insert(FollowOwner::new(owner));
+    }
     if let Some(position) = world.get::<Position>(unit).copied() {
         if let Some(mut home) = world.get_mut::<crate::creature_ai::SpawnPoint>(unit) {
             home.x = position.x;

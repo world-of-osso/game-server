@@ -4,7 +4,7 @@ use super::*;
 use crate::spell_cast::test_harness::{Harness, harness, spawn_npc, world_db};
 use shared::components::{Health, Npc, UnitPowers};
 
-fn prepare_profile(entry: u32) -> (Harness, Entity, Profile) {
+pub(super) fn spawn_profile_fixture(entry: u32) -> (Harness, Entity, Profile) {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -39,7 +39,7 @@ fn prepare_profile(entry: u32) -> (Harness, Entity, Profile) {
 }
 
 fn assert_profile_combat(entry: u32) {
-    let (mut h, unit, profile) = prepare_profile(entry);
+    let (mut h, unit, profile) = spawn_profile_fixture(entry);
     let enemy = h.npc;
     if profile.role == GroupRole::Healer {
         h.app
