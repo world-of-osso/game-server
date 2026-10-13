@@ -538,10 +538,28 @@ fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
 }
 
 fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSpawns {
-    source_map_objects(
-        map_id,
-        &shared::battleground::objective_object_entries(map_id),
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
+    .unwrap();
+    // Objective entries plus every authored flag/capture type, and Alterac/Isle doors
+    // and goobers (types 1/10) their opening and banner scripts use.
+    let mut entries = shared::battleground::objective_object_entries(map_id);
+    let authored: Vec<u32> = source
+        .prepare("SELECT DISTINCT g.id FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
+            WHERE g.map=?1 AND (t.type IN (36,42) OR (g.map IN (30,628) AND t.type IN (1,10)))")
+        .unwrap()
+        .query_map([map_id], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    entries.extend(
+        authored
+            .into_iter()
+            .filter(|entry| !entries.contains(entry)),
+    );
+    source_map_objects(map_id, &entries)
 }
 
 fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::GameObjectSpawns {

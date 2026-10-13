@@ -77,6 +77,7 @@ fn entry_location(
         .or_else(|| (invitation.map_id == 727).then_some(shared::battleground::SILVERSHARD_STARTS))
         .or_else(|| (invitation.map_id == 1803).then_some(shared::battleground::SEETHING_STARTS))
         .or_else(|| (invitation.map_id == 2656).then_some(shared::battleground::DEEPHAUL_STARTS))
+        .or_else(|| (invitation.map_id == 30).then_some([611, 610]))
         .ok_or("this battleground has no implemented entry lifecycle")?;
     let location_id = starts[match invitation.team {
         BgTeam::A => 0,
@@ -148,6 +149,11 @@ fn create_match_map(
     } else {
         None
     };
+    let alterac = if template.map_id == 30 {
+        Some(super::pvp_alterac::AlteracRuntime::from_source(world)?)
+    } else {
+        None
+    };
     let deephaul = if template.map_id == 2656 {
         Some(super::pvp_deephaul::DeephaulRuntime::from_source(world)?)
     } else {
@@ -181,6 +187,14 @@ fn create_match_map(
     if arena {
         super::arena_objects::prepare_map(world, map);
         super::arena_sight::prepare_map(world, map);
+    }
+    if let Some(alterac) = alterac {
+        alterac.synchronize(world, map);
+        state
+            .battleground_matches
+            .get_mut(&match_id)
+            .expect("validated match")
+            .alterac = Some(alterac);
     }
     if let Some(mut deephaul) = deephaul {
         deephaul.synchronize_carts(world, map);

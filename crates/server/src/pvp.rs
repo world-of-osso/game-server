@@ -47,6 +47,12 @@ mod arena_rating;
 #[path = "pvp_arena_sight.rs"]
 mod arena_sight;
 
+#[path = "pvp_alterac.rs"]
+mod pvp_alterac;
+pub(crate) use pvp_alterac::is_banner as is_alterac_banner;
+pub(crate) use pvp_alterac::{
+    check_banner_target, complete_opening, record_creature_death, record_player_death,
+};
 #[path = "pvp_deephaul.rs"]
 mod pvp_deephaul;
 #[path = "pvp_entry.rs"]
@@ -174,6 +180,7 @@ struct InvitedBattleground {
     silvershard: Option<pvp_silvershard::CartRuntime>,
     seething: Option<pvp_seething::SeethingRuntime>,
     deephaul: Option<pvp_deephaul::DeephaulRuntime>,
+    alterac: Option<pvp_alterac::AlteracRuntime>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
@@ -181,6 +188,17 @@ struct InvitedBattleground {
 }
 
 impl InvitedBattleground {
+    fn displayed_scores(&self) -> (u32, u32) {
+        if self.instance.bg_id == 1 {
+            (
+                self.instance.score_a.reinforcements,
+                self.instance.score_b.reinforcements,
+            )
+        } else {
+            (self.instance.score_a.score, self.instance.score_b.score)
+        }
+    }
+
     fn flag_objective(&self) -> shared::battleground::FlagObjective {
         self.flags
             .as_ref()
@@ -189,6 +207,9 @@ impl InvitedBattleground {
     }
 
     fn world_states(&self) -> Vec<(u32, i32)> {
+        if let Some(alterac) = &self.alterac {
+            return alterac.battle.world_states(&self.instance);
+        }
         if let Some(nodes) = &self.nodes {
             return nodes.world_states(&self.instance);
         }
@@ -245,6 +266,7 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             silvershard: None,
             seething: None,
             deephaul: None,
+            alterac: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
             arena: None,
@@ -307,12 +329,11 @@ impl Plugin for PvpPlugin {
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
         app.add_systems(Update, process_battleground_queue_requests);
+        // Accept/decline and Leave may retire a map. Update's corpse-loot
+        // commands must finish before either can destroy that map's creatures.
+        app.add_systems(PostUpdate, process_battleground_invitation_responses);
         app.add_systems(
-            Update,
-            process_battleground_invitation_responses.after(process_battleground_queue_requests),
-        );
-        app.add_systems(
-            Update,
+            PostUpdate,
             process_battleground_leave_requests.after(process_battleground_invitation_responses),
         );
         app.add_systems(
@@ -578,8 +599,8 @@ fn resolve_battleground_matches(
                 phase: invitation.instance.phase,
                 accepted: false,
                 invitation_time_left_secs: None,
-                score_a: invitation.instance.score_a.score,
-                score_b: invitation.instance.score_b.score,
+                score_a: invitation.displayed_scores().0,
+                score_b: invitation.displayed_scores().1,
                 flags: invitation.flag_objective(),
                 world_states: invitation.world_states(),
                 outcome: invitation.instance.outcome,
