@@ -1,6 +1,43 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_player_aura_some_rejects_a_missing_spell_alternative_at_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("aura-some.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let conn = Connection::open(&path).unwrap();
+    conn.execute("DELETE FROM spell WHERE ID = 136778", [])
+        .unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            auras: [136775].into_iter().collect(),
+            map: 0,
+            race: 1,
+            class: 1,
+            level: 1,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::BeSpellTarget(136749),
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&22840),
+        "missing spell cannot be silently removed"
+    );
+}
+
+#[test]
 fn achievements_criteria_player_area_some_accepts_alternatives_and_authored_descendants() {
     let catalog = catalog();
     for (area, qualifies) in [

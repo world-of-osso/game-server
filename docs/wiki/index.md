@@ -1,5 +1,6 @@
 # Wiki Index
 
+- [Player-aura criterion alternatives](systems/dungeon-achievements.md#player-aura-alternatives) — authenticated current aura membership; native Jaguar/Mighty Loa fixture, no full boss lifecycle claim.
 - [Player-area criterion alternatives](systems/dungeon-achievements.md#player-area-alternatives) — complete recursive membership; native death fixture uses controlled cached authority, not terrain-travel certification.
 - [Player-map criterion alternatives](systems/dungeon-achievements.md#player-map-alternatives) — complete map membership; native Warsong killing-blow fixture, no legacy-map playability claim.
 - [Target-creature criterion alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) — complete one-of NPC selectors, per-request native negatives and Wave40624 grant; NPC content closure remains separate.
