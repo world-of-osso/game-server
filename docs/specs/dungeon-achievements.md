@@ -73,6 +73,8 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 
 ### Continued source-backed coverage
 
+- Modifier29 LessThanTappers uses the full authoritative group roster at the criteria event, including offline members; known solo satisfies the positive limit. Count must be strictly less than Asset. Missing group authority/reference player cannot qualify. Difficulty/other predicates remain conjunctive; physical proximity does not replace group size.
+
 - Types32/33 use committed native rated results: exact map wins for online winners; exact map participation for online winners and losers. Team-size24 admits native2v2/3v3 and ranked60 requires this rated-result event. Queue, preparation, skirmish, offline settlement and idle replay cannot credit; unknown qualifiers and5v5 remain disabled.
 
 - Type54 TargetCreatureId4 uses the target snapshotted into each native text-emote request, resolved to a real NPC on the sender's map copy. Love225 is a text-only emote; targetless chat cannot borrow current CombatTarget. Wrong emote, forged/stale/player/foreign-map targets and non-world senders cannot qualify these leaves. Unknown target modifiers stay disabled; no target snapshot is inferred for other producer types.

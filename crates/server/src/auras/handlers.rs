@@ -29,6 +29,8 @@ pub enum AuraKind {
     DamageFromCaster,
     ///Creature victim selection and caster-specific threat generation.
     Taunt,
+    /// The caster's preferred victim while applied (`fixate.rs`).
+    Fixate,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
     Script,
     /// Casts its trigger spell on a health-percent crossing (`health_pct_trigger.rs`).
@@ -209,9 +211,13 @@ pub const MOD_ROOT_2: u32 = 455;
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 /// TC a352b1fa SpellHistory::StartCooldown: spell-mask-scoped haste regen.
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
+/// SpellHistory::StartCooldown adds signed milliseconds to matching categories.
+pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
+/// SPELL_AURA_MOD_FIXATE (SpellAuraDefines.h, TrinityCore a352b1fa).
+pub const MOD_FIXATE: u32 = 128;
 pub const LINKED_2: u32 = 285;
 pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
@@ -242,6 +248,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PERIODIC_DUMMY | DUMMY => Script,
         super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
         MOD_TAUNT => Taunt,
+        MOD_FIXATE => Fixate,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
@@ -333,7 +340,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
         | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
-        | MOD_COOLDOWN_BY_HASTE_REGEN => SpellMod,
+        | MOD_COOLDOWN_BY_HASTE_REGEN
+        | MOD_SPELL_CATEGORY_COOLDOWN => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,

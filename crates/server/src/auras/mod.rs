@@ -19,6 +19,7 @@ pub(crate) mod base_armor;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 mod fear;
+mod fixate;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
 pub mod invisibility;
@@ -869,9 +870,11 @@ pub(crate) fn apply_aura_with_spell(
             excluded.contains(&aura.spell_id)
         });
     }
-    // Atonement marks from different priests remain independently owned.
+    // Atonement marks from different priests remain independently owned; other
+    // casters' channelled auras stack (Aura::CanStackWith, SpellAuras.cpp:1695).
     let coexist = instance.harmful
         || spell.id == 194384
+        || crate::spell_cast::is_channeled(&spell)
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
@@ -902,6 +905,7 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        fixate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
         let stuns = aura
@@ -1071,6 +1075,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    fixate::on_removed(world, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
@@ -1095,6 +1100,26 @@ pub fn remove_auras(
     }
     auras_changed(world, unit);
     removed
+}
+
+/// Reset an existing finite aura to its stored maximum duration, without
+/// refilling absorb capacity or changing its periodic timer (Aura::RefreshDuration).
+pub(crate) fn refresh_duration(world: &mut World, target: Entity, spell_id: u32) {
+    let now = aura_now(world);
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id)
+    else {
+        return;
+    };
+    if aura.expires_at.is_some() {
+        aura.expires_at = Some(now + f64::from(aura.duration_ms) / 1_000.0);
+        auras.dirty = true;
+    }
 }
 
 /// Extend existing finite auras owned by this caster without restarting ticks.
