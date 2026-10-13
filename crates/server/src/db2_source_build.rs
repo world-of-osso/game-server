@@ -18,7 +18,9 @@ pub(crate) fn read_source_build(db: &Connection, table: &str) -> Result<String, 
         .and_then(|rows| rows.collect::<rusqlite::Result<Vec<_>>>())
         .map_err(|error| format!("{table} provenance: {error}"))?;
     let [build] = builds.as_slice() else {
-        return Err(format!("{table} requires exactly one declared source build"));
+        return Err(format!(
+            "{table} requires exactly one declared source build"
+        ));
     };
     validate_build(build)?;
     Ok(build.clone())

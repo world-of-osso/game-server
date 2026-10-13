@@ -6,8 +6,15 @@ use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
 fn db2_follow_install_housing_quests_read_the_declared_next_build_key() {
     let (source, mut quests) = fixture();
     let key = "334a36cf5f3c32a5f7a167405487fa14";
-    source.execute("UPDATE housing_catalog_build SET build_key=?, build='12.1.5.70391'", [key]).unwrap();
-    source.execute("UPDATE housing_catalog_record SET build_key=?", [key]).unwrap();
+    source
+        .execute(
+            "UPDATE housing_catalog_build SET build_key=?, build='12.1.5.70391'",
+            [key],
+        )
+        .unwrap();
+    source
+        .execute("UPDATE housing_catalog_record SET build_key=?", [key])
+        .unwrap();
     crate::housing_quests::load(&source, &mut quests).unwrap();
     let quest = &quests.quests[&92572];
     assert!(!quest.completion_blocked);

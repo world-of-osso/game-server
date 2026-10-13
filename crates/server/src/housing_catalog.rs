@@ -183,13 +183,18 @@ impl HousingCatalog {
 
 pub(crate) fn read_build_key(db: &Connection) -> Result<String, String> {
     crate::db2_source_build::read_source_build(db, "housing_catalog_build")?;
-    let count: u32 = db.query_row("SELECT COUNT(*) FROM housing_catalog_build", [], |row| row.get(0))
+    let count: u32 = db
+        .query_row("SELECT COUNT(*) FROM housing_catalog_build", [], |row| {
+            row.get(0)
+        })
         .map_err(|error| error.to_string())?;
     if count != 1 {
         return Err("Housing catalog requires exactly one declared build key".into());
     }
-    db.query_row("SELECT build_key FROM housing_catalog_build", [], |row| row.get(0))
-        .map_err(|error| error.to_string())
+    db.query_row("SELECT build_key FROM housing_catalog_build", [], |row| {
+        row.get(0)
+    })
+    .map_err(|error| error.to_string())
 }
 
 fn read_rows(db: &Connection, table: &str) -> Result<Vec<(u32, Fields)>, String> {
