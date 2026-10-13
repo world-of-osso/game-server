@@ -25,16 +25,20 @@ fn class_completeness_native_power_strike_casts_proc_each_tick() {
             target: unit,
             spell_id: POWER_STRIKE,
             effect_mask: u32::MAX,
-            source: AuraSource::Cast,
+            source: AuraSource::KnownSpell,
         },
     );
-    h.advance(TICK_FRAMES - 10);
-    assert!(!has_proc(&h), "cast by the 15 s tick, not on apply");
-    h.advance(10);
-    assert!(has_proc(&h));
+    assert!(!has_proc(&h), "cast by a tick, not the application hook");
+    h.advance(1);
+    assert!(
+        has_proc(&h),
+        "authored ExtraInitialPeriod triggers the first due tick"
+    );
     remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {
         aura.spell_id == POWER_STRIKE_PROC
     });
-    h.advance(TICK_FRAMES);
+    h.advance(TICK_FRAMES - 10);
+    assert!(!has_proc(&h), "next tick waits 15 seconds");
+    h.advance(10);
     assert!(has_proc(&h), "every tick recasts the proc");
 }

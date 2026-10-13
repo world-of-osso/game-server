@@ -98,7 +98,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## Periodic class proc hooks
 
-- [x] Combat Wisdom 121817 casts Power Strike Proc 129914 on each 15 s effect-0 tick, not on application. Effect 1 remains unmodeled.
+- [x] Combat Wisdom 121817 casts Power Strike Proc 129914 on each effect-0 tick, immediately on the first due tick (authored ExtraInitialPeriod) and then every 15 s. Effect 1 remains unmodeled.
 - [x] Critical Chaos 320413 adds effect 1's percentage of the owner's crit chance to Chaos Strike's proc chance on application and recalculates it on each 1 s effect-1 tick.
 
 ## Tests asserting this spec
