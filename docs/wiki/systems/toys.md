@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Current PvP faction and War Banner proof (2026-10-13)
+
+`CurrentPvpFaction` carries the authoritative source condition value independently of faction reactions. Login derives the known racial value; accepted BG/arena entry assigns team after successful teleport; successful return restores it. Invitations and refused source transport entry do not assign the team prematurely. Client parser/codec consumes this scalar for36349/36348. Exact sources, coverage matrix, census and private asset boundaries live in [War Banner coverage](../../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13); [match contract](../../specs/battleground-lifecycle.md#current-pvp-faction) owns lifecycle requirements.
+
 ## Source summon flag import (2026-10-12)
 
 Canonical read-only inspection found3610 SummonProperties rows with only ID/Control/Faction/Title/Slot, despite the maintained DB2 schema already naming `Flags_0`/`Flags_1`. Local CASC FDID1345276/layoutA4CA5ECF and pinned TC DB2LoadInfo supply both words for3610 readable records; three encrypted records are explicitly omitted. `scripts/import_summon_property_flags.py` validates every existing source identity, transactionally adds the missing columns and populates flags without rewriting identities/unrelated data. Legacy3001 Title4294967295 equals the source signed32 -1 bit pattern; validation normalizes bits, not stored data.

@@ -1,3 +1,7 @@
+## 2026-10-13 — Current PvP faction and War Banners
+
+[Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
