@@ -7,8 +7,13 @@ use rusqlite::{Connection, params};
 fn db2_follow_install_housing_catalog_reads_the_declared_next_build_key() {
     let db = catalog_fixture();
     let key = "334a36cf5f3c32a5f7a167405487fa14";
-    db.execute("UPDATE housing_catalog_build SET build_key=?, build='12.1.5.70391'", [key]).unwrap();
-    db.execute("UPDATE housing_catalog_record SET build_key=?", [key]).unwrap();
+    db.execute(
+        "UPDATE housing_catalog_build SET build_key=?, build='12.1.5.70391'",
+        [key],
+    )
+    .unwrap();
+    db.execute("UPDATE housing_catalog_record SET build_key=?", [key])
+        .unwrap();
     let catalog = HousingCatalog::read(&db).unwrap();
     assert_eq!(catalog.plot(417).unwrap().cost, 10_000_000);
     assert_eq!(catalog.cornerstone_plot(527268), Some(417));

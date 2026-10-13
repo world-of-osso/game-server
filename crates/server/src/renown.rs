@@ -55,8 +55,7 @@ pub(crate) fn catalog() -> &'static [MajorFaction] {
                 .unwrap_or_else(|error| panic!("Renown catalog {}: {error}", path.display()));
             let catalog: Catalog = serde_json::from_str(&text)
                 .unwrap_or_else(|error| panic!("Renown catalog {}: {error}", path.display()));
-            crate::db2_source_build::validate_build(&catalog.build)
-                .expect("renown source build");
+            crate::db2_source_build::validate_build(&catalog.build).expect("renown source build");
             catalog
         })
         .major_factions
