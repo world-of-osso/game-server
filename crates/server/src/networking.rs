@@ -397,6 +397,7 @@ fn save_and_despawn(
 
 pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
     commands.queue(move |world: &mut World| {
+        crate::pvp::reconnect::logged_out(world, entity);
         crate::hunter_pet::persist_current_pet_health(world, entity);
         // The transport can outlive its retired player while ForcedDisconnect is
         // delivered. Revoke its world link before PostUpdate removes that player.

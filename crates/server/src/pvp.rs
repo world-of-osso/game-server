@@ -76,6 +76,8 @@ pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
 #[path = "pvp_leave.rs"]
 mod pvp_leave;
+#[path = "pvp_reconnect.rs"]
+pub(crate) mod reconnect;
 use pvp_leave::process_battleground_leave_requests;
 #[path = "pvp_objective.rs"]
 mod pvp_objective;
@@ -245,7 +247,8 @@ impl InvitedBattleground {
 }
 
 #[derive(Resource, Default)]
-struct PvpServerState {
+pub(crate) struct PvpServerState {
+    offline_players: BTreeMap<u64, reconnect::OfflinePlayer>,
     battleground_queue: BgQueue,
     rated_team_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<arena_rating::QueuedTeam>>,
     arena_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<(u64, u8)>>,
@@ -346,6 +349,10 @@ impl Plugin for PvpPlugin {
         app.add_systems(
             PostUpdate,
             process_battleground_leave_requests.after(process_battleground_invitation_responses),
+        );
+        app.add_systems(
+            PostUpdate,
+            reconnect::expire_offline_players.after(process_battleground_leave_requests),
         );
         app.add_systems(
             Update,

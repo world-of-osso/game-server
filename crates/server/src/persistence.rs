@@ -338,6 +338,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(CHARACTER_CORPSES);
     txn.open_table(CHARACTER_DEATH_STATES)
         .expect("Failed to create character death states table");
+    txn.open_table(crate::pvp::reconnect::ENTRIES)
+        .expect("Failed to create battleground entry points table");
     let _ = txn.open_table(crate::maps::persistence::CHARACTER_MAPS);
     txn.open_table(crate::spell_cast::homebind::HOME_BINDS)
         .expect("Failed to create character homebinds");
