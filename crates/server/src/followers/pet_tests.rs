@@ -80,6 +80,20 @@ fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
 }
 
 #[test]
+fn follower_felguard_leaves_when_runtime_companion_owner_is_removed() {
+    let mut f = fixture();
+    let before = count_persisted_rows(f.h.app.world());
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 30146, Some(f.unit), false)
+        .unwrap();
+    f.h.advance(160);
+    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).unwrap();
+    f.h.app.world_mut().despawn(f.unit);
+    f.h.advance(3);
+    assert!(!f.h.app.world().entities().contains(pet));
+    assert_eq!(count_persisted_rows(f.h.app.world()), before);
+}
+
+#[test]
 fn follower_lantha_ai_prepares_authored_felguard_before_damage() {
     let mut f = fixture();
     for _ in 0..180 {
