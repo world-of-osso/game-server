@@ -620,14 +620,6 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
         let duration_gap = mechanic_duration::positive_source_gap(effect)
             || mechanic_duration::invalid_mechanic_source_gap(effect);
         let duration_supported = !duration_gap;
-<<<<<<< HEAD
-        let handled =
-            handlers::is_handled(effect.aura_type) && supported_amount && duration_supported;
-        if handled
-            || scripts::consumes_named_field(aura.spell_id, effect.index)
-            || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
-        {
-=======
         let immunity_supported = effect.aura_type != handlers::MECHANIC_IMMUNITY_MASK
             || effect
                 .immunity
@@ -637,8 +629,10 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
             && supported_amount
             && duration_supported
             && immunity_supported;
-        if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
->>>>>>> db8d14f1
+        if handled
+            || scripts::consumes_named_field(aura.spell_id, effect.index)
+            || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
+        {
             continue;
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
