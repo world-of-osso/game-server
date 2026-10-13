@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Goblin Weather Machine (2026-10-12)
+
+Read-only canonical census346→347/1166 (+35227, zero removed; `weather-canonical-after.json`). Source: TC a352b1fa `spell_item_goblin_weather_machine` makes the hit unit cast RAND(46740, 46739, 46738, 46736) on itself. The TDB1210 `spell_script_names` scan (4066 rows) binds 46203/60458/60476/64385 to exactly the scripts used here and binds none of the four weather spells. So 46736's5000ms PERIODIC_DUMMY tick is a no-op (TC PeriodicTick leaves226 to scripts). All four are single self auras with SpellVisual bindings and DurationIndex9 (30000ms).
+
+RED `00468623` refused effect77. GREEN `2643ea09`/`65974226`: actual bag learning/UseToy applies exactly one weather aura, cast by the caster, 30000ms; it stays through 46736 ticks with unchanged health/position and expires naturally. Refusals cover a missing weather spell, weather trigger drift, missing visual binding and an extra machine effect. Presentation comes from aura replication; the triggered weather cast sends no separate SpellGo. Native actual journal use: Modern46738 (observed29.0s to expiry from first capture) and Forever46740 (29.6s). The first Forever attempt hit a fixture bag-readiness race, fixed in engine `8780ec91a`. PNGs in `toys/weather18/` show the buff icon/timer, but the camera is obstructed, so the weather visual itself is not certified.
+
 ## Titanium Seal coin (2026-10-12)
 
 Read-only canonical census338→346/1166, zero removed. Only44430 is this batch. The other seven came from the origin/master merge, not from toy work here: 33219/33927/139337/210042/234951 are type22 spellcaster objects, plus 199554 (target62) and 200999 (target72). Census JSON: `coin-canonical-after.json`.
