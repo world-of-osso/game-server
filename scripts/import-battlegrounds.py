@@ -17,7 +17,7 @@ TABLES = frozenset({
     'battleground_template', 'battleground_scripts', 'spawn_group', 'spawn_group_template',
     'world_state', 'areatrigger', 'areatrigger_template', 'areatrigger_create_properties',
     'areatrigger_template_actions', 'areatrigger_scripts', 'areatrigger_teleport',
-    'npc_spellclick_spells',
+    'npc_spellclick_spells', 'transports',
 })
 COLUMN = re.compile(r'^\s+`(\w+)`\s+(\w+)')
 
