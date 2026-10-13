@@ -1,5 +1,14 @@
 # Toy Box server foundation
 
+## Source area-group closure — active2026-10-13
+
+- [ ] Preserve the69 authored Toy root `RequiredAreasID` bindings and42 complete area groups from local69933 source exports; producer reads world.db without mutation and refuses missing groups before replacing its manifest.
+- [ ] Cast start and completion require the player's actual area or an authored parent to match a source group member, before item cooldown/effect spending. Missing actual area fails explicitly, never through a guessed map/zone fallback.
+- [ ] Player-owned restricted auras interrupt when a real area change leaves the source group, following TC a352b1fa `Player::UpdateAreaDependentAuras`; changing areas within the group preserves them.
+- [ ] Preserve ordinary unrestricted casts and actual item/category cooldown history; no test reset.
+
+Facing-only requirements225826/406870, procedural/positioner rendering and generic non-Toy redesign are separate. WMO-only actual-area identification remains an explicit capability gap. Producer: `scripts/generate_toy_area_requirements.py`; behavioral tests: `scripts/tests/test_generate_toy_area_requirements.py`. New visual admission (Pendant115503/171352) waits for full region/lifecycle/native proof.
+
 ## Contract
 
 - War Banners169275/169276 use source300104/300144 permanent cosmetic self auras without gameplay/model replacement. Preserve source interrupt mask0x10001002, including real entering-combat removal, and ordinary learning/eligibility/cooldowns. Client visual87545/87561 requires authored CurrentPvpFaction2/1 (36349/36348), not a race-only condition; BG and arena team replication is required. No generic dummy-aura admission.
