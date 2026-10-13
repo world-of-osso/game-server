@@ -43,8 +43,8 @@ fn hit(h: &mut Harness, spell: u32) -> u32 {
     h.advance(1);
     h.inbox.log[start..]
         .iter()
-        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == spell)
-        .map(|event| event.amount)
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(spell))
+        .map(|event| u32::try_from(event.amount).unwrap())
         .sum()
 }
 
@@ -85,7 +85,7 @@ fn class_completeness_native_charred_warblades_accumulates_fire_damage_then_heal
         .inbox
         .log
         .iter()
-        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == HEAL)
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(HEAL))
         .count();
     assert_eq!(count, 1);
     h.advance(22);
@@ -98,7 +98,7 @@ fn class_completeness_native_charred_warblades_accumulates_fire_damage_then_heal
         h.inbox
             .log
             .iter()
-            .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == HEAL)
+            .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(HEAL))
             .count(),
         count
     );
