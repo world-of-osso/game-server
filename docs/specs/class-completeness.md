@@ -70,6 +70,16 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [x] Native aura101 with the physical bit multiplies final armor as TC's armor TOTAL_PCT: after base/gear and stat-derived armor, alongside aura466, with independent auras multiplying. Creatures (including level-scaled ones) multiply their armor before the attacker-level armor multiplier. Removal restores the remaining factors. Nonphysical resistance bits are logged unmodelled.
 
+## Class trans-door portals
+
+- [x] All 29 native class TRANS_DOOR (effect50) spells spawn their authored TDB type22 spellcaster objects; an absent template fails cast admission with its reason instead of silently succeeding.
+
+## Dual wield and parry knowledge
+
+- [x] Knowing a native SPELL_EFFECT_DUAL_WIELD (40) spell permits one-hand and off-hand weapons in the off hand; without it they fail with CantDualWield, and auto-equip offers only the main hand. One-hand polearms never fit the off hand.
+- [ ] When a player stops knowing Dual Wield (spec/talent change), TC moves the off-hand weapon to the bags or mails it (OffhandCheckAtSpellUnlearn defaults on). Not yet modelled.
+- [x] Knowing any of the six native SPELL_EFFECT_PARRY (22) spells enables parry; without one, parry chance never applies.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
@@ -81,6 +91,9 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `crates/server/src/spell_cast/cast_while_moving_tests.rs`: native330 masks, real cast/channel damage, live cast permission gain/removal/expiry and metadata veto controls.
 - `crates/server/src/auras/fear_tests.rs`: native fear swings/target/removal, Slam/Berserker Rage/Will of the Forsaken/Barkskin admission against Intimidating Shout, Sleep Walk and Turn Evil, and fleeing dodge loss.
 - `crates/server/src/spell_cast/resistance_pct_tests.rs`: native Armor Specialization/Reinforced Plates player armor with aura466, removal, and level-scaled creature mitigation.
+- `crates/server/src/spell_cast/portal_tests.rs`: all29 class trans-door spawns and absent-template admission failure.
+- `crates/server/src/inventory_tests.rs`: native Dual Wield off-hand admission, rejection and auto-equip.
+- `crates/server/src/auras/defensives_tests.rs`: six native Parry spells versus none.
 - `crates/server/src/spell_cast/melee_crit_taken_tests.rs`: native187 real damage, victim ownership, additive fields, expiry/removal, positive and ranged/magic controls.
 - `crates/server/src/spell_cast/mechanic_duration_tests.rs`: native232/234 stacking, mixed signs, actual clocks/expiry, integer arithmetic and named source-gap exclusions.
 - Existing targeted resource/regen/generator tests remain bounded proofs, not every talent combination.
