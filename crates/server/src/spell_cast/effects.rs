@@ -1131,6 +1131,59 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
 }
 
 /// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
+/// TC EffectTriggerMissileSpell HIT mode (SpellEffects.cpp:757-788), distinct from
+/// the existing HIT_TARGET handler: forward destination, retaining child costs.
+pub(super) fn trigger_missile_at_destination(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+) {
+    if ctx.depth >= MAX_TRIGGER_DEPTH {
+        warn!("Spell {} missile child exceeds trigger depth", ctx.spell.id);
+        return;
+    }
+    let Some(destination) = ctx.dest else {
+        warn!("Spell {} missile child has no destination", ctx.spell.id);
+        return;
+    };
+    let Some(mut child) = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(effect.trigger_spell)
+        .cloned()
+    else {
+        warn!(
+            "Spell {} missile child {} missing",
+            ctx.spell.id, effect.trigger_spell
+        );
+        return;
+    };
+    child.cast_destination = Some(destination.position.to_array());
+    child.cast_item_level = ctx.spell.cast_item_level;
+    if let Err(error) = cast_destination_missile_child(world, ctx.caster, &child, ctx.depth + 1) {
+        warn!(
+            "Spell {} missile child {} failed: {error:?}",
+            ctx.spell.id, child.id
+        );
+    }
+}
+
+fn cast_destination_missile_child(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+) -> Result<(), super::CastFailure> {
+    // TC uses FULL_MASK except IGNORE_POWER_COST/IGNORE_REAGENT_COST.
+    let costs = super::spell_costs(world, caster, spell)?;
+    crate::profession::check_cast_items(world, caster, spell)?;
+    let plan = super::plan_targets(world, caster, spell, Some(caster), true)?;
+    super::spend_costs(world, caster, &costs);
+    crate::profession::take_reagents(world, caster, spell);
+    crate::achievement::record_spell_cast(world, caster, spell.id);
+    super::missiles::launch(world, caster, spell, plan, depth);
+    Ok(())
+}
+
 fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     super::cast_triggered_with_item_level(
         world,

@@ -23,6 +23,7 @@ pub mod instance_script;
 pub mod kings_rest;
 pub mod movement;
 pub mod murder_row;
+pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 pub mod smart_ai;
 pub mod the_stockade;
@@ -252,6 +253,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if kings_rest::is_creature_script(script_name) {
         return kings_rest::creature_ai(world, creature, script_name);
     }
+    if ragefire_chasm::is_creature_script(script_name) {
+        return ragefire_chasm::creature_ai(world, creature, script_name);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -266,6 +270,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
     let script_name = if the_stockade::is_creature_script(script_name)
         || murder_row::is_creature_script(script_name)
         || kings_rest::is_creature_script(script_name)
+        || ragefire_chasm::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
