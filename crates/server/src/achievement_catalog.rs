@@ -434,6 +434,8 @@ pub(crate) struct ReferencePlayer {
     pub race: u8,
     pub class: u8,
     pub level: u8,
+    /// Full group roster, including offline members;0 means known solo, None unknown.
+    pub group_size: Option<usize>,
 }
 
 /// A compiled ModifierTree leaf resolved at catalog load.
@@ -446,6 +448,8 @@ enum CriteriaFact {
     TargetCreature(u32),
     ArenaTeamSize(u8),
     RankedArena,
+    /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
+    LessThanGroupMembers(u32),
     /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
     Area(BTreeSet<u32>),
     Race(u8),
@@ -473,6 +477,9 @@ impl CriteriaFact {
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
             Self::Race(race) => player.race == *race,
             Self::Class(class) => player.class == *class,
+            Self::LessThanGroupMembers(limit) => {
+                player.group_size.is_some_and(|size| size < *limit as usize)
+            }
             Self::Map(map) => player.map == *map,
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
@@ -1224,12 +1231,13 @@ fn load_criteria_facts(
             26 => small
                 .filter(|class| (1..=13).contains(class))
                 .map(CriteriaFact::Class),
+            29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
             69 => small
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/32/60/69/71"),
+            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/60/69/71"),
         };
         let Some(fact) = fact else {
             return Ok(None);
