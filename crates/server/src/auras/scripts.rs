@@ -88,6 +88,7 @@ const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
 const POWER_STRIKE: u32 = 121_817;
 const POWER_STRIKE_PROC: u32 = 129_914;
+const POWER_STRIKE_ENERGIZE: u32 = 121_283;
 const CRITICAL_CHAOS: u32 = 320_413;
 const TIGER_DASH: u32 = 252_216;
 const BLOODSURGE: u32 = 384_361;
@@ -374,6 +375,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        POWER_STRIKE_PROC,
+        AuraScript {
+            on_proc: Some(energize_power_strike),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         POWER_STRIKE,
         AuraScript {
             on_periodic: Some(cast_power_strike_proc),
@@ -498,6 +506,16 @@ fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect
     }
     super::auras_changed(world, unit);
     crate::spell_cast::mark_dirty(world, unit);
+}
+
+/// TC a352b1fa spell_monk.cpp:318-333, spell_monk_power_strike_proc.
+fn energize_power_strike(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    _other: Option<Entity>,
+) {
+    crate::spell_cast::cast_triggered(world, unit, POWER_STRIKE_ENERGIZE, Some(unit), 1);
 }
 
 /// TC a352b1fa spell_monk_power_strike_periodic: only effect0 casts 129914.
