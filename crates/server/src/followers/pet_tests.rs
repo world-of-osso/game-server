@@ -123,7 +123,13 @@ fn follower_lantha_felguard_interrupts_with_learned_axe_toss_without_canceling_o
             .world()
             .get::<shared::casting::CastState>(f.h.npc)
             .is_none(),
-        "actual enemy Fireball must be interrupted"
+        "actual enemy Fireball must be interrupted; pet charm {:?}; pet cast {:?}; pet powers {:?}; failures {:?}; go {:?}; log {:?}",
+        f.h.app.world().get::<crate::pet_control::PetCharm>(pet),
+        f.h.app.world().get::<shared::casting::CastState>(pet),
+        f.h.app.world().get::<shared::components::UnitPowers>(pet),
+        f.h.inbox.failed,
+        f.h.inbox.go,
+        f.h.inbox.log,
     );
     assert_eq!(
         f.h.app
