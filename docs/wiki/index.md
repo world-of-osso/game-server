@@ -3,6 +3,8 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Dungeon spawn-leash exemption](../specs/creature-aggro.md) — TC dungeon policy, unchanged open-world40yd test, and [superseded Stockade evidence](systems/navigation.md#stationary-arch-and-leash-acceptance); Slagmaw's authored East teleport stays engaged.
+
 - [Prepared follower Group Finder catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13) — authenticated source-backed sorted entries and explicit empty reply; native UI/full-dungeon proof remains separate.
 - [Unrated Solo Shuffle](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13) — six source-role rounds, item cast-time/category reset RED/GREEN, four-map exact origins and both-skin real-kill/return proof; rated/leaver and dampening gaps explicit.
 

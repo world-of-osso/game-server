@@ -8,17 +8,35 @@ use std::collections::HashMap;
 #[derive(Resource, Default)]
 pub(crate) struct SpellTargetPositions(pub HashMap<(u32, u8), WorldLocation>);
 
+/// Rows whose spell effect exists in DB2 or, once prepared, in `tdb_serverside_spell_effect`
+/// (TC resolves both through SpellInfo).
 pub(crate) fn load_positions(
     conn: &rusqlite::Connection,
 ) -> rusqlite::Result<SpellTargetPositions> {
-    let mut stmt = conn.prepare(
-        "SELECT p.ID, p.EffectIndex, p.MapID, p.PositionX, p.PositionY, p.PositionZ,
-                p.Orientation, e.EffectPos_facing
-         FROM tdb_spell_target_position p
-         JOIN spell_effect e ON e.SpellID=p.ID AND e.EffectIndex=p.EffectIndex
-                            AND e.DifficultyID=0
-         WHERE p.OrderIndex=0",
+    let serverside: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='tdb_serverside_spell_effect')",
+        [],
+        |row| row.get(0),
     )?;
+    let (serverside_join, serverside_facing, serverside_exists) = if serverside {
+        (
+            "LEFT JOIN tdb_serverside_spell_effect s ON s.SpellID=p.ID
+                 AND s.EffectIndex=p.EffectIndex AND s.DifficultyID=0",
+            "s.EffectPosFacing",
+            "s.SpellID",
+        )
+    } else {
+        ("", "NULL", "NULL")
+    };
+    let mut stmt = conn.prepare(&format!(
+        "SELECT p.ID, p.EffectIndex, p.MapID, p.PositionX, p.PositionY, p.PositionZ,
+                p.Orientation, COALESCE(e.EffectPos_facing, {serverside_facing})
+         FROM tdb_spell_target_position p
+         LEFT JOIN spell_effect e ON e.SpellID=p.ID AND e.EffectIndex=p.EffectIndex
+                                 AND e.DifficultyID=0
+         {serverside_join}
+         WHERE p.OrderIndex=0 AND (e.SpellID IS NOT NULL OR {serverside_exists} IS NOT NULL)"
+    ))?;
     let positions = stmt
         .query_map([], |row| {
             Ok((

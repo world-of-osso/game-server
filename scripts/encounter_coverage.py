@@ -19,10 +19,22 @@ from encounter_order import load_order
 EVENTS = {0, 4, 6, 7, 8, 11, 17, 19, 20, 23, 25, 35, 40, 54, 55, 56, 57, 58, 61, 65}
 ACTIONS = {1, 2, 6, 11, 12, 17, 22, 29, 33, 37, 41, 53, 54, 55, 59, 64, 65, 66, 80, 81, 82, 83, 107, 152}
 TARGETS = {0, 1, 2, 5, 7, 8, 12, 16, 19}
-# TC a352b1fa Murder Row / Kings' Rest headers and instances identify these primaries,
+# TC a352b1fa Murder Row / Kings' Rest / Deadmines headers and instances identify these primaries,
 # even where no placement/model join is available. These census facts do not bind runtime credit.
 CPP_IDENTITIES = {(2813,3101): [234648], (2813,3102): [234649],
-                  (2813,3103): [234647], (2813,3105): [237415], (1762,2139): [135322]}
+                  (2813,3103): [234647], (2813,3105): [237415], (1762,2139): [135322],
+                  (36,2976): [47162], (36,2981): [47162],
+                  (36,2977): [47296], (36,2982): [47296],
+                  (36,2975): [43778], (36,2980): [43778],
+                  (36,2974): [47626], (36,2979): [47626],
+                  (36,2973): [47739], (36,2978): [47739], (36,1081): [49541]}
+# Header e3beb3f1a16472f10655148b1cd6ffd07187ff58aa0b6fee3ebfc584bcc9944a;
+# instance 156a63da23e1ac0f725ba9d1b7397a024b61077537816e279cef4dba54f749af.
+DEADMINES_SOURCE_GAPS = [
+    'pinned TC has no Deadmines boss AI; primary templates have no C++/SmartAI script; no invented schedule',
+    'source encounter ordinals0-5 differ from DB2 difficulty-specific bits; current map-entry binding cannot express Normal/Heroic bit differences',
+    'source doors are identified but engage/kill/credit/loot/lockout/native acceptance unproved',
+]
 PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240,474183,1223906,1217989,1265412],
                  'boss_the_golden_serpent': [265773,265781,265910,265923],
                  'boss_dark_shaman_koranthal': [119928,119300,119971,119973],
@@ -150,6 +162,8 @@ def collect(connection, journals, actors, journal_maps, compat, order):
             has_binding = entry in {b['creature_entry'] for b in bound}
             if script in PARTIAL_PORTS:
                 row_issues.append(dict(row='TC callbacks', reasons=PARTIAL_GAPS[script]))
+            if mid == 36 and (mid, record['encounter_id']) in CPP_IDENTITIES:
+                row_issues.append(dict(row='TC instance source', reasons=DEADMINES_SOURCE_GAPS))
             actor_spawns = [r for r in spawns[entry] if r['map'] == mid]
             loot = [dict(difficulty=d['DifficultyID'], lootid=d['lootid'], rows=loot_counts.get(d['lootid'],0),
                          gold=[d['mingold'], d['maxgold']]) for d in difficulties[entry]]
@@ -182,9 +196,9 @@ def render(records, database, revision):
         p = r['priority']
         refs = ', '.join(f'{k}={v}' for k,v in p.items() if k not in ('tier','sort','reason'))
         priorities.append(f"|{rank}|{p['tier']}|{r['map_id']} {r['instance']}|{refs}; {p['reason']}|")
-    lines = ['# Hosted encounter coverage', '', 'Verified: 2026-10-12. **Census, not completion certification.**', '',
+    lines = ['# Hosted encounter coverage', '', 'Verified: 2026-10-13. **Census, not completion certification.**', '',
              f'Server revision: `{revision}`. Input: `{database}` (read-only).',
-             'Sources: local TDB1210, DB2 12.1.0.69933 JournalEncounter/Creature and Map/DungeonEncounter; work-order relations: locally extracted DisplaySeason4279827, MythicPlusSeasonTrackedMap4521365, JournalTier1349056, JournalTierXInstance1285009, MapChallengeMode801709 and LFGDungeons1361033. TC a352b1fa Murder Row/KingsRest headers and instance scripts supply primary actor identities; pinned hashes are in scripts/encounter_cpp_bindings.py.', '',
+             'Sources: local TDB1210, DB2 12.1.0.69933 JournalEncounter/Creature and Map/DungeonEncounter; work-order relations: locally extracted DisplaySeason4279827, MythicPlusSeasonTrackedMap4521365, JournalTier1349056, JournalTierXInstance1285009, MapChallengeMode801709 and LFGDungeons1361033. TC a352b1fa Murder Row/KingsRest/Deadmines headers and instance scripts supply primary actor identities; pinned hashes are in scripts/encounter_cpp_bindings.py and scripts/encounter_coverage.py.', '',
              'Every DungeonEncounter difficulty record and Journal-only encounter on an admissible party/raid map is retained. Garrisons excluded. A missing spawn is not a hosted fight. Display joins identify candidate actors; only imported bindings/compatibility data authorize kill credit. Multi-actor completion remains unproved.', '',
              '“Admitted casts” means current interpreter vocabulary or an existing Stockade Rust port, not correct damage, targeting, phases or complete boss mechanics. Spell effects, conditions, triggered chains and source-9 lists require behavioral certification. “Wired” is code reachability, not passing engage→kill→loot proof. Spawn counts are database placements, not observed live entities. Loot rows/gold are bindings, not awarded loot proof.', '',
              *priorities, '',
@@ -199,7 +213,7 @@ def render(records, database, revision):
             gap = '; '.join(f"row {g['row']}: {', '.join(g['reasons'])}" for g in a['ai_gaps'])
             if a['cpp_gap']:
                 gap += '; TC C++ script unported'
-            fields = base+[f"{r['name']} [{a['entry']}] / {a['spawned']}", f"{a['source_ai'] or a['source_cpp'] or 'none'} → {a['runtime_ai']}",
+            fields = base+[f"{a['name']} [{a['entry']}] / {a['spawned']}", f"{a['source_ai'] or a['source_cpp'] or 'none'} → {a['runtime_ai']}",
                 ','.join(map(str,a['admitted_casts']))+' / '+(gap or 'no row-vocabulary gap; mechanics/phases unproved'),
                 '; '.join(a[k] for k in ('encounter_start_end','kill_credit','lockout')),loot+' / '+a['proof']]
             lines.append('|'+ '|'.join(s.replace('|','/') for s in fields)+'|')
