@@ -345,6 +345,139 @@ fn stockade_pet() -> (PetFixture, Entity, std::path::PathBuf) {
     (f, pet, engine)
 }
 
+fn enable_companion_ai_ticks(f: &mut PetFixture) {
+    // Same production ordering as FollowerPlugin, without unrelated admission startup.
+    f.h.app.add_systems(
+        FixedUpdate,
+        super::update_ai
+            .after(crate::creature_aggro::update_victim_system)
+            .before(crate::creature_ai::chase_system),
+    );
+}
+
+fn pet_in_hostile_field() -> (PetFixture, Entity, std::path::PathBuf) {
+    let (mut f, pet, engine) = stockade_pet();
+    f.h.app
+        .world_mut()
+        .entity_mut(pet)
+        .insert(super::hazard_tests::FROM);
+    super::hazard_tests::hostile_field_at(&mut f.h, pet, super::hazard_tests::FROM);
+    enable_companion_ai_ticks(&mut f);
+    (f, pet, engine)
+}
+
+#[test]
+fn follower_felguard_field_escape_never_uses_unbaked_direct_movement() {
+    let (mut f, pet, _) = pet_in_hostile_field();
+    let missing = tempfile::tempdir().unwrap();
+    f.h.app
+        .insert_resource(crate::navigation::Navigation::new(missing.path()));
+    f.h.advance(60);
+    assert_eq!(
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap(),
+        super::hazard_tests::FROM
+    );
+}
+
+#[test]
+fn follower_felguard_leaves_overlapping_hostile_fields_on_real_stockade_routes() {
+    let (mut f, pet, engine) = pet_in_hostile_field();
+    let first = super::hazard_tests::FROM;
+    let second = shared::components::Position {
+        x: first.x + 4.0,
+        ..first
+    };
+    super::hazard_tests::hostile_field_at(&mut f.h, pet, second);
+    let mut los = los::LosMap::new(&engine.join("los/34"));
+    let mut previous = first;
+    let mut escaped = false;
+    for tick in 0..200 {
+        f.h.advance(1);
+        let at =
+            *f.h.app
+                .world()
+                .get::<shared::components::Position>(pet)
+                .unwrap();
+        let a = Vec3::new(previous.x, previous.y, previous.z);
+        let b = Vec3::new(at.x, at.y, at.z);
+        assert!(
+            los.clear(a + Vec3::Y, b + Vec3::Y).unwrap(),
+            "pet overlapping-field route crossed collision tick{tick}"
+        );
+        let crate::ground::GroundProbe::Supported(floor) =
+            f.h.app
+                .world_mut()
+                .resource_mut::<crate::ground::GroundMap>()
+                .ground_at(34, b)
+        else {
+            panic!("pet escape lost actual ground")
+        };
+        assert!((at.y - floor).abs() < 0.05);
+        if (at.x - first.x).hypot(at.z - first.z) > 8.0
+            && (at.x - second.x).hypot(at.z - second.z) > 8.0
+        {
+            assert_eq!(
+                crate::spell_cast::scripts::hostile_ground_fields(f.h.app.world_mut(), pet).len(),
+                2,
+                "escape must occur before either field expires"
+            );
+            escaped = true;
+            break;
+        }
+        previous = at;
+    }
+    assert!(
+        escaped,
+        "pet must escape the union of two actual Consecrations"
+    );
+    for _ in 0..40 {
+        f.h.advance(1);
+        let at =
+            *f.h.app
+                .world()
+                .get::<shared::components::Position>(pet)
+                .unwrap();
+        assert!(
+            (at.x - first.x).hypot(at.z - first.z) > 8.0
+                && (at.x - second.x).hypot(at.z - second.z) > 8.0,
+            "pet attack/follow must not re-enter either live field"
+        );
+    }
+}
+
+#[test]
+fn follower_felguard_stun_prevents_displacement_while_field_escape_is_requested() {
+    let (mut f, pet, _) = pet_in_hostile_field();
+    let stunner = crate::spell_cast::test_harness::spawn_npc(&mut f.h.app, 0.0);
+    super::utility_tests::prepare_enemy_spec(&mut f.h, stunner, 66);
+    f.h.app
+        .world_mut()
+        .entity_mut(stunner)
+        .insert((super::hazard_tests::FROM, crate::maps::InMap::continent(34)));
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), stunner, 853, Some(pet), false).unwrap();
+    for _ in 0..20 {
+        f.h.advance(1);
+        assert!(
+            f.h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(pet)
+                .unwrap()
+                .is_stunned()
+        );
+        assert_eq!(
+            *f.h.app
+                .world()
+                .get::<shared::components::Position>(pet)
+                .unwrap(),
+            super::hazard_tests::FROM,
+            "actual Hammer of Justice must block hazard displacement"
+        );
+    }
+}
+
 fn assert_stockade_pet_route(chase: bool) {
     let (mut f, pet, engine) = stockade_pet();
     if chase {

@@ -1,3 +1,7 @@
+## 2026-10-13 — NPC Felguard learned interrupt
+
+[Follower data](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13): native level17 learned Axe Toss89766→347008 interrupts actual Fireball without canceling the owner's Shadow Bolt; below-level/cooldown/non-interruptible/stunned controls pass5/5 at72e754d5. Authenticated catalog is installed after generic fixture startup; native missile landing and existing persistence baseline are observed, not guessed. Pet hazard/PC-persistence gates and full-dungeon acceptance remain open.
+
 ## 2026-10-13 — Follower utilities and strict-nav boundaries
 
 [Follower data](investigations/follower-data.md#advanced-bridge-utilities-and-bound-fields--2026-10-13): real interrupts, casting-time readiness/cancellation, eleven-profile defensive mitigation/healing and real Stockade hostile-field escape; native Group Finder current-source Ruby admission does not close its disconnected authored route or full-dungeon acceptance. No source-coordinate changes, canonical writes or direct movement substitute.

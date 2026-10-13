@@ -6,7 +6,9 @@ Verified: 2026-10-13. [Contract](../../specs/follower-dungeons.md). No authored 
 
 Demonology summon30146 resolves to real creature17252/Felguard. Its CreatureFamily29 exposes SkillLine761; SkillLineAbility23475 teaches89766/Axe Toss through AcquireMethod2 at native SpellLevel17. Local SpellEffect89766 index0/effect64 triggers347008, whose index0/effect68 is the actual interrupt; index1 is its stun aura. The bridge checks the pet's actual learned action bar, never assigns Spell Lock19647 (Felhunter) or invents an early-level kick. Ordinary cast readiness applies to the pet, not the companion owner, and active hostile-field escape takes priority.
 
-`pet_tests.rs` now reproduces the missing NPC pet kick with a native-level17 initialized Lantha/Felguard, real enemy Fireball and concurrent owner Shadow Bolt: RED leaves Fireball active; source-level16 negative passes. The implementation dispatches the existing real pet cast through native interrupt readiness. GREEN, cooldown/CC/hazard and player-pet persistence regression gates remain pending; this source section is not full-pet or dungeon acceptance.
+At72e754d5, five actual pet-utility cases pass: level17 Axe Toss interrupts Fireball through child347008 while owner Shadow Bolt continues; level16 has no invented kick; cooldown/non-interruptible/Hammer-of-Justice controls retain ordinary readiness and sourced damage priorities. Row counts are compared to the fixture's real existing baseline, not an assumed empty database.
+
+First RED had two real omissions: no NPC pet dispatch and a fixture catalog replaced by relative-path Startup loading in cargo's package cwd. The fixture now loads authenticated metadata after generic startup and before summon; it never fabricates action-bar entries. The sourced30yd/s axe needs the native166ms minimum5yd flight plus delivery, so a three-frame assertion was premature; the positive case observes its actual landing. Source dispatch086f1e79 uses ordinary pet readiness; no cast/event or persistence bypass. Hazard/overlap/movement-CC and player-pet persistence gates remain pending; this is not full-pet or dungeon acceptance.
 
 ## Source identity
 
