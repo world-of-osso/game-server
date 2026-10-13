@@ -131,7 +131,8 @@ fn follower_lantha_felguard_interrupts_with_learned_axe_toss_without_canceling_o
     crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 686, Some(f.h.npc), false)
         .unwrap();
     super::update_ai(f.h.app.world_mut());
-    f.h.advance(3);
+    // SpellMisc89766 Speed30: native minimum5yd flight is166ms, then UDP delivery.
+    f.h.advance(8);
     assert!(
         f.h.app
             .world()
