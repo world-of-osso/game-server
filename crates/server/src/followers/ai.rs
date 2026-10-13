@@ -254,7 +254,9 @@ fn pursue(world: &mut World, unit: Entity, target: Entity, spell_id: u32, melee:
         warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
         return false;
     };
-    let state = if super::hazards::target_is_hazardous(world, unit, target) {
+    let unsafe_approach = super::hazards::target_is_hazardous(world, unit, target)
+        || super::hazards::path_crosses_hostile_field(world, unit, target);
+    let state = if unsafe_approach {
         CreatureState::Idle
     } else {
         CreatureState::Pursuing {
@@ -296,7 +298,9 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 
 fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
-    if super::hazards::target_is_hazardous(world, unit, owner) {
+    let unsafe_approach = super::hazards::target_is_hazardous(world, unit, owner)
+        || super::hazards::path_crosses_hostile_field(world, unit, owner);
+    if unsafe_approach {
         world
             .entity_mut(unit)
             .remove::<FollowOwner>()
