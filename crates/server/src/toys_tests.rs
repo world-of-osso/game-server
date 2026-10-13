@@ -109,6 +109,86 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
     (h, character)
 }
 
+#[test]
+fn achievements_criteria_toys_native_learning_sets_owned_item_and_distinct_count() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("criteria-toys.redb");
+    let (mut h, character) = setup(&path);
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut h.app);
+    let player = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut inventory = persistence::load_inventory(db, character);
+    inventory.items.push(InventoryItemData {
+        item_guid: persistence::next_id(db, "item_instance"),
+        item_id: 37710,
+        name: String::new(),
+        quality: 1,
+        required_level: 1,
+        stack_count: 2,
+        vendor_sell_price: 1,
+        unique_auction: false,
+    });
+    persistence::save_inventory(db, character, &inventory);
+    assert!(
+        learn(&mut h, 3)
+            .iter()
+            .any(|r| r.operation == ToyOperation::Learn && r.error.is_none())
+    );
+    let state = h
+        .app
+        .world()
+        .get::<crate::achievement::PlayerAchievementState>(player)
+        .unwrap();
+    assert_eq!(state.criteria_progress.get(&27841), Some(&1));
+    assert_eq!(
+        state
+            .account
+            .as_ref()
+            .unwrap()
+            .criteria_progress
+            .get(&26801),
+        Some(&1)
+    );
+    assert!(
+        learn(&mut h, 3)
+            .iter()
+            .any(|r| r.error.as_deref() == Some("toy already learned"))
+    );
+    learn(&mut h, 0);
+    let state = h
+        .app
+        .world()
+        .get::<crate::achievement::PlayerAchievementState>(player)
+        .unwrap();
+    assert_eq!(
+        state
+            .account
+            .as_ref()
+            .unwrap()
+            .criteria_progress
+            .get(&26801),
+        Some(&2)
+    );
+    assert_eq!(state.criteria_progress.get(&27841), Some(&1));
+    drop(h);
+    let db = redb::Database::open(&path).unwrap();
+    assert_eq!(toy_store::load(&db, 1).len(), 2);
+    assert!(toy_store::load(&db, 2).is_empty());
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&26801),
+        Some(&2)
+    );
+}
+
 fn pump(h: &mut Harness) -> (Vec<ToyResult>, Vec<ToyCollectionUpdate>) {
     let mut results = Vec::new();
     let mut snapshots = Vec::new();

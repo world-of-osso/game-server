@@ -71,6 +71,21 @@ pub(crate) fn corpse_loot_is_empty(world: &World, corpse: Entity) -> bool {
 #[derive(Component)]
 pub(crate) struct ItemLoot;
 
+/// TC client `LootType` of a loot source (Loot.h `GetLootTypeForClient`).
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct LootKind(pub u8);
+
+impl LootKind {
+    /// Unit.cpp:11375-11398 creature corpses.
+    pub(crate) const CORPSE: Self = Self(1);
+    /// SpellEffects.cpp:3503 EffectDisEnchant.
+    pub(crate) const DISENCHANTING: Self = Self(4);
+    /// SpellEffects.cpp:3886 EffectSkinning.
+    pub(crate) const SKINNING: Self = Self(6);
+    /// GameObject.cpp:2684/3483 chests and gathering nodes.
+    pub(crate) const CHEST: Self = Self(9);
+}
+
 /// A roll owns the corpse until every choice or timeout resolves.
 #[derive(Component)]
 pub(crate) struct PendingGroupLoot;
@@ -80,6 +95,7 @@ pub(crate) fn open_item_loot(
     player: Entity,
     character_id: u64,
     rolled: RolledLoot,
+    kind: LootKind,
 ) {
     let slots = loot_slots(rolled, world.resource::<VendorCatalog>());
     let response = LootResponse {
@@ -95,6 +111,7 @@ pub(crate) fn open_item_loot(
         .expect("item caster has an in-world connection");
     world.entity_mut(player).insert((
         ItemLoot,
+        kind,
         CorpseLoot {
             looters: HashMap::from([(character_id, slots)]),
         },
@@ -139,7 +156,9 @@ pub(crate) fn open_game_object_loot(
         slots: remaining_slots(&slots),
     };
     if world.get::<CorpseLoot>(object).is_none() {
-        world.entity_mut(object).insert(CorpseLoot::default());
+        world
+            .entity_mut(object)
+            .insert((CorpseLoot::default(), LootKind::CHEST));
     }
     world
         .get_mut::<CorpseLoot>(object)
@@ -287,6 +306,7 @@ impl LootStore<'_> {
         }
         for (character, gold, _) in models {
             self.gold.record(character, gold);
+            self.gold.record_looted_money(character, share);
         }
         Ok(())
     }
@@ -321,8 +341,13 @@ impl LootStore<'_> {
         Ok(suppress_item)
     }
 
-    /// Store one slot's content for `character_id`.
-    fn take(&mut self, character_id: u64, content: &LootContent) -> Result<(), LootError> {
+    /// Store one slot's content for `character_id` from a `kind` loot source.
+    fn take(
+        &mut self,
+        character_id: u64,
+        content: &LootContent,
+        kind: LootKind,
+    ) -> Result<(), LootError> {
         if let LootContent::Item { item_id, count, .. } = content {
             if self.persist_bound_item_credit(character_id, *item_id, *count)? {
                 return Ok(());
@@ -381,6 +406,14 @@ impl LootStore<'_> {
         let gold = model.gold();
         save_inventory_record(db, character_id, &model.into_record());
         self.gold.record(character_id, gold);
+        match content {
+            LootContent::Item { item_id, count, .. } => {
+                self.gold.record_acquisition(character_id, *item_id, *count);
+                self.gold
+                    .record_looted_item(character_id, *item_id, *count, kind.0);
+            }
+            LootContent::Money { copper } => self.gold.record_looted_money(character_id, *copper),
+        }
         Ok(())
     }
 }
@@ -529,7 +562,9 @@ fn generate_corpse_loot(
             }
         }
         let pending = shared.has_pending_rolls();
-        commands.entity(corpse).insert((loot, shared));
+        commands
+            .entity(corpse)
+            .insert((loot, shared, LootKind::CORPSE));
         if pending {
             commands.entity(corpse).insert(PendingGroupLoot);
         }
@@ -565,6 +600,7 @@ struct Looting<'w, 's> {
         ),
     >,
     connections: Query<'w, 's, (Entity, &'static InWorld, Option<&'static ActiveLoot>)>,
+    kinds: Query<'w, 's, &'static LootKind>,
     senders: LootSenders<'w, 's>,
 }
 
@@ -616,14 +652,18 @@ impl Looting<'_, '_> {
         slot: u8,
     ) -> Result<bool, LootError> {
         let (content, members) = self.slot_content(corpse, character_id, slot)?;
+        let kind = *self
+            .kinds
+            .get(corpse)
+            .expect("every loot source records its loot type");
         if let LootContent::Money { copper } = content {
             if let Some(members) = &members {
                 self.store.split_money(members, copper)?;
             } else {
-                self.store.take(character_id, &content)?;
+                self.store.take(character_id, &content, kind)?;
             }
         } else {
-            self.store.take(character_id, &content)?;
+            self.store.take(character_id, &content, kind)?;
         }
         self.clear_slot(corpse, character_id, slot);
         self.senders.removed(connection, corpse, slot);
@@ -862,7 +902,7 @@ fn process_loot_releases(
             if item_sources.contains(active.corpse) {
                 commands
                     .entity(active.corpse)
-                    .remove::<(ItemLoot, CorpseLoot)>();
+                    .remove::<(ItemLoot, LootKind, CorpseLoot)>();
             }
         }
     }

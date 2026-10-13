@@ -204,5 +204,11 @@ pub(crate) fn effect_disenchant(world: &mut World, ctx: &EffectCtx, _effect: &Sp
     world
         .resource_mut::<crate::gold::GoldUpdateQueue>()
         .record_items(id);
-    crate::loot::open_item_loot(world, ctx.caster, id, rolled);
+    crate::loot::open_item_loot(
+        world,
+        ctx.caster,
+        id,
+        rolled,
+        crate::loot::LootKind::DISENCHANTING,
+    );
 }

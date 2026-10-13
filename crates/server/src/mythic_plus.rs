@@ -390,6 +390,7 @@ fn persist_summary(world: &mut World, summary: &ChallengeRun) {
             .expect("persist attributable completion");
     }
     txn.commit().expect("commit challenge settlement");
+    crate::achievement::record_mythic_completion(world, summary);
 }
 fn completion_record(
     world: &mut World,
@@ -487,6 +488,11 @@ pub(crate) fn open_font(world: &mut World, connection: Entity, font: Entity) {
             .resource_mut::<Challenges>()
             .fonts
             .insert(connection, font);
+        let entry = world
+            .get::<GameObjectInfo>(font)
+            .expect("validated Font of Power")
+            .entry;
+        crate::achievement::record_game_object_use(world, player, entry);
         Ok::<(), String>(())
     })();
     send_snapshot(world, connection, result.err());
@@ -496,7 +502,7 @@ pub(crate) fn open_font(world: &mut World, connection: Entity, font: Entity) {
 mod tests {
     use super::*;
     #[test]
-    fn mythic_bag_slot_activation_and_persistent_settlement() {
+    fn achievements_criteria_mythic_completion_credits_real_timed_map_once_after_settlement() {
         let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").expect("private imported copy");
         let conn = rusqlite::Connection::open_with_flags(
             &path,
@@ -510,7 +516,13 @@ mod tests {
         h.app.insert_resource(
             crate::item_templates::load_item_templates(std::path::Path::new(&path)).unwrap(),
         );
+        h.app
+            .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
         let player = h.player;
+        h.app.world_mut().entity_mut(player).insert((
+            shared::components::Level(70),
+            crate::achievement::PlayerAchievementState::default(),
+        ));
         let connection = h.connection;
         let owner = h.character_id;
         let mut manager = InstanceManager::default();
@@ -563,7 +575,7 @@ mod tests {
             item_guid: 4242,
             item_id: 180653,
             challenge_id: 401,
-            level: 8,
+            level: 10,
             affixes: vec![],
         };
         save_key(h.db(), &key);
@@ -592,6 +604,27 @@ mod tests {
                 },
             ))
             .id();
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x = 100.0;
+        open_font(h.app.world_mut(), connection, font);
+        assert!(
+            !h.app
+                .world()
+                .get::<crate::achievement::PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&104970)
+        );
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x = 0.0;
+        open_font(h.app.world_mut(), connection, font);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::achievement::PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&104970),
+            Some(&1)
+        );
         assert!(slot(h.app.world_mut(), connection, font.to_bits(), 999).is_err());
         slot(h.app.world_mut(), connection, font.to_bits(), 4242).unwrap();
         let peer = h.create_alt("Keypeer");
@@ -603,10 +636,10 @@ mod tests {
         h.play_as(owner);
         h.app.world_mut().get_mut::<Position>(player).unwrap().x = 100.0;
         assert!(start(h.app.world_mut(), connection).is_err());
-        assert_eq!(owned_keys(h.db(), owner)[0].level, 8);
+        assert_eq!(owned_keys(h.db(), owner)[0].level, 10);
         h.app.world_mut().get_mut::<Position>(player).unwrap().x = 0.0;
         start(h.app.world_mut(), connection).unwrap();
-        assert_eq!(owned_keys(h.db(), owner)[0].level, 7);
+        assert_eq!(owned_keys(h.db(), owner)[0].level, 9);
         assert_eq!(
             h.app
                 .world()
@@ -637,7 +670,21 @@ mod tests {
         assert_eq!(summary.phase, ChallengePhase::Completed);
         persist_summary(h.app.world_mut(), &summary);
         persist_summary(h.app.world_mut(), &summary);
-        assert_eq!(owned_keys(h.db(), owner)[0].level, 11);
+        assert_eq!(owned_keys(h.db(), owner)[0].level, 13);
+        let state = h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap();
+        assert_eq!(state.criteria_progress.get(&56012), Some(&1));
+        assert!(
+            state
+                .account
+                .as_deref()
+                .unwrap()
+                .earned_ids
+                .contains(&16645)
+        );
         {
             let txn = h.db().begin_read().unwrap();
             let table = txn.open_table(HISTORY).unwrap();
@@ -660,13 +707,19 @@ mod tests {
             assert_eq!(record["party"][0]["spec_id"], 71);
             assert_eq!(record["party"].as_array().unwrap().len(), 1);
             assert_eq!(record["completed_at"], 1791705600_i64);
-            assert_eq!(record["level"], 8);
+            assert_eq!(record["level"], 10);
             assert_eq!(record["timer_ms"], 2250000);
             assert_eq!(record["in_time"], true);
             assert!(record["season_id"].is_null());
         }
         drop(h);
         let reopened = redb::Database::open(file.path()).unwrap();
-        assert_eq!(owned_keys(&reopened, owner)[0].level, 11);
+        assert_eq!(owned_keys(&reopened, owner)[0].level, 13);
+        assert_eq!(
+            persistence::load_achievements(&reopened, owner)
+                .criteria_progress
+                .get(&56012),
+            Some(&1)
+        );
     }
 }

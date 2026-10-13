@@ -32,6 +32,7 @@ pub fn run_cycle(
     rotate_merchants(db, &mut next, config, now, draw, &mut book, &mut changes)?;
     next.last_cycle = now;
     store::commit_market(db, Some(&next), &changes)?;
+    auctions.pending_criteria.extend(changes.criteria);
     for id in &changes.deleted_auctions {
         auctions.auctions.remove(id);
     }
@@ -496,6 +497,11 @@ fn acquire_ingredients(
         changes.mails.push(crate::auction_house::seller_sale_mail(
             db, auction, price, None,
         ));
+        changes
+            .criteria
+            .extend(crate::auction_house::auction_sale_events(
+                auction, None, price,
+            ));
     }
     Ok(())
 }

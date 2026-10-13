@@ -26,6 +26,7 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
         .map(|(entity, id, _)| (id.0, entity))
         .collect();
     let mut changes = Vec::new();
+    let mut win_credits = Vec::new();
     for before in &result.2.players {
         let mut progress = match online.get(&before.id) {
             Some(entity) => world
@@ -64,6 +65,9 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
                 .get_mut::<PlayerPvpState>(*entity)
                 .expect("arena player")
                 .progress = progress;
+            if won {
+                win_credits.push((*entity, before.rating));
+            }
         }
         changes.push(ArenaRatingChange {
             character_id: before.id,
@@ -73,14 +77,19 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
             mmr_after,
         });
     }
-    let mut state = world.resource_mut::<PvpServerState>();
-    let arena = state
-        .battleground_matches
-        .get_mut(&id)
-        .expect("completed match")
-        .arena
-        .as_mut()
-        .expect("arena");
-    arena.snapshot.rating_changes = changes;
-    arena.rated.as_mut().expect("rated match").applied = true;
+    {
+        let mut state = world.resource_mut::<PvpServerState>();
+        let arena = state
+            .battleground_matches
+            .get_mut(&id)
+            .expect("completed match")
+            .arena
+            .as_mut()
+            .expect("arena");
+        arena.snapshot.rating_changes = changes;
+        arena.rated.as_mut().expect("rated match").applied = true;
+    }
+    for (player, before_rating) in win_credits {
+        crate::achievement::record_ranked_arena_win(world, player, before_rating);
+    }
 }

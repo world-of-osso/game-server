@@ -864,6 +864,7 @@ pub(crate) fn apply_aura_with_spell(
         .cloned()
         .expect("aura just stored");
     if kind == CombatLogKind::AuraApplied {
+        crate::achievement::record_gain_aura(world, target, aura.spell_id);
         crate::quest::record_gain_aura(world, target, spell.id);
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);

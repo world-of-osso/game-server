@@ -1510,8 +1510,10 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
+    let achievements = crate::achievement::load_achievement_catalog(&source).unwrap();
     let mut h = harness_with(move |app| {
         app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(achievements);
         app.insert_resource(objects);
         app.insert_resource(world_data);
         app.insert_resource(spells);
@@ -1523,6 +1525,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
             crate::auras::AuraPlugin,
             crate::combat::CombatPlugin,
             crate::death::DeathPlugin,
+            crate::achievement::AchievementPlugin,
         ));
         app.insert_resource(catalog);
         app.insert_resource(gates);
@@ -1544,6 +1547,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
             crate::pvp::PlayerPvpState::default(),
             crate::death::PlayerDeathState::default(),
             shared::components::CurrentPvpFaction(2),
+            crate::achievement::PlayerAchievementState::default(),
             crate::spell_cast::powers::PowerPools {
                 order: vec![shared::components::PowerType::Rage],
                 pools: vec![crate::spell_cast::powers::PowerPool {
@@ -1976,6 +1980,17 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         exercise_arena_forfeit(&mut h, &players, &origins, match_id);
         return;
     }
+    for who in &players {
+        assert!(
+            !h.app
+                .world()
+                .get::<crate::achievement::PlayerAchievementState>(who.player)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&306),
+            "queue, invitation and preparation cannot grant a rated win"
+        );
+    }
     let attacker = players[0].player;
     for target in players.iter().skip(1).step_by(2).map(|who| who.player) {
         h.app
@@ -2019,6 +2034,31 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         killer.damage_done > 0,
         "real combat events populate arena damage scoreboard"
     );
+    // TC Arena.cpp249: only online rated winners receive WinAnyRankedArena37.
+    for (index, who) in players.iter().enumerate() {
+        let state = h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(who.player)
+            .unwrap();
+        let expected = (rated && index % 2 == 0).then_some(1);
+        assert_eq!(state.criteria_progress.get(&306).copied(), expected);
+        assert_eq!(state.earned_ids.contains(&397), expected.is_some());
+    }
+    h.receive_pvp_updates(5);
+    for (index, who) in players.iter().enumerate() {
+        let state = h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(who.player)
+            .unwrap();
+        let expected = (rated && index % 2 == 0).then_some(1);
+        assert_eq!(
+            state.criteria_progress.get(&306).copied(),
+            expected,
+            "idle replay"
+        );
+    }
     if rated {
         assert_eq!(ended.arena.as_ref().unwrap().mode, mode);
         assert_eq!(
@@ -2087,6 +2127,17 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
                 .unwrap()
                 .battleground
                 .is_none()
+        );
+    }
+    drop(h);
+    let reopened = redb::Database::open(database_file.path()).unwrap();
+    for index in 0..team_size * 2 {
+        let saved = crate::persistence::load_achievements(&reopened, (index + 1) as u64);
+        let expected = (rated && index % 2 == 0).then_some(1);
+        assert_eq!(
+            saved.criteria_progress.get(&306).copied(),
+            expected,
+            "redb reopen"
         );
     }
 }

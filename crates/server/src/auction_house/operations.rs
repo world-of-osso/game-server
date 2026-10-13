@@ -194,6 +194,10 @@ pub(super) fn create_auction(
         return err(&error);
     }
     state.auctions.insert(auction.auction_id, auction);
+    state.pending_criteria.push((
+        character_id,
+        crate::achievement::CriteriaEvent::AuctionPosted,
+    ));
     ok("auction created")
 }
 
@@ -288,7 +292,14 @@ pub(super) fn place_bid(
     if let Err(error) = commit_market(db, None, &changes) {
         return err(&error);
     }
+    state.pending_criteria.push((
+        character_id,
+        crate::achievement::CriteriaEvent::HighestAuctionBid(amount),
+    ));
     if sold {
+        state
+            .pending_criteria
+            .extend(auction_sale_events(&updated, Some(character_id), amount));
         state.auctions.remove(&auction_id);
         ok("bid met buyout — auction sold")
     } else {
@@ -333,9 +344,15 @@ pub(super) fn buyout_auction(
         ..Default::default()
     };
     stage_previous_bidder_refund(db, auction, character_id, &mut changes);
+    let credits = auction_sale_events(auction, Some(character_id), price);
     if let Err(error) = commit_market(db, None, &changes) {
         return err(&error);
     }
+    state.pending_criteria.extend(credits);
+    state.pending_criteria.push((
+        character_id,
+        crate::achievement::CriteriaEvent::HighestAuctionBid(price),
+    ));
     state.auctions.remove(&auction_id);
     ok("auction bought out")
 }
@@ -377,6 +394,36 @@ pub(super) fn cancel_auction(
     ok("auction cancelled")
 }
 
+/// TC item-style settlement: seller profit includes deposit less cut; highest sale is gross bid.
+pub(crate) fn auction_sale_events(
+    auction: &AuctionData,
+    buyer: Option<u64>,
+    sale_price: u64,
+) -> Vec<(u64, crate::achievement::CriteriaEvent)> {
+    use crate::achievement::CriteriaEvent;
+    let mut events = vec![
+        (
+            auction.seller_character_id,
+            CriteriaEvent::MoneyEarnedFromAuctions(seller_proceeds(auction, sale_price)),
+        ),
+        (
+            auction.seller_character_id,
+            CriteriaEvent::HighestAuctionSale(sale_price),
+        ),
+    ];
+    if let Some(buyer) = buyer {
+        events.push((buyer, CriteriaEvent::AuctionWon));
+    }
+    events
+}
+
+fn seller_proceeds(auction: &AuctionData, sale_price: u64) -> u64 {
+    let house_fee = (u128::from(sale_price) * u128::from(HOUSE_CUT_BPS) / 10_000) as u64;
+    sale_price
+        .saturating_sub(house_fee)
+        .saturating_add(auction.deposit)
+}
+
 /// Seller settlement shared by player and economy purchases.
 pub(crate) fn seller_sale_mail(
     db: &redb::Database,
@@ -385,9 +432,7 @@ pub(crate) fn seller_sale_mail(
     buyer_name: Option<&str>,
 ) -> (u64, MailData) {
     let house_fee = (u128::from(sale_price) * u128::from(HOUSE_CUT_BPS) / 10_000) as u64;
-    let seller_proceeds = sale_price
-        .saturating_sub(house_fee)
-        .saturating_add(auction.deposit);
+    let seller_proceeds = seller_proceeds(auction, sale_price);
     (
         auction.seller_character_id,
         build_auction_mail(

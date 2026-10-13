@@ -804,6 +804,11 @@ impl<'a> QuestSession<'a, '_, '_> {
             let count = quest.provided_item_count.max(1);
             grant_item(inventory, self.db, self.quests, quest.start_item, count);
             self.save_inventory(&inventory, false);
+            let character = self.character();
+            self.io
+                .effects
+                .inventories
+                .record_acquisition(character, quest.start_item, count);
         }
         log.active.push(ActiveQuestData {
             quest_id,
@@ -947,11 +952,18 @@ impl<'a> QuestSession<'a, '_, '_> {
             numeric,
             knowledge.as_ref(),
         );
-        self.queue_script_quest_hook(npc, quest_id, true);
         let character = self.character();
+        for &(item, count) in &items {
+            self.io
+                .effects
+                .inventories
+                .record_acquisition(character, item, count);
+        }
+        self.queue_script_quest_hook(npc, quest_id, true);
         let has_knowledge_reward = knowledge.is_some();
+        let daily = quest.repeatability() == shared::protocol::QuestRepeatability::Daily;
         self.io.commands.queue(move |world: &mut World| {
-            crate::achievement::record_quest_reward(world, character, quest_id);
+            crate::achievement::record_quest_reward(world, character, quest_id, daily, money);
             if has_knowledge_reward {
                 crate::profession::specializations::reload_knowledge_wallet(world, character);
             }
@@ -1134,6 +1146,15 @@ impl<'a> QuestSession<'a, '_, '_> {
             remove_items(self.db, &mut inventory, provided.0, provided.1);
             self.save_inventory(&inventory, false);
         }
+        // TC QuestHandler.cpp:463 after a successful log removal.
+        let character = self.character();
+        self.io.commands.queue(move |world: &mut World| {
+            crate::achievement::record_character_event(
+                world,
+                character,
+                crate::achievement::CriteriaEvent::AbandonQuest,
+            );
+        });
         Ok(())
     }
 
