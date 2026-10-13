@@ -6,10 +6,10 @@ Local69933 SpellCastingRequirements contains exactly two Toy root INFRONT bindin
 
 | Boundary | Proof |
 |---|---|
-| Actual learned UseToy rear rejection, both roots | RED: missing NotInFront; bounded GREEN gate pending |
-| Completion turn-away, both roots, retained recovery | RED: missing NotInFront; legitimate start GCD excluded from item-recovery assertion |
-| Inclusive side arc; strict2yd/exact3D/player scale; TDB radius vs reach | Concrete actual-use fixtures; bounded gate pending |
-| Coin toss/catch master regression | Prior709082c0 fix retained; named test PASS at6eb29b48 |
+| Actual learned UseToy rear rejection, both roots | RED: missing NotInFront; actual-use GREEN at386286444b560d21c5886493655444afa1fa6c25 |
+| Completion turn-away, both roots, retained recovery | RED: missing NotInFront; both-root completion GREEN at386286444b560d21c5886493655444afa1fa6c25; legitimate start GCD retained |
+| Inclusive side arc; strict2yd/exact3D/player scale; TDB radius vs reach | Concrete actual-use fixtures GREEN at386286444b560d21c5886493655444afa1fa6c25 |
+| Coin toss/catch master regression | Prior709082c0 fix retained; named post-merge test PASS at386286444b560d21c5886493655444afa1fa6c25 |
 | Native both skins / entire1166 | Facing native proof pending; entire goal open |
 
 
