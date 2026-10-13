@@ -62,7 +62,8 @@ fn apply_native(h: &mut Harness, spell_id: u32) {
 
 fn cast_damage(h: &mut Harness, spell_id: u32) -> &CombatLogEvent {
     h.cast_and_deliver(spell_id, Some(h.npc));
-    h.advance(4);
+    // Native314633 casts2250ms, then its45yd/s missile travels3yd.
+    h.advance(60);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     h.inbox
         .log
@@ -180,10 +181,10 @@ fn class_completeness_native_163_precise_killer_increases_auto_attack_crit_damag
         })
         .collect();
     assert!(!crits.is_empty(), "{:?}", h.inbox.log);
-    // Fixed harness100 AP, unarmed1-2 at2s: pre-outcome round15-16,
-    // ×2 crit ×1.10 gives33-35.2 (source final rounding), not unbuffed30-32.
+    // Existing retail AP/6 formula:100 AP, unarmed1-2 at2s rounds34-35;
+    // ×2 crit ×1.10 gives74.8-77, versus unbuffed68-70.
     assert!(
-        crits.iter().all(|event| (33..=36).contains(&event.amount)),
+        crits.iter().all(|event| (75..=77).contains(&event.amount)),
         "{crits:?}"
     );
 }
