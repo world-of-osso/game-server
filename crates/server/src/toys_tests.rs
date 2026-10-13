@@ -3992,6 +3992,94 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
 }
 
 #[test]
+fn toyfx22_pendant_actual_learning_cast_completion_aura_exit_and_cooldown_preservation() {
+    use shared::components::{Health, ModelDisplay};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("pendant-real-use.redb"));
+    learn_effect_toy(&mut h, character, 115503);
+    assert_eq!(
+        snapshot(h.app.world(), 1)
+            .toys
+            .into_iter()
+            .find(|toy| toy.item_id == 115503)
+            .unwrap()
+            .unavailable_reason,
+        None
+    );
+    let health = h.app.world().get::<Health>(h.caster).unwrap().current;
+    let model = h.app.world().get::<ModelDisplay>(h.caster).copied();
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    assert_eq!(
+        activate(&mut h, 115503)[0].error.as_deref(),
+        Some("Requires area group4031")
+    );
+    assert!(!h.inbox.cooldowns.iter().any(|cd| cd.spell_id == 171352));
+    place_toy_caster_on_source_map_area(&mut h, 1116, 843253, [1433.39, 1081.63], 6797);
+    assert_eq!(activate(&mut h, 115503)[0].error, None);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CastState>(h.caster)
+            .unwrap()
+            .duration,
+        5.0
+    );
+    h.advance(10);
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 171352));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    h.advance(101);
+    assert!(h.inbox.failed.iter().any(|failed| failed.spell_id == 171352
+        && failed.reason == shared::spell_data::CastFailReason::IncorrectArea));
+    assert!(
+        !h.inbox
+            .cooldowns
+            .iter()
+            .any(|cd| cd.spell_id == 171352 && !cd.is_gcd)
+    );
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 171352));
+    place_toy_caster_on_source_map_area(&mut h, 1116, 843253, [1433.39, 1081.63], 6797);
+    assert_eq!(activate(&mut h, 115503)[0].error, None);
+    h.advance(101);
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 171352)
+        .unwrap();
+    assert_eq!(aura.duration_ms, 120_000);
+    assert_eq!(aura.caster, h.caster);
+    assert_eq!(
+        h.app.world().get::<Health>(h.caster).unwrap().current,
+        health
+    );
+    assert_eq!(h.app.world().get::<ModelDisplay>(h.caster).copied(), model);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 171352));
+    assert!(
+        h.inbox
+            .cooldowns
+            .iter()
+            .any(|cd| cd.spell_id == 171352 && !cd.is_gcd)
+    );
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .all(|a| a.spell_id != 171352)
+    );
+    place_toy_caster_on_source_map_area(&mut h, 1116, 843253, [1433.39, 1081.63], 6797);
+    assert_eq!(
+        activate(&mut h, 115503)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+}
+
+#[test]
 fn toyfx21_pendant_parent_area_starts_real_five_second_cast_then_rechecks_completion() {
     let directory = tempfile::tempdir().unwrap();
     let (mut h, _) = setup(&directory.path().join("pendant-completion.redb"));
