@@ -126,9 +126,11 @@ fn trading_post_source_vendor_wire_purchase_refuses_closed_and_out_of_range_inte
     let refused = request(&mut h, TradingPostRequest::Purchase { vendor_item_id: 4 });
     assert!(refused.error.as_ref().unwrap().contains("No active"));
     assert_eq!(refused.tender, 100);
-    assert_eq!(refused.items.len(), 1321);
+    assert!(refused.items.is_empty());
+    let catalog = request(&mut h, TradingPostRequest::Query);
+    assert_eq!(catalog.items.len(), 1321);
     assert!(
-        refused
+        catalog
             .items
             .iter()
             .find(|row| row.id == 4)
@@ -267,10 +269,30 @@ fn trading_post_admin_tender_and_refund_window_enable_wire_refund() {
     assert!(admin_grant_tender(h.db(), "no_such_account", 700).is_err());
     assert_eq!(admin_grant_tender(h.db(), "fb_tender", 700).unwrap(), 700);
     h.app.insert_resource(RefundWindow(600));
+    let balance = request(&mut h, TradingPostRequest::Balance);
+    assert_eq!((balance.tender, balance.items.len()), (700, 0));
+    assert!(!balance.catalog_complete);
     open_tawny(&mut h);
+    let catalog = request(&mut h, TradingPostRequest::Query);
+    assert!(catalog.catalog_complete);
+    assert_eq!(catalog.items.len(), 1321);
     let purchased = request(&mut h, TradingPostRequest::Purchase { vendor_item_id: 4 });
     assert!(purchased.error.is_none(), "{:?}", purchased.error);
     assert_eq!(purchased.tender, 600);
+    // Only rows whose collection state the purchase can change, never the catalog.
+    assert!(!purchased.catalog_complete);
+    assert!(
+        purchased.items.len() < 20,
+        "partial reply has {} rows",
+        purchased.items.len()
+    );
+    let frozen = request(
+        &mut h,
+        TradingPostRequest::Freeze {
+            vendor_item_id: Some(4),
+        },
+    );
+    assert_eq!((frozen.frozen_item_id, frozen.items.len()), (Some(4), 0));
     let row = purchased.items.iter().find(|row| row.id == 4).unwrap();
     assert!(row.purchased && row.collected);
     assert_eq!(row.refund_seconds, 600);

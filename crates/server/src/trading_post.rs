@@ -74,10 +74,47 @@ fn receive_requests(world: &mut World) {
     for (connection, account, player, request) in requests {
         crate::adventure_guide::refresh_for_connection(world, connection);
         let result = execute(world, connection, account, player, &request);
-        if let Ok(Some(grant)) = &result {
+        if let Ok(Some((_, grant))) = &result {
             publish_collections(world, account, grant);
         }
-        send_snapshot(world, connection, account, result.err());
+        let rows = match (&request, &result) {
+            (TradingPostRequest::Query, _) => Rows::Catalog,
+            (_, Ok(Some((vendor, _)))) => Rows::AffectedBy(*vendor),
+            _ => Rows::None,
+        };
+        send_snapshot(world, connection, account, result.err(), rows);
+    }
+}
+
+/// Which catalog rows a reply carries. The 1321-row catalog is ~0.5 MB, so only a
+/// vendor Query sends it; a purchase or refund sends the rows it can change.
+enum Rows {
+    Catalog,
+    AffectedBy(u32),
+    None,
+}
+
+/// The bought/refunded row and every row whose `collected` shares its collection entry.
+fn affected_by(catalog: &catalog::CatalogData, vendor: u32, row: u32) -> bool {
+    let grant = |id| {
+        catalog
+            .items
+            .get(&id)
+            .and_then(|(_, grant)| grant.as_ref().ok())
+    };
+    row == vendor
+        || grant(vendor)
+            .zip(grant(row))
+            .is_some_and(|(changed, other)| shares_collection(changed, other))
+}
+
+/// Whether owning `a` and `b` depends on a shared account collection entry.
+fn shares_collection(a: &store::Grant, b: &store::Grant) -> bool {
+    use store::Grant::*;
+    match (a, b) {
+        (Appearances(a), Appearances(b)) => a.iter().any(|id| b.contains(id)),
+        (Mount(a), Mount(b)) | (Pet(a), Pet(b)) | (Toy(a), Toy(b)) => a == b,
+        _ => false,
     }
 }
 
@@ -93,14 +130,18 @@ fn active_vendor(world: &World, connection: Entity, player: Entity) -> Result<En
     Ok(active.npc)
 }
 
+/// A purchase or refund returns its vendor item and the grant to publish.
 fn execute(
     world: &World,
     connection: Entity,
     account: u64,
     player: Entity,
     request: &TradingPostRequest,
-) -> Result<Option<store::Grant>, String> {
-    if matches!(request, TradingPostRequest::Query) {
+) -> Result<Option<(u32, store::Grant)>, String> {
+    if matches!(
+        request,
+        TradingPostRequest::Query | TradingPostRequest::Balance
+    ) {
         return Ok(None);
     }
     active_vendor(world, connection, player)?;
@@ -112,7 +153,7 @@ fn execute(
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let db = &world.resource::<GameDatabase>().db;
     match request {
-        TradingPostRequest::Query => Ok(None),
+        TradingPostRequest::Query | TradingPostRequest::Balance => Ok(None),
         TradingPostRequest::Purchase { vendor_item_id } => {
             let (row, grant) = catalog
                 .items
@@ -132,7 +173,7 @@ fn execute(
                 },
                 now,
             )?;
-            Ok(Some(grant.clone()))
+            Ok(Some((*vendor_item_id, grant.clone())))
         }
         TradingPostRequest::Refund { vendor_item_id } => {
             let state = store::load(db, account);
@@ -142,7 +183,7 @@ fn execute(
                 .ok_or("Trading Post receipt unavailable.")?;
             let grant = receipt.granted.clone();
             store::refund(db, account, *vendor_item_id, now)?;
-            Ok(Some(grant))
+            Ok(Some((*vendor_item_id, grant)))
         }
         TradingPostRequest::Freeze { vendor_item_id } => {
             if let Some(id) = vendor_item_id {
@@ -158,7 +199,13 @@ fn execute(
     }
 }
 
-fn send_snapshot(world: &mut World, connection: Entity, account: u64, error: Option<String>) {
+fn send_snapshot(
+    world: &mut World,
+    connection: Entity,
+    account: u64,
+    error: Option<String>,
+    rows: Rows,
+) {
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let calendar = crate::adventure_guide::calendar_month(now);
     let summary = world
@@ -191,6 +238,7 @@ fn send_snapshot(world: &mut World, connection: Entity, account: u64, error: Opt
             categories: Vec::new(),
             items: Vec::new(),
             thresholds: Vec::new(),
+            catalog_complete: matches!(rows, Rows::Catalog),
             source_gaps: vec![
             "Monthly featured rotation and seasonal reward binding: no verified calendar epoch."
                 .into(),
@@ -214,8 +262,17 @@ fn send_snapshot(world: &mut World, connection: Entity, account: u64, error: Opt
     }
     match &world.resource::<catalog::Catalog>().0 {
         Ok(catalog) => {
-            snapshot.categories = catalog.categories.clone();
-            snapshot.items = collection_rows(world, account, catalog, &state, now);
+            snapshot.items = match rows {
+                Rows::Catalog => {
+                    snapshot.categories = catalog.categories.clone();
+                    collection_rows(world, account, catalog, &state, now)
+                }
+                Rows::AffectedBy(vendor) => collection_rows(world, account, catalog, &state, now)
+                    .into_iter()
+                    .filter(|row| affected_by(catalog, vendor, row.id))
+                    .collect(),
+                Rows::None => Vec::new(),
+            };
         }
         Err(error) => snapshot.source_gaps.push(error.clone()),
     }
