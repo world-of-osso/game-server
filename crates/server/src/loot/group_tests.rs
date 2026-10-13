@@ -74,6 +74,64 @@ fn gathering_group_rolls_and_shared_slots_block_skinning() {
     );
 }
 
+#[test]
+fn achievements_criteria_loot_money_group_shares_are_actual_awards_and_cap_failure_is_atomic() {
+    let (mut h, other) = grouped();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut h.app);
+    for (looter, account) in [(h.looter, 1), (other, 2)] {
+        h.app
+            .world_mut()
+            .entity_mut(looter.connection)
+            .insert(crate::auth::Authenticated {
+                account_id: account,
+            });
+        let player = looter.player;
+        h.app
+            .world_mut()
+            .entity_mut(player)
+            .insert(crate::achievement::PlayerAchievementState::default());
+    }
+    let corpse = h.kill_kobold();
+    h.open(corpse, true);
+    for character in [h.looter.character_id, other.character_id] {
+        let db = &h.app.world().resource::<GameDatabase>().db;
+        assert_eq!(persistence::load_inventory(db, character).gold, 5);
+        assert_eq!(
+            persistence::load_achievements(db, character)
+                .criteria_progress
+                .get(&4093),
+            Some(&5)
+        );
+    }
+    h.open(corpse, true);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut inventory = persistence::load_inventory(db, other.character_id);
+    inventory.gold = MAX_MONEY;
+    persistence::save_inventory(db, other.character_id, &inventory);
+    let corpse2 = h.kill_kobold();
+    h.open(corpse2, true);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_inventory(db, h.looter.character_id).gold,
+        5
+    );
+    assert_eq!(
+        persistence::load_inventory(db, other.character_id).gold,
+        MAX_MONEY
+    );
+    for character in [h.looter.character_id, other.character_id] {
+        assert_eq!(
+            persistence::load_achievements(db, character)
+                .criteria_progress
+                .get(&4093),
+            Some(&5)
+        );
+    }
+}
+
 fn grouped() -> (Harness, Looter) {
     let mut h = harness(false).expect("canonical read-only world fixture");
     let other = spawn_looter(&mut h.app, "Other", 2);

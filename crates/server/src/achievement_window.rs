@@ -30,9 +30,41 @@ pub(super) struct WindowData {
     categories: BTreeMap<u32, AchievementCategoryEntry>,
     definitions: BTreeMap<u32, WindowDefinition>,
     tree_labels: HashMap<u32, (String, i32)>,
+    /// (achievement, points) in the Pet Battles category tree.
+    pet_battle: Vec<(u32, u32)>,
 }
 
+/// Retail Blizzard_PetCollection.lua:4,222: PET_ACHIEVEMENT_CATEGORY, summed with
+/// subcategories by GetCategoryAchievementPoints for the Pet Journal total.
+const PET_ACHIEVEMENT_CATEGORY: u32 = 15117;
+
 impl WindowData {
+    /// Points of earned achievements in the Pet Battles category tree.
+    pub(super) fn pet_battle_points(&self, earned: impl Fn(u32) -> bool) -> u32 {
+        self.pet_battle
+            .iter()
+            .filter(|(id, _)| earned(*id))
+            .map(|(_, points)| points)
+            .sum()
+    }
+
+    fn in_category(&self, mut category: u32, ancestor: u32) -> bool {
+        let mut visited = BTreeSet::new();
+        while visited.insert(category) {
+            if category == ancestor {
+                return true;
+            }
+            let Some(parent) = self.categories.get(&category).map(|row| row.parent_id) else {
+                return false;
+            };
+            let Ok(parent) = u32::try_from(parent) else {
+                return false;
+            };
+            category = parent;
+        }
+        false
+    }
+
     pub(super) fn icon_fdid(&self, id: u32) -> u32 {
         self.definitions[&id].icon
     }
@@ -45,11 +77,19 @@ impl WindowData {
 }
 
 pub(super) fn load_window_data(conn: &Connection) -> rusqlite::Result<WindowData> {
-    Ok(WindowData {
+    let mut data = WindowData {
         categories: load_categories(conn)?,
         definitions: load_window_definitions(conn)?,
         tree_labels: load_tree_labels(conn)?,
-    })
+        pet_battle: Vec::new(),
+    };
+    data.pet_battle = data
+        .definitions
+        .values()
+        .filter(|row| data.in_category(row.category, PET_ACHIEVEMENT_CATEGORY))
+        .map(|row| (row.id, row.points))
+        .collect();
+    Ok(data)
 }
 
 fn load_categories(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, AchievementCategoryEntry>> {
@@ -146,6 +186,14 @@ impl AchievementCatalog {
         race: u8,
     ) -> AchievementCatalogPage {
         match request {
+            QueryAchievementCatalog::Comparison { target_entity, .. } => {
+                AchievementCatalogPage::Comparison {
+                    target_entity,
+                    target_name: String::new(),
+                    page: None,
+                    error: Some("comparison requires an authenticated online target".into()),
+                }
+            }
             QueryAchievementCatalog::Statistics {
                 category_id,
                 after_id,
@@ -518,9 +566,7 @@ impl AchievementCatalog {
         character_scope: bool,
     ) -> AchievementCriterionLine {
         let tree = &self.trees[&id];
-        let counter = character_scope
-            .then(|| self.criterion_counter(tree.criteria_id, state))
-            .flatten();
+        let progress = self.tree_progress(id, state);
         let supported = character_scope
             && self
                 .criteria
@@ -533,9 +579,9 @@ impl AchievementCatalog {
             order_index: *order_index,
             criteria_id: tree.criteria_id,
             description: description.clone(),
-            current: counter.unwrap_or(0).min(tree.amount),
-            required: tree.amount,
-            completed: supported && counter.is_some_and(|current| current >= tree.amount),
+            current: if character_scope { progress.current } else { 0 },
+            required: progress.required,
+            completed: supported && progress.completed,
             progress_supported: supported,
         }
     }

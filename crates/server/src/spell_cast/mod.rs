@@ -13,9 +13,15 @@
 //! See `docs/wiki/systems/spell-casting.md`.
 
 #[cfg(test)]
+mod achievement_damage_tests;
+#[cfg(test)]
+mod achievement_healing_tests;
+#[cfg(test)]
 mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
+#[cfg(test)]
+mod attack_speed_tests;
 #[cfg(test)]
 mod base_armor_tests;
 pub(crate) mod blooming_infusion;
@@ -108,6 +114,8 @@ mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
 #[cfg(test)]
+mod melee_crit_taken_tests;
+#[cfg(test)]
 mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;
@@ -120,7 +128,11 @@ mod portal_tests;
 pub mod powers;
 #[cfg(test)]
 mod protective_growth_tests;
+#[cfg(test)]
+mod raid_area_tests;
 mod reflect;
+#[cfg(test)]
+mod resistance_pct_tests;
 mod resources;
 pub mod runes;
 pub mod scripts;
@@ -194,15 +206,20 @@ mod knockback;
 mod knockback_tests;
 mod school_costs;
 pub(crate) mod teleport;
-mod teleport_positions;
+pub(crate) mod teleport_positions;
+mod toy_coin;
+mod toy_foam_sword;
 pub(crate) mod toy_scripts;
+mod toy_weather;
+mod toy_wormhole;
 
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::knockback::KnockbackPlugin);
-        app.init_resource::<disenchant::DisenchantData>()
+        app.init_resource::<crate::group::GroupRegistry>()
+            .init_resource::<disenchant::DisenchantData>()
             .add_systems(Startup, (disenchant::load_startup, open_lock::load_startup))
             .init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
@@ -248,6 +265,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    toy_coin::catch_landed_coins.after(advance_casts),
                 ),
             );
     }
@@ -316,7 +334,10 @@ impl CastFailure {
                 crate::auras::CastBlock::NoActions => {
                     (R::NotSupported, Some("Can't do that right now".into()))
                 }
-                // SPELL_FAILED_CONFUSED has no CastFailReason in shared-protocol yet.
+                // SPELL_FAILED_FLEEING/CONFUSED have no CastFailReason in shared-protocol yet.
+                crate::auras::CastBlock::Fleeing => {
+                    (R::NotSupported, Some("Can't do that while fleeing".into()))
+                }
                 crate::auras::CastBlock::Confused => {
                     (R::NotSupported, Some("Can't do that while confused".into()))
                 }
@@ -756,13 +777,13 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     crate::pvp::record_arena_event(world, &event);
     scripts::record_health_change(world, &event);
     if event.kind == CombatLogKind::Death {
-        let source = event
-            .source
-            .and_then(Entity::try_from_bits)
-            .map(|unit| combat_event_owner(world, unit));
+        let source = event.source.and_then(Entity::try_from_bits);
         let target = event.target.and_then(Entity::try_from_bits);
         if let (Some(killer), Some(victim)) = (source, target) {
-            crate::quest::record_player_kill(world, killer, victim);
+            crate::achievement::record_delivered_killing_blow(world, killer);
+            crate::achievement::record_player_killed_by(world, victim, killer);
+            let owner = combat_event_owner(world, killer);
+            crate::quest::record_player_kill(world, owner, victim);
         }
     }
     let mut players: Vec<Entity> = Vec::new();
@@ -948,15 +969,16 @@ pub(crate) fn cast_granted(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    cast_granted_with_item_level(world, caster, spell_id, target, None)
+    cast_granted_with_item_context(world, caster, spell_id, target, None, None)
 }
 
-fn cast_granted_with_item_level(
+fn cast_granted_with_item_context(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
     target: Option<Entity>,
     item_level: Option<u16>,
+    retail_item_id: Option<u32>,
 ) -> Result<(), CastFailure> {
     let result = world
         .get_resource::<SpellStore>()
@@ -965,6 +987,7 @@ fn cast_granted_with_item_level(
         .ok_or(CastFailure::UnknownSpell)
         .and_then(|mut spell| {
             spell.cast_item_level = item_level;
+            spell.cast_retail_item_id = retail_item_id;
             start_cast(world, caster, &spell, target, None)
         });
     if let Err(failure) = &result {
@@ -1001,6 +1024,7 @@ pub(crate) fn cast_item_spell(
     target: Option<Entity>,
     cooldown: ItemCooldown,
     item_level: u16,
+    retail_item_id: Option<u32>,
 ) -> Result<(), CastFailure> {
     let now = now(world);
     let cooling = cooldown.category != 0
@@ -1023,7 +1047,14 @@ pub(crate) fn cast_item_spell(
         );
         return Err(CastFailure::OnCooldown);
     }
-    cast_granted_with_item_level(world, caster, spell_id, target, Some(item_level))?;
+    cast_granted_with_item_context(
+        world,
+        caster,
+        spell_id,
+        target,
+        Some(item_level),
+        retail_item_id,
+    )?;
     if cooldown.category != 0 && cooldown.category_ms > 0 {
         world
             .entity_mut(caster)
@@ -1869,6 +1900,10 @@ pub(crate) fn execute_cast(
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     open_lock::unlock_cast(world, spell)?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
+    if let Some(item) = spell.cast_retail_item_id {
+        // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
+        crate::achievement::record_item_use(world, caster, item);
+    }
     spend_costs(world, caster, &costs);
     scripts::empower_gargoyles(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
@@ -2036,6 +2071,13 @@ fn plan_targets(
                 return Err(CastFailure::Unsupported(reason));
             }
         }
+        if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+            if let Some(reason) =
+                crate::game_objects::summoned::wild_unsupported_reason(world, effect)
+            {
+                return Err(CastFailure::Unsupported(reason));
+            }
+        }
         if effect.effect == disenchant::EFFECT_DISENCHANT {
             plan.push(PlannedEffect {
                 index,
@@ -2066,7 +2108,7 @@ fn plan_targets(
             }
         };
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
-            filter(spell, explicit, &mut units);
+            filter(world, spell, explicit, &mut units);
         }
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {
@@ -2110,7 +2152,7 @@ fn resolve_effects(
 ) {
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
-        crate::achievement::record_spell_target(world, unit, spell.id);
+        crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
     }
     for effect in &spell.effects {
         if !selects_targets(spell, effect) {
@@ -2159,6 +2201,12 @@ fn resolve_effects(
         // hit units, but still cast their child once with the parent's destination.
         if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
             effects::trigger_missile_at_destination(world, &ctx, effect);
+            continue;
+        }
+        // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
+        // Unit-targeted events use the normal hit/immunity boundary below.
+        if effect.effect == effects::EFFECT_SEND_EVENT && effect.implicit_targets == [0, 0] {
+            effects::send_game_event(world, &ctx, effect, caster);
             continue;
         }
         // Item unlock is persisted before the cast success receipt; it has no
@@ -2418,29 +2466,65 @@ pub(super) fn cast_triggered_with_item_level(
     depth: u8,
     item_level: Option<u16>,
 ) {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    spell.cast_item_level = item_level;
+    launch_triggered_spell(world, caster, &spell, explicit, depth);
+}
+
+/// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
+pub(crate) fn cast_triggered_with_effect0_amount(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    amount: f32,
+) {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
+        warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
+        return;
+    };
+    effect.base_points = amount;
+    launch_triggered_spell(world, caster, &spell, explicit, depth);
+}
+
+fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {
     if depth > effects::MAX_TRIGGER_DEPTH {
         warn!(
             "Triggered spell {spell_id} skipped: depth {depth} exceeds {}",
             effects::MAX_TRIGGER_DEPTH
         );
-        return;
+        return None;
     }
-    let Some(mut spell) = world
+    let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
-        .cloned()
-    else {
+        .cloned();
+    if spell.is_none() {
         warn!("Triggered spell {spell_id} not found");
-        return;
-    };
-    spell.cast_item_level = item_level;
+    }
+    spell
+}
+
+fn launch_triggered_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) {
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
-    match plan_targets(world, caster, &spell, explicit, true) {
+    match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
-            missiles::launch(world, caster, &spell, plan, depth);
+            missiles::launch(world, caster, spell, plan, depth);
         }
-        Err(failure) => warn!("Triggered spell {spell_id} skipped: {failure:?}"),
+        Err(failure) => warn!("Triggered spell {} skipped: {failure:?}", spell.id),
     }
 }
 

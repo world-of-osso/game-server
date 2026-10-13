@@ -74,6 +74,8 @@ pub struct StatModifiers {
     pub base_armor_pct: f32,
     /// Aura466: composed final armor percentage, applied after stat-derived armor.
     pub bonus_armor_pct: f32,
+    /// Aura101 physical: composed armor TOTAL_PCT, applied after stat-derived armor.
+    pub total_armor_pct: f32,
 }
 
 /// The spec's main stat: gear Str/Agi/Int count only when they match it.
@@ -382,6 +384,7 @@ pub fn compute_character_stats(
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
         armor: ((ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
             + armor_from_stats(&primary, input.primary_stat, &mods))
+            * (1.0 + mods.total_armor_pct / 100.0)
             * (1.0 + mods.bonus_armor_pct / 100.0))
             .floor(),
         main_hand: WeaponDamage::UNARMED,
@@ -394,6 +397,8 @@ pub fn compute_character_stats(
 /// SPELL_EFFECT_PARRY 22 and SPELL_EFFECT_BLOCK 23: a player who knows such a spell
 /// can parry or block (Spell::EffectParry / EffectBlock, SpellEffects.cpp:3703-3719).
 const EFFECT_PARRY: u32 = 22;
+/// SPELL_EFFECT_DUAL_WIELD (Spell::EffectDualWield → `Player::SetCanDualWield`).
+pub(crate) const EFFECT_DUAL_WIELD: u32 = 40;
 const EFFECT_BLOCK: u32 = 23;
 /// `ActivePlayerData` base parry and block (StatSystem.cpp:497, 664).
 const BASE_PARRY_PCT: f32 = 5.0;
@@ -492,7 +497,11 @@ pub fn player_defense(
 }
 
 /// Whether `known` holds a spell with `effect` (`Player::m_canParry` / `m_canBlock`).
-fn knows_effect(known: Option<&KnownSpells>, spells: Option<&SpellStore>, effect: u32) -> bool {
+pub(crate) fn knows_effect(
+    known: Option<&KnownSpells>,
+    spells: Option<&SpellStore>,
+    effect: u32,
+) -> bool {
     let (Some(known), Some(spells)) = (known, spells) else {
         return false;
     };

@@ -19,7 +19,8 @@
 
 pub(crate) mod collision;
 pub(crate) mod cooking_focus;
-mod identity_conditions;
+mod cooking_traps;
+pub(crate) mod identity_conditions;
 pub(crate) mod locks;
 pub(crate) mod quest_object;
 pub(crate) mod spellcaster;

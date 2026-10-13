@@ -643,6 +643,12 @@ fn process_send_requests(mut requests: Requests<SendMail>, mut desk: MailDesk) {
             match result {
                 Ok(changes) => {
                     desk.apply(changes);
+                    // TC a352b1fa MailHandler.cpp224: postage only, not attached money.
+                    let postage = shared::mail::postage(request.attachments.len());
+                    desk.gold.record_criteria(
+                        in_world.character_id,
+                        crate::achievement::CriteriaEvent::MoneySpentOnPostage(postage),
+                    );
                     if let Ok(mut sender) = desk.sent.get_mut(connection) {
                         sender.send::<MailChannel>(MailSent {
                             object: request.object,

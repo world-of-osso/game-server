@@ -166,6 +166,34 @@ fn classify(
                 reasons.insert(reason);
             }
         }
+        if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+            if let Some(reason) =
+                crate::game_objects::summoned::wild_unsupported_reason(world, effect)
+            {
+                reasons.insert(reason);
+            }
+        }
+        let summons_object = [
+            crate::game_objects::summoned::EFFECT_TRANSMITTED,
+            crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD,
+        ]
+        .contains(&effect.effect);
+        if summons_object {
+            // A spellcaster object's use is the toy's action: its spell must work too.
+            let entry = effect.misc_values[0] as u32;
+            if let Some(object_spell) =
+                crate::game_objects::summoned::spellcaster_spell(world, entry)
+            {
+                classify(
+                    world,
+                    object_spell,
+                    depth + 1,
+                    visiting,
+                    reasons,
+                    supported_auras,
+                );
+            }
+        }
         if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
             if let Some(reason) = crate::spell_cast::summon::unsupported_reason(world, effect) {
                 reasons.insert(reason);
@@ -174,7 +202,8 @@ fn classify(
         if let Some(target) = crate::spell_cast::targets::unsupported_target(effect) {
             reasons.insert(format!("target {target}"));
         }
-        if effect.trigger_spell != 0 {
+        let script_owns_trigger = crate::spell_cast::toy_scripts::owns_triggered_spell(spell.id);
+        if effect.trigger_spell != 0 && !script_owns_trigger {
             if depth >= crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
                 reasons.insert("trigger depth limit".into());
             } else {
@@ -214,6 +243,10 @@ fn supports_effect(world: &World, spell_id: u32, effect: &SpellEffect) -> bool {
     if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
         return crate::auras::periodic_dummy_trigger(world, effect).is_ok();
     }
+    if effect.aura == crate::auras::handlers::MOD_RATING {
+        // Other rating masks need distinct replicated ratings, not a guessed merge.
+        return effect.misc_values[0] == crate::auras::handlers::VERSATILITY_RATING_MASK;
+    }
     if effect.aura == crate::auras::handlers::SCREEN_EFFECT {
         return effect.misc_values[0] > 0;
     }
@@ -223,6 +256,9 @@ fn supports_effect(world: &World, spell_id: u32, effect: &SpellEffect) -> bool {
     }
     if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
         return crate::game_objects::summoned::unsupported_reason(world, effect).is_none();
+    }
+    if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+        return crate::game_objects::summoned::wild_unsupported_reason(world, effect).is_none();
     }
     if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
         return crate::spell_cast::summon::unsupported_reason(world, effect).is_none();

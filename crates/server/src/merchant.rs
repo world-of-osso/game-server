@@ -550,6 +550,13 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     } else {
         shop.save(customer.character_id, model);
     }
+    shop.gold
+        .record_acquisition(customer.character_id, slot.item_id, items);
+    // TC Player::BuyItemFromVendorSlot (Player.cpp:23902): one committed purchase.
+    shop.gold.record_criteria(
+        customer.character_id,
+        crate::achievement::CriteriaEvent::BuyItemsFromVendors,
+    );
     if let Some(quests) = &shop.quests {
         let mut log =
             crate::persistence::quest_store::load_quest_log(shop.db(), customer.character_id);
@@ -598,6 +605,13 @@ fn sell(shop: &mut Shop, customer: &mut Customer, req: SellItem) -> MerchantResu
     model.collect_disposed_appearance(&sold);
     model.set_gold(model.gold() + money);
     shop.save(customer.character_id, model);
+    // TC Player::SellItemToVendor (Player.cpp:23946-23950).
+    for event in [
+        crate::achievement::CriteriaEvent::MoneyEarnedFromSales(money),
+        crate::achievement::CriteriaEvent::SellItemsToVendors,
+    ] {
+        shop.gold.record_criteria(customer.character_id, event);
+    }
     let sold_at = shop.now();
     customer.buyback.add(BuybackEntry {
         item: sold,

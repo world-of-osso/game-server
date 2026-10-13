@@ -53,6 +53,14 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
         ),
     >,
     profiles: ChatProfileQuery<'w, 's>,
+    emote_targets: Query<
+        'w,
+        's,
+        (
+            &'static shared::components::Npc,
+            &'static crate::maps::InMap,
+        ),
+    >,
     presences: Query<
         'w,
         's,
@@ -69,6 +77,13 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
     groups: Res<'w, GroupRegistry>,
     time: Res<'w, Time>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
+    criteria: MessageWriter<'w, crate::achievement::CriteriaCredit>,
+    entered: Query<
+        'w,
+        's,
+        &'static PlayerLink,
+        (With<crate::auth::Authenticated>, With<crate::auth::InWorld>),
+    >,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
 }
 
@@ -82,6 +97,15 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
     }
     for emote in &emotes {
         mark_activity(&mut q, emote.player_entity, activity_at);
+        if q.entered.iter().any(|link| link.0 == emote.player_entity) {
+            q.criteria.write(crate::achievement::CriteriaCredit {
+                player: emote.player_entity,
+                event: crate::achievement::CriteriaEvent::DoEmote(
+                    retail_text_emote(emote.event.emote),
+                    emote_target_entry(emote, &q.profiles, &q.emote_targets),
+                ),
+            });
+        }
     }
     collected.extend(emotes.iter().map(|emote| CollectedChat {
         msg: emote.chat.clone(),
@@ -161,6 +185,18 @@ struct CollectedEmote {
     chat: ChatMessage,
     event: EmoteEvent,
     player_entity: Entity,
+    target_entity: Option<Entity>,
+}
+
+/// TC ObjectAccessor::GetUnit: resolve this request's unit on the sender's map copy.
+fn emote_target_entry(
+    emote: &CollectedEmote,
+    profiles: &ChatProfileQuery,
+    targets: &Query<(&shared::components::Npc, &crate::maps::InMap)>,
+) -> Option<u32> {
+    let (_, _, _, _, _, _, map) = profiles.get(emote.player_entity).ok()?;
+    let (npc, target_map) = targets.get(emote.target_entity?).ok()?;
+    (map == Some(target_map)).then_some(npc.template_id)
 }
 
 /// An online player as seen by chat routing.
@@ -227,6 +263,7 @@ fn split_chat_emotes(collected: Vec<CollectedChat>) -> (Vec<CollectedChat>, Vec<
                 emote,
             },
             player_entity: chat.sender_entity,
+            target_entity: None,
         });
     }
     (chat_messages, emotes)
@@ -249,6 +286,7 @@ fn collect_emote_messages(
                     emote: intent.emote,
                 },
                 player_entity: link.0,
+                target_entity: intent.target_entity.and_then(Entity::try_from_bits),
             });
         }
     }
@@ -551,6 +589,18 @@ fn emote_chat_message(sender: &str, emote: EmoteKind) -> ChatMessage {
     }
 }
 
+/// Pinned TC a352b1fa SharedDefines.h TextEmotes; not animation Emotes IDs.
+fn retail_text_emote(emote: EmoteKind) -> u32 {
+    match emote {
+        EmoteKind::Dance => 34,
+        EmoteKind::Wave => 101,
+        EmoteKind::Sit => 86,
+        EmoteKind::Sleep => 87,
+        EmoteKind::Kneel => 59,
+        EmoteKind::Love => 225,
+    }
+}
+
 fn emote_chat_text(emote: EmoteKind) -> &'static str {
     match emote {
         EmoteKind::Dance => "dances.",
@@ -558,6 +608,7 @@ fn emote_chat_text(emote: EmoteKind) -> &'static str {
         EmoteKind::Sit => "sits down.",
         EmoteKind::Sleep => "falls asleep.",
         EmoteKind::Kneel => "kneels.",
+        EmoteKind::Love => "loves everyone.",
     }
 }
 
@@ -571,6 +622,7 @@ fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
         "/sit" => Some(EmoteKind::Sit),
         "/sleep" => Some(EmoteKind::Sleep),
         "/kneel" => Some(EmoteKind::Kneel),
+        "/love" => Some(EmoteKind::Love),
         _ => None,
     }
 }
@@ -832,6 +884,10 @@ pub fn process_target_messages(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "messaging_achievement_tests.rs"]
+mod achievement_tests;
 
 #[cfg(test)]
 mod tests {

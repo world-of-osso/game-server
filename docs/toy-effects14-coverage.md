@@ -1,5 +1,148 @@
 # Toy effects14 — active whole-goal coverage
 
+## Conditional Gladiator back banners (2026-10-13)
+
+Canonical census354→356 (+119220/119221, zero removed; `gladiator19-canonical-after.json`). This is separate from the prepared-copy statue gain: importing194793/203158 additionally would bring the current prepared count to358.
+
+Alliance/Horde Gladiator's Banner uses176899/176900, a zero-payload caster aura4 with infinite source duration. The item masks enforce faction eligibility. All source race/sex-conditioned variants resolve ordinary back models1332368/1332364 through the existing PlayerCondition evaluator; conditions40064-40067/49526/49669-49671/69443 contain only supported race/sex/flags fields. Core behavioral proof covers26 races ×2 sexes ×2 spells, including held AuraStart→AuraEnd kits. All4066 TDB1210 spell-script bindings were checked; neither spell has a binding. No new broad aura admission or condition bypass was added.
+
+Server RED rejects aura4. GREEN proves actual learning/use/persistent replicated aura/cancellation, unchanged native model and health, and learned-toy refusal for an ineligible race. Native private5911 PASS both skins: actual bag learning, journal use, model1332368 attached on the Human player's back, then cancellation removes the kit without changing the native player model. Horde variants have server/core proof, not a separate native witness. Nine authenticated model/skin/texture assets were published privately from the11-file local closure; two authored `.phys` files are not imported by the maintained chain importer, so cloth simulation is not certified. PNGs: `toys/gladiator19/`. Runtime stopped after captures.
+
+Alliance/Horde War Banner300104/300144 remains blocked: conditions36349/36348 require CurrentPvpFaction, not evaluated by the client, and their source combat removal requires separate proof.
+
+## Placed statues and the missing-template audit (2026-10-12)
+
+Prepared-copy census354→356/1166 (+198646/204405, zero removed; `statue-canonical-after.json`). Canonical stays354 until `scripts/add_toy_summon_templates.py --db data/world.db` runs there.
+
+110 toys are blocked only by effect28 with a missing creature template (`summon-template-audit.json`). Of these, 104 have a TDB1210 template and model, no `spell_script_names` binding on any chain spell, and no AI/ScriptName/smart_scripts/creature spells/spellclick/npcflag/vehicle. The audit does **not** show these 104 lack interactions: TDB `unit_flags` is zero for all of them and TypeFlags carry no interaction contract. Their DB2 item/spell text promises seats, target dummies, wormholes, mail, buffs, rides, fishing, portals, stacking, emote reactions or roaming. Under the existing rule (a missing template alone proves nothing about interactions), only text that describes placement alone is admitted:
+
+- Ornate Dragon Statue 198646: trigger64 384614→summon384618, wild properties64, creature194793, display108683 (template DisplayScale0.7, CDI0.3), 300000ms.
+- Stuffed Bear 204405: trigger64 405203→summon405204, wild properties64, creature203158, display111821, 300000ms.
+
+Attraction Sign 122126 is excluded. Its arrow display41343 has TDB probability0, so TC's weighted choice spawns the invisible trigger display11686 (CDI flag1), and nothing local binds the visible arrow. A native run confirmed the invisible spawn.
+
+Server RED `824dc66f` (missing creature90335) → GREEN `86be6abc`/drop-sign follow-up. Real learn/UseToy summons the source creature/display/scale, stationary when the caster moves, with the authored300s expiry. Native private5911, both skins: both statues render with replicated root scale0.7/1.0 and CDI scale0.3/1.0, and stay in place after the caster moves. PNGs in `toys/statue18/`. The private runtime world.db and slot `npc_appearance.sqlite` (coverage for108683/41343/111821; backup `.pre-statue18-20261012`) were prepared privately.
+
+## Honest object spells and summoned-object collision (2026-10-12)
+
+Read-only canonical census355→354/1166. The only removal is Costume Chest 139337; nothing was added. `m1-canonical-after.json`.
+
+- **Costume Chest:** the catalog classified a wild spellcaster object's spell but not an effect50 one. Costume Chest's object252775 casts 222360, a caster dummy with no SpellXSpellVisual, no TC a352b1fa script and no TDB1210 binding, so it is now unavailable. Both object effects now recurse into the object spell.
+- **Banners kept:** master's other spellcaster banners use object spells 424023 (Chilling Celebration) and 1215373 (Kaja'Cola Enthusiast). Both pass the kit-chain audit (`audit_kits.py`, `banner-kit-audit.json`: ordinary models, no condition/positioner/script, self cosmetic descriptions) and are admitted as visual-only. A behaviour test shows the placed banner's use applies the 3600000ms aura with model/health unchanged.
+- **Collision regression:** master's client draws no game object until `GameObjectCollision` replicates, and only world spawns carried it. After the engine master merge, every effect50/76 toy object and ritual portal was invisible natively. TC EffectTransmitted/EffectSummonObjectWild create them GO_STATE_READY, so both spawn sites now replicate `GameObjectCollision(true)`. Type6 cooking traps are unchanged (never drawn).
+- **Known risk:** master's arena hull sync panics when an enabled type0/5/6/35 object's model is absent from `data/models`, so a generic toy object placed inside an arena could reach that path. Lead decision recorded in the handoff.
+
+Native private5911, both skins:
+
+- Azerite Firework Launcher 166877: kit model1983536 on the caster, no aura.
+- Celebration Banner 210042: ground-placed, right-click applies aura424023. Its display84868/model5357398 closure is 28 authenticated assets, published privately.
+- Foam Sword Rack re-proven after the collision fix: Modern Toyfourmod got new sword45176; Forever, already holding a sword, got no second one.
+
+PNGs in `toys/{castkit18,banner18,foam18}/`.
+
+## Cast-event visual kits (2026-10-12)
+
+Read-only canonical census352→355/1166 (+122119/127668/166877, zero removed; `castkit-canonical-after.json`). The existing dummy-visual audit (`data/diagnostics/toy-effects14-2026-10-11/dummy-visual-audit.json`) found 54 of 77 effect3/77 shape candidates with complete ordinary model chains. Every other remaining candidate's description promises behaviour (teleport, discovery, throw-and-return, disguise, transform, cost) or is TDB-script-bound, so only three were admitted:
+
+- Everlasting Darkmoon Firework 103740 (caster target, model 1627561).
+- Azerite Firework Launcher 290627 (TARGET_DEST_CASTER_GROUND 62, model 1983536).
+- Jewel of Hellfire 187150 (models 192714/896706).
+
+Each is a single zero-payload dummy with no duration, no aura, no TDB1210 binding and only cast-event kits (StartEvent 3). Twelve-String Guitar 232592 is excluded: its kit starts on aura start (event 7) but the spell creates no aura.
+
+Server RED refused effect3. GREEN adds the three to `VISUAL_ONLY_SPELLS`: real learn/UseToy sends SpellGo without aura, model, health or position change. Drift refusals cover a lost visual binding and a nonzero payload. Native private5911, both skins: the authored kit model is active on the caster with no aura (Darkmoon 1627561, Jewel 192714). PNGs in `toys/castkit18/`; the Forever firework frame shows the launch trail but the camera is partly blocked by a lamp post. Azerite has server proof only, no native proof.
+
+## Foam Sword Rack: wild objects (2026-10-12)
+
+Read-only census348→349/1166 (+45063, zero removed; `foam-canonical-after.json`). Sources:
+
+- TC a352b1fa `EffectSummonObjectWild` places effect76's template at the spell destination, with respawn time = spell duration, and no owner ("Wild object not have owner").
+- TDB1210 binds Foam Sword Rack object194342's spell64142 to `spell_gen_upper_deck_create_foam_sword`. It gives one of 45061/45176/45177/45178/45179 unless the player already has one, bank included (`HasItemCount(item,1,true)`).
+- The rack's real cast is 3000ms; its SpellDuration is 180000ms.
+
+Without an owner, TC refuses a party-only wild spellcaster to everyone, so such templates are refused. The catalog now classifies a wild spellcaster's own spell. X-treme Water Blaster Display 220692/441724 therefore stays unavailable: its spell445930 is a dummy with no TDB script. Imp in a Ball, Picnic, Purple Firework and the Hearthstone Board stay refused, because their object types (focus without cooking, button, goober) need interaction runtime.
+
+Finding, not changed here: master's effect50 spellcaster admissions do not classify the object's spell. Costume Chest 139337's spell222360 is an effect3 dummy.
+
+Server commits:
+
+- RED `test: reproduce unsupported wild Foam Sword Rack…` refused effect76.
+- GREEN feature: wild summon, optional owner, catalog recursion, and `toy_foam_sword.rs`.
+- Tests: real learn/UseToy/ground placement, one sword on first use, none on second use, none when one sits in the character bank, natural 180s despawn, Water Blaster refusal.
+- Regression: effect50, cooking, portal and spellcaster 19/19.
+
+Engine: type22 spellcaster objects were neither rendered nor usable natively. They now render, show Interact, and send `UseGameObject` (RED→GREEN game_objects 13/13). Native private5911, both skins: ground click placed the wild rack, real right-click created exactly one source sword (Modern45178, Forever45179), and a second use created none. PNGs are in `toys/foam18/`, receipts in `{modern-foam18e,forever-foam18}/`. Toyfourmodc and Toyfourfor now each hold one foam sword.
+
+## Wormhole Generator: Pandaria (2026-10-12)
+
+Read-only census347→348/1166 (+87215, zero removed; `wormhole-canonical-after.json`). Source: TC a352b1fa `spell_item_wormhole_pandaria` replaces 126755's dummy with one uniformly chosen WormholeTargetLocations teleport (126756–126764) cast on the hit unit. Each is a single 252/[25,17] effect, and each has a TDB1210 `spell_target_position` row on map870; the TDB scan binds none of the nine. Admission refuses before cooldown when any teleport shape or destination row differs. The census now loads `spell_target_position` just as runtime Startup does.
+
+RED `df59203c` refused effect3. GREEN `968660b6`/`80ea6e3c`: actual bag learning/UseToy produces one far transfer to an authored point, sends NewWorld map870, and after WorldPortAck leaves the player in continent870 at the exact destination. Refusals: missing point, missing teleport, teleport target drift, extra root effect. The triggered teleport sends no SpellGo; MapTransfer identifies the chosen point. Native private5911 journal use: Modern landed at 126760 Zan'vess (-1509.39,4574.97,367.74) and Forever at 126758 Sra'vess (3072.24,6119.23,55.14), both InWorld with the native model and rendered terrain. PNGs are in `toys/wormhole18/`, receipts in `{modern,forever}-wormhole18/`. The characters were restored to map0 by admin teleport afterwards. The Modern minimap renders black in Pandaria; that minimap gap is separate and not certified here.
+
+The remaining TC root bindings stay explicit gaps:
+
+- **Gnomish Transporter 23453:** the backfire child 23448 can choose 36902 Transporter Malfunction, a target17 teleport with no TDB position row.
+- **Teleporting 59317:** needs area4637 Vargoth's Retreat, a WMO-interior area. Server `area_at` reads only ADT MCNK areas, without a WMOAreaTable lookup.
+- **Taunt Flag 51640:** needs enemy player/corpse area targeting, a text emote and a GO summon.
+
+## Goblin Weather Machine (2026-10-12)
+
+Read-only canonical census346→347/1166 (+35227, zero removed; `weather-canonical-after.json`). Source: TC a352b1fa `spell_item_goblin_weather_machine` makes the hit unit cast RAND(46740, 46739, 46738, 46736) on itself. The TDB1210 `spell_script_names` scan (4066 rows) binds 46203/60458/60476/64385 to exactly the scripts used here and binds none of the four weather spells. So 46736's5000ms PERIODIC_DUMMY tick is a no-op (TC PeriodicTick leaves226 to scripts). All four are single self auras with SpellVisual bindings and DurationIndex9 (30000ms).
+
+RED `00468623` refused effect77. GREEN `2643ea09`/`65974226`: actual bag learning/UseToy applies exactly one weather aura, cast by the caster, 30000ms; it stays through 46736 ticks with unchanged health/position and expires naturally. Refusals cover a missing weather spell, weather trigger drift, missing visual binding and an extra machine effect. Presentation comes from aura replication; the triggered weather cast sends no separate SpellGo. Native actual journal use: Modern46738 (observed29.0s to expiry from first capture) and Forever46740 (29.6s). The first Forever attempt hit a fixture bag-readiness race, fixed in engine `8780ec91a`. PNGs in `toys/weather18/` show the buff icon/timer, but the camera is obstructed, so the weather visual itself is not certified.
+
+## Titanium Seal coin (2026-10-12)
+
+Read-only canonical census338→346/1166, zero removed. Only44430 is this batch. The other seven came from the origin/master merge, not from toy work here: 33219/33927/139337/210042/234951 are type22 spellcaster objects, plus 199554 (target62) and 200999 (target72). Census JSON: `coin-canonical-after.json`.
+
+Source: TC a352b1fa `spell_item_titanium_seal_of_dalaran_toss` (TextEmote32638 at launch; RelocateHeight +20yd on TARGET_DEST_CASTER) and `_catch` (60476, OnEffectHit TextEmote RAND(32663, 32664)). DB2 60458 effect32 at dest18 triggers 60476, missile Speed10 → 2000ms flight. A script owns the triggered catch; the generic area-entry target8 is not admitted.
+
+RED `682d1bbc` refused `effect 77, target 8`. GREEN `da03865a` 2/2 covers both sexes: immediate toss to caster and 35yd hearer, no catch before the flight, exactly one heads/tails after it, no 500yd hearer, unchanged health/position, and refusals for missing text or toss/catch shape drift. Dice regression 2/2. Native Modern and Forever actual journal use: toss with blue item label, then one catch 2s later (chat timestamps 20:01:18→20:01:20 in Forever). PNGs in `toys/coin18/`. Gap: the 60476 catch SpellVisual12799 is not sent, and the missile visual is not certified.
+
+## Unusual Compass facing (2026-10-12)
+
+Read-only canonical census337→338/1166 (+45984, zero removed; `compass-canonical-after.json`). Source: TC a352b1fa `spell_item_unusual_compass` turns its caster to `frand(0, 2π)` via `Unit::SetFacingTo` (force=true); DB2 64385 has one caster effect3 with zero payload, cast time2000ms. No new data import.
+
+Actual RED `2cfb9932` refused effect3. GREEN covers actual bag learning/UseToy, source-range facing, unchanged position/health/other units, and refusal of missing rotation/control or payload drift before cast/cooldown. First native Modern run showed the boundary failure: server rotation changed, but the owning client kept its predicted yaw, and its next input overwrote the turn. Fix: shared `ForcedFacing{epoch,yaw}` plus a MovementControl epoch bump; the server rejects old-epoch input and keeps fall progress, and the client adopts the turn once, after which manual turns and teleports work as before.
+
+|Boundary|Proof|Remaining|
+|---|---|---|
+|Server learn/use/facing/refusals|`compass-authority-green.log`3/3|—|
+|Stale input/fall preservation|receiver_rate facing test|—|
+|Client adopt-once/turn/teleport|engine `compass_facing_is_adopted_once…`, wire round trip|—|
+|Native both skins|Modern π→6.386, Forever π→3.306 rad, position unchanged, turn held1s against idle input (`{modern,forever}-compass18-green`)|Camera does not follow facing, so PNGs show the journal/minimap, not the turned body|
+
+Requested PNGs: `/syncthing/AgentShared/2026-10-12/toys/compass18/`.
+
+## Source-private summons (2026-10-12)
+
+Source flag import and owner-only replication repair preserve the337/1166 preflight census (zero additions/removals), rather than claiming new working toys. Pinned CASC1345276/layoutA4CA5ECF has3610 readable records and three named encrypted gaps. Six importer tests cover exact0/private/creature-level flag words, real3001 signed/unsigned identity preservation, idempotence and transactional schema/data rollback. Canonical flag columns are a required lead import before deploying this branch; existing metadata/unrelated tables remain unchanged. [Importer and command](wiki/systems/toys.md#source-summon-flag-import-2026-10-12).
+
+TC a352b1fa `SpellEffects.cpp::EffectSummonType` and `Object.cpp::CheckPrivateObjectOwnerVisibility` define owner privacy. Actual private5911 two-peer RED observes73781 in both replicas while public66768 is visible to both. Fix covers both spatial visibility update paths and the actual wild/default zone-spawn path; source-private descendants inherit an existing private owner. Actual UDP GREEN uses Lilian's Warning Sign119039/176310→88280: owner=true, nearby observer=false, public66768=true for both. Source3077 is shared by all four warning signs. Group-private toy graphs remain explicitly unavailable; other flag semantics are not certified by importing their metadata.
+
+Modern+Forever real owner journal use of Shirakess170196/304505→156052/display92597 preserves four meshes,.6 root scale/no pet frame and natural60000ms expiry (observed59405/59742ms after model readiness). Two framed sign PNGs inspected; four total1280×720 captures in requested `toys/private-sign17/`. Receipts/logs and source data under continuation root; all owned runtime stopped. Post-merge interest/scenery regression33/33 PASS205.84s; server/engine checks and both formats PASS. Independent review remains unavailable due expired OAuth, not PASS. Per-toy complete effects and the whole1166 goal remain open.
+
+## Linked cooking traps (2026-10-12)
+
+Read-only canonical census330→337/1166 (+7, zero removed): Little Wickerman70722/99767→208935/display10726/.25; Eternal Kiln104309/148553→223229/14358/.5; Cozy Bonfire116435/171549→236014/30040/.5; Steamworks Sausage Grill116757/171760→236110/7385/1; Muckpool Cookpot182780/340241→357706/67291/.5; Ever-Abundant Hearth184404/345745→364811/67976/.5; Tuskarr Traveling Soup Pot199892/388258→381360/75335/.7. Each source focus4 links31442. Census measures runtime preflight, not complete per-toy effect certification.
+
+TC a352b1fa GameObject.cpp:1233,1495,1625 and GameObjectData.h establish a separate unowned invisible trap with addon faction35, source diameter10/2 plus player combat reach, living-player environmental activation and four-second repeat for charges0/cooldown0. Spell7353 supplies a10yd ally-area60s aura189, source versatility mask0x70000000 and level1-capped integer point1. Three native rating bits fold once into the shared versatility rating. Parent removal despawns the trap; an already-applied rating snapshot persists to its own expiry. TC SpellAuras.cpp `Aura::Update` accepts a null caster; old unconditional casterless removal was the failed production boundary, not a reason to truncate the source buff. Only the source-complete trap/signature and supported rating mask are admitted.
+
+|Boundary|Proof|Remaining|
+|---|---|---|
+|Actual source seven-item bag learn/UseToy, displays/scales/owner/map/lifetime, buff1 and60s restoration|Observed refusal RED; seven-item GREEN plus real rating-stat RED/GREEN|Native all-seven pixel/lifetime certification not claimed|
+|Environmental trigger and source spell audience|6.4/6.6yd reach,9yd recipient, NPC/dead/other-map exclusions and4s repeat GREEN|Other traps and interaction payloads unavailable|
+|Representative actual journal/recipe/fire/Cozy cancellation-refresh|Modern+Forever Little Wickerman: two meshes,.25 scale, nine emitters,201/198 own quads, real2672→2679, buff refresh3211/3438ms; inspected PNGs|Native parent expiry and other six variant pixels separate|
+|Authenticated model chains|88 source assets,16 local extractions,86 private receipts/19 aliases|Canonical publication lead-owned; Leylight253080 row absent, Akunda's Firesticks163211 multi-object chain separate|
+
+Evidence: `/home/osso/.worktrees/logs/toy-effects14-continuation/linked-fire-*`, `modern-linked-fire17-green/`, `forever-linked-fire17/`; requested PNGs `/syncthing/AgentShared/2026-10-12/toys/linked-fire17/`. No new template/DB2-table import: all seven focus templates,31442/addon35 and7353 already canonical. Canonical asset command (lead only, registered agent-run):
+
+```text
+python3 scripts/import_model_asset_chains.py --data data --product wow --staged-manifest /home/osso/.worktrees/logs/toy-effects14-continuation/linked-fire-staged.json --resolution data/diagnostics/toy-effects6-2026-10-10/assets/native-offline/wow/dcfc90fffd79ba00406ae46f5f657592/resolution.sqlite --fragment toy-effects17-linked-fires
+```
+
+Independent source review unavailable (expired Claude OAuth); no independent PASS claimed. Whole1166 goal remains open.
+
 ## Source dice scripts (2026-10-12)
 
 36863/47770 Decahedral Dwarven Dice: authored gendered BroadcastText26147, one uniform1–100 roll.36862/47776 Worn Troll Dice: BroadcastText26152, two independent uniform1–6 rolls. Pinned TC a352b1fa `spell_item.cpp`, `Player.cpp:30768` and `worldserver.conf.dist` define scripts, party-or-self roll delivery and40yd text-emote range. Retail69933 GlobalStrings11691 defines the result wording. Source hashes/rows: continuation `dice-source.json`; source files in `reference/`. No generic SCRIPT_EFFECT admission or gameplay mutation.

@@ -13,6 +13,7 @@ mod batch19;
 mod batch20;
 mod batch21;
 mod batch22;
+mod batch23;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -55,6 +56,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
+        && batch23::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
@@ -377,11 +379,12 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
 }
 
 /// `SpellObjectAreaTargetSelectFn`: narrows the units an effect selected.
-/// Receives the spell and its explicit target.
-pub type AreaTargetFilter = fn(&SpellInfo, Option<Entity>, &mut Vec<Entity>);
+/// Receives live target state, the spell and its explicit target.
+pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Entity>);
 
 pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetFilter> {
     match (spell_id, effect_index) {
+        (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),
         _ => None,
@@ -1004,10 +1007,35 @@ fn refund_energizing_flame(world: &mut World, caster: Entity) {
     }
 }
 
+/// TC spell_dru_yseras_gift_group_heal, Spell.cpp:9516-9580:
+/// one random target in the best available injury/player priority tier.
+fn pick_yseras_gift_group_target(
+    world: &World,
+    _spell: &SpellInfo,
+    _explicit: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    use rand::seq::SliceRandom;
+    units.shuffle(&mut rand::thread_rng());
+    units.sort_by_key(|&unit| {
+        let full = world
+            .get::<shared::components::Health>(unit)
+            .is_none_or(|health| health.current >= health.max);
+        let non_player = world.get::<shared::components::Player>(unit).is_none();
+        (full, non_player)
+    });
+    units.truncate(1);
+}
+
 /// `spell_evo_azure_strike::FilterTargets` (spell_evoker.cpp:94-107): the explicit
 /// target plus effect 0's value minus one others picked at random
 /// (`Trinity::Containers::RandomResize`).
-fn azure_strike_targets(spell: &SpellInfo, explicit: Option<Entity>, units: &mut Vec<Entity>) {
+fn azure_strike_targets(
+    _world: &World,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
     pick_azure_strike_targets(spell, explicit, units, &mut rand::thread_rng());
 }
 

@@ -39,6 +39,19 @@ pub(crate) fn load_journal(db: &Database, account_id: u64) -> PetJournal {
     journal
 }
 
+/// Read the same authoritative account journal inside the achievement write transaction.
+pub(crate) fn unique_species_in_transaction(txn: &redb::WriteTransaction, account_id: u64) -> u32 {
+    let table = txn
+        .open_table(ACCOUNT_PET_JOURNALS)
+        .expect("open owned pet journal");
+    let journal: PetJournal = table
+        .get(account_id)
+        .expect("read owned pet journal")
+        .map(|row| serde_json::from_slice(row.value()).expect("decode owned pet journal"))
+        .unwrap_or_default();
+    u32::try_from(journal.unique_species()).expect("journal count fits u32")
+}
+
 pub(crate) fn save_journal(db: &Database, account_id: u64, journal: &PetJournal) {
     let bytes = serde_json::to_vec(journal).expect("encode account pet journal");
     let transaction = db.begin_write().expect("begin account pet journal save");
@@ -72,6 +85,10 @@ pub(crate) struct PetCatalog {
 }
 
 impl PetCatalog {
+    pub(crate) fn creature_id(&self, species: u32) -> Option<u32> {
+        self.species.get(&species).map(|entry| entry.creature_id)
+    }
+
     pub(crate) fn load(conn: &Connection) -> rusqlite::Result<Self> {
         let mut query = conn.prepare(
             "SELECT species_id, creature_id, name, display_id, summon_spell_id \
@@ -309,6 +326,7 @@ pub(crate) fn learn_companion_from_item(
         .get_mut::<AccountPetJournal>(owner)
         .expect("journal checked")
         .journal = journal;
+    crate::achievement::record_learned_pet(world, owner, species);
     refresh_catalog_snapshot(world, owner);
     let mut connections = world.query::<(Entity, &PlayerLink)>();
     let connection = connections

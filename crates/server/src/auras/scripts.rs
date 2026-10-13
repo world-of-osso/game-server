@@ -86,6 +86,27 @@ const REGROWTH: u32 = 8_936;
 const LINGERING_HEALING: u32 = 231_040;
 const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
+const YSERAS_GIFT: u32 = 145_108;
+const YSERAS_GIFT_SELF: u32 = 145_109;
+const YSERAS_GIFT_GROUP: u32 = 145_110;
+const POWER_STRIKE: u32 = 121_817;
+const POWER_STRIKE_PROC: u32 = 129_914;
+const POWER_STRIKE_ENERGIZE: u32 = 121_283;
+const CRITICAL_CHAOS: u32 = 320_413;
+const KNOW_YOUR_ENEMY: u32 = 388_118;
+const TIGER_DASH: u32 = 252_216;
+const BLOODSURGE: u32 = 384_361;
+const MONSTER_RISING: u32 = 452_414;
+const MONSTER_RISING_AGILITY: u32 = 452_550;
+const METAMORPHOSIS_HAVOC: u32 = 162_264;
+const METAMORPHOSIS_VENGEANCE: u32 = 187_827;
+const METAMORPHOSIS_DEVOURER: u32 = 1_217_607;
+const ENDURING_TORMENT: u32 = 452_410;
+const ENDURING_TORMENT_BUFF: u32 = 453_314;
+const BLOODSURGE_ENERGIZE: u32 = 384_362;
+const REND_AURA: u32 = 388_539;
+/// `Cell::VisitAllObjects(caster, worker, 50.0f)`.
+const BLOODSURGE_RADIUS: f32 = 50.0;
 const ROGUE_STEALTH: u32 = 1_784;
 const ROGUE_SANCTUARY: u32 = 98_877;
 const ROGUE_STEALTH_AURA: u32 = 158_185;
@@ -344,6 +365,65 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        BLOODSURGE,
+        AuraScript {
+            on_periodic: Some(roll_bloodsurge),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        ENDURING_TORMENT,
+        AuraScript {
+            on_periodic: Some(toggle_enduring_torment),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        YSERAS_GIFT,
+        AuraScript {
+            on_periodic: Some(heal_yseras_gift),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        POWER_STRIKE_PROC,
+        AuraScript {
+            on_proc: Some(energize_power_strike),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        POWER_STRIKE,
+        AuraScript {
+            on_periodic: Some(cast_power_strike_proc),
+            ..Default::default()
+        },
+    );
+    for spell in [CRITICAL_CHAOS, KNOW_YOUR_ENEMY] {
+        scripts.0.insert(
+            spell,
+            AuraScript {
+                on_apply: Some(update_crit_scaled_bonus),
+                on_periodic: Some(recalculate_crit_scaled_bonus),
+                ..Default::default()
+            },
+        );
+    }
+    scripts.0.insert(
+        MONSTER_RISING,
+        AuraScript {
+            on_periodic: Some(toggle_monster_rising),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        TIGER_DASH,
+        AuraScript {
+            on_periodic: Some(decay_tiger_dash),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         crate::spell_cast::scripts::RAPID_FIRE,
         AuraScript {
             on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
@@ -413,6 +493,189 @@ fn barkskin_brambles(world: &mut World, unit: Entity, _aura: &AuraInstance, effe
     if effect_index == 2 && super::has_aura(world, unit, BRAMBLES) {
         crate::spell_cast::cast_triggered(world, unit, BRAMBLES_DAMAGE, Some(unit), 1);
     }
+}
+
+/// TC a352b1fa spell_druid.cpp:2827-2843, spell_dru_tiger_dash_aura: each effect1
+/// PERIODIC_DUMMY tick lowers effect0's run-speed amount by effect1's amount.
+fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
+    if effect_index != 1 {
+        return;
+    }
+    let Some(decay) = aura.effects.iter().find(|effect| effect.index == 1) else {
+        return;
+    };
+    let decay = decay.amount;
+    {
+        let Some(mut auras) = world.get_mut::<super::ActiveAuras>(unit) else {
+            return;
+        };
+        let Some(speed) = auras
+            .get_mut(aura.instance_id)
+            .and_then(|live| live.effects.iter_mut().find(|effect| effect.index == 0))
+        else {
+            return;
+        };
+        speed.amount -= decay;
+    }
+    super::auras_changed(world, unit);
+    crate::spell_cast::mark_dirty(world, unit);
+}
+
+/// TC a352b1fa spell_druid.cpp:3072-3097, spell_dru_yseras_gift.
+fn heal_yseras_gift(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
+    if effect_index != 0 {
+        return;
+    }
+    let Some(percent) = aura.effects.iter().find(|effect| effect.index == 0) else {
+        return;
+    };
+    let health = world
+        .get::<shared::components::Health>(unit)
+        .expect("living aura unit health");
+    let amount = (health.max * percent.amount / 100.0).floor();
+    let heal = if health.current < health.max {
+        YSERAS_GIFT_SELF
+    } else {
+        YSERAS_GIFT_GROUP
+    };
+    crate::spell_cast::cast_triggered_with_effect0_amount(world, unit, heal, Some(unit), 1, amount);
+}
+
+/// TC a352b1fa spell_monk.cpp:318-333, spell_monk_power_strike_proc.
+fn energize_power_strike(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    _other: Option<Entity>,
+) {
+    crate::spell_cast::cast_triggered(world, unit, POWER_STRIKE_ENERGIZE, Some(unit), 1);
+}
+
+/// TC a352b1fa spell_monk_power_strike_periodic: only effect0 casts 129914.
+fn cast_power_strike_proc(world: &mut World, unit: Entity, _aura: &AuraInstance, effect_index: u8) {
+    if effect_index == 0 {
+        crate::spell_cast::cast_triggered(world, unit, POWER_STRIKE_PROC, Some(unit), 1);
+    }
+}
+
+/// TC a352b1fa spell_dh.cpp:632-655/1571-1593: effect1 recalculates effect0's
+/// crit-scaled ProcChance (Critical Chaos) or critical-damage (KnowYourEnemy) bonus.
+fn recalculate_crit_scaled_bonus(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    effect_index: u8,
+) {
+    if effect_index == 1 {
+        update_crit_scaled_bonus(world, unit, aura);
+    }
+}
+
+fn update_crit_scaled_bonus(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    let Some(percent) = aura.effects.iter().find(|effect| effect.index == 1) else {
+        return;
+    };
+    let crit_pct = world
+        .get::<crate::stats::CharacterStats>(unit)
+        .map_or(0.0, |stats| stats.crit_pct);
+    let amount = crit_pct * percent.amount / 100.0;
+    let Some(bonus) = world
+        .get_mut::<super::ActiveAuras>(unit)
+        .and_then(|auras| auras.into_inner().get_mut(aura.instance_id))
+        .and_then(|live| live.effects.iter_mut().find(|effect| effect.index == 0))
+    else {
+        return;
+    };
+    bonus.amount = amount;
+    super::auras_changed(world, unit);
+}
+
+/// TC a352b1fa spell_dh.cpp:1659-1689, spell_dh_monster_rising.
+fn toggle_monster_rising(world: &mut World, unit: Entity, _aura: &AuraInstance, effect_index: u8) {
+    if effect_index == 0 {
+        toggle_outside_transforms(
+            world,
+            unit,
+            MONSTER_RISING_AGILITY,
+            &[METAMORPHOSIS_HAVOC, METAMORPHOSIS_VENGEANCE],
+        );
+    }
+}
+
+/// TC a352b1fa spell_dh.cpp:1086-1116, spell_dh_enduring_torment.
+fn toggle_enduring_torment(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    effect_index: u8,
+) {
+    if effect_index == 0 {
+        toggle_outside_transforms(
+            world,
+            unit,
+            ENDURING_TORMENT_BUFF,
+            &[METAMORPHOSIS_HAVOC, METAMORPHOSIS_DEVOURER],
+        );
+    }
+}
+
+/// Outside every `transforms` aura each tick ensures `buff`; inside one it removes it.
+fn toggle_outside_transforms(world: &mut World, unit: Entity, buff: u32, transforms: &[u32]) {
+    let transformed = transforms
+        .iter()
+        .any(|&transform| super::has_aura(world, unit, transform));
+    let buffed = super::has_aura(world, unit, buff);
+    if transformed && buffed {
+        super::remove_auras(world, unit, super::RemoveReason::Cancelled, |aura| {
+            aura.spell_id == buff
+        });
+    } else if !transformed && !buffed {
+        crate::spell_cast::cast_triggered(world, unit, buff, Some(unit), 1);
+    }
+}
+
+/// TC a352b1fa spell_warrior.cpp:282-316, spell_warr_bloodsurge: chance
+/// sqrt(units carrying the warrior's Rend effect0) × effect0 amount per tick. TC
+/// visits the grid cells covering 50 yd without a per-unit distance check; this
+/// counts units within 50 yd on the warrior's map.
+fn roll_bloodsurge(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
+    if effect_index != 0 {
+        return;
+    }
+    let Some(amount) = aura.effects.iter().find(|effect| effect.index == 0) else {
+        return;
+    };
+    let rends = count_owned_rends(world, unit) as f32;
+    let chance = rends.sqrt() * amount.amount;
+    if rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..100.0) < chance {
+        crate::spell_cast::cast_triggered(world, unit, BLOODSURGE_ENERGIZE, Some(unit), 1);
+    }
+}
+
+fn count_owned_rends(world: &mut World, warrior: Entity) -> usize {
+    let Some(center) = world.get::<shared::components::Position>(warrior).copied() else {
+        return 0;
+    };
+    let mut units = world.query::<(Entity, &shared::components::Position, &super::ActiveAuras)>();
+    let candidates: Vec<Entity> = units
+        .iter(world)
+        .filter(|(_, at, _)| {
+            let (dx, dy, dz) = (at.x - center.x, at.y - center.y, at.z - center.z);
+            dx * dx + dy * dy + dz * dz <= BLOODSURGE_RADIUS * BLOODSURGE_RADIUS
+        })
+        .filter(|(_, _, auras)| {
+            auras.iter().any(|aura| {
+                aura.spell_id == REND_AURA
+                    && aura.caster == warrior
+                    && aura.effects.iter().any(|effect| effect.index == 0)
+            })
+        })
+        .map(|(entity, ..)| entity)
+        .collect();
+    candidates
+        .into_iter()
+        .filter(|&target| crate::spell_cast::targets::same_map(world, warrior, target))
+        .count()
 }
 
 /// TrinityCore a352b1fa spell_hun_aspect_of_the_turtle applies catalog 205769
