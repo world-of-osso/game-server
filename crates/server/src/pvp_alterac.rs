@@ -4,13 +4,12 @@ use crate::game_objects::{GameObjectBounds, GameObjectSpawns, wow_position};
 use crate::maps::InMap;
 use crate::spell_cast::CastFailure;
 use bevy::prelude::*;
-use lightyear::prelude::*;
 use shared::battleground::{
     ALTERAC_OPENING_SPELL as OPENING_SPELL, AlteracBattle, BgPhase, BgTeam,
 };
 use shared::components::{Health, Npc, Position};
 use shared::protocol::GameObjectInfo;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 #[derive(Component)]
 struct AlteracBanner;
