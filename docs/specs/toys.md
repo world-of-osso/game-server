@@ -13,6 +13,8 @@ Facing-only requirements225826/406870, procedural/positioner rendering and gener
 
 ## Contract
 
+- Accursed Tome of the Sargerei127670/187146 uses only the source zero-payload self aura: instant cast,300000ms duration,3600000ms item recovery. Native ordinary model1097945 uses attachment17 and source offsets(-.3,0,.3), scale1; preserve original body, health and position. Aura removal must retain item recovery. No generic dummy-aura or inferred gameplay effect.
+
 - Druid and Priest Statue Set64361/91743 admits only the source complete-zero self cosmetic aura: instant cast,10000ms ordinary aura, ground model253570 at source scale.5. Preserve900000ms item recovery across natural aura removal; no creature, gameplay bonus or generic aura4 admission. Native certification requires actual learning/use and visible model lifecycle per skin.
 
 - War Banners169275/169276 use source300104/300144 permanent cosmetic self auras without gameplay/model replacement. Preserve source interrupt mask0x10001002, including real entering-combat removal, and ordinary learning/eligibility/cooldowns. Client visual87545/87561 requires authored CurrentPvpFaction2/1 (36349/36348), not a race-only condition; BG and arena team replication is required. No generic dummy-aura admission.
