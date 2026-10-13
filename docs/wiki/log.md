@@ -4,6 +4,7 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Conditional Gladiator banners](../toy-effects14-coverage.md#conditional-gladiator-back-banners-2026-10-13): existing race/sex PlayerConditions resolve both banner models; aura4 lifecycle/faction refusal, all104 visual contexts and representative both-skin native proof. Census354→356; War Banners remain blocked by CurrentPvpFaction.
 - 2026-10-12 — [Placed statues](../toy-effects14-coverage.md#placed-statues-and-the-missing-template-audit-2026-10-12): 110 missing-template summon toys were audited. Ornate Dragon Statue and Stuffed Bear are imported; prepared census354→356. Attraction Sign (invisible weighted display) and the interaction toys stay blocked.
 - 2026-10-12 — [Toy root scripts](../toy-effects14-coverage.md): Unusual Compass (ForcedFacing epoch), Titanium Seal coin, Goblin Weather Machine and Wormhole Generator: Pandaria are admitted only for their exact TC/TDB source shapes; census338→348. Transporter/Teleporting/Taunt Flag are named gaps.
 - 2026-10-12 — [Source summon flags/privacy](systems/toys.md#source-summon-flag-import-2026-10-12): atomic3610-record flags import, real two-peer owner-only/public-control proof, wild spawn/target visibility fixes and preserved337 census; group-private remains explicit gap.
