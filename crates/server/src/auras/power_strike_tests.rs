@@ -77,13 +77,14 @@ fn class_completeness_native_power_strike_proc_adds_one_chi_on_a_melee_ability_o
             .log
             .iter()
             .filter(|event| {
-                event.spell_id == POWER_STRIKE_ENERGIZE && event.kind == CombatLogKind::Energize
+                event.spell_id == Some(POWER_STRIKE_ENERGIZE)
+                    && event.kind == CombatLogKind::Energize
             })
             .collect();
         assert_eq!(energizes.len(), usize::from(proc_ready));
         if proc_ready {
             assert_eq!(energizes[0].amount, 1);
-            assert_eq!(energizes[0].target, unit.to_bits());
+            assert_eq!(energizes[0].target, Some(unit.to_bits()));
         }
         assert!(!has_proc(&h), "one-charge proc consumed by the ability");
         h.advance(30);
@@ -94,7 +95,8 @@ fn class_completeness_native_power_strike_proc_adds_one_chi_on_a_melee_ability_o
                 .log
                 .iter()
                 .filter(|event| {
-                    event.spell_id == POWER_STRIKE_ENERGIZE && event.kind == CombatLogKind::Energize
+                    event.spell_id == Some(POWER_STRIKE_ENERGIZE)
+                        && event.kind == CombatLogKind::Energize
                 })
                 .count(),
             usize::from(proc_ready),
