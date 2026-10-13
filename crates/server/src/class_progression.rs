@@ -785,6 +785,7 @@ fn process_set_specialization(
     db: Option<Res<GameDatabase>>,
     classes: Option<Res<ClassSpells>>,
     mut receivers: Query<(Entity, &PlayerLink, &mut MessageReceiver<SetSpecialization>)>,
+    pvp: Query<&crate::pvp::PlayerPvpState>,
     mut players: Query<ProgressionPlayer>,
     mut senders: ProgressionSenders,
 ) {
@@ -796,6 +797,14 @@ fn process_set_specialization(
             let Ok(entry) = players.get_mut(link.0) else {
                 continue;
             };
+            if pvp.get(link.0).is_ok_and(shuffle_spec_locked) {
+                send(
+                    &mut senders.spec,
+                    connection,
+                    SpecializationChanged { spec_id: entry.3.0 },
+                );
+                continue;
+            }
             if let Err(error) = validate_spec_request(&classes, entry.0, entry.1.0, request.spec_id)
             {
                 warn!("Rejected SetSpecialization {}: {error}", request.spec_id);
@@ -822,6 +831,20 @@ fn process_set_specialization(
             );
         }
     }
+}
+
+/// Realm Shuffle admission fixes two healers/four damage until the entrant leaves.
+fn shuffle_spec_locked(state: &crate::pvp::PlayerPvpState) -> bool {
+    matches!(
+        state.queue,
+        Some(crate::pvp::PlayerPvpQueue::Arena {
+            mode: shared::protocol::ArenaQueueMode::SoloShuffle
+        })
+    ) || state
+        .battleground
+        .as_ref()
+        .and_then(|bg| bg.arena.as_ref())
+        .is_some_and(|arena| arena.mode == shared::protocol::ArenaQueueMode::SoloShuffle)
 }
 
 fn validate_spec_request(

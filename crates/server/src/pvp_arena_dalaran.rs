@@ -95,6 +95,10 @@ struct Clock {
 #[derive(Resource, Default)]
 pub(crate) struct Timers(BTreeMap<InMap, Clock>);
 
+pub(super) fn reset_map(world: &mut World, map: InMap) {
+    world.resource_mut::<Timers>().0.remove(&map);
+}
+
 pub(super) fn update(world: &mut World, now: f64) {
     let maps: BTreeMap<_, _> = world
         .resource::<super::PvpServerState>()

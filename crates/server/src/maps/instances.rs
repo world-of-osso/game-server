@@ -284,6 +284,12 @@ impl InstanceManager {
         entrant: InstanceEntrant,
         unix: i64,
     ) -> Option<InMap> {
+        if matches!(
+            store.map(map_id)?.instance_type,
+            InstanceType::Battleground | InstanceType::Arena
+        ) {
+            return self.find_battleground_copy(map_id, entrant.character_id);
+        }
         let (instance_id, entries, owner) = self.bound_instance(store, map_id, entrant, unix)?;
         let map = InMap {
             map_id,
@@ -294,6 +300,13 @@ impl InstanceManager {
         (entries.is_instance_id_bound() || copy.lock_owner.is_none_or(|o| o == owner))
             .then_some(map)
             .filter(|_| copy.difficulty.difficulty_id == entries.difficulty_id)
+    }
+
+    fn find_battleground_copy(&self, map_id: u32, character_id: u64) -> Option<InMap> {
+        self.battleground_by_character
+            .get(&character_id)
+            .copied()
+            .filter(|map| map.map_id == map_id && self.copies.contains_key(map))
     }
 
     /// `MapManager::CreateMap` for a player: the continent itself, or the dungeon copy
@@ -322,10 +335,7 @@ impl InstanceManager {
                 self.create_dungeon(store, map_id, entrant, now)
             }
             InstanceType::Battleground | InstanceType::Arena => self
-                .battleground_by_character
-                .get(&entrant.character_id)
-                .copied()
-                .filter(|map| map.map_id == map_id && self.copies.contains_key(map))
+                .find_battleground_copy(map_id, entrant.character_id)
                 .map(|map| ResolvedMap {
                     map,
                     created: false,
@@ -661,10 +671,8 @@ impl InstanceManager {
                     .and_then(|map| self.cannot_enter(map, entrant, unix))
             }
             InstanceType::Battleground | InstanceType::Arena => {
-                match self.battleground_by_character.get(&entrant.character_id) {
-                    Some(&map) if map.map_id == map_id && self.copies.contains_key(&map) => {
-                        self.cannot_enter(map, entrant, unix)
-                    }
+                match self.find_battleground_copy(map_id, entrant.character_id) {
+                    Some(map) => self.cannot_enter(map, entrant, unix),
                     _ => Some(TransferAbortReason::MapNotAllowed),
                 }
             }

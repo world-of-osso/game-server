@@ -2,6 +2,7 @@ import copy
 import sqlite3
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -90,19 +91,25 @@ class Conditions(unittest.TestCase):
         modifiers[11] = node(10, 2, 5, 0)
         self.assertEqual(self.compile(modifiers, emote), {}, 'player/dead/faction targets remain unsupported')
 
-    def test_rated_arena_result_keeps_team_size_and_ranked_predicates(self):
+    def test_arena_player_facts_on_all_gated_events(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 24, 2), 12: node(10, 2, 60, 0)}
-        for kind in (32, 33):
+        for kind in (0, 17, 32, 33, 56, 70):
             criteria = copy.deepcopy(self.criteria)
             criteria[1]['Type'] = str(kind)
             self.assertEqual(self.compile(modifiers, criteria), {1: [None, ((24, 2), (60, 0))]})
             modifiers[11]['Asset'] = '5'
             self.assertEqual(self.compile(modifiers, criteria), {}, 'no native5v5')
             modifiers[11]['Asset'] = '2'
-        self.assertEqual(self.compile(modifiers), {}, 'other producers have no match snapshot')
+        derived = copy.deepcopy(self.criteria)
+        derived[1]['Type'] = '8'
+        self.assertEqual(self.compile(modifiers, derived), {}, 'structural recomputation has no player facts')
+
+    def test_group_roster_limit_preserves_strict_threshold(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 29, 9)}
+        self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
 
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
-        with sqlite3.connect(':memory:') as db:
+        with closing(sqlite3.connect(':memory:')) as db:
             db.executescript('''
                 CREATE TABLE tdb_conditions(SourceTypeOrReferenceId INTEGER, SourceEntry INTEGER);
                 CREATE TABLE player_condition(

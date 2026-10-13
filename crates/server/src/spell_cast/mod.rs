@@ -37,6 +37,8 @@ mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
 #[cfg(test)]
+mod category_cooldown_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
@@ -197,6 +199,10 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
+mod arena_cooldowns;
+pub(crate) use arena_cooldowns::reset_arena_cooldowns;
+#[cfg(test)]
+mod arena_cooldown_tests;
 mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
@@ -407,6 +413,8 @@ impl ChargeState {
 pub struct SpellHistory {
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
+    /// Actual item-use authored durations/categories, which can override SpellInfo.
+    item_cooldown_sources: HashMap<u32, ItemCooldownSource>,
     /// By `StartRecoveryCategory`.
     gcd_ready_at: HashMap<u32, f64>,
     /// By `ChargeCategory`.
@@ -783,6 +791,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
             crate::achievement::record_delivered_killing_blow(world, killer);
             crate::achievement::record_player_killed_by(world, victim, killer);
             let owner = combat_event_owner(world, killer);
+            crate::pvp::record_battleground_player_kill(world, owner, victim);
             crate::quest::record_player_kill(world, owner, victim);
         }
     }
@@ -969,7 +978,7 @@ pub(crate) fn cast_granted(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    cast_granted_with_item_context(world, caster, spell_id, target, None, None)
+    cast_granted_with_item_context(world, caster, spell_id, target, None, None, None)
 }
 
 fn cast_granted_with_item_context(
@@ -979,6 +988,7 @@ fn cast_granted_with_item_context(
     target: Option<Entity>,
     item_level: Option<u16>,
     retail_item_id: Option<u32>,
+    item_cooldown: Option<ItemCooldown>,
 ) -> Result<(), CastFailure> {
     let result = world
         .get_resource::<SpellStore>()
@@ -988,6 +998,18 @@ fn cast_granted_with_item_context(
         .and_then(|mut spell| {
             spell.cast_item_level = item_level;
             spell.cast_retail_item_id = retail_item_id;
+            if let Some(cooldown) =
+                item_cooldown.filter(|cd| cd.category != 0 && cd.category_ms > 0)
+            {
+                spell
+                    .categories
+                    .get_or_insert_with(Default::default)
+                    .category = cooldown.category;
+                spell
+                    .cooldowns
+                    .get_or_insert_with(Default::default)
+                    .category_recovery_ms = cooldown.category_ms;
+            }
             start_cast(world, caster, &spell, target, None)
         });
     if let Err(failure) = &result {
@@ -1003,6 +1025,13 @@ fn cast_granted_with_item_context(
         );
     }
     result
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ItemCooldownSource {
+    recovery_ms: u32,
+    category_ms: u32,
+    category: u32,
 }
 
 /// The cooldown an item effect puts on its spell's category (`ItemEffect`
@@ -1054,31 +1083,8 @@ pub(crate) fn cast_item_spell(
         target,
         Some(item_level),
         retail_item_id,
-    )?;
-    if cooldown.category != 0 && cooldown.category_ms > 0 {
-        world
-            .entity_mut(caster)
-            .entry::<SpellHistory>()
-            .or_default()
-            .get_mut()
-            .category_ready_at
-            .insert(
-                cooldown.category,
-                now + f64::from(cooldown.category_ms) / 1000.0,
-            );
-        send_to_owner(
-            world,
-            caster,
-            SpellCooldownUpdate {
-                spell_id,
-                category: cooldown.category,
-                duration_ms: cooldown.category_ms,
-                remaining_ms: cooldown.category_ms,
-                is_gcd: false,
-            },
-        );
-    }
-    Ok(())
+        Some(cooldown),
+    )
 }
 
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
@@ -2561,6 +2567,28 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
     (duration / haste.max(0.01)).trunc()
 }
 
+/// TC a352b1fa SpellHistory.cpp:469-481: native category341 is independent
+/// of spell class masks and applies after ordinary cooldown/haste modifiers.
+fn category_cooldown_modifier_ms(world: &World, caster: Entity, category: u32) -> f32 {
+    if category == 0 {
+        return 0.0;
+    }
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(caster) else {
+        return 0.0;
+    };
+    let mut total = 0.0;
+    for aura in auras.iter() {
+        for effect in &aura.effects {
+            if effect.aura_type == crate::auras::handlers::MOD_SPELL_CATEGORY_COOLDOWN
+                && u32::try_from(effect.misc_values[0]).ok() == Some(category)
+            {
+                total += (effect.amount * f32::from(aura.stacks)).trunc();
+            }
+        }
+    }
+    total
+}
+
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // SpellHistory::HandleCooldowns returns before consuming a charge or starting
     // a clock when source flag 0x2 is set. The cast's GCD remains independent.
@@ -2573,24 +2601,41 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .cooldowns
         .as_ref()
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let category = spell.categories.as_ref().map_or(0, |c| c.category);
+    let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
     let cooldown = |base: u32| {
         if base == 0 {
             return 0;
         }
         let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
-        haste_regen_cooldown_ms(world, caster, spell, modified)
-            .max(0.0)
-            .round() as u32
+        let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
+        let adjusted = if hasted > 0.0 {
+            hasted + category_modifier_ms
+        } else {
+            hasted
+        };
+        adjusted.max(0.0).round() as u32
     };
     let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
     let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
-    let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
+    if spell.cast_item_level.is_some() {
+        history.item_cooldown_sources.insert(
+            spell.id,
+            ItemCooldownSource {
+                recovery_ms: base_recovery_ms,
+                category_ms: base_category_ms,
+                category,
+            },
+        );
+    } else {
+        history.item_cooldown_sources.remove(&spell.id);
+    }
     // A fully discounted authored cooldown becomes ready now, not at its old deadline.
-    if base_recovery_ms > 0 {
+    if base_recovery_ms > 0 || base_category_ms > 0 {
         history
             .spell_ready_at
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);

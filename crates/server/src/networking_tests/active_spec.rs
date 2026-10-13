@@ -110,4 +110,24 @@ fn another_client_sees_a_players_spec_and_its_change() {
     );
     assert_eq!(seen_spec(&mut clients[1], "Alice"), Some(SPEC_FURY));
     assert_eq!(seen_spec(&mut clients[0], "Bob"), Some(SPEC_ARMS));
+    server
+        .world_mut()
+        .entity_mut(alice)
+        .insert(crate::pvp::PlayerPvpState {
+            queue: Some(crate::pvp::PlayerPvpQueue::Arena {
+                mode: shared::protocol::ArenaQueueMode::SoloShuffle,
+            }),
+            ..Default::default()
+        });
+    clients[0]
+        .world_mut()
+        .get_mut::<MessageSender<SetSpecialization>>(alice_entity)
+        .unwrap()
+        .send::<TalentChannel>(SetSpecialization { spec_id: SPEC_ARMS });
+    advance(&mut server, &mut clients, 100);
+    assert_eq!(
+        seen_spec(&mut clients[1], "Alice"),
+        Some(SPEC_FURY),
+        "Shuffle roles cannot change while queued/in the match"
+    );
 }
