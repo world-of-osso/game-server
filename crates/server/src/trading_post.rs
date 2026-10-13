@@ -14,10 +14,27 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::protocol::*;
 
+/// Refund window for new purchases. Retail's duration is unsourced, so it stays 0
+/// (refunds disabled) unless a server administrator sets it on the admin socket.
+#[derive(Resource, Default, Clone, Copy)]
+pub(crate) struct RefundWindow(pub u32);
+
+/// Admin-socket test setup: credit `amount` Tender to `username`'s account.
+pub(crate) fn admin_grant_tender(
+    db: &redb::Database,
+    username: &str,
+    amount: u32,
+) -> Result<u32, String> {
+    let account = crate::persistence_accounts::find_account_by_username(db, username)
+        .ok_or_else(|| format!("Account {username} not found"))?;
+    Ok(store::grant_tender(db, account, amount)?.tender)
+}
+
 pub(crate) struct TradingPostPlugin;
 impl Plugin for TradingPostPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<catalog::Catalog>()
+            .init_resource::<RefundWindow>()
             .add_systems(Startup, load_catalog)
             .add_systems(
                 Update,
@@ -109,7 +126,9 @@ fn execute(
                     vendor: *vendor_item_id,
                     price: row.price,
                     grant,
-                    refund_duration: 0,
+                    refund_duration: world
+                        .get_resource::<RefundWindow>()
+                        .map_or(0, |window| window.0),
                 },
                 now,
             )?;
@@ -161,23 +180,24 @@ fn send_snapshot(world: &mut World, connection: Entity, account: u64, error: Opt
         .get::<PlayerLink>(connection)
         .and_then(|link| active_vendor(world, connection, link.0).ok())
         .map(Entity::to_bits);
-    let mut snapshot = TradingPostSnapshot {
-        npc_net_id: npc,
-        tender: state.tender,
-        points: summary.points,
-        now_unix: now,
-        month_end_unix: summary.end_unix,
-        frozen_item_id: state.frozen,
-        categories: Vec::new(),
-        items: Vec::new(),
-        thresholds: Vec::new(),
-        source_gaps: vec![
+    let mut snapshot =
+        TradingPostSnapshot {
+            npc_net_id: npc,
+            tender: state.tender,
+            points: summary.points,
+            now_unix: now,
+            month_end_unix: summary.end_unix,
+            frozen_item_id: state.frozen,
+            categories: Vec::new(),
+            items: Vec::new(),
+            thresholds: Vec::new(),
+            source_gaps: vec![
             "Monthly featured rotation and seasonal reward binding: no verified calendar epoch."
                 .into(),
-            "Refund duration unsourced: refunds disabled.".into(),
+            refund_gap(world.get_resource::<RefundWindow>().map_or(0, |window| window.0)),
         ],
-        error,
-    };
+            error,
+        };
     if let crate::adventure_guide::AdventureCatalog::Ready(data) =
         world.resource::<crate::adventure_guide::AdventureCatalog>()
     {
@@ -201,6 +221,14 @@ fn send_snapshot(world: &mut World, connection: Entity, account: u64, error: Opt
     }
     if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
         sender.send::<InstanceChannel>(snapshot);
+    }
+}
+
+fn refund_gap(window: u32) -> String {
+    if window == 0 {
+        "Refund duration unsourced: refunds disabled.".into()
+    } else {
+        format!("Refund duration unsourced: {window}s window set by server administrator.")
     }
 }
 
