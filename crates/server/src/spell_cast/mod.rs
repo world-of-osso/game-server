@@ -628,6 +628,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
         let source = event.source.and_then(Entity::try_from_bits);
         let target = event.target.and_then(Entity::try_from_bits);
         if let (Some(killer), Some(victim)) = (source, target) {
+            crate::achievement::record_delivered_killing_blow(world, killer);
             crate::achievement::record_player_killed_by(world, victim, killer);
             let owner = combat_event_owner(world, killer);
             crate::quest::record_player_kill(world, owner, victim);

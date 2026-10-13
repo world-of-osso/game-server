@@ -132,6 +132,15 @@ fn achievements_criteria_native_damage_caps_totals_not_peaks_and_excludes_self_a
             .get::<PlayerAchievementState>(h.caster)
             .unwrap()
             .criteria_progress
+            .get(&5529),
+        Some(&1)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
             .get(&162),
         Some(&100)
     );
@@ -149,6 +158,15 @@ fn achievements_criteria_native_damage_caps_totals_not_peaks_and_excludes_self_a
     assert_eq!(state.criteria_progress.get(&5371), Some(&20));
     assert!(!state.criteria_progress.contains_key(&5372));
     crate::combat::kill_unit(h.app.world_mut(), h.caster, h.caster);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5529),
+        Some(&2)
+    );
     assert_eq!(
         h.app
             .world()
@@ -175,6 +193,12 @@ fn achievements_criteria_native_damage_caps_totals_not_peaks_and_excludes_self_a
             .criteria_progress
             .get(&162),
         Some(&100)
+    );
+    assert_eq!(
+        persistence::load_achievements(&reopened, caster_id)
+            .criteria_progress
+            .get(&5529),
+        Some(&2)
     );
     let saved = persistence::load_achievements(&reopened, victim_id);
     assert_eq!(saved.criteria_progress.get(&5371), Some(&150));
