@@ -1,5 +1,6 @@
-//! Effect50 (TRANS_DOOR / EffectTransmitted), not just summoning rituals.
-//! TC a352b1fa SpellEffects.cpp: destination, template, owner and spell duration.
+//! Effect50 (TRANS_DOOR / EffectTransmitted), not just summoning rituals, and effect76
+//! (EffectSummonObjectWild). TC a352b1fa SpellEffects.cpp: destination, template,
+//! owner (none for wild objects) and spell duration.
 //! Decoration, chairs, mailboxes and source cooking-only foci have complete behavior.
 use std::collections::HashMap;
 use std::f32::consts::FRAC_PI_2;
@@ -19,6 +20,7 @@ use crate::spell_cast::{duration_ms, effects::EffectCtx, now};
 use crate::spell_info::SpellEffect;
 
 pub(crate) const EFFECT_TRANSMITTED: u32 = 50;
+pub(crate) const EFFECT_SUMMON_OBJECT_WILD: u32 = 76;
 
 #[derive(Debug, Clone)]
 struct ObjectTemplate {
@@ -41,7 +43,8 @@ pub(crate) struct SummonedObjectTemplates(
 /// Owner and spell remain distinct from a ritual's channel-held ownership.
 #[derive(Component, Debug)]
 pub(crate) struct SummonedObject {
-    pub owner: Entity,
+    /// `None` for wild objects: "Wild object not have owner".
+    pub owner: Option<Entity>,
     pub spell_id: u32,
     pub expires_at: Option<f64>,
 }
@@ -107,12 +110,13 @@ pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObje
         .collect::<Vec<_>>()
         .join(" | ");
     let focus_type = GAMEOBJECT_TYPE_SPELL_FOCUS;
+    let (transmitted, wild) = (EFFECT_TRANSMITTED, EFFECT_SUMMON_OBJECT_WILD);
     let sql = format!("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
         d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
         t.Data0,t.Data1,t.Data2,t.Data5,t.Data8,
         t.type={focus_type} AND ({additional_focus_fields})<>0
         FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
-        WHERE t.type={focus_type} OR t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)");
+        WHERE t.type={focus_type} OR t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect IN ({transmitted},{wild}) AND DifficultyID=0)");
     let mut query = conn.prepare(&sql)?;
     let templates = query
         .query_map([], |row| template_from_row(row, conn))?
@@ -196,6 +200,43 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
     })
 }
 
+/// Effect76 has no ritual path. Without an owner TC GameObject::Use refuses a
+/// partyOnly spellcaster to everyone, so such an object is not a usable toy.
+pub(crate) fn wild_unsupported_reason(world: &World, effect: &SpellEffect) -> Option<String> {
+    let entry = effect.misc_values[0] as u32;
+    let template = world
+        .get_resource::<SummonedObjectTemplates>()
+        .and_then(|t| t.0.get(&entry));
+    let ritual = world
+        .get_resource::<crate::meeting_stone::MeetingStoneData>()
+        .and_then(|data| data.ritual(entry))
+        .is_some()
+        || template.is_some_and(|t| t.info.go_type == GAMEOBJECT_TYPE_RITUAL);
+    if ritual {
+        return Some(format!("wild ritual gameobject {entry}"));
+    }
+    let party_only = template
+        .and_then(|t| t.spellcaster.as_ref())
+        .is_some_and(|spellcaster| spellcaster.party_only);
+    if party_only {
+        return Some(format!(
+            "wild gameobject {entry} is party-only without an owner"
+        ));
+    }
+    unsupported_reason(world, effect)
+}
+
+/// The spell a spellcaster object `entry` casts on its user.
+pub(crate) fn spellcaster_spell(world: &World, entry: u32) -> Option<u32> {
+    world
+        .get_resource::<SummonedObjectTemplates>()?
+        .0
+        .get(&entry)?
+        .spellcaster
+        .as_ref()
+        .map(|spellcaster| spellcaster.spell)
+}
+
 pub(crate) fn cooking_focus_radius(world: &World, entry: u32) -> Option<f32> {
     let template = world
         .get_resource::<SummonedObjectTemplates>()?
@@ -234,12 +275,40 @@ pub(crate) fn spawn_transmitted(world: &mut World, ctx: &EffectCtx, effect: &Spe
     };
     let duration = duration_ms(world, ctx.caster, ctx.spell);
     let expires_at = (duration > 0).then(|| now(world) + f64::from(duration / 1000));
-    spawn_object(world, ctx, template, dest, map, expires_at);
+    spawn_object(
+        world,
+        (Some(ctx.caster), ctx.spell.id),
+        template,
+        dest,
+        map,
+        expires_at,
+    );
+}
+
+/// TC EffectSummonObjectWild: the template at the spell's destination for its
+/// duration, added to the map without an owner.
+pub(crate) fn spawn_wild(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    if let Some(reason) = wild_unsupported_reason(world, effect) {
+        warn!("Spell {}: {reason}", ctx.spell.id);
+        return;
+    }
+    let entry = effect.misc_values[0] as u32;
+    let template = world.resource::<SummonedObjectTemplates>().0[&entry].clone();
+    let Some(dest) = ctx.dest else {
+        warn!("Spell {}: wild object has no destination", ctx.spell.id);
+        return;
+    };
+    let Some(map) = world.get::<crate::maps::InMap>(ctx.caster).copied() else {
+        return;
+    };
+    let duration = duration_ms(world, ctx.caster, ctx.spell);
+    let expires_at = (duration > 0).then(|| now(world) + f64::from(duration / 1000));
+    spawn_object(world, (None, ctx.spell.id), template, dest, map, expires_at);
 }
 
 fn spawn_object(
     world: &mut World,
-    ctx: &EffectCtx,
+    (owner, spell_id): (Option<Entity>, u32),
     template: ObjectTemplate,
     dest: crate::spell_cast::targets::Dest,
     map: crate::maps::InMap,
@@ -269,8 +338,8 @@ fn spawn_object(
         template.info,
         bounds,
         SummonedObject {
-            owner: ctx.caster,
-            spell_id: ctx.spell.id,
+            owner,
+            spell_id,
             expires_at,
         },
         Replicate::to_clients(NetworkTarget::All),
@@ -297,7 +366,7 @@ pub(crate) fn expire_objects(world: &mut World) {
         .map(|(entity, object)| (entity, object.owner, object.spell_id))
         .collect();
     for (entity, owner, spell_id) in expired {
-        debug!("Spell {spell_id}: object {entity} owned by {owner} expired");
+        debug!("Spell {spell_id}: object {entity} owned by {owner:?} expired");
         world.despawn(entity);
     }
     super::cooking_traps::update(world);

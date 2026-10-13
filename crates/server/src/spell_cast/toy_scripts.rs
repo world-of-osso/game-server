@@ -1,4 +1,5 @@
-//! TC a352b1fa spell_item.cpp dice/compass/coin/weather/wormhole scripts and Player::DoRandomRoll.
+//! TC a352b1fa spell_item.cpp dice/compass/coin/weather/wormhole and spell_generic.cpp
+//! foam sword scripts, and Player::DoRandomRoll.
 //! BroadcastText26147/26152/32638/32663/32664 and GlobalStrings RANDOM_ROLL_RESULT are authored text.
 use std::collections::{HashMap, HashSet};
 
@@ -16,6 +17,7 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 use super::CastFailure;
 use super::effects::{CastEffectHandler, EffectCtx};
 use super::toy_coin::{self, COIN_TEXTS, COIN_TOSS};
+use super::toy_foam_sword::{self, CREATE_FOAM_SWORD};
 use super::toy_weather::{self, WEATHER_MACHINE};
 use super::toy_wormhole::{self, WORMHOLE_PANDARIA};
 
@@ -130,6 +132,9 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
         }
         return toy_weather::unsupported(world);
     }
+    if spell.id == CREATE_FOAM_SWORD {
+        return toy_foam_sword::unsupported(world, spell);
+    }
     if spell.id == WORMHOLE_PANDARIA {
         if !has_source_signature(spell, EFFECT_DUMMY) {
             return Some("wormhole source effect signature differs".into());
@@ -158,6 +163,9 @@ pub(crate) fn supports_effect(spell: u32, effect: &SpellEffect) -> bool {
     if spell == COIN_TOSS {
         return toy_coin::is_toss_effect(effect);
     }
+    if spell == CREATE_FOAM_SWORD {
+        return toy_foam_sword::is_script_effect(effect);
+    }
     if spell == WEATHER_MACHINE {
         return is_caster_script_effect(effect, EFFECT_SCRIPT);
     }
@@ -172,7 +180,7 @@ pub(crate) fn check_cast(
     if spell.id == UNUSUAL_COMPASS {
         return check_compass_cast(world, caster, spell);
     }
-    if spell.id == WEATHER_MACHINE || spell.id == WORMHOLE_PANDARIA {
+    if [WEATHER_MACHINE, WORMHOLE_PANDARIA, CREATE_FOAM_SWORD].contains(&spell.id) {
         return unsupported(world, spell)
             .map_or(Ok(()), |reason| Err(CastFailure::Unsupported(reason)));
     }
@@ -203,6 +211,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<CastEffectHandler> {
     }
     if spell == WEATHER_MACHINE && index == 0 {
         return Some(toy_weather::cast_personal_weather);
+    }
+    if spell == CREATE_FOAM_SWORD && index == 0 {
+        return Some(toy_foam_sword::create_one_foam_sword);
     }
     if spell == WORMHOLE_PANDARIA && index == 0 {
         return Some(toy_wormhole::teleport_to_random_pandaria_point);

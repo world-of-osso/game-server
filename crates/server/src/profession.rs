@@ -481,7 +481,7 @@ pub(crate) fn new_order_item(
     with_bags(world, player, |bags| bags.new_item(item_id, count)).ok_or("crafter has no bags")?
 }
 
-fn store_created_item(
+pub(crate) fn store_created_item(
     world: &mut World,
     player: Entity,
     item_id: u32,
