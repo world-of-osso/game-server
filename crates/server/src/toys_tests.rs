@@ -28,7 +28,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090,
             381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
             128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
-            127803, 128150, 128151, 128152, 176899, 176900,
+            127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
         ],
         class,
     )
@@ -3729,6 +3729,59 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
         world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
         h.advance(100);
         assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
+    }
+}
+
+#[test]
+fn toyfx20_war_banners_learn_apply_source_aura_and_remove_on_real_combat_entry() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    for (item, spell, race) in [(169275, 300104, 1), (169276, 300144, 2)] {
+        let (mut h, character) =
+            setup_for_race(&directory.path().join(format!("war-{item}.redb")), race);
+        learn_effect_toy(&mut h, character, item);
+        let before = *h.app.world().get::<Health>(h.caster).unwrap();
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(40);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.expires_at, None);
+        assert_eq!(aura.interrupt_flags, [0x1000_1002, 0]);
+        assert_eq!(*h.app.world().get::<Health>(h.caster).unwrap(), before);
+        assert!(h.app.world().get::<ModelDisplay>(h.caster).is_none());
+        let present = |h: &Harness| {
+            h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        };
+        assert!(present(&h));
+        let (caster, npc) = (h.caster, h.npc);
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, npc);
+        h.advance(2);
+        assert!(h.app.world().get::<CombatStatus>(caster).unwrap().0);
+        assert!(!present(&h), "entering actual combat removes spell {spell}");
+        assert!(
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(caster)
+                .unwrap()
+                .iter()
+                .all(|aura| aura.spell_id != spell)
+        );
+        assert_eq!(*h.app.world().get::<Health>(caster).unwrap(), before);
+        assert!(h.app.world().get::<ModelDisplay>(caster).is_none());
     }
 }
 

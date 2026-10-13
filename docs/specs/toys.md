@@ -2,6 +2,8 @@
 
 ## Contract
 
+- War Banners169275/169276 use source300104/300144 permanent cosmetic self auras without gameplay/model replacement. Preserve source interrupt mask0x10001002, including real entering-combat removal, and ordinary learning/eligibility/cooldowns. Client visual87545/87561 requires authored CurrentPvpFaction2/1 (36349/36348), not a race-only condition; BG and arena team replication is required. No generic dummy-aura admission.
+
 - Toy membership comes only from local Retail 12.1.0.69933 Toy.db2. Import every decrypted row, retain unresolved item/spell joins, and expose them as unavailable. No synthetic membership or spells.
 - Runtime content preparation retains every Toy member with authentic Item and ItemSparse rows, using the ordinary Retail item conversion without replacing existing item rows. The additive scenery/toy importer and full content rebuild must agree. Missing metadata is recorded, never synthesized; importing an item does not authorize its unsupported effects, conditions, interactions or presentation.
 - UseItem on a Retail toy learns it for the authenticated account, consuming one physical item in the same redb transaction. Duplicate learning is rejected without consumption. Unsupported activation does not prevent learning.
