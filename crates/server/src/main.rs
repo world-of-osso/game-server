@@ -103,6 +103,7 @@ mod quest_view;
 mod race_class;
 mod raid_history;
 mod renown;
+mod db2_source_build;
 mod reputation;
 mod rest;
 mod scripted_ai;

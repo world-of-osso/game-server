@@ -72,16 +72,7 @@ fn read_rows<T: serde::de::DeserializeOwned>(
 }
 
 pub(crate) fn load(conn: &Connection) -> Result<CatalogData, String> {
-    let bad: u32 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM trading_post_source WHERE build<>'12.1.0.69933'",
-            [],
-            |row| row.get(0),
-        )
-        .map_err(|error| format!("Trading Post provenance: {error}"))?;
-    if bad != 0 {
-        return Err("Trading Post requires local Retail12.1.0.69933".into());
-    }
+    crate::db2_source_build::read_source_build(conn, "trading_post_source")?;
     let categories = read_rows::<Category>(conn, "perks_vendor_category")?
         .into_iter()
         .map(|row| TradingPostCategory {

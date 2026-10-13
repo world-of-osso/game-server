@@ -1,6 +1,13 @@
 use super::*;
 use crate::bank_test_harness::Harness;
 
+#[test]
+fn db2_follow_install_renown_reads_new_active_faction_without_recompiling() {
+    let factions = catalog();
+    assert!(factions.iter().any(|faction| faction.id == 55));
+    assert_eq!(factions.iter().map(|faction| faction.rewards.len()).sum::<usize>(), 882);
+}
+
 const MARUUK: u32 = 12;
 
 fn maruuk() -> &'static MajorFaction {
