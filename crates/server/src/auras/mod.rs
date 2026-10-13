@@ -1895,6 +1895,8 @@ mod bloodsurge_tests;
 #[cfg(test)]
 mod defensives_tests;
 #[cfg(test)]
+mod enduring_torment_tests;
+#[cfg(test)]
 mod fear_tests;
 #[cfg(test)]
 mod monster_rising_tests;
