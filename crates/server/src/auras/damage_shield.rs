@@ -8,7 +8,7 @@ use crate::spell_info::SpellStore;
 
 pub(crate) fn retaliate(world: &mut World, owner: Entity, attacker: Entity) {
     let shields = snapshot_shields(world, owner);
-    for (spell_id, aura_caster, amount) in shields {
+    for (spell_id, aura_caster, index, amount) in shields {
         let spell = world
             .resource::<SpellStore>()
             .get(spell_id)
@@ -17,6 +17,13 @@ pub(crate) fn retaliate(world: &mut World, owner: Entity, attacker: Entity) {
         if !spell_cast::damage_shield_hits(world, owner, &spell, attacker) {
             continue;
         }
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("active damage shield has admitted effect metadata");
+        let amount =
+            amount + spell_cast::effects::effect_power_bonus(world, aura_caster, &spell, effect);
         let ctx = EffectCtx {
             caster: owner,
             spell: &spell,
@@ -28,7 +35,7 @@ pub(crate) fn retaliate(world: &mut World, owner: Entity, attacker: Entity) {
     }
 }
 
-fn snapshot_shields(world: &World, owner: Entity) -> Vec<(u32, Entity, f32)> {
+fn snapshot_shields(world: &World, owner: Entity) -> Vec<(u32, Entity, u8, f32)> {
     let Some(auras) = world.get::<ActiveAuras>(owner) else {
         return Vec::new();
     };
@@ -43,6 +50,7 @@ fn snapshot_shields(world: &World, owner: Entity) -> Vec<(u32, Entity, f32)> {
                     (
                         aura.spell_id,
                         aura.caster,
+                        effect.index,
                         effect.amount * aura.stack_multiplier(),
                     )
                 })

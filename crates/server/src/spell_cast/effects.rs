@@ -496,15 +496,26 @@ pub(crate) fn scaled_amount(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
+    modded_base_points(world, caster, spell, effect)
+        + effect_power_bonus(world, caster, spell, effect)
+}
+
+/// Native SP/AP contribution, separate from stored aura base points. Damage
+/// shields resolve this at retaliation using the original aura caster.
+pub(crate) fn effect_power_bonus(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
     let (spell_power, attack_power) = power_stats(world, caster, takes_healing_power(effect));
     let modify = |op, value| spell_mods::modify(world, caster, spell, op, value);
-    let base = modded_base_points(world, caster, spell, effect);
     let coefficient = modify(SpellModOp::BonusCoefficient, effect.bonus_coefficient);
     let ap_coefficient = modify(
         SpellModOp::BonusCoefficient,
         effect.bonus_coefficient_from_ap,
     );
-    base + coefficient * spell_power + ap_coefficient * attack_power
+    coefficient * spell_power + ap_coefficient * attack_power
 }
 
 /// One main-hand weapon hit. A creature (no `CharacterStats`) rolls its own weapon
