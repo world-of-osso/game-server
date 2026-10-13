@@ -45,6 +45,9 @@ class CoverageTests(unittest.TestCase):
         gaps = [reason for gap in actor['ai_gaps'] for reason in gap['reasons']]
         self.assertTrue(any('Retail 12.1 timeline inputs unavailable' in reason for reason in gaps))
         self.assertTrue(any('intro' in reason for reason in gaps))
+        self.assertFalse(any('missing emerge271598' in reason for reason in gaps))
+        self.assertTrue(any('delayed follow/absorption/announcement supported' in reason for reason in gaps))
+        self.assertTrue(any('near-point' in reason for reason in gaps))
         self.assertFalse(any('infusion' in reason or 'Fel Spray' in reason for reason in gaps))
         self.assertEqual(actor['proof'], 'structural inspection only')
 
