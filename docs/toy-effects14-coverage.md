@@ -1,5 +1,20 @@
 # Toy effects14 — active whole-goal coverage
 
+## Unusual Compass facing (2026-10-12)
+
+Read-only canonical census337→338/1166 (+45984, zero removed; `compass-canonical-after.json`). Source: TC a352b1fa `spell_item_unusual_compass` turns its caster to `frand(0, 2π)` via `Unit::SetFacingTo` (force=true); DB2 64385 has one caster effect3 with zero payload, cast time2000ms. No new data import.
+
+Actual RED `2cfb9932` refused effect3. GREEN covers actual bag learning/UseToy, source-range facing, unchanged position/health/other units, and refusal of missing rotation/control or payload drift before cast/cooldown. First native Modern run showed the boundary failure: server rotation changed, but the owning client kept its predicted yaw, and its next input overwrote the turn. Fix: shared `ForcedFacing{epoch,yaw}` plus a MovementControl epoch bump; the server rejects old-epoch input and keeps fall progress, and the client adopts the turn once, after which manual turns and teleports work as before.
+
+|Boundary|Proof|Remaining|
+|---|---|---|
+|Server learn/use/facing/refusals|`compass-authority-green.log`3/3|—|
+|Stale input/fall preservation|receiver_rate facing test|—|
+|Client adopt-once/turn/teleport|engine `compass_facing_is_adopted_once…`, wire round trip|—|
+|Native both skins|Modern π→6.386, Forever π→3.306 rad, position unchanged, turn held1s against idle input (`{modern,forever}-compass18-green`)|Camera does not follow facing, so PNGs show the journal/minimap, not the turned body|
+
+Requested PNGs: `/syncthing/AgentShared/2026-10-12/toys/compass18/`.
+
 ## Source-private summons (2026-10-12)
 
 Source flag import and owner-only replication repair preserve the337/1166 preflight census (zero additions/removals), rather than claiming new working toys. Pinned CASC1345276/layoutA4CA5ECF has3610 readable records and three named encrypted gaps. Six importer tests cover exact0/private/creature-level flag words, real3001 signed/unsigned identity preservation, idempotence and transactional schema/data rollback. Canonical flag columns are a required lead import before deploying this branch; existing metadata/unrelated tables remain unchanged. [Importer and command](wiki/systems/toys.md#source-summon-flag-import-2026-10-12).
