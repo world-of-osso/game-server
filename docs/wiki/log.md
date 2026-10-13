@@ -12,6 +12,7 @@
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Wailing four-druid DONE condition/Disciple action0 notification; real two-copy NPC/chat RED/GREEN. Three insufficient, fourth notifies only its copy, repeated DONE no duplicate; escort/awakening/combat unported. [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Wailing action34 mode1 resolves TC ordinal→encounter→runtime slot; actual Serpentis action-boundary RED/GREEN isolates it from generic death credit. Mode0 and missing-binding negatives preserve other states/copies. [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Deadmines pinned source has instance wiring only; exact six primaries authenticated, Oaf47297 no longer labeled Helix. Missing AI/spawns and difficulty-specific bit binding gaps retained. [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Slagmaw source port: Lava Spit/Submerge/server-side teleports, GetDistance boundary with source CombatReach24 (shared `model_reach.rs`). Dungeon-map spawn leash exempted per TC; open-world40yd boundary retained and tested. Historical Stockade39.888yd leash proof [superseded, evidence preserved](systems/navigation.md#stationary-arch-and-leash-acceptance). [Boss scripts](systems/boss-scripts.md).

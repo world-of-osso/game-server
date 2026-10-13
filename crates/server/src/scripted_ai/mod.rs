@@ -29,6 +29,7 @@ pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 pub mod smart_ai;
 pub mod the_stockade;
+pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 
 use std::collections::VecDeque;
@@ -267,6 +268,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if ragefire_chasm::is_creature_script(script_name) {
         return ragefire_chasm::creature_ai(world, creature, script_name);
     }
+    if wailing_caverns::is_creature_script(script_name) {
+        return wailing_caverns::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -282,6 +286,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || murder_row::is_creature_script(script_name)
         || kings_rest::is_creature_script(script_name)
         || ragefire_chasm::is_creature_script(script_name)
+        || wailing_caverns::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {

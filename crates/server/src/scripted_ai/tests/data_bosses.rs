@@ -197,6 +197,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
+            || (map_id == 43 && [3678, 3679].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
@@ -261,6 +262,21 @@ fn encounter_fixture(
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
+    if map_id == 43 {
+        // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
+        for (entry, bit) in [
+            (3671, 0),
+            (3669, 1),
+            (3653, 2),
+            (3670, 3),
+            (3674, 4),
+            (3673, 5),
+            (5775, 6),
+            (3654, 7),
+        ] {
+            maps.raid_creature_encounters.insert((43, entry), bit);
+        }
+    }
     let mut instances = crate::maps::InstanceManager::default();
     // Raid copies use the entrant's raid difficulty; dungeons its dungeon difficulty.
     let entrant = crate::maps::instances::InstanceEntrant {
@@ -1707,6 +1723,73 @@ fn encounter_coverage_cobrahn_lightning_damage_repeat_and_generic_lifecycle() {
             .any(|end| end.encounter_id == 586 && end.success)
     );
     assert!(h.inbox(0).ends.iter().all(|end| end.encounter_id != 585));
+}
+
+/// Instance source sends ACTION_ALL_DONE0 to its own Disciple when all four
+/// druids become DONE. This proves the state condition/notification, not four
+/// complete fights or the Anacondra mode0 source-data discrepancy.
+#[test]
+fn encounter_coverage_wailing_four_druids_notify_only_their_copy_once() {
+    let (mut h, _boss, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
+    let other = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let (other_disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, other, 1);
+    let position = *h.app.world().get::<Position>(disciple).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(position);
+    let other_player = h.players[1].0;
+    let other_position = *h.app.world().get::<Position>(other_disciple).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(other_player)
+        .insert(other_position);
+    h.advance(0.1);
+    let announcements = |h: &Harness, index: usize| {
+        h.inbox(index)
+            .chat
+            .iter()
+            .filter(|message| message.content.contains("Naralex can be awakened"))
+            .count()
+    };
+    let slots = [586, 588, 585, 590].map(|encounter| {
+        instance_script::boss_id_for_encounter(h.app.world_mut(), map, encounter).unwrap()
+    });
+    for &slot in &slots[..3] {
+        assert!(instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            slot,
+            EncounterState::Done
+        ));
+    }
+    h.advance(0.1);
+    assert_eq!(announcements(&h, 0), 0, "three druids are insufficient");
+    assert!(instance_script::set_boss_state(
+        h.app.world_mut(),
+        map,
+        slots[3],
+        EncounterState::Done
+    ));
+    h.advance(0.1);
+    assert_eq!(announcements(&h, 0), 1);
+    assert_eq!(
+        announcements(&h, 1),
+        0,
+        "another copy cannot receive the notification"
+    );
+    assert!(!instance_script::set_boss_state(
+        h.app.world_mut(),
+        map,
+        slots[3],
+        EncounterState::Done
+    ));
+    h.advance(0.1);
+    assert_eq!(announcements(&h, 0), 1, "repeated DONE cannot notify twice");
 }
 
 const ADAROGG: u32 = 61408;

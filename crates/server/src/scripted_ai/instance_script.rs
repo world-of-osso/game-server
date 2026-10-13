@@ -344,6 +344,7 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
         }
         EncounterState::NotStarted | EncounterState::Fail => {}
     }
+    super::wailing_caverns::on_boss_state_changed(world, map, encounter_id, state);
     true
 }
 
