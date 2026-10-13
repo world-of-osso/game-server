@@ -139,12 +139,24 @@ pub(super) fn relocate_destination(
     {
         crate::scripted_ai::murder_row::relocate_mirror_destination(dest);
     }
+    if spell_id == crate::scripted_ai::ruby_life_pools::STORM_INFUSION
+        && effect.index == 1
+        && effect.implicit_targets.contains(&87)
+    {
+        crate::scripted_ai::ruby_life_pools::relocate_storm_destination(dest);
+    }
 }
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::seething_parachute::PARACHUTE, 1) => {
+            Some(crate::seething_parachute::reset_fall_information)
+        }
         (crate::scripted_ai::murder_row::SPELL_FEL_NOVA_SELECTOR, 0) => {
             Some(crate::scripted_ai::murder_row::cast_blink_at_selected_target)
+        }
+        (crate::scripted_ai::ragefire_chasm::SHADOW_STORM_DUMMY, 0) => {
+            Some(crate::scripted_ai::ragefire_chasm::cast_shadow_storm_effect)
         }
         (124491, 0) => Some(start_switch_capture),
         (crate::pvp::arena_cage::REACTION_LOW_HEALTH, 0) => {

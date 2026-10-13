@@ -62,6 +62,7 @@ fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {
     };
     let ran = Vec2::new(dx, dz).normalize_or_zero() * RUN_STEP;
     PlayerInput {
+        transport: None,
         direction: [dx, dy, dz],
         facing_yaw,
         jumping: false,

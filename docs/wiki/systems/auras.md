@@ -297,6 +297,28 @@ Aura163 adds `(school_mask, multiplier)` entries to `AuraStatMods.critical_damag
 
 TC a352b1fa Unit.cpp:1222-1237/7297-7324 applies CritDamageAndHealing spellmods before163 for weapons, but after its critical-bonus calculation for magic. Existing floating damage and log rounding/truncation remain; no exact Retail integer-intermediate parity claim. Native-input damage tests cover both orderings, mixed masks, stack caps, noncritical/zero-mask behavior and unlearning; [contract/tests](../../specs/class-completeness.md#critical-damage-bonuses).
 
+## Flat versatility bonuses
+
+Aura471 contributes integer percentage points to `StatModifiers.versatility_pct`, outside rating diminishing returns; computed `CharacterStats` feeds existing spell/heal/weapon consumers. Incoming spell and auto damage now consumes half the combined percentage. Attr4IgnoreDamageTakenModifiers bypasses the new spell reduction. TC SpellAuraEffects.cpp4024–4034 and Unit.cpp6944/7036/8229 define these boundaries.
+
+Pinned69933 local CASC GlobalCurve3752002 maps types5/11 to21024/21035. All123 CombatRatings1391669 levels have Taken's points-per-percent exactly twice Done's; native21035 is half-scaled21024 at every knot and clamped endpoint. Therefore half of the existing derived Done percentage is the native Taken rating contribution, not an invented rating conversion. Receipts: `data/class-completeness6-2026-10-12/versatility-rating-source-batch46.json`.
+
+Nine native Bevy App controls cover computed3% Mark, actual spell/heal/taken/auto damage, additive3+4+3 points, passive unlearning/buff cancellation, low/high-DR combined factors, native262166's IgnoreDamageTakenModifiers and unowned-creature exclusion. One healing fixture removes only random variance; fixed powers/weapon/rating endpoints isolate math, not player-build availability. Charm/pet-owner inheritance and native-rendered parity remain open. [Contract](../../specs/class-completeness.md#versatility-bonuses).
+
+## Category cooldown offsets
+
+Aura341 contributes signed integer milliseconds to the caster's matching native spell category. `spell_cast::category_cooldown_modifier_ms` reads all live effects; `start_cooldowns` adds that total after ordinary cooldown/haste modifiers to both positive spell and category durations, then clamps at zero. Charge recovery and already-running deadlines are unchanged. TC a352b1fa SpellHistory.cpp469–500 is the runtime source; Player.cpp30693–30744 separately maintains the client's replicated category offset list, which this client does not expose as a separate list.
+
+Native Counterspell/Quick Witted tests prove25s→20s recovery with real blocked/successful recasts. Native Optical Blast supplies both24s timers, using an Energy-bearing fixture; Angel's Mercy reduces Desperate Prayer90s→70s. Tests also cover category0 exclusion, absent talent, unlearning, learning during an active lockout and native30000−30000ms clamping. Cross-class/internal-trigger fixtures do not claim player spellbook availability. [Contract](../../specs/class-completeness.md#category-cooldown-modifiers).
+
+## Cooldown recovery rates
+
+Aura286 matches native class masks and multiplies cooldowns by100/(100+amount), clamping the amount to−99. `spell_cast::recovery_rate` applies the factor after haste and before341 offsets. Aura apply/remove rescales only remaining time; unchanged refreshes do nothing, while changed native amounts undo/reapply the factor. Expiry follows the same removal path. Source: TC SpellHistory.cpp432–455/608–628 and SpellAuraEffects.cpp6258.
+
+`SpellHistory.category_spell_ids` stores the spell that started each category timer: Sprint has only a category timer, so its class-mask association cannot be recovered from `spell_ready_at`. Active spell/category deadlines are updated once each and owner messages report the remaining maximum. Existing charge timers and GCDs are untouched.
+
+Ten native App controls prove Rapid Fire16s→10s, Sprint120s→40s, real blocked/successful active-timer recasts, expiry, unchanged refresh, native Hot Hand label1935's zero→34 rate refresh, recipient/mask negatives and owner updates. Hot Hand's controlled refresh does not prove the random proc's availability; full abilities, global ModTimeRate interactions and native-rendered parity remain open. [Contract](../../specs/class-completeness.md#cooldown-recovery-rates).
+
 ## Script hooks
 
 Know Your Enemy388118 and Penetrating Shots459783 share Critical Chaos's effect1-percent-of-owner-crit updater. They recalculate effect0 on apply/effect1 ticks; `auras_changed` refreshes stat multipliers for live damage. Source: TC spell_dh.cpp:1571-1593/632-655 and spell_hunter.cpp:869-891. Penetrating Shots uses native25% with1s ticks; real Aimed Shot casts retain native variance, coefficient, cast time and missile travel. Tests cover live crit changes, unlearning, zero-crit damage and healing isolation. Guaranteed-crit endpoints and cross-class healing fixtures are test boundaries, not player-build or talent-availability claims.

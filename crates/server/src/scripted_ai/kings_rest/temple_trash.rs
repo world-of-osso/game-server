@@ -1,13 +1,18 @@
 //! TC a352b1fa kings_rest.cpp `npc_kings_rest_temple_basic` and its Shadow-Borne
-//! warrior (134157), witch doctor (134174) and champion (134158).
-//! Gust Slash's area trigger 17933 (`at_kings_rest_gust_slash`) is unported.
+//! warrior (134157), witch doctor (134174) and champion (134158), the Minion of Zul
+//! (133943) and its `spell_kings_rest_bound_by_shadow`.
+use bevy::prelude::*;
+
 use crate::scripted_ai::{CreatureAi, Ctx, EventMap};
 
 pub(crate) const WARRIOR_SCRIPT: &str = "npc_kings_rest_shadow_borne_warrior";
 pub(crate) const WITCH_DOCTOR_SCRIPT: &str = "npc_kings_rest_shadow_borne_witch_doctor";
 pub(crate) const CHAMPION_SCRIPT: &str = "npc_kings_rest_shadow_borne_champion";
+pub(crate) const MINION_OF_ZUL_SCRIPT: &str = "npc_kings_rest_minion_of_zul";
 
 const SPELL_ZUL_SUMMON_VISUAL: u32 = 269619;
+pub(super) const SPELL_BOUND_BY_SHADOW: u32 = 269935;
+const SPELL_MINION_OF_ZUL_FIXATE: u32 = 269936;
 const SPELL_GUST_SLASH: u32 = 269931;
 const SPELL_DEATHLY_CHILL: u32 = 269973;
 const SPELL_SHADOW_BOLT_VOLLEY: u32 = 269972;
@@ -85,11 +90,15 @@ const CHAMPION: Schedule = Schedule {
 };
 
 pub(crate) fn is_script(name: &str) -> bool {
-    matches!(name, WARRIOR_SCRIPT | WITCH_DOCTOR_SCRIPT | CHAMPION_SCRIPT)
+    matches!(
+        name,
+        WARRIOR_SCRIPT | WITCH_DOCTOR_SCRIPT | CHAMPION_SCRIPT | MINION_OF_ZUL_SCRIPT
+    )
 }
 
 pub(crate) fn creature_ai(name: &str) -> Option<Box<dyn CreatureAi>> {
     let schedule = match name {
+        MINION_OF_ZUL_SCRIPT => return Some(Box::new(MinionOfZul)),
         WARRIOR_SCRIPT => &WARRIOR,
         WITCH_DOCTOR_SCRIPT => &WITCH_DOCTOR,
         CHAMPION_SCRIPT => &CHAMPION,
@@ -107,17 +116,56 @@ struct ShadowBorne {
     events: EventMap,
 }
 
-impl CreatureAi for ShadowBorne {
-    /// `npc_kings_rest_temple_basic::JustAppeared`.
+/// `npc_kings_rest_temple_basic::JustAppeared`.
+fn cast_summon_visual(ctx: &mut Ctx) {
+    ctx.do_cast_at(Some(ctx.me), SPELL_ZUL_SUMMON_VISUAL, false);
+}
+
+/// 133943: temple_basic's visual only when raised by the TempleEvent, otherwise
+/// ScriptedAI's default melee.
+struct MinionOfZul;
+
+impl CreatureAi for MinionOfZul {
     fn just_appeared(&mut self, ctx: &mut Ctx) {
-        ctx.do_cast_at(Some(ctx.me), SPELL_ZUL_SUMMON_VISUAL, false);
+        let temple_event = ctx
+            .world
+            .get::<crate::zones::CreatureStringIds>(ctx.me)
+            .is_some_and(|ids| ids.has("TempleEvent"));
+        if temple_event {
+            cast_summon_visual(ctx);
+        }
+        ctx.do_cast(SPELL_BOUND_BY_SHADOW);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
+        ctx.do_cast(SPELL_MINION_OF_ZUL_FIXATE);
+    }
+}
+
+/// `spell_kings_rest_bound_by_shadow` AfterEffectRemove: a shield broken by an enemy
+/// (`AURA_REMOVE_BY_ENEMY_SPELL`: absorb used up or dispelled) kills its bearer.
+pub(super) fn kill_when_shadow_broken(
+    world: &mut World,
+    target: Entity,
+    _aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    use crate::auras::RemoveReason::{Consumed, Dispelled};
+    if matches!(reason, Consumed | Dispelled) {
+        crate::combat::kill_unit(world, target, target);
+    }
+}
+
+impl CreatureAi for ShadowBorne {
+    fn just_appeared(&mut self, ctx: &mut Ctx) {
+        cast_summon_visual(ctx);
     }
 
     fn reset(&mut self, _ctx: &mut Ctx) {
         self.events.reset();
     }
 
-    fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: bevy::prelude::Entity) {
+    fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {
         for (index, event) in self.schedule.events.iter().enumerate() {
             self.events.schedule(index as u32 + 1, event.first_ms);
         }

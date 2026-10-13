@@ -1,6 +1,90 @@
 use super::*;
 use std::{collections::HashMap, path::PathBuf, time::Instant};
 
+#[test]
+fn source_ship_deck_collision_follows_the_transport_only_in_its_copy() {
+    let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let catalog = crate::transport_catalog::fixture_catalog();
+    let ship = &catalog.0[&35];
+    let copy = InMap {
+        map_id: 1803,
+        instance_id: 786,
+    };
+    let other = InMap {
+        instance_id: 787,
+        ..copy
+    };
+    let mut app = App::new();
+    app.insert_resource(GroundMap::new(&data, HashMap::new()));
+    app.add_systems(FixedUpdate, sync_live_objects);
+    let entity = app
+        .world_mut()
+        .spawn((
+            copy,
+            ship.info.clone(),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            GameObjectCollision(true),
+        ))
+        .id();
+    for time in [0, 30_000] {
+        let pose = ship.route.pose_at(time);
+        let [x, y, z] = pose.position;
+        app.world_mut().entity_mut(entity).insert((
+            Position { x, y: z, z: -y },
+            Rotation {
+                x: 0.0,
+                y: pose.orientation + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+        ));
+        app.world_mut().run_schedule(FixedUpdate);
+        let feet = pose
+            .local_to_world(shared::transport_route::TransportPose {
+                position: [-30.0, 0.0, 20.55],
+                orientation: 0.0,
+            })
+            .position;
+        let feet = Vec3::new(feet[0], feet[2], -feet[1]);
+        let mut ground = app.world_mut().resource_mut::<GroundMap>();
+        let height = match ground.ground_in(copy, feet) {
+            crate::ground::GroundProbe::Supported(height) => height,
+            other => panic!("authored gunship deck missing at {time}ms: {other:?}"),
+        };
+        assert!((height - z - 20.6032).abs() < 0.01, "{height}");
+        assert!(!matches!(
+            ground.ground_in(other, feet),
+            crate::ground::GroundProbe::Supported(_)
+        ));
+    }
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(GameObjectCollision(false));
+    app.world_mut().run_schedule(FixedUpdate);
+    let pose = ship
+        .route
+        .pose_at(30_000)
+        .local_to_world(shared::transport_route::TransportPose {
+            position: [-30.0, 0.0, 20.55],
+            orientation: 0.0,
+        });
+    let feet = Vec3::new(pose.position[0], pose.position[2], -pose.position[1]);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(copy, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+}
+
 fn arena_app(map_id: u32) -> (App, Vec<(Entity, crate::game_objects::GameObjectSpawn)>) {
     let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
     let db = rusqlite::Connection::open_with_flags(
@@ -45,7 +129,9 @@ fn arena_app(map_id: u32) -> (App, Vec<(Entity, crate::game_objects::GameObjectS
 /// Cross an actual placed vertical face; no fabricated wall or bounding-box substitute.
 fn wall_segment(spawn: &crate::game_objects::GameObjectSpawn, data: &Path) -> (Vec3, Vec3) {
     let mut cache = HullCache::default();
-    let triangles = cache.load_triangles(data, spawn.info.display_id).unwrap();
+    let triangles = cache
+        .load_triangles(data, spawn.info.display_id, spawn.info.go_type)
+        .unwrap();
     let face = triangles
         .iter()
         .find(|face| {

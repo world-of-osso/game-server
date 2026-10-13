@@ -37,6 +37,8 @@ mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
 #[cfg(test)]
+mod category_cooldown_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
@@ -130,6 +132,9 @@ pub mod powers;
 mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
+pub(crate) mod recovery_rate;
+#[cfg(test)]
+mod recovery_rate_tests;
 mod reflect;
 #[cfg(test)]
 mod resistance_pct_tests;
@@ -170,7 +175,8 @@ use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_in_progress,
+    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
+    creature_cast_ignoring_in_progress,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -416,6 +422,8 @@ impl ChargeState {
 pub struct SpellHistory {
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
+    /// Native spell that last started each category timer, for masked rate changes.
+    category_spell_ids: HashMap<u32, u32>,
     /// Actual item-use authored durations/categories, which can override SpellInfo.
     item_cooldown_sources: HashMap<u32, ItemCooldownSource>,
     /// By `StartRecoveryCategory`.
@@ -794,6 +802,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
             crate::achievement::record_delivered_killing_blow(world, killer);
             crate::achievement::record_player_killed_by(world, victim, killer);
             let owner = combat_event_owner(world, killer);
+            crate::pvp::record_battleground_player_kill(world, owner, victim);
             crate::quest::record_player_kill(world, owner, victim);
         }
     }
@@ -1445,11 +1454,16 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
         return Ok(());
     };
     let now = now(world);
-    if history.school_locked(spell.school_mask(), now) {
+    // TC source 0x2 skips SpellHistory::IsReady, including its school/charge
+    // readiness checks; GCD and caster-aura checks are independent.
+    if !spell.cast_ignore_cooldowns && history.school_locked(spell.school_mask(), now) {
         return Err(CastFailure::SchoolLockedOut);
     }
     if history.on_gcd(spell, now) {
         return Err(CastFailure::OnGlobalCooldown);
+    }
+    if spell.cast_ignore_cooldowns {
+        return Ok(());
     }
     if history.on_cooldown(spell, now) {
         return Err(CastFailure::OnCooldown);
@@ -2204,6 +2218,12 @@ fn resolve_effects(
             }
             continue;
         }
+        // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
+        // hit units, but still cast their child once with the parent's destination.
+        if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
+            effects::trigger_missile_at_destination(world, &ctx, effect);
+            continue;
+        }
         // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
         // Unit-targeted events use the normal hit/immunity boundary below.
         if effect.effect == effects::EFFECT_SEND_EVENT && effect.implicit_targets == [0, 0] {
@@ -2459,6 +2479,17 @@ pub(crate) fn cast_triggered(
     cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None);
 }
 
+/// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
+pub(crate) fn try_cast_triggered(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> bool {
+    cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None)
+}
+
 pub(super) fn cast_triggered_with_item_level(
     world: &mut World,
     caster: Entity,
@@ -2466,12 +2497,12 @@ pub(super) fn cast_triggered_with_item_level(
     explicit: Option<Entity>,
     depth: u8,
     item_level: Option<u16>,
-) {
+) -> bool {
     let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
-        return;
+        return false;
     };
     spell.cast_item_level = item_level;
-    launch_triggered_spell(world, caster, &spell, explicit, depth);
+    launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
 /// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
@@ -2518,14 +2549,18 @@ fn launch_triggered_spell(
     spell: &SpellInfo,
     explicit: Option<Entity>,
     depth: u8,
-) {
+) -> bool {
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
     match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, spell, plan, depth);
+            true
         }
-        Err(failure) => warn!("Triggered spell {} skipped: {failure:?}", spell.id),
+        Err(failure) => {
+            warn!("Triggered spell {} skipped: {failure:?}", spell.id);
+            false
+        }
     }
 }
 
@@ -2562,25 +2597,63 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
     (duration / haste.max(0.01)).trunc()
 }
 
+/// TC a352b1fa SpellHistory.cpp:469-481: native category341 is independent
+/// of spell class masks and applies after ordinary cooldown/haste modifiers.
+fn category_cooldown_modifier_ms(world: &World, caster: Entity, category: u32) -> f32 {
+    if category == 0 {
+        return 0.0;
+    }
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(caster) else {
+        return 0.0;
+    };
+    let mut total = 0.0;
+    for aura in auras.iter() {
+        for effect in &aura.effects {
+            if effect.aura_type == crate::auras::handlers::MOD_SPELL_CATEGORY_COOLDOWN
+                && u32::try_from(effect.misc_values[0]).ok() == Some(category)
+            {
+                total += (effect.amount * f32::from(aura.stacks)).trunc();
+            }
+        }
+    }
+    total
+}
+
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // SpellHistory::HandleCooldowns returns before consuming a charge or starting
+    // a clock when source flag 0x2 is set. The cast's GCD remains independent.
+    if spell.cast_ignore_cooldowns {
+        return;
+    }
     let now = now(world);
     let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
     let (base_recovery_ms, base_category_ms) = spell
         .cooldowns
         .as_ref()
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let category = spell.categories.as_ref().map_or(0, |c| c.category);
+    let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
     let cooldown = |base: u32| {
         if base == 0 {
             return 0;
         }
         let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
-        haste_regen_cooldown_ms(world, caster, spell, modified)
-            .max(0.0)
-            .round() as u32
+        let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
+        let rate = recovery_rate::multiplier(world, caster, spell);
+        let recovered = if rate == 1.0 {
+            hasted
+        } else {
+            (f64::from(hasted) * rate).trunc() as f32
+        };
+        let adjusted = if recovered > 0.0 {
+            recovered + category_modifier_ms
+        } else {
+            recovered
+        };
+        adjusted.max(0.0).round() as u32
     };
     let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
     let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
-    let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
@@ -2604,6 +2677,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);
     }
     if category != 0 && base_category_ms > 0 {
+        history.category_spell_ids.insert(category, spell.id);
         history
             .category_ready_at
             .insert(category, now + category_ms as f64 / 1000.0);
@@ -2859,6 +2933,8 @@ mod regen_tests;
 mod rezrtap_tests;
 #[cfg(test)]
 mod rogue_stealth_tests;
+#[cfg(test)]
+mod source_cast_flags_tests;
 #[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]

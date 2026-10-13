@@ -11,6 +11,7 @@ use shared::protocol::{
 use crate::auth::Authenticated;
 use crate::networking::PlayerLink;
 
+mod follower_catalog;
 mod request_handlers;
 mod snapshots;
 
@@ -77,6 +78,7 @@ pub struct LfgPlugin;
 impl Plugin for LfgPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<LfgServerState>();
+        app.add_systems(Update, follower_catalog::send_follower_catalog);
         app.add_systems(Update, process_lfg_status_queries);
         app.add_systems(Update, process_lfg_queue_requests);
         app.add_systems(Update, process_lfg_dequeue_requests);

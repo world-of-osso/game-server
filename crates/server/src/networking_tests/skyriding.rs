@@ -37,6 +37,7 @@ fn launch_bound() -> f32 {
 
 fn flight_input(client: Vec3, flying: bool) -> PlayerInput {
     PlayerInput {
+        transport: None,
         direction: [0.0, 0.0, 1.0],
         facing_yaw: 0.0,
         jumping: false,

@@ -19,6 +19,7 @@ pub(crate) mod base_armor;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 mod fear;
+mod fixate;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
 pub mod invisibility;
@@ -89,7 +90,13 @@ impl Plugin for AuraPlugin {
         app.init_resource::<procs::PendingAuraEvents>()
             .init_resource::<UnhandledAuras>()
             .init_resource::<scripts::AuraScripts>()
-            .add_systems(Startup, scripts::register_class_scripts)
+            .add_systems(
+                Startup,
+                (
+                    scripts::register_class_scripts,
+                    crate::seething_parachute::register_aura_scripts,
+                ),
+            )
             .init_resource::<PendingPassiveSync>()
             .add_systems(
                 Startup,
@@ -869,12 +876,16 @@ pub(crate) fn apply_aura_with_spell(
             excluded.contains(&aura.spell_id)
         });
     }
-    // Atonement marks from different priests remain independently owned.
+    // Atonement marks from different priests remain independently owned; other
+    // casters' channelled auras stack (Aura::CanStackWith, SpellAuras.cpp:1695).
     let coexist = instance.harmful
         || spell.id == 194384
+        || crate::spell_cast::is_channeled(&spell)
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
+    let previous_rate =
+        crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
@@ -902,6 +913,8 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        fixate::on_applied(world, target, &aura);
+        crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
         let stuns = aura
@@ -912,6 +925,12 @@ pub(crate) fn apply_aura_with_spell(
     }
     if kind == CombatLogKind::AuraRefreshed {
         linked::on_reapplied(world, target, &aura);
+        crate::spell_cast::recovery_rate::on_refreshed(
+            world,
+            target,
+            previous_rate.as_ref(),
+            &aura,
+        );
     }
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
@@ -1071,6 +1090,8 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    fixate::on_removed(world, aura);
+    crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
@@ -1095,6 +1116,26 @@ pub fn remove_auras(
     }
     auras_changed(world, unit);
     removed
+}
+
+/// Reset an existing finite aura to its stored maximum duration, without
+/// refilling absorb capacity or changing its periodic timer (Aura::RefreshDuration).
+pub(crate) fn refresh_duration(world: &mut World, target: Entity, spell_id: u32) {
+    let now = aura_now(world);
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id)
+    else {
+        return;
+    };
+    if aura.expires_at.is_some() {
+        aura.expires_at = Some(now + f64::from(aura.duration_ms) / 1_000.0);
+        auras.dirty = true;
+    }
 }
 
 /// Extend existing finite auras owned by this caster without restarting ticks.
@@ -1298,6 +1339,14 @@ pub fn damage_taken_multiplier(
     attacker: Entity,
     spell: &SpellInfo,
 ) -> f32 {
+    const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x0000_0100;
+    let versatility = if attributes(spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0 {
+        world
+            .get::<crate::stats::CharacterStats>(target)
+            .map_or(1.0, |stats| stats.versatility_damage_taken_multiplier())
+    } else {
+        1.0
+    };
     let school_mask = spell.school_mask();
     let taken = world
         .get::<AuraStatMods>(target)
@@ -1324,6 +1373,7 @@ pub fn damage_taken_multiplier(
             .product()
     });
     taken
+        * versatility
         * from_caster
         * scripts::unstable_affliction_multiplier(world, attacker, target)
         * scripts::outgoing_to_owner_multiplier(world, attacker, target)
@@ -1923,6 +1973,8 @@ mod monster_rising_tests;
 mod power_strike_tests;
 #[cfg(test)]
 mod tiger_dash_tests;
+#[cfg(test)]
+mod versatility_tests;
 #[cfg(test)]
 mod yseras_gift_tests;
 

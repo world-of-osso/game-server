@@ -73,9 +73,14 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 
 ### Continued source-backed coverage
 
+- Modifier41 PlayerIsInZone matches the reference player's current terrain area, replacing it with its immediate parent only when the authored area is flagged as a subzone. A parent link alone and recursive ancestry cannot qualify. Missing reference area cannot credit; native pet-battle winners, not losers or idle replay, earn the matching city criterion and retain it after storage reopen. This does not add world-honor eligibility or certify every city's pet-battle content.
+- Modifier122 PlayerMapInstanceType compares the reference map's authored raw InstanceType, not guessed map/copy/difficulty categories. World0 is valid; unknown types and absent reference map cannot qualify. Arena4/Battleground3 predicates remain distinct through native killing-blow, kill-reward and queued death events. This does not enable missing type18 raid-death production.
+
+- Type70 BG/arena kill rewards use committed lethal damage, controlling player and accepted in-progress match. Killer receives one credit; same-team online in-world recipients require that copy and group reward distance, using corpse position when dead and combat reaches in the distance. Nonlethal/dead replay, self/world/inactive/unaccepted cases cannot credit this path. World honor eligibility, lifetime honor counters and scoreboard honorable-kill availability remain separate missing producers; no generic killing-blow substitute.
+
 - Modifier29 LessThanTappers uses the full authoritative group roster at the criteria event, including offline members; known solo satisfies the positive limit. Count must be strictly less than Asset. Missing group authority/reference player cannot qualify. Difficulty/other predicates remain conjunctive; physical proximity does not replace group size.
 
-- Types32/33 use committed native rated results: exact map wins for online winners; exact map participation for online winners and losers. Team-size24 admits native2v2/3v3 and ranked60 requires this rated-result event. Queue, preparation, skirmish, offline settlement and idle replay cannot credit; unknown qualifiers and5v5 remain disabled.
+- Types32/33 use committed native rated results: exact map wins for online winners; exact map participation for online winners and losers. Team-size24/ranked60 read the actual accepted/current-copy arena state at the event; native2/3 sizes only. The same predicates gate other event producers, including56/17/70 statistics. Queue, preparation, skirmish, offline settlement and idle replay cannot credit; unknown qualifiers and5v5 remain disabled.
 
 - Type54 TargetCreatureId4 uses the target snapshotted into each native text-emote request, resolved to a real NPC on the sender's map copy. Love225 is a text-only emote; targetless chat cannot borrow current CombatTarget. Wrong emote, forged/stale/player/foreign-map targets and non-world senders cannot qualify these leaves. Unknown target modifiers stay disabled; no target snapshot is inferred for other producer types.
 

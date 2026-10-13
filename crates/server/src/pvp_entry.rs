@@ -19,7 +19,8 @@ pub(super) fn enter_battleground(
         .battleground_matches
         .get(&match_id)
         .and_then(|matched| matched.arena.as_ref());
-    let destination = entry_location(world, player, arena.map(|arena| arena.source.starts))?;
+    let (mut destination, transport_spawn) =
+        entry_location(world, player, arena.map(|arena| arena.source.starts))?;
     let team = world
         .get::<PlayerPvpState>(player)
         .and_then(|pvp| pvp.battleground.as_ref())
@@ -57,12 +58,16 @@ pub(super) fn enter_battleground(
         && world
             .get::<shared::components::Health>(player)
             .is_some_and(|health| health.current <= 0.0);
-    create_match_map(world, state, match_id)?;
+    let map = create_match_map(world, state, match_id)?;
+    if let Some(spawn_id) = transport_spawn {
+        destination = crate::transport::prepare_entry(world, player, map, destination, spawn_id)?;
+    }
     // TC BattleGroundHandler.cpp:380-384 resurrects before battlefield port.
     if dead_arena_entrant {
         crate::death::resurrect_player_fully(world, player);
     }
     if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
+        crate::transport::cancel_entry(world, player);
         return Err("battleground map entry was refused".into());
     }
     // ConditionMgr uses ArenaFaction for both BG and arena, unlike reactions.
@@ -150,7 +155,7 @@ fn entry_location(
     world: &World,
     player: Entity,
     arena_starts: Option<[u32; 2]>,
-) -> Result<WorldLocation, String> {
+) -> Result<(WorldLocation, Option<u32>), String> {
     let invitation = world
         .get::<PlayerPvpState>(player)
         .and_then(|state| state.battleground.as_ref())
@@ -164,6 +169,8 @@ fn entry_location(
         .or_else(|| (invitation.map_id == 1803).then_some(shared::battleground::SEETHING_STARTS))
         .or_else(|| (invitation.map_id == 2656).then_some(shared::battleground::DEEPHAUL_STARTS))
         .or_else(|| (invitation.map_id == 30).then_some([611, 610]))
+        // TDB battleground_template 30 AllianceStartLoc/HordeStartLoc.
+        .or_else(|| (invitation.map_id == 628).then_some([1299, 1245]))
         .ok_or("this battleground has no implemented entry lifecycle")?;
     let location_id = starts[match invitation.team {
         BgTeam::A => 0,
@@ -172,10 +179,9 @@ fn entry_location(
     let store = world
         .get_resource::<MapStore>()
         .ok_or("map catalog is unavailable")?;
-    if let Some(transport) = store.safe_loc_transports.get(&location_id) {
-        return Err(format!(
-            "battleground start location {location_id} requires unimplemented transport {transport} entry"
-        ));
+    let transport = store.safe_loc_transports.get(&location_id).copied();
+    if let Some(spawn_id) = transport {
+        crate::transport::validate_entry(world, spawn_id, invitation.map_id)?;
     }
     let destination = store
         .safe_locs
@@ -185,7 +191,7 @@ fn entry_location(
     if destination.map_id != invitation.map_id {
         return Err("battleground start location disagrees with its map".into());
     }
-    Ok(destination)
+    Ok((destination, transport))
 }
 
 fn authored_object_entries(map_id: u32) -> Result<Vec<u32>, String> {
@@ -235,8 +241,11 @@ fn create_match_map(
     } else {
         None
     };
-    let alterac = if template.map_id == 30 {
-        Some(super::pvp_alterac::AlteracRuntime::from_source(world)?)
+    let alterac = if matches!(template.map_id, 30 | 628) {
+        Some(super::pvp_alterac::BannerRuntime::from_source(
+            world,
+            template.map_id,
+        )?)
     } else {
         None
     };
@@ -270,12 +279,22 @@ fn create_match_map(
         .expect("validated match")
         .seething = seething;
     crate::maps::transfer::spawn_map_content(world, map);
+    if template.map_id == 1803 {
+        crate::transport::spawn_ships(world, map);
+    }
     if arena {
         super::arena_objects::prepare_map(world, map);
         super::arena_sight::prepare_map(world, map);
     }
     if let Some(alterac) = alterac {
-        alterac.synchronize(world, map);
+        let states = alterac.battle.world_states(
+            &state
+                .battleground_matches
+                .get(&match_id)
+                .expect("validated match")
+                .instance,
+        );
+        alterac.synchronize(world, map, &states);
         state
             .battleground_matches
             .get_mut(&match_id)
