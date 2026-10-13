@@ -4026,7 +4026,8 @@ fn toyfx22_pendant_actual_learning_cast_completion_aura_exit_and_cooldown_preser
     );
     h.advance(10);
     assert!(!h.inbox.go.iter().any(|go| go.spell_id == 171352));
-    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    // Same-map source Ashran site (TDB371343/86408):7332→6941, outside4031.
+    place_toy_caster_on_source_map_area(&mut h, 1116, 843551, [3594.38, -3928.24], 7332);
     h.advance(101);
     assert!(h.inbox.failed.iter().any(|failed| failed.spell_id == 171352
         && failed.reason == shared::spell_data::CastFailReason::IncorrectArea));
@@ -4062,7 +4063,7 @@ fn toyfx22_pendant_actual_learning_cast_completion_aura_exit_and_cooldown_preser
             .iter()
             .any(|cd| cd.spell_id == 171352 && !cd.is_gcd)
     );
-    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    place_toy_caster_on_source_map_area(&mut h, 1116, 843551, [3594.38, -3928.24], 7332);
     h.advance(2);
     assert!(
         h.app
@@ -4073,6 +4074,38 @@ fn toyfx22_pendant_actual_learning_cast_completion_aura_exit_and_cooldown_preser
             .all(|a| a.spell_id != 171352)
     );
     place_toy_caster_on_source_map_area(&mut h, 1116, 843253, [1433.39, 1081.63], 6797);
+    assert_eq!(
+        activate(&mut h, 115503)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+}
+
+#[test]
+fn toyfx22_pendant_expires_after_source_120_seconds_without_ending_its_item_recovery() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("pendant-natural-expiry.redb"));
+    place_toy_caster_on_source_map_area(&mut h, 1116, 843253, [1433.39, 1081.63], 6797);
+    learn_effect_toy(&mut h, character, 115503);
+    assert_eq!(activate(&mut h, 115503)[0].error, None);
+    h.advance(101);
+    h.advance(2300);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 171352)
+    );
+    h.advance(100);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .all(|a| a.spell_id != 171352)
+    );
     assert_eq!(
         activate(&mut h, 115503)[0].error.as_deref(),
         Some("OnCooldown")
