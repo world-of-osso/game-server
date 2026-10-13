@@ -414,12 +414,14 @@ impl DifficultyRule {
     }
 }
 
-/// A compiled criteria ModifierTree: an optional difficulty rule and raw fact
-/// leaves `(ModifierTreeType, Asset)`, all of which must hold.
+/// Compiled All facts or a plain Some of complete target-creature alternatives.
 #[derive(Debug, Clone, Copy)]
-struct CompiledConditions {
-    difficulty: Option<DifficultyRule>,
-    facts: &'static [(u32, u32)],
+enum CompiledConditions {
+    All {
+        difficulty: Option<DifficultyRule>,
+        facts: &'static [(u32, u32)],
+    },
+    TargetCreatures(&'static [u32]),
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -456,6 +458,8 @@ enum CriteriaFact {
     Aura(u32),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
+    /// Some8 requiring one of these complete TargetCreatureId4 leaves.
+    TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
     RankedArena,
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
@@ -479,6 +483,9 @@ impl CriteriaFact {
             Self::Aura(spell) => player.auras.contains(spell),
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
+            }
+            Self::TargetCreatures(entries) => {
+                matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
             }
             Self::ArenaTeamSize(size) => player.arena_team_size == Some(*size),
             Self::RankedArena => player.in_ranked_arena,
@@ -1335,8 +1342,13 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
             .filter(|_| modifier_asset.is_none());
         let resolved = match compiled {
-            Some(compiled) => load_criteria_facts(conn, compiled.facts, &area_children)?
-                .map(|facts| (compiled.difficulty, facts)),
+            Some(CompiledConditions::All { difficulty, facts }) => {
+                load_criteria_facts(conn, facts, &area_children)?.map(|facts| (difficulty, facts))
+            }
+            Some(CompiledConditions::TargetCreatures(entries)) => Some((
+                None,
+                vec![CriteriaFact::TargetCreatures(entries.iter().copied().collect())],
+            )),
             None => None,
         };
         let condition_tree = resolved.is_some();

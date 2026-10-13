@@ -155,6 +155,30 @@ class Conditions(unittest.TestCase):
         modifiers[11]['Asset'] = '128'
         self.assertEqual(self.compile(modifiers), {}, 'unknown out-of-range type stays disabled')
 
+    def test_emote_some_accepts_every_plain_target_alternative_without_dropping_children(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[1]['Type'] = '54'
+        modifiers = {10: node(0, 8, amount=1),
+                     11: node(10, 2, 4, 63288), 12: node(10, 2, 4, 64798)}
+        self.assertEqual(self.compile(modifiers, criteria),
+                         {1: [None, ((4, 63288), (4, 64798))]})
+        modifiers[10]['Amount'] = '0'
+        self.assertEqual(self.compile(modifiers, criteria),
+                         {1: [None, ((4, 63288), (4, 64798))]})
+        for change in ({'Amount': '2'}, {'Asset': '99'}, {'SecondaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[10].update(change)
+            self.assertEqual(self.compile(rejected, criteria), {})
+        for change in ({'Type': '8'}, {'Operator': '3'}, {'Asset': '0'},
+                       {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[12].update(change)
+            self.assertEqual(self.compile(rejected, criteria), {})
+        modifiers[13] = node(12, 2, 4, 1412)
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'nested unknown child is not dropped')
+        del modifiers[13]
+        self.assertEqual(self.compile(modifiers), {}, 'other event types have no target snapshot')
+
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
         with closing(sqlite3.connect(':memory:')) as db:
             db.executescript('''

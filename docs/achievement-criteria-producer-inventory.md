@@ -2,11 +2,13 @@
 
 verified: 2026-10-13
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5417 ordinary (3428 account/1989 character),1804 statistics; 99 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5424 ordinary (3435 account/1989 character),1804 statistics; 99 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
-- Plain Some8 requiring one of exactly one child (Amount0/1, TC1738–1750) reuses the existing All child evaluator; it does not discard that child. Native per-request Love225/Wave101 over controlled server units proves wrong/foreign/player/absent-target rejection, target68751/3236, all18 slime-selector account40475, idle and reopened counters. IDs are authenticated from pinned criteria; newer NPC definitions/spawn/model closure remain unclaimed. +40475 account/+1065 statistic; general multi-child non-difficulty OR, higher amounts and unknown leaves remain disabled.
+- Plain multi-child Some8 requiring one of complete TargetCreatureId4 SingleTrue leaves is compiled only for DoEmote54. Every alternative is retained as exact NPC-entry membership; other target modifiers, mixed/nested predicates and higher amounts stay disabled. Adds seven structural account definitions6350/14728/14729/14730/14731/18361/40624; NPC spawns/models and full playable-content closure remain unclaimed.
+
+- Plain Some8 requiring one of exactly one child (Amount0/1, TC1738–1750) reuses the existing All child evaluator; it does not discard that child. Multi-child target-creature alternatives are the bounded exception described above. Native per-request Love225/Wave101 over controlled server units proves wrong/foreign/player/absent-target rejection, target68751/3236, all18 slime-selector account40475, idle and reopened counters. IDs are authenticated from pinned criteria; newer NPC definitions/spawn/model closure remain unclaimed. +40475 account/+1065 statistic; other multi-child non-difficulty OR, higher amounts and unknown leaves remain disabled.
 
 - Plain empty All4 (TC CriteriaHandler1733–1737) is true; empty Some8 and SingleTrue2 remain false. Compiler now admits its seven cast rows61781–61787 for18905. Native triggered127117–127123 casts store all seven real goggles and grant the account achievement; refused depth, idle, redb reopen/relogin are covered. The test prepares its own read-only canonical snapshot and adds only exact pinned69933 Item/ItemSparse projections77533–77539 using content_policy.ITEM_COLUMNS; no GOGGLE_WORLD_COPY dependency or canonical mutation. Canonical content_item still lacks these rows. +1 structural account achievement, not production crafting/UI or data-closure certification.
 
@@ -100,7 +102,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 51 | RollGreed | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 52 | DeliverKillingBlowToClass | 0/13 | 0/13 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 53 | DeliverKillingBlowToRace | 0/149 | 0/148 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
-| 54 | DoEmote | 195/398 | 181/254 | 14 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 54 | DoEmote | 233/398 | 218/254 | 15 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 55 | HealingDone | 1/16 | 0/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 56 | DeliveredKillingBlow | 35/80 | 20/63 | 15 | Native: authenticated in-world killer on actual lethal health commits, plus genuine HunterPet owner credit (TC Unit::Kill); dead replay/self raw KillUnit idle. See spec. |
 | 57 | EquipItem | 162/163 | 11/11 | 151 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
