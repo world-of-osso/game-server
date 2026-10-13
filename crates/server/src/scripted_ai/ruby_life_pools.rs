@@ -11,6 +11,17 @@ const ICE_SHIELD_PERIODIC: u32 = 384933;
 const ICE_SHIELD: u32 = 372749;
 const EXCAVATE_PERIODIC: u32 = 372793;
 const EXCAVATE: u32 = 373497;
+pub(crate) const STORM_INFUSION: u32 = 395029;
+const STORM_FORWARD_OFFSET: f32 = 9.0;
+const STORM_HEIGHT_OFFSET: f32 = 4.0;
+
+/// TC Position::RelocateOffset: local(9,0,4) rotated around the destination's
+/// WoW orientation. WoW Z is engine Y; WoW Y is negative engine Z.
+pub(crate) fn relocate_storm_destination(dest: &mut crate::spell_cast::targets::Dest) {
+    dest.position.x += STORM_FORWARD_OFFSET * dest.orientation.cos();
+    dest.position.z -= STORM_FORWARD_OFFSET * dest.orientation.sin();
+    dest.position.y += STORM_HEIGHT_OFFSET;
+}
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
