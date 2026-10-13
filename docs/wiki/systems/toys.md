@@ -244,3 +244,7 @@ Exact171352 admission uses source zero-payload shape, ordinary ground model93703
 ## Fountain of Knowledge (2026-10-13)
 
 Exact91743 source cosmetic admission renders ordinary ground253570 with scale.5 for the source10s aura; no creature or gameplay effect. Natural removal preserves the15-minute item recovery. [Source, private asset provenance and bounded native proof](../../toy-effects14-coverage.md#fountain-of-knowledge--bounded-lifecycle-proof-2026-10-13).
+
+## Accursed Tome of the Sargerei (2026-10-13)
+
+Exact187146 source cosmetic admission uses ordinary1097945 at attachment17 and offsets(-.3,0,.3), scale1. Source aura lasts300s; natural removal retains one-hour item recovery without changing body/health/position. [Sources, native scopes and retained learning-update gap](../../toy-effects14-coverage.md#accursed-tome--bounded-lifecycle-proof-2026-10-13).
