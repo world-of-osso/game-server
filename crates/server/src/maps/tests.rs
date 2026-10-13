@@ -1472,6 +1472,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
     let catalog = crate::pvp::arena::Catalog::load(&catalog_db).unwrap();
     let gates = crate::pvp::arena_objects::GateCatalog::load(&source).unwrap();
     let dalaran = crate::pvp::arena_dalaran::Catalog::load(&source).unwrap();
+    let cage = crate::pvp::arena_cage::Catalog::load(&source).unwrap();
     let gate_actions: Vec<(u32, String, u32)> = source
         .prepare("SELECT entry,action,despawn_secs FROM arena_gate WHERE map_id=?")
         .unwrap()
@@ -1498,10 +1499,12 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         .clone();
     let store = crate::spell_cast::test_harness::world_db().unwrap();
     let spells = crate::spell_info::SpellStore::fixture(
-        [32727, 34709, 57405, 96538, 96539, 58873, 254013, 48018]
-            .iter()
-            .map(|id| store.store.get(*id).unwrap().clone())
-            .collect(),
+        [
+            32727, 34709, 57405, 96538, 96539, 58873, 254013, 48018, 228212, 1214676, 371319,
+        ]
+        .iter()
+        .map(|id| store.store.get(*id).unwrap().clone())
+        .collect(),
     );
     let database_file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(database_file.path()).unwrap();
@@ -1525,6 +1528,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         app.insert_resource(gates);
         app.insert_resource(sight);
         app.insert_resource(dalaran);
+        app.insert_resource(cage);
     })
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
@@ -1744,6 +1748,12 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
                 .is_visible(players[0].connection),
             "nearby Cage gate must remain visible through actual32727 preparation"
         );
+        for who in &players {
+            assert!(
+                crate::auras::has_aura(h.app.world(), who.player, 228212),
+                "source entrance areatrigger marks every Cage entrant during preparation"
+            );
+        }
     }
     for (gate, entry) in &source_gates {
         let (_, action, _) = gate_actions
