@@ -834,8 +834,9 @@ fn advance_encounter(
     if outcome == WildPetBattleOutcome::Won {
         crate::achievement::record_pet_battle_win(world, owner);
     }
-    if guid.is_some() {
+    if let Some(captured) = guid.and(encounter.captured.as_ref()) {
         crate::achievement::record_pet_capture(world, owner);
+        crate::achievement::record_learned_pet(world, owner, captured.species);
     }
     info!(
         "Wild pet battle {} ended: account {}, outcome {:?}, captured {:?}, rewards {:?}",

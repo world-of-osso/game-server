@@ -80,6 +80,8 @@ pub(crate) enum CriteriaEvent {
     WinPetBattle,
     PetBattleAchievementPoints(u32),
     CaptureBattlePet,
+    /// TC BattlePetMgr::AddPet: one newly committed pet GUID of this species.
+    LearnedNewPet(u32),
     BattlePetReachedLevel(u8),
     ActivelyEarnedPetLevel(u8),
     Login,
@@ -181,6 +183,7 @@ impl CriteriaEvent {
             Self::WinPetBattle => 158,
             Self::PetBattleAchievementPoints(_) => 81,
             Self::CaptureBattlePet => 157,
+            Self::LearnedNewPet(_) => 155,
             Self::BattlePetReachedLevel(_) => 160,
             Self::ActivelyEarnedPetLevel(_) => 162,
             Self::Login => 74,
@@ -241,8 +244,11 @@ impl CriteriaEvent {
             Self::ReachMaxLevel(class) => {
                 criteria.asset == 0
                     && criteria
-                        .max_level_class
-                        .is_none_or(|required| required == class)
+                        .modifier_asset
+                        .is_none_or(|required| required == u32::from(class))
+            }
+            Self::LearnedNewPet(species) => {
+                criteria.asset == 0 && criteria.modifier_asset == Some(species)
             }
             Self::KillAnyCreature
             | Self::DeliveredKillingBlow
@@ -362,12 +368,12 @@ impl MythicRequirements {
     }
 }
 
-#[path = "achievement_level_classes.rs"]
-mod level_classes;
 #[path = "achievement_mythic_predicates.rs"]
 mod mythic_predicates;
 #[path = "achievement_overlays.rs"]
 mod overlays;
+#[path = "achievement_single_modifiers.rs"]
+mod single_modifiers;
 
 #[derive(Debug, Clone)]
 struct Criteria {
@@ -375,7 +381,8 @@ struct Criteria {
     asset: u32,
     supported: bool,
     mythic: Option<MythicRequirements>,
-    max_level_class: Option<u8>,
+    /// Compiled sole PlayerClass26/BattlePetSpecies91 requirement.
+    modifier_asset: Option<u32>,
     exploration_bits: Vec<u32>,
     area_members: BTreeSet<u32>,
 }
@@ -435,6 +442,7 @@ pub(crate) struct AchievementCatalog {
     faction_groups: HashMap<u32, u32>,
     area_bits: HashMap<u32, u32>,
     pet_creatures: BTreeSet<u32>,
+    pet_species: BTreeSet<u32>,
     spell_skill_lines: HashMap<u32, BTreeSet<u32>>,
 }
 
@@ -718,6 +726,7 @@ impl AchievementCatalog {
                 u64::from(rank)
             }
             CriteriaEvent::ActivelyReachLevel(_)
+            | CriteriaEvent::LearnedNewPet(_)
             | CriteriaEvent::CompleteQuest(_)
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
@@ -1004,6 +1013,10 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
     catalog.pet_creatures = pets
         .query_map([], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
+    let mut species = conn.prepare("SELECT species_id FROM battle_pet_species")?;
+    catalog.pet_species = species
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
     load_criteria(conn, &mut catalog)?;
     load_spell_skill_lines(conn, &mut catalog)?;
     load_trees(conn, &mut catalog)?;
@@ -1067,19 +1080,20 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         } else {
             Vec::new()
         };
-        let max_level_class = if kind == 221 && row.get::<_, i32>(2)? == 0 {
-            level_classes::max_level_class(criteria_id, conditional[0])
+        let modifier_asset = if matches!(kind, 155 | 221) && row.get::<_, i32>(2)? == 0 {
+            single_modifiers::single_modifier_asset(criteria_id, conditional[0])
+                .filter(|species| kind != 155 || catalog.pet_species.contains(species))
         } else {
             None
         };
-        let supported_predicate = (mythic.is_some() || max_level_class.is_some())
+        let supported_predicate = (mythic.is_some() || modifier_asset.is_some())
             && conditional.iter().skip(1).all(|value| *value == 0);
         Ok((
             row.get(0)?,
             Criteria {
                 kind,
                 mythic,
-                max_level_class,
+                modifier_asset,
                 area_members: if matches!(kind, 163 | 164) {
                     collect_area_descendants(row.get::<_, i32>(2)? as u32, &area_children)
                 } else {
