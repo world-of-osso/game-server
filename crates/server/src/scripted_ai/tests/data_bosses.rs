@@ -25,6 +25,20 @@ fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path:
     source
         .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
         .expect("snapshot canonical encounter data without writing source");
+    if encounter == "adarogg" {
+        // encounter_serverside_spells.py's actual TDB rows precede the summon import.
+        let copy = Connection::open(&path).unwrap();
+        let prepared: bool = copy
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name = 'tdb_serverside_spell')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        if !prepared {
+            crate::spell_info::serverside_tests::write_adarogg_serverside_tables(&copy);
+        }
+    }
     let script =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/encounter_summons.py");
     let result = std::process::Command::new("python3")
@@ -119,6 +133,7 @@ fn encounter_fixture(
     let prepared = match entry {
         234648 => Some(prepare_encounter_database("kystia")),
         135322 => Some(prepare_encounter_database("golden-serpent")),
+        ADAROGG => Some(prepare_encounter_database("adarogg")),
         _ => None,
     };
     let path = prepared
@@ -146,6 +161,7 @@ fn encounter_fixture(
         *id == entry
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
+            || (entry == ADAROGG && *id == DEMONIC_LEAP)
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
@@ -201,7 +217,12 @@ fn encounter_fixture(
     // Use production's complete DB2 store, including absence of legacy SAI IDs.
     // A script's unknown spell must fail normal admission, not panic the fixture.
     let all = crate::spell_cast::test_harness::world_db().unwrap();
-    app.insert_resource(all.store.clone());
+    let mut store = all.store.clone();
+    if store.get(119297).is_none() {
+        // Production's loader over the prepared copy's server-side tables.
+        store.append_serverside(&conn).unwrap();
+    }
+    app.insert_resource(store);
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
@@ -263,7 +284,7 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if [61412, 61528].contains(&entry)
+        let near = if [ADAROGG, 61412, 61528].contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
         {
             // Keep these hostile source actors idle until their fixture explicitly pulls.
@@ -1580,6 +1601,151 @@ fn encounter_coverage_koranthal_death_and_evade_use_source_lifecycle() {
             );
             assert!(h.has_aura(boss, 119928), "reappearance Shadow Vortex");
         }
+    }
+}
+
+const ADAROGG: u32 = 61408;
+const DEMONIC_LEAP: u32 = 61409;
+
+/// Adarogg engaged by the first player (the tank) 3 yards away; `healer` adds a
+/// second threat-list player 8 yards away in the same copy.
+fn engaged_adarogg(healer: bool) -> (Harness, Entity, InMap, Option<Entity>) {
+    let (mut h, boss, map) =
+        encounter_fixture(ADAROGG, 389, 0, 1, None, EncounterState::NotStarted, false);
+    let boss = boss.unwrap();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    let tank = h.player();
+    h.app.world_mut().entity_mut(tank).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    let healer = healer.then(|| {
+        let wow = [position.x + 8.0, -position.z, position.y, 0.0];
+        let (healer, connection) = spawn_player(&mut h.app, map, wow, 3);
+        h.players.push((healer, connection, Inbox::default()));
+        healer
+    });
+    h.engage(boss);
+    if let Some(healer) = healer {
+        crate::creature_aggro::add_threat(h.app.world_mut(), boss, healer, 0.5);
+    }
+    h.advance(0.1);
+    (h, boss, map, healer)
+}
+
+fn casting(h: &Harness, unit: Entity) -> Option<u32> {
+    h.app
+        .world()
+        .get::<CastState>(unit)
+        .map(|cast| cast.spell_id)
+}
+
+/// TC boss_adarogg: Inferno Charge at10s picks a random non-tank player, summons
+/// server-side119297 Demonic Leap there and channels119405 onto it; Fire Breath
+/// 119420 hits the victim at20s. Both repeat15-20s.
+#[test]
+fn encounter_coverage_adarogg_source_inferno_charge_and_fire_breath() {
+    let (mut h, boss, map, healer) = engaged_adarogg(true);
+    let healer = healer.unwrap();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::InProgress)
+    );
+    h.advance(9.7);
+    assert!(h.creatures_of(DEMONIC_LEAP).is_empty(), "Inferno waits10s");
+    h.advance(0.3);
+    let leaps = h.creatures_of(DEMONIC_LEAP);
+    assert_eq!(leaps.len(), 1, "server-side119297 summons one Demonic Leap");
+    let leap = leaps[0];
+    assert!(
+        h.wow_position(leap).distance(h.wow_position(healer)) < 0.5,
+        "DEST_TARGET_ENEMY: summoned at the non-tank player"
+    );
+    assert_eq!(casting(&h, boss), Some(119405), "channels Inferno Charge");
+    assert!(
+        h.has_aura(leap, 119405),
+        "NEARBY_ENTRY condition selects the Leap"
+    );
+    assert_eq!(h.casts(2, boss, 119297), 1, "logged to the targeted player");
+    h.advance(3.1);
+    assert_eq!(casting(&h, boss), None, "3s channel ends");
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .all(|event| event.spell_id != Some(119299)),
+        "TC EffectCharge without a unit target never casts119299"
+    );
+    h.advance(2.0);
+    assert!(h.creatures_of(DEMONIC_LEAP).is_empty(), "5s summon expires");
+    h.advance(4.6);
+    assert_eq!(casting(&h, boss), None, "Fire Breath waits20s");
+    h.advance(0.3);
+    assert_eq!(casting(&h, boss), Some(119420));
+    let tank = h.player();
+    let before = h.health(tank).current;
+    h.advance(1.6);
+    assert!(
+        h.health(tank).current < before,
+        "1.5s cast damages the victim"
+    );
+    assert!(h.health(healer).current == h.health(healer).max);
+    h.advance(10.5);
+    assert_eq!(
+        h.casts(2, boss, 119297),
+        2,
+        "Inferno repeats within15-20s of10s"
+    );
+}
+
+/// NonTankTargetSelector(me): only players other than the current victim qualify.
+#[test]
+fn encounter_coverage_adarogg_inferno_charge_never_targets_the_tank() {
+    let (mut h, boss, _, _) = engaged_adarogg(false);
+    h.advance(10.2);
+    assert!(h.creatures_of(DEMONIC_LEAP).is_empty());
+    assert_eq!(h.casts(0, boss, 119297), 0);
+    assert_ne!(casting(&h, boss), Some(119405));
+}
+
+#[test]
+fn encounter_coverage_adarogg_death_and_evade_use_source_lifecycle() {
+    for killed in [false, true] {
+        let (mut h, boss, map, _) = engaged_adarogg(true);
+        h.advance(10.1);
+        assert_eq!(h.creatures_of(DEMONIC_LEAP).len(), 1);
+        if killed {
+            h.hit_pct(boss, 1_000.0);
+            h.advance(0.1);
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, 0),
+                Some(EncounterState::Done)
+            );
+        } else {
+            crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+            h.advance(0.1);
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, 0),
+                Some(EncounterState::Fail)
+            );
+            assert!(
+                h.app
+                    .world()
+                    .get::<crate::combat::DeathState>(boss)
+                    .is_some(),
+                "_DespawnAtEvade retires actor without a kill"
+            );
+        }
+        if !killed {
+            // _DespawnAtEvade does not DespawnAll; the wild summon keeps its 5s expiry.
+            assert_eq!(h.creatures_of(DEMONIC_LEAP).len(), 1);
+            h.advance(5.0);
+        }
+        assert!(
+            h.creatures_of(DEMONIC_LEAP).is_empty(),
+            "_JustDied DespawnAll, or the evaded summon's own expiry"
+        );
+        assert!(!h.inbox(0).disengages.is_empty(), "frame disengage");
     }
 }
 
