@@ -59,6 +59,7 @@ type Roaming = (
     Without<crate::scripted_ai::movement::PointMovement>,
     Without<crate::scripted_ai::movement::ScriptedPath>,
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
+    Without<crate::scripted_ai::jump_movement::JumpMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
 type ActiveUncontrolled = (
@@ -66,6 +67,7 @@ type ActiveUncontrolled = (
     Without<Confused>,
     Without<Feared>,
     Without<crate::knockback::KnockbackFlight>,
+    Without<crate::scripted_ai::jump_movement::JumpMovement>,
 );
 
 pub struct CreatureAiPlugin;
@@ -108,6 +110,14 @@ pub struct SpawnPoint {
 /// The creature's original home facing in Bevy radians, independent of current rotation.
 #[derive(Component, Debug, Clone, Copy)]
 pub(crate) struct HomeOrientation(pub f32);
+
+/// Explicit TC `Creature::m_homePosition`, independent of original respawn data.
+/// Position and orientation use server/Bevy coordinates.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct HomePosition {
+    pub position: Position,
+    pub orientation: f32,
+}
 
 /// State machine for random-wander creatures (movement_type=1).
 /// Coordinates are in Bevy space (X-right, Y-up, Z-back).
@@ -1273,15 +1283,21 @@ fn leash_check_system(
             &SpawnPoint,
             &CreatureState,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
+            Option<&HomePosition>,
         ),
         (ActiveUncontrolled, Without<crate::followers::Follower>),
     >,
     mut commands: Commands,
 ) {
-    for (entity, pos, spawn, state, escort) in &query {
-        let beyond_home = match escort {
-            Some(escort) => (pos.x - escort.home.x).hypot(pos.z - escort.home.z) > LEASH_DISTANCE,
-            None => beyond_leash(pos, spawn),
+    for (entity, pos, spawn, state, escort, explicit_home) in &query {
+        let beyond_home = match explicit_home {
+            Some(home) => (pos.x - home.position.x).hypot(pos.z - home.position.z) > LEASH_DISTANCE,
+            None => match escort {
+                Some(escort) => {
+                    (pos.x - escort.home.x).hypot(pos.z - escort.home.z) > LEASH_DISTANCE
+                }
+                None => beyond_leash(pos, spawn),
+            },
         };
         if matches!(*state, CreatureState::Pursuing { .. }) && beyond_home {
             bevy::log::debug!(
@@ -1325,8 +1341,12 @@ fn return_to_spawn_system(
             Option<&mut shared::components::Health>,
             Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
+            Option<&HomePosition>,
         ),
-        Without<GridDormant>,
+        (
+            Without<GridDormant>,
+            Without<crate::scripted_ai::jump_movement::JumpMovement>,
+        ),
     >,
     mut commands: Commands,
 ) {
@@ -1344,6 +1364,7 @@ fn return_to_spawn_system(
         health,
         regen,
         escort,
+        explicit_home,
     ) in &mut query
     {
         if *state != CreatureState::Returning {
@@ -1351,13 +1372,18 @@ fn return_to_spawn_system(
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
-        let home = escort.map_or(
-            Position {
-                x: spawn.x,
-                y: spawn.y,
-                z: spawn.z,
+        let home = explicit_home.map_or_else(
+            || {
+                escort.map_or(
+                    Position {
+                        x: spawn.x,
+                        y: spawn.y,
+                        z: spawn.z,
+                    },
+                    |escort| escort.home,
+                )
             },
-            |escort| escort.home,
+            |home| home.position,
         );
         let (mut next_position, reached) = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
@@ -1400,6 +1426,9 @@ fn return_to_spawn_system(
         let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, speed);
         if reached {
             stride.motion = CreatureMotion::Still;
+            if let Some(home) = explicit_home {
+                stride.facing = Some(home.orientation);
+            }
         }
         queues.apply(entity, &mut pos, bearing, stride);
         if reached {

@@ -1806,7 +1806,7 @@ pub(crate) fn respawn_system(
         }
         let mut respawned = commands.entity(entity);
         respawned
-            .remove::<(DeathState, Corpse)>()
+            .remove::<(DeathState, Corpse, crate::creature_ai::HomePosition)>()
             .insert(Replicate::to_clients(NetworkTarget::All));
         if let Some(&vignette) = vignette {
             crate::vignettes::show(&mut respawned, vignette);
