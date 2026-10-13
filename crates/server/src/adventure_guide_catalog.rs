@@ -73,6 +73,7 @@ struct TagLink {
 #[derive(Debug)]
 pub(crate) struct CatalogData {
     pub activities: Vec<Activity>,
+    pub thresholds: Vec<crate::trading_post_store::Threshold>,
     pub supported_indices: Vec<usize>,
     pub supported_roots: BTreeSet<u32>,
     suggestions: Vec<Suggestion>,
@@ -99,6 +100,37 @@ fn read_rows<T: serde::de::DeserializeOwned>(
     .collect()
 }
 
+#[derive(Deserialize)]
+struct ThresholdRow {
+    #[serde(rename = "ID")]
+    id: u32,
+    #[serde(rename = "BonusTendies")]
+    tender: u32,
+    #[serde(rename = "Threshold")]
+    points: u32,
+    #[serde(rename = "PerksActivityThresholdGroupID")]
+    group: u32,
+}
+
+fn load_thresholds(conn: &Connection) -> Result<Vec<crate::trading_post_store::Threshold>, String> {
+    // Explicit Osso policy: sourced default group1, not an inferred seasonal epoch.
+    let default_group = 1;
+    let rows = read_rows::<ThresholdRow>(conn, "perks_activity_threshold")?;
+    let thresholds: Vec<_> = rows
+        .into_iter()
+        .filter(|row| row.group == default_group)
+        .map(|row| crate::trading_post_store::Threshold {
+            id: row.id,
+            points: row.points,
+            tender: row.tender,
+        })
+        .collect();
+    if thresholds.is_empty() {
+        return Err("Default PerksActivityThreshold group1 is unavailable".into());
+    }
+    Ok(thresholds)
+}
+
 impl CatalogData {
     pub(super) fn load(
         conn: &Connection,
@@ -115,6 +147,7 @@ impl CatalogData {
             return Err("Adventure Guide source build differs from pinned 12.1.0.69933".into());
         }
         let activities = read_rows::<Activity>(conn, "perks_activity")?;
+        let thresholds = load_thresholds(conn)?;
         let supported_roots: BTreeSet<_> = activities
             .iter()
             .filter(|a| criteria.supports_tree(a.root, &mut BTreeSet::new()))
@@ -157,6 +190,7 @@ impl CatalogData {
         }
         Ok(Self {
             activities,
+            thresholds,
             supported_indices,
             supported_roots,
             suggestions,
@@ -233,7 +267,7 @@ mod tests {
     fn eligible_authored_suggestion_keeps_card_without_unsupported_activation() {
         // Authored AdventureJournal7; all three condition results are test inputs.
         let catalog = CatalogData {
-            activities: vec![], supported_indices: vec![], supported_roots: BTreeSet::new(),
+            activities: vec![], thresholds: vec![], supported_indices: vec![], supported_roots: BTreeSet::new(),
             suggestions: vec![Suggestion {
                 id: 7, name: "Hillsbrad Foothills".into(),
                 description: "Join the Forsaken war machine as it marches on Hillsbrad Foothills for the Horde!".into(),

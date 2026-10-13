@@ -267,6 +267,15 @@ pub enum AdminRequest {
     },
     EconomyStatus,
     Ping,
+    /// Private-server test setup: credit Trader's Tender to an account.
+    TradingPostGrantTender {
+        username: String,
+        amount: u32,
+    },
+    /// Private-server test setup: refund window (seconds) for new purchases; 0 disables.
+    TradingPostRefundWindow {
+        seconds: u32,
+    },
 }
 
 /// IPC response from server to CLI.
@@ -502,6 +511,13 @@ pub enum AdminResponse {
     },
     Pong,
     Error(String),
+    TradingPostTenderGranted {
+        username: String,
+        tender: u32,
+    },
+    TradingPostRefundWindowSet {
+        seconds: u32,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]

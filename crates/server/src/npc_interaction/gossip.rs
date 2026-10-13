@@ -182,6 +182,7 @@ pub(crate) fn roles_from_flags(flags: NpcFlags) -> Vec<NpcRole> {
         (NpcFlags::STABLEMASTER, NpcRole::StableMaster),
         (NpcFlags::TRANSMOGRIFIER, NpcRole::Transmogrifier),
         (NpcFlags::CRAFTING_ORDERS, NpcRole::CraftingOrders),
+        (NpcFlags::TRADING_POST, NpcRole::TradingPost),
     ]
     .into_iter()
     .filter(|(mask, _)| flags.contains(*mask))
@@ -208,6 +209,8 @@ fn option_action(option_type: u8, action_menu_id: u32) -> Option<GossipAction> {
         13 => GossipAction::Role(NpcRole::AuctionHouse),
         14 => GossipAction::Role(NpcRole::StableMaster),
         34 => GossipAction::Role(NpcRole::Transmogrifier),
+        // Mainline GossipNpcOption::PerksProgramVendor; TDB Seabraid menus30312/30315.
+        47 => GossipAction::Role(NpcRole::TradingPost),
         // TDB1210 menu30243 OptionNpc50: create a crafting order.
         50 => GossipAction::Role(NpcRole::CraftingOrders),
         _ => return None,
