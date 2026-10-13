@@ -308,6 +308,56 @@ fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return
     win_leave_and_return(&mut entered, 700);
 }
 
+/// TDB1210 spawn groups 1041-1173 with their source-33 conditions: only the owner's
+/// tier-0 defenders, neutral mine crews and intact-tower warmasters exist at the start;
+/// a destroyed tower despawns its warmaster (flag 0x20) and keeps its flag-0 bowmen.
+#[test]
+fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match(&template, [611, 610]);
+    let actor = &entered.players[0];
+    let (h, copy) = (&mut entered.h, entered.copy);
+    use_second_frames(h);
+    // Aid Station/Stormpike/Stonehearth Alliance and Iceblood/Frostwolf/Hut Horde
+    // graveyards (1325/1333/1302, 1347/1338/1330) each spawn four tier-0 guards;
+    // neutral Snowfall (1966) spawns none.
+    assert_eq!(creatures_in(h, copy, 12050), 12, "Stormpike Defender");
+    assert_eq!(creatures_in(h, copy, 12053), 12, "Frostwolf Guardian");
+    for upgraded in [13326, 13328, 13331, 13332, 13421, 13422] {
+        assert_eq!(
+            creatures_in(h, copy, upgraded),
+            0,
+            "defender tier {upgraded}"
+        );
+    }
+    // Neutral Irondeep (1360, group 1170) and not the Alliance crew (1358, group 1124).
+    assert_eq!(creatures_in(h, copy, 10987), 50, "neutral Irondeep Trogg");
+    assert_eq!(creatures_in(h, copy, 13396), 0, "Alliance Irondeep Miner");
+    assert_eq!(creatures_in(h, copy, 14773), 1, "Iceblood Warmaster");
+    assert_eq!(creatures_in(h, copy, 13359), 16, "Frostwolf Bowman");
+    let (banner, at) = objects_in(h, copy, 178946)[0];
+    h.walk_to(actor, at);
+    use_object(h, actor, banner);
+    h.advance(8);
+    h.advance(240);
+    assert_eq!(battleground(h, actor).score_b, 625);
+    assert_eq!(
+        creatures_in(h, copy, 14773),
+        0,
+        "destroyed Iceblood despawns its warmaster"
+    );
+    assert_eq!(creatures_in(h, copy, 13359), 16, "flag-0 tower guards stay");
+}
+
+fn creatures_in(h: &mut Harness, copy: InMap, entry: u32) -> usize {
+    let world = h.app.world_mut();
+    let mut query = world.query::<(&shared::components::Npc, &InMap)>();
+    query
+        .iter(world)
+        .filter(|(npc, map)| npc.template_id == entry && **map == copy)
+        .count()
+}
+
 fn kill_alterac_source_npc(h: &mut Harness, actor: &Traveler, copy: InMap, entry: u32) {
     let (victim, health) = find_alterac_source_npc(h, copy, entry);
     crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim, health + 1.0);

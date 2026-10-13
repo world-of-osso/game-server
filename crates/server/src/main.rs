@@ -106,6 +106,7 @@ mod rest;
 mod scripted_ai;
 mod sheet_visibility;
 mod skyriding;
+mod spawn_groups;
 mod spawn_pools;
 mod spell_area;
 mod spell_cast;

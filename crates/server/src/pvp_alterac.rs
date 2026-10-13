@@ -17,6 +17,16 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Component)]
 struct AlteracBanner;
 
+/// TC `DATA_DEFENDER_TIER_HORDE` / `DATA_DEFENDER_TIER_ALLIANCE`.
+const DEFENDER_TIER_DATA: [u32; 2] = [1, 2];
+
+/// TC `getDefenderTierForTeam`: `_teamQuestStatus` starts at 0 and only AV quest
+/// turn-ins raise it. Those quests are not implemented, so both teams keep
+/// `BG_AV_DEFENDER_TIER_DEFENDER` (0).
+fn defender_tier(_data: u32) -> u32 {
+    0
+}
+
 #[derive(Debug)]
 pub(super) struct AlteracRuntime {
     pub battle: AlteracBattle,
@@ -37,13 +47,29 @@ impl AlteracRuntime {
                 .ok_or_else(|| format!("Alterac source banner {entry} missing"))?;
             sources.insert(entry, source.clone());
         }
+        let data_ids = world
+            .get_resource::<crate::world_data::WorldData>()
+            .ok_or("Alterac creature catalog missing")?
+            .spawn_groups
+            .instance_data_ids();
+        if let Some(unknown) = data_ids.iter().find(|id| !DEFENDER_TIER_DATA.contains(id)) {
+            return Err(format!(
+                "Alterac spawn group reads unknown instance data {unknown}"
+            ));
+        }
         Ok(Self {
             battle: AlteracBattle::default(),
             sources,
         })
     }
 
-    pub fn synchronize(&self, world: &mut World, map: InMap) {
+    /// Banner variants and TDB spawn group creatures for the battle's world states.
+    pub fn synchronize(&self, world: &mut World, map: InMap, states: &[(u32, i32)]) {
+        self.synchronize_banners(world, map);
+        crate::spawn_groups::synchronize(world, map, states, defender_tier);
+    }
+
+    fn synchronize_banners(&self, world: &mut World, map: InMap) {
         let desired: BTreeSet<_> = (0..ALTERAC_NODE_COUNT)
             .filter_map(|node| self.battle.banner_entry(node))
             .collect();
@@ -204,7 +230,7 @@ pub(super) fn update_alterac(
     alterac.battle.advance(delta_ms, &mut matched.instance);
     let changed = before != alterac.battle.world_states(&matched.instance);
     if changed {
-        alterac.synchronize(world, map);
+        alterac.synchronize(world, map, &alterac.battle.world_states(&matched.instance));
     }
     changed
 }

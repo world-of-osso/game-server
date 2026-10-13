@@ -86,6 +86,7 @@ pub(crate) fn spawn_map_creatures(
         .map(|&idx| &world_data.spawns[idx])
         .filter(|spawn| {
             (world_data.pools.creature_pool(spawn.guid).is_none() || picked.contains(&spawn.guid))
+                && !world_data.spawn_groups.is_member(spawn.guid)
                 && spawn.spawns_at(content.difficulty_id)
                 && !content.dead_bosses.contains(&spawn.template_entry)
         });
@@ -145,6 +146,27 @@ pub(crate) fn spawn_pooled_creatures(
         commands.entity(entity).insert(PooledSpawn(guid));
     }
     entities
+}
+
+/// `Map::SpawnGroupSpawn` of the condition-met members `guids` in `map`'s copy; each
+/// carries its spawn guid.
+pub(crate) fn spawn_grouped_creatures(
+    commands: &mut Commands,
+    world_data: &WorldData,
+    map: crate::maps::InMap,
+    difficulty_id: u32,
+    guids: &std::collections::BTreeSet<u32>,
+) {
+    let spawns = world_data.spawns_by_map[&(map.map_id as u16)]
+        .iter()
+        .map(|&idx| &world_data.spawns[idx])
+        .filter(|spawn| guids.contains(&spawn.guid) && spawn.spawns_at(difficulty_id));
+    let entities = spawn_creatures(commands, world_data, map, difficulty_id, true, spawns);
+    for (&guid, &entity) in &entities {
+        commands
+            .entity(entity)
+            .insert(crate::spawn_groups::GroupedSpawn(guid));
+    }
 }
 
 /// Spawn `spawns` with their AI, addon and formation components; returns

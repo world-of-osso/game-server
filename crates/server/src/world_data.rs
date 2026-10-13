@@ -202,6 +202,8 @@ pub struct WorldData {
     pub armor_constants: ArmorConstants,
     /// `content_pool_*` spawn pools (PoolMgr).
     pub pools: crate::spawn_pools::SpawnPools,
+    /// TDB `spawn_group` members whose battleground runtime spawns them by condition.
+    pub spawn_groups: crate::spawn_groups::SpawnGroups,
     /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
     pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
 }
@@ -250,6 +252,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let armor_constants = expected_stats.armor_constants();
     let pools = crate::spawn_pools::SpawnPools::load(&conn)
         .expect("Failed to load content_pool_*; run scripts/import-spawn-pools.sh");
+    let spawn_groups = crate::spawn_groups::SpawnGroups::load(&conn)
+        .unwrap_or_else(|error| panic!("Failed to load TDB spawn groups: {error}"));
     let vignettes = crate::vignettes::load_creature_vignettes(&conn);
 
     info!(
@@ -276,6 +280,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         class_level_base_mana,
         armor_constants,
         pools,
+        spawn_groups,
         vignettes,
     }
 }

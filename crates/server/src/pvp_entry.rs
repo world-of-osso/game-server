@@ -208,7 +208,14 @@ fn create_match_map(
         .seething = seething;
     crate::maps::transfer::spawn_map_content(world, map);
     if let Some(alterac) = alterac {
-        alterac.synchronize(world, map);
+        let states = alterac.battle.world_states(
+            &state
+                .battleground_matches
+                .get(&match_id)
+                .expect("validated match")
+                .instance,
+        );
+        alterac.synchronize(world, map, &states);
         state
             .battleground_matches
             .get_mut(&match_id)
