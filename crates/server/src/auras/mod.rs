@@ -832,14 +832,6 @@ pub(crate) fn apply_aura_with_spell(
     }
     let now = aura_now(world);
     let mut instance = build_instance(world, application, &spell, now);
-    if spell.id == 223143 {
-        info!(
-            "TOY26_AURA_BUILD target={target:?} duration={} now={now} expires={:?} effects={}",
-            instance.duration_ms,
-            instance.expires_at,
-            instance.effects.len()
-        );
-    }
     instance.effects.retain(|stored| {
         let effect = spell
             .effects
@@ -1095,13 +1087,6 @@ pub(crate) fn apply_attack_damage(world: &mut World, unit: Entity, loss: f32) ->
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
-    if aura.spell_id == 223143 {
-        info!(
-            "TOY26_AURA_REMOVED unit={unit:?} reason={reason:?} now={} expires={:?}",
-            aura_now(world),
-            aura.expires_at
-        );
-    }
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
@@ -1920,12 +1905,6 @@ fn sync_unit_auras(
             .remove(&entity)
             .expect("dirty unit has a prepared aura view");
         if view.auras != views {
-            if let Some(aura) = views.iter().find(|aura| aura.spell_id == 223143) {
-                info!(
-                    "TOY26_AURA_SYNC unit={entity:?} duration={} remaining={}",
-                    aura.duration_ms, aura.remaining_ms
-                );
-            }
             view.auras = views;
             changed.push(entity);
         }
