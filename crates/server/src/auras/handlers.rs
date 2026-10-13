@@ -158,6 +158,8 @@ pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
 /// TC a352b1fa HandleUnused: viewer-local humanoid appearance, client-side only.
 pub const CHANGE_MODEL_FOR_ALL_HUMANOIDS: u32 = 233;
 pub const MOD_SPEED_SLOW_ALL: u32 = 252;
+/// Melee attack time only (`HandleModMeleeSpeedPct`); no cast-time effect.
+pub const MOD_MELEE_HASTE_3: u32 = 319;
 /// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
 pub const SCREEN_EFFECT: u32 = 260;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
@@ -270,6 +272,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_MANA_REGEN_PCT
         | MOD_HIT_CHANCE
         | MOD_SPEED_SLOW_ALL
+        | MOD_MELEE_HASTE_3
         | WATER_BREATHING
         | MOD_WATER_BREATHING
         | MOD_INCREASE_ENERGY

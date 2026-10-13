@@ -724,7 +724,9 @@ impl Attacker<'_> {
     /// players, the flat interval over aura haste otherwise
     /// (Unit::ApplyAttackTimePercentMod), times the MOD_SPEED_SLOW_ALL multiplier.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
-        let slow = self.mods.map_or(1.0, |mods| mods.attack_cast_time_mult);
+        let slow = self.mods.map_or(1.0, |mods| {
+            mods.attack_cast_time_mult * mods.attack_time_mult
+        });
         self.stats.map_or(
             AUTO_ATTACK_INTERVAL / (1.0 + self.haste_pct / 100.0).max(0.01),
             |stats| melee::swing_time(weapon.speed, stats.haste_pct),
