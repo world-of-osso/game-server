@@ -61,7 +61,7 @@ fn core_fragment_authored_normal_copy_replicates_only_to_its_observer() {
         .id();
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, app.world());
-    spawn_map_game_objects(&mut commands, &spawns, copy, 1);
+    spawn_map_game_objects(&mut commands, &spawns, copy, 1, None);
     queue.apply(app.world_mut());
     app.world_mut().run_schedule(FixedUpdate);
     let mut objects = app
@@ -187,9 +187,21 @@ fn follower_normal_population_spawns_normal_gameobjects_in_205_copy() {
         map_id: 2521,
         instance_id: 7,
     };
-    assert_eq!(spawn_map_game_objects(&mut commands, &spawns, map, 205), 1);
+    assert_eq!(
+        spawn_map_game_objects(&mut commands, &spawns, map, 205, None),
+        1
+    );
     queue.apply(&mut world);
     assert_eq!(world.query::<&GameObjectInfo>().iter(&world).count(), 1);
+    let (collision, visible) = world
+        .query::<(
+            &shared::protocol::GameObjectCollision,
+            &shared::protocol::GameObjectVisible,
+        )>()
+        .single(&world)
+        .expect("authored native object snapshot includes collision and visibility");
+    assert!(collision.0);
+    assert!(visible.0);
     assert_eq!(
         *world.query::<&crate::maps::InMap>().single(&world).unwrap(),
         map

@@ -21,6 +21,7 @@ fn wire_direction(forward: f32, right: f32) -> [f32; 3] {
 
 fn input(direction: [f32; 3]) -> PlayerInput {
     PlayerInput {
+        transport: None,
         direction,
         facing_yaw: YAW,
         jumping: false,
@@ -47,6 +48,7 @@ fn player_motion_airborne_walkoff_and_touchdown_replicate_without_jump() {
     tick(&mut app, connection, vec![]);
     assert_eq!(motion(&app, player), PlayerMotion(0));
     let sent = PlayerInput {
+        transport: None,
         direction: [-1.0, 0.0, 0.0],
         facing_yaw: -std::f32::consts::FRAC_PI_2,
         position: [x - 0.35, y, z],
