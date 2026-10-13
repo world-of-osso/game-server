@@ -132,6 +132,9 @@ pub mod powers;
 mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
+pub(crate) mod recovery_rate;
+#[cfg(test)]
+mod recovery_rate_tests;
 mod reflect;
 #[cfg(test)]
 mod resistance_pct_tests;
@@ -413,6 +416,8 @@ impl ChargeState {
 pub struct SpellHistory {
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
+    /// Native spell that last started each category timer, for masked rate changes.
+    category_spell_ids: HashMap<u32, u32>,
     /// Actual item-use authored durations/categories, which can override SpellInfo.
     item_cooldown_sources: HashMap<u32, ItemCooldownSource>,
     /// By `StartRecoveryCategory`.
@@ -2464,6 +2469,17 @@ pub(crate) fn cast_triggered(
     cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None);
 }
 
+/// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
+pub(crate) fn try_cast_triggered(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> bool {
+    cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None)
+}
+
 pub(super) fn cast_triggered_with_item_level(
     world: &mut World,
     caster: Entity,
@@ -2471,12 +2487,12 @@ pub(super) fn cast_triggered_with_item_level(
     explicit: Option<Entity>,
     depth: u8,
     item_level: Option<u16>,
-) {
+) -> bool {
     let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
-        return;
+        return false;
     };
     spell.cast_item_level = item_level;
-    launch_triggered_spell(world, caster, &spell, explicit, depth);
+    launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
 /// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
@@ -2523,14 +2539,18 @@ fn launch_triggered_spell(
     spell: &SpellInfo,
     explicit: Option<Entity>,
     depth: u8,
-) {
+) -> bool {
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
     match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, spell, plan, depth);
+            true
         }
-        Err(failure) => warn!("Triggered spell {} skipped: {failure:?}", spell.id),
+        Err(failure) => {
+            warn!("Triggered spell {} skipped: {failure:?}", spell.id);
+            false
+        }
     }
 }
 
@@ -2609,10 +2629,16 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         }
         let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
         let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
-        let adjusted = if hasted > 0.0 {
-            hasted + category_modifier_ms
-        } else {
+        let rate = recovery_rate::multiplier(world, caster, spell);
+        let recovered = if rate == 1.0 {
             hasted
+        } else {
+            (f64::from(hasted) * rate).trunc() as f32
+        };
+        let adjusted = if recovered > 0.0 {
+            recovered + category_modifier_ms
+        } else {
+            recovered
         };
         adjusted.max(0.0).round() as u32
     };
@@ -2641,6 +2667,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);
     }
     if category != 0 && base_category_ms > 0 {
+        history.category_spell_ids.insert(category, spell.id);
         history
             .category_ready_at
             .insert(category, now + category_ms as f64 / 1000.0);

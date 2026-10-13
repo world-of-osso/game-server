@@ -23,6 +23,7 @@ fn can_fly(app: &mut App, player: Entity) {
 /// One client frame flying (or not) with the feet at `client`.
 fn flight_input(client: &Position, flying: bool) -> PlayerInput {
     PlayerInput {
+        transport: None,
         direction: [0.0; 3],
         facing_yaw: 0.0,
         jumping: false,

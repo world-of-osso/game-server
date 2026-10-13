@@ -104,9 +104,22 @@ class Conditions(unittest.TestCase):
         derived[1]['Type'] = '8'
         self.assertEqual(self.compile(modifiers, derived), {}, 'structural recomputation has no player facts')
 
+    def test_player_zone_preserves_the_authored_id_and_other_conditions(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 41, 1519), 12: node(10, 2, 69, 10)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((41, 1519), (69, 10))]})
+        modifiers[11]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers), {}, 'negated zone remains unsupported')
+
     def test_group_roster_limit_preserves_strict_threshold(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 29, 9)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
+
+    def test_map_instance_type_preserves_exact_type_including_world_zero(self):
+        for instance_type in (0, 1, 2, 3, 4, 5):
+            modifiers = {10: node(0, 4), 11: node(10, 2, 122, instance_type)}
+            self.assertEqual(self.compile(modifiers), {1: [None, ((122, instance_type),)]})
+        modifiers[11]['Asset'] = '128'
+        self.assertEqual(self.compile(modifiers), {}, 'unknown out-of-range type stays disabled')
 
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
         with closing(sqlite3.connect(':memory:')) as db:
