@@ -13,6 +13,30 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-13 — PlayerHasAura Some alternatives
+
+[Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
+
+## 2026-10-13 — PlayerIsInArea Some alternatives
+
+[Complete area alternatives](systems/dungeon-achievements.md#player-area-alternatives) reuse recursive ancestry and retain every authenticated leaf. Five controlled cached authority snapshots drive real queued death109755/character61456 and reopened persistence; no terrain-travel or holiday/NPC content claim. Focused3/3, compiler24/24; four additional ordinary definitions are structural only.
+
+## 2026-10-13 — PlayerMap Some alternatives
+
+[Complete map alternatives](systems/dungeon-achievements.md#player-map-alternatives) retain every sourced leaf and reject a missing map at load. Native Warsong2106 lethal damage credits5538 once to its killer and survives reopen; source489 catalog evaluation is not legacy-map playability. Type56 is independent of accepted battleground reward70. Focused5/5, compiler23/23; census5430 ordinary/1812 statistics is structural only.
+
+## 2026-10-13 — Target-creature Some alternatives
+
+[Complete target alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) preserve one-of native request matching. Source-backed Love alternatives and six Wave selectors add seven structural account definitions; unknown qualifiers and NPC content closure remain explicit.
+
+## 2026-10-13 — Single-child Some criterion semantics
+
+[Some1-of-1](systems/dungeon-achievements.md#single-child-some-trees--verified-2026-10-13) preserves the supported child check. Native per-request target negatives and slime/wave credit add structural40475/1065; NPC spawn/model closure remains unclaimed.
+
+## 2026-10-13 — Empty All criterion semantics
+
+[Plain empty All4](systems/dungeon-achievements.md#empty-all-modifier-trees--verified-2026-10-13) matches TC's true result. Seven native goggle casts/store outcomes grant18905 in a sourced private fixture; missing canonical item projections and production/UI closure remain explicit.
+
 ## 2026-10-13 — Exact-level criterion facts
 
 [Level39](systems/dungeon-achievements.md#exact-reference-player-levels--verified-2026-10-13) reuses inclusive minimum/maximum facts. Native level1/2/3 deaths and reopen prove raw orphan counters without linking them to current achievements; census unchanged.
@@ -39,6 +63,8 @@
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Wailing four-druid DONE condition/Disciple action0 notification; real two-copy NPC/chat RED/GREEN. Three insufficient, fourth notifies only its copy, repeated DONE no duplicate; escort/awakening/combat unported. [Boss scripts](systems/boss-scripts.md).
+- 2026-10-13: Wailing action34 mode1 resolves TC ordinal→encounter→runtime slot; actual Serpentis action-boundary RED/GREEN isolates it from generic death credit. Mode0 and missing-binding negatives preserve other states/copies. [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Deadmines pinned source has instance wiring only; exact six primaries authenticated, Oaf47297 no longer labeled Helix. Missing AI/spawns and difficulty-specific bit binding gaps retained. [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Slagmaw source port: Lava Spit/Submerge/server-side teleports, GetDistance boundary with source CombatReach24 (shared `model_reach.rs`). Dungeon-map spawn leash exempted per TC; open-world40yd boundary retained and tested. Historical Stockade39.888yd leash proof [superseded, evidence preserved](systems/navigation.md#stationary-arch-and-leash-acceptance). [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
