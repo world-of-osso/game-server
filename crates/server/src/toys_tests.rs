@@ -4359,6 +4359,22 @@ fn toyfx18_foam_sword_rack_counts_a_banked_sword() {
 }
 
 #[test]
+fn toyfx18_transmitted_spellcaster_with_unscripted_object_spell_is_unavailable() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("costume-chest.redb"));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    // Costume Chest 252775 casts 222360, a caster dummy no TC/TDB script implements.
+    let reasons = toy_catalog::unsupported_types(h.app.world(), 222367);
+    assert!(reasons.contains("effect 3"), "{reasons:?}");
+}
+
+#[test]
 fn toyfx18_wild_display_with_unscripted_object_spell_stays_unavailable() {
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
