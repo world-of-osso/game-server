@@ -153,13 +153,17 @@ fn achievements_criteria_native_battleground_kill_rejects_world_self_and_unaccep
         );
         for (_, player) in &players {
             assert_eq!(player_kills(&world, *player), None, "no reward {control}");
-            assert!(
-                !world
+            // TC Unit::Kill11449–11453 credits56 independently of BG reward70,
+            // including self/unfinished matches; only PlayerMap32 gates5538 here.
+            let expected_blow = (*player == killer && control != "world").then_some(&1);
+            assert_eq!(
+                world
                     .get::<PlayerAchievementState>(*player)
                     .unwrap()
                     .criteria_progress
-                    .contains_key(&5538),
-                "no Warsong killing-blow credit {control}"
+                    .get(&5538),
+                expected_blow,
+                "killing blow is not a battleground kill reward {control}"
             );
         }
     }
