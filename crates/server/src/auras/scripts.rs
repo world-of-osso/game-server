@@ -86,6 +86,9 @@ const REGROWTH: u32 = 8_936;
 const LINGERING_HEALING: u32 = 231_040;
 const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
+const POWER_STRIKE: u32 = 121_817;
+const POWER_STRIKE_PROC: u32 = 129_914;
+const CRITICAL_CHAOS: u32 = 320_413;
 const TIGER_DASH: u32 = 252_216;
 const BLOODSURGE: u32 = 384_361;
 const MONSTER_RISING: u32 = 452_414;
@@ -371,6 +374,21 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        POWER_STRIKE,
+        AuraScript {
+            on_periodic: Some(cast_power_strike_proc),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        CRITICAL_CHAOS,
+        AuraScript {
+            on_apply: Some(update_critical_chaos_amount),
+            on_periodic: Some(recalculate_critical_chaos),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         MONSTER_RISING,
         AuraScript {
             on_periodic: Some(toggle_monster_rising),
@@ -480,6 +498,43 @@ fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect
     }
     super::auras_changed(world, unit);
     crate::spell_cast::mark_dirty(world, unit);
+}
+
+/// TC a352b1fa spell_monk_power_strike_periodic: only effect0 casts 129914.
+fn cast_power_strike_proc(world: &mut World, unit: Entity, _aura: &AuraInstance, effect_index: u8) {
+    if effect_index == 0 {
+        crate::spell_cast::cast_triggered(world, unit, POWER_STRIKE_PROC, Some(unit), 1);
+    }
+}
+
+/// TC a352b1fa spell_dh.cpp:632-655: effect1 recalculates the flat proc modifier.
+fn recalculate_critical_chaos(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    effect_index: u8,
+) {
+    if effect_index == 1 {
+        update_critical_chaos_amount(world, unit, aura);
+    }
+}
+
+fn update_critical_chaos_amount(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    let Some(percent) = aura.effects.iter().find(|effect| effect.index == 1) else {
+        return;
+    };
+    let crit_pct = world
+        .get::<crate::stats::CharacterStats>(unit)
+        .map_or(0.0, |stats| stats.crit_pct);
+    let amount = crit_pct * percent.amount / 100.0;
+    let Some(bonus) = world
+        .get_mut::<super::ActiveAuras>(unit)
+        .and_then(|auras| auras.into_inner().get_mut(aura.instance_id))
+        .and_then(|live| live.effects.iter_mut().find(|effect| effect.index == 0))
+    else {
+        return;
+    };
+    bonus.amount = amount;
 }
 
 /// TC a352b1fa spell_dh.cpp:1659-1689, spell_dh_monster_rising.
