@@ -111,10 +111,10 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
     return supported
 
 
-def fact_can_hold(kind, asset, spells, zones, maps, identities):
+def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
     return {2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
-            32: asset in maps, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
+            32: asset in maps, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
 def supports_tree(root, trees, children, supported, visiting=frozenset()):
@@ -165,6 +165,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         scenarios = {row[0] for row in db.execute('SELECT ID FROM scenario')}
         zones = {row[0] for row in db.execute('SELECT ID FROM area_table')}
         maps = {row[0] for row in db.execute('SELECT ID FROM map')}
+        map_types = {row[0] for row in db.execute('SELECT DISTINCT InstanceType FROM map')}
         identities = load_identity_condition_ids(db)
     header, overlays = db2_casc.decode(overlays_path.read_bytes())
     if header['layout_hash'] != 0x9A196494:
@@ -175,7 +176,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     condition_trees = {
         row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv')).items()
         if row_id not in single_modifiers
-        and all(fact_can_hold(kind, asset, spells, zones, maps, identities) for kind, asset in facts)
+        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types) for kind, asset in facts)
     }
     supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, condition_trees)
     by_type = collections.defaultdict(set)
