@@ -137,7 +137,8 @@ fn update_match(
                     && actors.get(id).is_some_and(|actor| actor.map == map)
             })
     });
-    if matched.instance.phase == BgPhase::Waiting && ready {
+    if matched.instance.phase == BgPhase::Waiting && (ready || arena.preparation_started.is_some())
+    {
         let start = *arena.preparation_started.get_or_insert(now);
         let remaining = (60.0 - (now - start)).ceil().max(0.0) as u32;
         arena.snapshot.preparation_remaining_secs = Some(remaining);
