@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Prepare Adarogg's authentic TDB server-side spells in independent copies.
+"""Prepare Ragefire Chasm's authentic TDB server-side spells in independent copies.
+
+Adarogg Inferno Charge 119297/119298 and Slagmaw's Magnaw teleports
+119424/119425/119426/119428 (boss_adarogg.cpp/boss_slagmaw.cpp "Serverside").
 
 Retain all source columns in tdb_serverside_spell/tdb_serverside_spell_effect;
 no DB2 rows, substitute spells or derived effect IDs. The server's spell store
@@ -13,7 +16,7 @@ from pathlib import Path
 
 import mysql_dump
 
-SPELLS = {119297, 119298}
+SPELLS = {119297, 119298, 119424, 119425, 119426, 119428}
 TABLE_KEYS = {
     'serverside_spell': ('Id', 'DifficultyID'),
     'serverside_spell_effect': ('SpellID', 'EffectIndex', 'DifficultyID'),
@@ -110,7 +113,7 @@ def main():
     parser.add_argument('--source-dump', type=Path, required=True)
     args = parser.parse_args()
     counts = import_spells(args.db, args.source_dump)
-    print(f'Prepared authored Adarogg server-side spell rows: {counts}')
+    print(f'Prepared authored Ragefire server-side spell rows: {counts}')
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import encounter_serverside_spells
 
-FIXTURE = Path(__file__).parent / 'fixtures/adarogg-serverside-spells.json'
+FIXTURE = Path(__file__).parent / 'fixtures/ragefire-serverside-spells.json'
 
 
 def write_dump(path, missing=None):
@@ -47,12 +47,15 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         with sqlite3.connect(self.db) as connection:
             self.assertEqual(connection.execute("SELECT name FROM sqlite_master WHERE name LIKE 'tdb_serverside%' ORDER BY name").fetchall(),
                              [('tdb_serverside_spell',), ('tdb_serverside_spell_effect',)])
-            self.assertEqual(connection.execute('SELECT count(*) FROM tdb_serverside_spell').fetchone(), (2,))
-            self.assertEqual(connection.execute('SELECT count(*) FROM tdb_serverside_spell_effect').fetchone(), (2,))
+            self.assertEqual(connection.execute('SELECT count(*) FROM tdb_serverside_spell').fetchone(), (6,))
+            self.assertEqual(connection.execute('SELECT count(*) FROM tdb_serverside_spell_effect').fetchone(), (6,))
             self.assertEqual(connection.execute('SELECT Id,DurationIndex,RangeIndex,SpellName FROM tdb_serverside_spell ORDER BY Id').fetchall(),
-                             [(119297, 28, 5, 'Inferno Charge'), (119298, 0, 5, 'Inferno Charge')])
-            self.assertEqual(connection.execute('SELECT SpellID,Effect,EffectMiscValue1,EffectMiscValue2,ImplicitTarget1 FROM tdb_serverside_spell_effect ORDER BY SpellID').fetchall(),
-                             [(119297, 28, 61409, 491, 53), (119298, 96, 0, 0, 46)])
+                             [(119297, 28, 5, 'Inferno Charge'), (119298, 0, 5, 'Inferno Charge'),
+                              (119424, 0, 1, 'Magnaw Teleport North'), (119425, 0, 1, 'Magnaw Teleport East'),
+                              (119426, 0, 1, 'Magnaw Teleport South'), (119428, 0, 1, 'Magnaw Teleport West')])
+            self.assertEqual(connection.execute('SELECT SpellID,Effect,EffectMiscValue1,EffectMiscValue2,ImplicitTarget1,ImplicitTarget2 FROM tdb_serverside_spell_effect ORDER BY SpellID').fetchall(),
+                             [(119297, 28, 61409, 491, 53, 0), (119298, 96, 0, 0, 46, 0), (119424, 252, 0, 0, 1, 17),
+                              (119425, 252, 0, 0, 1, 17), (119426, 252, 0, 0, 1, 17), (119428, 252, 0, 0, 1, 17)])
             self.assertEqual(connection.execute('SELECT EffectTriggerSpell FROM tdb_serverside_spell_effect WHERE SpellID=119298').fetchone(), (119299,))
             self.assertEqual(connection.execute('SELECT value FROM unrelated').fetchone(), ('retained',))
             connection.row_factory = sqlite3.Row
@@ -63,8 +66,8 @@ class EncounterServersideSpellsTests(unittest.TestCase):
                 self.assertEqual(actual, source_rows, 'Every actual source field must survive unchanged')
 
     def test_missing_authored_spell_refuses_without_partial_tables(self):
-        write_dump(self.dump, missing=('serverside_spell', 119298))
-        with self.assertRaisesRegex(ValueError, '119298'):
+        write_dump(self.dump, missing=('serverside_spell_effect', 119426))
+        with self.assertRaisesRegex(ValueError, '119426'):
             encounter_serverside_spells.import_spells(self.db, self.dump)
         with sqlite3.connect(self.db) as connection:
             self.assertEqual(connection.execute("SELECT name FROM sqlite_master WHERE name LIKE 'tdb_serverside%'").fetchall(), [])

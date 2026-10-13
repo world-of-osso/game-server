@@ -1,5 +1,5 @@
 //! TC a352b1fa RagefireChasm/boss_dark_shaman_koranthal.cpp and instance/header.
-//! Koranthal, Gordoth and Adarogg; Slagmaw is open.
+//! Koranthal, Gordoth, Adarogg and Slagmaw.
 use bevy::prelude::*;
 
 pub(crate) mod intro_triggers;
@@ -70,9 +70,23 @@ const TASK_CHOW_3: u32 = 3;
 const TASK_PATH_INTRO2: u32 = 4;
 const TASK_PATH_INTRO3: u32 = 5;
 const TASK_EAT_TROGG: u32 = 6;
+const SLAGMAW_SCRIPT: &str = "boss_slagmaw";
+const SLAGMAW_BOSS_ID: u32 = 2;
+const LAVA_SPIT: u32 = 119434;
+const MAGNAW_SUBMERGE: u32 = 120384;
+/// Server-side North, East, South, West (`SlagmawTeleportSpells`).
+const MAGNAW_TELEPORTS: [u32; 4] = [119424, 119425, 119426, 119428];
+const EVENT_LAVA_SPIT: u32 = 1;
+const EVENT_TELEPORT: u32 = 2;
+const EVENT_EMERGE: u32 = 3;
+const EVENT_BOUNDARY_CHECK: u32 = 4;
+const SLAGMAW_BOUNDARY: f32 = 50.0;
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
-    matches!(name, SCRIPT | GORDOTH_SCRIPT | ADAROGG_SCRIPT)
+    matches!(
+        name,
+        SCRIPT | GORDOTH_SCRIPT | ADAROGG_SCRIPT | SLAGMAW_SCRIPT
+    )
 }
 
 pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Box<dyn CreatureAi>> {
@@ -96,6 +110,11 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
             boss: BossAi::new(ADAROGG_BOSS_ID),
             scheduler: super::EventMap::default(),
             eat_counter: 0,
+        }),
+        SLAGMAW_SCRIPT => Box::new(Slagmaw {
+            boss: BossAi::new(SLAGMAW_BOSS_ID),
+            lava_spit_counter: 0,
+            last_teleport: MAGNAW_TELEPORTS[3],
         }),
         _ => return None,
     };
@@ -554,6 +573,122 @@ impl BossScript for Adarogg {
             EVENT_FIRE_BREATH => {
                 ctx.do_cast_victim(FIRE_BREATH);
                 self.boss.events.repeat_range(15_000, 20_000);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// TC boss_slagmaw. Its UpdateAI runs at most one event per update.
+struct Slagmaw {
+    boss: BossAi,
+    lava_spit_counter: u8,
+    last_teleport: u32,
+}
+
+impl Slagmaw {
+    /// `GetNextTeleportSpell`: a random teleport other than the previous one.
+    fn next_teleport(&mut self) -> u32 {
+        let choices: Vec<u32> = MAGNAW_TELEPORTS
+            .into_iter()
+            .filter(|&spell| spell != self.last_teleport)
+            .collect();
+        let pick = rand::Rng::gen_range(&mut rand::thread_rng(), 0..choices.len());
+        self.last_teleport = choices[pick];
+        self.last_teleport
+    }
+
+    fn lava_spit(&mut self, ctx: &mut Ctx) {
+        if self.lava_spit_counter < 5 {
+            if let Some(target) = ctx.select_target_random(0.0, false) {
+                ctx.do_cast_at(Some(target), LAVA_SPIT, false);
+                self.lava_spit_counter += 1;
+            }
+            self.boss.events.repeat(1_000);
+        } else if self.lava_spit_counter == 5 {
+            // HandleSubmergePhase.
+            ctx.do_cast_self(MAGNAW_SUBMERGE);
+            self.lava_spit_counter = 0;
+            self.boss.events.schedule(EVENT_TELEPORT, 3_000);
+        }
+    }
+
+    /// `me->GetVictim()->GetDistance(me) > 50.0f`: beyond both combat reaches.
+    fn victim_beyond_boundary(ctx: &Ctx) -> bool {
+        let Some(victim) = ctx.victim() else {
+            return false;
+        };
+        match super::model_reach::distance(ctx.world, victim, ctx.me) {
+            Some(distance) => distance > SLAGMAW_BOUNDARY,
+            None => {
+                error!(
+                    "Slagmaw {}: no source combat reach for its boundary check; run scripts/encounter_model_geometry.py",
+                    ctx.me
+                );
+                false
+            }
+        }
+    }
+}
+
+impl CreatureAi for Slagmaw {
+    fn reset(&mut self, ctx: &mut Ctx) {
+        self.boss.reset(ctx);
+        self.lava_spit_counter = 0;
+        self.last_teleport = MAGNAW_TELEPORTS[3];
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
+        self.boss.just_engaged_with(ctx);
+        self.boss.events.schedule(EVENT_LAVA_SPIT, 1_000);
+        self.boss.events.schedule(EVENT_BOUNDARY_CHECK, 2_500);
+    }
+
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        self.boss.just_died(ctx);
+    }
+
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        despawn_at_evade(ctx, SLAGMAW_BOSS_ID);
+    }
+
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        if !ctx.update_victim() {
+            return;
+        }
+        self.boss.events.update(u64::from(diff_ms));
+        if ctx.is_casting() {
+            return;
+        }
+        match self.boss.events.execute_event() {
+            Some(EVENT_LAVA_SPIT) => self.lava_spit(ctx),
+            Some(EVENT_TELEPORT) => {
+                let spell = self.next_teleport();
+                ctx.do_cast_self(spell);
+                self.boss.events.schedule(EVENT_EMERGE, 1_000);
+            }
+            Some(EVENT_EMERGE) => {
+                crate::auras::remove_auras(
+                    ctx.world,
+                    ctx.me,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == MAGNAW_SUBMERGE,
+                );
+                self.boss.events.schedule(EVENT_LAVA_SPIT, 1_000);
+            }
+            Some(EVENT_BOUNDARY_CHECK) => {
+                if Self::victim_beyond_boundary(ctx) {
+                    crate::creature_aggro::enter_evade_mode(ctx.world, ctx.me);
+                }
+                self.boss.events.schedule(EVENT_BOUNDARY_CHECK, 2_500);
             }
             _ => {}
         }
