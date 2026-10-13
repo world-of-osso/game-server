@@ -1907,6 +1907,8 @@ mod monster_rising_tests;
 mod power_strike_tests;
 #[cfg(test)]
 mod tiger_dash_tests;
+#[cfg(test)]
+mod yseras_gift_tests;
 
 #[cfg(test)]
 mod override_tests;
