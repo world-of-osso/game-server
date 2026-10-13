@@ -1,11 +1,12 @@
-//! AV spawn-group banner variants, normal Opening casts and authoritative creature deaths.
+//! Alterac Valley and Isle of Conquest spawn-group banners, normal Opening (Lock 1479,
+//! spell 21651) casts and authoritative creature and player deaths.
 use super::{InvitedBattleground, PlayerPvpState, PvpServerState};
 use crate::game_objects::{GameObjectBounds, GameObjectSpawns, wow_position};
 use crate::maps::InMap;
 use crate::spell_cast::CastFailure;
 use bevy::prelude::*;
 use shared::battleground::{
-    ALTERAC_OPENING_SPELL as OPENING_SPELL, AlteracBattle, BgPhase, BgTeam,
+    ALTERAC_OPENING_SPELL as OPENING_SPELL, AlteracBattle, BgInstance, BgPhase, BgTeam, IsleBattle,
 };
 use shared::components::{Health, Npc, Position};
 use shared::protocol::GameObjectInfo;
@@ -24,45 +25,110 @@ fn defender_tier(_data: u32) -> u32 {
     0
 }
 
+/// The source rules of a banner battleground whose nodes TDB spawn groups present.
 #[derive(Debug)]
-pub(super) struct AlteracRuntime {
-    pub battle: AlteracBattle,
+pub(super) enum BannerBattle {
+    Alterac(AlteracBattle),
+    Isle(IsleBattle),
+}
+
+impl BannerBattle {
+    pub fn interact(
+        &mut self,
+        entry: u32,
+        team: BgTeam,
+        instance: &BgInstance,
+    ) -> Result<u32, &'static str> {
+        match self {
+            Self::Alterac(battle) => battle.interact(entry, team, instance),
+            Self::Isle(battle) => battle.interact(entry, team, instance),
+        }
+    }
+
+    pub fn check_interact(
+        &self,
+        entry: u32,
+        team: BgTeam,
+        instance: &BgInstance,
+    ) -> Result<(), &'static str> {
+        match self {
+            Self::Alterac(battle) => battle.check_interact(entry, team, instance),
+            Self::Isle(battle) => battle.check_interact(entry, team, instance),
+        }
+    }
+
+    pub fn advance(&mut self, delta_ms: u64, instance: &mut BgInstance) {
+        match self {
+            Self::Alterac(battle) => battle.advance(delta_ms, instance),
+            Self::Isle(battle) => battle.advance(delta_ms, instance),
+        }
+    }
+
+    pub fn npc_killed(
+        &mut self,
+        entry: u32,
+        killer: Option<BgTeam>,
+        instance: &mut BgInstance,
+    ) -> bool {
+        match self {
+            Self::Alterac(battle) => battle.npc_killed(entry, killer, instance),
+            Self::Isle(battle) => battle.npc_killed(entry, instance),
+        }
+    }
+
+    pub fn world_states(&self, instance: &BgInstance) -> Vec<(u32, i32)> {
+        match self {
+            Self::Alterac(battle) => battle.world_states(instance),
+            Self::Isle(battle) => battle.world_states(instance),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(super) struct BannerRuntime {
+    pub battle: BannerBattle,
     banners: BTreeSet<u32>,
 }
 
-impl AlteracRuntime {
-    pub fn from_source(world: &World) -> Result<Self, String> {
+impl BannerRuntime {
+    pub fn from_source(world: &World, map_id: u32) -> Result<Self, String> {
         let catalog = world
             .get_resource::<GameObjectSpawns>()
-            .ok_or("Alterac source objects missing")?;
+            .ok_or("battleground source objects missing")?;
         let world_data = world
             .get_resource::<crate::world_data::WorldData>()
-            .ok_or("Alterac creature catalog missing")?;
-        let banners: BTreeSet<u32> = shared::battleground::alterac_banner_entries()
-            .into_iter()
-            .collect();
+            .ok_or("battleground creature catalog missing")?;
+        let (battle, banners) = match map_id {
+            30 => (
+                BannerBattle::Alterac(AlteracBattle::default()),
+                shared::battleground::alterac_banner_entries(),
+            ),
+            628 => (
+                BannerBattle::Isle(IsleBattle::default()),
+                shared::battleground::isle_banner_entries(),
+            ),
+            other => return Err(format!("map {other} has no banner battle")),
+        };
+        let banners: BTreeSet<u32> = banners.into_iter().collect();
         for &entry in &banners {
             // Every banner variant must be an authored spawn its TDB spawn group gates.
             catalog
                 .0
                 .iter()
                 .find(|spawn| {
-                    spawn.map_id == 30
+                    spawn.map_id == map_id
                         && spawn.info.entry == entry
                         && world_data.spawn_groups.is_object_member(spawn.guid)
                 })
-                .ok_or_else(|| format!("Alterac source banner {entry} missing"))?;
+                .ok_or_else(|| format!("map {map_id} source banner {entry} missing"))?;
         }
         let data_ids = world_data.spawn_groups.instance_data_ids();
         if let Some(unknown) = data_ids.iter().find(|id| !DEFENDER_TIER_DATA.contains(id)) {
             return Err(format!(
-                "Alterac spawn group reads unknown instance data {unknown}"
+                "battleground spawn group reads unknown instance data {unknown}"
             ));
         }
-        Ok(Self {
-            battle: AlteracBattle::default(),
-            banners,
-        })
+        Ok(Self { battle, banners })
     }
 
     /// TDB spawn group creatures and objects (banner variants included) for the battle's
