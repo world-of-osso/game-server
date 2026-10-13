@@ -40,6 +40,7 @@ use shared::protocol::{
 use crate::interest::NetworkVisibility;
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 
+pub(crate) const GAMEOBJECT_TYPE_BUTTON: u8 = 1;
 pub(crate) const GAMEOBJECT_TYPE_CHEST: u8 = 3;
 pub(crate) const GAMEOBJECT_TYPE_GOOBER: u8 = 10;
 
@@ -49,7 +50,8 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
      d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
-     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs, g.state \
+     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs, g.state, \
+     t.ScriptName \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
@@ -85,7 +87,18 @@ pub struct GameObjectSpawn {
     /// A `GAMEOBJECT_TYPE_CHAIR`'s seats.
     pub chair: Option<crate::chair::Chair>,
     pub quest_object: Option<quest_object::QuestObject>,
+    /// `gameobject_template.ScriptName`; empty when none.
+    pub script_name: String,
 }
+
+/// A ported `GameObjectAI` registered for the template's ScriptName.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct GameObjectScript(pub String);
+
+/// `GO_FLAG_IN_USE` with `GO_STATE_ACTIVE` after `UseDoorOrButton`. The client refuses
+/// to use an in-use object, so the server applies that gate itself.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GameObjectInUse;
 
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
@@ -142,6 +155,7 @@ fn spawn_from_row(row: &Row, locks: &locks::LockDb) -> rusqlite::Result<GameObje
             })
             .transpose()?,
         quest_object: quest_object::QuestObject::from_row(row, locks)?,
+        script_name: row.get::<_, Option<String>>(25)?.unwrap_or_default(),
         spawn_difficulties: row
             .get::<_, String>(17)?
             .split(',')
@@ -255,6 +269,9 @@ pub(crate) fn spawn_map_game_objects(
         }
         if let Some(chair) = &spawn.chair {
             object.insert(chair.clone());
+        }
+        if crate::scripted_ai::is_game_object_script(&spawn.script_name) {
+            object.insert(GameObjectScript(spawn.script_name.clone()));
         }
         count += 1;
     }
