@@ -10,7 +10,7 @@
 //! `creature_aggro::enter_evade_mode` (`EnterEvadeMode` → `Reset`), death in
 //! `combat::insert_npc_death` (`JustDied`), damage in the melee and spell damage
 //! paths (`DamageTaken`), summons (`JustSummoned`, `SummonedCreatureDespawn`) and
-//! point movement (`MovementInform`). `UpdateAI` runs every tick of a living
+//! point movement (`MovementInform`) and script paths (`WaypointPathEnded`). `UpdateAI` runs every tick of a living
 //! creature. A hook raised while the creature's own AI runs (a script killing
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
@@ -25,6 +25,7 @@ pub mod movement;
 pub mod murder_row;
 pub mod smart_ai;
 pub mod the_stockade;
+pub mod waypoint_path;
 
 use std::collections::VecDeque;
 
@@ -68,6 +69,7 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
+                    waypoint_path::path_movement_system.before(crate::creature_ai::chase_system),
                     kings_rest::update_gold_follows
                         .after(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
@@ -130,6 +132,11 @@ pub enum Hook {
     IsSummonedBy(Entity),
     SummonedCreatureDespawn(Entity),
     MovementInform(MotionType, u32),
+    /// `WaypointPathEnded(nodeId, pathId)`.
+    WaypointPathEnded {
+        node_id: u32,
+        path_id: u32,
+    },
     DoAction(i32),
     UpdateAi(u32),
     QuestAccepted {
@@ -168,6 +175,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn is_summoned_by(&mut self, _ctx: &mut Ctx, _summoner: Entity) {}
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
+    fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, _path_id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
     fn do_action(&mut self, _ctx: &mut Ctx, _action: i32) {}
     fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
@@ -379,6 +387,9 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::IsSummonedBy(summoner) => ai.is_summoned_by(&mut ctx, summoner),
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
         Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
+        Hook::WaypointPathEnded { node_id, path_id } => {
+            ai.waypoint_path_ended(&mut ctx, node_id, path_id)
+        }
         Hook::DoAction(action) => ai.do_action(&mut ctx, action),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
         Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),

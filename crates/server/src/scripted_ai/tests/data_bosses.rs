@@ -85,6 +85,7 @@ fn bound_boss_in_state(
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
+    app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
@@ -385,6 +386,96 @@ fn encounter_coverage_golden_serpent_not_started_intro_is_friendly_and_uninterac
     );
     assert!(h.inbox(0).starts.is_empty());
     assert!(h.inbox(0).engages.is_empty());
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_intro_flies_authored_paths_then_lands_hostile() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let player = h.player();
+    let far = Position {
+        x: h.app.world().get::<Position>(boss).unwrap().x + 500.0,
+        ..*h.app.world().get::<Position>(boss).unwrap()
+    };
+    h.app.world_mut().entity_mut(player).insert(far);
+    let spawn = h.wow_position(boss);
+    // Each MovePath starts with WaypointMovementGenerator::DoInitialize's1000ms wait.
+    h.advance(0.9);
+    assert!(h.wow_position(boss).distance(spawn) < 0.01);
+    assert!(h.has_aura(boss, 271598));
+    let submerge_low = Vec3::new(-1065.97, 2641.51, 776.115);
+    let submerge_apex = Vec3::new(-1065.97, 2641.51, 816.115);
+    let flying = [
+        Vec3::new(-1064.73, 2633.53, 819.27),
+        Vec3::new(-1057.29, 2629.48, 820.627),
+        Vec3::new(-1052.35, 2632.23, 821.548),
+        Vec3::new(-1050.81, 2639.52, 821.841),
+        Vec3::new(-1051.3, 2645.3, 822.053),
+        Vec3::new(-1053.86, 2657.0, 821.205),
+        Vec3::new(-1072.12, 2661.95, 820.305),
+        Vec3::new(-1084.02, 2651.1, 820.091),
+        Vec3::new(-1089.33, 2635.23, 819.845),
+        Vec3::new(-1082.08, 2621.95, 819.27),
+        Vec3::new(-1058.84, 2615.17, 815.878),
+    ];
+    let landing = Vec3::new(-1058.84, 2615.17, 810.152);
+    let mut closest = [f32::MAX; 11];
+    let mut lowest = f32::MAX;
+    let mut emerge_removed = None;
+    let mut landed = None;
+    let mut elapsed = 0.9;
+    for _ in 0..800 {
+        h.advance(0.05);
+        elapsed += 0.05;
+        let position = h.wow_position(boss);
+        lowest = lowest.min(position.z);
+        for (node, best) in flying.iter().zip(&mut closest) {
+            *best = best.min(position.distance(*node));
+        }
+        if emerge_removed.is_none() && !h.has_aura(boss, 271598) {
+            assert!(
+                position.distance(submerge_apex) < 0.01,
+                "submerge path end removes emerge state: {position}"
+            );
+            emerge_removed = Some((elapsed, position));
+        }
+        let faction = h.app.world().get::<UnitFactionTemplate>(boss).unwrap().0;
+        if faction != 35 {
+            assert_eq!(faction, 16, "landing path end sets FACTION_MONSTER_2");
+            landed = Some(elapsed);
+            break;
+        }
+    }
+    assert!(
+        (lowest - submerge_low.z).abs() < 0.01,
+        "path13532200 first descends to node0: lowest z {lowest}"
+    );
+    let (removed_at, apex) = emerge_removed.expect("submerge path ended");
+    for (node, best) in flying.iter().zip(closest) {
+        assert!(best < 0.75, "flying spline passes node {node}: {best}");
+    }
+    let landed_at = landed.expect("landing path ended");
+    assert!(h.wow_position(boss).distance(landing) < 0.01);
+    let flags = h.app.world().get::<UnitFlags>(boss).unwrap().0;
+    assert_eq!(flags & UnitFlags::NOT_SELECTABLE, 0);
+    // Template speed_run2.0 * baseMoveSpeed7: a Catmull-Rom path is never shorter
+    // than its chords, and the two later MovePath calls each wait1000ms.
+    let mut chords = apex.distance(flying[0]);
+    for pair in flying.windows(2) {
+        chords += pair[0].distance(pair[1]);
+    }
+    let landing_drop = flying[10].distance(landing);
+    let minimum = 2.0 + (chords + landing_drop) / 14.0;
+    let flight = landed_at - removed_at;
+    assert!(
+        flight >= minimum - 0.1 && flight <= minimum + 1.5,
+        "flight {flight}s, chord minimum {minimum}s"
+    );
+    h.advance(2.0);
+    assert!(h.wow_position(boss).distance(landing) < 0.01);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::NotStarted)
+    );
 }
 
 fn defer_due_time_while_busy(mut due: f64, next_cast: f64, busy_windows: &[(f64, f64)]) -> f64 {

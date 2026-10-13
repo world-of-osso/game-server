@@ -1,6 +1,7 @@
 //! Partial Golden Serpent port from TC a352b1fa boss_golden_serpent.cpp.
 //! TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
-//! Intro paths/flying, near-point collision-angle search and native visuals remain gaps.
+//! Intro fly anim tier/hover state, near-point collision-angle search and native
+//! visuals remain gaps.
 mod gold_follow;
 mod golden_serpent;
 mod molten_gold;

@@ -2,6 +2,7 @@
 //! Pinned a352b1fa boss_golden_serpent.cpp. No Retail alert clock is inferred.
 use crate::scripted_ai::boss_ai::{BossAi, BossScript, boss_update_ai};
 use crate::scripted_ai::instance_script::{self, EncounterState};
+use crate::scripted_ai::waypoint_path::{self, GravityDisabled};
 use crate::scripted_ai::{CreatureAi, Ctx};
 use bevy::prelude::*;
 use shared::components::{Position, Rotation, UnitFactionTemplate, UnitFlags};
@@ -15,6 +16,10 @@ const TAIL_THRASH: u32 = 265910;
 const LUCRES_CALL: u32 = 265923;
 const EMERGE_STATE: u32 = 271598;
 const FRIENDLY_FACTION: u32 = 35;
+const MONSTER_2_FACTION: u32 = 16;
+const PATH_SUBMERGE: u32 = 13532200;
+const PATH_FLYING: u32 = 13532201;
+const PATH_LANDING: u32 = 13532202;
 const RESPAWN_POSITION: [f32; 4] = [-1058.8403, 2615.1667, 810.1519, 5.113396];
 const EVADE_RESPAWN_SECONDS: u32 = 30;
 const EVENT_SPIT_GOLD: u32 = 1;
@@ -119,19 +124,35 @@ impl CreatureAi for GoldenSerpent {
         {
             return;
         }
-        let mut flags = *ctx
-            .world
-            .get::<UnitFlags>(ctx.me)
-            .expect("population unit flags");
-        flags.0 |= UnitFlags::NOT_SELECTABLE;
-        ctx.world
-            .entity_mut(ctx.me)
-            .insert((UnitFactionTemplate(FRIENDLY_FACTION), flags));
+        // Fly anim tier and hover animation have no replicated state yet.
+        ctx.world.entity_mut(ctx.me).insert(GravityDisabled);
+        set_intro_presence(ctx, FRIENDLY_FACTION, true);
         if !ctx.do_cast_at(Some(ctx.me), EMERGE_STATE, false) {
-            warn!("Golden Serpent source emerge271598 unavailable; intro remains closed");
+            warn!("Golden Serpent source emerge271598 unavailable");
         }
-        // Source gravity/flying and three authored paths remain unconverted.
-        // Do not synthesize a landing callback or unlock friendly intro combat.
+        waypoint_path::move_path(ctx.world, ctx.me, PATH_SUBMERGE);
+    }
+
+    fn waypoint_path_ended(&mut self, ctx: &mut Ctx, _node_id: u32, path_id: u32) {
+        match path_id {
+            PATH_SUBMERGE => {
+                crate::auras::remove_auras(
+                    ctx.world,
+                    ctx.me,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == EMERGE_STATE,
+                );
+                waypoint_path::move_path(ctx.world, ctx.me, PATH_FLYING);
+            }
+            PATH_FLYING => {
+                waypoint_path::move_path(ctx.world, ctx.me, PATH_LANDING);
+            }
+            PATH_LANDING => {
+                set_intro_presence(ctx, MONSTER_2_FACTION, false);
+                ctx.world.entity_mut(ctx.me).remove::<GravityDisabled>();
+            }
+            _ => {}
+        }
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
@@ -174,4 +195,20 @@ impl CreatureAi for GoldenSerpent {
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         boss_update_ai(self, ctx, diff_ms);
     }
+}
+
+/// `SetFaction` + `SetUninteractible` of the intro branch.
+fn set_intro_presence(ctx: &mut Ctx, faction: u32, uninteractible: bool) {
+    let mut flags = *ctx
+        .world
+        .get::<UnitFlags>(ctx.me)
+        .expect("population unit flags");
+    if uninteractible {
+        flags.0 |= UnitFlags::NOT_SELECTABLE;
+    } else {
+        flags.0 &= !UnitFlags::NOT_SELECTABLE;
+    }
+    ctx.world
+        .entity_mut(ctx.me)
+        .insert((UnitFactionTemplate(faction), flags));
 }
