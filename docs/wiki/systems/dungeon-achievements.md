@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Player zone predicates — verified 2026-10-13
+
+Modifier41 reuses `AreaTable::zone_id` at catalog load to compile accepted current-area IDs. Unlike modifier17's descendant closure, this uses exactly one flagged subzone parent (TC a352b1fa CriteriaHandler1964–1973). Reference-player terrain area is sampled at credit time; missing area rejects. Native pet-battle settlement at real Stormwind terrain proves criterion19845, loser/wrong-city exclusion, idle stability and redb reopen. Catalog tests preserve unflagged-parent and two-level rejection. [Inventory and census](../../achievement-criteria-producer-inventory.md) remain structural, not city content certification.
+
 ## Data and provenance
 
 Verified 2026-10-06: `/mnt/c/World of Warcraft/.build.info` names retail build `12.1.0.69933`, build key `dcfc90fffd79ba00406ae46f5f657592`. Local community listfile maps Achievement=1260179, Criteria=1263817, CriteriaTree=1263818, Achievement_Category=1324299. Phase 2 extracts Category from the same local build to server data; layout `67B2B4BD`, 243 rows. Achievement display metadata adds Category column 7 and IconFileID column 12. Category columns are Name/ID/Parent/Ui_order; the relationship repeats Ui_order, not a parent ID.

@@ -1,3 +1,7 @@
+## 2026-10-13 — Achievement zone predicates
+
+[Zone41](systems/dungeon-achievements.md#player-zone-predicates--verified-2026-10-13) uses one flagged parent, not ancestry. Native Stormwind pet win and reopened storage prove city credit; six account definitions become structurally evaluable without a world-honor or all-city-content claim.
+
 ## 2026-10-13 — Unrated Shuffle and authored cooldown reset
 
 [Native arenas](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13): six source-role solo entrants, real first-kill rounds, spec lock, source gate/start/reset restoration and character wins; both-skin live proof and four-map full-channel exact origins. Item overrides survive real cast-time completion and reset only the actual category; RED/GREEN fixtures preserve unrelated600s timers, charges/GCD/school locks and prove active-pet reset. Current Retail rated/leaver policy and dampening remain unclaimed.
