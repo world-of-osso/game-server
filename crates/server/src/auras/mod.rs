@@ -614,7 +614,10 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
         let duration_supported = !duration_gap;
         let handled =
             handlers::is_handled(effect.aura_type) && supported_amount && duration_supported;
-        if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
+        if handled
+            || scripts::consumes_named_field(aura.spell_id, effect.index)
+            || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
+        {
             continue;
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
@@ -1779,6 +1782,9 @@ fn state_interrupts(world: &mut World, unit: Entity) {
         auras.bypass_change_detection().spec = spec;
     }
     interrupt_auras(world, unit, flags, None);
+    // Proc-derived interrupt flags approximate other TC call sites (triggered casts
+    // skip Action there), so only these state changes end matching channels.
+    crate::spell_cast::interrupt_channel_with_flags(world, unit, flags);
 }
 
 /// Rebuild `UnitAuras` for units whose auras changed; remaining times are

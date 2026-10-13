@@ -1,6 +1,8 @@
 """Observable census contracts, independent of production database contents."""
 import sqlite3
 import unittest
+from contextlib import closing
+from pathlib import Path
 
 import encounter_coverage as coverage
 
@@ -29,6 +31,27 @@ class CoverageTests(unittest.TestCase):
         row = dict(id=0, event_type=11, action_type=11, target_type=1, event_flags=0,
                    action_param1=1264106, action_param2=0, event_param2=0)
         self.assertEqual(coverage.row_gaps(row), [])
+
+    def test_golden_partial_census_keeps_its_own_source_gaps(self):
+        source = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
+        with closing(sqlite3.connect(source.as_uri()+'?mode=ro', uri=True)) as connection:
+            order = {row[0]: dict(tier=3, sort=(3,row[0]), reason='test source inventory')
+                     for row in connection.execute('SELECT ID FROM map')}
+            records = coverage.collect(connection, [], [], {}, [], order)
+        golden = next(row for row in records if row['map_id']==1762 and row['encounter_id']==2139)
+        actor = next(actor for actor in golden['actors'] if actor['entry']==135322)
+        self.assertFalse(actor['cpp_gap'])
+        self.assertTrue(actor['runtime_ai'].startswith('partial TC C++ port'))
+        gaps = [reason for gap in actor['ai_gaps'] for reason in gap['reasons']]
+        self.assertTrue(any('Retail 12.1 timeline inputs unavailable' in reason for reason in gaps))
+        self.assertTrue(any('group1256 spawns on last TempleEvent death' in reason and 'Serpentine Seal gossip summons Zul' in reason for reason in gaps))
+        self.assertFalse(any('chain unported' in reason for reason in gaps))
+        self.assertFalse(any('intro remains closed' in reason for reason in gaps))
+        self.assertFalse(any('missing emerge271598' in reason for reason in gaps))
+        self.assertTrue(any('delayed follow/absorption/announcement supported' in reason for reason in gaps))
+        self.assertTrue(any('near-point' in reason for reason in gaps))
+        self.assertFalse(any('infusion' in reason or 'Fel Spray' in reason for reason in gaps))
+        self.assertEqual(actor['proof'], 'structural inspection only')
 
     def test_ambiguous_display_does_not_assign_kill_credit(self):
         actors = [['Council', '', 30, 9, 123, 0, 0, 0, 9]]
