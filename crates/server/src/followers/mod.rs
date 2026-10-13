@@ -107,6 +107,8 @@ impl Plugin for FollowerPlugin {
 #[cfg(test)]
 mod catalog_tests;
 #[cfg(test)]
+mod defensive_tests;
+#[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
