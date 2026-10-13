@@ -205,7 +205,9 @@ pub fn talk(world: &mut World, speaker: Entity, group: u8) {
     };
     for player in hearers(world, speaker, range) {
         send_chat(world, player, message.clone());
-        if sound_kit != 0 {
+        // Native voice coverage is currently Naminze only; other creature sounds
+        // remain outside this arena change instead of emitting unsupported kits.
+        if npc.template_id == crate::pvp::arena_cage::NAMINZE && sound_kit != 0 {
             if text.sound_play_type == 0 {
                 send_sound(
                     world,
