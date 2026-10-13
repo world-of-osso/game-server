@@ -84,7 +84,7 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     bossmod::advance_schedules,
                     init_creature_ai,
-                    ragefire_chasm::gordoth_intro::detect_entries,
+                    ragefire_chasm::intro_triggers::detect_entries,
                     update_creature_ai,
                 )
                     .chain()
@@ -684,6 +684,31 @@ impl Ctx<'_> {
         }
         let pick = rand::Rng::gen_range(&mut rand::thread_rng(), 0..candidates.len());
         Some(candidates[pick])
+    }
+
+    /// `FindNearestCreatureWithOptions(range, { .StringId = id })` in this copy.
+    /// Source leaves IsAlive unset; DeathState here also marks respawn-pending
+    /// actors, so dead creatures are excluded like the Ragefire boss lookups.
+    pub fn find_nearest_creature_with_string_id(&mut self, range: f32, id: &str) -> Option<Entity> {
+        let origin = crate::spell_cast::targets::position(self.world, self.me)?;
+        let map = self.map()?;
+        let me = self.me;
+        self.world
+            .query_filtered::<(
+                Entity,
+                &InMap,
+                &crate::zones::CreatureStringIds,
+                &shared::components::Position,
+            ), Without<DeathState>>()
+            .iter(self.world)
+            .filter(|(entity, copy, ids, _)| *entity != me && **copy == map && ids.has(id))
+            .map(|(entity, _, _, position)| {
+                let position = Vec3::new(position.x, position.y, position.z);
+                (entity, position.distance(origin))
+            })
+            .filter(|(_, distance)| *distance <= range)
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+            .map(|(entity, _)| entity)
     }
 
     /// `Unit::RemoveAllAuras`.

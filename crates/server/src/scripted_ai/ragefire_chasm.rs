@@ -1,8 +1,8 @@
 //! TC a352b1fa RagefireChasm/boss_dark_shaman_koranthal.cpp and instance/header.
-//! Koranthal, Gordoth and Adarogg combat; Adarogg's intro and Slagmaw are open.
+//! Koranthal, Gordoth and Adarogg; Slagmaw is open.
 use bevy::prelude::*;
 
-pub(crate) mod gordoth_intro;
+pub(crate) mod intro_triggers;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx, DamageTaken, instance_script};
@@ -47,6 +47,29 @@ const FIRE_BREATH: u32 = 119420;
 const SAY_INFERNO_CHARGE: u8 = 0;
 const EVENT_INFERNO_CHARGE: u32 = 1;
 const EVENT_FIRE_BREATH: u32 = 2;
+const ADAROGG_ACTION_KILL_HOUNDMASTERS: i32 = 1;
+const ADJULES_CHOW_TIME: u32 = 120113;
+const EAT_TROGG: u32 = 120064;
+const SAY_HOUNDMASTER_INTRO_0: u8 = 0;
+const SAY_HOUNDMASTER_INTRO_1: u8 = 1;
+const HOUNDMASTER_1: &str = "npc_corrupted_houndmaster_1";
+const HOUNDMASTER_2: &str = "npc_corrupted_houndmaster_2";
+const HOUNDMASTER_RANGE: f32 = 70.0;
+const PATH_INTRO: u32 = 6_140_800;
+const PATH_INTRO2: u32 = 6_140_801;
+const PATH_INTRO3: u32 = 6_140_802;
+/// WoW-space `AdaroggIntroPoints`.
+const ADAROGG_INTRO_POINTS: [[f32; 3]; 2] = [
+    [-282.31488, -53.24906, -60.802902],
+    [-281.1894, -54.73433, -60.34256],
+];
+/// `TaskScheduler` tasks of the intro, as events of a separate map.
+const TASK_CHOW_1: u32 = 1;
+const TASK_CHOW_2: u32 = 2;
+const TASK_CHOW_3: u32 = 3;
+const TASK_PATH_INTRO2: u32 = 4;
+const TASK_PATH_INTRO3: u32 = 5;
+const TASK_EAT_TROGG: u32 = 6;
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
     matches!(name, SCRIPT | GORDOTH_SCRIPT | ADAROGG_SCRIPT)
@@ -71,6 +94,8 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
         }),
         ADAROGG_SCRIPT => Box::new(Adarogg {
             boss: BossAi::new(ADAROGG_BOSS_ID),
+            scheduler: super::EventMap::default(),
+            eat_counter: 0,
         }),
         _ => return None,
     };
@@ -381,19 +406,88 @@ impl BossScript for Gordoth {
     }
 }
 
-/// TC boss_adarogg combat. The intro (AT7904 DoAction, its scheduler paths and
-/// Eat Trogg) is not ported, so Reset has no scheduler/eat counter to clear.
+/// TC boss_adarogg. Its unvalidated `scheduler` (Reset clears the BossAI validator)
+/// runs the intro before UpdateVictim; engaging cancels it.
 struct Adarogg {
     boss: BossAi,
+    scheduler: super::EventMap,
+    eat_counter: u8,
+}
+
+impl Adarogg {
+    fn kill_houndmasters(&mut self, ctx: &mut Ctx) {
+        let Some(first) =
+            ctx.find_nearest_creature_with_string_id(HOUNDMASTER_RANGE, HOUNDMASTER_1)
+        else {
+            return;
+        };
+        let Some(second) =
+            ctx.find_nearest_creature_with_string_id(HOUNDMASTER_RANGE, HOUNDMASTER_2)
+        else {
+            return;
+        };
+        super::creature_text::talk(ctx.world, first, SAY_HOUNDMASTER_INTRO_0);
+        super::creature_text::talk(ctx.world, second, SAY_HOUNDMASTER_INTRO_1);
+        self.scheduler.schedule(TASK_CHOW_1, 2_000);
+    }
+
+    fn chow_toward(ctx: &mut Ctx, point: [f32; 3]) {
+        ctx.do_cast(ADJULES_CHOW_TIME);
+        let me = ctx.me;
+        ctx.move_point(
+            me,
+            0,
+            shared::components::Position {
+                x: point[0],
+                y: point[2],
+                z: -point[1],
+            },
+        );
+    }
+
+    fn move_path(ctx: &mut Ctx, path: u32) {
+        // Ground non-exact paths need map389 navigation, which is not baked.
+        super::waypoint_path::move_path(ctx.world, ctx.me, path);
+    }
+
+    fn run_task(&mut self, ctx: &mut Ctx, task: u32) {
+        match task {
+            TASK_CHOW_1 => {
+                Self::chow_toward(ctx, ADAROGG_INTRO_POINTS[0]);
+                self.scheduler.schedule(TASK_CHOW_2, 1_000);
+            }
+            TASK_CHOW_2 => {
+                Self::chow_toward(ctx, ADAROGG_INTRO_POINTS[1]);
+                self.scheduler.schedule(TASK_CHOW_3, 1_200);
+            }
+            TASK_CHOW_3 => {
+                ctx.do_cast(ADJULES_CHOW_TIME);
+                Self::move_path(ctx, PATH_INTRO);
+            }
+            TASK_PATH_INTRO2 => Self::move_path(ctx, PATH_INTRO2),
+            TASK_PATH_INTRO3 => Self::move_path(ctx, PATH_INTRO3),
+            TASK_EAT_TROGG => {
+                if self.eat_counter >= 2 {
+                    return;
+                }
+                ctx.do_cast(EAT_TROGG);
+                self.eat_counter += 1;
+                self.scheduler.schedule_range(TASK_EAT_TROGG, 2_000, 3_000);
+            }
+            _ => {}
+        }
+    }
 }
 
 impl CreatureAi for Adarogg {
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
+        self.eat_counter = 0;
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
+        self.scheduler.reset();
         self.boss.events.schedule(EVENT_INFERNO_CHARGE, 10_000);
         self.boss.events.schedule(EVENT_FIRE_BREATH, 20_000);
     }
@@ -406,6 +500,24 @@ impl CreatureAi for Adarogg {
         despawn_at_evade(ctx, ADAROGG_BOSS_ID);
     }
 
+    fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
+        if action == ADAROGG_ACTION_KILL_HOUNDMASTERS {
+            self.kill_houndmasters(ctx);
+        }
+    }
+
+    fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, path_id: u32) {
+        let (task, delay) = match path_id {
+            PATH_INTRO => (TASK_PATH_INTRO2, 6_148),
+            PATH_INTRO2 => (TASK_PATH_INTRO3, 6_996),
+            PATH_INTRO3 => (TASK_PATH_INTRO2, 6_148),
+            _ => return,
+        };
+        self.scheduler.schedule(task, delay);
+        self.eat_counter = 0;
+        self.scheduler.schedule(TASK_EAT_TROGG, 1_000);
+    }
+
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
         self.boss.just_summoned(ctx, summon);
     }
@@ -415,6 +527,10 @@ impl CreatureAi for Adarogg {
     }
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        self.scheduler.update(u64::from(diff_ms));
+        while let Some(task) = self.scheduler.execute_event() {
+            self.run_task(ctx, task);
+        }
         boss_update_ai(self, ctx, diff_ms);
     }
 }
