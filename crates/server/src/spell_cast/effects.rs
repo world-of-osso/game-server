@@ -170,6 +170,9 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
         crate::game_objects::summoned::EFFECT_TRANSMITTED => {
             crate::game_objects::summoned::spawn_transmitted
         }
+        crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD => {
+            crate::game_objects::summoned::spawn_wild
+        }
         crate::hunter_pet::EFFECT_SUMMON_PET => crate::hunter_pet::effect_summon_pet,
         crate::hunter_pet::EFFECT_RESURRECT_PET => crate::hunter_pet::effect_revive_pet,
         super::summon::EFFECT_SUMMON => super::summon::summon_creature,

@@ -573,6 +573,13 @@ fn finished_cast_opens_the_portal_at_the_summoner_and_channels_for_two_minutes()
         h.app.world().get::<crate::maps::InMap>(portals[0].0),
         Some(&crate::maps::InMap::continent(0))
     );
+    // GO_STATE_READY: the client draws no game object without this replicated state.
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(portals[0].0),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
     let channel = h.cast(summoner).expect("summoning channel");
     assert_eq!(channel.spell_id, SUMMONING_STONE_EFFECT);
     assert_eq!(channel.cast_type, CastType::Channel);

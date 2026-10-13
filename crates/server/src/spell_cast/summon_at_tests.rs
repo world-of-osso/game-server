@@ -228,7 +228,13 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
         &world_db().unwrap().powers_db,
     ));
     let conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.execute_batch("CREATE TABLE summon_properties (ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER); INSERT INTO summon_properties VALUES (3141,1,0,5,6);").unwrap();
+    conn.execute_batch(
+        "CREATE TABLE summon_properties (
+            ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER,
+            Flags_0 INTEGER, Flags_1 INTEGER
+        ); INSERT INTO summon_properties VALUES (3141,1,0,5,6,0,0);",
+    )
+    .unwrap();
     h.app
         .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
     let mut spell = world_db().unwrap().store.get(99104).unwrap().clone();

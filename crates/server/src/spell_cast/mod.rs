@@ -197,8 +197,12 @@ mod knockback;
 mod knockback_tests;
 mod school_costs;
 pub(crate) mod teleport;
-mod teleport_positions;
+pub(crate) mod teleport_positions;
+mod toy_coin;
+mod toy_foam_sword;
 pub(crate) mod toy_scripts;
+mod toy_weather;
+mod toy_wormhole;
 
 pub struct SpellCastPlugin;
 
@@ -251,6 +255,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    toy_coin::catch_landed_coins.after(advance_casts),
                 ),
             );
     }
@@ -2045,6 +2050,13 @@ fn plan_targets(
         }
         if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
             if let Some(reason) = crate::game_objects::summoned::unsupported_reason(world, effect) {
+                return Err(CastFailure::Unsupported(reason));
+            }
+        }
+        if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+            if let Some(reason) =
+                crate::game_objects::summoned::wild_unsupported_reason(world, effect)
+            {
                 return Err(CastFailure::Unsupported(reason));
             }
         }
