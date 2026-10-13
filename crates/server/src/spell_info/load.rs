@@ -1,6 +1,8 @@
 //! SQL loaders for `SpellStore`. Every per-spell table query selects
 //! `SpellID` first; rows for spells missing from `spell_name` are skipped.
 
+mod serverside;
+
 use std::collections::HashMap;
 
 use rusqlite::{Connection, Row};
@@ -184,8 +186,21 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     load_empower_stages(conn, &mut spells)?;
     load_labels(conn, &mut spells)?;
     load_spell_visuals(conn, &mut spells)?;
+    serverside::load_serverside_spells(conn, &lookups, &mut spells)?;
     finish(&mut spells);
     Ok(SpellStore { spells })
+}
+
+/// Add a copy's server-side spells to an already loaded store.
+#[cfg(test)]
+pub(super) fn append_serverside_spells(
+    conn: &Connection,
+    store: &mut SpellStore,
+) -> rusqlite::Result<usize> {
+    let lookups = Lookups::load(conn)?;
+    let count = serverside::load_serverside_spells(conn, &lookups, &mut store.spells)?;
+    finish(&mut store.spells);
+    Ok(count)
 }
 
 /// Effects are scanned in table order (an index-ordered scan is ~3x slower).

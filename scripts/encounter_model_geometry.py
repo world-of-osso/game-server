@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Prepare source-selected Golden Serpent model geometry in independent copies.
+"""Prepare source-selected encounter model geometry in independent copies.
 
-TC a352b1fa follows at both units' actual CombatReach plus its authored range,
-then uses invisible display11686 on absorption. Import the TDB1210 model-info
+TC a352b1fa Golden Serpent follows at both units' actual CombatReach plus its
+authored range, then uses invisible display11686 on absorption; Slagmaw61463's
+boundary check measures `GetDistance`, which subtracts both units' CombatReach. Import the TDB1210 model-info
 rows for the source templates and that display, without activating movement,
 changing templates or substituting a guessed reach. Input is the local full
 TDB mysqldump (its INSERT records are single-line), never a CDN download.
@@ -14,7 +15,7 @@ from pathlib import Path
 
 import mysql_dump
 
-ACTORS = (135322, 135406)
+ACTORS = (135322, 135406, 61463)
 INVISIBLE_DISPLAY = 11686
 COLUMNS = ('DisplayID', 'BoundingRadius', 'CombatReach', 'DisplayID_Other_Gender', 'VerifiedBuild')
 SCHEMA = '''CREATE TABLE IF NOT EXISTS encounter_creature_model_info (
@@ -29,11 +30,11 @@ SCHEMA = '''CREATE TABLE IF NOT EXISTS encounter_creature_model_info (
 def select_source_displays(connection):
     models = connection.execute(
         'SELECT CreatureID,CreatureDisplayID FROM tdb_creature_template_model '
-        'WHERE CreatureID IN (?,?)', ACTORS,
+        f'WHERE CreatureID IN ({",".join("?" * len(ACTORS))})', ACTORS,
     ).fetchall()
     actors = {entry for entry, _ in models}
     if actors != set(ACTORS):
-        raise ValueError(f'Missing authored Golden model rows for {set(ACTORS) - actors}')
+        raise ValueError(f'Missing authored encounter model rows for {set(ACTORS) - actors}')
     return {display for _, display in models} | {INVISIBLE_DISPLAY}
 
 

@@ -49,6 +49,7 @@ class EncounterModelGeometryTests(unittest.TestCase):
                     ).fetchall()
                     self.assertEqual(rows, [
                         (11686, 0.5, 1.0, 0, 66527),
+                        (42247, 6.0, 24.0, 0, -45745),
                         (84202, 6.90508, 5.0, 0, 61967),
                         (88651, 0.31, 1.0, 0, 65727),
                     ])
@@ -76,7 +77,7 @@ class EncounterModelGeometryTests(unittest.TestCase):
                 ).fetchone(), unrelated)
                 self.assertEqual(target.execute(
                     'SELECT count(*) FROM encounter_creature_model_info'
-                ).fetchone()[0], 4)
+                ).fetchone()[0], 5)
 
     def test_missing_source_geometry_does_not_commit_a_partial_table(self):
         unrelated = geometry.read_model_info(DUMP, {4})[0]

@@ -2,6 +2,42 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Player-area alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerIsInArea17 leaves compiles to `CompiledConditions::PlayerAreas`. Loader reuses existing area validation/recursive ancestry, then unions complete member sets into `CriteriaFact::Area`; one missing source area disables the entire predicate. TC a352b1fa CriteriaHandler1738–1750/1842–1847 and DB2Stores1985–1999 define one-of and recursive parent membership. Native queued death fixture exercises109755/character61456 from controlled cached area snapshots; this is not actual terrain travel or every holiday/NPC content lifecycle. [Contract](../../specs/dungeon-achievements.md).
+
+## Player-map alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerMap32 leaves compiles to `CompiledConditions::PlayerMaps`. Catalog checks every authored map before constructing `CriteriaFact::PlayerMaps`; missing rows disable the entire predicate. Reference-player map membership implements pinned TC a352b1fa CriteriaHandler1738–1750/1922–1925; missing reference state rejects. TC Unit::Kill11449–11453 emits killing-blow56 independently of battleground kill-reward70, including self/unfinished-match lethal events; map membership does not add accepted-match restrictions. Native accepted Warsong2106 lethal-damage fixture exercises criterion5538, killer-only credit and redb reopen; catalog tests evaluate both sourced489/2106 and wrong maps without claiming legacy-map playability. Mixed/nested children, zero assets and higher amounts remain disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Target-creature alternatives — verified 2026-10-13
+
+Pinned TC1738–1750 Some8 with Amount0/1 requires one successful child; TargetCreatureId4 reads the request's native unit (1782–1785). Compiler preserves every plain SingleTrue target-entry alternative for DoEmote54 as exact set membership, not AND and not an unconditional event. Native63288/64798 Love requests each credit20817 independently; wrong/foreign/player/absent targets and Wave reject. Six authored Wave selectors grant account40624; idle/reopened counters are covered. Higher amounts, mixed/nested/unknown children and other producer types remain disabled. IDs are sourced selectors, not certification of authored NPC spawns/models. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Single-child Some trees — verified 2026-10-13
+
+TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. Other multi-child non-difficulty OR and unknown children stay disabled; bounded area/map/target-creature exceptions are described above. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Empty All modifier trees — verified 2026-10-13
+
+TC a352b1fa CriteriaHandler1733–1737 returns true after looping over zero children. Compiler accepts only plain empty All4; empty Some8/SingleTrue2, nonplain roots and other unsupported conditions still reject. Native127117–127123 triggered casts produce each authored goggle77533–77539 and account18905, with refused depth and reopened state. Canonical content_item lacks those seven rows: private fixture projects exact existing Retail Item/ItemSparse metadata through `content_policy.ITEM_COLUMNS` without changing costs/effects or canonical data. This is cast/predicate/persistence proof, not the full production engineering flow. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Exact reference-player levels — verified 2026-10-13
+
+Modifier39 (TC a352b1fa CriteriaHandler1956–1959) compiles as the existing69 minimum and71 maximum with the same value; no new runtime field or comparator. Native Unit::Kill at levels1/2/3 proves orphan16188/16402 exactness, lower/higher negatives and reopened persistence. Twenty-four additional raw rows become evaluable while current-root census stays unchanged; internal/title21 and orphan relinking remain disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Instance-death capacity — verified 2026-10-13
+
+Native accepted player deaths emit18 only when MapStore says IsDungeon and InstanceManager has the current copy. `copy_capacity` exposes its real admission maximum; no occupancy or difficulty-to-group-size mapping. TC a352b1fa Player1164/CriteriaHandler1481–1493 requires that exact value. Unit::Kill fixtures allocate actual33/party5 and533/raid10/25 copies, reject continents/fake copies and other capacity/modifier counters, and preserve duplicate/idle/reopened state. [Inventory](../../achievement-criteria-producer-inventory.md) records three structural statistics, not rendered raids or certified delves.
+
+## Solo group predicates — verified 2026-10-13
+
+Modifier35 tests existing `ReferencePlayer.group_size == Some(0)`; no new state channel. The size comes from authoritative GroupRegistry plus character identity, includes offline members and distinguishes unknown from solo (TC a352b1fa CriteriaHandler1940–1943). Native triggered marker280339 casts prove41658/13026, real invite/join exclusion, missing-authority and depth negatives, idle/reopen persistence. This proves cast/predicate semantics, not the missing Nazmir timed-invader quest trigger. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Player zone predicates — verified 2026-10-13
+
+Modifier41 reuses `AreaTable::zone_id` at catalog load to compile accepted current-area IDs. Unlike modifier17's descendant closure, this uses exactly one flagged subzone parent (TC a352b1fa CriteriaHandler1964–1973). Reference-player terrain area is sampled at credit time; missing area rejects. Native pet-battle settlement at real Stormwind terrain proves criterion19845, loser/wrong-city exclusion, idle stability and redb reopen. Catalog tests preserve unflagged-parent and two-level rejection. [Inventory and census](../../achievement-criteria-producer-inventory.md) remain structural, not city content certification.
+
 ## Data and provenance
 
 Verified 2026-10-06: `/mnt/c/World of Warcraft/.build.info` names retail build `12.1.0.69933`, build key `dcfc90fffd79ba00406ae46f5f657592`. Local community listfile maps Achievement=1260179, Criteria=1263817, CriteriaTree=1263818, Achievement_Category=1324299. Phase 2 extracts Category from the same local build to server data; layout `67B2B4BD`, 243 rows. Achievement display metadata adds Category column 7 and IconFileID column 12. Category columns are Name/ID/Parent/Ui_order; the relationship repeats Ui_order, not a parent ID.
@@ -135,6 +171,10 @@ Native effect/death tests prove untimed **orphan** counter26004 with actual heal
 ## General arena player predicates (verified 2026-10-13)
 
 `pvp::player_arena_conditions` follows the player's current battleground ID into the native ledger, verifies current map copy/accepted character, then reads native team size and RatedMatch presence. ReferencePlayer snapshots these for all gated event producers; the compiler no longer restricts24/60 to32/33. Result events no longer carry redundant team-size fields. Native-source rated2/3 and skirmish2/3 tests prove real killing blows5541/5542, deaths4962/4963 and kill rewards4959/4960, with size isolation, idle/reopen and unrated rejection. Primary leaves: TC CriteriaHandler1879–1885/2059–2065.5v5 is absent; current Shuffle is intentionally unrated, and pinned239/240 lack progress implementation, so neither lifecycle presence nor an enum name authorizes credit. [Inventory](../../achievement-criteria-producer-inventory.md) owns census and gaps.
+
+## Map instance type (verified 2026-10-13)
+
+Modifier122 uses authenticated Map.InstanceType rows to load a set of map IDs per requested raw type; runtime checks the reference player's actual map. World0 is valid. Missing maps/type memberships and out-of-range assets remain disabled. Source: pinned TC CriteriaHandler2394–2397. Native real-channel rated/skirmish arena2/3 plus BG effect→queued death-system tests prove arena50456/50457 versus BG50458/50460, cross-type rejection, idle/reopened counters. Fixture now runs `process_player_death_transitions` with its real required resources; test-only counter visibility changed, production death logic did not. Raid-death18 remains a separate missing producer. [Inventory](../../achievement-criteria-producer-inventory.md) owns the +4-statistics census; no rendered-runtime claim.
 
 ## Sources
 

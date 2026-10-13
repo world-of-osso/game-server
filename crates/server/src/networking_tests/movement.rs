@@ -541,6 +541,7 @@ fn strafing_speed_is_reduced_but_faster_than_backpedal() {
 /// any speed covers in one input.
 fn far_facing_forward(direction: [f32; 3]) -> PlayerInput {
     PlayerInput {
+        transport: None,
         direction,
         facing_yaw: 0.0,
         position: direction.map(|axis| axis * 10.0),

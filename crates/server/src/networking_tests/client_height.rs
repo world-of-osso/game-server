@@ -105,6 +105,7 @@ pub(super) fn server_y(app: &App, player: Entity) -> f32 {
 /// swimming (`network_input` with zero direction), or standing/jumping on land.
 fn frame_input(client: &Position, swimming: bool, jumping: bool) -> PlayerInput {
     PlayerInput {
+        transport: None,
         direction: [0.0; 3],
         facing_yaw: 0.0,
         jumping,
