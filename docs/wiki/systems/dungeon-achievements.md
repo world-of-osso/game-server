@@ -136,6 +136,10 @@ Native effect/death tests prove untimed **orphan** counter26004 with actual heal
 
 `pvp::player_arena_conditions` follows the player's current battleground ID into the native ledger, verifies current map copy/accepted character, then reads native team size and RatedMatch presence. ReferencePlayer snapshots these for all gated event producers; the compiler no longer restricts24/60 to32/33. Result events no longer carry redundant team-size fields. Native-source rated2/3 and skirmish2/3 tests prove real killing blows5541/5542, deaths4962/4963 and kill rewards4959/4960, with size isolation, idle/reopen and unrated rejection. Primary leaves: TC CriteriaHandler1879–1885/2059–2065.5v5 is absent; current Shuffle is intentionally unrated, and pinned239/240 lack progress implementation, so neither lifecycle presence nor an enum name authorizes credit. [Inventory](../../achievement-criteria-producer-inventory.md) owns census and gaps.
 
+## Map instance type (verified 2026-10-13)
+
+Modifier122 uses authenticated Map.InstanceType rows to load a set of map IDs per requested raw type; runtime checks the reference player's actual map. World0 is valid. Missing maps/type memberships and out-of-range assets remain disabled. Source: pinned TC CriteriaHandler2394–2397. Native real-channel rated/skirmish arena2/3 plus BG effect→queued death-system tests prove arena50456/50457 versus BG50458/50460, cross-type rejection, idle/reopened counters. Fixture now runs `process_player_death_transitions` with its real required resources; test-only counter visibility changed, production death logic did not. Raid-death18 remains a separate missing producer. [Inventory](../../achievement-criteria-producer-inventory.md) owns the +4-statistics census; no rendered-runtime claim.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
