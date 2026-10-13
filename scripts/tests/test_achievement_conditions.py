@@ -104,6 +104,12 @@ class Conditions(unittest.TestCase):
         derived[1]['Type'] = '8'
         self.assertEqual(self.compile(modifiers, derived), {}, 'structural recomputation has no player facts')
 
+    def test_player_zone_preserves_the_authored_id_and_other_conditions(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 41, 1519), 12: node(10, 2, 69, 10)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((41, 1519), (69, 10))]})
+        modifiers[11]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers), {}, 'negated zone remains unsupported')
+
     def test_group_roster_limit_preserves_strict_threshold(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 29, 9)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
