@@ -1467,6 +1467,7 @@ fn exercise_arena_reconnect(
         h.app
             .world_mut()
             .entity_mut(ally.connection)
+            .insert(lightyear::prelude::server::ClientOf)
             .remove::<Connected>();
         h.advance(3);
         let state = h
@@ -1482,6 +1483,7 @@ fn exercise_arena_reconnect(
     h.app
         .world_mut()
         .entity_mut(who.connection)
+        .insert(lightyear::prelude::server::ClientOf)
         .remove::<Connected>();
     h.advance(3);
     assert!(
@@ -1751,10 +1753,6 @@ fn exercise_arena_channel_with_reconnect(
                 .get_mut::<Player>(who.player)
                 .unwrap()
                 .name = name.into();
-            h.app
-                .world_mut()
-                .entity_mut(who.connection)
-                .insert(lightyear::prelude::server::ClientOf);
         }
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
@@ -1839,7 +1837,9 @@ fn exercise_arena_channel_with_reconnect(
                 .iter()
                 .filter_map(|u| u.snapshot.as_ref()?.battleground.clone())
                 .last()
-                .unwrap()
+                .unwrap_or_else(|| {
+                    panic!("missing arena invitation: {:?}", updates[&who.connection])
+                })
         })
         .collect();
     let match_id = invitations[0].match_id;
