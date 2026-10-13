@@ -218,6 +218,16 @@ fn print_character_response(response: &AdminResponse) -> bool {
         AdminResponse::TradingPostRefundWindowSet { seconds } => {
             println!("Trading Post refund window: {seconds}s");
         }
+        AdminResponse::RenownGranted {
+            character_name,
+            major_faction,
+            level,
+            standing,
+        } => {
+            println!(
+                "Renown {major_faction}: {character_name} -> level {level}, standing {standing}"
+            );
+        }
         AdminResponse::GoldSet {
             character_name,
             copper,
