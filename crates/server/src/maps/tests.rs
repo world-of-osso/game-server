@@ -546,7 +546,7 @@ fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSp
     // Objective entries plus every authored flag/capture type, and Alterac/Isle doors
     // and goobers (types 1/10) their opening and banner scripts use.
     let mut entries = shared::battleground::objective_object_entries(map_id);
-    let authored: Vec<u32> = source
+    let authored: std::collections::BTreeSet<u32> = source
         .prepare("SELECT DISTINCT g.id FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
             WHERE g.map=?1 AND (t.type IN (36,42) OR (g.map IN (30,628) AND t.type IN (1,10)))")
         .unwrap()
@@ -554,11 +554,8 @@ fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSp
         .unwrap()
         .collect::<rusqlite::Result<_>>()
         .unwrap();
-    entries.extend(
-        authored
-            .into_iter()
-            .filter(|entry| !entries.contains(entry)),
-    );
+    let objectives: std::collections::BTreeSet<u32> = entries.iter().copied().collect();
+    entries.extend(authored.difference(&objectives));
     source_map_objects(map_id, &entries)
 }
 
