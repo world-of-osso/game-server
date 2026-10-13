@@ -11,12 +11,15 @@ from pathlib import Path
 from import_achievement_modifiers import qualified_mythic_criteria
 from import_achievement_single_modifiers import qualified_single_modifiers
 from import_achievement_difficulty_rules import legacy_difficulties, qualified_difficulty_rules
-from import_achievement_aura_rules import qualified_aura_rules
+from import_achievement_player_facts import qualified_player_facts
 import db2_casc
 
 BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 30, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 # shared battleground_columns.rs PvpStat columns credited by native objectives.
+MAX_LEVEL = 90  # crate::experience::MAX_LEVEL
+# crate::race_class::PLAYABLE_RACES IDs.
+PLAYABLE_RACES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 52, 70, 84, 85, 86, 91, 95, 96}
 NATIVE_PVP_STATS = {61, 63, 64, 65, 82, 183, 290, 291, 370, 371, 418, 419, 428, 744, 926, 927, 928, 929, 1020, 1021}
 
 
@@ -43,7 +46,7 @@ def walk_tree(root, rows, children, visiting=frozenset()):
     return descendants, errors
 
 
-def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules, aura_rules):
+def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules, player_facts):
     supported = set()
     for row_id, row in criteria.items():
         kind, asset = int(row['Type']), int(row['Asset'])
@@ -60,9 +63,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             if row_id in single_modifiers and single_modifiers[row_id][1] in pet_species:
                 supported.add(row_id)
             continue
-        # A compiled difficulty (20/68) or PlayerHasAura8 tree may be the only condition.
-        aura_rule = aura_rules.get(row_id)
-        if any(int(row[key]) for key in CONDITIONS) and row_id not in difficulty_rules and not (aura_rule and aura_rule[1] in spells):
+        # A compiled difficulty (20/68) or holdable player-fact tree may be the only condition.
+        if any(int(row[key]) for key in CONDITIONS) and row_id not in difficulty_rules and row_id not in player_facts:
             continue
         if kind in (28, 29, 34, 69, 110) and asset not in spells:
             continue
@@ -106,6 +108,12 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         supported.add(row_id)
     return supported
+
+
+def fact_can_hold(kind, asset, spells, zones, maps):
+    """Mirror of the catalog loader: a fact naming unknown data can never hold."""
+    return {8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+            32: asset in maps, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
 def supports_tree(root, trees, children, supported, visiting=frozenset()):
@@ -155,6 +163,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         taxi_nodes = {row[0] for row in db.execute('SELECT ID FROM taxi_nodes')}
         scenarios = {row[0] for row in db.execute('SELECT ID FROM scenario')}
         zones = {row[0] for row in db.execute('SELECT ID FROM area_table')}
+        maps = {row[0] for row in db.execute('SELECT ID FROM map')}
     header, overlays = db2_casc.decode(overlays_path.read_bytes())
     if header['layout_hash'] != 0x9A196494:
         raise ValueError('requires pinned WorldMapOverlay layout9A196494')
@@ -162,8 +171,12 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     mythic_ids = qualified_mythic_criteria(criteria, modifiers)
     single_modifiers = qualified_single_modifiers(criteria, modifiers)
     difficulty_rules = qualified_difficulty_rules(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv'))
-    aura_rules = qualified_aura_rules(criteria, modifiers)
-    supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules, aura_rules)
+    player_facts = {
+        row_id: facts for row_id, (_, facts) in qualified_player_facts(criteria, modifiers).items()
+        if row_id not in single_modifiers
+        and all(fact_can_hold(kind, asset, spells, zones, maps) for kind, asset in facts)
+    }
+    supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules, player_facts)
     by_type = collections.defaultdict(set)
     records = {}
     for row_id, row in achievements.items():
@@ -201,7 +214,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     trackable = [row for row in records.values() if row['trackable']]
     ranking = []
     for kind, ids in sorted(by_type.items(), key=lambda item: (-len(item[1]), item[0])):
-        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules, aura_rules)
+        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules, player_facts)
         gain = sum(not records[id]['trackable'] and not records[id]['flags'] & (1 | 0x4000)
                    and supports_tree(records[id]['root'], trees, children, newly_supported)
                    for id in ids)

@@ -372,14 +372,14 @@ impl MythicRequirements {
     }
 }
 
-#[path = "achievement_aura_rules.rs"]
-mod aura_rules;
 #[path = "achievement_difficulty_rules.rs"]
 mod difficulty_rules;
 #[path = "achievement_mythic_predicates.rs"]
 mod mythic_predicates;
 #[path = "achievement_overlays.rs"]
 mod overlays;
+#[path = "achievement_player_facts.rs"]
+mod player_facts;
 #[path = "achievement_single_modifiers.rs"]
 mod single_modifiers;
 
@@ -397,13 +397,53 @@ impl DifficultyRule {
     }
 }
 
-/// TC ModifierTree facts of the reference player at the criteria update.
+/// TC ModifierTree facts at a criteria update.
 #[derive(Debug, Default)]
 pub(crate) struct PlayerConditions {
     /// Difficulty.db2 ID of the current map copy; 0 on continents.
     pub difficulty: u32,
-    /// Spell IDs of the player's active auras.
+    /// None for map-wide credit, which has no reference player.
+    pub player: Option<ReferencePlayer>,
+}
+
+/// The reference player's own state read by TC player-only ModifierTree leaves.
+#[derive(Debug, Default)]
+pub(crate) struct ReferencePlayer {
+    /// Spell IDs of active auras.
     pub auras: BTreeSet<u32>,
+    /// Current terrain area (TC Player::GetAreaId).
+    pub area: Option<u32>,
+    pub map: u32,
+    pub race: u8,
+    pub class: u8,
+    pub level: u8,
+}
+
+/// A TC player-only ModifierTree leaf resolved at catalog load.
+#[derive(Debug, Clone)]
+enum PlayerFact {
+    Aura(u32),
+    /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
+    Area(BTreeSet<u32>),
+    Race(u8),
+    Class(u8),
+    Map(u32),
+    MinLevel(u8),
+    MaxLevel(u8),
+}
+
+impl PlayerFact {
+    fn holds(&self, player: &ReferencePlayer) -> bool {
+        match self {
+            Self::Aura(spell) => player.auras.contains(spell),
+            Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
+            Self::Race(race) => player.race == *race,
+            Self::Class(class) => player.class == *class,
+            Self::Map(map) => player.map == *map,
+            Self::MinLevel(level) => player.level >= *level,
+            Self::MaxLevel(level) => player.level <= *level,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -415,8 +455,8 @@ struct Criteria {
     /// Compiled sole PlayerClass26/BattlePetSpecies91 requirement.
     modifier_asset: Option<u32>,
     difficulty: Option<DifficultyRule>,
-    /// Compiled sole PlayerHasAura8 spell.
-    aura: Option<u32>,
+    /// Compiled All4 player-only leaves; all must hold.
+    player_facts: Vec<PlayerFact>,
     exploration_bits: Vec<u32>,
     area_members: BTreeSet<u32>,
 }
@@ -425,9 +465,11 @@ impl Criteria {
     fn conditions_hold(&self, conditions: &PlayerConditions) -> bool {
         self.difficulty
             .is_none_or(|rule| rule.admits(conditions.difficulty))
-            && self
-                .aura
-                .is_none_or(|spell| conditions.auras.contains(&spell))
+            && (self.player_facts.is_empty()
+                || conditions
+                    .player
+                    .as_ref()
+                    .is_some_and(|player| self.player_facts.iter().all(|fact| fact.holds(player))))
     }
 }
 
@@ -1114,6 +1156,47 @@ fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTr
     descendants
 }
 
+/// Every leaf must name data the server has, else the tree can never hold (empty).
+fn resolve_player_facts(
+    conn: &Connection,
+    leaves: &[(u32, u32)],
+    area_children: &HashMap<u32, Vec<u32>>,
+) -> rusqlite::Result<Vec<PlayerFact>> {
+    let mut facts = Vec::with_capacity(leaves.len());
+    for &(kind, asset) in leaves {
+        let exists = |table: &str| {
+            conn.prepare_cached(&format!(
+                "SELECT EXISTS(SELECT 1 FROM {table} WHERE ID = ?1)"
+            ))?
+            .query_row([asset], |row| row.get::<_, bool>(0))
+        };
+        let small = u8::try_from(asset).ok();
+        let fact = match kind {
+            8 => exists("spell")?.then_some(PlayerFact::Aura(asset)),
+            17 => exists("area_table")?
+                .then(|| PlayerFact::Area(collect_area_descendants(asset, area_children))),
+            // Only a race a character can be created as can ever hold.
+            25 => small
+                .filter(|race| crate::race_class::race_bit(*race).is_some())
+                .map(PlayerFact::Race),
+            26 => small
+                .filter(|class| (1..=13).contains(class))
+                .map(PlayerFact::Class),
+            32 => exists("map")?.then_some(PlayerFact::Map(asset)),
+            69 => small
+                .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
+                .map(PlayerFact::MinLevel),
+            71 => Some(PlayerFact::MaxLevel(small.unwrap_or(u8::MAX))),
+            _ => unreachable!("generated player facts use only 8/17/25/26/32/69/71"),
+        };
+        let Some(fact) = fact else {
+            return Ok(Vec::new());
+        };
+        facts.push(fact);
+    }
+    Ok(facts)
+}
+
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
     let mut areas = conn.prepare("SELECT ID, ParentAreaID FROM area_table WHERE ID != 0")?;
     let mut area_children = HashMap::<u32, Vec<u32>>::new();
@@ -1128,7 +1211,6 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         .flat_map(|template| shared::battleground::pvp_stat_columns(template.map_id))
         .map(|column| column.stat)
         .collect();
-    let mut known_spell = conn.prepare("SELECT EXISTS(SELECT 1 FROM spell WHERE ID = ?1)")?;
     let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM area_table a WHERE a.ID = c.Asset), EXISTS(SELECT 1 FROM taxi_nodes t WHERE t.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
@@ -1157,12 +1239,12 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             None
         };
         let difficulty = difficulty_rules::difficulty_rule(criteria_id, conditional[0]);
-        // TC Unit::HasAura can only hold a spell the server knows.
-        let aura = match aura_rules::aura_rule(criteria_id, conditional[0]) {
-            Some(spell) if known_spell.query_row([spell], |row| row.get::<_, bool>(0))? => {
-                Some(spell)
+        // Single-modifier families already compile their own player leaf.
+        let facts = match player_facts::player_facts(criteria_id, conditional[0]) {
+            Some(leaves) if modifier_asset.is_none() => {
+                resolve_player_facts(conn, leaves, &area_children)?
             }
-            _ => None,
+            _ => Vec::new(),
         };
         let supported_predicate = (mythic.is_some() || modifier_asset.is_some())
             && conditional.iter().skip(1).all(|value| *value == 0);
@@ -1219,10 +1301,10 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                             && row.get::<_, bool>(8)?
                             && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
                         && (conditional.iter().all(|value| *value == 0)
-                            || ((difficulty.is_some() || aura.is_some())
+                            || ((difficulty.is_some() || !facts.is_empty())
                                 && conditional.iter().skip(1).all(|value| *value == 0)))),
                 difficulty,
-                aura,
+                player_facts: facts,
             },
         ))
     })?;

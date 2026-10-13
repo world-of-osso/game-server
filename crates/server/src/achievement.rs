@@ -17,7 +17,7 @@ use crate::persistence::{self, GameDatabase};
 #[path = "achievement_catalog.rs"]
 mod catalog;
 pub(crate) use catalog::{
-    AchievementCatalog, CriteriaEvent, PlayerConditions, load_achievement_catalog,
+    AchievementCatalog, CriteriaEvent, PlayerConditions, ReferencePlayer, load_achievement_catalog,
 };
 #[path = "achievement_account.rs"]
 mod account_store;
@@ -859,22 +859,37 @@ fn map_difficulty(world: &World, map: Option<InMap>) -> u32 {
 
 /// The reference player's ModifierTree facts at this criteria update.
 pub(crate) fn player_conditions(world: &World, player: Entity) -> PlayerConditions {
+    let map = world.get::<InMap>(player).copied();
     PlayerConditions {
-        difficulty: map_difficulty(world, world.get::<InMap>(player).copied()),
+        difficulty: map_difficulty(world, map),
+        player: reference_player(world, player, map),
+    }
+}
+
+fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
+    let identity = world.get::<Player>(player)?;
+    Some(ReferencePlayer {
         auras: world
             .get::<crate::auras::ActiveAuras>(player)
             .into_iter()
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
-    }
+        area: world
+            .get::<AchievementTracker>(player)
+            .and_then(|tracker| tracker.last_processed_area),
+        map: map?.map_id,
+        race: identity.race,
+        class: identity.class,
+        level: world.get::<Level>(player)?.0,
+    })
 }
 
 /// Map-wide credit has no reference player: only the copy's difficulty is known,
-/// so aura-gated criteria cannot hold.
+/// so player-fact criteria cannot hold.
 pub(crate) fn map_conditions(world: &World, map: InMap) -> PlayerConditions {
     PlayerConditions {
         difficulty: map_difficulty(world, Some(map)),
-        auras: BTreeSet::new(),
+        player: None,
     }
 }
 
