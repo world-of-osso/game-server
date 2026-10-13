@@ -31,6 +31,9 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
         return;
     }
+    if enemy.is_some_and(|enemy| defend_follower(world, unit, enemy, follower.profile.class_id)) {
+        return;
+    }
     if world.get::<CastState>(unit).is_some() {
         return;
     }
@@ -171,6 +174,46 @@ fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) ->
             false
         }
     }
+}
+
+/// Approved bridge policy: defend a wounded companion being actively attacked.
+/// No invented health-percentage threshold or NPC-kit parity claim.
+fn defend_follower(world: &mut World, unit: Entity, enemy: Entity, class: u8) -> bool {
+    let wounded = world
+        .get::<Health>(unit)
+        .is_some_and(|health| health.current < health.max);
+    let attacked = world
+        .get::<CombatTarget>(enemy)
+        .is_some_and(|target| target.0 == Some(unit));
+    if !wounded || !attacked {
+        return false;
+    }
+    let Some(spell) = defensive_spell(class) else {
+        return false;
+    };
+    match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(unit)) {
+        Ok(()) => true,
+        Err(failure) => {
+            debug!("Follower {unit} defensive {spell}: {failure:?}");
+            false
+        }
+    }
+}
+
+fn defensive_spell(class: u8) -> Option<u32> {
+    Some(match class {
+        1 => 871,     // Shield Wall.
+        2 => 498,     // Divine Protection.
+        3 => 186265,  // Aspect of the Turtle.
+        5 => 19236,   // Desperate Prayer.
+        7 => 108271,  // Astral Shift.
+        8 => 45438,   // Ice Block.
+        9 => 104773,  // Unending Resolve.
+        10 => 115203, // Fortifying Brew.
+        11 => 22812,  // Barkskin.
+        13 => 363916, // Obsidian Scales.
+        _ => return None,
+    })
 }
 
 fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) -> bool {
