@@ -60,7 +60,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             .unwrap();
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app
-        .insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+        .insert_resource(crate::spell_cast::toy_scripts::load_toy_texts(&conn).unwrap());
     h.app.init_resource::<crate::group::GroupRegistry>();
     h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
@@ -3865,7 +3865,7 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
             "text" => {
                 h.app
                     .world_mut()
-                    .remove_resource::<crate::spell_cast::toy_scripts::DiceTexts>();
+                    .remove_resource::<crate::spell_cast::toy_scripts::ToyTexts>();
             }
             "group" => {
                 h.app
@@ -3914,6 +3914,160 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
                 .all(Vec::is_empty),
             "{missing} must not emit an emote or roll"
         );
+    }
+}
+
+fn coin_texts(source: &rusqlite::Connection, sex: u8) -> [String; 3] {
+    [32638, 32663, 32664].map(|id| {
+        source
+            .query_row(
+                "SELECT MaleText, FemaleText FROM content_broadcast_text WHERE ID=?",
+                [id],
+                |row| row.get::<_, String>(if sex == 1 { 1 } else { 0 }),
+            )
+            .unwrap()
+    })
+}
+
+fn emotes_for(h: &Harness, connection: Entity) -> Vec<String> {
+    h.app
+        .world()
+        .resource::<ToyChatCapture>()
+        .0
+        .get(&connection)
+        .map_or(Vec::new(), |chat| {
+            chat.iter()
+                .filter(|message| message.channel == ChatType::Emote)
+                .map(|message| message.content.clone())
+                .collect()
+        })
+}
+
+#[test]
+fn toyfx18_coin_tosses_then_catches_heads_or_tails_after_source_flight() {
+    use crate::persistence::ClientId;
+    use shared::components::{Health, Player, Position};
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&source).unwrap().0;
+    for sex in [0, 1] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("coin.redb"));
+        h.app.insert_resource(store.clone());
+        h.app.init_resource::<ToyChatCapture>();
+        h.app.add_systems(PostUpdate, capture_toy_chat);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        h.app
+            .world_mut()
+            .get_mut::<Player>(h.caster)
+            .unwrap()
+            .appearance
+            .sex = sex;
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ));
+        let mut peers = Vec::new();
+        for (peer, x, name) in [(2, 35.0, "Near"), (3, 500.0, "Far")] {
+            let player = spawn_player(&mut h.app, 8, x);
+            h.app.world_mut().get_mut::<Player>(player).unwrap().name = name.into();
+            h.app
+                .world_mut()
+                .entity_mut(player)
+                .insert((ClientId(100 + peer), crate::maps::InMap::continent(0)));
+            let connection = spawn_peer_connection(&mut h.app, player, peer);
+            h.app.world_mut().entity_mut(connection).insert((
+                MessageSender::<ChatMessage>::default(),
+                MessageReceiver::<ChatMessage>::default(),
+            ));
+            peers.push(connection);
+        }
+        let [toss, heads, tails] = coin_texts(&source, sex);
+        let health = *h.app.world().get::<Health>(h.caster).unwrap();
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        learn_effect_toy(&mut h, character, 44430);
+        assert_eq!(activate(&mut h, 44430)[0].error, None);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == 60458));
+        assert_eq!(emotes_for(&h, h.connection), vec![toss.clone()]);
+        assert_eq!(emotes_for(&h, peers[0]), vec![toss.clone()]);
+        // Source missile: 20yd above the caster at speed10 lands after 2000ms.
+        h.advance(30);
+        assert_eq!(
+            emotes_for(&h, h.connection).len(),
+            1,
+            "caught before source flight"
+        );
+        h.advance(14);
+        let caster_emotes = emotes_for(&h, h.connection);
+        assert_eq!(caster_emotes.len(), 2);
+        assert!(
+            caster_emotes[1] == heads || caster_emotes[1] == tails,
+            "{caster_emotes:?}"
+        );
+        assert_eq!(emotes_for(&h, peers[0]), caster_emotes);
+        assert!(emotes_for(&h, peers[1]).is_empty());
+        assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&origin));
+        h.advance(20);
+        assert_eq!(emotes_for(&h, h.connection).len(), 2, "one catch per toss");
+    }
+}
+
+#[test]
+fn toyfx18_coin_refuses_missing_text_or_source_shape_drift() {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for missing in ["text", "trigger", "catch target", "extra effect"] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("coin-refusal.redb"));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        let mut toss = store.get(60458).unwrap().clone();
+        let mut catch = store.get(60476).unwrap().clone();
+        match missing {
+            "text" => {
+                h.app
+                    .world_mut()
+                    .remove_resource::<crate::spell_cast::toy_scripts::ToyTexts>();
+            }
+            "trigger" => toss.effects[0].trigger_spell = 116,
+            "catch target" => catch.effects[0].implicit_targets = [6, 0],
+            "extra effect" => toss.effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![toss, catch]));
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ));
+        h.app.init_resource::<ToyChatCapture>();
+        h.app.add_systems(PostUpdate, capture_toy_chat);
+        learn_effect_toy(&mut h, character, 44430);
+        assert!(activate(&mut h, 44430)[0].error.is_some(), "{missing}");
+        h.advance(50);
+        assert!(h.inbox.go.is_empty(), "{missing}");
+        assert!(h.inbox.cooldowns.is_empty(), "{missing}");
+        assert!(emotes_for(&h, h.connection).is_empty(), "{missing}");
     }
 }
 
@@ -4581,7 +4735,7 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
-    world.insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+    world.insert_resource(crate::spell_cast::toy_scripts::load_toy_texts(&conn).unwrap());
     world.init_resource::<crate::group::GroupRegistry>();
     world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
