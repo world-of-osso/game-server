@@ -66,7 +66,8 @@ pub(crate) enum CriteriaEvent {
     HighestHealCast(u64),
     TotalHealReceived(u64),
     HighestHealReceived(u64),
-    DoEmote(u32),
+    /// TextEmote ID and the same-map NPC entry resolved from this request's unit GUID.
+    DoEmote(u32, Option<u32>),
     DeliveredKillingBlow,
     UseItem(u32),
     EquipItem(u32),
@@ -174,7 +175,7 @@ impl CriteriaEvent {
             Self::HighestHealCast(_) => 104,
             Self::TotalHealReceived(_) => 105,
             Self::HighestHealReceived(_) => 106,
-            Self::DoEmote(_) => 54,
+            Self::DoEmote(_, _) => 54,
             Self::DeliveredKillingBlow => 56,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
@@ -329,7 +330,7 @@ impl CriteriaEvent {
             | Self::TrackedWorldStateUIModified(asset)
             | Self::KilledByCreature(asset)
             | Self::DieFromEnvironmentalDamage(asset)
-            | Self::DoEmote(asset)
+            | Self::DoEmote(asset, _)
             | Self::UseItem(asset)
             | Self::EquipItem(asset)
             | Self::UseGameObject(asset)
@@ -399,7 +400,7 @@ impl DifficultyRule {
     }
 }
 
-/// A compiled criteria ModifierTree: an optional difficulty rule and raw player-fact
+/// A compiled criteria ModifierTree: an optional difficulty rule and raw fact
 /// leaves `(ModifierTreeType, Asset)`, all of which must hold.
 #[derive(Debug, Clone, Copy)]
 struct CompiledConditions {
@@ -429,12 +430,14 @@ pub(crate) struct ReferencePlayer {
     pub level: u8,
 }
 
-/// A TC player-only ModifierTree leaf resolved at catalog load.
+/// A compiled ModifierTree leaf resolved at catalog load.
 #[derive(Debug, Clone)]
-enum PlayerFact {
+enum CriteriaFact {
     /// Bounded native PlayerCondition2 class/race rule; all other fields reject at load.
     Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
+    /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
+    TargetCreature(u32),
     /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
     Area(BTreeSet<u32>),
     Race(u8),
@@ -444,11 +447,14 @@ enum PlayerFact {
     MaxLevel(u8),
 }
 
-impl PlayerFact {
-    fn holds(&self, player: &ReferencePlayer) -> bool {
+impl CriteriaFact {
+    fn holds(&self, player: &ReferencePlayer, event: CriteriaEvent) -> bool {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
+            Self::TargetCreature(entry) => {
+                matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
+            }
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
             Self::Race(race) => player.race == *race,
             Self::Class(class) => player.class == *class,
@@ -468,21 +474,21 @@ struct Criteria {
     /// Compiled sole PlayerClass26/BattlePetSpecies91 requirement.
     modifier_asset: Option<u32>,
     difficulty: Option<DifficultyRule>,
-    /// Compiled All4 player-only leaves; all must hold.
-    player_facts: Vec<PlayerFact>,
+    /// Compiled All4 reference-player or emote-target leaves; all must hold.
+    facts: Vec<CriteriaFact>,
     exploration_bits: Vec<u32>,
     area_members: BTreeSet<u32>,
 }
 
 impl Criteria {
-    fn conditions_hold(&self, conditions: &PlayerConditions) -> bool {
+    fn conditions_hold(&self, conditions: &PlayerConditions, event: CriteriaEvent) -> bool {
         self.difficulty
             .is_none_or(|rule| rule.admits(conditions.difficulty))
-            && (self.player_facts.is_empty()
+            && (self.facts.is_empty()
                 || conditions
                     .player
                     .as_ref()
-                    .is_some_and(|player| self.player_facts.iter().all(|fact| fact.holds(player))))
+                    .is_some_and(|player| self.facts.iter().all(|fact| fact.holds(player, event))))
     }
 }
 
@@ -631,7 +637,7 @@ impl AchievementCatalog {
         }
         for &id in self.event_criteria.get(&event.kind()).into_iter().flatten() {
             let criteria = &self.criteria[&id];
-            if !event.matches(criteria) || !criteria.conditions_hold(conditions) {
+            if !event.matches(criteria) || !criteria.conditions_hold(conditions, event) {
                 continue;
             }
             Self::update_counter(state, id, event);
@@ -960,7 +966,7 @@ impl AchievementCatalog {
         let mut changed = false;
         for id in ids {
             if self.criteria.get(&id).is_some_and(|row| {
-                row.supported && event.matches(row) && row.conditions_hold(conditions)
+                row.supported && event.matches(row) && row.conditions_hold(conditions, event)
             }) {
                 Self::update_counter(state, id, event);
                 changed = true;
@@ -1170,11 +1176,11 @@ fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTr
 }
 
 /// Every leaf must name data the server has, else the tree can never hold (None).
-fn load_player_facts(
+fn load_criteria_facts(
     conn: &Connection,
     leaves: &[(u32, u32)],
     area_children: &HashMap<u32, Vec<u32>>,
-) -> rusqlite::Result<Option<Vec<PlayerFact>>> {
+) -> rusqlite::Result<Option<Vec<CriteriaFact>>> {
     let mut facts = Vec::with_capacity(leaves.len());
     for &(kind, asset) in leaves {
         let exists = |table: &str| {
@@ -1187,23 +1193,24 @@ fn load_player_facts(
         let fact = match kind {
             2 => crate::game_objects::identity_conditions::load_condition(conn, asset)?
                 .ok()
-                .map(PlayerFact::Identity),
-            8 => exists("spell")?.then_some(PlayerFact::Aura(asset)),
+                .map(CriteriaFact::Identity),
+            4 => Some(CriteriaFact::TargetCreature(asset)),
+            8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             17 => exists("area_table")?
-                .then(|| PlayerFact::Area(collect_area_descendants(asset, area_children))),
+                .then(|| CriteriaFact::Area(collect_area_descendants(asset, area_children))),
             // Only a race a character can be created as can ever hold.
             25 => small
                 .filter(|race| crate::race_class::race_bit(*race).is_some())
-                .map(PlayerFact::Race),
+                .map(CriteriaFact::Race),
             26 => small
                 .filter(|class| (1..=13).contains(class))
-                .map(PlayerFact::Class),
-            32 => exists("map")?.then_some(PlayerFact::Map(asset)),
+                .map(CriteriaFact::Class),
+            32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
             69 => small
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
-                .map(PlayerFact::MinLevel),
-            71 => Some(PlayerFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated player facts use only 2/8/17/25/26/32/69/71"),
+                .map(CriteriaFact::MinLevel),
+            71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
+            _ => unreachable!("generated facts use only 2/4/8/17/25/26/32/69/71"),
         };
         let Some(fact) = fact else {
             return Ok(None);
@@ -1258,7 +1265,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
             .filter(|_| modifier_asset.is_none());
         let resolved = match compiled {
-            Some(compiled) => load_player_facts(conn, compiled.facts, &area_children)?
+            Some(compiled) => load_criteria_facts(conn, compiled.facts, &area_children)?
                 .map(|facts| (compiled.difficulty, facts)),
             None => None,
         };
@@ -1290,9 +1297,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 20 && criteria_id != 111356)
                         // TC Player.h environmental0/1/2/6; no native lava/slime/fire source.
                         || (kind == 26 && matches!(row.get::<_, i32>(2)?, 0 | 1 | 2 | 6))
-                        // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel.
+                        // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel/Love.
                         // TDB1210 has no criteria_data overlay for these unconditional rows.
-                        || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59))
+                        || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225))
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
@@ -1322,7 +1329,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                             || (condition_tree
                                 && conditional.iter().skip(1).all(|value| *value == 0)))),
                 difficulty,
-                player_facts: facts,
+                facts,
             },
         ))
     })?;
