@@ -207,3 +207,83 @@ fn class_completeness_native_charge_rate_native_same_category_effects_multiply()
     );
     assert_eq!(cast_aimed_shot(&mut h).recharge_ms, 4_285);
 }
+
+#[test]
+fn class_completeness_native_charge_rate_negative_demonic_resolve_slows_fiery_brand() {
+    let mut base = harness(Vec::new(), &[204_021], 12).unwrap();
+    base.cast_and_deliver(204_021, Some(base.npc));
+    base.advance(3);
+    assert!(base.inbox.failed.is_empty(), "{:?}", base.inbox.failed);
+    let normal = base.inbox.charges.first().unwrap().clone();
+    let mut h = harness(Vec::new(), &[204_021, 331_227], 12).unwrap();
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 331_227,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(204_021, Some(h.npc));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let slow = h.inbox.charges.first().unwrap();
+    assert_eq!(slow.category, 1541);
+    // Native negative25 slows recovery, unlike454's duration multiplier.
+    assert_eq!(
+        slow.recharge_ms,
+        (normal.recharge_ms as f64 / 0.75).floor() as u32
+    );
+}
+
+#[test]
+fn class_completeness_native_charge_rate_per_cast_amount_refresh_preserves_progress() {
+    let mut h = fixture();
+    apply_charge_rate(&mut h);
+    cast_aimed_shot(&mut h);
+    let remaining = remaining_ms(&h);
+    let store = h.app.world().resource::<crate::spell_info::SpellStore>();
+    let mut refreshed = store.get(TRUESHOT).unwrap().clone();
+    // Exercise the per-cast amount boundary with native Quick Shot150.
+    // This fixture does NOT assert a Retail binding from Quick Shot to Trueshot.
+    let quick = super::test_harness::world_db()
+        .unwrap()
+        .store
+        .get(321_461)
+        .unwrap()
+        .clone();
+    refreshed
+        .effects
+        .iter_mut()
+        .find(|e| e.index == 1)
+        .unwrap()
+        .base_points = quick
+        .effects
+        .iter()
+        .find(|e| e.aura_type == 148)
+        .unwrap()
+        .base_points;
+    crate::auras::apply_aura_with_spell(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: TRUESHOT,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+        &refreshed,
+    );
+    h.inbox.charges.clear();
+    h.advance(3);
+    let after = h
+        .inbox
+        .charges
+        .last()
+        .expect("amount refresh owner receipt");
+    assert_eq!(after.recharge_ms, 6_000);
+    let expected = (remaining as f64 * 6_000.0 / 10_714.0) as u32;
+    assert!(after.remaining_ms.abs_diff(expected) <= 200, "{after:?}");
+}
