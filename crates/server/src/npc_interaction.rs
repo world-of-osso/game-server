@@ -159,6 +159,14 @@ pub(crate) fn find_interactable_crafting_broker(
     find_interactable_flag(world, player, npc, NpcFlags::CRAFTING_ORDERS)
 }
 
+pub(crate) fn find_interactable_trading_vendor(
+    world: &World,
+    player: Entity,
+    npc: Entity,
+) -> Result<&Npc, InteractionError> {
+    find_interactable_flag(world, player, npc, NpcFlags::TRADING_POST)
+}
+
 fn find_interactable_flag(
     world: &World,
     player: Entity,
@@ -260,7 +268,8 @@ impl InteractionWorld<'_, '_> {
             shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT => ObjectUse::HousingUiLink,
             _ if info.is_battleground_flag()
                 || info.is_battleground_orb()
-                || info.is_battleground_capture_point() =>
+                || info.is_battleground_capture_point()
+                || info.is_battleground_banner() =>
             {
                 ObjectUse::BattlegroundFlag
             }

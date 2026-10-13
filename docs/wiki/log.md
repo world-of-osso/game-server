@@ -1,3 +1,7 @@
+## 2026-10-12 — Preparation visibility distinguishes unit targets
+
+[Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
+
 # Wiki Log
 
 - 2026-10-12 — [Portals, dual wield and parry](../class-completeness6.md#dual-wield-and-parry-knowledge--batch34): all29 class trans-door spells proved (census analyzer fix), off-hand weapons gated on native Dual Wield knowledge, Parry knowledge characterized; census3105/4540/182 (+113 working). Unlearn-time off-hand removal remains a gap.
@@ -7,6 +11,7 @@
 - 2026-10-12 — [Creature-immunity definitions](../class-completeness6.md#native-creature-immunity-definitions--batch31): authentic235-row TDB importer, aura147 definition lookup, per-effect immunity miss logging; RED→GREEN plus403 adjacent passes. Census2983/4662/182, Bladestorm Arms/Fury now working; knockback effect lists and four absent TDB definitions remain gaps.
 
 - 2026-10-12 — [Victim melee critical chance](../class-completeness6.md#victim-melee-critical-chance--batch30): native187 RED2→ten behavior controls, positive/negative/additive fields, actual attack type and expiry/removal; nine adjacent controls. Native form process evidence remains bounded by unverified starter art.
+- 2026-10-13 — [Master arena/class regressions](investigations/master-arena-fixture-regressions.md): pinned TC target/cost/cap rules; duplicate Arcane discount removed, reciprocal Moloch success/refusal controls, unchanged mastery expiry assertions isolated from capped selection. Historical bisect limitations retained explicitly.
 
 - 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
 

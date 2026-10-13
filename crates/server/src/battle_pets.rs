@@ -17,7 +17,7 @@ use shared::pet_battle::PetJournal;
 use shared::protocol::{CollectionChannel, CollectionStateUpdate, DismissPet, SummonPet};
 use std::collections::HashMap;
 
-const ACCOUNT_PET_JOURNALS: TableDefinition<u64, &[u8]> =
+pub(crate) const ACCOUNT_PET_JOURNALS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("account_pet_journals");
 
 /// Load by authenticated account, never character id. An absent journal is empty.
