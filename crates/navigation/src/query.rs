@@ -378,6 +378,31 @@ mod tests {
             );
         }
         eprintln!("Ruby metalplate doorway route: {path:?}");
+        let approach = nav
+            .path(
+                wow(1386.2, -169.719, 131.0),
+                wow(1551.33, -257.688, 126.01431),
+            )
+            .expect("actual entrance must reach the collected boss floor");
+        for segment in approach.windows(2) {
+            assert!(
+                los.clear(segment[0] + Vec3::Y * 2.0, segment[1] + Vec3::Y * 2.0)
+                    .unwrap(),
+                "Ruby approach crosses collision: {segment:?}"
+            );
+        }
+        eprintln!(
+            "Ruby entrance to collected boss floor: {} corners",
+            approach.len()
+        );
+        assert!(
+            nav.path(
+                wow(1386.2, -169.719, 131.0),
+                wow(1551.33, -257.688, 129.782)
+            )
+            .is_err(),
+            "authored height mismatch must not be silently snapped"
+        );
     }
 
     #[test]
