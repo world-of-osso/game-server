@@ -26,6 +26,11 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_plain_empty_all_is_true_but_empty_some_and_single_are_false(self):
+        self.assertEqual(self.compile({10: node(0, 4)}), {1: [None, ()]})
+        self.assertEqual(self.compile({10: node(0, 8)}), {})
+        self.assertEqual(self.compile({10: node(0, 2)}), {})
+
     def test_all_single_true_mythic_requires_that_difficulty(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 68, 23)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (23,)), ()]})
@@ -71,16 +76,31 @@ class Conditions(unittest.TestCase):
             'difference empties': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 3, 68, 1)},
             'unknown legacy value': {10: node(0, 4), 11: node(10, 2, 20, 7)},
             'some needing two': {10: node(0, 8, amount=2), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
-            'some of facts': {10: node(0, 8), 11: node(10, 2, 8, 1)},
+            'some of multiple facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 8, 2)},
             'negated fact': {10: node(0, 4), 11: node(10, 3, 8, 46598)},
             'target leaf': {10: node(0, 4), 11: node(10, 2, 4, 448)},
             'nested all': {10: node(0, 4), 11: node(10, 4), 12: node(11, 2, 8, 1)},
             'zero fact asset': {10: node(0, 4), 11: node(10, 2, 32, 0)},
-            'empty tree': {10: node(0, 4)},
         }
         for name, modifiers in cases.items():
             with self.subTest(name):
                 self.assertEqual(self.compile(modifiers), {})
+
+    def test_single_child_some_preserves_the_supported_target_condition(self):
+        emote = copy.deepcopy(self.criteria)
+        emote[1]['Type'] = '54'
+        modifiers = {10: node(0, 8, amount=1), 11: node(10, 2, 4, 216058)}
+        self.assertEqual(self.compile(modifiers, emote), {1: [None, ((4, 216058),)]})
+        modifiers[10]['Amount'] = '0'
+        self.assertEqual(self.compile(modifiers, emote), {1: [None, ((4, 216058),)]})
+        modifiers[10]['Amount'] = '2'
+        self.assertEqual(self.compile(modifiers, emote), {})
+        modifiers[10]['Amount'] = '1'
+        modifiers[12] = node(10, 2, 4, 217559)
+        self.assertEqual(self.compile(modifiers, emote), {}, 'general target OR remains unsupported')
+        del modifiers[12]
+        modifiers[11]['Type'] = '5'
+        self.assertEqual(self.compile(modifiers, emote), {}, 'unknown target fields remain blocked')
 
     def test_target_creature_requires_a_per_request_emote_producer(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 4, 1412)}
