@@ -70,6 +70,8 @@ fn remove_immune_effect_targets(
             true
         });
     }
+    // TC UpdateSpellCastDataTargets: immune only when no effect still hits the unit.
+    immune_units.retain(|unit| !plan.iter().any(|planned| planned.units.contains(unit)));
     immune_units.sort_unstable();
     immune_units.dedup();
     immune_units

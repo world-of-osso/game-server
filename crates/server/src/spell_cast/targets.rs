@@ -50,6 +50,8 @@ enum Selector {
     Explicit(Relation),
     ///119: dead party/raid members selected at their stored corpse positions.
     RaidCorpses,
+    ///56: living members of the caster's party/raid (and their controlled units).
+    RaidArea,
     /// Area center = caster (SRC/DEST_CASTER).
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
@@ -98,7 +100,8 @@ fn selector(id: u32) -> Option<Selector> {
     use Relation::*;
     Some(match id {
         0 | 9 | 17 => Selector::None, // Homebind / spell database destinations handled by teleport.
-        1 | 56 | 120 => Selector::Caster,
+        1 | 120 => Selector::Caster,
+        56 => Selector::RaidArea,
         5 => Selector::Pet,
         119 => Selector::RaidCorpses,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
@@ -405,6 +408,19 @@ pub fn select_targets(
                     ));
                 }
             }
+            Selector::RaidArea => {
+                selected_any = true;
+                let mut candidates = area_units(
+                    world,
+                    caster,
+                    caster_pos,
+                    radius(effect, slot),
+                    Relation::Ally,
+                    0,
+                );
+                candidates.retain(|&unit| shares_raid(world, caster, unit));
+                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
+            }
             Selector::RaidCorpses => {
                 selected_any = true;
                 units.extend(raid_corpses(
@@ -575,6 +591,33 @@ fn limit_spell_targets(
         units.truncate(cap as usize);
     }
     units
+}
+
+fn raid_character(world: &World, unit: Entity) -> Option<u64> {
+    let controller = match world.get::<shared::components::UnitSummonedBy>(unit) {
+        Some(owner) => Entity::try_from_bits(owner.0)?,
+        None => unit,
+    };
+    world
+        .get::<crate::persistence::ClientId>(controller)
+        .map(|id| id.0)
+}
+
+/// TC TARGET_CHECK_RAID uses IsInRaidWith, including a controlled unit's owner.
+fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
+    if caster == target {
+        return true;
+    }
+    let Some(caster_id) = raid_character(world, caster) else {
+        return false;
+    };
+    let Some(target_id) = raid_character(world, target) else {
+        return false;
+    };
+    caster_id == target_id
+        || world
+            .resource::<crate::group::GroupRegistry>()
+            .is_in_same_group(caster_id, target_id)
 }
 
 ///TC a352b1fa SpellInfo.cpp:367/Spell.cpp:9361 selects raid corpse owners.

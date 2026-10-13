@@ -4,6 +4,11 @@ use crate::spell_cast::summon::SummonedCreature;
 use crate::stats::StatModifiers;
 
 /// Non-player armor consumers apply this only to native pet ownership categories.
+/// Creature::UpdateArmor TOTAL_PCT from aura101, before GetArmorMultiplierForTarget.
+pub(crate) fn total_multiplier(modifiers: Option<&StatModifiers>) -> f32 {
+    modifiers.map_or(1.0, |mods| 1.0 + mods.total_armor_pct / 100.0)
+}
+
 pub(crate) fn pet_multiplier(
     modifiers: Option<&StatModifiers>,
     hunter: Option<&HunterPet>,

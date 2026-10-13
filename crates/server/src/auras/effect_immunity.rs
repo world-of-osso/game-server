@@ -21,10 +21,18 @@ pub(crate) fn blocks_effect(
         return false;
     }
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
-        auras.iter().flat_map(|aura| &aura.effects).any(|immunity| {
-            immunity.aura_type == handlers::EFFECT_IMMUNITY
-                && immunity.misc_values[0] > 0
-                && immunity.misc_values[0] as u32 == effect.effect
-        })
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .any(|immunity| match immunity.aura_type {
+                handlers::EFFECT_IMMUNITY => {
+                    immunity.misc_values[0] > 0 && immunity.misc_values[0] as u32 == effect.effect
+                }
+                handlers::MECHANIC_IMMUNITY_MASK => immunity
+                    .immunity
+                    .as_ref()
+                    .is_some_and(|definition| definition.effects.contains(&effect.effect)),
+                _ => false,
+            })
     })
 }

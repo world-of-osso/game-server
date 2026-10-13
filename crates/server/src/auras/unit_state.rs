@@ -18,7 +18,7 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{ModelDisplay, Position, UnitFlags};
 
-use super::handlers::{MOD_CONFUSE, MOD_UNATTACKABLE, TRANSFORM};
+use super::handlers::{MOD_CONFUSE, MOD_FEAR, MOD_UNATTACKABLE, TRANSFORM};
 use super::{ActiveAuras, AuraInstance};
 
 /// Under a MOD_UNATTACKABLE aura: the aura set `NON_ATTACKABLE_2`.
@@ -33,6 +33,13 @@ pub struct Confused {
     pub reference: (f32, f32),
     pub destination: Option<(f32, f32)>,
     pub wait_secs: f32,
+}
+
+/// Under a MOD_FEAR aura (`UNIT_STATE_FLEEING`): the first fear aura's caster, which
+/// `Unit::SetFeared` passes to `MoveFleeing`.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Feared {
+    pub flee_from: Entity,
 }
 
 /// The aura whose display shows instead of the native one.
@@ -70,6 +77,14 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let preparing = has_type(auras, super::handlers::ARENA_PREPARATION);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
+    let fear_caster = auras
+        .iter()
+        .find(|aura| {
+            aura.effects
+                .iter()
+                .any(|effect| effect.aura_type == MOD_FEAR)
+        })
+        .map(|aura| aura.caster);
     let flight = super::mount::flight(auras);
     let feather_fall =
         shared::components::FeatherFall(has_type(auras, super::handlers::FEATHER_FALL));
@@ -89,6 +104,9 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     }
     if confused != world.get::<Confused>(unit).is_some() {
         reconcile_confused(world, unit, confused);
+    }
+    if fear_caster.is_some() != world.get::<Feared>(unit).is_some() {
+        reconcile_feared(world, unit, fear_caster);
     }
     super::mount::reconcile_can_fly(world, unit, flight);
     reconcile_display(world, unit);
@@ -183,6 +201,17 @@ fn reconcile_confused(world: &mut World, unit: Entity, confused: bool) {
         destination: None,
         wait_secs: 0.0,
     });
+}
+
+/// `Unit::SetControlled(UNIT_STATE_FLEEING)`: applying stops the cast (`CastStop`) and
+/// clears the unit's target (`SetFeared`).
+fn reconcile_feared(world: &mut World, unit: Entity, fear_caster: Option<Entity>) {
+    let Some(flee_from) = fear_caster else {
+        world.entity_mut(unit).remove::<Feared>();
+        return;
+    };
+    crate::spell_cast::cancel_cast(world, unit);
+    world.entity_mut(unit).insert(Feared { flee_from });
 }
 
 /// The transform aura whose display shows (`Unit::RestoreDisplayId`): the newest,

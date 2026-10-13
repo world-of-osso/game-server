@@ -67,6 +67,9 @@ pub struct AuraStatMods {
     /// `ApplyCastTimePercentMod`): × 100 / (100 + amount) for a positive amount,
     /// × (100 − amount) / 100 for a negative one.
     pub attack_cast_time_mult: f32,
+    /// MOD_MELEE_HASTE_3 319 melee attack time multiplier (`HandleModMeleeSpeedPct`
+    /// → `ApplyAttackTimePercentMod`), same per-aura factor as 252.
+    pub attack_time_mult: f32,
     /// WATER_BREATHING 82: no breath timer (`Player::getMaxTimer`).
     pub water_breathing: bool,
     /// MOD_WATER_BREATHING 155 breath duration multiplier (`GetTotalAuraMultiplier`).
@@ -102,6 +105,7 @@ impl Default for AuraStatMods {
             swim_speed: 1.0,
             melee_hit_chance_pct: 0.0,
             attack_cast_time_mult: 1.0,
+            attack_time_mult: 1.0,
             water_breathing: false,
             water_breathing_mult: 1.0,
             health_regen_mult: 1.0,
@@ -321,6 +325,17 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     );
                 }
             }
+            MOD_RESISTANCE_PCT => {
+                if misc & 1 != 0 {
+                    stats.total_armor_pct += amount * (1.0 + stats.total_armor_pct / 100.0);
+                }
+                if misc & !1 != 0 {
+                    warn!(
+                        "Aura101 spell{} has unmodeled nonphysical resistance mask{misc}",
+                        aura.spell_id
+                    );
+                }
+            }
             MOD_ARMOR_PCT_FROM_STAT => {
                 if misc == -2 {
                     stats.armor_from_primary_stat_pct += amount;
@@ -398,6 +413,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
             MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,
             MOD_SPEED_SLOW_ALL => combat.attack_cast_time_mult *= time_percent_mod(amount),
+            MOD_MELEE_HASTE_3 => combat.attack_time_mult *= time_percent_mod(amount),
             WATER_BREATHING => combat.water_breathing = true,
             MOD_WATER_BREATHING => combat.water_breathing_mult *= pct(amount),
             MOD_HEALTH_REGEN_PERCENT => combat.health_regen_mult *= pct(amount),
