@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CreatureMotion, Health, MovementSpeed, Position, Rotation};
 
-use crate::auras::{AuraStatMods, Confused};
+use crate::auras::{AuraStatMods, Confused, Feared};
 use crate::combat::DeathState;
 use crate::grid_activity::GridDormant;
 use crate::ground::{GroundMap, GroundProbe};
@@ -48,17 +48,18 @@ const CONFUSED_PAUSE_SECS: (f32, f32) = (0.8, 1.5);
 /// Delay before a confused unit retries a point it cannot walk to (`_timer.Reset(100)`).
 const RETRY_CONFUSED_SECS: f32 = 0.1;
 
-/// Living, active creatures that are not confused: their wander, waypoint and
-/// formation movement runs.
+/// Living, active creatures that are not confused or feared: their wander, waypoint
+/// and formation movement runs.
 type Roaming = (
     Without<DeathState>,
     Without<GridDormant>,
     Without<Confused>,
+    Without<Feared>,
     Without<crate::scripted_ai::movement::PointMovement>,
     Without<crate::scripted_ai::movement::ScriptedPath>,
 );
-/// Active creatures that are not confused: chase and leash run.
-type ActiveUncontrolled = (Without<GridDormant>, Without<Confused>);
+/// Active creatures that are not confused or feared: chase and leash run.
+type ActiveUncontrolled = (Without<GridDormant>, Without<Confused>, Without<Feared>);
 
 pub struct CreatureAiPlugin;
 
