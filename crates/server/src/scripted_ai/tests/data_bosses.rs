@@ -1782,6 +1782,106 @@ fn encounter_coverage_pythas_real_lightning_thunderclap_and_source_death_target(
     assert!(h.inbox(0).ends.iter().all(|end| end.encounter_id != 585));
 }
 
+/// Actual Skum6254 row: first3–4s/repeat3–4s, successful80% branch only pinned.
+#[test]
+fn encounter_coverage_skum_real_chain_damage_and_repeat() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(3674, 43, 4, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(2.7);
+    assert_ne!(casting(&h, boss), Some(6254), "first event waits3s");
+    assert_eq!(h.casts(0, boss, 6254), 0);
+    h.advance(3.3);
+    assert_eq!(h.casts(0, boss, 6254), 1, "first4s maximum plus1.8s cast");
+    assert!(h.inbox(0).log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(6254)
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(player.to_bits())
+    }));
+    h.advance(4.5);
+    assert!(h.casts(0, boss, 6254) >= 2);
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    let skum = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 589).unwrap();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, skum),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 589 && end.success)
+    );
+}
+
+/// Verdan's sourced8142 first20–35s applies actual5s MOD_ROOT26, not merely a cast log.
+#[test]
+fn encounter_coverage_verdan_real_vines_root_and_expire() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(5775, 43, 6, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(19.5);
+    assert_eq!(h.casts(0, boss, 8142), 0, "first event waits20s");
+    let mut waited = 0.0;
+    while !h.has_aura(player, 8142) {
+        assert!(waited < 18.0, "first35s maximum plus1.5s cast");
+        h.advance(0.1);
+        waited += 0.1;
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(player)
+            .unwrap()
+            .movement_speed,
+        0.0
+    );
+    assert!(h.inbox(0).log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(8142)
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(player.to_bits())
+    }));
+    h.advance(5.5);
+    assert!(
+        !h.has_aura(player, 8142),
+        "source5s root expires before20s repeat"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(player)
+            .unwrap()
+            .movement_speed
+            > 0.0
+    );
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    let verdan = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 591).unwrap();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, verdan),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 591 && end.success)
+    );
+}
+
 /// Instance source sends ACTION_ALL_DONE0 to its own Disciple when all four
 /// druids become DONE. This proves the state condition/notification, not four
 /// complete fights or the Anacondra mode0 source-data discrepancy.
