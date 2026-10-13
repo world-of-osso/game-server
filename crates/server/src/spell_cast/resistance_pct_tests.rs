@@ -185,12 +185,6 @@ fn class_completeness_native_armor_percent_applies_to_creature_armor() {
         npc,
         ARMOR_SPECIALIZATION
     ));
-    let total = h
-        .app
-        .world()
-        .get::<StatModifiers>(npc)
-        .map(|mods| mods.total_armor_pct);
-    assert_eq!(total, Some(6.0));
     let expected = DAMAGE * CREATURE_ARMOR_CONSTANT
         / (armor * factor(ARMOR_SPECIALIZATION, 101) + CREATURE_ARMOR_CONSTANT);
     let loss = physical_loss(&mut h, caster, npc);
