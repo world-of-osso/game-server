@@ -28,6 +28,52 @@ fn cooldown_spell(id: u32, recovery: u32, category_recovery: u32, excluded: bool
 }
 
 #[test]
+fn arena_item_category_reset_uses_item_duration_and_sends_native_clear() {
+    for duration in [120_000, 600_000] {
+        let mut h = super::test_harness::harness(Vec::new(), &[498], 2).unwrap();
+        cast_item_spell(
+            h.app.world_mut(),
+            h.caster,
+            498,
+            Some(h.caster),
+            ItemCooldown {
+                category: 9999,
+                category_ms: duration,
+            },
+            90,
+        )
+        .unwrap();
+        h.advance(1);
+        assert!(
+            h.app
+                .world()
+                .get::<SpellHistory>(h.caster)
+                .unwrap()
+                .category_ready_at[&9999]
+                > 0.0
+        );
+        h.inbox.cooldowns.clear();
+        reset_arena_cooldowns(h.app.world_mut(), h.caster);
+        h.advance(1);
+        let history = h.app.world().get::<SpellHistory>(h.caster).unwrap();
+        if duration < 600_000 {
+            assert!(
+                !history.category_ready_at.contains_key(&9999),
+                "item-use category not present in source spell metadata must clear"
+            );
+            assert!(h.inbox.cooldowns.iter().any(|update| update.spell_id == 498
+                && update.category == 9999
+                && update.remaining_ms == 0));
+        } else {
+            assert!(
+                history.category_ready_at.contains_key(&9999),
+                "authored10min item category must remain even on short source spell"
+            );
+        }
+    }
+}
+
+#[test]
 fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_and_exclusions() {
     let spells = vec![
         cooldown_spell(1, 599_999, 0, false),

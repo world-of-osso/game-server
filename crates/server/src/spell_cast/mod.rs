@@ -389,6 +389,8 @@ impl ChargeState {
 pub struct SpellHistory {
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
+    /// Actual item-use authored durations/categories, which can override SpellInfo.
+    item_cooldown_sources: HashMap<u32, ItemCooldownSource>,
     /// By `StartRecoveryCategory`.
     gcd_ready_at: HashMap<u32, f64>,
     /// By `ChargeCategory`.
@@ -967,6 +969,13 @@ fn cast_granted_with_item_level(
     result
 }
 
+#[derive(Debug, Clone, Copy)]
+struct ItemCooldownSource {
+    recovery_ms: u32,
+    category_ms: u32,
+    category: u32,
+}
+
 /// The cooldown an item effect puts on its spell's category (`ItemEffect`
 /// `SpellCategoryID` / `CategoryCoolDownMSec`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1010,16 +1019,20 @@ pub(crate) fn cast_item_spell(
     }
     cast_granted_with_item_level(world, caster, spell_id, target, Some(item_level))?;
     if cooldown.category != 0 && cooldown.category_ms > 0 {
-        world
-            .entity_mut(caster)
-            .entry::<SpellHistory>()
-            .or_default()
-            .get_mut()
-            .category_ready_at
-            .insert(
-                cooldown.category,
-                now + f64::from(cooldown.category_ms) / 1000.0,
-            );
+        let mut entity = world.entity_mut(caster);
+        let mut history = entity.entry::<SpellHistory>().or_default();
+        let mut history = history.get_mut();
+        history.category_ready_at.insert(
+            cooldown.category,
+            now + f64::from(cooldown.category_ms) / 1000.0,
+        );
+        history.spell_ready_at.entry(spell_id).or_insert(now);
+        let source = history
+            .item_cooldown_sources
+            .get_mut(&spell_id)
+            .expect("item cast records its authored cooldown source");
+        source.category = cooldown.category;
+        source.category_ms = cooldown.category_ms;
         send_to_owner(
             world,
             caster,
@@ -2469,6 +2482,18 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
+    if spell.cast_item_level.is_some() {
+        history.item_cooldown_sources.insert(
+            spell.id,
+            ItemCooldownSource {
+                recovery_ms: base_recovery_ms,
+                category_ms: base_category_ms,
+                category,
+            },
+        );
+    } else {
+        history.item_cooldown_sources.remove(&spell.id);
+    }
     // A fully discounted authored cooldown becomes ready now, not at its old deadline.
     if base_recovery_ms > 0 || base_category_ms > 0 {
         history
