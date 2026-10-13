@@ -32,6 +32,10 @@ fn falling_harness(height: f32) -> Harness {
         app.add_systems(FixedUpdate, crate::networking::apply_terrain_gravity);
     })
     .expect("local world.db");
+    h.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&crate::ground::ground_data_dir().join("los"))
+            .unwrap(),
+    );
     h.app
         .insert_resource(crate::terrain_height::test_helpers::flat_ground(
             33.0, 33.0, 0.0,
