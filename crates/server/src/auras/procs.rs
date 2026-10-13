@@ -61,6 +61,8 @@ pub const PROC_DEATH: u32 = 0x0100_0000;
 pub const PROC_TAKE_HELPFUL_PERIODIC: u32 = 0x8000_0000;
 /// `ProcTypeMask_1` (TrinityCore `ProcFlags2`).
 pub const PROC2_CAST_SUCCESSFUL: u32 = 0x4;
+/// TC a352b1fa SpellMgr.h:191, recipient-side knockback event.
+pub const PROC2_KNOCKBACK: u32 = 0x2;
 
 /// Event bits carried by a spell (not melee swing, kill or death).
 const SPELL_PROC_MASK: u32 = PROC_DEAL_MELEE_ABILITY

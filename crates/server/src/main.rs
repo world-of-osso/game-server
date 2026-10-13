@@ -64,6 +64,7 @@ mod interest;
 mod inventory;
 mod item_stats;
 mod item_templates;
+mod knockback;
 mod level_scaling;
 mod lfg;
 mod line_of_sight;

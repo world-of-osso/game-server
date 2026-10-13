@@ -894,6 +894,7 @@ fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
                     map_id: 998,
                     info: GameObjectInfo { entry: orb.entry, go_type: row.get(0)?, display_id: row.get(1)?, name: row.get(2)?, scale },
                     position: Vec3::from_array(orb.position), orientation: 0.0,
+                    initial_state: 1,
                     bounds: crate::game_objects::GameObjectBounds {
                         min: Vec3::new(number(4)?,number(5)?,number(6)?),
                         max: Vec3::new(number(7)?,number(8)?,number(9)?),

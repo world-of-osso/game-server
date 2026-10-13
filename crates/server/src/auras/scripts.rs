@@ -86,6 +86,10 @@ const REGROWTH: u32 = 8_936;
 const LINGERING_HEALING: u32 = 231_040;
 const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
+const ROGUE_STEALTH: u32 = 1_784;
+const ROGUE_SANCTUARY: u32 = 98_877;
+const ROGUE_STEALTH_AURA: u32 = 158_185;
+const ROGUE_STEALTH_SHAPESHIFT: u32 = 158_188;
 
 /// Native441675s3: Frenzied Regeneration also increases your maximum health.
 pub(super) fn fount_max_health_pct(unit: Entity, auras: &super::ActiveAuras) -> f32 {
@@ -361,6 +365,44 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+    scripts.0.insert(
+        crate::pvp::arena_cage::WARNING,
+        AuraScript {
+            on_remove: Some(crate::pvp::arena_cage::warning_removed),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        ROGUE_STEALTH,
+        AuraScript {
+            on_apply: Some(apply_rogue_stealth),
+            on_remove: Some(remove_rogue_stealth),
+            ..Default::default()
+        },
+    );
+}
+
+/// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;
+/// its effect1 dummy casts Sanctuary and the 158185/158188 stealth children.
+fn apply_rogue_stealth(world: &mut World, unit: Entity, _aura: &AuraInstance) {
+    for spell_id in [
+        ROGUE_SANCTUARY,
+        ROGUE_STEALTH_AURA,
+        ROGUE_STEALTH_SHAPESHIFT,
+    ] {
+        crate::spell_cast::cast_triggered(world, unit, spell_id, Some(unit), 1);
+    }
+}
+
+fn remove_rogue_stealth(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    reason: super::RemoveReason,
+) {
+    super::remove_auras(world, unit, reason, |aura| {
+        matches!(aura.spell_id, ROGUE_STEALTH_AURA | ROGUE_STEALTH_SHAPESHIFT)
+    });
 }
 
 /// TC a352b1fa spell_druid.cpp:297-316, spell_dru_barkskin. Effect 2's

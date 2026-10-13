@@ -33,6 +33,7 @@ pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
+pub(crate) mod stealth;
 pub(crate) mod summon_damage;
 mod unit_state;
 pub use invisibility::Invisibility;
@@ -211,7 +212,7 @@ impl AuraInstance {
             .map_or(0, |at| ((at - now).max(0.0) * 1000.0).round() as u32)
     }
 
-    fn stack_multiplier(&self) -> f32 {
+    pub(crate) fn stack_multiplier(&self) -> f32 {
         f32::from(self.stacks.max(1))
     }
 

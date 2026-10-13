@@ -17,6 +17,7 @@
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
+pub(crate) mod collision;
 pub(crate) mod cooking_focus;
 mod cooking_traps;
 mod identity_conditions;
@@ -49,11 +50,12 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
      d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
-     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs \
+     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs, g.state \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10, 50)";
+     WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10, 50) \
+     OR (g.map IN (SELECT map_id FROM arena_map) AND t.type IN (0,6,35))";
 
 /// Battleground objective spawns use difficulty 0; the shared rules name each one.
 fn battleground_objective_clause() -> String {
@@ -75,6 +77,8 @@ pub struct GameObjectSpawn {
     /// WoW coordinates.
     pub position: Vec3,
     pub orientation: f32,
+    /// Authored gameobject.state: GO_STATE_READY1 has model collision.
+    pub initial_state: u8,
     pub bounds: GameObjectBounds,
     /// `gameobject.spawnDifficulties`: the copy difficulties it spawns in (0 on a
     /// continent).
@@ -126,6 +130,7 @@ fn spawn_from_row(row: &Row, locks: &locks::LockDb) -> rusqlite::Result<GameObje
             row.get::<_, f64>(4)? as f32,
         ),
         orientation: row.get::<_, f64>(5)? as f32,
+        initial_state: row.get(24)?,
         bounds: GameObjectBounds {
             min: Vec3::new(geo(10)?, geo(11)?, geo(12)?),
             max: Vec3::new(geo(13)?, geo(14)?, geo(15)?),
@@ -173,7 +178,7 @@ pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObject
 }
 
 /// Server-space (`wow_to_bevy`) position of a WoW coordinate.
-fn bevy_position(wow: Vec3) -> Position {
+pub(crate) fn bevy_position(wow: Vec3) -> Position {
     let (x, y, z) = wow_to_bevy(wow.x, wow.y, wow.z);
     Position { x, y, z }
 }
@@ -186,7 +191,13 @@ pub(crate) fn wow_position(position: &Position) -> Vec3 {
 
 pub(crate) fn game_object_bundle(
     spawn: &GameObjectSpawn,
-) -> (Position, Rotation, GameObjectInfo, GameObjectBounds) {
+) -> (
+    Position,
+    Rotation,
+    GameObjectInfo,
+    GameObjectBounds,
+    shared::protocol::GameObjectCollision,
+) {
     (
         bevy_position(spawn.position),
         // Same facing convention as creature spawns (`zones::creature_bundle`).
@@ -197,6 +208,7 @@ pub(crate) fn game_object_bundle(
         },
         spawn.info.clone(),
         spawn.bounds,
+        shared::protocol::GameObjectCollision(spawn.initial_state == 1),
     )
 }
 
@@ -256,6 +268,13 @@ impl Plugin for GameObjectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameObjectSpawns>()
             .add_plugins(crate::gathering::GatheringPlugin)
+            .add_systems(
+                FixedUpdate,
+                collision::sync_live_objects
+                    .before(crate::networking::process_player_inputs)
+                    .before(crate::networking::apply_terrain_gravity)
+                    .before(crate::knockback::update_knockbacks),
+            )
             .add_systems(
                 PostStartup,
                 spawn_continent_game_objects.after(crate::zones::spawn_continent_creatures),

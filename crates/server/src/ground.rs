@@ -87,6 +87,7 @@ pub struct GroundMap {
     maps: HashMap<u32, Option<MapGround>>,
     /// Dedicated authored M2 hull bake, cached independently of ADT/WMO ground.
     m2_floors: HashMap<u32, los::LosMap>,
+    live_hulls: crate::game_objects::collision::LiveHulls,
 }
 
 impl GroundMap {
@@ -97,12 +98,22 @@ impl GroundMap {
             wdts,
             maps: HashMap::new(),
             m2_floors: HashMap::new(),
+            live_hulls: HashMap::new(),
         }
     }
 
     /// A map 0 holding only `terrain` for `tile`, without WMOs or lazy loading.
     #[cfg(test)]
     pub(crate) fn with_terrain(tile: (u32, u32), terrain: TerrainHeightMap) -> Self {
+        Self::with_terrain_on(0, tile, terrain)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_terrain_on(
+        map_id: u32,
+        tile: (u32, u32),
+        terrain: TerrainHeightMap,
+    ) -> Self {
         let mut map = MapGround::default();
         map.tiles.insert(
             tile,
@@ -113,9 +124,71 @@ impl GroundMap {
             }),
         );
         Self {
-            maps: HashMap::from([(0, Some(map))]),
+            maps: HashMap::from([(map_id, Some(map))]),
             ..default()
         }
+    }
+
+    pub(crate) fn data_dir(&self) -> &Path {
+        &self.data_dir
+    }
+
+    #[cfg(test)]
+    pub(crate) fn live_hull_count(&self, map: crate::maps::InMap) -> usize {
+        self.live_hulls.get(&map).map_or(0, Vec::len)
+    }
+
+    pub(crate) fn set_live_hulls(&mut self, hulls: crate::game_objects::collision::LiveHulls) {
+        self.live_hulls = hulls;
+    }
+
+    /// Static ground plus enabled live GO collision in this exact map copy.
+    pub(crate) fn ground_in(&mut self, map: crate::maps::InMap, feet: Vec3) -> GroundProbe {
+        let base = self.ground_at(map.map_id, feet);
+        let live = self
+            .live_hulls
+            .get(&map)
+            .into_iter()
+            .flatten()
+            .filter_map(|hull| hull.floor_height(feet))
+            .max_by(f32::total_cmp);
+        match (base, live) {
+            (GroundProbe::Supported(base), Some(live)) => GroundProbe::Supported(base.max(live)),
+            (_, Some(live)) => GroundProbe::Supported(live),
+            (base, None) => base,
+        }
+    }
+
+    pub(crate) fn live_clear(&self, map: crate::maps::InMap, start: Vec3, end: Vec3) -> bool {
+        self.live_hulls
+            .get(&map)
+            .into_iter()
+            .flatten()
+            .all(|hull| !hull.blocks(start, end))
+    }
+
+    /// Clamp a movement report against live walls, using the realm's 0.5yd clearance.
+    pub(crate) fn clamp_live_movement(
+        &self,
+        map: crate::maps::InMap,
+        start: Vec3,
+        end: Vec3,
+    ) -> Vec3 {
+        let offset = Vec3::Y;
+        if self.live_clear(map, start + offset, end + offset) {
+            return end;
+        }
+        let (mut clear, mut blocked) = (0.0, 1.0);
+        for _ in 0..16 {
+            let fraction = (clear + blocked) * 0.5;
+            if self.live_clear(map, start + offset, start.lerp(end, fraction) + offset) {
+                clear = fraction;
+            } else {
+                blocked = fraction;
+            }
+        }
+        let distance = start.distance(end);
+        start.lerp(end, (clear - 0.5 / distance).max(0.0))
     }
 
     /// The ground files of map `map_id` the cache does not hold, relative to it

@@ -1,3 +1,7 @@
+## 2026-10-12 — Preparation visibility distinguishes unit targets
+
+[Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
+
 # Wiki Log
 
 - 2026-10-12 — [Toy root scripts](../toy-effects14-coverage.md): Unusual Compass (ForcedFacing epoch), Titanium Seal coin, Goblin Weather Machine and Wormhole Generator: Pandaria are admitted only for their exact TC/TDB source shapes; census338→348. Transporter/Teleporting/Taunt Flag are named gaps.
