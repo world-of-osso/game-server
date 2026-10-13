@@ -762,6 +762,21 @@ pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::WinPetBattle);
 }
 
+/// TC Arena.cpp249: online rated winners only, after committed result settlement.
+pub(crate) fn record_ranked_arena_win(world: &mut World, player: Entity, before_rating: u32) {
+    let authenticated = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .any(|(_, link, _)| link.0 == player);
+    if authenticated {
+        record_criteria_event(
+            world,
+            player,
+            CriteriaEvent::WinAnyRankedArena(before_rating.max(1)),
+        );
+    }
+}
+
 pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {
     record_criteria_event(world, player, event);
 }

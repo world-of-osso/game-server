@@ -960,3 +960,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-12 — Transmog metadata and saved configuration
 
 [Authoritative transmog](systems/transmog-apply.md): pinned local-CASC metadata, authored source enums, primary collection states and account-isolated outfit/Custom Set persistence. Current33 transmog tests pass; both-skin private5926 native paid-save, illusion selection, set membership and paged preset load proof links to the client SSOT. Paid Apply unchanged; conditional acquisition/event eligibility and equipped enchant/price policy remain explicit gaps.
+
+- 2026-10-13 — [Rated arena win criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13): native committed online-winner Type37, rated2v2/3v3/skirmish/loser/idle/redb proof; source/data mismatch keeps39 disabled.
