@@ -61,6 +61,12 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [ ] Factory13965 opens after Glubtok, Mast16400 after Helix, Heavy17153 outside Helix combat and Foundry16399 after Foe Reaper per source. Source-authored door behavior is identified, not implemented or proved. Missing primaries47296/47739/49541 have no TDB placements; no invented spawn coordinates.
 - [ ] No Deadmines full-combat, loot/lockout or native acceptance claim. [Census](../encounter-coverage.md).
 
+## Wailing Caverns source slices
+
+- [x] `encounter_cpp_bindings.py --encounter cobrahn` prepares source3669→586/bit1 (Journal475/actor1046/display4213), checking pinned header/instance hashes and exact SmartAI identity. Copy-only SQL preserves unrelated bindings and is idempotent; no canonical mutation.
+- [ ] Cobrahn Lightning Bolt20805 existing SmartAI row (80% event chance, initial0ms, repeat6–8s), aggro text and lifecycle behavioral proof remain open. Source death action34 uses TC ordinal0, while DB2 boss bit is1; untranslated actions must not complete Lady Anacondra bit0.
+- [ ] Full Wailing Caverns four-druid completion, disciple action0/escort, Mutanus spawning, loot/lockout/native gates remain open. No correction of authored SmartScript parameters or replacement with Classic schedules.
+
 ## Ruby Life Pools source hooks
 
 Pinned TC `ruby_life_pools.cpp` has four spell scripts and no boss AIs. Local Melidrussa/Kokia/Kyrakka/Erkhart templates have empty AIName/ScriptName; no boss schedules are inferred.
