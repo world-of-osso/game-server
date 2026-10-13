@@ -1,5 +1,8 @@
 # Wiki Index
 
+- [Source summon flags and privacy](systems/toys.md#source-summon-flag-import-2026-10-12) —3610 readable source records, atomic legacy import, real owner/observer UDP proof and preserved337 census; group/private flag boundaries explicit.
+
+- [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
 - [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13) — native evaluator reused; actual faction-isolated XP-cap Double Agent and reopened account persistence.
 
 - [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.

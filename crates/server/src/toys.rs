@@ -30,7 +30,7 @@ fn load_catalog(mut commands: Commands) {
     info!("Loaded {} Toy.db2 entries", catalog.0.len());
     commands.insert_resource(catalog);
     commands.insert_resource(
-        crate::spell_cast::toy_scripts::load_dice_texts(&conn)
+        crate::spell_cast::toy_scripts::load_toy_texts(&conn)
             .expect("load authored dice BroadcastText rows"),
     );
 }

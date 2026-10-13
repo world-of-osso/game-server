@@ -80,6 +80,28 @@ pub struct PlayerLink(pub Entity);
 #[derive(Component, Debug, Default)]
 pub struct CombatTarget(pub Option<Entity>);
 
+/// Turn a predicted player without moving it or restarting an ongoing fall.
+/// The matching epoch rejects pre-turn input until the client adopts ForcedFacing.
+pub(crate) fn face_player(world: &mut World, player: Entity, yaw: f32) {
+    let epoch = {
+        let mut control = world
+            .get_mut::<shared::components::MovementControl>(player)
+            .expect("validated player movement control");
+        control.epoch = control.epoch.wrapping_add(1);
+        control.epoch
+    };
+    if let Some(mut fall) = world.get_mut::<FallTracker>(player) {
+        fall.epoch = epoch;
+    }
+    world
+        .get_mut::<shared::components::Rotation>(player)
+        .expect("validated player rotation")
+        .y = yaw;
+    world
+        .entity_mut(player)
+        .insert(shared::components::ForcedFacing { epoch, yaw });
+}
+
 /// Whether the player's newest input requests translation. Server-only; a
 /// blocking cast freezes `Position`, so casts read intent instead.
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
