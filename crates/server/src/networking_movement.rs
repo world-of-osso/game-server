@@ -7,6 +7,7 @@ use shared::skyriding::{SKYRIDING, impulse_bound, max_climb, speed_after};
 use super::FallTracker;
 use crate::auras::AuraStatMods;
 use crate::ground::{GroundMap, GroundProbe};
+use crate::maps::InMap;
 
 pub(super) const DEFAULT_RUN_SPEED: f32 = 7.0;
 pub(super) const DEFAULT_WALK_SPEED: f32 = 2.5;
@@ -129,7 +130,7 @@ pub(super) fn apply_movement_input(
     player_entity: Entity,
     players: &mut Query<PlayerMovement, With<Player>>,
     clocks: &mut MovementClocks,
-    mut terrain: Option<(&mut GroundMap, u32)>,
+    mut terrain: Option<(&mut GroundMap, InMap)>,
 ) -> MovementChanges {
     let Ok((
         mut position,
@@ -192,7 +193,11 @@ pub(super) fn apply_movement_input(
     let (mut next, behind) = move_toward_reported(current, leg.target, leg.speed, travel, |secs| {
         clocks.grant(player_entity, secs)
     });
-    let behind = behind || leg.cut;
+    let unclamped = next;
+    if let Some((ground, map)) = terrain.as_ref() {
+        next = ground.clamp_live_movement(*map, current, next);
+    }
+    let behind = behind || leg.cut || next != unclamped;
     // Short of a landing report the player still flies.
     let state = PlayerInput {
         flying: if behind { flown } else { flying },
@@ -253,7 +258,7 @@ struct JudgedPlayer {
 
 /// The height the player gets at `next`: within the swim bounds there while swimming,
 /// else within the land bounds.
-fn judged_height(ground: &mut GroundMap, map_id: u32, player: JudgedPlayer, next: Vec3) -> f32 {
+fn judged_height(ground: &mut GroundMap, map_id: InMap, player: JudgedPlayer, next: Vec3) -> f32 {
     let bounds = player
         .swimming
         .then(|| swim_bounds(ground, map_id, next.with_y(player.current.y)))
@@ -339,8 +344,8 @@ fn skyriding_leg(current: Vec3, reported: Vec3, energy: f32) -> Leg {
 
 /// A flyer's height: anywhere on or over the ground under it (probed from the server's
 /// height, so no report passes through a floor); unloaded ground takes the report.
-fn flight_height(ground: &mut GroundMap, map_id: u32, current: Vec3, next: Vec3) -> f32 {
-    match ground.ground_at(map_id, next.with_y(current.y)) {
+fn flight_height(ground: &mut GroundMap, map_id: InMap, current: Vec3, next: Vec3) -> f32 {
+    match ground.ground_in(map_id, next.with_y(current.y)) {
         GroundProbe::Supported(floor) => next.y.max(floor),
         GroundProbe::Unsupported | GroundProbe::Unloaded => next.y,
     }
@@ -356,9 +361,9 @@ pub(super) struct SwimBounds {
 
 /// The swim bounds at `feet`, where the terrain water there stands `SWIM_DEPTH` over the
 /// ground; `None` where the player cannot swim.
-pub(super) fn swim_bounds(ground: &mut GroundMap, map_id: u32, feet: Vec3) -> Option<SwimBounds> {
-    let liquid = ground.liquid_at(map_id, feet)?;
-    let floor = match ground.ground_at(map_id, feet) {
+pub(super) fn swim_bounds(ground: &mut GroundMap, map_id: InMap, feet: Vec3) -> Option<SwimBounds> {
+    let liquid = ground.liquid_at(map_id.map_id, feet)?;
+    let floor = match ground.ground_in(map_id, feet) {
         GroundProbe::Supported(height) => height,
         _ => liquid.depth_level,
     };
@@ -392,12 +397,12 @@ const HEIGHT_TOLERANCE: f32 = 0.25;
 /// keeps the server's height.
 fn land_height(
     ground: &mut GroundMap,
-    map_id: u32,
+    map_id: InMap,
     current: Vec3,
     next: Vec3,
     envelope: LandEnvelope,
 ) -> f32 {
-    let floor = match ground.ground_at(map_id, next.with_y(current.y)) {
+    let floor = match ground.ground_in(map_id, next.with_y(current.y)) {
         GroundProbe::Supported(height) => height,
         GroundProbe::Unsupported => f32::NEG_INFINITY,
         GroundProbe::Unloaded => return current.y,

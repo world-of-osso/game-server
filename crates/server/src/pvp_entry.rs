@@ -15,12 +15,24 @@ pub(super) fn enter_battleground(
     character_id: u64,
     match_id: u64,
 ) -> Result<(), String> {
-    let destination = entry_location(world, player)?;
-    let reaction = read_team_reaction(world, player)?;
+    let arena = state
+        .battleground_matches
+        .get(&match_id)
+        .and_then(|matched| matched.arena.as_ref());
+    let destination = entry_location(world, player, arena.map(|arena| arena.source.starts))?;
+    // TC Battleground::AddPlayer casts mercenary reactions only outside arenas.
+    let reaction = match arena {
+        Some(_) => None,
+        None => read_team_reaction(world, player)?,
+    };
     let sources = world
         .get_resource::<crate::game_objects::GameObjectSpawns>()
         .ok_or("gameobject catalog unavailable")?;
-    let required = authored_object_entries(destination.map_id)?;
+    let required = if arena.is_some() {
+        Vec::new()
+    } else {
+        authored_object_entries(destination.map_id)?
+    };
     for entry in required {
         if !sources
             .0
@@ -36,7 +48,15 @@ pub(super) fn enter_battleground(
         .get::<InMap>(player)
         .ok_or("current map transfer is still pending")?;
     let origin = crate::maps::transfer::current_location(world, player, current.map_id);
+    let dead_arena_entrant = arena.is_some()
+        && world
+            .get::<shared::components::Health>(player)
+            .is_some_and(|health| health.current <= 0.0);
     create_match_map(world, state, match_id)?;
+    // TC BattleGroundHandler.cpp:380-384 resurrects before battlefield port.
+    if dead_arena_entrant {
+        crate::death::resurrect_player_fully(world, player);
+    }
     if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
         return Err("battleground map entry was refused".into());
     }
@@ -90,13 +110,17 @@ fn apply_team_reaction(world: &mut World, player: Entity, reaction: Option<(u32,
     }
 }
 
-fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String> {
+fn entry_location(
+    world: &World,
+    player: Entity,
+    arena_starts: Option<[u32; 2]>,
+) -> Result<WorldLocation, String> {
     let invitation = world
         .get::<PlayerPvpState>(player)
         .and_then(|state| state.battleground.as_ref())
         .ok_or("player has no battleground invitation")?;
-    let starts = shared::battleground::flag_rules(invitation.map_id)
-        .map(|rules| rules.starts)
+    let starts = arena_starts
+        .or_else(|| shared::battleground::flag_rules(invitation.map_id).map(|rules| rules.starts))
         .or_else(|| shared::battleground::node_rules(invitation.map_id).map(|rules| rules.starts))
         .or_else(|| shared::battleground::eye_rules(invitation.map_id).map(|rules| rules.starts))
         .or_else(|| (invitation.map_id == 998).then_some(shared::battleground::KOTMOGU_STARTS))
@@ -150,8 +174,10 @@ fn create_match_map(
     if let Some(map) = invitation.map {
         return Ok(map);
     }
-    let template =
-        template_by_id(invitation.instance.bg_id).ok_or("battleground template missing")?;
+    let template = match &invitation.arena {
+        Some(arena) => arena.template(),
+        None => template_by_id(invitation.instance.bg_id).ok_or("battleground template missing")?,
+    };
     let roster: Vec<_> = invitation
         .instance
         .team_a_players
@@ -184,6 +210,7 @@ fn create_match_map(
         None
     };
     let capacity = u32::from(template.team_size) * 2;
+    let arena = invitation.arena.is_some();
     let now = crate::maps::difficulty::now(world);
     let map = world
         .resource_scope(|world, mut instances: Mut<InstanceManager>| {
@@ -207,6 +234,10 @@ fn create_match_map(
         .expect("validated match")
         .seething = seething;
     crate::maps::transfer::spawn_map_content(world, map);
+    if arena {
+        super::arena_objects::prepare_map(world, map);
+        super::arena_sight::prepare_map(world, map);
+    }
     if let Some(alterac) = alterac {
         alterac.synchronize(world, map);
         state

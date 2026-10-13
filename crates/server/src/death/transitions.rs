@@ -25,7 +25,7 @@ type PlayerDeathTransitionQuery<'w, 's> = Query<
 >;
 
 #[derive(SystemParam)]
-pub(super) struct PlayerDeathParams<'w, 's> {
+pub(crate) struct PlayerDeathParams<'w, 's> {
     players: PlayerDeathTransitionQuery<'w, 's>,
     connections: Query<'w, 's, (Entity, &'static PlayerLink), With<Authenticated>>,
     state: Res<'w, DeathServerState>,
@@ -37,7 +37,7 @@ pub(super) struct PlayerDeathParams<'w, 's> {
     counters: ResMut<'w, DeathTransitionCounters>,
 }
 
-pub(super) fn process_player_death_transitions(
+pub(crate) fn process_player_death_transitions(
     mut transitions: MessageReader<PlayerDeathTransition>,
     mut params: PlayerDeathParams,
 ) {

@@ -37,7 +37,7 @@ struct SelectionContext {
     level: u8,
     alive: bool,
     in_combat: bool,
-    resting: bool,
+    can_swap: bool,
     old_on_cooldown: bool,
 }
 impl Catalog {
@@ -134,8 +134,8 @@ impl Catalog {
         if selected.values().any(|&chosen| chosen == id) {
             return Err("PvP talent is already selected".into());
         }
-        if selected.contains_key(&slot) && !context.resting {
-            return Err("Replacing a PvP talent requires a rest area".into());
+        if selected.contains_key(&slot) && !context.can_swap {
+            return Err("Replacing a PvP talent requires a rest area or talent-swap aura".into());
         }
         if context.old_on_cooldown {
             return Err("Selected PvP talent is on cooldown".into());
@@ -168,6 +168,10 @@ fn read_context(world: &World, owner: Entity, slot: u8) -> Result<SelectionConte
     let resting = world
         .get::<crate::rest::PlayerRestState>(owner)
         .is_some_and(|rest| rest.is_resting());
+    let can_swap = resting
+        || world
+            .get::<crate::auras::ActiveAuras>(owner)
+            .is_some_and(|auras| auras.has_type(crate::auras::handlers::ALLOW_TALENT_SWAPPING));
     let old = world
         .get::<PlayerPvpState>(owner)
         .and_then(|s| s.progress.pvp_talents.get(&spec))
@@ -187,7 +191,7 @@ fn read_context(world: &World, owner: Entity, slot: u8) -> Result<SelectionConte
         level,
         alive,
         in_combat,
-        resting,
+        can_swap,
         old_on_cooldown,
     })
 }
@@ -262,7 +266,7 @@ fn project(world: &World, owner: Entity) -> Option<(PvpTalentsSnapshot, Vec<(u32
             let can_change = context.alive
                 && !context.in_combat
                 && context.level >= required_level
-                && (selected.is_none() || context.resting);
+                && (selected.is_none() || context.can_swap);
             Some(PvpTalentSlotSnapshot {
                 index,
                 required_level,
@@ -428,7 +432,7 @@ mod tests {
             level: 90,
             alive: true,
             in_combat: false,
-            resting: true,
+            can_swap: true,
             old_on_cooldown: false,
         };
         catalog.select(&mut progress, context, 1, 752).unwrap();
@@ -490,7 +494,7 @@ mod tests {
                 .select(
                     &mut progress,
                     SelectionContext {
-                        resting: false,
+                        can_swap: false,
                         ..context
                     },
                     1,
@@ -526,6 +530,75 @@ mod tests {
         let db = redb::Database::open(&path).unwrap();
         let loaded = crate::persistence::load_pvp(&db, 41);
         assert_eq!(loaded.pvp_talents[&70][&1], 5573);
+    }
+    #[test]
+    fn arena_preparation_allows_actual_pvp_talent_replacement_only_while_aura_remains() {
+        let mut h =
+            crate::spell_cast::test_harness::harness(Vec::new(), &[32727, 210256], 2).unwrap();
+        h.app.insert_resource(Catalog::fixture());
+        let mut state = PlayerPvpState::default();
+        state
+            .progress
+            .pvp_talents
+            .insert(70, [(1, 752)].into_iter().collect());
+        h.app.world_mut().entity_mut(h.caster).insert((
+            state,
+            ActiveSpec(70),
+            Level(90),
+            CombatStatus(false),
+        ));
+        let replace = |h: &mut crate::spell_cast::test_harness::Harness| {
+            let context = read_context(h.app.world(), h.caster, 1).unwrap();
+            let mut progress = h
+                .app
+                .world()
+                .get::<PlayerPvpState>(h.caster)
+                .unwrap()
+                .progress
+                .clone();
+            let result =
+                h.app
+                    .world()
+                    .resource::<Catalog>()
+                    .select(&mut progress, context, 1, 5573);
+            (result, progress)
+        };
+        assert!(replace(&mut h).0.is_err(), "outside a rest area");
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: 32727,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        let (result, progress) = replace(&mut h);
+        result.unwrap();
+        assert_eq!(progress.pvp_talents[&70][&1], 5573);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(CombatStatus(true));
+        assert!(
+            replace(&mut h).0.is_err(),
+            "preparation never permits combat talent swaps"
+        );
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(CombatStatus(false));
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Expired,
+            |aura| aura.spell_id == 32727,
+        );
+        assert!(
+            replace(&mut h).0.is_err(),
+            "gate opening removes permission"
+        );
     }
     #[test]
     fn temporary_pvp_grants_do_not_remove_class_owned_spells() {

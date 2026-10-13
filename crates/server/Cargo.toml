@@ -7,7 +7,8 @@ rust-version.workspace = true
 [dependencies]
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "74e67cf" }
 # Baked line-of-sight tiles and eye points (docs/specs/line-of-sight.md).
-los = { path = "../los" }
+# Reuse the authored M2 collision parser for live arena GO hulls.
+los = { path = "../los", features = ["bake"] }
 # Tiled offline navigation queries; no runtime geometry extraction.
 navigation = { path = "../navigation" }
 bevy = { version = "0.19", default-features = false, features = [
