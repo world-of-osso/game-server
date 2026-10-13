@@ -15,7 +15,80 @@ pub(crate) struct Toy {
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct ToyCatalog(pub BTreeMap<u32, Toy>);
+pub(crate) struct ToyCatalog(
+    pub BTreeMap<u32, Toy>,
+    std::sync::Mutex<Option<PresentationCache>>,
+);
+
+struct PresentationCache {
+    revisions: [Option<u32>; 11],
+    group_authority: bool,
+    built_at: u32,
+    rows: Vec<ToySnapshot>,
+}
+
+fn resource_revision<T: Resource>(world: &World) -> Option<u32> {
+    world
+        .get_resource_ref::<T>()
+        .map(|resource| resource.last_changed().get())
+}
+
+fn presentation_revisions(world: &World) -> [Option<u32>; 11] {
+    [
+        resource_revision::<SpellStore>(world),
+        resource_revision::<crate::world_data::WorldData>(world),
+        resource_revision::<crate::game_objects::summoned::SummonedObjectTemplates>(world),
+        resource_revision::<crate::spell_cast::summon::SummonPropertiesStore>(world),
+        resource_revision::<crate::meeting_stone::MeetingStoneData>(world),
+        resource_revision::<crate::spell_cast::toy_scripts::ToyTexts>(world),
+        resource_revision::<crate::auras::override_spell_data::OverrideSpellData>(world),
+        resource_revision::<crate::spell_cast::teleport_positions::SpellTargetPositions>(world),
+        resource_revision::<crate::merchant::VendorCatalog>(world),
+        resource_revision::<crate::item_templates::ItemTemplates>(world),
+        resource_revision::<ToyCatalog>(world),
+    ]
+}
+
+impl ToyCatalog {
+    pub(crate) fn cache_presentations(&self, world: &World) -> Vec<ToySnapshot> {
+        let revisions = presentation_revisions(world);
+        let group_authority = world.contains_resource::<crate::group::GroupRegistry>();
+        let mut cache = self.1.lock().expect("toy presentation cache lock");
+        let valid = cache.as_ref().is_some_and(|cache| {
+            cache.revisions == revisions
+                && cache.group_authority == group_authority
+                && !revisions
+                    .iter()
+                    .any(|revision| *revision == Some(cache.built_at))
+        });
+        if !valid {
+            let rows = self
+                .0
+                .values()
+                .map(|toy| {
+                    let mut row = toy.snapshot.clone();
+                    row.unavailable_reason = unavailable(toy, world);
+                    row.requires_target_witness = row
+                        .spell_id
+                        .and_then(|id| world.resource::<SpellStore>().get(id))
+                        .is_some_and(crate::spell_cast::requires_target_witness);
+                    row
+                })
+                .collect();
+            *cache = Some(PresentationCache {
+                revisions,
+                group_authority,
+                built_at: world.read_change_tick().get(),
+                rows,
+            });
+        }
+        cache
+            .as_ref()
+            .expect("toy presentations populated")
+            .rows
+            .clone()
+    }
+}
 
 pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
     let mut query = conn.prepare(
@@ -78,6 +151,7 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
         rows.into_iter()
             .map(|toy| (toy.snapshot.item_id, toy))
             .collect(),
+        Default::default(),
     ))
 }
 

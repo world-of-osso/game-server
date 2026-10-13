@@ -13,7 +13,8 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [x] Missing tile files count as prepared/no geometry; read or parse errors log explicitly and fail admission. No timeout admits unready geometry.
 - [x] Connection bootstrap must not enumerate every hidden world entity; visibility changes, unlink/re-entry and component filters must retain the same network results.
 - [x] Password verification runs off the tick thread; successful completion rechecks bans and credential rotation before minting a token and authenticating.
-- [ ] Grant evaluation avoids walking unrelated empty criterion trees, retaining zero-threshold and earned-achievement dependency semantics.
+- [x] Grant evaluation avoids walking unrelated empty criterion trees, retaining zero-threshold and earned-achievement dependency semantics.
+- [ ] Toy presentation preflight is shared across owner snapshots and refreshed when source catalogs change; ownership/favourites remain account-specific.
 - [ ] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
 
 ## How it works

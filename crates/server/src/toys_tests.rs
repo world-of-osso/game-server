@@ -4,6 +4,64 @@ use crate::spell_cast::test_harness::*;
 use shared::components::{CombatStatus, Level};
 use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, UseItem};
 
+#[test]
+fn toy_presentations_are_reused_across_owner_snapshots_and_refresh_after_source_replacement() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let (mut h, _) = setup(file.path());
+    h.app
+        .insert_resource(world_db().expect("production spell source").store.clone());
+    let first = snapshot(h.app.world(), 1);
+    let figurine = first
+        .toys
+        .iter()
+        .find(|toy| toy.item_id == FIGURINE)
+        .unwrap();
+    let expected = figurine.unavailable_reason.clone();
+    h.advance(1);
+    let fastest = (0..3)
+        .map(|_| {
+            let start = std::time::Instant::now();
+            for _ in 0..8 {
+                assert_eq!(snapshot(h.app.world(), 2).toys.len(), first.toys.len());
+            }
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    println!("eight Toy Box owner snapshots: {fastest:?}");
+    assert!(
+        fastest < std::time::Duration::from_millis(50),
+        "static toy preflight is rebuilt per connection: {fastest:?}"
+    );
+    let original = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .clone();
+    h.app
+        .insert_resource(crate::spell_info::SpellStore::default());
+    assert!(
+        snapshot(h.app.world(), 1)
+            .toys
+            .iter()
+            .find(|toy| toy.item_id == FIGURINE)
+            .unwrap()
+            .unavailable_reason
+            .as_ref()
+            .is_some_and(|reason| reason.contains("missing spell"))
+    );
+    h.app.insert_resource(original);
+    assert_eq!(
+        snapshot(h.app.world(), 1)
+            .toys
+            .iter()
+            .find(|toy| toy.item_id == FIGURINE)
+            .unwrap()
+            .unavailable_reason,
+        expected
+    );
+}
+
 const FIGURINE: u32 = 32782;
 const TRANSFORM: u32 = 41301;
 const FLAG_OWNERSHIP: u32 = 38578; // The Flag of Ownership: effect 3, spell 51640.

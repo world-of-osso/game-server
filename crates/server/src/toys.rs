@@ -14,6 +14,7 @@ pub struct ToysPlugin;
 impl Plugin for ToysPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_catalog)
+            .add_systems(PostStartup, cache_catalog_presentations)
             .add_systems(Update, (receive_favourites, receive_use))
             .add_systems(PostUpdate, send_initial);
     }
@@ -40,21 +41,19 @@ pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
     ToyCollectionUpdate {
         toys: world
             .resource::<ToyCatalog>()
-            .0
-            .values()
-            .map(|toy| {
-                let mut entry = toy.snapshot.clone();
+            .cache_presentations(world)
+            .into_iter()
+            .map(|mut entry| {
                 entry.learned = toys.contains_key(&entry.item_id);
                 entry.favourite = toys.get(&entry.item_id).copied().unwrap_or(false);
-                entry.unavailable_reason = toy_catalog::unavailable(toy, world);
-                entry.requires_target_witness = entry
-                    .spell_id
-                    .and_then(|id| world.resource::<crate::spell_info::SpellStore>().get(id))
-                    .is_some_and(crate::spell_cast::requires_target_witness);
                 entry
             })
             .collect(),
     }
+}
+
+fn cache_catalog_presentations(world: &mut World) {
+    drop(world.resource::<ToyCatalog>().cache_presentations(world));
 }
 
 pub(crate) fn send_initial(world: &mut World) {
