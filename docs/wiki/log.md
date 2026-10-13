@@ -1,3 +1,7 @@
+## 2026-10-13 — Empty All criterion semantics
+
+[Plain empty All4](systems/dungeon-achievements.md#empty-all-modifier-trees--verified-2026-10-13) matches TC's true result. Seven native goggle casts/store outcomes grant18905 in a sourced private fixture; missing canonical item projections and production/UI closure remain explicit.
+
 ## 2026-10-13 — Exact-level criterion facts
 
 [Level39](systems/dungeon-achievements.md#exact-reference-player-levels--verified-2026-10-13) reuses inclusive minimum/maximum facts. Native level1/2/3 deaths and reopen prove raw orphan counters without linking them to current achievements; census unchanged.

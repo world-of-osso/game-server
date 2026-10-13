@@ -2,9 +2,11 @@
 
 verified: 2026-10-13
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5415 ordinary (3426 account/1989 character),1803 statistics; 99 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5416 ordinary (3427 account/1989 character),1803 statistics; 99 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Plain empty All4 (TC CriteriaHandler1733–1737) is true; empty Some8 and SingleTrue2 remain false. Compiler now admits its seven cast rows61781–61787 for18905. Native triggered127117–127123 casts store all seven real goggles and grant the account achievement; refused depth, idle, redb reopen/relogin are covered. Private fixture adds exact existing Item/ItemSparse projections77533–77539 using content_policy.ITEM_COLUMNS; canonical content_item lacks these rows and was not changed. +1 structural account achievement, not production crafting/UI or data-closure certification.
 
 - PlayerLevelEqual39 (TC CriteriaHandler1956–1959) lowers to existing inclusive minimum69 and maximum71 on the same level. Native Unit::Kill at levels1/2/3 proves exact-level orphan death counters16188/16402, lower/higher rejection, dead-hit replay safety and redb reopen. +24 supported raw orphan rows (one reach-level5 row, seven quest-count9 rows, sixteen death17 rows); unsupported title/internal21 remains disabled. No new current-root achievement/statistic and no orphan relinking; census unchanged.
 
@@ -71,7 +73,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 26 | DieFromEnviromentalDamage | 4/6 | 4/6 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 27 | CompleteQuest | 12739/14115 | 9505/9889 | 3234 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 28 | BeSpellTarget | 855/1839 | 564/1290 | 291 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 29 | CastSpell | 2500/2972 | 1471/1657 | 1029 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 29 | CastSpell | 2507/2972 | 1478/1657 | 1029 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 30 | TrackedWorldStateUIModified | 16/87 | 16/78 | 0 | Native: every battleground objective credit (TC BattlegroundScore::UpdatePvpStat:78-80) records +1 for the connected character, completed in the match map; only unconditional rows whose PvpStat is a native column. BG start/fail-event rows stay disabled. Native completion-map gate leaves 199/200 (Instance_ID489) unearned on WSG2106. See spec. |
 | 31 | PVPKillInArea | 0/51 | 0/45 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 32 | WinArena | 57/82 | 56/62 | 1 | Native committed rated winners: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
