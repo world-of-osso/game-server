@@ -42,7 +42,7 @@ fn source_harness(corner: [f32; 2], height: f32) -> Harness {
         },
         false,
     );
-    crate::game_objects::spawn_map_game_objects(&mut commands, &objects, COPY, 0);
+    crate::game_objects::spawn_map_game_objects(&mut commands, &objects, COPY, 0, None);
     queue.apply(h.app.world_mut());
     h.app.insert_resource(data);
     h.app.world_mut().entity_mut(h.caster).insert(COPY);
