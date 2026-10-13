@@ -1,3 +1,7 @@
+## 2026-10-13 — Native damage shields
+
+[Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.
+
 ## 2026-10-13 — PlayerHasAura Some alternatives
 
 [Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.

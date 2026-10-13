@@ -1688,6 +1688,9 @@ fn record_swing_events(
     let swing = swing_log_event(attacker, target, &outcome);
     commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
     if outcome.npc_died || outcome.player_died {
+        // Unit::Kill removes death-interrupted auras before damage-shield reactions.
+        // The ordinary aura-lifetime sweep runs later than this deferred melee batch.
+        commands.queue(move |world: &mut World| crate::auras::remove_on_death(world, target));
         let death = death_log_event(attacker, target);
         commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, death));
     }
