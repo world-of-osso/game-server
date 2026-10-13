@@ -206,11 +206,12 @@ fn class_completeness_native_feared_victim_cannot_dodge() {
         let mut h = harness_with(Vec::new(), &[EVASION, INTIMIDATING_SHOUT], ROGUE, true)
             .expect("real world.db and computed stats required");
         h.advance(3);
-        assert_eq!(cast_outcome(&mut h, EVASION, Some(h.caster)), Ok(()));
+        let rogue = h.caster;
+        assert_eq!(cast_outcome(&mut h, EVASION, Some(rogue)), Ok(()));
         if feared {
             fear_player(&mut h, INTIMIDATING_SHOUT, 1);
         }
-        let (npc, rogue) = (h.npc, h.caster);
+        let npc = h.npc;
         h.app.world_mut().entity_mut(npc).insert((
             CharacterStats {
                 main_hand: WeaponDamage {
