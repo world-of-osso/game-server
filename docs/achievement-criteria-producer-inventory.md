@@ -2,9 +2,11 @@
 
 verified: 2026-10-13
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5394 ordinary (3414 account/1980 character),1751 statistics; 95 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5395 ordinary (3415 account/1980 character),1791 statistics; 97 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- WinArena32 / ParticipateInArena33 (TC Arena.cpp241–250): successful once-only native rated settlement credits every online in-world participant and map-specific winners, after the result's applied marker. Compiler admits arena team-size24 for native2/3 and ranked-match60 only for these result events. Native 2v2/3v3 real-channel RED/GREEN covers winner/loser participation, map/team-size isolation, no queue/preparation/skirmish credit, idle replay and redb reopen. No native5v5 or inferred slot-to-team-size rating39 mapping. Census +World Wide Winner699 / +40 statistics, structural only.
 
 - DoEmote54 TargetCreatureId4 (TC ChatHandler703–753; CriteriaHandler1782–1785): each EmoteIntent snapshots the selected server entity; native receipt resolves an NPC on the sender's map copy and publishes its template entry with that request's TextEmote ID. All4/SingleTrue target-entry leaves are compiled only for type54; other producers have no target snapshot and remain disabled. Love225 has no animation (pinned69933 EmotesText EmoteID0). Native RED/GREEN covers two different targets queued together, wrong emote, targetless/player/forged/stale/foreign-map targets, world-entry eligibility, idle replay and redb reopen. Census +5 account achievements:1206/2557/5548/5865/16729; structural only, not spawn/model completeness. Other target modifiers remain unsupported.
 
@@ -55,8 +57,8 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 29 | CastSpell | 2397/2972 | 1391/1657 | 1006 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 30 | TrackedWorldStateUIModified | 15/87 | 15/78 | 0 | Native: every battleground objective credit (TC BattlegroundScore::UpdatePvpStat:78-80) records +1 for the connected character, completed in the match map; only unconditional rows whose PvpStat is a native column. BG start/fail-event rows stay disabled. Native completion-map gate leaves 199/200 (Instance_ID489) unearned on WSG2106. See spec. |
 | 31 | PVPKillInArea | 0/51 | 0/45 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
-| 32 | WinArena | 0/82 | 0/62 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
-| 33 | ParticipateInArena | 0/87 | 0/61 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
+| 32 | WinArena | 57/82 | 56/62 | 1 | Native committed rated winners: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
+| 33 | ParticipateInArena | 55/87 | 55/61 | 0 | Native committed rated participants, including losers: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
 | 34 | LearnOrKnowSpell | 530/578 | 441/467 | 89 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 35 | EarnHonorableKill | 0/62 | 0/52 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 36 | AcquireItem | 1650/1759 | 1123/1132 | 527 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -72,7 +74,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 46 | ReputationGained | 259/387 | 222/342 | 37 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 47 | TotalExaltedFactions | 1/2 | 0/0 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 48 | GotHaircut | 1/2 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 49 | EquipItemInSlot | 0/433 | 0/113 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
+| 49 | EquipItemInSlot | 0/433 | 0/113 | 0 | Source/data mismatch: TC Player.cpp11638/11766 sends slot as miscValue1 and itemID as miscValue2, but ModifierTree3/14/15 read miscValue1 as itemID. Local rows use those qualifiers. No invented argument remap or dropped conditions. |
 | 50 | RollNeed | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 51 | RollGreed | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 52 | DeliverKillingBlowToClass | 0/13 | 0/13 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |

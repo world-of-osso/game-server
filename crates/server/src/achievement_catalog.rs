@@ -15,9 +15,9 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 78, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62, 63, 65, 67, 68,
-    69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162,
-    165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    0, 1, 32, 33, 78, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62, 63, 65,
+    67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158,
+    160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -98,6 +98,9 @@ pub(crate) enum CriteriaEvent {
     WinAnyBattleground,
     /// TC Arena.cpp249: winner's pre-result personal rating, minimum1.
     WinAnyRankedArena(u32),
+    /// Native rated result: map and team size of the completed arena.
+    WinArena(u32, u8),
+    ParticipateInArena(u32, u8),
     CompleteMythicPlus(MythicCompletion),
     CompleteScenario(u32),
     CompleteAnyScenario,
@@ -139,6 +142,8 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::KillAnyCreature => 78,
             Self::WinAnyRankedArena(_) => 37,
+            Self::WinArena(_, _) => 32,
+            Self::ParticipateInArena(_, _) => 33,
             Self::ReachLevel(_) => 5,
             Self::ActivelyReachLevel(_) => 196,
             Self::ReachMaxLevel(_) => 221,
@@ -239,6 +244,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::WinArena(map, _) | Self::ParticipateInArena(map, _) => criteria.asset == map,
             Self::WinAnyRankedArena(rating) => rating > 0 && criteria.asset == 0,
             Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
             Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
@@ -438,6 +444,8 @@ enum CriteriaFact {
     Aura(u32),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
+    ArenaTeamSize(u8),
+    RankedArena,
     /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
     Area(BTreeSet<u32>),
     Race(u8),
@@ -455,6 +463,13 @@ impl CriteriaFact {
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
+            Self::ArenaTeamSize(size) => matches!(event,
+                CriteriaEvent::WinArena(_, actual) | CriteriaEvent::ParticipateInArena(_, actual)
+                if actual == *size),
+            Self::RankedArena => matches!(
+                event,
+                CriteriaEvent::WinArena(..) | CriteriaEvent::ParticipateInArena(..)
+            ),
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
             Self::Race(race) => player.race == *race,
             Self::Class(class) => player.class == *class,
@@ -1198,6 +1213,10 @@ fn load_criteria_facts(
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             17 => exists("area_table")?
                 .then(|| CriteriaFact::Area(collect_area_descendants(asset, area_children))),
+            24 => small
+                .filter(|size| matches!(size, 2 | 3))
+                .map(CriteriaFact::ArenaTeamSize),
+            60 => Some(CriteriaFact::RankedArena),
             // Only a race a character can be created as can ever hold.
             25 => small
                 .filter(|race| crate::race_class::race_bit(*race).is_some())
@@ -1210,7 +1229,7 @@ fn load_criteria_facts(
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated facts use only 2/4/8/17/25/26/32/69/71"),
+            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/32/60/69/71"),
         };
         let Some(fact) = fact else {
             return Ok(None);
@@ -1300,6 +1319,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel/Love.
                         // TDB1210 has no criteria_data overlay for these unconditional rows.
                         || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225))
+                        // Native rated arena result has a real positive map ID, never an all-map alias0.
+                        || (matches!(kind, 32 | 33) && row.get::<_, i32>(2)? > 0)
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
