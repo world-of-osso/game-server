@@ -381,6 +381,7 @@ impl Plugin for InterestPlugin {
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
             .add_observer(on_player_link_removed)
+            .add_observer(on_detection_geometry_woken)
             .add_systems(
                 FixedUpdate,
                 (sync_detection_geometry, update_interest)
@@ -394,15 +395,10 @@ impl Plugin for InterestPlugin {
     }
 }
 
-/// Replicon defaults to visible; no world entities are relevant before selection.
-fn on_replication_client_added(
-    trigger: On<Add, ClientVisibility>,
-    targets: Query<Entity, With<NetworkVisibility>>,
-    mut commands: Commands,
-) {
-    for entity in &targets {
-        commands.lose_visibility(entity, trigger.entity);
-    }
+/// No world entities are relevant before selection. Start with a whitelist,
+/// rather than allocating a hidden entry/command for every world object.
+fn on_replication_client_added(trigger: On<Add, ClientVisibility>, mut commands: Commands) {
+    commands.hide_all_by_default(trigger.entity);
 }
 
 fn on_private_object_owner_added(
@@ -422,13 +418,35 @@ fn on_network_visibility_added(
         Option<&InMap>,
         Option<&DeathState>,
         Option<&PrivateObjectOwner>,
+        Option<&Level>,
+        Option<&Rotation>,
+        Option<&UnitScale>,
+        Has<Player>,
+        Has<Npc>,
+        Option<&shared::protocol::GameObjectInfo>,
     )>,
     connections: Query<Entity, With<ClientVisibility>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,
 ) {
-    if let Ok((position, map, life_state, private_owner)) = positions.get(trigger.entity) {
+    if let Ok((
+        position,
+        map,
+        life_state,
+        private_owner,
+        level,
+        rotation,
+        scale,
+        player,
+        npc,
+        object,
+    )) = positions.get(trigger.entity)
+    {
+        index.detection_geometry.insert(
+            trigger.entity,
+            DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
+        );
         if let Some(owner) = private_owner {
             index.private_owners.insert(trigger.entity, owner.0);
         }
@@ -524,26 +542,66 @@ type ChangedDetectionGeometry<'w, 's> = Query<
         Has<Npc>,
         Option<&'static shared::protocol::GameObjectInfo>,
     ),
-    Or<(
-        Changed<Level>,
-        Changed<Rotation>,
-        Changed<UnitScale>,
-        Added<Player>,
-        Added<Npc>,
-        Added<shared::protocol::GameObjectInfo>,
-    )>,
+    (
+        Or<(
+            Changed<Level>,
+            Changed<Rotation>,
+            Changed<UnitScale>,
+            Added<Player>,
+            Added<Npc>,
+            Added<shared::protocol::GameObjectInfo>,
+        )>,
+        Without<crate::grid_activity::GridDormant>,
+    ),
 >;
+
+// Geometry of a sleeping unit is refreshed at the actual activation boundary.
+type DetectionGeometryUnits<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Option<&'static Level>,
+        Option<&'static Rotation>,
+        Option<&'static UnitScale>,
+        Has<Player>,
+        Has<Npc>,
+        Option<&'static shared::protocol::GameObjectInfo>,
+    ),
+>;
+
+fn on_detection_geometry_woken(
+    event: On<Remove, crate::grid_activity::GridDormant>,
+    units: DetectionGeometryUnits,
+    mut index: ResMut<InterestIndex>,
+) {
+    if let Ok(parts) = units.get(event.entity) {
+        update_detection_geometry(
+            &mut index,
+            event.entity,
+            DetectionGeometry::from_parts(parts),
+        );
+    }
+}
 
 fn sync_detection_geometry(units: ChangedDetectionGeometry, mut index: ResMut<InterestIndex>) {
     for (entity, level, rotation, scale, player, npc, object) in &units {
-        index.detection_geometry.insert(
+        update_detection_geometry(
+            &mut index,
             entity,
             DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
         );
-        index.dirty_targets.insert(entity);
-        if let Some(&connection) = index.connection_by_player.get(&entity) {
-            index.dirty_observers.insert(connection);
-        }
+    }
+}
+
+fn update_detection_geometry(
+    index: &mut InterestIndex,
+    entity: Entity,
+    geometry: DetectionGeometry,
+) {
+    index.detection_geometry.insert(entity, geometry);
+    index.dirty_targets.insert(entity);
+    if let Some(&connection) = index.connection_by_player.get(&entity) {
+        index.dirty_observers.insert(connection);
     }
 }
 

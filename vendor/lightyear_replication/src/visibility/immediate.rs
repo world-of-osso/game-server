@@ -78,9 +78,16 @@ pub trait VisibilityExt {
 
     /// Hide `entity` (and its replication-hierarchy descendants) from `sender`.
     fn lose_visibility(&mut self, entity: Entity, sender: Entity);
+
+    /// Start a new client's entity visibility as an interest whitelist.
+    fn hide_all_by_default(&mut self, sender: Entity);
 }
 
 impl VisibilityExt for Commands<'_, '_> {
+    fn hide_all_by_default(&mut self, sender: Entity) {
+        self.queue(move |world: &mut World| world.hide_all_by_default(sender));
+    }
+
     fn gain_visibility(&mut self, entity: Entity, sender: Entity) {
         self.queue(move |world: &mut World| {
             world.gain_visibility(entity, sender);
@@ -95,6 +102,13 @@ impl VisibilityExt for Commands<'_, '_> {
 }
 
 impl VisibilityExt for World {
+    fn hide_all_by_default(&mut self, sender: Entity) {
+        let bit = self.resource::<VisibilityBit>().0;
+        self.get_mut::<ClientVisibility>(sender)
+            .expect("new replication client's visibility")
+            .hide_by_default(bit);
+    }
+
     fn gain_visibility(&mut self, entity: Entity, sender: Entity) {
         let bit = self.resource::<VisibilityBit>().0;
         if let Some(mut vis) = self.get_mut::<ClientVisibility>(sender) {

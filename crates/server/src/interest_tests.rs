@@ -214,6 +214,23 @@ fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_
     app.world_mut().get_mut::<Rotation>(player).unwrap().y = std::f32::consts::FRAC_PI_2;
     run_fixed_ticks(&mut app, 1);
     assert!(visible(&app));
+    app.world_mut()
+        .entity_mut(player)
+        .insert(crate::grid_activity::GridDormant);
+    app.world_mut().get_mut::<Rotation>(player).unwrap().y = -std::f32::consts::FRAC_PI_2;
+    run_fixed_ticks(&mut app, 1);
+    assert!(visible(&app), "sleeping geometry is not scanned every tick");
+    app.world_mut()
+        .entity_mut(player)
+        .remove::<crate::grid_activity::GridDormant>();
+    run_fixed_ticks(&mut app, 1);
+    assert!(
+        !visible(&app),
+        "wake applies the changed facing before visibility"
+    );
+    app.world_mut().get_mut::<Rotation>(player).unwrap().y = std::f32::consts::FRAC_PI_2;
+    run_fixed_ticks(&mut app, 1);
+    assert!(visible(&app));
     remove_auras(app.world_mut(), player, RemoveReason::Expired, |aura| {
         aura.spell_id == 34709
     });

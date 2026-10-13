@@ -4,17 +4,25 @@ use shared::protocol::{AuthChannel, LoginRequest, LoginResponse};
 use std::net::UdpSocket;
 use std::time::Duration;
 
-fn spawn_network_npc(app: &mut App, template_id: u32, x: f32) {
-    app.world_mut().spawn((
-        Position { x, y: 0.0, z: 0.0 },
-        crate::maps::InMap::continent(0),
-        Npc {
-            template_id,
-            name: "Fixture wolf".into(),
-        },
-        NetworkVisibility::default(),
-        Replicate::to_clients(NetworkTarget::All),
-    ));
+fn spawn_network_npc(app: &mut App, template_id: u32, x: f32, dormant: bool) {
+    let entity = app
+        .world_mut()
+        .spawn((
+            Position { x, y: 0.0, z: 0.0 },
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id,
+                name: "Fixture wolf".into(),
+            },
+            NetworkVisibility::default(),
+            Replicate::to_clients(NetworkTarget::All),
+        ))
+        .id();
+    if dormant {
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(crate::grid_activity::GridDormant);
+    }
 }
 
 fn reply_to_test_login(
@@ -48,9 +56,17 @@ fn collect_login_replies(
     }
 }
 
+#[derive(Resource, Default)]
+struct ServerFrameWork(Duration);
+
 fn advance_network(server: &mut App, client: &mut App, frames: usize) {
     for _ in 0..frames {
+        let started = std::time::Instant::now();
         server.update();
+        let elapsed = started.elapsed();
+        let mut work = server.world_mut().resource_mut::<ServerFrameWork>();
+        work.0 = work.0.max(elapsed);
+        drop(work);
         client.update();
         std::thread::sleep(Duration::from_millis(1));
     }
@@ -69,6 +85,15 @@ fn received_npcs(client: &mut App) -> Vec<u32> {
 
 #[test]
 fn pre_world_client_exchanges_auth_without_receiving_npcs_then_receives_nearby_npcs() {
+    run_world_entry_case(0);
+}
+
+#[test]
+fn pre_world_large_population_bootstrap_keeps_auth_frames_in_budget() {
+    run_world_entry_case(100_000);
+}
+
+fn run_world_entry_case(hidden_population: usize) {
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let address = socket.local_addr().unwrap();
     drop(socket);
@@ -83,6 +108,7 @@ fn pre_world_client_exchanges_auth_without_receiving_npcs_then_receives_nearby_n
         shared::ProtocolPlugin,
         crate::interest::InterestPlugin,
     ));
+    server.init_resource::<ServerFrameWork>();
     server.add_observer(on_new_link);
     server.add_observer(on_player_link_inserted);
     server.add_systems(Update, reply_to_test_login);
@@ -97,8 +123,11 @@ fn pre_world_client_exchanges_auth_without_receiving_npcs_then_receives_nearby_n
     server.world_mut().trigger(Start {
         entity: server_entity,
     });
-    spawn_network_npc(&mut server, 1001, 20.0);
-    spawn_network_npc(&mut server, 1002, 1000.0);
+    spawn_network_npc(&mut server, 1001, 20.0, false);
+    spawn_network_npc(&mut server, 1002, 1000.0, false);
+    for index in 0..hidden_population {
+        spawn_network_npc(&mut server, 100_000 + index as u32, 10_000.0, true);
+    }
 
     let mut client = App::new();
     client.add_plugins((
@@ -139,6 +168,8 @@ fn pre_world_client_exchanges_auth_without_receiving_npcs_then_receives_nearby_n
         app.finish();
         app.cleanup();
     }
+    server.update();
+    server.world_mut().run_schedule(FixedUpdate);
     advance_network(&mut server, &mut client, 250);
     assert!(client.world().get::<Connected>(client_entity).is_some());
     client
@@ -165,7 +196,7 @@ fn pre_world_client_exchanges_auth_without_receiving_npcs_then_receives_nearby_n
         "existing NPCs must not arrive before world entry"
     );
 
-    spawn_network_npc(&mut server, 1003, 30.0);
+    spawn_network_npc(&mut server, 1003, 30.0, false);
     advance_network(&mut server, &mut client, 100);
     assert_eq!(
         received_npcs(&mut client),
@@ -212,4 +243,12 @@ fn pre_world_client_exchanges_auth_without_receiving_npcs_then_receives_nearby_n
         vec![1002],
         "moving must replace the client's visible NPC set"
     );
+    if hidden_population != 0 {
+        let max = server.world().resource::<ServerFrameWork>().0;
+        println!("{hidden_population} hidden NPCs: maximum auth/entry frame {max:?}");
+        assert!(
+            max < Duration::from_millis(50),
+            "hidden population blocks connection bootstrap: {max:?}"
+        );
+    }
 }

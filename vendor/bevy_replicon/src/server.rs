@@ -458,13 +458,14 @@ fn prepare_messages(
 fn prepare_candidates(
     dirty_queue: Res<ReplicationDirtyQueue>,
     replicated: Query<Entity, With<Replicated>>,
-    senders: Query<Entity, With<ConnectedClient>>,
+    senders: Query<(Entity, &ClientVisibility), With<ConnectedClient>>,
+    filter_registry: Res<FilterRegistry>,
     mut candidates: ResMut<ReplicationCandidates>,
 ) {
     candidates.clear();
 
     let dirty = dirty_queue.drain();
-    let connected_senders: EntityIndexSet = senders.iter().collect();
+    let connected_senders: EntityIndexSet = senders.iter().map(|(entity, _)| entity).collect();
 
     for entity in dirty.all_senders {
         for sender in &connected_senders {
@@ -485,8 +486,21 @@ fn prepare_candidates(
         if !connected_senders.contains(&sender) {
             continue;
         }
-        for entity in &replicated {
-            candidates.insert(entity, sender);
+        let (_, visibility) = senders.get(sender).expect("connected replication sender");
+        if let Some(visible) = visibility.explicitly_visible() {
+            for entity in visible {
+                if replicated.contains(entity)
+                    && !visibility.get(entity).is_hidden(&filter_registry)
+                {
+                    candidates.insert(entity, sender);
+                }
+            }
+        } else {
+            for entity in &replicated {
+                if !visibility.get(entity).is_hidden(&filter_registry) {
+                    candidates.insert(entity, sender);
+                }
+            }
         }
     }
 }

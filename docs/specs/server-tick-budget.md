@@ -9,8 +9,10 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [x] Evaluate simultaneously observed achievement facts without rescanning grants for each fact; preserve final counters, earned IDs and every toast.
 - [x] Publish one final achievement snapshot and one Adventure Guide refresh per connection per frame; retain every toast and persisted contribution, with no idle replay.
 - [x] Health-percent aura observation must not scan idle world populations; preserve threshold crossing, removal, reapplication and apply-below-threshold behavior.
-- [ ] Keep admission pending while surrounding ground, M2 floors, LOS and navigation are loaded off the tick thread. No successful entry or player activation before preparation completes.
-- [ ] Missing tile files count as prepared/no geometry; read or parse errors log explicitly and fail admission. No timeout admits unready geometry.
+- [x] Keep admission pending while surrounding ground, M2 floors, LOS and navigation are loaded off the tick thread. No successful entry or player activation before preparation completes.
+- [x] Missing tile files count as prepared/no geometry; read or parse errors log explicitly and fail admission. No timeout admits unready geometry.
+- [ ] Connection bootstrap must not enumerate every hidden world entity; visibility changes and component filters must retain the same network results.
+- [ ] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
 
 ## How it works
 
@@ -37,7 +39,7 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 
 ## Known gaps (current cycle)
 
-- [ ] Pending-admission tests and paired live before/after proof on private UDP5831.
+- [ ] Paired live before/after frame-budget proof on private UDP5831.
 - [ ] Remaining synchronous account/catalog hot spots must be measured after geometry preparation.
 
 ## Out of scope

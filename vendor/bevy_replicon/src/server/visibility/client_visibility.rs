@@ -1,4 +1,8 @@
-use bevy::{ecs::entity::EntityHashMap, platform::collections::hash_map::Entry, prelude::*};
+use bevy::{
+    ecs::entity::{EntityHashMap, EntityHashSet},
+    platform::collections::hash_map::Entry,
+    prelude::*,
+};
 
 use super::filters_mask::{FilterBit, FiltersMask};
 
@@ -13,6 +17,8 @@ use super::filters_mask::{FilterBit, FiltersMask};
 /// Automatically updated by observers from [`AppVisibilityExt`](super::AppVisibilityExt).
 #[derive(Component, Reflect, Default)]
 pub struct ClientVisibility {
+    default_hidden: Option<FilterBit>,
+    shown: EntityHashSet,
     /// Entities with hidden data.
     hidden: EntityHashMap<FiltersMask>,
 
@@ -24,6 +30,20 @@ pub struct ClientVisibility {
 }
 
 impl ClientVisibility {
+    /// New clients may opt into an entity-scope whitelist before replication begins.
+    /// Unknown and subsequently spawned entities stay hidden without per-entity writes.
+    pub fn hide_by_default(&mut self, bit: FilterBit) {
+        assert!(
+            self.default_hidden.is_none(),
+            "visibility default already configured"
+        );
+        self.default_hidden = Some(bit);
+    }
+
+    pub(crate) fn explicitly_visible(&self) -> Option<impl Iterator<Item = Entity> + '_> {
+        self.default_hidden.map(|_| self.shown.iter().copied())
+    }
+
     /// Returns iterator over all entities that lose any visibility during this tick.
     pub(crate) fn iter_lost(&self) -> impl Iterator<Item = (Entity, FiltersMask)> {
         self.lost.iter().map(|(&e, &m)| (e, m))
@@ -43,6 +63,7 @@ impl ClientVisibility {
     pub(crate) fn remove_despawned(&mut self, entity: Entity) {
         self.hidden.remove(&entity);
         self.lost.remove(&entity);
+        self.shown.remove(&entity);
     }
 
     /**
@@ -145,6 +166,13 @@ impl ClientVisibility {
     ```
     */
     pub fn set(&mut self, entity: Entity, bit: FilterBit, visible: bool) {
+        if self.default_hidden == Some(bit) {
+            if visible {
+                self.shown.insert(entity);
+            } else if !self.shown.remove(&entity) {
+                return;
+            }
+        }
         if visible {
             if let Entry::Occupied(mut mask) = self.hidden.entry(entity) {
                 mask.get_mut().remove(bit);
@@ -170,13 +198,46 @@ impl ClientVisibility {
 
     /// Returns bits for all filters that affect visibility of the given entity.
     pub(crate) fn get(&self, entity: Entity) -> FiltersMask {
-        self.hidden.get(&entity).copied().unwrap_or_default()
+        let mut mask = self.hidden.get(&entity).copied().unwrap_or_default();
+        if let Some(bit) = self.default_hidden
+            && !self.shown.contains(&entity)
+        {
+            mask.insert(bit);
+        }
+        mask
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_hidden_tracks_visible_losses_and_other_component_filters() {
+        let mut visibility = ClientVisibility::default();
+        let entity = Entity::PLACEHOLDER;
+        let bit = FilterBit::new(0);
+        visibility.hide_by_default(bit);
+        assert!(visibility.get(entity).contains(bit));
+        visibility.set(entity, bit, true);
+        assert!(visibility.get(entity).is_empty());
+        visibility.set(entity, FilterBit::new(1), false);
+        assert!(!visibility.get(entity).contains(bit));
+        assert!(visibility.get(entity).contains(FilterBit::new(1)));
+        visibility.set(entity, bit, false);
+        assert!(visibility.get(entity).contains(bit));
+        assert!(visibility.get(entity).contains(FilterBit::new(1)));
+        assert!(
+            visibility
+                .iter_lost()
+                .any(|(lost, mask)| lost == entity && mask.contains(bit))
+        );
+        visibility.set(entity, bit, true);
+        visibility.set(entity, FilterBit::new(1), true);
+        assert!(visibility.get(entity).is_empty());
+        visibility.remove_despawned(entity);
+        assert!(visibility.get(entity).contains(bit));
+    }
 
     #[test]
     fn single() {
