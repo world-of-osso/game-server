@@ -193,6 +193,15 @@ fn follower_normal_population_spawns_normal_gameobjects_in_205_copy() {
     );
     queue.apply(&mut world);
     assert_eq!(world.query::<&GameObjectInfo>().iter(&world).count(), 1);
+    let (collision, visible) = world
+        .query::<(
+            &shared::protocol::GameObjectCollision,
+            &shared::protocol::GameObjectVisible,
+        )>()
+        .single(&world)
+        .expect("authored native object snapshot includes collision and visibility");
+    assert!(collision.0);
+    assert!(visible.0);
     assert_eq!(
         *world.query::<&crate::maps::InMap>().single(&world).unwrap(),
         map

@@ -2,7 +2,6 @@
 use crate::game_objects::GameObjectBounds;
 use crate::maps::InMap;
 use bevy::prelude::*;
-use lightyear::prelude::*;
 use rusqlite::Connection;
 use shared::protocol::GameObjectInfo;
 use std::collections::BTreeMap;
@@ -64,27 +63,75 @@ pub(super) fn spawn_scripted_object(
         .get(&entry)
         .expect("validated scripted BG template/display")
         .clone();
-    let (x, y, z) = crate::terrain_height::wow_to_bevy(at.x, at.y, at.z);
-    world
-        .spawn((
-            shared::components::Position { x, y, z },
-            shared::components::Rotation {
-                x: 0.0,
-                y: orientation + std::f32::consts::FRAC_PI_2,
-                z: 0.0,
-            },
-            info,
-            // Script summons use the source default GO_STATE_READY; publish that
-            // state explicitly, just as ordinary authored GO spawns do.
-            shared::protocol::GameObjectCollision(true),
-            shared::protocol::GameObjectVisible(true),
-            GameObjectBounds {
-                orientation,
-                ..bounds
-            },
-            map,
-            Replicate::to_clients(NetworkTarget::All),
-            crate::interest::NetworkVisibility::default(),
-        ))
-        .id()
+    let spawn = crate::game_objects::GameObjectSpawn {
+        guid: 0, // Runtime summon: no static content_gameobject GUID.
+        map_id: map.map_id,
+        info,
+        position: at,
+        orientation,
+        initial_state: crate::game_objects::GO_STATE_READY,
+        bounds: GameObjectBounds {
+            orientation,
+            ..bounds
+        },
+        spawn_difficulties: vec![0],
+        chair: None,
+        quest_object: None,
+        script_name: String::new(),
+    };
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, world);
+    let object = crate::game_objects::spawn_game_object(&mut commands, &spawn, map);
+    queue.apply(world);
+    object
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scripted_azerite_emits_ready_native_object_state() {
+        let mut world = World::new();
+        let info = GameObjectInfo {
+            entry: 281307,
+            go_type: 42,
+            display_id: 47685,
+            name: "Azerite".into(),
+            scale: 1.1,
+        };
+        let bounds = GameObjectBounds {
+            min: Vec3::ZERO,
+            max: Vec3::ONE,
+            scale: 1.1,
+            orientation: 0.0,
+        };
+        world.insert_resource(BattlegroundObjectTemplates(BTreeMap::from([(
+            info.entry,
+            (info.clone(), bounds),
+        )])));
+        let map = InMap {
+            map_id: 1803,
+            instance_id: 9,
+        };
+        let at = Vec3::new(1343.72, 2919.95, 32.87);
+        let object = spawn_scripted_object(&mut world, map, info.entry, at, 0.5);
+        let entity = world.entity(object);
+        assert_eq!(entity.get::<GameObjectInfo>(), Some(&info));
+        assert_eq!(entity.get::<InMap>(), Some(&map));
+        assert_eq!(
+            entity
+                .get::<shared::protocol::GameObjectCollision>()
+                .map(|state| state.0),
+            Some(true),
+            "native object snapshot requires explicit READY collision state"
+        );
+        assert_eq!(
+            entity
+                .get::<shared::protocol::GameObjectVisible>()
+                .map(|state| state.0),
+            Some(true)
+        );
+        assert_eq!(crate::game_objects::wow_position(entity.get().unwrap()), at);
+    }
 }

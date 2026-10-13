@@ -108,7 +108,7 @@ pub(crate) struct GameObjectState(pub u8);
 
 pub(crate) const GO_STATE_ACTIVE: u8 = 0;
 pub(crate) const GO_STATE_DESTROYED: u8 = 2;
-const GO_STATE_READY: u8 = 1;
+pub(crate) const GO_STATE_READY: u8 = 1;
 
 /// TC `GameObject::SetGoState`: store the state and enable model collision only
 /// in READY. No scripted GO AI/state-type callbacks are bound to the liquid pool.
@@ -298,6 +298,7 @@ pub(crate) fn spawn_game_object(
 ) -> Entity {
     let mut object = commands.spawn((
         game_object_bundle(spawn),
+        shared::protocol::GameObjectVisible(true),
         map,
         Replicate::to_clients(NetworkTarget::All),
         NetworkVisibility::default(),
