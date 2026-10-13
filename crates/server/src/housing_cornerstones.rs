@@ -108,6 +108,7 @@ fn read_ui_link(
         spawn_difficulties: vec![0],
         chair: None,
         quest_object: None,
+        script_name: String::new(),
     })
 }
 

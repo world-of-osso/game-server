@@ -1,10 +1,13 @@
 //! Partial Golden Serpent port from TC a352b1fa boss_golden_serpent.cpp.
 //! TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
-//! Intro fly anim tier/hover state, near-point collision-angle search and native
-//! visuals remain gaps.
+//! Also the Serpentine Seal -> Shadow of Zul temple event from kings_rest.cpp.
+//! Intro fly anim tier/hover state, GO state visuals, near-point collision-angle
+//! search and native visuals remain gaps.
 mod gold_follow;
 mod golden_serpent;
 mod molten_gold;
+mod serpentine_seal;
+mod shadow_of_zul;
 use super::{CreatureAi, Ctx, DamageTaken};
 use bevy::prelude::*;
 pub(crate) use gold_follow::{
@@ -13,6 +16,10 @@ pub(crate) use gold_follow::{
 pub(crate) use molten_gold::{
     handles_effect as handles_molten_gold_effect, load_areas as load_molten_gold_areas,
     update_areas as update_molten_gold_areas,
+};
+pub(crate) use serpentine_seal::{
+    SCRIPT as SERPENTINE_SEAL_SCRIPT, gossip_hello as serpentine_seal_gossip_hello,
+    update as update_serpentine_seals,
 };
 use shared::components::UnitFlags;
 
@@ -32,7 +39,10 @@ const ABSORPTION_DESPAWN_MS: u32 = 4_000;
 const ANIMATED_GOLD: u32 = 135406;
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
-    matches!(name, ANIMATED_GOLD_SCRIPT | GOLDEN_SERPENT_SCRIPT)
+    matches!(
+        name,
+        ANIMATED_GOLD_SCRIPT | GOLDEN_SERPENT_SCRIPT | shadow_of_zul::SCRIPT
+    )
 }
 
 pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Box<dyn CreatureAi>> {
@@ -46,6 +56,9 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
     }
     if name == GOLDEN_SERPENT_SCRIPT {
         return golden_serpent::creature_ai(world, actor);
+    }
+    if name == shadow_of_zul::SCRIPT {
+        return Some(Box::new(shadow_of_zul::ShadowOfZul::default()));
     }
     Some(Box::new(AnimatedGold::default()))
 }
@@ -147,6 +160,8 @@ impl CreatureAi for AnimatedGold {
     }
 }
 
+/// `SPAWN_GROUP_PRE_FIRST_BOSS`: the TempleEvent trash Shadow of Zul raises.
+pub(crate) const SPAWN_GROUP_PRE_FIRST_BOSS: u32 = 1255;
 /// `SPAWN_GROUP_SERPENT_BOSS`: manual group spawned by the instance script.
 pub(crate) const SPAWN_GROUP_SERPENT_BOSS: u32 = 1256;
 const TEMPLE_EVENT: &str = "TempleEvent";

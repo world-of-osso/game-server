@@ -582,6 +582,29 @@ fn channel_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bo
     intrinsic || aura_allows_moving(world, caster, spell)
 }
 
+/// The channel half of `Unit::RemoveAurasWithInterruptFlags` (Unit.cpp:4278-4284): a
+/// channel whose `ChannelInterruptFlags` share `flags` ends (`InterruptNonMeleeSpells`).
+/// Moving and Turning are enforced through `CastState::cast_while_moving` instead.
+pub(crate) fn interrupt_channel_with_flags(
+    world: &mut World,
+    caster: Entity,
+    flags: [u32; 2],
+    except_spell: Option<u32>,
+) {
+    let Some((spell, CastType::Channel)) = read_active_cast_spell(world, caster) else {
+        return;
+    };
+    let channel_flags = spell
+        .interrupts
+        .as_ref()
+        .map_or([0; 2], |interrupts| interrupts.channel_interrupt_flags);
+    let handled_elsewhere = [CHANNEL_INTERRUPT_MOVING, 0];
+    let matches = (0..2).any(|i| channel_flags[i] & flags[i] & !handled_elsewhere[i] != 0);
+    if matches && Some(spell.id) != except_spell {
+        cancel_cast(world, caster);
+    }
+}
+
 /// TC Unit::CanCastSpellWhileMoving: native330 uses a family mask, not its amount.
 fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;

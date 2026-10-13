@@ -77,6 +77,24 @@ impl CreatureStringIds {
     }
 }
 
+/// `Creature::SetScriptStringId`.
+pub(crate) fn set_script_string_id(world: &mut World, creature: Entity, id: &str) {
+    let mut ids = world
+        .get::<CreatureStringIds>(creature)
+        .cloned()
+        .unwrap_or_default();
+    ids.script = Some(id.to_owned());
+    world.entity_mut(creature).insert(ids);
+}
+
+/// `Map::GetDifficultyID()` of `map`'s copy; open-world maps are difficulty 0.
+pub(crate) fn map_difficulty_id(world: &World, map: crate::maps::InMap) -> u32 {
+    world
+        .get_resource::<crate::maps::InstanceManager>()
+        .and_then(|instances| instances.copy_difficulty(map))
+        .map_or(0, |difficulty| difficulty.difficulty_id)
+}
+
 /// `Map::SpawnGroupSpawn(groupId)` for a script-owned group withheld at copy fill.
 pub(crate) fn spawn_group_spawn(
     world: &mut World,
@@ -412,7 +430,7 @@ pub(crate) fn summon_creature(
         // Creature::InitEntry: a summon loads its default equipment (LoadEquipment(1)).
         equipment_id: 1,
     };
-    let difficulty_id = world.get::<CreatureDifficulty>(summoner).map_or(0, |d| d.0);
+    let difficulty_id = map_difficulty_id(world, map);
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let summon = world.resource_scope(|world, world_data: Mut<WorldData>| {
         let Some(template) = world_data.template_for(entry, difficulty_id) else {
