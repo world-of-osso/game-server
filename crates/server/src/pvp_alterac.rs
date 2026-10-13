@@ -209,7 +209,8 @@ pub(crate) fn complete_opening(world: &mut World, player: Entity, object: Entity
             super::pvp_objective::active_match(world, &mut state, player, object)?;
         let alterac = matched.alterac.as_mut().ok_or("Alterac runtime missing")?;
         let stat = alterac.battle.interact(entry, team, &matched.instance)?;
-        alterac.synchronize(world, matched.map.expect("active match map"));
+        let states = alterac.battle.world_states(&matched.instance);
+        alterac.synchronize(world, matched.map.expect("active match map"), &states);
         super::pvp_objective::credit(&mut matched.scoreboard, character, stat, 1);
         Ok::<_, String>(match_id)
     });
