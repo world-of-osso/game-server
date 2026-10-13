@@ -291,8 +291,7 @@ def select_rows(rows, record_ids):
 
 def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
     """Observed WDC5 0x5: record bytes, IDs, copies, offsets, relations, sparse IDs."""
-    # Secondary-key flag 0x2 does not change the sparse record/relationship layout.
-    # Local CollectableSource*Sparse uses 0x7, the same index/offset-map contract.
+    # Local CollectableSource*Sparse 0x7 puts offset-map IDs before relations.
     if header["flags"] not in (5, 7):
         raise ValueError(f"sparse DB2 flags {header['flags']:#x} are not supported")
     sections = [
@@ -348,9 +347,14 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
         )
         map_at = copy_at + 8 * copies
         entries = struct.iter_unpack("<IH", data[map_at : map_at + 6 * map_count])
-        relation_at = map_at + 6 * map_count
+        map_ids_at = map_at + 6 * map_count
+        if header['flags'] & 2:
+            ids_at = map_ids_at
+            relation_at = ids_at + 4 * map_count
+        else:
+            relation_at = map_ids_at
+            ids_at = relation_at + relations
         related = read_sparse_relations(data, relation_at, relations, count)
-        ids_at = relation_at + relations
         ids = struct.unpack_from(f"<{map_count}I", data, ids_at)
         for index, (record_id, (at, size)) in enumerate(zip(ids, entries)):
             if not size or not start <= at < at + size <= end:
