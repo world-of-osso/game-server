@@ -461,6 +461,8 @@ enum CriteriaFact {
     Race(u8),
     Class(u8),
     Map(u32),
+    /// Authenticated Map.InstanceType members, compared by raw type ID.
+    MapInstanceType(BTreeSet<u32>),
     MinLevel(u8),
     MaxLevel(u8),
 }
@@ -482,6 +484,7 @@ impl CriteriaFact {
                 player.group_size.is_some_and(|size| size < *limit as usize)
             }
             Self::Map(map) => player.map == *map,
+            Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
         }
@@ -1198,6 +1201,17 @@ fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTr
     descendants
 }
 
+fn load_map_instance_type(
+    conn: &Connection,
+    instance_type: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let mut query = conn.prepare_cached("SELECT ID FROM map WHERE InstanceType = ?1")?;
+    let members = query
+        .query_map([instance_type], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!members.is_empty()).then_some(CriteriaFact::MapInstanceType(members)))
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
@@ -1234,11 +1248,12 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Class),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
+            122 => load_map_instance_type(conn, asset)?,
             69 => small
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/60/69/71"),
+            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/60/69/71/122"),
         };
         let Some(fact) = fact else {
             return Ok(None);
