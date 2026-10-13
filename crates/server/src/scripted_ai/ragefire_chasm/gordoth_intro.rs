@@ -87,7 +87,7 @@ fn handle_once(world: &mut World, map: InMap) {
         return;
     }
     let boss = world.query_filtered::<(Entity, &InMap, &Npc),
-        (With<CreatureAiState>, Without<crate::zones::CreatureHidden>)>()
+        (With<CreatureAiState>, Without<crate::combat::DeathState>)>()
         .iter(world)
         .find_map(|(entity, copy, npc)| (*copy == map && npc.template_id == BOSS).then_some(entity));
     let Some(boss) = boss else { return };
