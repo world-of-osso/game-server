@@ -20604,6 +20604,34 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(8, 22683)],
         }),
+        (61781, 236179) => Some(CompiledConditions {
+            difficulty: None,
+            facts: &[],
+        }),
+        (61782, 236179) => Some(CompiledConditions {
+            difficulty: None,
+            facts: &[],
+        }),
+        (61783, 236179) => Some(CompiledConditions {
+            difficulty: None,
+            facts: &[],
+        }),
+        (61784, 236179) => Some(CompiledConditions {
+            difficulty: None,
+            facts: &[],
+        }),
+        (61785, 236179) => Some(CompiledConditions {
+            difficulty: None,
+            facts: &[],
+        }),
+        (61786, 236179) => Some(CompiledConditions {
+            difficulty: None,
+            facts: &[],
+        }),
+        (61787, 236179) => Some(CompiledConditions {
+            difficulty: None,
+            facts: &[],
+        }),
         (61922, 236795) => Some(CompiledConditions {
             difficulty: None,
             facts: &[(32, 2530)],

@@ -26,6 +26,11 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_plain_empty_all_is_true_but_empty_some_and_single_are_false(self):
+        self.assertEqual(self.compile({10: node(0, 4)}), {1: [None, ()]})
+        self.assertEqual(self.compile({10: node(0, 8)}), {})
+        self.assertEqual(self.compile({10: node(0, 2)}), {})
+
     def test_all_single_true_mythic_requires_that_difficulty(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 68, 23)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (23,)), ()]})
@@ -76,7 +81,6 @@ class Conditions(unittest.TestCase):
             'target leaf': {10: node(0, 4), 11: node(10, 2, 4, 448)},
             'nested all': {10: node(0, 4), 11: node(10, 4), 12: node(11, 2, 8, 1)},
             'zero fact asset': {10: node(0, 4), 11: node(10, 2, 32, 0)},
-            'empty tree': {10: node(0, 4)},
         }
         for name, modifiers in cases.items():
             with self.subTest(name):

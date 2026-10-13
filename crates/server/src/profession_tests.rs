@@ -11,6 +11,129 @@
 mod crafting_order_tests;
 
 #[test]
+fn achievements_criteria_native_goggle_casts_accept_empty_all_and_store_real_items() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("goggle-casts.redb");
+    let db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
+    let mut h = harness_with(80, |app| {
+        app.add_plugins(AchievementPlugin);
+        app.insert_resource(GameDatabase { db });
+    })
+    .unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
+    // Existing Retail projections in a private DB; never invent or alter item definitions.
+    let fixture =
+        PathBuf::from(std::env::var_os("GOGGLE_WORLD_COPY").expect("private sourced goggle DB"));
+    let items = Connection::open_with_flags(&fixture, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(load_item_templates(&fixture).unwrap());
+    h.app.insert_resource(load_vendor_catalog(&items).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    let data = world_db().unwrap();
+    let spells: Vec<_> = (127117..=127123)
+        .map(|id| data.store.get(id).unwrap().clone())
+        .collect();
+    let goggles: Vec<_> = spells
+        .iter()
+        .map(|spell| {
+            spell
+                .effects
+                .iter()
+                .find(|effect| effect.effect == 24)
+                .unwrap()
+                .item_type
+        })
+        .collect();
+    h.app.insert_resource(SpellStore::fixture(spells));
+    h.app.update();
+    for spell in 127117..=127123 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.player, spell, None, u8::MAX);
+    }
+    h.app.update();
+    assert!((61781..=61787).all(|criterion| {
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&criterion)
+    }));
+    for spell in 127117..=127123 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.player, spell, None, 0);
+        h.app.update();
+    }
+    let inventory =
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id);
+    for item in goggles {
+        assert_eq!(
+            inventory
+                .items
+                .iter()
+                .filter(|entry| entry.item_id == item)
+                .map(|entry| entry.stack_count)
+                .sum::<u32>(),
+            1,
+            "real crafted goggle {item}"
+        );
+    }
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.player)
+        .unwrap();
+    for criterion in 61781..=61787 {
+        assert_eq!(state.criteria_progress.get(&criterion), Some(&1));
+    }
+    assert!(
+        state
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&18905)
+    );
+    h.app.update();
+    let character = h.character_id;
+    let closed = h.app.world_mut().remove_resource::<GameDatabase>().unwrap();
+    drop(closed);
+    let reopened = redb::Database::open(&path).unwrap();
+    let saved = persistence::load_achievements(&reopened, character);
+    for criterion in 61781..=61787 {
+        assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
+    }
+    h.app.insert_resource(GameDatabase { db: reopened });
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<InWorld>();
+    h.app.world_mut().entity_mut(h.connection).insert(InWorld {
+        character_id: character,
+    });
+    h.app.update();
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&18905)
+    );
+}
+
+#[test]
 fn quality_crafting_refuses_before_any_reagent_or_skill_mutation() {
     let mut h = harness(80).unwrap();
     h.learn_tailoring();
