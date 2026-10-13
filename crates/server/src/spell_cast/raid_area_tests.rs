@@ -1,7 +1,7 @@
 //! TC a352b1fa SpellInfo.cpp:304 target56 caster-area raid; spell_druid.cpp:
 //! 3100-3110 Ysera's Gift145110 selects one injured raid target, preferring players.
 use bevy::prelude::*;
-use shared::components::Health;
+use shared::components::{Health, Position, UnitSummonedBy};
 use shared::protocol::CombatLogKind;
 
 use super::test_harness::{Harness, harness, spawn_player};
@@ -90,5 +90,81 @@ fn class_completeness_native_raid_heal_prefers_injured_member_to_full_member() {
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(h.health(first), 1000.0);
     assert_eq!(h.health(second), INITIAL_HEALTH + NATIVE_HEAL);
+    assert_eq!(h.health(outsider), INITIAL_HEALTH);
+}
+
+#[test]
+fn class_completeness_native_raid_heal_ignores_dead_far_other_copy_and_departed_members() {
+    for excluded in ["dead", "far", "other-copy", "departed"] {
+        let (mut h, first, second, _) = raid_fixture();
+        match excluded {
+            "dead" => h.app.world_mut().get_mut::<Health>(first).unwrap().current = 0.0,
+            "far" => h.app.world_mut().get_mut::<Position>(first).unwrap().x = 200.0,
+            "other-copy" => {
+                h.app
+                    .world_mut()
+                    .entity_mut(first)
+                    .insert(crate::maps::InMap {
+                        map_id: 0,
+                        instance_id: 77,
+                    });
+            }
+            "departed" => {
+                h.app.world_mut().resource_mut::<GroupRegistry>().leave(2);
+            }
+            _ => unreachable!(),
+        }
+        h.cast_and_deliver(YSERAS_GIFT_GROUP_HEAL, None);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "{excluded}: {:?}",
+            h.inbox.failed
+        );
+        assert_eq!(h.health(second), INITIAL_HEALTH + NATIVE_HEAL, "{excluded}");
+    }
+}
+
+#[test]
+fn class_completeness_native_raid_heal_reaches_members_controlled_unit() {
+    let (mut h, first, second, outsider) = raid_fixture();
+    for member in [first, second] {
+        h.app.world_mut().get_mut::<Health>(member).unwrap().current = 1000.0;
+    }
+    let controlled = h.npc;
+    h.app.world_mut().entity_mut(controlled).insert((
+        UnitSummonedBy(first.to_bits()),
+        shared::components::UnitFactionTemplate(1),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<Health>(controlled)
+        .unwrap()
+        .current = INITIAL_HEALTH;
+    h.cast_and_deliver(YSERAS_GIFT_GROUP_HEAL, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.health(controlled), INITIAL_HEALTH + NATIVE_HEAL);
+    assert_eq!(h.health(outsider), INITIAL_HEALTH);
+}
+
+#[test]
+fn class_completeness_native_raid_heal_retains_one_full_health_target_when_none_injured() {
+    let (mut h, first, second, outsider) = raid_fixture();
+    for member in [first, second] {
+        h.app.world_mut().get_mut::<Health>(member).unwrap().current = 1000.0;
+    }
+    h.cast_and_deliver(YSERAS_GIFT_GROUP_HEAL, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let heals: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(YSERAS_GIFT_GROUP_HEAL) && event.kind == CombatLogKind::Heal
+        })
+        .collect();
+    assert_eq!(heals.len(), 1);
+    assert_eq!(heals[0].amount, 0);
+    assert_eq!(heals[0].overflow, NATIVE_HEAL as i32);
+    assert!([Some(first.to_bits()), Some(second.to_bits())].contains(&heals[0].target));
     assert_eq!(h.health(outsider), INITIAL_HEALTH);
 }
