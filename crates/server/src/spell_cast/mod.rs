@@ -132,6 +132,9 @@ pub mod powers;
 mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
+pub(crate) mod recovery_rate;
+#[cfg(test)]
+mod recovery_rate_tests;
 mod reflect;
 #[cfg(test)]
 mod resistance_pct_tests;
@@ -413,6 +416,8 @@ impl ChargeState {
 pub struct SpellHistory {
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
+    /// Native spell that last started each category timer, for masked rate changes.
+    category_spell_ids: HashMap<u32, u32>,
     /// Actual item-use authored durations/categories, which can override SpellInfo.
     item_cooldown_sources: HashMap<u32, ItemCooldownSource>,
     /// By `StartRecoveryCategory`.
@@ -2624,10 +2629,16 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         }
         let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
         let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
-        let adjusted = if hasted > 0.0 {
-            hasted + category_modifier_ms
-        } else {
+        let rate = recovery_rate::multiplier(world, caster, spell);
+        let recovered = if rate == 1.0 {
             hasted
+        } else {
+            (f64::from(hasted) * rate).trunc() as f32
+        };
+        let adjusted = if recovered > 0.0 {
+            recovered + category_modifier_ms
+        } else {
+            recovered
         };
         adjusted.max(0.0).round() as u32
     };
@@ -2656,6 +2667,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);
     }
     if category != 0 && base_category_ms > 0 {
+        history.category_spell_ids.insert(category, spell.id);
         history
             .category_ready_at
             .insert(category, now + category_ms as f64 / 1000.0);
