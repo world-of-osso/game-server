@@ -1467,6 +1467,33 @@ fn exercise_pvp_reconnect(
         .copied();
     let prior = reconnect_snapshot(h, who).clone();
     assert_eq!(prior.phase, shared::battleground::BgPhase::InProgress);
+    if matches!(case, ReconnectCase::NearTeleportWithinFullMap) {
+        let current = wow(h.app.world().get::<Position>(who.player).unwrap());
+        let destination = WorldLocation {
+            map_id: old_map.map_id,
+            position: current + Vec3::new(1.0, 0.0, 0.0),
+            orientation: 0.7,
+        };
+        assert!(
+            teleport_to(
+                h.app.world_mut(),
+                who.player,
+                destination,
+                TeleportOptions::default()
+            ),
+            "an already-admitted arena player can move within its full reserved copy"
+        );
+        assert_eq!(h.map_of(who), Some(old_map));
+        assert!(
+            h.new_worlds(who).is_empty(),
+            "near teleport must not re-enter a full copy"
+        );
+        assert!(close(
+            wow(h.app.world().get::<Position>(who.player).unwrap()),
+            destination.position
+        ));
+        return;
+    }
     if matches!(case, ReconnectCase::LastLivingLogout) {
         let ally = players
             .iter()
@@ -1574,7 +1601,9 @@ fn exercise_pvp_reconnect(
                 (wow(h.app.world().get::<Position>(player).unwrap()) - original).length() < 0.001
             );
         }
-        ReconnectCase::LastLivingLogout => unreachable!(),
+        ReconnectCase::LastLivingLogout | ReconnectCase::NearTeleportWithinFullMap => {
+            unreachable!()
+        }
     }
 }
 
@@ -1631,6 +1660,7 @@ enum ReconnectCase {
     MissingMatch,
     LastLivingLogout,
     ExpiredMatch,
+    NearTeleportWithinFullMap,
 }
 
 #[test]
@@ -1650,6 +1680,16 @@ fn arena_disconnect_returns_to_captured_origin_when_match_is_missing() {
         false,
         572,
         Some(ReconnectCase::MissingMatch),
+    );
+}
+
+#[test]
+fn arena_near_teleport_within_full_reserved_copy_does_not_fail_capacity_admission() {
+    exercise_arena_channel_with_reconnect(
+        ArenaQueueMode::Skirmish2v2,
+        false,
+        572,
+        Some(ReconnectCase::NearTeleportWithinFullMap),
     );
 }
 
