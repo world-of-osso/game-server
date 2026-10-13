@@ -2551,6 +2551,28 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
     (duration / haste.max(0.01)).trunc()
 }
 
+/// TC a352b1fa SpellHistory.cpp:469-481: native category341 is independent
+/// of spell class masks and applies after ordinary cooldown/haste modifiers.
+fn category_cooldown_modifier_ms(world: &World, caster: Entity, category: u32) -> f32 {
+    if category == 0 {
+        return 0.0;
+    }
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(caster) else {
+        return 0.0;
+    };
+    let mut total = 0.0;
+    for aura in auras.iter() {
+        for effect in &aura.effects {
+            if effect.aura_type == crate::auras::handlers::MOD_SPELL_CATEGORY_COOLDOWN
+                && u32::try_from(effect.misc_values[0]).ok() == Some(category)
+            {
+                total += (effect.amount * f32::from(aura.stacks)).trunc();
+            }
+        }
+    }
+    total
+}
+
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let now = now(world);
     let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
@@ -2558,18 +2580,23 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .cooldowns
         .as_ref()
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let category = spell.categories.as_ref().map_or(0, |c| c.category);
+    let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
     let cooldown = |base: u32| {
         if base == 0 {
             return 0;
         }
         let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
-        haste_regen_cooldown_ms(world, caster, spell, modified)
-            .max(0.0)
-            .round() as u32
+        let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
+        let adjusted = if hasted > 0.0 {
+            hasted + category_modifier_ms
+        } else {
+            hasted
+        };
+        adjusted.max(0.0).round() as u32
     };
     let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
     let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
-    let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
