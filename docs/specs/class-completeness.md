@@ -96,7 +96,14 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [x] Monster Rising 452414 and Enduring Torment 452410 apply their buff (452550, 453314) on each 1 s tick outside Metamorphosis (Havoc/Vengeance, Havoc/Devourer) and remove it inside. A player's 453314 keeps effects 0–1 only as Havoc and 2–3 only as Devourer.
 
+## Periodic class proc hooks
+
+- [x] Combat Wisdom 121817 casts Power Strike Proc 129914 on each 15 s effect-0 tick, not on application. Effect 1 remains unmodeled.
+- [x] Critical Chaos 320413 adds effect 1's percentage of the owner's crit chance to Chaos Strike's proc chance on application and recalculates it on each 1 s effect-1 tick.
+
 ## Tests asserting this spec
+
+- `crates/server/src/auras/power_strike_tests.rs`, `critical_chaos_tests.rs`: native periodic proc application and live crit-scaled proc modifier.
 
 - `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
 - `crates/server/src/spell_info/immunity_tests.rs`: authentic definition1733 root purge/admission, explicitly requested absent-table compatibility, and native1887/1733 partial versus whole-target immunity with Tail Swipe and Thunderstorm.
