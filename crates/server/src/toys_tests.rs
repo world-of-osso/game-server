@@ -3669,7 +3669,6 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
             .unwrap();
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
     for (item, spell, entry, displays, scale) in [
-        (122126, 179942, 90335, vec![41343, 11686], 1.0),
         (198646, 384618, 194793, vec![108683], 0.7),
         (204405, 405204, 203158, vec![111821], 1.0),
     ] {
@@ -3734,11 +3733,12 @@ fn toyfx18_placed_statues_census() {
     let report = report_toy_census(&path, "TOYFX18_STATUE_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
     let find = |item: u32| toys.iter().find(|toy| toy["item_id"] == item).unwrap();
-    for item in [122126, 198646, 204405] {
+    for item in [198646, 204405] {
         assert!(find(item)["unavailable"].is_null(), "{}", find(item));
     }
-    // Seats, target dummies and wormholes keep their interaction gap.
-    for item in [116689, 88375, 172924] {
+    // Seats, target dummies and wormholes keep their interaction gap; Attraction
+    // Sign's only weighted display is an invisible trigger.
+    for item in [116689, 88375, 172924, 122126] {
         assert!(!find(item)["unavailable"].is_null(), "{}", find(item));
     }
 }
