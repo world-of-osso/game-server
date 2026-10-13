@@ -808,6 +808,7 @@ pub fn deal_damage(
         periodic,
         resolved_source: false,
         effect: None,
+        bonus_caster: ctx.caster,
     };
     deal_damage_and_report(world, ctx, target, damage);
 }
@@ -827,6 +828,7 @@ pub(crate) fn deal_effect_damage(
         periodic,
         resolved_source: false,
         effect: Some(effect),
+        bonus_caster: ctx.caster,
     };
     deal_damage_and_report(world, ctx, target, damage);
 }
@@ -838,6 +840,28 @@ struct DamageInput<'a> {
     resolved_source: bool,
     /// Authored effect for native damage; script/copy amounts carry no effect selector.
     effect: Option<&'a SpellEffect>,
+    /// DAMAGE_SHIELD attributes damage to its owner but bonuses to its aura caster.
+    bonus_caster: Entity,
+}
+
+/// TC Unit::DealMeleeDamage: shield owner damages the attacker; the original
+/// aura caster supplies SpellDamageBonusDone/Taken. Shield damage cannot crit.
+pub(crate) fn deal_damage_shield(
+    world: &mut World,
+    ctx: &EffectCtx,
+    aura_caster: Entity,
+    target: Entity,
+    amount: f32,
+) {
+    let damage = DamageInput {
+        amount,
+        crit: false,
+        periodic: false,
+        resolved_source: false,
+        effect: None,
+        bonus_caster: aura_caster,
+    };
+    deal_damage_and_report(world, ctx, target, damage);
 }
 
 /// Leech copies effective damage, after mitigation/absorption and excluding overkill.
@@ -857,6 +881,7 @@ pub(crate) fn deal_leech(
         periodic,
         resolved_source: false,
         effect: Some(effect),
+        bonus_caster: ctx.caster,
     };
     let dealt = deal_damage_and_report(world, ctx, target, damage);
     if dealt > 0.0 {
@@ -882,6 +907,7 @@ pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Ent
         periodic: false,
         resolved_source: true,
         effect: None,
+        bonus_caster: ctx.caster,
     };
     deal_damage_and_report(world, ctx, target, damage);
 }
@@ -898,6 +924,7 @@ fn deal_damage_and_report(
         periodic,
         resolved_source,
         effect,
+        bonus_caster,
     } = damage;
     if !super::targets::is_alive(world, target) {
         return 0.0;
@@ -918,15 +945,19 @@ fn deal_damage_and_report(
     let done = if resolved_source {
         1.0
     } else {
-        stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
-            * versatility_multiplier(world, ctx.caster)
-            * crate::auras::summon_damage::multiplier(world, ctx.caster)
+        stat_mods(world, bonus_caster).map_or(1.0, |mods| mods.damage_done(school))
+            * versatility_multiplier(world, bonus_caster)
+            * crate::auras::summon_damage::multiplier(world, bonus_caster)
     };
-    let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
+    let taken = crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell);
+    let bonus_ctx = EffectCtx {
+        caster: bonus_caster,
+        ..*ctx
+    };
     let amount = (if resolved_source {
         amount
     } else {
-        modded_amount(world, ctx, amount, periodic)
+        modded_amount(world, &bonus_ctx, amount, periodic)
     } * done
         * taken)
         .max(0.0)
@@ -995,7 +1026,12 @@ fn deal_damage_and_report(
     // `Unit::DealDamage` (Unit.cpp:1085-1092) starts no combat itself: the spell's
     // launch did (`spell_cast::starts_combat`), and threat does for creatures. So a
     // periodic tick refreshes no PvP or training dummy combat.
-    if !periodic && loss > 0.0 {
+    let damage_shield = ctx
+        .spell
+        .effects
+        .iter()
+        .any(|effect| effect.aura == crate::auras::handlers::DAMAGE_SHIELD);
+    if !periodic && loss > 0.0 && !damage_shield {
         crate::creature_aggro::note_damage_taken(world, target);
     }
     if !periodic {

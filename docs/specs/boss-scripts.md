@@ -63,6 +63,8 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 
 ## Wailing Caverns source slices
 
+- [ ] Anacondra's source Thorns8148 must apply at7s, repeat63s, and retaliate after positive damaging melee swings through aura15; ordinary spell damage and removed shields must not retaliate. Shield damage uses the aura caster's bonuses, the shield owner's damage attribution, native hit defenses, immunity/absorbs and no critical roll; it does not refresh creature last-damaged leash time. Missing Lightning spell2 is not replaced.
+
 - [x] `encounter_cpp_bindings.py --encounter anacondra|cobrahn|kresh|pythas|skum|serpentis|verdan|mutanus` prepares all eight exact local Normal identities (encounters585–592/bits0–7), checking pinned header/instance hashes and source AI identity. Source8 primaries match journal/model rows; no guessed actors or placements. Copy-only SQL preserves unrelated bindings and is idempotent; no canonical mutation. Cobrahn3669→586/bit1 is Journal475/actor1046/display4213.
 - [x] Cobrahn Lightning Bolt20805 existing SmartAI row first0ms/repeat6–8s produces real Nature damage after its3s cast plus missile flight (speed24yd/s, minimum5yd unit distance). Fixture pins only the successful branch of its80% chance, retaining the selected source repeat, spell and target. Generic bound BossAi engage/death emits successful encounter586, never585.
 - [x] Pythas3670 actual SmartAI Lightning20805 and Thunderclap8147 damage are exercised with the successful80% Lightning branch only pinned. Thunderclap first6–8s and repeat12–30s execute through real cast deferral; real death completes588 and leaves Anacondra585 NOT_STARTED. No manufactured ability or timer.
