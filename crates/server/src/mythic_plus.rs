@@ -309,7 +309,10 @@ fn receive(world: &mut World) {
     }
     for (connection, request) in requests {
         let result = match request {
-            ChallengeRequest::Query => Ok(()),
+            ChallengeRequest::Query => {
+                mentor::send_party_snapshot(world, connection);
+                Ok(())
+            }
             ChallengeRequest::Slot { font, item_guid } => slot(world, connection, font, item_guid),
             ChallengeRequest::Remove => {
                 world.resource_mut::<Challenges>().slots.remove(&connection);
