@@ -1,6 +1,6 @@
 # Retail follower data and approved spec bridge
 
-Verified: 2026-10-11. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
+Verified: 2026-10-13. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
 
 ## Source identity
 
@@ -30,7 +30,7 @@ These are eleven specs across ten classes. No Rogue/Death Knight/Demon Hunter fo
 
 Role AI uses ordinary `creature_cast`, native cooldowns/costs/passives, threat/taunt, chase and owner-follow systems. Tanks recover an ally's attacker with their real taunt and approach melee reach; healers pick the lowest living party-health fraction before damage; damage roles use bounded cooldown/filler priorities. Missing cast-range metadata stops combat instead of substituting melee. The bridge uses native class/spec/level stats and consistent health/mana; it does not infer NPC gear. Holy Priest137031 activates the sourced Flash Heal mana-cost row, so passives must be applied rather than allowing a free heal.
 
-The native Godot host now forwards existing LFG IPC requests on LfgChannel and retains authoritative state/refusals. Send acknowledgment does not mean server acceptance. Full pet/guardian rotation, interrupts/defensives, hazard avoidance, NPC portraits, relog recovery and full-instance completion are not established by these bounded proofs.
+The native Godot host now forwards existing LFG IPC requests on LfgChannel and retains authoritative state/refusals. Send acknowledgment does not mean server acceptance. The later utility and bound-field section owns interrupt/defensive/escape proof. Full pet/guardian rotations, general hazardous-path planning, NPC portraits, relog recovery and full-instance completion remain unestablished.
 
 ## Admission data and approved Normal-population bridge
 
@@ -120,6 +120,16 @@ Actual scene positions advanced owner1386.2→1439.6035/128.903/169.75151; compa
 The private diagnostic queried entrance100030→Melidrussa's TDB spawn1551.33/-257.688/129.782. Strict nearest-poly lookup rejected the boss endpoint. Runtime ground and collected collision both reported126.01431 there, with only a terrain support triangle nearby. Grounding the destination still yielded an incomplete corridor. Zero missing collector assets does not prove connectivity. No spawn-height change, enlarged snapping window or synthetic connector was made; the connected authored-route boundary remains unresolved.
 
 Evidence: `/home/osso/.worktrees/follower-dungeons-2026-10-13/routed-modern/`, `ruby-route-diagnostic.rs`, `ruby-entrance-route-probe.log`, `ruby-entrance-floor-trace.log`, `ruby-grounded-endpoint-trace.log`. Temporary diagnostic code is preserved outside the tracked tests. All owned live processes stopped after captures. Startup-only stale private `tdb_transports` schema and obsolete token/layout ownership were resolved with a read-only canonical SQLite backup and fresh private credential login, not product fallbacks.
+
+## Advanced bridge utilities and bound fields — 2026-10-13
+
+Real enemy Fireball fixtures now prove eight selected spec kicks: Rebuke96231, Pummel6552, Counterspell2139, Wind Shear57994, Counter Shot147362, Quell351338, Spear Hand Strike116705 and Skull Bash106839→93985. The missing Skull Bash DUMMY dispatch follows TrinityCore a352b1fa `spell_druid.cpp:2037–2053`, casting charge221514 then interrupt93985. Charge movement itself remains unproved. A replacement kick validates ordinary range/LOS/power/aura/school/cooldowns before cancelling the follower's active cast; unavailable kicks preserve it and normal damage priorities. Twelve utility cases passed atc4394e7a.
+
+Eleven profiles also execute their class's ordinary defensive when wounded and actively targeted. Native damage after the cast proves the authored mitigation, immunity or Desperate Prayer healing, not merely spell selection. This bridge decision is not an authenticated NPC health-threshold policy. Twelve cases passed at64523113; the combined prior/utility source gate passed68/68 atb2bed3f3.
+
+Bound `GroundPulses` and active `SpellAreaTrigger` actions provide field centers/radii/allegiance/lifetime. Escape considers eight supported perimeter candidates, requires complete baked corridors, rejects re-entry into hostile fields, and writes ordinary movement/interest/replication. No direct-movement or teleport substitute exists. Combat/follow targets still inside a field hold approach. Real hostile Consecration during combat originally held the follower in danger (RED); current Stockade proof exits with collision-clear steps, holds outside during continued combat, ignores friendly Consecration and stays put without a bake:3/3 atcee9c693. Ordinary chase paths crossing a field from outside, overlapping-field destinations, separately scripted shapes, cast/CC movement boundaries and live both-skin hazard behavior remain unproved; these bounded fixtures do not close full-dungeon acceptance.
+
+Logs: `/home/osso/.worktrees/follower-dungeons-2026-10-13/utility-{interrupt,casting,defensive}-*.log`, `server-utility-gate-b2bed3f3.log`, `hazard-stockade-{combat-red,green,boundaries}.log`. No canonical data or shared-realm process was changed.
 
 ## Sources
 

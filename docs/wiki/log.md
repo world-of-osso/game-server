@@ -1,3 +1,7 @@
+## 2026-10-13 — Follower utilities and strict-nav boundaries
+
+[Follower data](investigations/follower-data.md#advanced-bridge-utilities-and-bound-fields--2026-10-13): real interrupts, casting-time readiness/cancellation, eleven-profile defensive mitigation/healing and real Stockade hostile-field escape; native Group Finder current-source Ruby admission does not close its disconnected authored route or full-dungeon acceptance. No source-coordinate changes, canonical writes or direct movement substitute.
+
 ## 2026-10-13 — Achievement zone predicates
 
 [Zone41](systems/dungeon-achievements.md#player-zone-predicates--verified-2026-10-13) uses one flagged parent, not ancestry. Native Stormwind pet win and reopened storage prove city credit; six account definitions become structurally evaluable without a world-honor or all-city-content claim.
