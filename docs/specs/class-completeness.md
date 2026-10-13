@@ -112,7 +112,16 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Native passive 145108's effect-0 tick heals 3% of the owner's live maximum health every 5 s, through 145109 when the owner is injured and 145110 when full. The first tick is delayed by the authored period.
 - [x] Both heal children honor Can'tCrit even with 100% crit; normal health clamping and overflow logging remain intact. Unlearning the passive removes its ticks.
 
+## Critical-damage bonuses
+
+- [x] Aura163 multiplies existing critical-damage paths by every matching school-mask effect once, including mixed-school hits and melee auto-attacks; it does not modify critical healing.
+- [x] Know Your Enemy388118 calculates effect0 from effect1's native40% of the owner's crit on application and every1s effect1 tick; live damage consumes the recalculated amount.
+- [x] Penetrating Shots459783 calculates effect0 from effect1's native25% of the owner's crit on application and every1s effect1 tick; real ranged critical damage consumes the live bonus. Noncritical damage and healing remain unchanged; unlearning removes the bonus.
+- [x] CritDamageAndHealing spell modifiers precede aura163 for weapon attacks and follow its critical bonus for magic. Existing floating damage/final-rounding behavior is retained; exact Retail intermediate-integer parity is not asserted.
+
 ## Tests asserting this spec
+
+- `crates/server/src/auras/crit_damage_bonus_tests.rs`: actual static/mixed-school damage, magic/weapon spellmod ordering, dynamic crit percentage, auto-attacks and no crit-heal leakage.
 
 - `crates/server/src/auras/yseras_gift_tests.rs`: native timing, owner-max scaling, self/group switching, unlearning, overflow and Can'tCrit.
 
