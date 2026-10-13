@@ -581,7 +581,9 @@ pub(crate) struct AchievementCatalog {
     pet_creatures: BTreeSet<u32>,
     pet_species: BTreeSet<u32>,
     spell_skill_lines: HashMap<u32, BTreeSet<u32>>,
-    grant_prerequisites: HashMap<u32, (Vec<u32>, bool)>,
+    criterion_definitions: HashMap<u32, Vec<u32>>,
+    dependency_definitions: HashMap<u32, Vec<u32>>,
+    empty_definitions: BTreeSet<u32>,
 }
 
 #[derive(Debug, Default)]
@@ -736,8 +738,9 @@ impl AchievementCatalog {
         race: u8,
         account_scope: bool,
     ) -> Vec<&AchievementDef> {
-        self.definitions
-            .values()
+        self.grant_candidates(state)
+            .into_iter()
+            .filter_map(|id| self.definitions.get(&id))
             .filter(|definition| {
                 if self.window.has_account_flag(definition.id) != account_scope
                     || state.earned_ids.contains(&definition.id)
@@ -752,18 +755,40 @@ impl AchievementCatalog {
                 {
                     return false;
                 }
-                let (criteria, completes_empty) = &self.grant_prerequisites[&definition.id];
-                if !completes_empty
-                    && !criteria.iter().any(|id| {
-                        self.criterion_counter(*id, state)
-                            .is_some_and(|value| value != 0)
-                    })
-                {
-                    return false;
-                }
                 self.tree_progress(definition.root, state).completed
             })
             .collect()
+    }
+
+    fn grant_candidates(&self, state: &PlayerAchievementState) -> BTreeSet<u32> {
+        let mut candidates = self.empty_definitions.clone();
+        for (&criterion, &value) in &state.criteria_progress {
+            if value != 0 {
+                candidates.extend(
+                    self.criterion_definitions
+                        .get(&criterion)
+                        .into_iter()
+                        .flatten()
+                        .copied(),
+                );
+            }
+        }
+        let earned = state.earned_ids.iter().chain(
+            state
+                .account
+                .iter()
+                .flat_map(|account| account.earned_ids.iter()),
+        );
+        for achievement in earned {
+            candidates.extend(
+                self.dependency_definitions
+                    .get(achievement)
+                    .into_iter()
+                    .flatten()
+                    .copied(),
+            );
+        }
+        candidates
     }
 
     pub fn snapshot(&self, state: &PlayerAchievementState, race: u8) -> AchievementSnapshot {
@@ -1218,19 +1243,28 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
         .collect::<rusqlite::Result<_>>()?;
     catalog.window = window::load_window_data(conn)?;
     let empty = PlayerAchievementState::default();
-    catalog.grant_prerequisites = catalog
-        .definitions
-        .values()
-        .map(|definition| {
-            let criteria = catalog
-                .criterion_tree_ids(definition.root)
-                .into_iter()
-                .map(|tree| catalog.trees[&tree].criteria_id)
-                .collect();
-            let completes_empty = catalog.tree_progress(definition.root, &empty).completed;
-            (definition.id, (criteria, completes_empty))
-        })
-        .collect();
+    for definition in catalog.definitions.values() {
+        if catalog.tree_progress(definition.root, &empty).completed {
+            catalog.empty_definitions.insert(definition.id);
+        }
+        for tree in catalog.criterion_tree_ids(definition.root) {
+            let id = catalog.trees[&tree].criteria_id;
+            catalog
+                .criterion_definitions
+                .entry(id)
+                .or_default()
+                .push(definition.id);
+            if let Some(criteria) = catalog.criteria.get(&id)
+                && criteria.kind == 8
+            {
+                catalog
+                    .dependency_definitions
+                    .entry(criteria.asset)
+                    .or_default()
+                    .push(definition.id);
+            }
+        }
+    }
     for (&id, criteria) in &catalog.criteria {
         if criteria.supported {
             catalog
