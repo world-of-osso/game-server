@@ -45,6 +45,17 @@ pub(crate) fn load_catalog(
     }
 }
 
+#[derive(Component, Clone, Copy, Default)]
+pub(crate) struct MonthlySummary {
+    pub points: u32,
+    pub start_unix: i64,
+    pub end_unix: i64,
+}
+
+pub(crate) fn calendar_month(now: i64) -> shared::protocol::JournalMonth {
+    month::month_at(now, 0, now)
+}
+
 pub(crate) struct AdventureGuidePlugin;
 impl Plugin for AdventureGuidePlugin {
     fn build(&self, app: &mut App) {
@@ -86,8 +97,7 @@ fn receive_requests(world: &mut World) {
 
 fn ensure_month_state(world: &mut World, player: Entity, character: u64) {
     let now = world.resource::<crate::maps::ServerClock>().unix();
-    let hour = world.resource::<crate::guild_bank::DailyReset>().hour_utc;
-    let start = month::month_at(now, hour, now).start_unix;
+    let start = month::month_at(now, 0, now).start_unix;
     let mut state = match world.get::<PlayerAchievementState>(player) {
         Some(state) => state.clone(),
         None => persistence::load_achievements(&world.resource::<GameDatabase>().db, character),
@@ -140,12 +150,11 @@ fn persist_month_state(world: &World, connection: Entity, player: Entity, charac
 fn send_snapshot(world: &mut World, connection: Entity, player: Entity, character: u64) {
     persist_month_state(world, connection, player, character);
     let now = world.resource::<crate::maps::ServerClock>().unix();
-    let hour = world.resource::<crate::guild_bank::DailyReset>().hour_utc;
     let state = world
         .get::<PlayerAchievementState>(player)
         .expect("month initialized");
     let monthly = state.monthly.as_ref().expect("month initialized");
-    let mut month = month::month_at(now, hour, monthly.tracking_since);
+    let mut month = month::month_at(now, 0, monthly.tracking_since);
     let snapshot = match world.resource::<AdventureCatalog>() {
         AdventureCatalog::Unavailable(error) => AdventureGuideSnapshot {
             month,
@@ -187,9 +196,27 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, characte
                 .map(|a| a.points)
                 .sum();
             let (suggestions, census) = data.suggestions(level);
-            AdventureGuideSnapshot{month,activities,tags:data.tags.clone(),suggestions,suggestion_census:census,points,activity_scope_notice:Some("All source activities shown: source interval values have no verified calendar mapping. Reward interval binding unavailable; no currency/reward grant is inferred.".into()),source_error:None}
+            AdventureGuideSnapshot{month,activities,tags:data.tags.clone(),suggestions,suggestion_census:census,points,activity_scope_notice:Some("All source activities shown: interval/calendar binding unavailable. Osso default group1 Tender thresholds apply; seasonal reward binding unavailable.".into()),source_error:None}
         }
     };
+    if let AdventureCatalog::Ready(data) = world.resource::<AdventureCatalog>() {
+        let account = world
+            .get::<Authenticated>(connection)
+            .expect("authenticated monthly award")
+            .account_id;
+        crate::trading_post_store::settle(
+            &world.resource::<GameDatabase>().db,
+            account,
+            snapshot.month.start_unix,
+            snapshot.points,
+            &data.thresholds,
+        );
+    }
+    world.entity_mut(connection).insert(MonthlySummary {
+        points: snapshot.points,
+        start_unix: snapshot.month.start_unix,
+        end_unix: snapshot.month.end_unix,
+    });
     if let Some(mut sender) = world.get_mut::<MessageSender<AdventureGuideSnapshot>>(connection) {
         sender.send::<InstanceChannel>(snapshot);
     }

@@ -76,7 +76,7 @@ fn send_snapshot(world: &mut World, connection: Entity, account: u64) {
     }
 }
 
-fn broadcast(world: &mut World, account: u64) {
+pub(crate) fn broadcast(world: &mut World, account: u64) {
     let mut query = world.query_filtered::<(Entity, &Authenticated), With<InWorld>>();
     let connections: Vec<_> = query
         .iter(world)
