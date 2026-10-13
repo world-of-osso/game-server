@@ -12,6 +12,257 @@ struct EnteredMatch {
 }
 
 #[test]
+fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_race() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match_with(&template, [611, 610], |app| {
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        app.add_plugins(crate::combat::CombatPlugin);
+    });
+    let actor = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .find(|(_, team)| **team == BgTeam::B)
+        .unwrap()
+        .0;
+    let h = &mut entered.h;
+    h.app.world_mut().entity_mut(actor.connection).insert((
+        pair::<shared::protocol::AttackSwing>(),
+        pair::<shared::protocol::AttackStop>(),
+        pair::<shared::protocol::AttackStart>(),
+        pair::<shared::protocol::AttackStopped>(),
+        pair::<shared::protocol::CombatEvent>(),
+    ));
+    let (enemy, before) = find_alterac_source_npc(h, entered.copy, 11949);
+    let at = wow(h.app.world().get::<Position>(enemy).unwrap());
+    h.walk_to(actor, at);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::AttackSwing>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::AttackSwing {
+            target: enemy.to_bits(),
+        });
+    h.advance(20);
+    let after = h.app.world().get::<Health>(enemy).unwrap().current;
+    assert!(
+        after < before,
+        "Human assigned Horde must hit Alliance captain: {before} -> {after}"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::AttackStop>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::AttackStop);
+    h.advance(5);
+    let (friendly, before) = find_alterac_source_npc(h, entered.copy, 11947);
+    let at = wow(h.app.world().get::<Position>(friendly).unwrap());
+    h.walk_to(actor, at);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::AttackSwing>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::AttackSwing {
+            target: friendly.to_bits(),
+        });
+    h.advance(20);
+    assert_eq!(
+        h.app.world().get::<Health>(friendly).unwrap().current,
+        before
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<LeaveBattleground>>(actor.connection)
+        .unwrap()
+        .send::<PvpChannel>(LeaveBattleground {
+            match_id: entered.match_id,
+        });
+    h.receive_pvp_updates(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(actor.player)
+            .unwrap()
+            .0,
+        1
+    );
+}
+
+#[test]
+fn alterac_channel_last_leave_with_fresh_npc_death_unloads_without_loot_panic() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match_with(&template, [611, 610], |app| {
+        app.init_resource::<crate::merchant::VendorCatalog>();
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.add_plugins(crate::loot::LootPlugin);
+    });
+    let actor = &entered.players[0];
+    let (victim, health) = find_alterac_source_npc(&mut entered.h, entered.copy, 11947);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        victim,
+        health + 1.0,
+    );
+    assert!(
+        entered
+            .h
+            .app
+            .world()
+            .get::<crate::combat::DeathState>(victim)
+            .is_some()
+    );
+    // The real death is still fresh when every accepted participant's normal
+    // Leave request arrives; no intermediate frame may settle corpse commands.
+    for who in &entered.players {
+        entered
+            .h
+            .app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground {
+                match_id: entered.match_id,
+            });
+    }
+    entered.h.receive_pvp_updates(5);
+    assert!(entered.h.app.world().get_entity(victim).is_err());
+    let world = entered.h.app.world_mut();
+    let mut maps = world.query::<&InMap>();
+    assert!(!maps.iter(world).any(|map| *map == entered.copy));
+    for who in &entered.players {
+        assert!(
+            world
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match(&template, [611, 610]);
+    assert_eq!(entered.players.len(), 20);
+    let victim = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .find(|(_, team)| **team == BgTeam::B)
+        .unwrap()
+        .0;
+    let actor = &entered.players[0];
+    let h = &mut entered.h;
+    use_second_frames(h);
+    assert_eq!(battleground(h, actor).score_a, 700);
+    assert_eq!(battleground(h, actor).score_b, 700);
+    let (banner, at) = objects_in(h, entered.copy, 178946)[0];
+    h.walk_to(actor, at);
+    let other_copy = InMap {
+        instance_id: entered.copy.instance_id + 1,
+        ..entered.copy
+    };
+    h.app.world_mut().entity_mut(banner).insert(other_copy);
+    use_object(h, actor, banner);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_none()
+    );
+    h.app.world_mut().entity_mut(banner).insert(entered.copy);
+    use_object(h, actor, banner);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_some()
+    );
+    assert!(objects_in(h, entered.copy, 178940).is_empty());
+    h.app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(crate::networking::Moving(true));
+    h.advance(1);
+    h.app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(crate::networking::Moving(false));
+    h.advance(8);
+    assert!(objects_in(h, entered.copy, 178940).is_empty());
+    use_object(h, actor, banner);
+    h.advance(8);
+    assert!(objects_in(h, entered.copy, 178946).is_empty());
+    assert_eq!(objects_in(h, entered.copy, 178940).len(), 1);
+    h.advance(220);
+    assert_eq!(battleground(h, actor).score_b, 700);
+    h.advance(20);
+    assert_eq!(battleground(h, actor).score_b, 625);
+    assert!(objects_in(h, entered.copy, 178940).is_empty());
+    crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim.player, 1000.0);
+    h.advance(2);
+    assert_eq!(battleground(h, actor).score_b, 624);
+    h.app
+        .world_mut()
+        .write_message(crate::death::PlayerDeathTransition {
+            player: victim.player,
+        });
+    h.advance(2);
+    assert_eq!(battleground(h, actor).score_b, 624);
+    assert_eq!(
+        battleground(h, actor)
+            .players
+            .iter()
+            .find(|row| row.character_id == h.app.world().get::<ClientId>(victim.player).unwrap().0)
+            .unwrap()
+            .deaths,
+        1
+    );
+    let (other_captain, _) = find_alterac_source_npc(h, entered.copy, 11949);
+    h.app
+        .world_mut()
+        .entity_mut(other_captain)
+        .insert(other_copy);
+    kill_alterac_source_npc(h, actor, other_copy, 11949);
+    h.receive_pvp_updates(5);
+    assert_eq!(battleground(h, actor).score_a, 700);
+    assert!(battleground(h, actor).world_states.contains(&(1351, 1)));
+    kill_alterac_source_npc(h, actor, entered.copy, 11947);
+    h.receive_pvp_updates(5);
+    assert_eq!(battleground(h, actor).score_b, 524);
+    assert!(battleground(h, actor).world_states.contains(&(1352, 0)));
+    kill_alterac_source_npc(h, actor, entered.copy, 11946);
+    h.receive_pvp_updates(5);
+    assert_eq!(battleground(h, actor).phase, BgPhase::Ended);
+    let row = battleground(h, actor)
+        .players
+        .iter()
+        .find(|row| row.character_id == 1)
+        .unwrap();
+    assert!(row.objective_scores.contains(&(61, 1)));
+    win_leave_and_return(&mut entered, 700);
+}
+
+fn kill_alterac_source_npc(h: &mut Harness, actor: &Traveler, copy: InMap, entry: u32) {
+    let (victim, health) = find_alterac_source_npc(h, copy, entry);
+    crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim, health + 1.0);
+}
+
+fn find_alterac_source_npc(h: &mut Harness, copy: InMap, entry: u32) -> (Entity, f32) {
+    let world = h.app.world_mut();
+    let mut query = world.query::<(Entity, &shared::components::Npc, &InMap, &Health)>();
+    query
+        .iter(world)
+        .find(|(_, npc, map, health)| {
+            npc.template_id == entry && **map == copy && health.current > 0.0
+        })
+        .map(|(entity, _, _, health)| (entity, health.current))
+        .expect("authored living objective NPC")
+}
+
+#[test]
 fn deephaul_channel_real_carts_crystal_drop_capture_victory_and_origin_return() {
     let template = shared::battleground::deephaul_ravine();
     let mut entered = enter_source_match(&template, shared::battleground::DEEPHAUL_STARTS);
@@ -293,6 +544,14 @@ fn seething_objects(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
 
 /// Source-minimum roster queue, invitation, acceptance and safe-location entry over the channel.
 fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
+    enter_source_match_with(template, starts, |_| {})
+}
+
+fn enter_source_match_with(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
     } else if matches!(template.map_id, 727 | 1803) {
@@ -356,12 +615,26 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
             app.insert_resource(crate::spell_cast::test_harness::power_table(data));
             app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
         }
+        if template.map_id == 30 {
+            app.insert_resource(alterac_source_world());
+            let data = crate::spell_cast::test_harness::world_db().unwrap();
+            app.insert_resource(crate::spell_info::SpellStore::fixture(vec![
+                data.store.get(21651).unwrap().clone(),
+            ]));
+            app.insert_resource(crate::spell_cast::test_harness::power_table(data));
+            app.add_plugins((
+                crate::spell_cast::SpellCastPlugin,
+                crate::auras::AuraPlugin,
+                crate::death::DeathPlugin,
+            ));
+        }
         if template.map_id == 2656 {
             let (world_data, templates) = deephaul_source_world();
             app.insert_resource(world_data);
             app.insert_resource(templates);
         }
         app.insert_resource(crate::faction::FactionTemplates::default());
+        setup(app);
         app.add_plugins((
             crate::pvp::PvpPlugin,
             crate::npc_interaction::NpcInteractionPlugin,
@@ -520,6 +793,7 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
         assert_eq!(result.honor_reward, None);
         assert_eq!(result.players.len(), players.len());
         let score_state = match copy.map_id {
+            30 => 3127,
             998 => 6303,
             727 => 6437,
             1803 => 13845,
@@ -620,6 +894,7 @@ fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
                     map_id: 998,
                     info: GameObjectInfo { entry: orb.entry, go_type: row.get(0)?, display_id: row.get(1)?, name: row.get(2)?, scale },
                     position: Vec3::from_array(orb.position), orientation: 0.0,
+                    initial_state: 1,
                     bounds: crate::game_objects::GameObjectBounds {
                         min: Vec3::new(number(4)?,number(5)?,number(6)?),
                         max: Vec3::new(number(7)?,number(8)?,number(9)?),
@@ -702,6 +977,27 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
     h.walk_to(actor, Vec3::new(1783.41, 1333.56, 6.0));
     h.advance(1300);
     win_leave_and_return(&mut entered, 1500);
+}
+
+fn alterac_source_world() -> crate::world_data::WorldData {
+    let copy = tempfile::NamedTempFile::new().unwrap();
+    std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
+    let promoted = std::process::Command::new("python3")
+        .args([
+            "../../scripts/promote_battlegrounds.py",
+            "--maps",
+            "30",
+            "--db",
+        ])
+        .arg(copy.path())
+        .output()
+        .unwrap();
+    assert!(
+        promoted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&promoted.stderr)
+    );
+    crate::world_data::load_world_data(copy.path())
 }
 
 fn deephaul_source_world() -> (

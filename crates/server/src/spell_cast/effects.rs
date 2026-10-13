@@ -99,6 +99,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         }
         EFFECT_ENERGIZE => energize,
         41 => super::teleport::jump_to_unit,
+        98 | 144 => super::knockback::knock_back,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
@@ -1145,6 +1146,10 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 /// `EffectTriggerSpell` at the caster, triggered. TrinityCore keeps that cast's power and
 /// reagent costs; `cast_triggered` ignores costs.
 fn force_cast(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if ctx.spell.id == 57405 && effect.trigger_spell == 61698 {
+        crate::pvp::arena_dalaran::push_pipe_player(world, target, ctx.caster);
+        return;
+    }
     super::cast_triggered(
         world,
         target,

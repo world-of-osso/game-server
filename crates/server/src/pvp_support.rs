@@ -67,7 +67,7 @@ pub(super) fn build_pvp_snapshot(state: &PlayerPvpState) -> PvpSnapshot {
             .cloned()
             .map(|entry| PvpBracketStatsSnapshot {
                 bracket: entry.bracket,
-                rating: None,
+                rating: entry.matchmaker_rating.and(entry.rating),
                 season_wins: entry.season_wins,
                 season_losses: entry.season_losses,
                 weekly_wins: entry.weekly_wins,
@@ -91,6 +91,7 @@ fn build_queue_snapshot(queue: &PlayerPvpQueue) -> PvpQueueSnapshot {
                 battleground_id: *battleground_id,
                 name: name.clone(),
             },
+            PlayerPvpQueue::Arena { mode } => PvpQueueKindSnapshot::Arena { mode: *mode },
             PlayerPvpQueue::RatedBracket { bracket } => PvpQueueKindSnapshot::RatedBracket {
                 bracket: bracket.clone(),
             },
@@ -101,6 +102,7 @@ fn build_queue_snapshot(queue: &PlayerPvpQueue) -> PvpQueueSnapshot {
 pub(super) fn queue_label(queue: &PlayerPvpQueue) -> String {
     match queue {
         PlayerPvpQueue::Battleground { name, .. } => name.clone(),
+        PlayerPvpQueue::Arena { mode } => format!("{mode:?}"),
         PlayerPvpQueue::RatedBracket { bracket } => bracket_label(bracket).into(),
     }
 }
@@ -137,6 +139,7 @@ pub(super) fn default_brackets() -> Vec<PlayerPvpBracketState> {
     .map(|bracket| PlayerPvpBracketState {
         bracket,
         rating: None,
+        matchmaker_rating: None,
         season_wins: 0,
         season_losses: 0,
         weekly_wins: 0,

@@ -25,7 +25,7 @@ type PlayerDeathTransitionQuery<'w, 's> = Query<
 >;
 
 #[derive(SystemParam)]
-pub(super) struct PlayerDeathParams<'w, 's> {
+pub(crate) struct PlayerDeathParams<'w, 's> {
     players: PlayerDeathTransitionQuery<'w, 's>,
     connections: Query<'w, 's, (Entity, &'static PlayerLink), With<Authenticated>>,
     state: Res<'w, DeathServerState>,
@@ -37,7 +37,7 @@ pub(super) struct PlayerDeathParams<'w, 's> {
     counters: ResMut<'w, DeathTransitionCounters>,
 }
 
-pub(super) fn process_player_death_transitions(
+pub(crate) fn process_player_death_transitions(
     mut transitions: MessageReader<PlayerDeathTransition>,
     mut params: PlayerDeathParams,
 ) {
@@ -86,6 +86,7 @@ pub(super) fn process_player_death_transitions(
         params.commands.queue(move |world: &mut World| {
             crate::damage_meter::record_player_death_transition(world, player_entity);
             crate::mythic_plus::record_death(world, player_entity);
+            crate::pvp::record_player_death(world, player_entity);
         });
         // `Player::setDeathState` -> `Unit::setDeathState` -> `CombatStop`
         // (AzerothCore Player.cpp:1078, Unit.cpp:11439-11441).

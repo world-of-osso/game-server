@@ -73,6 +73,9 @@ fn update_match(
     matched: &mut InvitedBattleground,
     actors: &BTreeMap<u64, Participant>,
 ) -> bool {
+    if matched.arena.is_some() {
+        return false;
+    }
     let Some(map) = matched.map else { return false };
     let template =
         template_by_id(matched.instance.bg_id).expect("matched template remains registered");
@@ -87,6 +90,9 @@ fn update_match(
         return changed;
     }
     let delta_ms = world.resource::<Time<Fixed>>().delta().as_millis() as u64;
+    if matched.alterac.is_some() {
+        return super::pvp_alterac::update_alterac(world, matched, map, delta_ms) || changed;
+    }
     if let Some(nodes) = matched.nodes.as_mut() {
         let before = nodes.world_states(&matched.instance);
         nodes.advance(delta_ms, &mut matched.instance, &template);
@@ -492,6 +498,11 @@ pub(crate) fn use_battleground_object(
     player: Entity,
     object: Entity,
 ) {
+    if super::pvp_alterac::is_banner(world, object) {
+        let result = super::pvp_alterac::begin_opening(world, player, object);
+        super::pvp_invites::send_response(world, connection, player, result);
+        return;
+    }
     if super::pvp_seething::is_azerite_object(world, object) {
         let result = super::pvp_seething::begin_gathering(world, player, object);
         super::pvp_invites::send_response(world, connection, player, result);
@@ -708,11 +719,12 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
         };
         (
             matched.instance.phase,
-            matched.instance.score_a.score,
-            matched.instance.score_b.score,
+            matched.displayed_scores().0,
+            matched.displayed_scores().1,
             matched.flag_objective(),
             matched.instance.outcome,
             matched.scoreboard.clone(),
+            matched.arena.as_ref().map(|arena| arena.snapshot.clone()),
             matched.world_states(),
         )
     };
@@ -739,7 +751,8 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
         snapshot.flags = values.3.clone();
         snapshot.outcome = values.4;
         snapshot.players = values.5.clone();
-        snapshot.world_states = values.6.clone();
+        snapshot.arena = values.6.clone();
+        snapshot.world_states = values.7.clone();
         super::pvp_invites::send_response(
             world,
             connection,
