@@ -113,4 +113,6 @@ mod profile_behavior_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod utility_tests;
+#[cfg(test)]
 mod wire_tests;
