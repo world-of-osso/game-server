@@ -1882,6 +1882,8 @@ mod toy_effects_tests;
 
 #[cfg(test)]
 mod defensives_tests;
+#[cfg(test)]
+mod fear_tests;
 
 #[cfg(test)]
 mod override_tests;
