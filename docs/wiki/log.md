@@ -1,3 +1,11 @@
+## 2026-10-13 — Unrated Shuffle and authored cooldown reset
+
+[Native arenas](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13): six source-role solo entrants, real first-kill rounds, spec lock, source gate/start/reset restoration and character wins; both-skin live proof and four-map full-channel exact origins. Item overrides survive real cast-time completion and reset only the actual category; RED/GREEN fixtures preserve unrelated600s timers, charges/GCD/school locks and prove active-pet reset. Current Retail rated/leaver policy and dampening remain unclaimed.
+
+## 2026-10-13 — Shared PvP reconnect and near teleport
+
+[Persistence](systems/persistence.md#pvp-reconnect-verified-2026-10-13): durable captured entry points, exact reserved-copy rejoin and missing/expired-match origin restoration; reopened-redb and real disconnect/SelectCharacter tests pass. Shared Warsong mercenary restoration and last-living arena logout preserve behavior. Full-copy near teleport RED exposed dungeon-only lookup; reserved PvP-copy lookup fixes it. Native/UDP proof and completed32-case map/skin captures are in [arenas](../../../game-engine/docs/wiki/systems/arenas.md#pvp-reconnect--verified-2026-10-13).
+
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
@@ -9,6 +17,7 @@
 - 2026-10-13 — [Category cooldown offsets](systems/auras.md#category-cooldown-offsets): source341 additive milliseconds applied after haste/spellmods, actual25s→20s Counterspell RED/GREEN, category/learning/unlearn/both-timer/zero controls; no whole-role or rendered parity claim.
 
 - 2026-10-13 — [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage): native25%-of-owner-crit aura updater, real Aimed Shot RED/GREEN, live crit/unlearn and heal isolation; full-class/rendered parity remains open.
+- 2026-10-13 — [Full-roster criterion limit](systems/dungeon-achievements.md#full-roster-limit-verified-2026-10-13): LessThanTappers29 uses full native group membership, not physical tappers; authored Malygos solo/8/9 roster RED/GREEN, offline-member and persistence controls. +8 ordinary; complete raw inventory counts reconciled. Full boss mechanics/rendering unclaimed.
 
 - 2026-10-13 — [Rated arena map criteria](systems/dungeon-achievements.md#rated-map-wins-and-participation-verified-2026-10-13): committed WinArena32/ParticipateInArena33, qualified native team-size24/ranked60, real-channel2v2/3v3 RED/GREEN and persistence controls; +World Wide Winner699/+40 statistics.5v5/rating39 mapping remain disabled.
 

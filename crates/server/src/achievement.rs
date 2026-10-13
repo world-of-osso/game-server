@@ -911,6 +911,10 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
         race: identity.race,
         class: identity.class,
         level: world.get::<Level>(player)?.0,
+        group_size: world
+            .get_resource::<crate::group::GroupRegistry>()
+            .zip(world.get::<crate::persistence::ClientId>(player))
+            .map(|(groups, character)| groups.group_members(character.0).len()),
     })
 }
 

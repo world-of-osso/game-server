@@ -101,6 +101,10 @@ class Conditions(unittest.TestCase):
             modifiers[11]['Asset'] = '2'
         self.assertEqual(self.compile(modifiers), {}, 'other producers have no match snapshot')
 
+    def test_group_roster_limit_preserves_strict_threshold(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 29, 9)}
+        self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
+
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
         with sqlite3.connect(':memory:') as db:
             db.executescript('''

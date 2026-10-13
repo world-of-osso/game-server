@@ -401,6 +401,9 @@ fn handle_select(
         }
     }
     insert_world_components(commands, selection.connection, player_entity, character_id);
+    commands.queue(move |world: &mut World| {
+        crate::pvp::reconnect::logged_in(world, player_entity, character_id);
+    });
     send_enter_success(selection.connection, enter_senders, player_entity);
     send_load_terrain(
         selection.connection,
