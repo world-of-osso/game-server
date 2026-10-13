@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Source Toy facing](systems/toys.md#source-facing-boundary-2026-10-13) — two roots, inclusive180° arc and strict exact3D target-radius exemption; no CombatReach substitution.
+
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.

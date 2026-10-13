@@ -1518,6 +1518,14 @@ fn toyfx5_mask_affects_selected_friend_and_mortar_delivers_real_cast_time() {
     learn_effect_toy(&mut h, character, 204818);
     h.app
         .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    h.app
+        .world_mut()
         .get_mut::<shared::components::Position>(h.npc)
         .unwrap()
         .x = 20.0;
@@ -4099,6 +4107,52 @@ fn toyfx25_facing_uses_inclusive_half_arc_and_strict_scaled_exact3d_boundary() {
 }
 
 #[test]
+fn toyfx25_facing_uses_source_creature_radius_not_its_combat_reach() {
+    use shared::components::{ModelDisplay, Npc, Player, UnitScale};
+    let directory = tempfile::tempdir().unwrap();
+    // Source display42247: bounding radius6, CombatReach24. UnitScale is the
+    // native display/object scale already replicated by the creature spawner.
+    for (index, (distance, scale, permitted)) in [
+        (5.9, 1.0, true),
+        (6.0, 1.0, false),
+        (11.9, 2.0, true),
+        (12.0, 2.0, false),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let (mut h, target) =
+            facing25_fixture(&directory.path().join(format!("model{index}.redb")), 141300);
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<Player>()
+            .insert((
+                Npc {
+                    template_id: 61463,
+                    name: "Slagmaw".into(),
+                },
+                ModelDisplay {
+                    display_id: 42247,
+                    ..Default::default()
+                },
+                Position {
+                    x: -distance,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                UnitScale(scale),
+            ));
+        let expected = if permitted { None } else { Some("NotInFront") };
+        assert_eq!(
+            activate(&mut h, 141300)[0].error.as_deref(),
+            expected,
+            "case{index}"
+        );
+    }
+}
+
+#[test]
 fn toyfx25_facing_rechecks_noninstant_completion_without_spending_recovery() {
     let directory = tempfile::tempdir().unwrap();
     for (item, spell) in [(141300, 225826), (204818, 406870)] {
@@ -4121,7 +4175,10 @@ fn toyfx25_facing_rechecks_noninstant_completion_without_spending_recovery() {
         assert!(h.inbox.failed.iter().any(|failed| failed.spell_id == spell
             && failed.reason == shared::spell_data::CastFailReason::NotInFront));
         assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
-        assert!(h.inbox.cooldowns.is_empty());
+        assert!(
+            h.inbox.cooldowns.iter().all(|cooldown| cooldown.is_gcd),
+            "start GCD is legitimate; item/category recovery must remain unspent"
+        );
         h.app
             .world_mut()
             .get_mut::<shared::components::Rotation>(h.caster)

@@ -1,5 +1,18 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source Toy facing — bounded gate (2026-10-13)
+
+Local69933 SpellCastingRequirements contains exactly two Toy root INFRONT bindings:225826 and406870. TC a352b1fa Spell.cpp7293–7304 checks explicit non-self unit targets for players, inclusive180° arc, at strict start and noninstant completion. Unit.cpp712–720 exempts max(target BoundingRadius,2yd); Position.h155–157 uses strict exact3D distance, not Object.cpp CombatReach distance. Native Rotation.y minus pi/2 is WoW orientation. Target scale multiplies source player0.389/pet1 or TDB1210 model radius. Producer `scripts/generate_toy_facing_requirements.py` reads authenticated CSV and local TDB dump only; inspectable manifest retains both flags and98609 authentic model radii, without canonical database writes. Unknown target geometry is explicit unsupported, never permission fallback.
+
+| Boundary | Proof |
+|---|---|
+| Actual learned UseToy rear rejection, both roots | RED: missing NotInFront; bounded GREEN gate pending |
+| Completion turn-away, both roots, retained recovery | RED: missing NotInFront; legitimate start GCD excluded from item-recovery assertion |
+| Inclusive side arc; strict2yd/exact3D/player scale; TDB radius vs reach | Concrete actual-use fixtures; bounded gate pending |
+| Coin toss/catch master regression | Prior709082c0 fix retained; named test PASS at6eb29b48 |
+| Native both skins / entire1166 | Facing native proof pending; entire goal open |
+
+
 ## Accursed Tome — bounded lifecycle proof (2026-10-13)
 
 127670/187146 has one complete-zero self aura, instant cast,300000ms duration and3600000ms recovery. Visual ordinary1097945 attaches at17 with authored(-.3,0,.3) offsets/scale1, starts53403 on AuraStart7 and ends on AuraEnd8; no Positioner/visual condition/area requirement/TDB1210 root script binding. Description and aura text remain literal: path of Man'ari Eredar / Touched by the Burning Legion; no fabricated empowerment or gameplay payload. Source capsules tome24-source-db.json, tome24-visual-source.json and tome24-script-source.json. Actual bag learning/use RED refuses aura4; exact187146 admission only. Server2 GREEN tests cover actual Tome learning/use, five-minute authoritative expiry, preserved health/position/display/recovery and Fountain regression; B.F.F.90067 remains unsupported rather than generically admitted. Core source attachment17/offsets/scale/end-event test passes. Authenticated7 local assets/1alias published privately. Both native skins show source1097945, retain aura/model at280s and remove naturally with recovery retained (`modern-tome24-learning-diagnostic`, `forever-tome24-natural` receipts); screenshots inspected. Earlier profile35/36 first-learning attempts consumed the item but live ownership stayed stale until reconnect; unexplained, not marked fixed. Exact fresh-account learning fixtures pass both skins with correct learned snapshots, present server sender and native receipt. Snapshot generation6–18ms rejects slow-generation hypothesis. Temporary traces removed; no transport/guard/permission behavior changed. Native proof scopes remain claim-specific; no exact300s wall or physical-audio claim.
