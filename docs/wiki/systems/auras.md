@@ -293,6 +293,8 @@ Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 
 
 ## Script hooks
 
+Ysera's Gift 145108 reads its owner's live max health on each authored 5 s effect-0 tick and floors its native 3% amount. Injured owners trigger 145109; full owners trigger the [raid-area group child](spell-casting.md#implicit-targets), 145110. `cast_triggered_with_effect0_amount` overrides only a cloned per-cast child; later direct casts retain the native 15-point definition. Both children carry Can'tCrit, enforced before crit modifiers/scripts. Six native Bevy App tests cover timing, live max health, self/group priority, 100% crit, unlearning, overflow, no-group isolation and override non-leakage. Source: TC a352b1fa `spell_dru_yseras_gift`, SharedDefines.h:539; [contract](../../specs/class-completeness.md#yseras-gift-periodic-healing).
+
 Combat Wisdom 121817's effect-0 tick casts Power Strike Proc 129914 (first due tick immediately via ExtraInitialPeriod, then every 15 s). Its proc hook casts 121283 for one Chi before the generic charge consumer removes it. Combat Wisdom effect 1 remains unmodeled.
 
 Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's percentage of owner crit on apply and each effect-1 tick. Chaos Strike's custom refund roll in `spell_cast/scripts/batch5.rs` consumes this modifier through `spell_mods::modify`; merely updating the live aura amount did not affect that custom roll. Native cast tests cover actual Fury gain, one roll per root, and a no-talent control. Source: TC a352b1fa `spell_dh_critical_chaos`, `spell_monk_power_strike_periodic` and `spell_monk_power_strike_proc`; [contract and tests](../../specs/class-completeness.md#periodic-class-proc-hooks).
