@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Prismatic Bauble — source admission, native gaps open (2026-10-13)
+
+140309/223143 has a complete-zero self aura, instant cast,20000ms duration and current ItemEffect120000ms recovery. Pinned69933 root label2399 is preserved; no invented Darkspear Dash override. No casting-requirements or TDB1210 root script binding was found in4066 scanned bindings. Visual59841 uses ordinary cast982939/kit73315 and aura1417024/kit73316, attachment34, aura pitchpi/2, scale1, end-event8. Sixteen local assets authenticated against frozen CASC; five private assets/two aliases published without canonical writes. Capsules and claim-specific commands: `bauble26-proof-ledger.json` in the continuation evidence directory.
+
+| Boundary | Proof / remaining |
+|---|---|
+| Real bag learning/UseToy/lifetime/recovery/body state | RED unsupported aura4 → server1 GREEN at87fdc83234b758b417c6c0d77bafab342b881eec |
+| Source visual metadata / ribbon scalar parser | Core visual1 PASS; real1417024 scalar RED→GREEN plus six parser regressions; [format](../../game-engine/docs/wiki/formats/m2-format.md#ribbon-emitter-scalars-2026-10-13) |
+| Modern stationary native | Aura/kit ready, natural removal, recovery retained;27318ms after model readiness, not exact20s wall. Stationary PNG does not certify rainbow trail |
+| Forever native | First-learning timeout; reconnect model/aura with immediateCD0; instrumented BFF learning and Bauble120000ms receipt pass but model predicate fails. Latest initial catalog sent but no native apply observed before120s timeout. No lifecycle PASS or ownership fix |
+| Native rainbow / whole1166 | 1417024 has one ribbon and one particle; effect builder lacks ribbon consumer. Moving trail and complete1166 remain open; no independent verification PASS |
+
 ## Source Toy facing — bounded gate (2026-10-13)
 
 Local69933 SpellCastingRequirements contains exactly two Toy root INFRONT bindings:225826 and406870. TC a352b1fa Spell.cpp7293–7304 checks explicit non-self unit targets for players, inclusive180° arc, at strict start and noninstant completion. Unit.cpp712–720 exempts max(target BoundingRadius,2yd); Position.h155–157 uses strict exact3D distance, not Object.cpp CombatReach distance. Native Rotation.y minus pi/2 is WoW orientation. Target scale multiplies source player0.389/pet1 or TDB1210 model radius. Producer `scripts/generate_toy_facing_requirements.py` reads authenticated CSV and local TDB dump only; inspectable manifest retains both flags and98609 authentic model radii, without canonical database writes. Unknown target geometry is explicit unsupported, never permission fallback.

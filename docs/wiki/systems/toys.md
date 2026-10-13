@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Prismatic Bauble source boundary (2026-10-13)
+
+Exact223143 cosmetic admission has authoritative lifetime/recovery proof, not native rainbow certification. Source ribbon parsing and actual native delivery/lifecycle gaps remain separate. [Claim-specific coverage](../../toy-effects14-coverage.md#prismatic-bauble--source-admission-native-gaps-open-2026-10-13).
+
 ## Source facing boundary (2026-10-13)
 
 Two source-facing roots use selected-unit180° arc validation and TC's strict exact3D target-radius exemption before spending. No CombatReach extension; ordinary start GCD is retained on completion refusal. [Sources and claim-specific proof](../../toy-effects14-coverage.md#source-toy-facing--bounded-gate-2026-10-13); [contract](../../specs/toys.md).
