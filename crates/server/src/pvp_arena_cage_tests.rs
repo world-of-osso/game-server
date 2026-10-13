@@ -147,6 +147,8 @@ fn announcer_harness() -> (Harness, Entity) {
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<ChatMessage>::default(),
         MessageReceiver::<ChatMessage>::default(),
+        MessageSender::<shared::protocol::CreatureTextSound>::default(),
+        MessageReceiver::<shared::protocol::CreatureTextSound>::default(),
     ));
     let naminze = h
         .app
@@ -305,4 +307,25 @@ fn arena_cage_announcer_speaks_at_preparation_stage_two_and_start() {
     update_announcements(h.app.world_mut(), CAGE, 160.0, running, &mut clock);
     update_announcements(h.app.world_mut(), CAGE, 170.0, running, &mut clock);
     assert_eq!(said(&mut h), ["Get ready. It's about to go down!"]);
+}
+
+#[test]
+fn arena_cage_announcer_delivers_source_sound_kit_with_its_preparation_line() {
+    let (mut h, naminze) = announcer_harness();
+    crate::scripted_ai::creature_text::talk(h.app.world_mut(), naminze, TEXT_PREPARE);
+    let mut sounds = Vec::new();
+    for _ in 0..3 {
+        h.advance(1);
+        let connection = h.connection;
+        sounds.extend(drain::<shared::protocol::CreatureTextSound>(
+            &mut h.app, connection,
+        ));
+    }
+    assert_eq!(
+        sounds,
+        [shared::protocol::CreatureTextSound {
+            speaker: naminze.to_bits(),
+            sound_kit: 269092,
+        }]
+    );
 }
