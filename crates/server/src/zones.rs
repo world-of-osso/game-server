@@ -59,6 +59,44 @@ impl MapContent {
     }
 }
 
+/// The spawn's `creature.StringId` (`Creature::HasStringId`).
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct CreatureStringId(pub String);
+
+/// `Map::SpawnGroupSpawn(groupId)` for a script-owned group withheld at copy fill.
+pub(crate) fn spawn_group_spawn(
+    world: &mut World,
+    map: crate::maps::InMap,
+    difficulty_id: u32,
+    replicate: bool,
+    group: u32,
+) -> Vec<Entity> {
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let entities = world.resource_scope(|world, world_data: Mut<WorldData>| {
+        let Some(guids) = world_data.script_spawn_groups.get(&group) else {
+            error!("SpawnGroupSpawn: group {group} is not a loaded script spawn group");
+            return Vec::new();
+        };
+        let spawns = world_data.spawns_by_map[&(map.map_id as u16)]
+            .iter()
+            .map(|&idx| &world_data.spawns[idx])
+            .filter(|spawn| guids.contains(&spawn.guid) && spawn.spawns_at(difficulty_id));
+        let mut commands = Commands::new(&mut queue, world);
+        spawn_creatures(
+            &mut commands,
+            &world_data,
+            map,
+            difficulty_id,
+            replicate,
+            spawns,
+        )
+        .into_values()
+        .collect()
+    });
+    queue.apply(world);
+    entities
+}
+
 /// The difficulty a creature's map copy was created at (`Map::GetDifficultyID`), which
 /// picks its template's difficulty row and loot.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,6 +118,12 @@ pub(crate) fn spawn_map_creatures(
         .pools
         .init_map(map.map_id as u16, &mut rand::thread_rng());
     let picked: HashSet<u32> = picked.into_iter().collect();
+    let withheld: HashSet<u32> = world_data
+        .script_spawn_groups
+        .values()
+        .flatten()
+        .copied()
+        .collect();
     let spawns = indices
         .into_iter()
         .flatten()
@@ -88,6 +132,7 @@ pub(crate) fn spawn_map_creatures(
             (world_data.pools.creature_pool(spawn.guid).is_none() || picked.contains(&spawn.guid))
                 && spawn.spawns_at(content.difficulty_id)
                 && !content.dead_bosses.contains(&spawn.template_entry)
+                && !withheld.contains(&spawn.guid)
         });
     let entities = spawn_creatures(
         commands,
@@ -175,6 +220,11 @@ fn spawn_creatures<'a>(
             commands
                 .entity(entity)
                 .insert(CreatureDifficulty(difficulty_id));
+        }
+        if let Some(string_id) = world_data.spawn_string_ids.get(&spawn.guid) {
+            commands
+                .entity(entity)
+                .insert(CreatureStringId(string_id.clone()));
         }
         entities.insert(spawn.guid, entity);
     }

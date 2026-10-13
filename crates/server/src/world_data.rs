@@ -204,6 +204,11 @@ pub struct WorldData {
     pub pools: crate::spawn_pools::SpawnPools,
     /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
     pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
+    /// TDB `creature.StringId` keyed by content spawn guid (`HasStringId`).
+    pub(crate) spawn_string_ids: HashMap<u32, String>,
+    /// Members of the manual spawn groups ported scripts spawn (`SpawnGroupSpawn`),
+    /// keyed by group; copy fill withholds them.
+    pub(crate) script_spawn_groups: HashMap<u32, Vec<u32>>,
 }
 
 impl WorldData {
@@ -251,6 +256,11 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let pools = crate::spawn_pools::SpawnPools::load(&conn)
         .expect("Failed to load content_pool_*; run scripts/import-spawn-pools.sh");
     let vignettes = crate::vignettes::load_creature_vignettes(&conn);
+    let spawn_string_ids =
+        load_spawn_string_ids(&conn).expect("Failed to load TDB creature.StringId");
+    let script_spawn_groups =
+        load_script_spawn_groups(&conn, crate::scripted_ai::SCRIPT_SPAWN_GROUPS)
+            .expect("Failed to load script-owned TDB spawn groups");
 
     info!(
         "WorldData loaded: {} templates, {} spawns, {} maps, {} waypoint paths, {} addons, {} formation members",
@@ -277,7 +287,46 @@ pub fn load_world_data(path: &Path) -> WorldData {
         armor_constants,
         pools,
         vignettes,
+        spawn_string_ids,
+        script_spawn_groups,
     }
+}
+
+/// `import_instance_population.OFFSET`: content guid of a TDB creature row.
+const TDB_GUID_OFFSET: u32 = 20_000_000;
+
+pub(crate) fn load_spawn_string_ids(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
+    conn.prepare(
+        "SELECT creature.guid, tdb.StringId FROM content_creature creature
+         JOIN tdb_creature tdb ON creature.guid = tdb.guid + ?1 AND creature.id1 = tdb.id
+         WHERE tdb.StringId <> ''",
+    )?
+    .query_map([TDB_GUID_OFFSET], |row| Ok((row.get(0)?, row.get(1)?)))?
+    .collect()
+}
+
+pub(crate) fn load_script_spawn_groups(
+    conn: &Connection,
+    groups: &[u32],
+) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
+    let mut query = conn.prepare(
+        "SELECT creature.guid FROM tdb_spawn_group grp
+         JOIN tdb_spawn_group_template template USING(groupId)
+         JOIN content_creature creature ON creature.guid = grp.spawnId + ?2
+         WHERE grp.groupId = ?1 AND grp.spawnType = 0 AND template.groupFlags & 4",
+    )?;
+    groups
+        .iter()
+        .map(|&group| {
+            let guids = query
+                .query_map([group, TDB_GUID_OFFSET], |row| row.get(0))?
+                .collect::<rusqlite::Result<Vec<u32>>>()?;
+            if guids.is_empty() {
+                error!("script spawn group {group} has no manual-spawn content creatures");
+            }
+            Ok((group, guids))
+        })
+        .collect()
 }
 
 fn creature_stats(row: &Row) -> rusqlite::Result<CreatureStats> {
@@ -655,7 +704,7 @@ pub(crate) fn load_spawn(conn: &Connection, guid: u32) -> rusqlite::Result<Creat
     )
 }
 
-fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
+pub(crate) fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
     // No events are activated yet. Negative memberships spawn while inactive.
     let mut stmt = conn
         .prepare(&format!(
@@ -678,7 +727,7 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
         .collect()
 }
 
-fn build_spawns_by_map(spawns: &[CreatureSpawn]) -> HashMap<u16, Vec<usize>> {
+pub(crate) fn build_spawns_by_map(spawns: &[CreatureSpawn]) -> HashMap<u16, Vec<usize>> {
     let mut map: HashMap<u16, Vec<usize>> = HashMap::new();
     for (idx, spawn) in spawns.iter().enumerate() {
         map.entry(spawn.map).or_default().push(idx);

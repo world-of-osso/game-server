@@ -147,6 +147,65 @@ impl CreatureAi for AnimatedGold {
     }
 }
 
+/// `SPAWN_GROUP_SERPENT_BOSS`: manual group spawned by the instance script.
+pub(crate) const SPAWN_GROUP_SERPENT_BOSS: u32 = 1256;
+const TEMPLE_EVENT: &str = "TempleEvent";
+
+/// `instance_kings_rest::OnUnitDeath`: the copy's last living TempleEvent creature
+/// dying spawns the Serpent's group.
+pub(crate) fn spawn_serpent_after_temple_event(
+    died: Query<
+        (
+            &crate::maps::InMap,
+            &crate::zones::CreatureStringId,
+            Option<&crate::zones::CreatureDifficulty>,
+            Has<lightyear::prelude::Replicate>,
+        ),
+        Added<crate::combat::DeathState>,
+    >,
+    living: Query<
+        (&crate::maps::InMap, &crate::zones::CreatureStringId),
+        Without<crate::combat::DeathState>,
+    >,
+    mut commands: Commands,
+) {
+    for (&map, string_id, difficulty, replicate) in &died {
+        let remaining = living
+            .iter()
+            .any(|(other, id)| *other == map && id.0 == TEMPLE_EVENT);
+        if string_id.0 != TEMPLE_EVENT || remaining {
+            continue;
+        }
+        let difficulty = difficulty.map_or(0, |difficulty| difficulty.0);
+        commands.queue(move |world: &mut World| {
+            spawn_serpent_group(world, map, difficulty, replicate);
+        });
+    }
+}
+
+fn spawn_serpent_group(
+    world: &mut World,
+    map: crate::maps::InMap,
+    difficulty: u32,
+    replicate: bool,
+) {
+    let maps = world.resource::<crate::maps::MapStore>();
+    if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(INSTANCE) {
+        return;
+    }
+    // A killed boss keeps its respawn time, so SpawnGroupSpawn skips it.
+    let done = super::instance_script::get_boss_state(world, map, 0)
+        == Some(super::instance_script::EncounterState::Done);
+    let present = world
+        .query::<(&crate::maps::InMap, &shared::components::Npc)>()
+        .iter(world)
+        .any(|(other, npc)| *other == map && npc.template_id == golden_serpent::ENTRY);
+    if done || present {
+        return;
+    }
+    crate::zones::spawn_group_spawn(world, map, difficulty, replicate, SPAWN_GROUP_SERPENT_BOSS);
+}
+
 pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::AuraScripts>) {
     scripts.0.insert(
         SPIT_GOLD,

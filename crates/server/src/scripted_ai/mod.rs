@@ -41,6 +41,9 @@ use crate::networking::CombatTarget;
 
 pub use event_map::EventMap;
 
+/// Manual spawn groups ported scripts spawn; copy fill withholds their members.
+pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[kings_rest::SPAWN_GROUP_SERPENT_BOSS];
+
 pub struct ScriptedAiPlugin;
 
 impl Plugin for ScriptedAiPlugin {
@@ -73,6 +76,7 @@ impl Plugin for ScriptedAiPlugin {
                     kings_rest::update_gold_follows
                         .after(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
+                    kings_rest::spawn_serpent_after_temple_event,
                     kings_rest::update_molten_gold_areas
                         .after(update_creature_ai)
                         .after(crate::combat::auto_attack_system),
