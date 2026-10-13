@@ -304,7 +304,7 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, error: O
     }
 }
 
-fn broadcast_account(world: &mut World, account: u64) {
+pub(crate) fn broadcast_account(world: &mut World, account: u64) {
     let owned = mount_store::load(&world.resource::<GameDatabase>().db, account);
     for (connection, id, player) in connections(world) {
         if id == account {
