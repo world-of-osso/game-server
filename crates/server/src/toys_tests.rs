@@ -28,7 +28,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090,
             381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
             128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
-            127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
+            171352, 127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
         ],
         class,
     )
@@ -3946,6 +3946,20 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
         serde_json::from_str(include_str!("spell_cast/toy_required_areas.json")).unwrap();
     let spells = manifest["spells"].as_object().unwrap();
     assert_eq!(spells.len(), 69);
+    h.app
+        .insert_resource(crate::spell_info::SpellStore::fixture(
+            spells
+                .keys()
+                .map(|spell| {
+                    world_db()
+                        .unwrap()
+                        .store
+                        .get(spell.parse().unwrap())
+                        .unwrap()
+                        .clone()
+                })
+                .collect(),
+        ));
     for (spell, group) in spells {
         let spell: u32 = spell.parse().unwrap();
         for absent in [false, true] {
