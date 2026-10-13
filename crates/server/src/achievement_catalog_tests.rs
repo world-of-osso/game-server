@@ -1,6 +1,80 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_player_area_some_accepts_alternatives_and_authored_descendants() {
+    let catalog = catalog();
+    for (area, qualifies) in [
+        (Some(1377), true),
+        (Some(9310), true),
+        (Some(2738), true),
+        (Some(1519), false),
+        (None, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                area,
+                map: 1,
+                race: 1,
+                class: 1,
+                level: 30,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::CastSpell(61818),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&9142),
+            qualifies.then_some(&1),
+            "area {area:?}"
+        );
+    }
+}
+
+#[test]
+fn achievements_criteria_player_area_some_rejects_a_missing_alternative_at_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("area-some.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let conn = Connection::open(&path).unwrap();
+    conn.execute("DELETE FROM area_table WHERE ID = 9310", [])
+        .unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            area: Some(1377),
+            map: 1,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::CastSpell(61818),
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&9142),
+        "missing alternative cannot be silently removed"
+    );
+}
+
+#[test]
 fn achievements_criteria_player_map_some_requires_an_authored_reference_map() {
     let catalog = catalog();
     for (map, qualifies) in [
