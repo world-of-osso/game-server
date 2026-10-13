@@ -1,6 +1,151 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_player_area_some_accepts_alternatives_and_authored_descendants() {
+    let catalog = catalog();
+    for (area, qualifies) in [
+        (Some(1377), true),
+        (Some(9310), true),
+        (Some(2738), true),
+        (Some(1519), false),
+        (None, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                area,
+                map: 1,
+                race: 1,
+                class: 1,
+                level: 30,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::CastSpell(61818),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&9142),
+            qualifies.then_some(&1),
+            "area {area:?}"
+        );
+    }
+}
+
+#[test]
+fn achievements_criteria_player_area_some_rejects_a_missing_alternative_at_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("area-some.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let conn = Connection::open(&path).unwrap();
+    conn.execute("DELETE FROM area_table WHERE ID = 9310", [])
+        .unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            area: Some(1377),
+            map: 1,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::CastSpell(61818),
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&9142),
+        "missing alternative cannot be silently removed"
+    );
+}
+
+#[test]
+fn achievements_criteria_player_map_some_requires_an_authored_reference_map() {
+    let catalog = catalog();
+    for (map, qualifies) in [
+        (Some(489), true),
+        (Some(2106), true),
+        (Some(0), false),
+        (Some(726), false),
+        (None, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: map.map(|map| ReferencePlayer {
+                map,
+                race: 1,
+                class: 1,
+                level: 30,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::DeliveredKillingBlow,
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&5538),
+            qualifies.then_some(&1),
+            "map {map:?}"
+        );
+    }
+}
+
+#[test]
+fn achievements_criteria_player_map_some_rejects_a_missing_alternative_at_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("map-some.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let conn = Connection::open(&path).unwrap();
+    conn.execute("DELETE FROM map WHERE ID = 489", []).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            map: 2106,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::DeliveredKillingBlow,
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&5538),
+        "missing alternative cannot be silently removed"
+    );
+}
+
+#[test]
 fn achievements_criteria_zone_pet_win_uses_one_flagged_parent_not_ancestry() {
     let catalog = catalog();
     for (area, qualifies) in [
@@ -221,10 +366,15 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 5415);
+    // Pinned census:5424 + six complete PlayerMap alternatives + four complete
+    // PlayerIsInArea alternatives; structural union, not playable-content proof.
+    assert_eq!(union.len(), 5434);
     for achievement in [
         578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
-        6030, 6031, 6584, 6621, 6973, 13025, 13026, 13623, 16729, 17852,
+        6030, 6031, 6350, 6584, 6621, 6973, 13025, 13026, 13623, 14728, 14729, 14730, 14731, 16729,
+        17852, 18361, 18905, 40475, 40624,
+        // Map alternatives, then area alternatives: all ten new sourced definitions.
+        155, 16614, 16615, 16616, 40437, 62352, 2436, 2497, 11802, 61456,
     ] {
         assert!(
             union.contains(&achievement),

@@ -414,12 +414,16 @@ impl DifficultyRule {
     }
 }
 
-/// A compiled criteria ModifierTree: an optional difficulty rule and raw fact
-/// leaves `(ModifierTreeType, Asset)`, all of which must hold.
+/// Compiled All facts or a plain Some of complete target-creature/map/area alternatives.
 #[derive(Debug, Clone, Copy)]
-struct CompiledConditions {
-    difficulty: Option<DifficultyRule>,
-    facts: &'static [(u32, u32)],
+enum CompiledConditions {
+    All {
+        difficulty: Option<DifficultyRule>,
+        facts: &'static [(u32, u32)],
+    },
+    TargetCreatures(&'static [u32]),
+    PlayerMaps(&'static [u32]),
+    PlayerAreas(&'static [u32]),
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -456,6 +460,8 @@ enum CriteriaFact {
     Aura(u32),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
+    /// Some8 requiring one of these complete TargetCreatureId4 leaves.
+    TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
     RankedArena,
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
@@ -466,6 +472,8 @@ enum CriteriaFact {
     Race(u8),
     Class(u8),
     Map(u32),
+    /// Some8 requiring one of these complete, authenticated PlayerMap32 leaves.
+    PlayerMaps(BTreeSet<u32>),
     /// Authenticated Map.InstanceType members, compared by raw type ID.
     MapInstanceType(BTreeSet<u32>),
     MinLevel(u8),
@@ -480,6 +488,9 @@ impl CriteriaFact {
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
+            Self::TargetCreatures(entries) => {
+                matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
+            }
             Self::ArenaTeamSize(size) => player.arena_team_size == Some(*size),
             Self::RankedArena => player.in_ranked_arena,
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
@@ -490,6 +501,7 @@ impl CriteriaFact {
             }
             Self::NotInParty => player.group_size == Some(0),
             Self::Map(map) => player.map == *map,
+            Self::PlayerMaps(maps) => maps.contains(&player.map),
             Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
@@ -1290,6 +1302,43 @@ fn load_criteria_facts(
     Ok(Some(facts))
 }
 
+/// Reject the entire Some when even one authored map is missing.
+fn load_player_map_alternatives(
+    conn: &Connection,
+    maps: &[u32],
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let mut query = conn.prepare_cached("SELECT EXISTS(SELECT 1 FROM map WHERE ID = ?1)")?;
+    for map in maps {
+        let exists = query.query_row([map], |row| row.get::<_, bool>(0))?;
+        if !exists {
+            return Ok(None);
+        }
+    }
+    Ok(Some(CriteriaFact::PlayerMaps(
+        maps.iter().copied().collect(),
+    )))
+}
+
+/// Reuse complete17 validation/ancestry, then union their accepted area members.
+fn load_player_area_alternatives(
+    conn: &Connection,
+    areas: &[u32],
+    area_children: &HashMap<u32, Vec<u32>>,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let leaves: Vec<_> = areas.iter().map(|area| (17, *area)).collect();
+    let Some(facts) = load_criteria_facts(conn, &leaves, area_children)? else {
+        return Ok(None);
+    };
+    let members = facts
+        .into_iter()
+        .flat_map(|fact| match fact {
+            CriteriaFact::Area(members) => members,
+            _ => unreachable!("validated17 leaves produce only Area facts"),
+        })
+        .collect();
+    Ok(Some(CriteriaFact::Area(members)))
+}
+
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
     let mut areas = conn.prepare("SELECT ID, ParentAreaID FROM area_table WHERE ID != 0")?;
     let mut area_children = HashMap::<u32, Vec<u32>>::new();
@@ -1335,8 +1384,19 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
             .filter(|_| modifier_asset.is_none());
         let resolved = match compiled {
-            Some(compiled) => load_criteria_facts(conn, compiled.facts, &area_children)?
-                .map(|facts| (compiled.difficulty, facts)),
+            Some(CompiledConditions::All { difficulty, facts }) => {
+                load_criteria_facts(conn, facts, &area_children)?.map(|facts| (difficulty, facts))
+            }
+            Some(CompiledConditions::TargetCreatures(entries)) => Some((
+                None,
+                vec![CriteriaFact::TargetCreatures(entries.iter().copied().collect())],
+            )),
+            Some(CompiledConditions::PlayerMaps(maps)) => {
+                load_player_map_alternatives(conn, maps)?.map(|fact| (None, vec![fact]))
+            }
+            Some(CompiledConditions::PlayerAreas(areas)) => {
+                load_player_area_alternatives(conn, areas, &area_children)?.map(|fact| (None, vec![fact]))
+            }
             None => None,
         };
         let condition_tree = resolved.is_some();
