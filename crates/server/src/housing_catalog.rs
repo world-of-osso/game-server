@@ -1,12 +1,10 @@
 //! Qualified authored housing coordinates; catalog membership never grants property.
 use crate::maps::WorldLocation;
-use crate::persistence::housing_store::BUILD_KEY;
 use bevy::prelude::*;
 use rusqlite::{Connection, params};
 use shared::protocol::HousingPlot;
 use std::collections::BTreeMap;
 
-const BUILD: &str = "12.1.0.69933";
 type Fields = BTreeMap<String, String>;
 
 #[path = "housing_cornerstones.rs"]
@@ -34,20 +32,7 @@ pub(crate) struct HousingCatalog {
 
 impl HousingCatalog {
     pub(crate) fn read(db: &Connection) -> Result<Self, String> {
-        let build: String = db
-            .query_row(
-                "SELECT build FROM housing_catalog_build WHERE build_key=?",
-                [BUILD_KEY],
-                |row| row.get(0),
-            )
-            .map_err(|error| {
-                format!(
-                    "Housing catalog build {BUILD}: {error}; apply the housing-catalog lead import."
-                )
-            })?;
-        if build != BUILD {
-            return Err(format!("Housing catalog build {build}; expected {BUILD}."));
-        }
+        read_build_key(db)?;
         let neighborhoods = Self::read_neighborhoods(db)?;
         let plots = Self::read_plots(db, &neighborhoods)?;
         let mut catalog = Self {
@@ -196,10 +181,21 @@ impl HousingCatalog {
     }
 }
 
+pub(crate) fn read_build_key(db: &Connection) -> Result<String, String> {
+    crate::db2_source_build::read_source_build(db, "housing_catalog_build")?;
+    let count: u32 = db.query_row("SELECT COUNT(*) FROM housing_catalog_build", [], |row| row.get(0))
+        .map_err(|error| error.to_string())?;
+    if count != 1 {
+        return Err("Housing catalog requires exactly one declared build key".into());
+    }
+    db.query_row("SELECT build_key FROM housing_catalog_build", [], |row| row.get(0))
+        .map_err(|error| error.to_string())
+}
+
 fn read_rows(db: &Connection, table: &str) -> Result<Vec<(u32, Fields)>, String> {
     let mut query = db.prepare("SELECT record_id, fields_json FROM housing_catalog_record WHERE build_key=? AND table_name=? ORDER BY record_id").map_err(|error| error.to_string())?;
     let rows = query
-        .query_map(params![BUILD_KEY, table], |row| {
+        .query_map(params![read_build_key(db)?, table], |row| {
             Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?))
         })
         .map_err(|error| error.to_string())?;

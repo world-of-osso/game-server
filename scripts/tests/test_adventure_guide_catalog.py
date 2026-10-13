@@ -18,7 +18,7 @@ class CatalogPrepareTests(unittest.TestCase):
         before = world.stat().st_mtime_ns
         decoder = module.load_decoder(Path(os.environ['ADVENTURE_GUIDE_DECODER']))
         tables = module.decode_sources(decoder, source / 'db2', source / 'definitions')
-        sql, report = module.prepare_sql(tables, world)
+        sql, report = module.prepare_sql(tables, world, '12.1.0.69933')
         self.assertEqual(world.stat().st_mtime_ns, before)
         with tempfile.TemporaryDirectory() as temporary:
             with closing(sqlite3.connect(Path(temporary) / 'catalog.sqlite')) as connection:
