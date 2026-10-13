@@ -99,10 +99,15 @@ fn class_completeness_native_yseras_gift_self_tick_scales_owner_health_and_stops
 fn class_completeness_native_yseras_gift_switches_to_group_heal_at_full_owner_health() {
     let mut h = fixture();
     let member = add_group_member(&mut h);
+    let unit = h.caster;
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(unit)
+        .unwrap()
+        .crit_pct = 100.0;
     h.advance(TICK_FRAMES);
     assert_eq!(h.health(h.caster), 500.0 + NATIVE_PERCENT_HEAL);
     assert_eq!(h.health(member), 400.0, "injured owner takes priority");
-    let unit = h.caster;
     h.app.world_mut().get_mut::<Health>(unit).unwrap().current = OWNER_MAX_HEALTH;
     h.advance(TICK_FRAMES);
     assert_eq!(h.health(unit), OWNER_MAX_HEALTH);
@@ -151,4 +156,41 @@ fn class_completeness_native_yseras_heal_respects_authored_cant_crit_with_100_pe
         .find(|event| event.spell_id == Some(HEAL_SELF) && event.kind == CombatLogKind::Heal)
         .unwrap();
     assert!(!heal.crit);
+}
+
+#[test]
+fn class_completeness_native_yseras_gift_full_ungrouped_owner_does_not_heal_outsider() {
+    let mut h = fixture();
+    let unit = h.caster;
+    h.app.world_mut().entity_mut(unit).insert(ClientId(1));
+    h.app.world_mut().get_mut::<Health>(unit).unwrap().current = OWNER_MAX_HEALTH;
+    let outsider = spawn_player(&mut h.app, DRUID, 3.0);
+    h.app.world_mut().entity_mut(outsider).insert(ClientId(2));
+    h.app
+        .world_mut()
+        .get_mut::<Health>(outsider)
+        .unwrap()
+        .current = 400.0;
+    h.advance(TICK_FRAMES);
+    assert_eq!(h.health(unit), OWNER_MAX_HEALTH);
+    assert_eq!(h.health(outsider), 400.0);
+    assert!(!h.inbox.log.iter().any(|event| {
+        matches!(event.spell_id, Some(HEAL_SELF | HEAL_GROUP)) && event.kind == CombatLogKind::Heal
+    }));
+}
+
+#[test]
+fn class_completeness_native_yseras_gift_override_does_not_change_later_direct_child_casts() {
+    let mut h = fixture();
+    h.advance(TICK_FRAMES);
+    assert_eq!(h.health(h.caster), 500.0 + NATIVE_PERCENT_HEAL);
+    let unit = h.caster;
+    h.app.world_mut().get_mut::<Health>(unit).unwrap().current = 500.0;
+    h.cast_and_deliver(HEAL_SELF, Some(unit));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.health(unit),
+        515.0,
+        "per-cast percent override never mutates native15 child definition"
+    );
 }
