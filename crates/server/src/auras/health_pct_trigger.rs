@@ -25,9 +25,13 @@ struct Watch {
     trigger: u32,
 }
 
-pub(super) fn trigger_on_health_pct(world: &mut World) {
-    let units: Vec<(Entity, f32, f32, Vec<Watch>)> = world
-        .query::<(Entity, &ActiveAuras, &Health)>()
+type ChangedHealthWatches = QueryState<
+    (Entity, &'static ActiveAuras, &'static Health),
+    Or<(Changed<ActiveAuras>, Changed<Health>)>,
+>;
+
+pub(super) fn trigger_on_health_pct(world: &mut World, changed: &mut ChangedHealthWatches) {
+    let units: Vec<(Entity, f32, f32, Vec<Watch>)> = changed
         .iter(world)
         .filter_map(|(unit, auras, health)| {
             let watches: Vec<_> = auras
