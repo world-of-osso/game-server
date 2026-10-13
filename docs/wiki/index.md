@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
+
 - [Player-aura criterion alternatives](systems/dungeon-achievements.md#player-aura-alternatives) — authenticated current aura membership; native Jaguar/Mighty Loa fixture, no full boss lifecycle claim.
 - [Player-area criterion alternatives](systems/dungeon-achievements.md#player-area-alternatives) — complete recursive membership; native death fixture uses controlled cached authority, not terrain-travel certification.
 - [Player-map criterion alternatives](systems/dungeon-achievements.md#player-map-alternatives) — complete map membership; native Warsong killing-blow fixture, no legacy-map playability claim.

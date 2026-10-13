@@ -68,11 +68,16 @@ fn damage_shield_uses_native_power_coefficient_at_retaliation() {
     let mut h = harness(Vec::new(), &[POWERED_THORNS], 11).unwrap();
     let (caster, owner) = (h.caster, h.npc);
     apply(&mut h, POWERED_THORNS, caster, owner);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .spell_power = 200.0;
     let before = h.app.world().get::<Health>(caster).unwrap().current;
     super::damage_shield::retaliate(h.app.world_mut(), owner, caster);
     assert_eq!(
         h.app.world().get::<Health>(caster).unwrap().current,
-        before - 103.0
+        before - 203.0
     );
 }
 

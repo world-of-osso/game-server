@@ -1808,7 +1808,8 @@ fn remove_casterless(world: &mut World, unit: Entity) {
     }
 }
 
-fn remove_on_death(world: &mut World, unit: Entity) {
+/// Unit::RemoveAllAurasOnDeath, also used before post-lethal melee reactions.
+pub(crate) fn remove_on_death(world: &mut World, unit: Entity) {
     let store = world.get_resource::<SpellStore>();
     let persistent: Vec<u32> = world
         .get::<ActiveAuras>(unit)
