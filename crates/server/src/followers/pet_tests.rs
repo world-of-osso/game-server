@@ -24,9 +24,8 @@ fn fixture() -> PetFixture {
     let directory = tempfile::tempdir().unwrap();
     let db = redb::Database::create(directory.path().join("npc-pets.redb")).unwrap();
     crate::persistence::create_tables(&db);
-    let (h, unit, _) = spawn_profile_fixture_with_plugins(230861, |app| {
+    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(230861, |app| {
         app.insert_resource(data);
-        app.insert_resource(spells);
         app.insert_resource(crate::persistence::GameDatabase { db });
         app.add_plugins((
             crate::hunter_pet::HunterPetPlugin,
@@ -34,6 +33,9 @@ fn fixture() -> PetFixture {
             crate::creature_ai::CreatureAiPlugin,
         ));
     });
+    // Generic harness has already run Startup; its relative database path is absent
+    // in cargo's package cwd. Install authenticated metadata before any pet summon.
+    h.app.insert_resource(spells);
     PetFixture {
         h,
         unit,
@@ -113,6 +115,18 @@ fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
 #[test]
 fn follower_lantha_felguard_interrupts_with_learned_axe_toss_without_canceling_owner_cast() {
     let (mut f, pet) = felguard_at_level(17); // SpellLevels89766: learned at17, CreatureFamily29/SkillLine761.
+    let charm =
+        f.h.app
+            .world()
+            .get::<crate::pet_control::PetCharm>(pet)
+            .unwrap();
+    assert!(
+        charm
+            .action_bar
+            .iter()
+            .any(|button| shared::protocol::pet_action_button_action(*button) == 89766),
+        "real level17 bar must contain sourced Axe Toss"
+    );
     super::utility_tests::start_enemy_fireball(&mut f.h, pet);
     crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 686, Some(f.h.npc), false)
         .unwrap();
