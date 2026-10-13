@@ -4,6 +4,8 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Per-request emote targets](systems/dungeon-achievements.md#per-request-emote-targets-verified-2026-10-13): native target-entry snapshots, text-only Love225, emote-only TargetCreatureId4; real-channel RED/GREEN and persistence controls. Structural census gains five account achievements; spawn completeness and other target modifiers unclaimed.
+
 - 2026-10-12 — [Achievement criteria producer inventory](../achievement-criteria-producer-inventory.md): all243 raw types separated from current-root rows and unsupported actors/conditions; earned XP196/221/253,13 sourced class predicates, traditional ranks47/87/88 and real terrain163/164. Native account Dynamic Duo, authenticated45068 settlement, five terrain destinations and reopened persistence proved; current-build both-skin/integration gate remains open.
 - 2026-10-12 — [Golden spawn gate](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): manual group1256 withheld at copy fill and spawned on the copy's last TempleEvent death; group1255 comes from the Serpentine Seal → Shadow of Zul `SerpentBossEvent` chain (script-set StringId), not yet ported.
 - 2026-10-12 — [Golden intro paths](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): script `MovePath` ports the used WaypointMovementGenerator/Catmull-Rom subset; NotStarted Serpent flies TDB 13532200/01/02, drops emerge at the apex and lands hostile. Spawn-group trigger and fly/hover visuals still open.
