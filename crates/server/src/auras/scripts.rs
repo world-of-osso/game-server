@@ -93,6 +93,7 @@ const POWER_STRIKE: u32 = 121_817;
 const POWER_STRIKE_PROC: u32 = 129_914;
 const POWER_STRIKE_ENERGIZE: u32 = 121_283;
 const CRITICAL_CHAOS: u32 = 320_413;
+const KNOW_YOUR_ENEMY: u32 = 388_118;
 const TIGER_DASH: u32 = 252_216;
 const BLOODSURGE: u32 = 384_361;
 const MONSTER_RISING: u32 = 452_414;
@@ -398,14 +399,16 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
-    scripts.0.insert(
-        CRITICAL_CHAOS,
-        AuraScript {
-            on_apply: Some(update_critical_chaos_amount),
-            on_periodic: Some(recalculate_critical_chaos),
-            ..Default::default()
-        },
-    );
+    for spell in [CRITICAL_CHAOS, KNOW_YOUR_ENEMY] {
+        scripts.0.insert(
+            spell,
+            AuraScript {
+                on_apply: Some(update_crit_scaled_bonus),
+                on_periodic: Some(recalculate_crit_scaled_bonus),
+                ..Default::default()
+            },
+        );
+    }
     scripts.0.insert(
         MONSTER_RISING,
         AuraScript {
@@ -555,19 +558,20 @@ fn cast_power_strike_proc(world: &mut World, unit: Entity, _aura: &AuraInstance,
     }
 }
 
-/// TC a352b1fa spell_dh.cpp:632-655: effect1 recalculates the flat proc modifier.
-fn recalculate_critical_chaos(
+/// TC a352b1fa spell_dh.cpp:632-655/1571-1593: effect1 recalculates effect0's
+/// crit-scaled ProcChance (Critical Chaos) or critical-damage (KnowYourEnemy) bonus.
+fn recalculate_crit_scaled_bonus(
     world: &mut World,
     unit: Entity,
     aura: &AuraInstance,
     effect_index: u8,
 ) {
     if effect_index == 1 {
-        update_critical_chaos_amount(world, unit, aura);
+        update_crit_scaled_bonus(world, unit, aura);
     }
 }
 
-fn update_critical_chaos_amount(world: &mut World, unit: Entity, aura: &AuraInstance) {
+fn update_crit_scaled_bonus(world: &mut World, unit: Entity, aura: &AuraInstance) {
     let Some(percent) = aura.effects.iter().find(|effect| effect.index == 1) else {
         return;
     };
@@ -583,6 +587,7 @@ fn update_critical_chaos_amount(world: &mut World, unit: Entity, aura: &AuraInst
         return;
     };
     bonus.amount = amount;
+    super::auras_changed(world, unit);
 }
 
 /// TC a352b1fa spell_dh.cpp:1659-1689, spell_dh_monster_rising.
