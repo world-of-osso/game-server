@@ -40,6 +40,7 @@ use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
+pub const EFFECT_INSTAKILL: u32 = 1;
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
@@ -88,6 +89,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 /// APPLY_AURA) are resolved per target by `resolve_effects`, not here.
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
+        EFFECT_INSTAKILL => instakill,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         33 | 95 => crate::gathering::effect_gather,
         EFFECT_HEALTH_LEECH => health_leech,
@@ -123,6 +125,12 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::hunter_pet::EFFECT_DISMISS_PET => crate::hunter_pet::effect_dismiss_pet,
         _ => return None,
     })
+}
+
+/// TC EffectInstaKill hit-target branch. The existing Unit::Kill path handles
+/// death/AI/credit once; instakill packet details and player CHEAT_GOD are unmodelled.
+fn instakill(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
+    crate::combat::kill_unit(world, ctx.caster, target);
 }
 
 /// TC EffectKillCreditPersonal/EffectKillCredit: credit the hit player, not the caster

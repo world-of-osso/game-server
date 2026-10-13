@@ -106,6 +106,7 @@ pub struct GameObjectInUse;
 pub(crate) struct GameObjectState(pub u8);
 
 pub(crate) const GO_STATE_ACTIVE: u8 = 0;
+pub(crate) const GO_STATE_DESTROYED: u8 = 2;
 const GO_STATE_READY: u8 = 1;
 
 /// TC `GameObject::SetGoState`: store the state and enable model collision only

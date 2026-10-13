@@ -1,5 +1,7 @@
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Gordoth source DoAction jump/landing, vial state and researcher Bloody Suicide→51744 instakill. Real-population parabola/landing/self-death proof; home/static trigger/cage/animkit/native gaps retained. [Boss scripts](systems/boss-scripts.md).
+
 - 2026-10-13: Gordoth already-started relocation/first casts/one-shot31% enrage/30s reset; source0x2 bypass with native category/cast-time and GCD/stun/mana proofs. Intro/repeats/native/map389 navigation remain gaps. [Boss scripts](systems/boss-scripts.md).
 
 - 2026-10-13: Ragefire Koranthal source appearance/combat/death/evade;119973 dummy exposed missing destination-only effect32 dispatch, now forwards child destination. Three fixtures GREEN; native/credit publication/whole-instance gaps remain. [Boss scripts](systems/boss-scripts.md).
