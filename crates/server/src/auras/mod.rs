@@ -1901,6 +1901,8 @@ mod fear_tests;
 #[cfg(test)]
 mod monster_rising_tests;
 #[cfg(test)]
+mod power_strike_tests;
+#[cfg(test)]
 mod tiger_dash_tests;
 
 #[cfg(test)]
