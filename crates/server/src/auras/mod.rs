@@ -17,6 +17,8 @@
 pub(crate) mod area_avoidance;
 pub(crate) mod base_armor;
 pub(crate) mod damage_shield;
+#[cfg(test)]
+mod damage_shield_tests;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 mod fear;
