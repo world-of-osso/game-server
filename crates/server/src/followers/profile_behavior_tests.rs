@@ -1,10 +1,17 @@
 //! Every authenticated local class/spec profile uses the production initializer and
 //! real spell/aura/cost executor. No invented follower identities or spell rows.
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness, spawn_npc, world_db};
+use crate::spell_cast::test_harness::{Harness, harness_with_plugins, spawn_npc, world_db};
 use shared::components::{Health, Npc, UnitPowers};
 
 pub(super) fn spawn_profile_fixture(entry: u32) -> (Harness, Entity, Profile) {
+    spawn_profile_fixture_with_plugins(entry, |_| {})
+}
+
+pub(super) fn spawn_profile_fixture_with_plugins(
+    entry: u32,
+    configure: impl FnOnce(&mut App),
+) -> (Harness, Entity, Profile) {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -16,7 +23,7 @@ pub(super) fn spawn_profile_fixture(entry: u32) -> (Harness, Entity, Profile) {
         .into_iter()
         .find(|profile| profile.entry == entry)
         .expect("authenticated imported follower profile");
-    let mut h = harness(vec![], &[], 8).unwrap();
+    let mut h = harness_with_plugins(vec![], &[], 8, false, configure).unwrap();
     // Full native metadata includes actual form/passive/trigger dependencies.
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app
