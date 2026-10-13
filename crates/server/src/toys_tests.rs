@@ -4186,6 +4186,71 @@ fn toyfx25_facing_rechecks_noninstant_completion_without_spending_recovery() {
 }
 
 #[test]
+fn toyfx26_bauble_actual_learning_source_lifetime_and_retained_recovery() {
+    use shared::components::{Health, ModelDisplay};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("bauble-real-use.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    let position = *h.app.world().get::<Position>(h.caster).unwrap();
+    let display = h.app.world().get::<ModelDisplay>(h.caster).copied();
+    learn_effect_toy(&mut h, character, 140309);
+    assert_eq!(activate(&mut h, 140309)[0].error, None);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 223143));
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 223143)
+        .unwrap();
+    assert_eq!(aura.duration_ms, 20_000);
+    assert!(
+        h.inbox
+            .cooldowns
+            .iter()
+            .any(|cooldown| cooldown.spell_id == 223143
+                && !cooldown.is_gcd
+                && cooldown.duration_ms == 120_000)
+    );
+    h.advance(370);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 223143)
+    );
+    h.advance(40);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .all(|aura| aura.spell_id != 223143)
+    );
+    assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+    assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+    assert_eq!(
+        h.app.world().get::<ModelDisplay>(h.caster).copied(),
+        display
+    );
+    assert_eq!(
+        activate(&mut h, 140309)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+}
+
+#[test]
 fn toyfx24_tome_actual_learning_five_minute_lifetime_and_retained_recovery() {
     use shared::components::{Health, ModelDisplay};
     let directory = tempfile::tempdir().unwrap();
