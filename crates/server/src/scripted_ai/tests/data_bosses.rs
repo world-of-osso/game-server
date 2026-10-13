@@ -1974,6 +1974,23 @@ fn encounter_coverage_anacondra_thorns_retaliates_only_while_applied() {
         before_removal,
         "removed Thorns cannot retaliate"
     );
+    // Controlled native reapplication isolates Unit::Kill's death-aura boundary,
+    // not a new AI cast schedule. Existing auto-attacks deliver the lethal swing.
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 8148, Some(boss), true).unwrap();
+    assert!(h.has_aura(boss, 8148));
+    h.app.world_mut().get_mut::<Health>(boss).unwrap().current = 1.0;
+    h.advance(8.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_some()
+    );
+    assert_eq!(
+        retaliations(&h),
+        before_removal,
+        "death-removed Thorns cannot retaliate after lethal melee"
+    );
 }
 
 /// Real deaths/evades use each bound encounter, never another Wailing boss.
