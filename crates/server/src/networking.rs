@@ -424,6 +424,13 @@ pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
     );
 }
 
+#[cfg(test)]
+pub(crate) fn install_disconnect_fixture(app: &mut App) {
+    app.init_resource::<ConnectedAccounts>();
+    app.add_observer(on_client_disconnected);
+    app.add_systems(PreUpdate, despawn_pending);
+}
+
 fn despawn_pending(mut commands: Commands, query: Query<Entity, With<PendingDespawn>>) {
     for entity in &query {
         commands.entity(entity).try_despawn();
