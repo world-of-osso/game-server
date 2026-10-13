@@ -47,6 +47,8 @@ pub struct ClassSpells {
 pub struct ClassInfo {
     pub class_id: u8,
     pub skill_line: u32,
+    /// `chr_classes.SpellClassSet`, used by class-based casting restrictions.
+    pub spell_class_set: u32,
     /// `chr_classes_x_power_types.PowerType` raw DB IDs, ascending.
     pub power_types: Vec<i32>,
     /// `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility`.
@@ -166,11 +168,16 @@ pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpel
     let classes = CLASS_SKILL_LINES
         .iter()
         .map(|&(class_id, skill_line)| {
-            let (attack_power_per_strength, attack_power_per_agility, primary_stat_priority) =
-                load_class_stats(conn, class_id)?;
+            let (
+                attack_power_per_strength,
+                attack_power_per_agility,
+                primary_stat_priority,
+                spell_class_set,
+            ) = load_class_properties(conn, class_id)?;
             Ok(ClassInfo {
                 class_id,
                 skill_line,
+                spell_class_set,
                 power_types: load_power_types(conn, class_id)?,
                 attack_power_per_strength,
                 attack_power_per_agility,
@@ -261,12 +268,22 @@ fn load_power_types(conn: &Connection, class_id: u8) -> rusqlite::Result<Vec<i32
     rows.collect()
 }
 
-fn load_class_stats(conn: &Connection, class_id: u8) -> rusqlite::Result<(f32, f32, u32)> {
+fn load_class_properties(
+    conn: &Connection,
+    class_id: u8,
+) -> rusqlite::Result<(f32, f32, u32, u32)> {
     conn.query_row(
-        "SELECT AttackPowerPerStrength, AttackPowerPerAgility, PrimaryStatPriority
+        "SELECT AttackPowerPerStrength, AttackPowerPerAgility, PrimaryStatPriority, SpellClassSet
          FROM chr_classes WHERE ID = ?1",
         [class_id],
-        |r| Ok((int(r, 0)? as f32, int(r, 1)? as f32, uint(r, 2)?)),
+        |r| {
+            Ok((
+                int(r, 0)? as f32,
+                int(r, 1)? as f32,
+                uint(r, 2)?,
+                uint(r, 3)?,
+            ))
+        },
     )
 }
 

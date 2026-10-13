@@ -81,6 +81,64 @@ const LASHING_FLAMES: u32 = 334168;
 const RAKE_BLEED: u32 = 155722;
 const UNSTABLE_AFFLICTION: u32 = 30108;
 const UNSTABLE_AFFLICTION_BLEED: u32 = 233490;
+const PROTECTIVE_GROWTH: u32 = 433_748;
+const REGROWTH: u32 = 8_936;
+const LINGERING_HEALING: u32 = 231_040;
+const FOUNT_OF_STRENGTH: u32 = 441_675;
+const FRENZIED_REGENERATION: u32 = 22_842;
+
+/// Native441675s3: Frenzied Regeneration also increases your maximum health.
+pub(super) fn fount_max_health_pct(unit: Entity, auras: &super::ActiveAuras) -> f32 {
+    let regenerating = auras
+        .iter()
+        .any(|aura| aura.spell_id == FRENZIED_REGENERATION && aura.caster == unit);
+    if !regenerating {
+        return 0.0;
+    }
+    auras
+        .iter()
+        .find(|aura| aura.spell_id == FOUNT_OF_STRENGTH && aura.caster == unit)
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 2))
+        .map_or(0.0, |effect| effect.amount)
+}
+
+/// Native231040s2 extends Regrowth only "when cast on yourself"; s1 is the
+/// independently masked Rejuvenation duration modifier handled by spell_mods.
+pub(super) fn self_regrowth_duration_bonus(
+    world: &World,
+    application: &super::AuraApplication,
+) -> f32 {
+    if application.spell_id != REGROWTH || application.caster != application.target {
+        return 0.0;
+    }
+    world
+        .get::<super::ActiveAuras>(application.caster)
+        .and_then(|auras| {
+            auras.iter().find(|aura| {
+                aura.spell_id == LINGERING_HEALING && aura.caster == application.caster
+            })
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 1))
+        .map_or(0.0, |effect| effect.amount)
+}
+
+/// Native433748s1: "Your Regrowth protects you ... while your Regrowth is on you."
+/// Fold into the recipient's shared school multipliers so spells and melee agree.
+pub(super) fn protective_growth_multiplier(unit: Entity, auras: &super::ActiveAuras) -> f32 {
+    let own_regrowth = auras
+        .iter()
+        .any(|aura| aura.spell_id == REGROWTH && aura.caster == unit);
+    if !own_regrowth {
+        return 1.0;
+    }
+    let talent = auras
+        .iter()
+        .find(|aura| aura.spell_id == PROTECTIVE_GROWTH && aura.caster == unit);
+    let amount = talent
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
+    1.0 - amount / 100.0
+}
 
 ///60103/334046/334168 explicitly limit this vulnerability to Flame Shock.
 ///Other271 masks do not establish a universal filter:208086's description
@@ -110,7 +168,14 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 }
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
-    (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
+    (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION && effect_index == 0)
+        || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
+        || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
+        || (spell_id == LINGERING_HEALING && effect_index == 1)
+        || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
+        || (spell_id == 431442 && matches!(effect_index, 0..=2))
+        || (spell_id == 1260647 && effect_index == 0)
+        || (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
         || (spell_id == 31850 && effect_index == 1)
@@ -207,6 +272,22 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        crate::spell_cast::blooming_infusion::BLOOMING_INFUSION,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::blooming_infusion::start_cast_count),
+            on_remove: Some(crate::spell_cast::blooming_infusion::stop_cast_count),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::control_dream::start_ready_credit),
+            on_remove: Some(crate::spell_cast::control_dream::stop_ready_credit),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         80240,
         AuraScript {

@@ -15,6 +15,8 @@ pub enum AuraKind {
     ProcTrigger,
     /// Consumed by incoming damage (`absorb_damage`).
     Absorb,
+    /// Native per-effect area damage reduction, restricted by school mask.
+    AreaAvoidance,
     /// Redirects native school-mask damage to the aura caster.
     DamageTransfer,
     /// Negates damage of its school mask.
@@ -45,6 +47,16 @@ pub enum AuraKind {
     Override,
     /// Trigger a summon on application and remove it with its aura.
     LinkedSummon,
+    /// Trigger and remove an owned child aura; only zero parent amounts are supported.
+    Linked,
+    /// Permission to keep masked casts/channels moving (`spell_cast`).
+    CastMovement,
+    /// Masked permission to ignore cast-start form restrictions (`spell_cast::shapeshift`).
+    IgnoreShapeshift,
+    /// Player casting restriction with native class-family exceptions.
+    CastRestriction,
+    /// Receiver-side finite harmful aura duration (`mechanic_duration`).
+    MechanicDuration,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -137,6 +149,7 @@ pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
 pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
 pub const PERIODIC_DUMMY: u32 = 226;
+pub const MOD_AOE_DAMAGE_AVOIDANCE: u32 = 229;
 pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
 /// TC a352b1fa HandleUnused: viewer-local humanoid appearance, client-side only.
 pub const CHANGE_MODEL_FOR_ALL_HUMANOIDS: u32 = 233;
@@ -173,7 +186,19 @@ pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
+pub const LINKED: u32 = 284;
+pub const LINKED_2: u32 = 285;
 pub const LINKED_SUMMON: u32 = 428;
+pub const MOD_SUMMON_DAMAGE: u32 = 429;
+pub const MOD_BONUS_ARMOR_PCT: u32 = 466;
+pub const MOD_STAT_BONUS_PCT: u32 = 467;
+pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
+pub const MOD_MINIMUM_SPEED: u32 = 305;
+pub const CAST_WHILE_WALKING: u32 = 330;
+pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
+pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
+pub const MECHANIC_DURATION_MOD: u32 = 232;
+pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
@@ -189,9 +214,15 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
         MOD_TAUNT => Taunt,
+        MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
+        LINKED | LINKED_2 => Linked,
+        CAST_WHILE_WALKING => CastMovement,
+        MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
+        DISABLE_CASTING_EXCEPT_ABILITIES => CastRestriction,
+        MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT
@@ -221,8 +252,13 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_HEALING_RECEIVED
         | MOD_CRIT_PCT
         | MASTERY
+        | MOD_STAT_BONUS_PCT
+        | MOD_BONUS_ARMOR_PCT
+        | MOD_BASE_RESISTANCE_PCT
+        | MOD_MINIMUM_SPEED
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
+        | MOD_SUMMON_DAMAGE
         | MOD_RAGE_FROM_DAMAGE_DEALT
         | MOD_MANA_REGEN_PCT
         | MOD_HIT_CHANCE
