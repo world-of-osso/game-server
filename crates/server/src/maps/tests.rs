@@ -2481,7 +2481,7 @@ fn flag_match_with_reconnect(
             let (created_id, mut data) =
                 crate::persistence::create_character(db, id, names[index], 1, 1).unwrap();
             assert_eq!(created_id, id);
-            data.level = TRAVELER_LEVEL;
+            data.level = u16::from(TRAVELER_LEVEL);
             crate::persistence::save_character(db, id, &data);
             h.app
                 .world_mut()
