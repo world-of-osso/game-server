@@ -192,6 +192,7 @@ pub(crate) mod teleport;
 mod teleport_positions;
 mod toy_coin;
 pub(crate) mod toy_scripts;
+mod toy_weather;
 
 pub struct SpellCastPlugin;
 
