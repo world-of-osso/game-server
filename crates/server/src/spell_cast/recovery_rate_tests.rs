@@ -7,6 +7,8 @@ use shared::spell_data::CastFailReason;
 
 const TRUESHOT: u32 = 288_613;
 const RAPID_FIRE: u32 = 257_044;
+const DEADLY_PURSUIT: u32 = 1_259_614;
+const SPRINT: u32 = 2983;
 
 fn fixture() -> Harness {
     harness(Vec::new(), &[TRUESHOT, RAPID_FIRE, 257_045, 263_585], 3).unwrap()
@@ -38,6 +40,57 @@ fn cast_rapid_fire(h: &mut Harness) {
             .iter()
             .any(|r| r.spell_id == Some(257_045) && r.kind == CombatLogKind::Damage)
     );
+}
+
+fn apply_deadly_pursuit(h: &mut Harness) {
+    let unit = h.caster;
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: DEADLY_PURSUIT,
+            // Native286 only; charge recovery is a separate effect/contract.
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+}
+
+#[test]
+fn class_completeness_native_recovery_rate_scales_native_category_only_cooldown() {
+    let mut h = harness(Vec::new(), &[DEADLY_PURSUIT, SPRINT], 4).unwrap();
+    apply_deadly_pursuit(&mut h);
+    h.cast_and_deliver(SPRINT, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let cd = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|r| r.spell_id == SPRINT && !r.is_gcd)
+        .unwrap();
+    // Native category44 only, 120000×100/(100+200)=40000ms.
+    assert_eq!(cd.duration_ms, 40_000);
+    assert_eq!(cd.category, 44);
+}
+
+#[test]
+fn class_completeness_native_recovery_rate_category_owner_allows_real_accelerated_recast() {
+    let mut h = harness(Vec::new(), &[DEADLY_PURSUIT, SPRINT], 4).unwrap();
+    h.cast_and_deliver(SPRINT, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(2350);
+    apply_deadly_pursuit(&mut h);
+    h.advance(5);
+    h.cast_and_deliver(SPRINT, Some(h.caster));
+    assert_eq!(
+        h.inbox.failed.last().unwrap().reason,
+        CastFailReason::OnCooldown
+    );
+    h.inbox.failed.clear();
+    h.advance(8);
+    h.cast_and_deliver(SPRINT, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
 }
 
 #[test]
