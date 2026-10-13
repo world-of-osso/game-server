@@ -103,11 +103,16 @@ fn load_route_knots(conn: &Connection, path_id: u32) -> Result<(u32, Vec<[f32; 3
 }
 
 #[cfg(test)]
+pub(crate) fn fixture_catalog() -> TransportCatalog {
+    TransportCatalog::load(&tests::source_fixture()).unwrap()
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use shared::transport_route::TransportPose;
 
-    fn source_fixture() -> Connection {
+    pub(super) fn source_fixture() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("CREATE TABLE tdb_transports(guid INTEGER,entry INTEGER,name TEXT,ScriptName TEXT);
             CREATE TABLE tdb_gameobject_template(entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data6 INTEGER);

@@ -330,6 +330,12 @@ impl Plugin for PvpPlugin {
         app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
         app.add_systems(
             FixedUpdate,
+            crate::transport::advance_ships
+                .before(crate::game_objects::collision::sync_live_objects)
+                .before(crate::networking::process_player_inputs),
+        );
+        app.add_systems(
+            FixedUpdate,
             arena::update_matches.after(crate::death::process_player_death_transitions),
         );
         app.add_systems(Update, send_initial_pvp_snapshot);
