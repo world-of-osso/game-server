@@ -827,6 +827,9 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
             snapshot.team = unit.team;
         }
         snapshot.world_states = values.7.clone();
+        if snapshot.battleground_id == 894 {
+            debug!(player = ?player, match_id, score_a = snapshot.score_a, score_b = snapshot.score_b, "Seething snapshot sent");
+        }
         super::pvp_invites::send_response(
             world,
             connection,
