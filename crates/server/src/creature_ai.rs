@@ -1368,7 +1368,8 @@ fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
 
 /// Evade pursuing creatures that exceed leash distance from spawn
 /// (`enter_evade_mode`: threat cleared, combat stopped, health restored,
-/// Returning).
+/// Returning). Not in a dungeon: `Creature::CanCreatureAttack` (Creature.cpp:2731)
+/// keeps any target there regardless of home distance.
 fn leash_check_system(
     query: Query<
         (
@@ -1378,12 +1379,21 @@ fn leash_check_system(
             &CreatureState,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
             Option<&HomePosition>,
+            Option<&InMap>,
         ),
         (ActiveUncontrolled, Without<crate::followers::Follower>),
     >,
+    maps: Option<Res<MapStore>>,
     mut commands: Commands,
 ) {
-    for (entity, pos, spawn, state, escort, explicit_home) in &query {
+    for (entity, pos, spawn, state, escort, explicit_home, map) in &query {
+        let dungeon = map
+            .zip(maps.as_deref())
+            .and_then(|(map, maps)| maps.map(map.map_id))
+            .is_some_and(|entry| entry.is_dungeon());
+        if dungeon {
+            continue;
+        }
         let beyond_home = match explicit_home {
             Some(home) => (pos.x - home.position.x).hypot(pos.z - home.position.z) > LEASH_DISTANCE,
             None => match escort {

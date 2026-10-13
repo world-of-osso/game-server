@@ -456,6 +456,7 @@ enum CriteriaFact {
     RankedArena,
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
     LessThanGroupMembers(u32),
+    NotInParty,
     /// Accepted current areas: descendants for17, one flagged parent for Zone41.
     Area(BTreeSet<u32>),
     Race(u8),
@@ -483,6 +484,7 @@ impl CriteriaFact {
             Self::LessThanGroupMembers(limit) => {
                 player.group_size.is_some_and(|size| size < *limit as usize)
             }
+            Self::NotInParty => player.group_size == Some(0),
             Self::Map(map) => player.map == *map,
             Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
@@ -1260,6 +1262,7 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Class),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
+            35 => Some(CriteriaFact::NotInParty),
             41 => {
                 if !exists("area_table")? {
                     return Ok(None);
@@ -1271,7 +1274,9 @@ fn load_criteria_facts(
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/41/60/69/71/122"),
+            _ => {
+                unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/35/41/60/69/71/122")
+            }
         };
         let Some(fact) = fact else {
             return Ok(None);

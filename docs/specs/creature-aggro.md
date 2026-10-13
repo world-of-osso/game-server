@@ -78,7 +78,9 @@ World creatures attack players: hostile creatures aggro players that come near, 
 ## Known gaps (current cycle)
 
 - [ ] Social/assist aggro: nearby creatures of the same pack do not join (`Creature::CallAssistance`, `CreatureGroup` assist flags).
-- [ ] AzerothCore's leash is 30 yards from the home position unless the creature took damage in the last 11–16 s (`Creature::CanCreatureAttack`, `GetLeashTimer`); the server evades at a flat 40 yards from spawn.
+- [x] Dungeon maps (party/raid/scenario) skip the 40-yard spawn leash, matching pinned TC `Creature::CanCreatureAttack` (Creature.cpp:2731). Script-authored boundaries still apply. Slagmaw's East teleport119425 remains engaged ~48yd from spawn; the former Stockade39.9yd leash proof is superseded, not current behavior ([preserved evidence](../wiki/systems/navigation.md#stationary-arch-and-leash-acceptance)).
+- [x] Open-world maps retain the existing inclusive40yd spawn leash unchanged: continent map0 stays engaged at40yd and evades at40.1yd (`leash_open_world_map_keeps_forty_yard_boundary`).
+- [ ] Open-world spawn leash remains flat40yd rather than AzerothCore's30yd home-distance/timer policy; no open-world policy change is included in the dungeon exemption.
 - [ ] Patrollers return to their spawn point, not to where they left their path (`GetResetPosition`).
 - [ ] Periodic spell damage goes through the same `deal_damage` threat hook but has no test.
 - [ ] No 5 s post-respawn aggro grace (`m_respawnedTime`), no stunned check, no taunt. Spell-specific flat/AP threat and NO_THREAT/NO_HELPFUL_THREAT attributes are not modelled.

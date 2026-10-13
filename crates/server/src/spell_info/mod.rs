@@ -16,6 +16,8 @@ mod immunity;
 mod immunity_tests;
 mod load;
 pub mod positivity;
+#[cfg(test)]
+pub(crate) mod serverside_tests;
 mod trait_data;
 
 use std::path::Path;
@@ -336,6 +338,12 @@ impl SpellStore {
     pub(crate) fn fixture(mut spells: Vec<SpellInfo>) -> Self {
         spells.sort_by_key(|spell| spell.id);
         Self { spells }
+    }
+
+    /// Production's server-side loader against an independent prepared copy.
+    #[cfg(test)]
+    pub(crate) fn append_serverside(&mut self, conn: &Connection) -> rusqlite::Result<usize> {
+        load::append_serverside_spells(conn, self)
     }
 
     /// Resolve an explicit ID or a unique exact name; ambiguous ranks require an ID.

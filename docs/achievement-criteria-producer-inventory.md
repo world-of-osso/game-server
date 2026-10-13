@@ -2,9 +2,11 @@
 
 verified: 2026-10-13
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5413 ordinary (3426 account/1987 character),1800 statistics; 98 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5415 ordinary (3426 account/1989 character),1800 statistics; 98 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- PlayerIsNotInParty35 (TC CriteriaHandler1940–1943) admits pinned zero-asset SingleTrue leaves only when native GroupRegistry and character identity establish an empty roster. Missing authority is not solo; offline roster members still make the character grouped. Native actual280339 self-target marker cast RED/GREEN earns41658/13026 only for known solo, rejects unknown registry/identity, depth refusal and a real joined party, and persists through idle/redb reopen. +2 character definitions13025/13026 structurally; the Nazmir quest's timed invader lifecycle and marker trigger are not certified by this cast fixture.
 
 - PlayerIsInZone41 (TC CriteriaHandler1964–1973) compiles exact area membership through native AreaTable::zone_id: one immediate parent only for a flagged subzone, never recursive ancestry or ParentAreaID alone. Real terrain at Stormwind coordinates and native terminal pet-battle win credit19845, reject other-city/loser counters, preserve idle/reopened persistence. Catalog behavior proves top-level/flagged membership, absent area, unflagged-parent rejection and two-level rejection. +6 account achievements603/604/6030/6031/6584/6621 structurally; world-honor city kills, firework effects and complete city battle coverage remain unclaimed.
 
@@ -65,7 +67,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 26 | DieFromEnviromentalDamage | 4/6 | 4/6 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 27 | CompleteQuest | 12739/14115 | 9505/9889 | 3234 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 28 | BeSpellTarget | 855/1839 | 564/1290 | 291 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 29 | CastSpell | 2498/2972 | 1469/1657 | 1029 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 29 | CastSpell | 2500/2972 | 1471/1657 | 1029 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 30 | TrackedWorldStateUIModified | 16/87 | 16/78 | 0 | Native: every battleground objective credit (TC BattlegroundScore::UpdatePvpStat:78-80) records +1 for the connected character, completed in the match map; only unconditional rows whose PvpStat is a native column. BG start/fail-event rows stay disabled. Native completion-map gate leaves 199/200 (Instance_ID489) unearned on WSG2106. See spec. |
 | 31 | PVPKillInArea | 0/51 | 0/45 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 32 | WinArena | 57/82 | 56/62 | 1 | Native committed rated winners: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
@@ -161,7 +163,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 128 | GuildBankTabsPurchased | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
 | 129 | EarnGuildAchievementPoints | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
 | 130 | WinAnyBattleground | 17/75 | 0/35 | 17 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 131 | ParticipateInAnyBattleground | 0/11 | 0/1 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 131 | ParticipateInAnyBattleground | 0/11 | 0/1 | 0 | Source semantics gap: pinned enum marks NYI and TC UpdateCriteria has no executable progress case (default Not implemented at877). No inferred participation/start/completion policy. |
 | 132 | EarnBattlegroundRating | 0/36 | 0/22 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 133 | GuildTabardCreated | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
 | 134 | CompleteQuestsCountForGuild | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
@@ -172,8 +174,8 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 139 | CompleteAnyGuildChallenge | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
 | 140 | MarkedAFKInBattleground | 0/1 | 0/0 | 0 | Producer gap: no battleground AFK-report/removal authority. |
 | 141 | RemovedAFKInBattleground | 0/1 | 0/0 | 0 | Producer gap: no battleground AFK-report/removal authority. |
-| 142 | StartAnyBattleground | 0/1 | 0/0 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
-| 143 | CompleteAnyBattleground | 0/6 | 0/0 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 142 | StartAnyBattleground | 0/1 | 0/0 | 0 | Source semantics gap: pinned enum marks NYI and TC UpdateCriteria has no executable progress case (default Not implemented at877). No inferred participation/start/completion policy. |
+| 143 | CompleteAnyBattleground | 0/6 | 0/0 | 0 | Source semantics gap: pinned enum marks NYI and TC UpdateCriteria has no executable progress case (default Not implemented at877). No inferred participation/start/completion policy. |
 | 144 | MarkedSomeoneAFKInBattleground | 0/1 | 0/0 | 0 | Producer gap: no battleground AFK-report/removal authority. |
 | 145 | CompletedLFRDungeon | 0/2 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |
 | 146 | AbandonedLFRDungeon | 0/1 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |
