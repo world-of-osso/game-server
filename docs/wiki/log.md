@@ -1,3 +1,7 @@
+## 2026-10-13 — Prismatic Bauble source and native gaps
+
+[Coverage](../toy-effects14-coverage.md#prismatic-bauble--source-admission-native-gaps-open-2026-10-13): exact20s/current120s admission, real-source ribbon parser failure/fix, stationary Modern state proof and explicit Forever delivery/native-rendering gaps.
+
 ## 2026-10-13 — Source Toy facing
 
 [Coverage](../toy-effects14-coverage.md#source-toy-facing--bounded-gate-2026-10-13): explicit unit180° arc, strict exact3D target-radius exemption and completion refusal before item recovery. Bounded gate and native proof status remain claim-specific.
