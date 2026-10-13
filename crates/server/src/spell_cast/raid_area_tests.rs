@@ -163,8 +163,10 @@ fn class_completeness_native_raid_heal_retains_one_full_health_target_when_none_
         })
         .collect();
     assert_eq!(heals.len(), 1);
-    assert_eq!(heals[0].amount, 0);
+    assert_eq!(heals[0].amount, NATIVE_HEAL as i32);
     assert_eq!(heals[0].overflow, NATIVE_HEAL as i32);
+    assert_eq!(h.health(first), 1000.0);
+    assert_eq!(h.health(second), 1000.0);
     assert!([Some(first.to_bits()), Some(second.to_bits())].contains(&heals[0].target));
     assert_eq!(h.health(outsider), INITIAL_HEALTH);
 }

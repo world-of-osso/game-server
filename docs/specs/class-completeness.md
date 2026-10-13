@@ -104,8 +104,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## Raid-area healing
 
-- [x] Native selector 56 selects living members of the caster's party/raid and their controlled units in range and the same map copy, not just the caster. ExcludeCaster applies before caps.
-- [x] Ysera's Gift group heal 145110 selects one target, preferring injured players over full-health members; outsiders and the caster are excluded. This does not certify passive 145108's missing periodic hook.
+- [x] For player casts, native selector 56 selects living members of the caster's party/raid and their controlled units in range and the same map copy, not just the caster. ExcludeCaster applies before caps.
+- [x] Ysera's Gift group heal 145110 selects one target, preferring injured players over full-health members; outsiders and the caster are excluded. This does not certify passive 145108's missing periodic hook. Charmed controllers and NPCs marked TreatAsRaidUnit through unmodeled CreatureStaticFlags remain outside this proof.
 
 ## Tests asserting this spec
 
