@@ -25,6 +25,10 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 
 ## Ragefire Chasm source hooks
 
+- [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. No DB2 substitutes or derived effect IDs.
+- [x] The spell store loads those tables like TC `LoadSpellInfoServerside` (DifficultyID0): every modelled source field becomes SpellInfo; an ID already in DB2 is refused, never overridden. Copies without the tables have no server-side spells.
+- [x] `encounter_summons.py --encounter adarogg` admits Demonic Leap61409 (actual base row/models plus authored Normal difficulty1) only after the server-side import establishes 119297's summon identity.
+
 Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then Deadmines). Source: TC a352b1fa `RagefireChasm`.
 
 - [x] Gordoth61528 relocates already-started actors to its source landing point, casts Ground Rupture119999 at7.3s (native1s cast) and Seismic Slam120024 at13.3s with only source flag0x2. It enrages50420 once when projected health falls below31%, resetting through source30s evade/respawn.
@@ -37,7 +41,32 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [x] Shadow Storm119973 effect0 dummy casts its actual effect value119965 triggered; destination-only missile effect32 forwards its destination to119964 and deals real damage.
 - [x] Koranthal death marks DONE/talks; evade retires without kill credit and respawns after source30s, recasting appearance Vortex.
 - [x] Prepare Koranthal primary-binding SQL with `encounter_cpp_bindings.py --encounter koranthal`: pinned source hashes and local Journal695/actor1321/display42101; idempotent output preserves unrelated bindings. No canonical data mutation.
-- [ ] Canonical primary credit-binding publication, loot/lockout/native acceptance and the other Ragefire boss/intro scripts remain open. Fixtures bind the source actor/bit in an independent map resource; they do not mutate canonical data.
+- [x] Adarogg61408 engage schedules Inferno Charge at10s and Fire Breath119420 at20s, both repeating15–20s. Inferno targets a random non-tank threat-list player (`NonTankTargetSelector`), summons server-side119297 Demonic Leap there and channels119405 onto it through its NEARBY_ENTRY condition. Death despawns summons; evade uses `_DespawnAtEvade` and leaves the wild summon to its5s expiry.
+- [x] TC `EffectCharge` returns without a unit target, so the Leap's dest-only charge119298 (target46) never casts119299; Inferno Charge deals no damage in pinned source.
+- [x] AT7904 (`at_adarogg_intro`) shares AT7899's OnlyOnce DB2-box detector. DoAction makes the nearest StringId houndmasters_1/_2 within70yd yell groups0/1, then Adjules Chow Time120113 at +2s/+1s/+1.2s with the two authored MovePoints and MovePath6140800. Path ends schedule the next path (6148/6996ms) and Eat Trogg120064 at1s, repeating2–3s, twice. Engaging cancels the intro scheduler.
+- [ ] Ground MovePath6140800–6140802 needs map389 navigation, so the walked intro cycle is unproved; path-end behaviour is proved by dispatching the source WaypointPathEnded at the authored last node. Unit-target `EFFECT_CHARGE` (Chow Time's charge) is unmodelled; the following MovePoint replaces it in source. Dead houndmasters are not found (DeathState also marks respawn-pending actors).
+- [x] Unbound copies: canonical binds only Koranthal on map389, so Gordoth has no boss state there and initializes at its spawn instead of panicking.
+- [x] `encounter_cpp_bindings.py --encounter adarogg|gordoth` prepares 61408→1443 bit0 (Journal694/actor1343/display38759) and 61528→1446 bit3 (697/1345/42100) from pinned instance/header hashes.
+- [x] Slagmaw61463 engage schedules Lava Spit119434 at1s on a random threat-list unit, repeating1s for five casts; the sixth event casts Magnaw Submerge120384, a random server-side Magnaw Teleport other than the last (initially West: North119424/East119425/South119426/West119428) 3s later, removes Submerge1s after that and resumes Lava Spit1s later. One event per UpdateAI; casting defers events. Teleports use their TDB spell_target_position; a creature target relocates on its own map (`NearTeleportTo`).
+- [x] Slagmaw's2.5s boundary check evades (`_DespawnAtEvade`) when `GetVictim()->GetDistance(me)` exceeds50yd: exact distance minus Slagmaw's display42247 CombatReach24 and the player's1.5. Without prepared model geometry the check logs an error and does not evade.
+- [x] `encounter_serverside_spells.py` also prepares the four Magnaw teleports; `encounter_model_geometry.py` also prepares display42247.
+- [ ] Slagmaw binding: journal actor1344 display38391 differs from TDB model42247, so no binding SQL is prepared. Vehicle2206 accessory61800 (Magnaw's Head) and `ENCOUNTER_FRAME_ENGAGE` are unmodelled. The East teleport lands ~48yd from spawn and stays engaged: dungeon maps skip the flat40yd spawn leash ([contract](creature-aggro.md)); open-world behavior is unchanged.
+- [ ] Canonical publication of the Adarogg/Gordoth bindings and server-side/summon/model rows, loot/lockout/native acceptance remain open. Fixtures bind the source actor/bit in an independent map resource; they do not mutate canonical data.
+
+## Deadmines source audit
+
+- [x] TC a352b1fa `Deadmines/deadmines.h` and `instance_deadmines.cpp` identify Glubtok47162, Helix47296, Foe Reaper43778, Ripsnarl47626, Cookie47739 and Vanessa49541. Census retains all11 Normal/Heroic encounter records; Lumbering Oaf47297 is a journal companion, not Helix's primary. These identities do not authorize runtime kill credit.
+- [ ] Pinned Deadmines directory has only header/instance files, no boss AI files. Local primary templates have empty AIName/ScriptName and no source0 SmartScripts; authentic combat schedules are unavailable. Do not synthesize timers or import Classic mechanics as Retail boss behavior.
+- [ ] TC ordinals0–5 differ from local difficulty-specific DB2 bits (e.g. Glubtok2976/bit8 Normal,2981/bit9 Heroic). Current `raid_encounter_creature` key `(map_id,creature_entry)` stores one bit; no ambiguous multi-difficulty credit binding is published.
+- [ ] Factory13965 opens after Glubtok, Mast16400 after Helix, Heavy17153 outside Helix combat and Foundry16399 after Foe Reaper per source. Source-authored door behavior is identified, not implemented or proved. Missing primaries47296/47739/49541 have no TDB placements; no invented spawn coordinates.
+- [ ] No Deadmines full-combat, loot/lockout or native acceptance claim. [Census](../encounter-coverage.md).
+
+## Wailing Caverns source slices
+
+- [x] `encounter_cpp_bindings.py --encounter anacondra|cobrahn|kresh|pythas|skum|serpentis|verdan|mutanus` prepares all eight exact local Normal identities (encounters585–592/bits0–7), checking pinned header/instance hashes and source AI identity. Source8 primaries match journal/model rows; no guessed actors or placements. Copy-only SQL preserves unrelated bindings and is idempotent; no canonical mutation. Cobrahn3669→586/bit1 is Journal475/actor1046/display4213.
+- [x] Cobrahn Lightning Bolt20805 existing SmartAI row first0ms/repeat6–8s produces real Nature damage after its3s cast plus missile flight (speed24yd/s, minimum5yd unit distance). Fixture pins only the successful branch of its80% chance, retaining the selected source repeat, spell and target. Generic bound BossAi engage/death emits successful encounter586, never585.
+- [ ] Source death action34 remains unsupported. Cobrahn source/compatibility ordinal0 differs from DB2 lockout bit1; generic BossAi lifecycle masks that missing source callback and is not proof of its interpretation. Aggro text, other chance outcomes, loot/lockout/native and full-instance acceptance remain open.
+- [ ] Full Wailing Caverns four-druid completion, disciple action0/escort, Mutanus spawning, loot/lockout/native gates remain open. No correction of authored SmartScript parameters or replacement with Classic schedules.
 
 ## Ruby Life Pools source hooks
 

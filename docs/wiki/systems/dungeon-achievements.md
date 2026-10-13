@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Solo group predicates — verified 2026-10-13
+
+Modifier35 tests existing `ReferencePlayer.group_size == Some(0)`; no new state channel. The size comes from authoritative GroupRegistry plus character identity, includes offline members and distinguishes unknown from solo (TC a352b1fa CriteriaHandler1940–1943). Native triggered marker280339 casts prove41658/13026, real invite/join exclusion, missing-authority and depth negatives, idle/reopen persistence. This proves cast/predicate semantics, not the missing Nazmir timed-invader quest trigger. [Inventory](../../achievement-criteria-producer-inventory.md).
+
 ## Player zone predicates — verified 2026-10-13
 
 Modifier41 reuses `AreaTable::zone_id` at catalog load to compile accepted current-area IDs. Unlike modifier17's descendant closure, this uses exactly one flagged subzone parent (TC a352b1fa CriteriaHandler1964–1973). Reference-player terrain area is sampled at credit time; missing area rejects. Native pet-battle settlement at real Stormwind terrain proves criterion19845, loser/wrong-city exclusion, idle stability and redb reopen. Catalog tests preserve unflagged-parent and two-level rejection. [Inventory and census](../../achievement-criteria-producer-inventory.md) remain structural, not city content certification.
