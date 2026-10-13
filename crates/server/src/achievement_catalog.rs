@@ -414,7 +414,7 @@ impl DifficultyRule {
     }
 }
 
-/// Compiled All facts or a plain Some of complete target-creature/map alternatives.
+/// Compiled All facts or a plain Some of complete target-creature/map/area alternatives.
 #[derive(Debug, Clone, Copy)]
 enum CompiledConditions {
     All {
@@ -423,6 +423,7 @@ enum CompiledConditions {
     },
     TargetCreatures(&'static [u32]),
     PlayerMaps(&'static [u32]),
+    PlayerAreas(&'static [u32]),
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -1318,6 +1319,26 @@ fn load_player_map_alternatives(
     )))
 }
 
+/// Reuse complete17 validation/ancestry, then union their accepted area members.
+fn load_player_area_alternatives(
+    conn: &Connection,
+    areas: &[u32],
+    area_children: &HashMap<u32, Vec<u32>>,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let leaves: Vec<_> = areas.iter().map(|area| (17, *area)).collect();
+    let Some(facts) = load_criteria_facts(conn, &leaves, area_children)? else {
+        return Ok(None);
+    };
+    let members = facts
+        .into_iter()
+        .flat_map(|fact| match fact {
+            CriteriaFact::Area(members) => members,
+            _ => unreachable!("validated17 leaves produce only Area facts"),
+        })
+        .collect();
+    Ok(Some(CriteriaFact::Area(members)))
+}
+
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
     let mut areas = conn.prepare("SELECT ID, ParentAreaID FROM area_table WHERE ID != 0")?;
     let mut area_children = HashMap::<u32, Vec<u32>>::new();
@@ -1372,6 +1393,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             )),
             Some(CompiledConditions::PlayerMaps(maps)) => {
                 load_player_map_alternatives(conn, maps)?.map(|fact| (None, vec![fact]))
+            }
+            Some(CompiledConditions::PlayerAreas(areas)) => {
+                load_player_area_alternatives(conn, areas, &area_children)?.map(|fact| (None, vec![fact]))
             }
             None => None,
         };
