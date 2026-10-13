@@ -94,9 +94,9 @@ pub(crate) fn prepare_login(
     }
     let account_id = find_account_by_username(db, username).ok_or_else(|| {
         if is_username_pending(db, username) {
-            "Account pending admin approval".into()
+            "Account pending admin approval".to_owned()
         } else {
-            "Account not found — please register first".into()
+            "Account not found — please register first".to_owned()
         }
     })?;
     ensure_account_not_banned(db, account_id)?;

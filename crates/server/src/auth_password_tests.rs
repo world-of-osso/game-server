@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 #[test]
 fn password_login_completion_rechecks_bans_and_password_rotation() {
-    use redb::{ReadableDatabase, ReadableTable};
+    use redb::ReadableDatabase;
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
