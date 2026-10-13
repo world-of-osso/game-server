@@ -26,11 +26,7 @@ pub(super) fn update(world: &mut World) {
 }
 
 fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
-    if let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) {
-        if super::hazards::escape(world, pet) {
-            crate::pet_control::order_companion_pet(world, unit, None);
-        }
-    }
+    escape_pet_hazard(world, unit);
     if super::hazards::escape(world, unit) {
         return;
     }
@@ -56,6 +52,15 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+fn escape_pet_hazard(world: &mut World, unit: Entity) {
+    let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) else {
+        return;
+    };
+    if super::hazards::escape(world, pet) {
+        crate::pet_control::order_companion_pet(world, unit, None);
+    }
 }
 
 fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
