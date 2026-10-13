@@ -184,6 +184,10 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
+mod arena_cooldowns;
+pub(crate) use arena_cooldowns::reset_arena_cooldowns;
+#[cfg(test)]
+mod arena_cooldown_tests;
 mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
@@ -2466,7 +2470,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
     // A fully discounted authored cooldown becomes ready now, not at its old deadline.
-    if base_recovery_ms > 0 {
+    if base_recovery_ms > 0 || base_category_ms > 0 {
         history
             .spell_ready_at
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);
