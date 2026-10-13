@@ -124,6 +124,8 @@ mod portal_tests;
 pub mod powers;
 #[cfg(test)]
 mod protective_growth_tests;
+#[cfg(test)]
+mod raid_area_tests;
 mod reflect;
 #[cfg(test)]
 mod resistance_pct_tests;
