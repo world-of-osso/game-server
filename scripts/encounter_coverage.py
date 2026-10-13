@@ -32,9 +32,10 @@ PARTIAL_GAPS = {
         'Fel Spray area geometry/damage, root/visual kits, door/boundary and source-empty loot unproved'],
     'boss_the_golden_serpent': [
         'TC script schedule (partial; Retail 12.1 timeline inputs unavailable); Retail alerts disabled',
-        'source friendly intro remains closed: missing emerge271598, gravity/flying and authored paths not converted',
+        'source friendly intro remains closed: gravity/flying and authored paths not converted',
         'Molten Gold source static sphere/Player enter-exit and periodic damage supported; native area visuals unproved',
-        'follow/absorption/announcement and source-empty loot unproved',
+        'delayed follow/absorption/announcement supported: real-bake,3D reach,subyard repath,root/cast pause and4s retirement fixtures; source near-point collision/floor and full motion-priority equivalence unproved',
+        'source-empty loot unproved',
         'ordinary balance, full instance and both-skin native acceptance unproved'],
 }
 PORTS = {'boss_hogger': [86604, 86620, 86736],
