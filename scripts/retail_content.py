@@ -757,6 +757,7 @@ GOSSIP_OPTION_NPC = {
     9: (12, 0x100000, 9),        # Battlemaster
     10: (13, 0x200000, 6),       # Auctioneer
     12: (14, 0x400000, 0),       # Stablemaster
+    47: (47, TRADING_POST_NPC_FLAG, 0),  # Mainline PerksProgramVendor
 }
 GOSSIP_OPTION_NONE = 0
 NPC_TEXT_SLOTS = 8
