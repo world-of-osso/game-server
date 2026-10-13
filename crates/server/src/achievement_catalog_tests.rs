@@ -149,7 +149,13 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 5389);
+    assert_eq!(union.len(), 5394);
+    for achievement in [1206, 2557, 5548, 5865, 16729] {
+        assert!(
+            union.contains(&achievement),
+            "target-qualified emote achievement {achievement}"
+        );
+    }
 }
 
 #[test]

@@ -69,8 +69,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind == 30 and asset not in NATIVE_PVP_STATS:
             continue
-        if kind == 54 and asset not in (34, 101, 86, 87, 59):
-            continue  # TC TextEmotes for the five native emotes, not animation IDs.
+        if kind == 54 and asset not in (34, 101, 86, 87, 59, 225):
+            continue  # TC TextEmotes for the six native emotes, not animation IDs.
         if kind == 26 and asset not in (0, 1, 2, 6):
             continue  # Native fatigue/drowning/falling/void only, no lava/slime/fire producer.
         if kind == 20 and row_id == 111356:
@@ -111,7 +111,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
 
 def fact_can_hold(kind, asset, spells, zones, maps, identities):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
-    return {2: asset in identities, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+    return {2: asset in identities, 4: asset > 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 

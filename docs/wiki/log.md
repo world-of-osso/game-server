@@ -4,6 +4,8 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Per-request emote targets](systems/dungeon-achievements.md#per-request-emote-targets-verified-2026-10-13): native target-entry snapshots, text-only Love225, emote-only TargetCreatureId4; real-channel RED/GREEN and persistence controls. Structural census gains five account achievements; spawn completeness and other target modifiers unclaimed.
+
 - 2026-10-13 — [Conditional Gladiator banners](../toy-effects14-coverage.md#conditional-gladiator-back-banners-2026-10-13): existing race/sex PlayerConditions resolve both banner models; aura4 lifecycle/faction refusal, all104 visual contexts and representative both-skin native proof. Census354→356; War Banners remain blocked by CurrentPvpFaction.
 - 2026-10-12 — [Placed statues](../toy-effects14-coverage.md#placed-statues-and-the-missing-template-audit-2026-10-12): 110 missing-template summon toys were audited. Ornate Dragon Statue and Stuffed Bear are imported; prepared census354→356. Attraction Sign (invisible weighted display) and the interaction toys stay blocked.
 - 2026-10-12 — [Toy root scripts](../toy-effects14-coverage.md): Unusual Compass (ForcedFacing epoch), Titanium Seal coin, Goblin Weather Machine and Wormhole Generator: Pandaria are admitted only for their exact TC/TDB source shapes; census338→348. Transporter/Teleporting/Taunt Flag are named gaps.
