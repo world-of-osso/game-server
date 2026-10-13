@@ -255,7 +255,6 @@ fn encounter_fixture(
             app.world().resource::<WorldData>(),
             content,
             false,
-            None,
         );
         // Object spawns and their lock sidecar are unchanged by the template import.
         let canonical =
