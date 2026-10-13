@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native orphan killing-blow fixture, no honor/relinking claim.
+- [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [Player-aura criterion alternatives](systems/dungeon-achievements.md#player-aura-alternatives) — authenticated current aura membership; native Jaguar/Mighty Loa fixture, no full boss lifecycle claim.
 - [Player-area criterion alternatives](systems/dungeon-achievements.md#player-area-alternatives) — complete recursive membership; native death fixture uses controlled cached authority, not terrain-travel certification.
 - [Player-map criterion alternatives](systems/dungeon-achievements.md#player-map-alternatives) — complete map membership; native Warsong killing-blow fixture, no legacy-map playability claim.

@@ -4,7 +4,7 @@ Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated enc
 
 ## Exact zero map
 
-TC a352b1fa CriteriaHandler1922–1925 compares the reference player's actual map ID, so0 is valid when Map contains0. Saved source root592 is plain All4 with one SingleTrue32/asset0 leaf593; native loader already validates map existence and rejects absent reference-map authority. Compiler admits the zero leaf without changing runtime defaults. Native Unit::Kill11449–11453 killing-blow56 is independent of honor35/113: orphan5512 fixture exercises known0 versus1/missing map and reopen. No current-root gain or orphan relinking. [Contract](../../specs/dungeon-achievements.md).
+TC a352b1fa CriteriaHandler1922–1925 compares the reference player's actual map ID, so0 is valid when Map contains0. Saved source root592 is plain All4 with one SingleTrue32/asset0 leaf593; native loader already validates map existence and rejects absent reference-map authority. Compiler admits the zero leaf without changing runtime defaults. Native Unit::Kill11449–11453 killing-blow56 is independent of honor35/113: 5512 fixture exercises known0 versus1/missing map, existing statistic1488 numeric criteria replies and reopen. Statistic1488 becomes structurally trackable; no ordinary gain or tree relinking. [Contract](../../specs/dungeon-achievements.md).
 
 ## Player-aura alternatives
 
