@@ -88,6 +88,10 @@ const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
 const TIGER_DASH: u32 = 252_216;
 const BLOODSURGE: u32 = 384_361;
+const MONSTER_RISING: u32 = 452_414;
+const MONSTER_RISING_AGILITY: u32 = 452_550;
+const METAMORPHOSIS_HAVOC: u32 = 162_264;
+const METAMORPHOSIS_VENGEANCE: u32 = 187_827;
 const BLOODSURGE_ENERGIZE: u32 = 384_362;
 const REND_AURA: u32 = 388_539;
 /// `Cell::VisitAllObjects(caster, worker, 50.0f)`.
@@ -353,6 +357,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        MONSTER_RISING,
+        AuraScript {
+            on_periodic: Some(toggle_monster_rising),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         TIGER_DASH,
         AuraScript {
             on_periodic: Some(decay_tiger_dash),
@@ -417,6 +428,24 @@ fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect
     }
     super::auras_changed(world, unit);
     crate::spell_cast::mark_dirty(world, unit);
+}
+
+/// TC a352b1fa spell_dh.cpp:1659-1689, spell_dh_monster_rising: outside either
+/// Metamorphosis transform each tick ensures 452550; inside one it removes it.
+fn toggle_monster_rising(world: &mut World, unit: Entity, _aura: &AuraInstance, effect_index: u8) {
+    if effect_index != 0 {
+        return;
+    }
+    let transformed = super::has_aura(world, unit, METAMORPHOSIS_HAVOC)
+        || super::has_aura(world, unit, METAMORPHOSIS_VENGEANCE);
+    let buffed = super::has_aura(world, unit, MONSTER_RISING_AGILITY);
+    if transformed && buffed {
+        super::remove_auras(world, unit, super::RemoveReason::Cancelled, |aura| {
+            aura.spell_id == MONSTER_RISING_AGILITY
+        });
+    } else if !transformed && !buffed {
+        crate::spell_cast::cast_triggered(world, unit, MONSTER_RISING_AGILITY, Some(unit), 1);
+    }
 }
 
 /// TC a352b1fa spell_warrior.cpp:282-316, spell_warr_bloodsurge: chance
