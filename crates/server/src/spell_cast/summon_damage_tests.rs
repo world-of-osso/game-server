@@ -276,19 +276,22 @@ fn class_completeness_native_mastery_refresh_preserves_timed_aura_expiry() {
         .insert((Level(80), ActiveSpec(253)));
     h.advance(4);
     let other = spawn_player(&mut h.app, 3, 0.0);
-    super::cast_triggered(h.app.world_mut(), owner, SHIFTING_SANDS, Some(owner), 0);
-    // Native413984 caps its area selector at one unit; apply the foreign
-    // recipient at the aura boundary to test refresh, not target selection.
-    crate::auras::apply_aura(
-        h.app.world_mut(),
-        &crate::auras::AuraApplication {
-            caster: owner,
-            target: other,
-            spell_id: SHIFTING_SANDS,
-            effect_mask: 3,
-            source: crate::auras::AuraSource::Cast,
-        },
-    );
+    // Native413984 caps its area selector at one unit. Both players are at
+    // the same position; an explicit owner does not force this area selector
+    // to choose it. Apply both recipients at the aura boundary: this test
+    // covers self/foreign refresh and expiry, not capped target selection.
+    for target in [owner, other] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: owner,
+                target,
+                spell_id: SHIFTING_SANDS,
+                effect_mask: 3,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
     h.advance(2);
     let before = h
         .app

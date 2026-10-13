@@ -6,7 +6,7 @@ Authored invisibility and quest-area eligibility must determine which units each
 
 ### Detection
 - [x] Aura18 carries its authored MiscValue0 type and summed integer amount, including stacks. Aura19 carries independent detection types/values; zero still marks a type present.
-- [x] Detect only when every hidden type has matching detection at least as strong. Invisible observers also require reciprocal type flags, except aura335.
+- [x] Detect only when every hidden type has matching detection at least as strong. For unit targets, invisible observers also require reciprocal type flags, except aura335. Game objects are exempt from reciprocity (TC Object.cpp:1003), not from detection of their own hidden types.
 - [x] Stationary detector changes, detector removal and late arrivals update per-observer replication. Self remains visible under the existing interest contract.
 - [x] Boss vanish still hides its target until the aura ends; hostile/friendly spell relations follow observer detection.
 - [ ] Melee and creature acquisition use the same typed predicate; dedicated detector-vs-swing/acquisition request proof is not recorded.
@@ -34,6 +34,7 @@ Authored invisibility and quest-area eligibility must determine which units each
 ## Tests asserting this spec
 - `crates/server/src/auras/invisibility.rs` — real aura/stack sums, threshold/type presence, reciprocal flags/aura335.
 - `crates/server/src/interest_tests.rs` — real89302/82343/100616/82336 stationary/new observer transitions.
+- `crates/server/src/maps/tests.rs` — real32727/type4 preparation preserves authored Cage gate visibility after worldport, before movement/opening.
 - `crates/server/src/spell_area.rs` — authored100616 lifecycle, real Jaga area5171, source flags and signed/race/gender requirements.
 - `crates/server/src/scripted_ai/tests.rs` — Moloch vanish detection; `scripts/tests/test_spell_area_import.py` — unsigned masks and unrelated-table preservation.
 - Engine `godot/tests/quest_objectives_live.gd` — both-skin native loot, credit, reward and post-reward hiding; evidence in engine `data/diagnostics/invis-detection-2026-10-11/live-proof-ledger.json`.

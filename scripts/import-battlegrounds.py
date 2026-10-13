@@ -16,7 +16,8 @@ from mysql_dump import INSERT_RE, parse_values
 TABLES = frozenset({
     'battleground_template', 'battleground_scripts', 'spawn_group', 'spawn_group_template',
     'world_state', 'areatrigger', 'areatrigger_template', 'areatrigger_create_properties',
-    'areatrigger_scripts', 'areatrigger_teleport', 'npc_spellclick_spells',
+    'areatrigger_template_actions', 'areatrigger_scripts', 'areatrigger_teleport',
+    'npc_spellclick_spells',
 })
 COLUMN = re.compile(r'^\s+`(\w+)`\s+(\w+)')
 
