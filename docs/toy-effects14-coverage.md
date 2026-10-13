@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Wormhole Generator: Pandaria (2026-10-12)
+
+Read-only census347→348/1166 (+87215, zero removed; `wormhole-canonical-after.json`). Source: TC a352b1fa `spell_item_wormhole_pandaria` replaces 126755's dummy with one uniformly chosen WormholeTargetLocations teleport (126756–126764) cast on the hit unit. Each is a single 252/[25,17] effect, and each has a TDB1210 `spell_target_position` row on map870; the TDB scan binds none of the nine. Admission refuses before cooldown when any teleport shape or destination row differs. The census now loads `spell_target_position` just as runtime Startup does.
+
+RED `df59203c` refused effect3. GREEN `968660b6`/`80ea6e3c`: actual bag learning/UseToy produces one far transfer to an authored point, sends NewWorld map870, and after WorldPortAck leaves the player in continent870 at the exact destination. Refusals: missing point, missing teleport, teleport target drift, extra root effect. The triggered teleport sends no SpellGo; MapTransfer identifies the chosen point. Native private5911 journal use: Modern landed at 126760 Zan'vess (-1509.39,4574.97,367.74) and Forever at 126758 Sra'vess (3072.24,6119.23,55.14), both InWorld with the native model and rendered terrain. PNGs are in `toys/wormhole18/`, receipts in `{modern,forever}-wormhole18/`. The characters were restored to map0 by admin teleport afterwards. The Modern minimap renders black in Pandaria; that minimap gap is separate and not certified here.
+
+The remaining TC root bindings stay explicit gaps:
+
+- **Gnomish Transporter 23453:** the backfire child 23448 can choose 36902 Transporter Malfunction, a target17 teleport with no TDB position row.
+- **Teleporting 59317:** needs area4637 Vargoth's Retreat, a WMO-interior area. Server `area_at` reads only ADT MCNK areas, without a WMOAreaTable lookup.
+- **Taunt Flag 51640:** needs enemy player/corpse area targeting, a text emote and a GO summon.
+
 ## Goblin Weather Machine (2026-10-12)
 
 Read-only canonical census346→347/1166 (+35227, zero removed; `weather-canonical-after.json`). Source: TC a352b1fa `spell_item_goblin_weather_machine` makes the hit unit cast RAND(46740, 46739, 46738, 46736) on itself. The TDB1210 `spell_script_names` scan (4066 rows) binds 46203/60458/60476/64385 to exactly the scripts used here and binds none of the four weather spells. So 46736's5000ms PERIODIC_DUMMY tick is a no-op (TC PeriodicTick leaves226 to scripts). All four are single self auras with SpellVisual bindings and DurationIndex9 (30000ms).
