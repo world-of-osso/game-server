@@ -780,7 +780,6 @@ pub(crate) fn record_ranked_arena_result(
     player: Entity,
     before_rating: u32,
     map: u32,
-    team_size: u8,
     won: bool,
 ) {
     let connection = world
@@ -788,11 +787,11 @@ pub(crate) fn record_ranked_arena_result(
         .iter(world)
         .find_map(|(connection, _, link, _)| (link.0 == player).then_some(connection));
     let Some(connection) = connection else { return };
-    let mut events = vec![CriteriaEvent::ParticipateInArena(map, team_size)];
+    let mut events = vec![CriteriaEvent::ParticipateInArena(map)];
     if won {
         events.extend([
             CriteriaEvent::WinAnyRankedArena(before_rating.max(1)),
-            CriteriaEvent::WinArena(map, team_size),
+            CriteriaEvent::WinArena(map),
         ]);
     }
     for &event in &events {
@@ -910,6 +909,7 @@ pub(crate) fn player_conditions(world: &World, player: Entity) -> PlayerConditio
 
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
     let identity = world.get::<Player>(player)?;
+    let arena = crate::pvp::player_arena_conditions(world, player);
     Some(ReferencePlayer {
         auras: world
             .get::<crate::auras::ActiveAuras>(player)
@@ -923,6 +923,8 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
         race: identity.race,
         class: identity.class,
         level: world.get::<Level>(player)?.0,
+        arena_team_size: arena.map(|(size, _)| size),
+        in_ranked_arena: arena.is_some_and(|(_, ranked)| ranked),
         group_size: world
             .get_resource::<crate::group::GroupRegistry>()
             .zip(world.get::<crate::persistence::ClientId>(player))
