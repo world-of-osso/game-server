@@ -75,6 +75,47 @@ fn arena_item_category_reset_uses_item_duration_and_sends_native_clear() {
 }
 
 #[test]
+fn arena_item_cast_time_category_survives_completion_then_resets() {
+    let mut h = super::test_harness::harness(Vec::new(), &[133], 8).unwrap();
+    cast_item_spell(
+        h.app.world_mut(),
+        h.caster,
+        133,
+        Some(h.npc),
+        ItemCooldown {
+            category: 9999,
+            category_ms: 120_000,
+        },
+        90,
+        None,
+    )
+    .unwrap();
+    assert!(h.app.world().get::<CastState>(h.caster).is_some());
+    h.advance(50);
+    assert!(h.app.world().get::<CastState>(h.caster).is_none());
+    assert!(
+        h.health(h.npc) < 5000.0,
+        "real cast-time damage must complete"
+    );
+    let history = h.app.world().get::<SpellHistory>(h.caster).unwrap();
+    assert!(history.category_ready_at[&9999] > now(h.app.world()));
+    h.inbox.cooldowns.clear();
+    reset_arena_cooldowns(h.app.world_mut(), h.caster);
+    h.advance(1);
+    assert!(
+        !h.app
+            .world()
+            .get::<SpellHistory>(h.caster)
+            .unwrap()
+            .category_ready_at
+            .contains_key(&9999)
+    );
+    assert!(h.inbox.cooldowns.iter().any(|update| update.spell_id == 133
+        && update.category == 9999
+        && update.remaining_ms == 0));
+}
+
+#[test]
 fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_and_exclusions() {
     let spells = vec![
         cooldown_spell(1, 599_999, 0, false),
