@@ -92,6 +92,9 @@ const MONSTER_RISING: u32 = 452_414;
 const MONSTER_RISING_AGILITY: u32 = 452_550;
 const METAMORPHOSIS_HAVOC: u32 = 162_264;
 const METAMORPHOSIS_VENGEANCE: u32 = 187_827;
+const METAMORPHOSIS_DEVOURER: u32 = 1_217_607;
+const ENDURING_TORMENT: u32 = 452_410;
+const ENDURING_TORMENT_BUFF: u32 = 453_314;
 const BLOODSURGE_ENERGIZE: u32 = 384_362;
 const REND_AURA: u32 = 388_539;
 /// `Cell::VisitAllObjects(caster, worker, 50.0f)`.
@@ -357,6 +360,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        ENDURING_TORMENT,
+        AuraScript {
+            on_periodic: Some(toggle_enduring_torment),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         MONSTER_RISING,
         AuraScript {
             on_periodic: Some(toggle_monster_rising),
@@ -430,21 +440,47 @@ fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect
     crate::spell_cast::mark_dirty(world, unit);
 }
 
-/// TC a352b1fa spell_dh.cpp:1659-1689, spell_dh_monster_rising: outside either
-/// Metamorphosis transform each tick ensures 452550; inside one it removes it.
+/// TC a352b1fa spell_dh.cpp:1659-1689, spell_dh_monster_rising.
 fn toggle_monster_rising(world: &mut World, unit: Entity, _aura: &AuraInstance, effect_index: u8) {
-    if effect_index != 0 {
-        return;
+    if effect_index == 0 {
+        toggle_outside_transforms(
+            world,
+            unit,
+            MONSTER_RISING_AGILITY,
+            &[METAMORPHOSIS_HAVOC, METAMORPHOSIS_VENGEANCE],
+        );
     }
-    let transformed = super::has_aura(world, unit, METAMORPHOSIS_HAVOC)
-        || super::has_aura(world, unit, METAMORPHOSIS_VENGEANCE);
-    let buffed = super::has_aura(world, unit, MONSTER_RISING_AGILITY);
+}
+
+/// TC a352b1fa spell_dh.cpp:1086-1116, spell_dh_enduring_torment.
+fn toggle_enduring_torment(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    effect_index: u8,
+) {
+    if effect_index == 0 {
+        toggle_outside_transforms(
+            world,
+            unit,
+            ENDURING_TORMENT_BUFF,
+            &[METAMORPHOSIS_HAVOC, METAMORPHOSIS_DEVOURER],
+        );
+    }
+}
+
+/// Outside every `transforms` aura each tick ensures `buff`; inside one it removes it.
+fn toggle_outside_transforms(world: &mut World, unit: Entity, buff: u32, transforms: &[u32]) {
+    let transformed = transforms
+        .iter()
+        .any(|&transform| super::has_aura(world, unit, transform));
+    let buffed = super::has_aura(world, unit, buff);
     if transformed && buffed {
         super::remove_auras(world, unit, super::RemoveReason::Cancelled, |aura| {
-            aura.spell_id == MONSTER_RISING_AGILITY
+            aura.spell_id == buff
         });
     } else if !transformed && !buffed {
-        crate::spell_cast::cast_triggered(world, unit, MONSTER_RISING_AGILITY, Some(unit), 1);
+        crate::spell_cast::cast_triggered(world, unit, buff, Some(unit), 1);
     }
 }
 

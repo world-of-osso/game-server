@@ -13,6 +13,7 @@ mod batch19;
 mod batch20;
 mod batch21;
 mod batch22;
+mod batch23;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -52,6 +53,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
+        && batch23::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
