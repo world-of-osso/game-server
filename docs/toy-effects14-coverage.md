@@ -1,5 +1,26 @@
 # Toy effects14 — active whole-goal coverage
 
+## Foam Sword Rack: wild objects (2026-10-12)
+
+Read-only census348→349/1166 (+45063, zero removed; `foam-canonical-after.json`). Sources:
+
+- TC a352b1fa `EffectSummonObjectWild` places effect76's template at the spell destination, with respawn time = spell duration, and no owner ("Wild object not have owner").
+- TDB1210 binds Foam Sword Rack object194342's spell64142 to `spell_gen_upper_deck_create_foam_sword`. It gives one of 45061/45176/45177/45178/45179 unless the player already has one, bank included (`HasItemCount(item,1,true)`).
+- The rack's real cast is 3000ms; its SpellDuration is 180000ms.
+
+Without an owner, TC refuses a party-only wild spellcaster to everyone, so such templates are refused. The catalog now classifies a wild spellcaster's own spell. X-treme Water Blaster Display 220692/441724 therefore stays unavailable: its spell445930 is a dummy with no TDB script. Imp in a Ball, Picnic, Purple Firework and the Hearthstone Board stay refused, because their object types (focus without cooking, button, goober) need interaction runtime.
+
+Finding, not changed here: master's effect50 spellcaster admissions do not classify the object's spell. Costume Chest 139337's spell222360 is an effect3 dummy.
+
+Server commits:
+
+- RED `test: reproduce unsupported wild Foam Sword Rack…` refused effect76.
+- GREEN feature: wild summon, optional owner, catalog recursion, and `toy_foam_sword.rs`.
+- Tests: real learn/UseToy/ground placement, one sword on first use, none on second use, none when one sits in the character bank, natural 180s despawn, Water Blaster refusal.
+- Regression: effect50, cooking, portal and spellcaster 19/19.
+
+Engine: type22 spellcaster objects were neither rendered nor usable natively. They now render, show Interact, and send `UseGameObject` (RED→GREEN game_objects 13/13). Native private5911, both skins: ground click placed the wild rack, real right-click created exactly one source sword (Modern45178, Forever45179), and a second use created none. PNGs are in `toys/foam18/`, receipts in `{modern-foam18e,forever-foam18}/`. Toyfourmodc and Toyfourfor now each hold one foam sword.
+
 ## Wormhole Generator: Pandaria (2026-10-12)
 
 Read-only census347→348/1166 (+87215, zero removed; `wormhole-canonical-after.json`). Source: TC a352b1fa `spell_item_wormhole_pandaria` replaces 126755's dummy with one uniformly chosen WormholeTargetLocations teleport (126756–126764) cast on the hit unit. Each is a single 252/[25,17] effect, and each has a TDB1210 `spell_target_position` row on map870; the TDB scan binds none of the nine. Admission refuses before cooldown when any teleport shape or destination row differs. The census now loads `spell_target_position` just as runtime Startup does.
