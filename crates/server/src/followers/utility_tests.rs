@@ -89,7 +89,7 @@ interrupt_case!(follower_shuja_wind_shear_interrupts, 209053, 57994);
 interrupt_case!(follower_austin_counter_shot_interrupts, 209065, 147362);
 interrupt_case!(follower_kybel_quell_interrupts, 215240, 351338);
 interrupt_case!(follower_bo_spear_hand_strike_interrupts, 227734, 116705);
-interrupt_case!(follower_ralia_skull_bash_interrupts, 232800, 106839);
+interrupt_case!(follower_ralia_skull_bash_interrupts, 232800, 93985);
 
 #[test]
 fn follower_does_not_waste_counterspell_on_non_interruptible_cast() {
