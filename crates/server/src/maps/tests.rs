@@ -2652,7 +2652,13 @@ fn exercise_shuffle_rounds(
             .rounds_won,
         vec![(1, 6), (2, 0), (3, 3), (4, 3), (5, 3), (6, 3)]
     );
-    for who in players {
+    for (index, who) in players.iter().enumerate() {
+        let state = h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(who.player)
+            .unwrap();
+        assert_rated_arena_combat_credits(state, false, index, 3);
         h.app
             .world_mut()
             .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
