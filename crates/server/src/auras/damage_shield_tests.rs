@@ -50,7 +50,7 @@ fn damage_shield_uses_original_caster_bonuses_but_owner_attribution() {
         h.app.world().get::<Health>(caster).unwrap().current,
         before - 4.0
     );
-    h.advance(0.1);
+    h.advance(2);
     assert!(h.inbox.log.iter().any(|event| {
         event.kind == CombatLogKind::Damage
             && event.spell_id == Some(THORNS)
@@ -74,7 +74,7 @@ fn damage_shield_honors_school_immunity_and_native_absorption() {
             h.app.world().get::<Health>(attacker).unwrap().current,
             before
         );
-        h.advance(0.1);
+        h.advance(2);
         let defended = h.inbox.log.iter().any(|event| {
             if event.spell_id != Some(THORNS) {
                 return false;
