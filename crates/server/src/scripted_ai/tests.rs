@@ -1019,14 +1019,15 @@ fn randolph_moloch_shadowstep_requires_reciprocal_detection_until_vanish_expires
         crate::spell_cast::creature_cast(h.app.world_mut(), moloch, 55966, Some(player), true),
         Ok(())
     );
-    h.advance(0.1);
-    assert_eq!(h.casts(0, moloch, 55966), 1);
+    // Observe the instant teleport before aggressive pursuit resumes next tick.
     let behind = h.wow_position(player) + Vec3::new(4.0, 0.0, 0.0);
     let moloch_at = h.wow_position(moloch);
     assert!(
         Vec2::new(moloch_at.x - behind.x, moloch_at.y - behind.y).length() < 0.5,
         "{moloch_at} vs {behind}"
     );
+    h.advance(0.1);
+    assert_eq!(h.casts(0, moloch, 55966), 1);
 }
 
 #[test]
