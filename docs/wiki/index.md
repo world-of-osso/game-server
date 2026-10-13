@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility boundaries; pet hazards/persistence and full-instance acceptance remain open.
+- [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; player-pet persistence/post-master and full-instance acceptance remain open.
 
 - [Follower class/native follow](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13) — eleven actual basic-role casts, Cobra Shot class-level crash fixed, real Stockade navmesh/collision/progress regression and authored private12-tile Ruby ground package; advanced AI/live completion open.
 - [Dungeon spawn-leash exemption](../specs/creature-aggro.md) — TC dungeon policy, unchanged open-world40yd test, and [superseded Stockade evidence](systems/navigation.md#stationary-arch-and-leash-acceptance); Slagmaw's authored East teleport stays engaged.
