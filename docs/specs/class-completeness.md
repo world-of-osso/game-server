@@ -80,6 +80,10 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] When a player stops knowing Dual Wield (spec/talent change), TC moves the off-hand weapon to the bags or mails it (OffhandCheckAtSpellUnlearn defaults on). Not yet modelled.
 - [x] Knowing any of the six native SPELL_EFFECT_PARRY (22) spells enables parry; without one, parry chance never applies.
 
+## Melee attack speed
+
+- [x] Native aura319 multiplies melee swing time by 100/(100+amount) per aura (negative amounts by (100−amount)/100) for players and creatures, independently of haste and cast time.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
@@ -94,6 +98,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `crates/server/src/spell_cast/portal_tests.rs`: all29 class trans-door spawns and absent-template admission failure.
 - `crates/server/src/inventory_tests.rs`: native Dual Wield off-hand admission, rejection and auto-equip.
 - `crates/server/src/auras/defensives_tests.rs`: six native Parry spells versus none.
+- `crates/server/src/spell_cast/attack_speed_tests.rs`: native Ruthless Aggression/Swift as a Coursing River creature swing intervals and unchanged Fireball cast time.
 - `crates/server/src/spell_cast/melee_crit_taken_tests.rs`: native187 real damage, victim ownership, additive fields, expiry/removal, positive and ranged/magic controls.
 - `crates/server/src/spell_cast/mechanic_duration_tests.rs`: native232/234 stacking, mixed signs, actual clocks/expiry, integer arithmetic and named source-gap exclusions.
 - Existing targeted resource/regen/generator tests remain bounded proofs, not every talent combination.
