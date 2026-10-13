@@ -230,20 +230,7 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
             Ok((row.get::<_, i64>(0)? as u32, row.get::<_, i64>(1)? as u32))
         })?
         .collect::<rusqlite::Result<_>>()?;
-    load_retail_service_options(
-        conn,
-        &mut menus,
-        &mut template_menus,
-        NpcFlags::CRAFTING_ORDERS,
-        50,
-    )?;
-    load_retail_service_options(
-        conn,
-        &mut menus,
-        &mut template_menus,
-        NpcFlags::TRADING_POST,
-        47,
-    )?;
+    load_crafting_broker_options(conn, &mut menus, &mut template_menus)?;
     Ok(GossipCatalog {
         menus,
         template_menus,
@@ -255,21 +242,19 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
 }
 
 /// Source Retail brokers retain their TDB customer-service choice, not a synthetic menu.
-fn load_retail_service_options(
+fn load_crafting_broker_options(
     conn: &Connection,
     menus: &mut HashMap<u32, GossipMenuData>,
     templates: &mut HashMap<u32, u32>,
-    flag: u64,
-    option_type: u8,
 ) -> rusqlite::Result<()> {
     let mut statement = conn.prepare(
         "SELECT c.entry,g.MenuID,o.OptionID,o.OptionText
         FROM tdb_creature_template c
         JOIN tdb_creature_template_gossip g ON g.CreatureID=c.entry
         JOIN tdb_gossip_menu_option o ON o.MenuID=g.MenuID
-        WHERE (c.npcflag & ?1)!=0 AND o.OptionNpc=?2 ORDER BY c.entry,o.OptionID",
+        WHERE (c.npcflag & ?1)!=0 AND o.OptionNpc=50 ORDER BY c.entry,o.OptionID",
     )?;
-    for row in statement.query_map(params![flag as i64, option_type], |row| {
+    for row in statement.query_map([NpcFlags::CRAFTING_ORDERS as i64], |row| {
         Ok((
             row.get::<_, u32>(0)?,
             row.get::<_, u32>(1)?,
@@ -291,8 +276,8 @@ fn load_retail_service_options(
             option_id,
             icon: 0,
             text,
-            option_type,
-            npc_flag: NpcFlags(flag),
+            option_type: 50,
+            npc_flag: NpcFlags(NpcFlags::CRAFTING_ORDERS),
             action_menu_id: 0,
         });
     }
