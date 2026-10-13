@@ -703,7 +703,94 @@ fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return()
 }
 
 #[test]
-fn seething_channel_refuses_unimplemented_transport_relative_entry() {
+fn seething_channel_authored_ship_entry_and_carry_use_transport_frames() {
+    let template = shared::battleground::seething_shore();
+    let mut entered = enter_source_match(&template, shared::battleground::SEETHING_STARTS);
+    let world = entered.h.app.world_mut();
+    let mut objects = world.query::<(&shared::protocol::GameObjectInfo, &InMap)>();
+    let ships = objects
+        .iter(world)
+        .filter(|(info, map)| **map == entered.copy && info.go_type == 15)
+        .count();
+    assert_eq!(
+        ships, 2,
+        "both authored airships exist only in their match copy"
+    );
+    let before: Vec<_> = entered
+        .players
+        .iter()
+        .map(|player| {
+            let at = *world.get::<Position>(player.player).unwrap();
+            assert!(
+                at.y > 290.0,
+                "source ship deck arrival, not a ground substitute: {at:?}"
+            );
+            let passenger = *world
+                .get::<shared::components::TransportPassenger>(player.player)
+                .unwrap();
+            (at, passenger)
+        })
+        .collect();
+    use_second_frames(&mut entered.h);
+    entered.h.advance(30);
+    for (index, player) in entered.players.iter().enumerate() {
+        let world = entered.h.app.world();
+        let at = world.get::<Position>(player.player).unwrap();
+        let passenger = world
+            .get::<shared::components::TransportPassenger>(player.player)
+            .unwrap();
+        assert_eq!(
+            *passenger, before[index].1,
+            "carrying preserves ship-local feet/facing"
+        );
+        let distance = Vec3::new(
+            at.x - before[index].0.x,
+            at.y - before[index].0.y,
+            at.z - before[index].0.z,
+        )
+        .length();
+        assert!(
+            distance > 5.0,
+            "source ship carries idle player: {distance}"
+        );
+        let ship = world
+            .get::<shared::components::TransportState>(Entity::from_bits(passenger.transport))
+            .unwrap();
+        let expected = if entered.teams[index] == BgTeam::A {
+            35
+        } else {
+            36
+        };
+        assert_eq!(ship.spawn_id, expected);
+        entered
+            .h
+            .app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(player.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground {
+                match_id: entered.match_id,
+            });
+    }
+    entered.h.receive_pvp_updates(5);
+    for player in &entered.players {
+        assert!(
+            entered
+                .h
+                .app
+                .world()
+                .get::<shared::components::TransportPassenger>(player.player)
+                .is_none()
+        );
+        assert_eq!(entered.h.new_worlds(player).len(), 1);
+        entered.h.ack(player);
+        assert_eq!(entered.h.map_of(player), Some(STORMWIND));
+        assert!(close(entered.h.position(player), entered.origin));
+    }
+}
+
+#[test]
+fn seething_channel_refuses_missing_authored_transport_catalog() {
     let template = shared::battleground::seething_shore();
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
@@ -806,25 +893,7 @@ fn enter_source_match_with(
         }
         if template.map_id == 1803 {
             let (world_data, templates) = seething_source_world();
-            // Partial objective proof only: the parent's approved grounded fixture
-            // starts at an actual authored fissure, not a fabricated airship transform.
-            // The separate refusal test retains genuine TransportSpawnId35/36.
-            let fissure = world_data
-                .spawns
-                .iter()
-                .find(|spawn| spawn.map == 1803 && spawn.template_entry == 125253)
-                .unwrap();
-            let ground_start =
-                Vec3::new(fissure.position_x, fissure.position_y, fissure.position_z);
-            {
-                let mut store = app.world_mut().resource_mut::<MapStore>();
-                assert_eq!(store.safe_loc_transports.get(&6337), Some(&35));
-                assert_eq!(store.safe_loc_transports.get(&6380), Some(&36));
-                for start in starts {
-                    store.safe_loc_transports.remove(&start);
-                    store.safe_locs.get_mut(&start).unwrap().position = ground_start;
-                }
-            }
+            app.insert_resource(crate::transport_catalog::fixture_catalog());
             app.insert_resource(world_data);
             app.insert_resource(templates);
             app.insert_resource(crate::ground::GroundMap::new(

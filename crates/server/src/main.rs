@@ -132,6 +132,7 @@ mod trading_post_store;
 mod trait_config;
 mod transmog;
 mod transmog_store;
+mod transport;
 mod transport_catalog;
 mod unit_target;
 mod vehicle;
