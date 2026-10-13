@@ -35,6 +35,8 @@ const BOSS_FRAME_PRIORITY: u8 = 1;
 pub enum EncounterState {
     NotStarted,
     InProgress,
+    /// TC BossAI::_DespawnAtEvade; not a completed or saved encounter.
+    Fail,
     Done,
 }
 
@@ -314,17 +316,21 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
             crate::mythic_plus::record_boss(world, map, encounter_id);
             crate::raid_history::record_first_kill(world, map, encounter_id, difficulty_id);
         }
-        EncounterState::NotStarted if previous == EncounterState::InProgress => send_to_players(
-            world,
-            map,
-            EncounterEnd {
-                encounter_id,
-                difficulty_id,
-                group_size,
-                success: false,
-            },
-        ),
-        EncounterState::NotStarted => {}
+        EncounterState::NotStarted | EncounterState::Fail
+            if previous == EncounterState::InProgress =>
+        {
+            send_to_players(
+                world,
+                map,
+                EncounterEnd {
+                    encounter_id,
+                    difficulty_id,
+                    group_size,
+                    success: false,
+                },
+            )
+        }
+        EncounterState::NotStarted | EncounterState::Fail => {}
     }
     true
 }

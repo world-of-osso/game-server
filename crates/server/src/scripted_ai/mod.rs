@@ -10,7 +10,7 @@
 //! `creature_aggro::enter_evade_mode` (`EnterEvadeMode` → `Reset`), death in
 //! `combat::insert_npc_death` (`JustDied`), damage in the melee and spell damage
 //! paths (`DamageTaken`), summons (`JustSummoned`, `SummonedCreatureDespawn`) and
-//! point movement (`MovementInform`). `UpdateAI` runs every tick of a living
+//! point movement (`MovementInform`) and script paths (`WaypointPathEnded`). `UpdateAI` runs every tick of a living
 //! creature. A hook raised while the creature's own AI runs (a script killing
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
@@ -25,6 +25,7 @@ pub mod movement;
 pub mod murder_row;
 pub mod smart_ai;
 pub mod the_stockade;
+pub mod waypoint_path;
 
 use std::collections::VecDeque;
 
@@ -40,6 +41,27 @@ use crate::networking::CombatTarget;
 
 pub use event_map::EventMap;
 
+/// Manual spawn groups ported scripts spawn; copy fill withholds their members.
+pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
+    kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    kings_rest::SPAWN_GROUP_SERPENT_BOSS,
+];
+
+/// `gameobject_template.ScriptName`s with a ported `GameObjectAI`.
+pub(crate) fn is_game_object_script(script_name: &str) -> bool {
+    script_name == kings_rest::SERPENTINE_SEAL_SCRIPT
+}
+
+/// `GameObjectAI::OnGossipHello` of the object's ported script.
+pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object: Entity) {
+    let Some(script) = world.get::<crate::game_objects::GameObjectScript>(object) else {
+        return;
+    };
+    if script.0 == kings_rest::SERPENTINE_SEAL_SCRIPT {
+        kings_rest::serpentine_seal_gossip_hello(world, player, object);
+    }
+}
+
 pub struct ScriptedAiPlugin;
 
 impl Plugin for ScriptedAiPlugin {
@@ -51,6 +73,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
+            .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(
                 FixedUpdate,
                 (
@@ -68,6 +91,16 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
+                    waypoint_path::path_movement_system.before(crate::creature_ai::chase_system),
+                    kings_rest::update_gold_follows
+                        .after(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
+                    kings_rest::spawn_serpent_after_temple_event,
+                    kings_rest::update_serpentine_seals.before(update_creature_ai),
+                    kings_rest::update_gust_slashes.after(update_creature_ai),
+                    kings_rest::update_molten_gold_areas
+                        .after(update_creature_ai)
+                        .after(crate::combat::auto_attack_system),
                 ),
             );
     }
@@ -98,11 +131,14 @@ pub enum ReactState {
 pub enum MotionType {
     /// `POINT_MOTION_TYPE`.
     Point,
+    /// `FOLLOW_MOTION_TYPE`.
+    Follow,
 }
 
 /// A `CreatureAI` hook with its arguments.
 #[derive(Debug, Clone, Copy)]
 pub enum Hook {
+    InitializeAi,
     Reset,
     JustAppeared,
     ChannelFinished {
@@ -121,6 +157,12 @@ pub enum Hook {
     IsSummonedBy(Entity),
     SummonedCreatureDespawn(Entity),
     MovementInform(MotionType, u32),
+    /// `WaypointPathEnded(nodeId, pathId)`.
+    WaypointPathEnded {
+        node_id: u32,
+        path_id: u32,
+    },
+    DoAction(i32),
     UpdateAi(u32),
     QuestAccepted {
         player: Entity,
@@ -140,6 +182,9 @@ pub enum Hook {
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
+    fn initialize_ai(&mut self, ctx: &mut Ctx) {
+        dispatch(ctx.world, ctx.me, Hook::Reset);
+    }
     fn reset(&mut self, _ctx: &mut Ctx) {}
     fn just_appeared(&mut self, _ctx: &mut Ctx) {}
     fn channel_finished(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
@@ -155,7 +200,9 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn is_summoned_by(&mut self, _ctx: &mut Ctx, _summoner: Entity) {}
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
+    fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, _path_id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
+    fn do_action(&mut self, _ctx: &mut Ctx, _action: i32) {}
     fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     /// `ScriptedAI::UpdateAI`: keep the victim current.
@@ -283,10 +330,16 @@ fn initialize_ai(world: &mut World, creature: Entity) {
     // SmartAI initializes event timers in its constructor and dispatches RESET
     // after RESPAWN in JustAppeared. Other CreatureAI implementations reset here.
     if name != SMART_AI && !name.is_empty() {
-        dispatch(world, creature, Hook::Reset);
+        dispatch(world, creature, Hook::InitializeAi);
     }
-    dispatch(world, creature, Hook::JustAppeared);
+    world.entity_mut(creature).insert(TriggerJustAppeared);
 }
+
+/// `Creature::m_triggerJustAppeared`: set at AddToMap and Respawn, consumed by the
+/// creature's next `Update`, so a summoner's post-summon setup (e.g.
+/// `SetScriptStringId`) is visible to `JustAppeared`.
+#[derive(Component)]
+struct TriggerJustAppeared;
 
 /// `Creature::Respawn`: the creature starts over with a new AI.
 pub(crate) fn reinitialize(world: &mut World, creature: Entity) {
@@ -308,6 +361,29 @@ fn update_creature_ai(world: &mut World) {
         .collect();
     for creature in creatures {
         dispatch(world, creature, Hook::UpdateAi(diff_ms));
+    }
+}
+
+/// The head of `Creature::Update`: `JustAppeared` once after AddToMap or Respawn.
+/// `Map::Update` updates objects before relocation notifies, so this precedes the
+/// tick's sight and aggro.
+fn trigger_just_appeared(world: &mut World) {
+    let creatures: Vec<Entity> = world
+        .query_filtered::<Entity, (
+            With<TriggerJustAppeared>,
+            With<CreatureAiState>,
+            Without<DeathState>,
+            Without<GridDormant>,
+        )>()
+        .iter(world)
+        .collect();
+    for creature in creatures {
+        // An earlier creature's hook may have despawned this one.
+        let Ok(mut entity) = world.get_entity_mut(creature) else {
+            continue;
+        };
+        entity.remove::<TriggerJustAppeared>();
+        dispatch(world, creature, Hook::JustAppeared);
     }
 }
 
@@ -338,6 +414,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
     }
     let mut ctx = Ctx { world, me };
     match hook {
+        Hook::InitializeAi => ai.initialize_ai(&mut ctx),
         Hook::Reset => ai.reset(&mut ctx),
         Hook::JustAppeared => ai.just_appeared(&mut ctx),
         Hook::ChannelFinished { spell_id } => ai.channel_finished(&mut ctx, spell_id),
@@ -364,6 +441,10 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::IsSummonedBy(summoner) => ai.is_summoned_by(&mut ctx, summoner),
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
         Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
+        Hook::WaypointPathEnded { node_id, path_id } => {
+            ai.waypoint_path_ended(&mut ctx, node_id, path_id)
+        }
+        Hook::DoAction(action) => ai.do_action(&mut ctx, action),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
         Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),

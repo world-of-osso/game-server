@@ -201,6 +201,11 @@ pub fn engage(world: &mut World, unit: Entity) {
     let Some(encounter) = super::instance_script::active_encounter_id(world, map, unit) else {
         return;
     };
+    // TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
+    // Lead-authorized TC combat does not authorize Golden Retail alert clocks.
+    if encounter == super::kings_rest::GOLDEN_SERPENT_ENCOUNTER {
+        return;
+    }
     let rules = world
         .get_resource::<Catalog>()
         .and_then(|catalog| catalog.0.get(&encounter))
