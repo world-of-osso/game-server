@@ -84,7 +84,9 @@ pub(crate) const PROFESSIONS: TableDefinition<u64, &[u8]> =
 const LEGACY_PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
 
 /// Reputation table: PlayerId (u64) -> serialized reputation state (bytes).
-pub(crate) const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
+pub(crate) const REPUTATIONS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("reputations_retail_v2");
+const LEGACY_REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
 
 /// Currency table: PlayerId (u64) -> serialized currency wallet (bytes).
 pub(crate) const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
@@ -311,6 +313,7 @@ pub(crate) fn create_tables(db: &Database) {
     txn.delete_table(LEGACY_PROFESSIONS)
         .expect("Failed to delete legacy professions table");
     let _ = txn.open_table(REPUTATIONS);
+    let _ = txn.open_table(LEGACY_REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);
     let _ = txn.open_table(ACHIEVEMENTS);
     let _ = txn.open_table(PVP_STATES);
@@ -616,16 +619,50 @@ pub fn load_reputation(
     let table = txn
         .open_table(REPUTATIONS)
         .expect("Failed to open reputations table");
-    match table.get(character_id).expect("Failed to read reputation") {
-        Some(guard) => {
-            bitcode::decode::<CharacterReputation>(guard.value()).expect("decode reputation")
-        }
-        None => {
-            let reputation = default();
-            save_reputation(db, character_id, &reputation);
-            reputation
-        }
+    if let Some(guard) = table.get(character_id).expect("Failed to read reputation") {
+        return bitcode::decode::<CharacterReputation>(guard.value()).expect("decode reputation");
     }
+    let legacy = txn
+        .open_table(LEGACY_REPUTATIONS)
+        .expect("open legacy reputation")
+        .get(character_id)
+        .expect("read legacy reputation")
+        .map(|guard| {
+            bitcode::decode::<CharacterReputation>(guard.value()).expect("decode legacy reputation")
+        });
+    drop(table);
+    drop(txn);
+    let reputation = if let Some(mut legacy) = legacy {
+        let character =
+            load_character(db, character_id).expect("legacy reputation character must exist");
+        legacy.migrate_legacy_baselines(
+            &shared::reputation::default_faction_registry(),
+            character.race,
+            character.class,
+        );
+        legacy
+    } else {
+        default()
+    };
+    persist_reputation_migration(db, character_id, &reputation);
+    reputation
+}
+
+fn persist_reputation_migration(
+    db: &Database,
+    character_id: u64,
+    reputation: &CharacterReputation,
+) {
+    let txn = db.begin_write().expect("begin signed reputation migration");
+    txn.open_table(REPUTATIONS)
+        .expect("open signed reputations")
+        .insert(character_id, bitcode::encode(reputation).as_slice())
+        .expect("save signed reputation");
+    txn.open_table(LEGACY_REPUTATIONS)
+        .expect("open legacy reputations")
+        .remove(character_id)
+        .expect("retire migrated reputation");
+    txn.commit().expect("commit signed reputation migration");
 }
 
 pub fn save_reputation(db: &Database, character_id: u64, reputation: &CharacterReputation) {

@@ -27,6 +27,8 @@ pub struct MarketChanges {
     /// Full replacements, applied before appending `mails`.
     pub mailboxes: Vec<(u64, Vec<MailData>)>,
     pub mails: Vec<(u64, MailData)>,
+    /// Runtime-only receipt metadata; callers publish it after commit, never serialize it.
+    pub(crate) criteria: Vec<(u64, crate::achievement::CriteriaEvent)>,
 }
 
 pub fn init_state_table(db: &Database) -> Result<(), String> {

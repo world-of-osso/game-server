@@ -576,7 +576,7 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
     let target = Connection::open(dir.path().join("world.db")).unwrap();
     target.execute_batch("CREATE TABLE arena_map(map_id INTEGER);
         CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER,state INTEGER);
-        CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
+        CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER,ScriptName TEXT DEFAULT '');
         CREATE TABLE game_object_display_info (ID INTEGER PRIMARY KEY,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
     target
         .execute("INSERT INTO arena_map VALUES(?)", [map_id])
@@ -608,7 +608,7 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
         template.extend_from_slice(&values[21..24]);
         target
             .execute(
-                "INSERT OR IGNORE INTO content_gameobject_template VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO content_gameobject_template (entry,type,displayId,name,size,Data0,Data1,Data3,Data5,Data6) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&template),
             )
             .unwrap();
@@ -1804,6 +1804,7 @@ fn exercise_arena_channel_with_reconnect(
     let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
     let classes = (mode == ArenaQueueMode::SoloShuffle)
         .then(|| crate::spell_info::load_spell_data(&source).unwrap().1);
+    let achievements = crate::achievement::load_achievement_catalog(&source).unwrap();
     let mut h = harness_with(move |app| {
         if let Some(classes) = classes {
             app.insert_resource(classes);
@@ -1813,6 +1814,7 @@ fn exercise_arena_channel_with_reconnect(
             crate::networking::install_disconnect_fixture(app);
             app.add_systems(Update, crate::auth_character::process_select_character);
         }
+        app.insert_resource(achievements);
         app.insert_resource(objects);
         app.insert_resource(world_data);
         app.insert_resource(spells);
@@ -1824,6 +1826,7 @@ fn exercise_arena_channel_with_reconnect(
             crate::auras::AuraPlugin,
             crate::combat::CombatPlugin,
             crate::death::DeathPlugin,
+            crate::achievement::AchievementPlugin,
         ));
         app.insert_resource(catalog);
         app.insert_resource(gates);
@@ -1863,6 +1866,7 @@ fn exercise_arena_channel_with_reconnect(
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
             crate::death::PlayerDeathState::default(),
+            crate::achievement::PlayerAchievementState::default(),
             crate::spell_cast::powers::PowerPools {
                 order: vec![shared::components::PowerType::Rage],
                 pools: vec![crate::spell_cast::powers::PowerPool {
@@ -2302,6 +2306,17 @@ fn exercise_arena_channel_with_reconnect(
         exercise_arena_forfeit(&mut h, &players, &origins, match_id);
         return;
     }
+    for who in &players {
+        assert!(
+            !h.app
+                .world()
+                .get::<crate::achievement::PlayerAchievementState>(who.player)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&306),
+            "queue, invitation and preparation cannot grant a rated win"
+        );
+    }
     let attacker = players[0].player;
     for target in players.iter().skip(1).step_by(2).map(|who| who.player) {
         h.app
@@ -2345,6 +2360,31 @@ fn exercise_arena_channel_with_reconnect(
         killer.damage_done > 0,
         "real combat events populate arena damage scoreboard"
     );
+    // TC Arena.cpp249: only online rated winners receive WinAnyRankedArena37.
+    for (index, who) in players.iter().enumerate() {
+        let state = h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(who.player)
+            .unwrap();
+        let expected = (rated && index % 2 == 0).then_some(1);
+        assert_eq!(state.criteria_progress.get(&306).copied(), expected);
+        assert_eq!(state.earned_ids.contains(&397), expected.is_some());
+    }
+    h.receive_pvp_updates(5);
+    for (index, who) in players.iter().enumerate() {
+        let state = h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(who.player)
+            .unwrap();
+        let expected = (rated && index % 2 == 0).then_some(1);
+        assert_eq!(
+            state.criteria_progress.get(&306).copied(),
+            expected,
+            "idle replay"
+        );
+    }
     if rated {
         assert_eq!(ended.arena.as_ref().unwrap().mode, mode);
         assert_eq!(
@@ -2406,6 +2446,17 @@ fn exercise_arena_channel_with_reconnect(
                 .unwrap()
                 .battleground
                 .is_none()
+        );
+    }
+    drop(h);
+    let reopened = redb::Database::open(database_file.path()).unwrap();
+    for index in 0..team_size * 2 {
+        let saved = crate::persistence::load_achievements(&reopened, (index + 1) as u64);
+        let expected = (rated && index % 2 == 0).then_some(1);
+        assert_eq!(
+            saved.criteria_progress.get(&306).copied(),
+            expected,
+            "redb reopen"
         );
     }
 }

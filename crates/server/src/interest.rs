@@ -22,6 +22,10 @@ const INTEREST_BUCKET_SIZE: f32 = INTEREST_RADIUS;
 /// A 100 yd square of one map copy.
 type InterestBucket = (InMap, i32, i32);
 
+/// TC private object GUID for the source OnlyVisibleToSummoner flag.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct PrivateObjectOwner(pub Entity);
+
 #[derive(Component, Default)]
 pub(crate) struct NetworkVisibility {
     visible_senders: EntityHashSet,
@@ -179,6 +183,7 @@ struct InterestIndex {
     /// Targets no player sees (decayed corpses).
     hidden: EntityHashSet,
     life_states: EntityHashMap<DeathState>,
+    private_owners: EntityHashMap<Entity>,
 }
 
 impl InterestIndex {
@@ -203,6 +208,10 @@ impl InterestIndex {
         observer.sees(entity, position, map)
             && (entity == observer.player
                 || (!self.hidden.contains(&entity)
+                    && private_object_visible(
+                        self.private_owners.get(&entity).copied(),
+                        observer.player,
+                    )
                     && self
                         .invisibility
                         .get(&observer.player)
@@ -252,6 +261,7 @@ impl InterestIndex {
 
     fn remove_target(&mut self, entity: Entity) {
         self.life_states.remove(&entity);
+        self.private_owners.remove(&entity);
         self.invisibility.remove(&entity);
         self.stealth.remove(&entity);
         self.detection_geometry.remove(&entity);
@@ -366,6 +376,7 @@ impl Plugin for InterestPlugin {
         app.init_resource::<InterestDirtyQueue>()
             .init_resource::<InterestIndex>()
             .add_observer(on_network_visibility_added)
+            .add_observer(on_private_object_owner_added)
             .add_observer(on_replication_client_added)
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
@@ -394,15 +405,33 @@ fn on_replication_client_added(
     }
 }
 
+fn on_private_object_owner_added(
+    trigger: On<Add, PrivateObjectOwner>,
+    owners: Query<&PrivateObjectOwner>,
+    mut index: ResMut<InterestIndex>,
+) {
+    let owner = owners.get(trigger.entity).expect("added private owner");
+    index.private_owners.insert(trigger.entity, owner.0);
+    index.dirty_targets.insert(trigger.entity);
+}
+
 fn on_network_visibility_added(
     trigger: On<Add, NetworkVisibility>,
-    positions: Query<(&Position, Option<&InMap>, Option<&DeathState>)>,
+    positions: Query<(
+        &Position,
+        Option<&InMap>,
+        Option<&DeathState>,
+        Option<&PrivateObjectOwner>,
+    )>,
     connections: Query<Entity, With<ClientVisibility>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,
 ) {
-    if let Ok((position, map, life_state)) = positions.get(trigger.entity) {
+    if let Ok((position, map, life_state, private_owner)) = positions.get(trigger.entity) {
+        if let Some(owner) = private_owner {
+            index.private_owners.insert(trigger.entity, owner.0);
+        }
         if let Some(state) = life_state {
             index.update_life_state(trigger.entity, *state);
         }
@@ -645,6 +674,10 @@ fn update_target_visibility(
             commands,
         );
     }
+}
+
+fn private_object_visible(owner: Option<Entity>, observer: Entity) -> bool {
+    owner.is_none_or(|owner| owner == observer)
 }
 
 fn apply_target_visibility_transition(

@@ -79,6 +79,7 @@ pub(crate) fn record(world: &mut World, event: &CombatLogEvent) {
     }
     let Some(score) = matched
         .scoreboard
+        .rows
         .iter_mut()
         .find(|score| score.character_id == id)
     else {

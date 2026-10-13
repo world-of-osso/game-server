@@ -431,6 +431,10 @@ fn use_item(
     let (db, templates) = use_store(world)?;
     let model = load_model(db, templates, character_id)?;
     let (on_use, item_scaling) = model.use_spell(request.location)?;
+    let item = model.existing(request.location)?;
+    let retail_item_id = (model.definition_source(item.item_guid)
+        == shared::item_data::ItemDefinitionSource::Retail)
+        .then_some(item.item_id);
     let item_level = world
         .resource::<crate::item_stats::ItemScalingTables>()
         .item_level(&item_scaling);
@@ -468,6 +472,9 @@ fn use_item(
         world
             .resource_mut::<GoldUpdateQueue>()
             .record_items(character_id);
+        if let Some(item) = retail_item_id {
+            crate::achievement::record_item_use(world, player, item);
+        }
         return Ok(());
     }
     if let Err(failure) = crate::spell_cast::cast_item_spell(
@@ -477,6 +484,7 @@ fn use_item(
         target,
         on_use.cooldown,
         item_level,
+        retail_item_id,
     ) {
         debug!("Item use spell {spell} by {player} failed: {failure:?}");
         return Ok(());

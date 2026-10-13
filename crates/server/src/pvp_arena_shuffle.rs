@@ -161,7 +161,7 @@ pub(super) fn finish_round(matched: &mut super::InvitedBattleground, winner: BgT
             BgTeam::B
         };
     }
-    for score in &mut matched.scoreboard {
+    for score in &mut matched.scoreboard.rows {
         score.team = if matched
             .instance
             .team_a_players

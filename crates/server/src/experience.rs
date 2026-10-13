@@ -294,6 +294,7 @@ pub struct ExperiencePlugin;
 
 impl Plugin for ExperiencePlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<crate::achievement::CriteriaCredit>();
         app.init_resource::<XpAwards>();
         app.init_resource::<XpDirty>();
         app.add_systems(
@@ -429,6 +430,7 @@ type XpPlayers<'w, 's> = Query<
     (
         Entity,
         &'static ClientId,
+        &'static Player,
         &'static mut Level,
         Option<&'static mut UnitLevel>,
         Option<&'static PlayerDeathState>,
@@ -455,6 +457,7 @@ fn apply_xp_awards(
     mut dirty: ResMut<XpDirty>,
     db: Option<Res<GameDatabase>>,
     mut players: XpPlayers,
+    mut criteria: MessageWriter<crate::achievement::CriteriaCredit>,
     connections: XpConnections,
     mut senders: Query<&mut MessageSender<LogXpGain>>,
     mut commands: Commands,
@@ -469,7 +472,7 @@ fn apply_xp_awards(
             amount,
             ..
         } = award;
-        let Some((entity, _, mut level, unit_level, death, rest)) =
+        let Some((entity, _, player, mut level, unit_level, death, rest)) =
             players.iter_mut().find(|(_, id, ..)| id.0 == character_id)
         else {
             continue;
@@ -502,7 +505,24 @@ fn apply_xp_awards(
             data.level = u16::from(new_level);
             persistence::save_character(&db.db, character_id, &data);
         }
+        let gained_levels = new_level - level.0;
         level.0 = new_level;
+        // TC Player::GiveLevel2290-2294: earned transition only, not loaded/admin Level.
+        for event in [
+            crate::achievement::CriteriaEvent::ActivelyReachLevel(new_level),
+            crate::achievement::CriteriaEvent::GainLevels(gained_levels),
+        ] {
+            criteria.write(crate::achievement::CriteriaCredit {
+                player: entity,
+                event,
+            });
+        }
+        if new_level == MAX_LEVEL {
+            criteria.write(crate::achievement::CriteriaCredit {
+                player: entity,
+                event: crate::achievement::CriteriaEvent::ReachMaxLevel(player.class),
+            });
+        }
         if let Some(mut unit_level) = unit_level {
             unit_level.0 = new_level;
         }

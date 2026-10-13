@@ -35,6 +35,17 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
         );
         return;
     };
+    if effect.misc_values[0] == crate::scripted_ai::kings_rest::GUST_SLASH_CREATE_PROPERTIES {
+        let duration = super::duration_ms(world, ctx.caster, ctx.spell);
+        crate::scripted_ai::kings_rest::create_gust_slash(
+            world,
+            ctx.caster,
+            dest.position,
+            dest.orientation,
+            duration,
+        );
+        return;
+    }
     let Some(map) = world.get::<InMap>(ctx.caster).copied() else {
         return;
     };

@@ -51,7 +51,11 @@ pub(super) fn tick_lifetimes(world: &mut World, diff_ms: u32) {
     }
 }
 
-pub(super) fn despawn_creature(world: &mut World, entity: Entity, force_respawn_secs: u32) {
+pub(in crate::scripted_ai) fn despawn_creature(
+    world: &mut World,
+    entity: Entity,
+    force_respawn_secs: u32,
+) {
     crate::combat::combat_stop(world, entity);
     if world.get::<crate::zones::TempSummon>(entity).is_some() {
         crate::zones::unsummon(world, entity);

@@ -166,8 +166,8 @@ fn update_match(
             })
         })
         .collect();
-    if matched.scoreboard.is_empty() && ready {
-        matched.scoreboard = arena
+    if matched.scoreboard.rows.is_empty() && ready {
+        matched.scoreboard.rows = arena
             .snapshot
             .units
             .iter()
@@ -189,7 +189,7 @@ fn update_match(
     }
     if matched.instance.phase == BgPhase::InProgress {
         let shuffle = arena.shuffle.is_some();
-        for score in &mut matched.scoreboard {
+        for score in &mut matched.scoreboard.rows {
             // TC Battleground.cpp:1359 counts combat deaths, not living departures.
             if actors
                 .get(&score.character_id)
