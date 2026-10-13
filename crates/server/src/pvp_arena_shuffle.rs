@@ -184,7 +184,10 @@ pub(super) fn reset_pending_rounds(world: &mut World) {
         .filter_map(|(id, matched)| {
             let arena = matched.arena.as_mut()?;
             let shuffle = arena.shuffle.as_mut()?;
-            std::mem::take(&mut shuffle.reset_pending).then_some((
+            if !std::mem::take(&mut shuffle.reset_pending) {
+                return None;
+            }
+            Some((
                 *id,
                 matched.map.expect("started shuffle copy"),
                 arena.source.starts,
