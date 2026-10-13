@@ -24,6 +24,12 @@ pub(crate) fn adarogg_serverside_copy() -> Connection {
         [format!("file:{}?mode=ro", canonical.display())],
     )
     .unwrap();
+    write_adarogg_serverside_tables(&conn);
+    conn
+}
+
+/// The actual rows as `tdb_serverside_spell*` in `conn`'s main schema.
+pub(crate) fn write_adarogg_serverside_tables(conn: &Connection) {
     let fixture: Value = serde_json::from_str(FIXTURE).unwrap();
     for (table, columns) in fixture["schema"].as_object().unwrap() {
         let columns: Vec<&str> = columns
@@ -32,9 +38,8 @@ pub(crate) fn adarogg_serverside_copy() -> Connection {
             .iter()
             .map(|column| column.as_str().unwrap())
             .collect();
-        insert_source_rows(&conn, table, &columns, &fixture["rows"][table]);
+        insert_source_rows(conn, table, &columns, &fixture["rows"][table]);
     }
-    conn
 }
 
 fn insert_source_rows(conn: &Connection, table: &str, columns: &[&str], rows: &Value) {

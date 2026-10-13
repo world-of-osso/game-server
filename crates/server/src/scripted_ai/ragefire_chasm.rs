@@ -1,5 +1,5 @@
 //! TC a352b1fa RagefireChasm/boss_dark_shaman_koranthal.cpp and instance/header.
-//! Koranthal and Gordoth combat; Gordoth's intro and other Ragefire bosses are open.
+//! Koranthal, Gordoth and Adarogg combat; Adarogg's intro and Slagmaw are open.
 use bevy::prelude::*;
 
 pub(crate) mod gordoth_intro;
@@ -38,9 +38,18 @@ const LAB_VIAL: u32 = 211784;
 const LANDING_EFFECT_RADIUS: f32 = 25.0;
 const RESEARCHER_MEAT_EXPLOSIONS: [u32; 7] =
     [111778, 111778, 111779, 111779, 111780, 111780, 111780];
+const ADAROGG_SCRIPT: &str = "boss_adarogg";
+const ADAROGG_BOSS_ID: u32 = 0;
+const INFERNO_CHARGE_CAST: u32 = 119405;
+/// Server-side: only present once `tdb_serverside_spell` is loaded.
+const INFERNO_CHARGE_SUMMON: u32 = 119297;
+const FIRE_BREATH: u32 = 119420;
+const SAY_INFERNO_CHARGE: u8 = 0;
+const EVENT_INFERNO_CHARGE: u32 = 1;
+const EVENT_FIRE_BREATH: u32 = 2;
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
-    matches!(name, SCRIPT | GORDOTH_SCRIPT)
+    matches!(name, SCRIPT | GORDOTH_SCRIPT | ADAROGG_SCRIPT)
 }
 
 pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Box<dyn CreatureAi>> {
@@ -59,6 +68,9 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
         GORDOTH_SCRIPT => Box::new(Gordoth {
             boss: BossAi::new(GORDOTH_BOSS_ID),
             enrage_triggered: false,
+        }),
+        ADAROGG_SCRIPT => Box::new(Adarogg {
+            boss: BossAi::new(ADAROGG_BOSS_ID),
         }),
         _ => return None,
     };
@@ -363,6 +375,69 @@ impl BossScript for Gordoth {
                     warn!("Gordoth source Seismic Slam failed: {error:?}");
                 }
                 self.boss.events.repeat(36_300);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// TC boss_adarogg combat. The intro (AT7904 DoAction, its scheduler paths and
+/// Eat Trogg) is not ported, so Reset has no scheduler/eat counter to clear.
+struct Adarogg {
+    boss: BossAi,
+}
+
+impl CreatureAi for Adarogg {
+    fn reset(&mut self, ctx: &mut Ctx) {
+        self.boss.reset(ctx);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
+        self.boss.just_engaged_with(ctx);
+        self.boss.events.schedule(EVENT_INFERNO_CHARGE, 10_000);
+        self.boss.events.schedule(EVENT_FIRE_BREATH, 20_000);
+    }
+
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        self.boss.just_died(ctx);
+    }
+
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        despawn_at_evade(ctx, ADAROGG_BOSS_ID);
+    }
+
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        boss_update_ai(self, ctx, diff_ms);
+    }
+}
+
+impl BossScript for Adarogg {
+    fn boss_ai(&mut self) -> &mut BossAi {
+        &mut self.boss
+    }
+
+    fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
+        match event {
+            EVENT_INFERNO_CHARGE => {
+                if let Some(target) = ctx.select_target_random_non_tank() {
+                    // Talk's target only fills text tokens; 61408 has no creature_text rows.
+                    ctx.talk(SAY_INFERNO_CHARGE);
+                    ctx.do_cast_at(Some(target), INFERNO_CHARGE_SUMMON, false);
+                    ctx.do_cast_at(Some(target), INFERNO_CHARGE_CAST, false);
+                }
+                self.boss.events.repeat_range(15_000, 20_000);
+            }
+            EVENT_FIRE_BREATH => {
+                ctx.do_cast_victim(FIRE_BREATH);
+                self.boss.events.repeat_range(15_000, 20_000);
             }
             _ => {}
         }

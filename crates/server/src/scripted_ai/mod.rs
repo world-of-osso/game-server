@@ -663,6 +663,29 @@ impl Ctx<'_> {
         Some(candidates[pick])
     }
 
+    /// `SelectTarget(SelectTargetMethod::Random, 0, NonTankTargetSelector(me))`
+    /// (UnitAICommon.cpp): a random living threat-list player other than the
+    /// current victim.
+    pub fn select_target_random_non_tank(&self) -> Option<Entity> {
+        let victim = self.victim();
+        let threat = self.world.get::<ThreatTable>(self.me)?;
+        let candidates: Vec<Entity> = threat
+            .entries()
+            .iter()
+            .filter_map(|entry| Entity::try_from_bits(entry.entity))
+            .filter(|&unit| {
+                Some(unit) != victim
+                    && self.world.get::<Player>(unit).is_some()
+                    && crate::spell_cast::targets::is_alive(self.world, unit)
+            })
+            .collect();
+        if candidates.is_empty() {
+            return None;
+        }
+        let pick = rand::Rng::gen_range(&mut rand::thread_rng(), 0..candidates.len());
+        Some(candidates[pick])
+    }
+
     /// `Unit::RemoveAllAuras`.
     pub fn remove_all_auras(&mut self) {
         crate::auras::remove_auras(
