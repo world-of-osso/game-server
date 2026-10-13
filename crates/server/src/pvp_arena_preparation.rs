@@ -33,16 +33,19 @@ pub(super) fn sync_preparation(world: &mut World) {
             .get::<crate::auras::ActiveAuras>(entity)
             .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == PREPARATION_SPELL));
         match (preparing, applied) {
-            (true, false) => crate::auras::apply_aura(
-                world,
-                &crate::auras::AuraApplication {
-                    caster: entity,
-                    target: entity,
-                    spell_id: PREPARATION_SPELL,
-                    effect_mask: u32::MAX,
-                    source: crate::auras::AuraSource::Cast,
-                },
-            ),
+            (true, false) => {
+                reset_entry(world, entity);
+                crate::auras::apply_aura(
+                    world,
+                    &crate::auras::AuraApplication {
+                        caster: entity,
+                        target: entity,
+                        spell_id: PREPARATION_SPELL,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
             (false, true) => clear_preparation(world, entity),
             _ => {}
         }
@@ -50,6 +53,12 @@ pub(super) fn sync_preparation(world: &mut World) {
             reset_preparing_resources(world, entity);
         }
     }
+}
+
+pub(super) fn reset_entry(world: &mut World, entity: Entity) {
+    reset_resources(world, entity);
+    crate::spell_cast::reset_arena_cooldowns(world, entity);
+    world.entity_mut(entity).remove::<PreparationResetAt>();
 }
 
 fn reset_preparing_resources(world: &mut World, entity: Entity) {
