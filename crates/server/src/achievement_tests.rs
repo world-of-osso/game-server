@@ -792,6 +792,137 @@ fn prove_death_criteria(player_killer: bool) {
 }
 
 #[test]
+fn achievements_criteria_native_spy_marker_requires_known_solo_group_authority() {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[280339], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("solo-spy.redb");
+    let db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Spyproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        PlayerAchievementState::default(),
+        persistence::ClientId(character),
+    ));
+    h.app.update();
+    // A native cast with no authoritative group registry cannot establish solo status.
+    h.app.world_mut().remove_resource::<GroupRegistry>();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 280339, None, 0);
+    h.app.update();
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&41658)
+    );
+    h.app.init_resource::<GroupRegistry>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<persistence::ClientId>();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 280339, None, 0);
+    h.app.update();
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&41658)
+    );
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(persistence::ClientId(character));
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 280339, None, u8::MAX);
+    h.app.update();
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&41658)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 280339, None, 0);
+    h.app.update();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&41658),
+        Some(&1)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .earned_ids
+            .contains(&13026)
+    );
+    let online: OnlineView = [(character, "Spyproof"), (character + 1, "Offlinefriend")]
+        .into_iter()
+        .map(|(id, name)| {
+            (
+                id,
+                OnlineMember {
+                    entity: id,
+                    name: name.into(),
+                    class: 1,
+                    level: 1,
+                    portrait: Default::default(),
+                    dungeon_difficulty: 1,
+                    raid_difficulty: Default::default(),
+                },
+            )
+        })
+        .collect();
+    let mut groups = h.app.world_mut().resource_mut::<GroupRegistry>();
+    groups.invite(character, "Offlinefriend", &online);
+    groups.respond_invite(character + 1, true);
+    assert_eq!(groups.group_members(character).len(), 2);
+    // The roster includes an offline member; physical co-location cannot imply solo.
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 280339, None, 0);
+    h.app.update();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&41658),
+        Some(&1)
+    );
+    h.app.update();
+    drop(h);
+    let reopened = redb::Database::open(&path).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&reopened, character)
+            .criteria_progress
+            .get(&41658),
+        Some(&1)
+    );
+}
+
+#[test]
 fn achievements_criteria_targeted_spell_credits_caster_after_native_hit_only() {
     let mut h =
         crate::spell_cast::test_harness::harness_with_plugins(vec![], &[61781], 1, false, |app| {
