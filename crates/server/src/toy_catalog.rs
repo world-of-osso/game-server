@@ -174,7 +174,8 @@ fn classify(
         if let Some(target) = crate::spell_cast::targets::unsupported_target(effect) {
             reasons.insert(format!("target {target}"));
         }
-        if effect.trigger_spell != 0 {
+        let script_owns_trigger = crate::spell_cast::toy_scripts::owns_triggered_spell(spell.id);
+        if effect.trigger_spell != 0 && !script_owns_trigger {
             if depth >= crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
                 reasons.insert("trigger depth limit".into());
             } else {

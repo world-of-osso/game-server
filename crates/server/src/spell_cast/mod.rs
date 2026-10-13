@@ -190,6 +190,7 @@ mod charge_snapshot_tests;
 pub(crate) mod homebind;
 pub(crate) mod teleport;
 mod teleport_positions;
+mod toy_coin;
 pub(crate) mod toy_scripts;
 
 pub struct SpellCastPlugin;
@@ -242,6 +243,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    toy_coin::catch_landed_coins.after(advance_casts),
                 ),
             );
     }
