@@ -6,6 +6,8 @@ Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT
 
 ## Current-tree wiring
 
+- PlayerLevelEqual39 (TC CriteriaHandler1956–1959) lowers to existing inclusive minimum69 and maximum71 on the same level. Native Unit::Kill at levels1/2/3 proves exact-level orphan death counters16188/16402, lower/higher rejection, dead-hit replay safety and redb reopen. +24 supported raw orphan rows (one reach-level5 row, seven quest-count9 rows, sixteen death17 rows); unsupported title/internal21 remains disabled. No new current-root achievement/statistic and no orphan relinking; census unchanged.
+
 - DieInInstance18 (TC Player1164, CriteriaHandler1481–1493): accepted native player death uses authored IsDungeon and the allocated copy's actual admission capacity, never current occupancy or a difficulty/map-name guess. Native Unit::Kill RED/GREEN proves party5/raid10/raid25 capacity and modifier isolation, continent/nonexistent-copy rejection, duplicate dead hits/transitions and reopened persistence. +3 statistics14784/14787/40748 structurally, no ordinary gain; delves content is not certified by the party/raid fixture.
 
 - PlayerIsNotInParty35 (TC CriteriaHandler1940–1943) admits pinned zero-asset SingleTrue leaves only when native GroupRegistry and character identity establish an empty roster. Missing authority is not solo; offline roster members still make the character grouped. Native actual280339 self-target marker cast RED/GREEN earns41658/13026 only for known solo, rejects unknown registry/identity, depth refusal and a real joined party, and persists through idle/redb reopen. +2 character definitions13025/13026 structurally; the Nazmir quest's timed invader lifecycle and marker trigger are not certified by this cast fixture.
@@ -46,11 +48,11 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 1 | WinBattleground | 27/212 | 25/160 | 2 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 3 | CompleteAnyResearchProject | 0/12 | 0/12 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 4 | FindResearchObject | 0/12 | 0/0 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
-| 5 | ReachLevel | 64/270 | 17/196 | 47 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 5 | ReachLevel | 65/270 | 17/196 | 48 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 6 | ExhaustAnyResearchSite | 0/4 | 0/3 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 7 | SkillRaised | 190/375 | 190/363 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 8 | EarnAchievement | 5618/5959 | 5146/5414 | 472 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 9 | CompleteQuestsCount | 1/13 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 9 | CompleteQuestsCount | 8/13 | 1/1 | 7 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 10 | CompleteAnyDailyQuestPerDay | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 11 | CompleteQuestsInZone | 149/641 | 59/59 | 90 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 12 | CurrencyGained | 127/337 | 64/204 | 63 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -58,7 +60,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 14 | CompleteDailyQuest | 13/34 | 13/16 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 15 | ParticipateInBattleground | 31/84 | 25/67 | 6 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 16 | DieOnMap | 24/24 | 0/0 | 24 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 17 | DieAnywhere | 6/44 | 5/11 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 17 | DieAnywhere | 22/44 | 5/11 | 17 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 18 | DieInInstance | 10/12 | 8/9 | 2 | Native accepted death with authored IsDungeon and allocated-copy capacity; difficulty/map-type qualifiers remain conjunctive. Party5/raid10/25 and persistence proved; delve content unclaimed. |
 | 19 | RunInstance | 0/3 | 0/3 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
 | 20 | KilledByCreature | 167/168 | 0/1 | 167 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |

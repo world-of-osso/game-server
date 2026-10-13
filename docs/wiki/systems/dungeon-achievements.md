@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Exact reference-player levels — verified 2026-10-13
+
+Modifier39 (TC a352b1fa CriteriaHandler1956–1959) compiles as the existing69 minimum and71 maximum with the same value; no new runtime field or comparator. Native Unit::Kill at levels1/2/3 proves orphan16188/16402 exactness, lower/higher negatives and reopened persistence. Twenty-four additional raw rows become evaluable while current-root census stays unchanged; internal/title21 and orphan relinking remain disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+
 ## Instance-death capacity — verified 2026-10-13
 
 Native accepted player deaths emit18 only when MapStore says IsDungeon and InstanceManager has the current copy. `copy_capacity` exposes its real admission maximum; no occupancy or difficulty-to-group-size mapping. TC a352b1fa Player1164/CriteriaHandler1481–1493 requires that exact value. Unit::Kill fixtures allocate actual33/party5 and533/raid10/25 copies, reject continents/fake copies and other capacity/modifier counters, and preserve duplicate/idle/reopened state. [Inventory](../../achievement-criteria-producer-inventory.md) records three structural statistics, not rendered raids or certified delves.

@@ -110,6 +110,14 @@ class Conditions(unittest.TestCase):
         modifiers[11]['Operator'] = '3'
         self.assertEqual(self.compile(modifiers), {}, 'negated zone remains unsupported')
 
+    def test_exact_player_level_lowers_to_matching_minimum_and_maximum(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 39, 3)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((69, 3), (71, 3))]})
+        modifiers[11]['Asset'] = '0'
+        self.assertEqual(self.compile(modifiers), {}, 'no playable zero level')
+        modifiers[11] = node(10, 3, 39, 3)
+        self.assertEqual(self.compile(modifiers), {}, 'negated level stays unsupported')
+
     def test_known_solo_condition_admits_the_pinned_zero_asset(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 35, 0)}
         self.assertEqual(self.compile(modifiers), {1: [None, ((35, 0),)]})
