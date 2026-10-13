@@ -26,10 +26,14 @@ pub(super) fn update(world: &mut World) {
 }
 
 fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    let party = party_units(world, follower.owner);
+    let enemy = select_enemy(world, follower, unit, &party);
+    if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
+        return;
+    }
     if world.get::<CastState>(unit).is_some() {
         return;
     }
-    let party = party_units(world, follower.owner);
     if follower.profile.heal_spell != 0 {
         if let Some(patient) = lowest_health(world, &party, unit) {
             if !pursue(world, unit, patient, follower.profile.heal_spell, false) {
@@ -40,13 +44,10 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
             return;
         }
     }
-    let Some(enemy) = select_enemy(world, follower, unit, &party) else {
+    let Some(enemy) = enemy else {
         regroup(world, unit, follower.owner);
         return;
     };
-    if interrupt_enemy(world, unit, enemy, follower.profile.spec_id) {
-        return;
-    }
     if !pursue(
         world,
         unit,
@@ -163,7 +164,13 @@ fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) ->
     let Some(spell) = interrupt_spell(spec) else {
         return false;
     };
-    cast(world, unit, enemy, spell)
+    match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(enemy)) {
+        Ok(()) => true,
+        Err(failure) => {
+            debug!("Follower {unit} interrupt {spell} at {enemy}: {failure:?}");
+            false
+        }
+    }
 }
 
 fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) -> bool {
