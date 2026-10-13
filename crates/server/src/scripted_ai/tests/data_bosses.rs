@@ -1882,6 +1882,40 @@ fn encounter_coverage_verdan_real_vines_root_and_expire() {
     );
 }
 
+/// The source Disciple combat clock is independent of the unavailable escort activation.
+/// First Sleep1090 is due5–10s; Druid's Potion8141 only below80% health.
+#[test]
+fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
+    let (mut h, _boss, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
+    let position = *h.app.world().get::<Position>(disciple).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(disciple);
+    h.advance(4.7);
+    assert_eq!(h.casts(0, disciple, 1090), 0, "Sleep waits at least5s");
+    assert_eq!(h.casts(0, disciple, 8141), 0);
+    h.advance(7.5);
+    assert!(
+        h.has_aura(player, 1090),
+        "actual Sleep aura after10s plus cast"
+    );
+    assert_eq!(h.casts(0, disciple, 1090), 1);
+    assert_eq!(h.casts(0, disciple, 8141), 0, "full health forbids potion");
+    h.set_health_pct(disciple, 75.0);
+    let wounded = h.health(disciple).current;
+    h.advance(16.0);
+    assert!(h.casts(0, disciple, 8141) >= 1, "10–15s potion retry");
+    assert!(h.health(disciple).current > wounded, "real healing effect");
+    h.advance(7.0);
+    assert!(h.casts(0, disciple, 1090) >= 2, "20–30s Sleep repeat");
+}
+
 /// Instance source sends ACTION_ALL_DONE0 to its own Disciple when all four
 /// druids become DONE. This proves the state condition/notification, not four
 /// complete fights or the Anacondra mode0 source-data discrepancy.
