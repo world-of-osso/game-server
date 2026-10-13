@@ -1909,10 +1909,11 @@ fn encounter_coverage_anacondra_thorns_application_and_source_repeat() {
 }
 
 /// Real deaths/evades use each bound encounter, never another Wailing boss.
-/// Generic BossAi lifecycle is not proof of Mutanus escort spawning or source action34.
+/// Generic BossAi lifecycle is not proof of source action34. Mutanus has no
+/// content_creature placement and must instead use its source summon group.
 #[test]
-fn encounter_coverage_wailing_kresh_serpentis_mutanus_generic_lifecycle() {
-    for (entry, bit, encounter) in [(3653, 2, 587), (3673, 5, 590), (3654, 7, 592)] {
+fn encounter_coverage_wailing_kresh_serpentis_generic_lifecycle() {
+    for (entry, bit, encounter) in [(3653, 2, 587), (3673, 5, 590)] {
         for killed in [false, true] {
             let (mut h, boss, map) = bound_boss_at_difficulty(entry, 43, bit, 1, None);
             h.engage(boss);
@@ -1929,10 +1930,11 @@ fn encounter_coverage_wailing_kresh_serpentis_mutanus_generic_lifecycle() {
                 crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
             }
             h.advance(0.1);
+            // Generic BossAi::_Reset returns to NOT_STARTED; no invented FAIL state.
             let expected = if killed {
                 EncounterState::Done
             } else {
-                EncounterState::Fail
+                EncounterState::NotStarted
             };
             assert_eq!(get_boss_state(h.app.world_mut(), map, slot), Some(expected));
             assert!(
