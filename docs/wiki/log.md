@@ -1,6 +1,10 @@
+## 2026-10-13 — Unrated Shuffle and authored cooldown reset
+
+[Native arenas](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13): six source-role solo entrants, real first-kill rounds, spec lock, source gate/start/reset restoration and character wins; both-skin live proof and four-map full-channel exact origins. Item overrides survive real cast-time completion and reset only the actual category; RED/GREEN fixtures preserve unrelated600s timers, charges/GCD/school locks and prove active-pet reset. Current Retail rated/leaver policy and dampening remain unclaimed.
+
 ## 2026-10-13 — Shared PvP reconnect and near teleport
 
-[Persistence](systems/persistence.md#pvp-reconnect-verified-2026-10-13): durable captured entry points, exact reserved-copy rejoin and missing/expired-match origin restoration; reopened-redb and real disconnect/SelectCharacter tests pass. Shared Warsong mercenary restoration and last-living arena logout preserve behavior. Full-copy near teleport RED exposed dungeon-only lookup; reserved PvP-copy lookup fixes it. Native/UDP proof and ongoing map/skin captures remain in [arenas](../../../game-engine/docs/wiki/systems/arenas.md#pvp-reconnect--verified-2026-10-13).
+[Persistence](systems/persistence.md#pvp-reconnect-verified-2026-10-13): durable captured entry points, exact reserved-copy rejoin and missing/expired-match origin restoration; reopened-redb and real disconnect/SelectCharacter tests pass. Shared Warsong mercenary restoration and last-living arena logout preserve behavior. Full-copy near teleport RED exposed dungeon-only lookup; reserved PvP-copy lookup fixes it. Native/UDP proof and completed32-case map/skin captures are in [arenas](../../../game-engine/docs/wiki/systems/arenas.md#pvp-reconnect--verified-2026-10-13).
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
