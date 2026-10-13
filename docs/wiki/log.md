@@ -1061,3 +1061,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: [Pendant](systems/toys.md#blazing-diamond-pendant-2026-10-13) exact source admission and both-skin natural expiry; restored coin-script precedence before generic targetless missile dispatch.
 
 - 2026-10-13: [Fountain of Knowledge](systems/toys.md#fountain-of-knowledge-2026-10-13) exact admission, authenticated ordinary model and both-skin natural removal; census expectations now retain source-backed Pendant/Fountain while preserving control refusals.
+
+- 2026-10-13: [Accursed Tome](systems/toys.md#accursed-tome-of-the-sargerei-2026-10-13) exact source admission and both-skin natural model removal; fresh-account learning delivers, while earlier profile ownership-update timeouts remain unexplained.
