@@ -1,3 +1,7 @@
+## 2026-10-13 — Instance-death criteria capacity
+
+[Type18](systems/dungeon-achievements.md#instance-death-capacity--verified-2026-10-13) uses allocated dungeon-copy capacity. Native party5/raid10/25 death, negative capacity/copy cases and reopened persistence pass; three statistics become structural, with no delve-content claim.
+
 ## 2026-10-13 — Known-solo achievement predicates
 
 [Solo35](systems/dungeon-achievements.md#solo-group-predicates--verified-2026-10-13) requires native roster authority, not absence of visible peers. Actual marker casts and real joined groups prove credit/exclusion and reopened persistence; originating timed quest content remains unclaimed.
