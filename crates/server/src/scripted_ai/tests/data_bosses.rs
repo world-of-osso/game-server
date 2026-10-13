@@ -127,6 +127,7 @@ fn encounter_fixture(
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
+    app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
@@ -814,6 +815,91 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(!h.has_aura(champion, 269928));
     h.advance(0.3);
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
+}
+
+/// TC at_kings_rest_gust_slash: 269931 creates AT17933 5yd ahead of the warrior; it
+/// orbits its creation point (TDB orbit radius5, speed5, blending from radius0,
+/// clockwise, looping) and an entering player casts 269932 once with no explicit
+/// target, which InitExplicitTargets resolves to that player's valid hostile selection.
+#[test]
+fn encounter_coverage_gust_slash_orbits_and_entering_player_casts_source_damage() {
+    let (mut h, map) = kings_rest_copy(23);
+    crate::zones::spawn_group_spawn(
+        h.app.world_mut(),
+        map,
+        23,
+        false,
+        super::super::kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    );
+    h.advance(0.1);
+    let warrior = h.creatures_of(134157)[0];
+    crate::spell_cast::creature_cast(h.app.world_mut(), warrior, 269931, None, false)
+        .expect("real Gust Slash cast");
+    h.advance(1.6);
+    let triggers: Vec<(Entity, [f32; 4], InMap)> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &super::super::kings_rest::GustSlashTrigger, &InMap)>()
+        .iter(h.app.world())
+        .map(|(entity, trigger, copy)| (entity, trigger.center, *copy))
+        .collect();
+    assert_eq!(
+        triggers.len(),
+        1,
+        "DB2 effect179 creates create properties13339"
+    );
+    let (at, center, at_map) = triggers[0];
+    assert_eq!(at_map, map);
+    let warrior_at = h.wow_position(warrior);
+    let ahead = Vec3::new(center[0] - warrior_at.x, center[1] - warrior_at.y, 0.0);
+    assert!(
+        (ahead.length() - 5.0).abs() < 0.05,
+        "target47 radius8 = 5yd: {ahead:?}"
+    );
+    let player = h.player();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(center[0], center[1], center[2]);
+    h.app.world_mut().entity_mut(player).insert((
+        Position { x, y, z },
+        crate::networking::CombatTarget(Some(warrior)),
+    ));
+    let before = h.health(warrior).current;
+    h.advance(0.1);
+    assert_eq!(h.casts(0, player, 269932), 1, "OnUnitEnter casts once");
+    assert!(
+        h.health(warrior).current < before,
+        "selection takes 269932 damage"
+    );
+    h.advance(0.3);
+    assert_eq!(h.casts(0, player, 269932), 1, "no repeat while inside");
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(Position { x: x + 500.0, y, z });
+    h.advance(1.2);
+    let wow_at = |h: &Harness| {
+        let p = h.app.world().get::<Position>(at).unwrap();
+        let (x, y, _) = crate::terrain_height::bevy_to_wow(p.x, p.y, p.z);
+        Vec3::new(x - center[0], y - center[1], 0.0)
+    };
+    let first = wow_at(&h);
+    assert!(
+        (first.length() - 5.0).abs() < 0.01,
+        "blend done by 25% of 6s: {first:?}"
+    );
+    h.advance(0.1);
+    let second = wow_at(&h);
+    assert!((second.length() - 5.0).abs() < 0.01);
+    assert!(
+        first.cross(second).z < 0.0,
+        "CounterClockwise0 orbits clockwise"
+    );
+    h.advance(27.5);
+    assert!(
+        h.app.world().get_entity(at).is_ok(),
+        "duration index9 is 30s"
+    );
+    h.advance(1.2);
+    assert!(h.app.world().get_entity(at).is_err(), "removed at 30s");
 }
 
 fn defer_due_time_while_busy(mut due: f64, next_cast: f64, busy_windows: &[(f64, f64)]) -> f64 {
