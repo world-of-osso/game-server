@@ -321,6 +321,9 @@ fn handle_select(
     maps: &mut crate::maps::LoginMaps,
     geometry: &mut crate::admission_geometry::AdmissionGeometry,
 ) {
+    commands
+        .entity(selection.connection)
+        .remove::<crate::admission_geometry::PendingCharacterSelection>();
     let character_id = selection.request.character_id;
     if !validate_ownership(db, selection.account_id, character_id) {
         send_enter_error(selection.connection, enter_senders, "Character not found");
