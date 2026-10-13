@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Player-aura alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerHasAura8 leaves compiles to `CompiledConditions::PlayerAuras`. Existing spell validation rejects a missing alternative; `CriteriaFact::PlayerAuras` tests nonempty intersection with the reference player's current `ActiveAuras` snapshot. TC a352b1fa CriteriaHandler1738–1750/1798–1801. Native fixture casts sourced Jaguar136775/136777/136778 buffs, then Mighty Loa136749; target-hit credit28 is evaluated before effect dispatch (spell_cast/mod.rs2164–2166), not from stored historical aura possession. Cancellation/refusal/idle/reopen boundaries are exercised without synthetic credit. Boss/form acquisition and full8111 remain unclaimed. [Contract](../../specs/dungeon-achievements.md).
+
 ## Player-area alternatives
 
 Plain Some8 Amount0/1 over complete SingleTrue PlayerIsInArea17 leaves compiles to `CompiledConditions::PlayerAreas`. Loader reuses existing area validation/recursive ancestry, then unions complete member sets into `CriteriaFact::Area`; one missing source area disables the entire predicate. TC a352b1fa CriteriaHandler1738–1750/1842–1847 and DB2Stores1985–1999 define one-of and recursive parent membership. Native queued death fixture exercises109755/character61456 from controlled cached area snapshots; this is not actual terrain travel or every holiday/NPC content lifecycle. [Contract](../../specs/dungeon-achievements.md).
@@ -16,7 +20,7 @@ Pinned TC1738–1750 Some8 with Amount0/1 requires one successful child; TargetC
 
 ## Single-child Some trees — verified 2026-10-13
 
-TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. Other multi-child non-difficulty OR and unknown children stay disabled; bounded area/map/target-creature exceptions are described above. [Inventory](../../achievement-criteria-producer-inventory.md).
+TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. Other multi-child non-difficulty OR and unknown children stay disabled; bounded aura/area/map/target-creature exceptions are described above. [Inventory](../../achievement-criteria-producer-inventory.md).
 
 ## Empty All modifier trees — verified 2026-10-13
 

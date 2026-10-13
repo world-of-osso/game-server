@@ -676,6 +676,109 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_player_aura_some_requires_actual_jaguar_aura_at_loa_landing() {
+    for buff in [136775, 136777, 136778] {
+        let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+            vec![],
+            &[136749, 136775, 136777, 136778],
+            1,
+            false,
+            |app| {
+                app.add_plugins(AchievementPlugin);
+            },
+        )
+        .unwrap();
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("jaguar-aura.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) = persistence::create_character(&db, 1, "Jaguarproof", 1, 1).unwrap();
+        h.app.insert_resource(GameDatabase { db });
+        h.app
+            .world_mut()
+            .get_mut::<InWorld>(h.connection)
+            .unwrap()
+            .character_id = character;
+        h.app.world_mut().entity_mut(h.caster).insert((
+            persistence::ClientId(character),
+            PlayerAchievementState::default(),
+        ));
+        h.app.update();
+        let count = |h: &crate::spell_cast::test_harness::Harness| {
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .get(&22840)
+                .copied()
+        };
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(1);
+        assert_eq!(count(&h), None, "no Jaguar aura");
+        // Mighty Loa itself is a real installed aura, but not a Jaguar leaf.
+        assert!(
+            crate::auras::has_aura(h.app.world(), h.caster, 136749),
+            "real unrelated native Mighty Loa aura"
+        );
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(1);
+        assert_eq!(
+            count(&h),
+            None,
+            "unrelated aura is not a Jaguar alternative"
+        );
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, buff, None, u8::MAX);
+        assert!(
+            !crate::auras::has_aura(h.app.world(), h.caster, buff),
+            "refused-depth buff cast"
+        );
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, buff, None, 0);
+        h.advance(1);
+        assert!(
+            crate::auras::has_aura(h.app.world(), h.caster, buff),
+            "real sourced Jaguar buff {buff}"
+        );
+        assert_eq!(count(&h), None, "buff alone is not Mighty Loa landing");
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, u8::MAX);
+        assert_eq!(count(&h), None, "refused-depth Mighty Loa cast");
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(1);
+        assert_eq!(
+            count(&h),
+            Some(1),
+            "real Mighty Loa landing under independent Jaguar {buff}"
+        );
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == buff,
+        );
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, buff));
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(3);
+        assert_eq!(
+            count(&h),
+            Some(1),
+            "removed aura and idle cannot borrow previous state"
+        );
+        drop(h);
+        let reopened = redb::Database::open(&path).unwrap();
+        assert_eq!(
+            persistence::load_achievements(&reopened, character)
+                .criteria_progress
+                .get(&22840),
+            Some(&1),
+            "reopened actual landing {buff}"
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_native_death_player_area_some_uses_cached_authority_and_persists() {
     for (area, qualifies) in [
         (Some(153), true),
