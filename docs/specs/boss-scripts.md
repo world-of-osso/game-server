@@ -29,7 +29,7 @@ Pinned TC `ruby_life_pools.cpp` has four spell scripts and no boss AIs. Local Me
 
 - [x] Ice Shield384933 effect0 periodic dummy refreshes existing372749 duration without reapplying/refilling the shield; missing shield stays missing. Respect local DB2's immediate initial tick, then1s period.
 - [x] Excavate372793 effect0 periodic dummy casts373497 triggered from the original caster on the bearer; stops after removal. Respect local DB2's immediate initial tick, then1s period.
-- [ ] Executed371652 effect0 apply sets the source unit flags (FAKE_DEAD, FEIGN_DEATH, PREVENT_EMOTES_FROM_CHAT_TEXT).
+- [x] Executed371652 effect0 apply sets source flag fields (FAKE_DEAD flags3, FEIGN_DEATH flags2, PREVENT_EMOTES_FROM_CHAT_TEXT flags1), preserving other bits without a real death. Other effects alone do not run this hook. Source has no cleanup hook; flags persist after aura removal. Native rendering remains unproved.
 - [x] Storm Infusion395029 effect1 TARGET_DEST_DEST offsets destination by local(9,0,4). Actual area-trigger creation is tested at two facings; area actions/native visuals remain unproved (local effect has no radius/trigger-spell binding).
 - [ ] Source spell-hook gates do not certify SAI path prerequisites, boss combat/credit/loot/lockout or native visuals.
 

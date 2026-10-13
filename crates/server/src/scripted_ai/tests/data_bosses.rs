@@ -884,6 +884,66 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
 }
 
+/// TC Executed371652 effect0 apply sets three independent flag fields, preserves
+/// their other bits, never performs a real death, and has no removal callback.
+#[test]
+fn encounter_coverage_ruby_executed_sets_source_flags_without_killing() {
+    use shared::components::{UnitFlags, UnitFlags2, UnitFlags3};
+    let (mut h, actor, _) =
+        encounter_fixture(189162, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let actor = actor.unwrap();
+    h.app.world_mut().entity_mut(actor).insert((
+        UnitFlags(UnitFlags::IMMUNE_TO_PC),
+        UnitFlags2(4),
+        UnitFlags3(2),
+    ));
+    let health = h.health(actor);
+    crate::spell_cast::creature_cast(h.app.world_mut(), actor, 371652, None, true)
+        .expect("realExecuted371652 self cast");
+    let expected = (
+        UnitFlags(UnitFlags::IMMUNE_TO_PC | UnitFlags::PREVENT_EMOTES_FROM_CHAT_TEXT),
+        UnitFlags2(4 | UnitFlags2::FEIGN_DEATH),
+        UnitFlags3(2 | UnitFlags3::FAKE_DEAD),
+    );
+    assert_eq!(h.app.world().get::<UnitFlags>(actor), Some(&expected.0));
+    assert_eq!(h.app.world().get::<UnitFlags2>(actor), Some(&expected.1));
+    assert_eq!(h.app.world().get::<UnitFlags3>(actor), Some(&expected.2));
+    assert_eq!(h.health(actor), health);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(actor)
+            .is_none()
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 371652,
+    );
+    h.advance(0.1);
+    assert_eq!(
+        h.app.world().get::<UnitFlags2>(actor),
+        Some(&expected.1),
+        "source has no cleanup hook"
+    );
+    assert_eq!(h.app.world().get::<UnitFlags3>(actor), Some(&expected.2));
+    // A hit containing only effect1 (MOD_UNATTACKABLE) must not run effect0's hook.
+    let other = h.player();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: other,
+            target: other,
+            spell_id: 371652,
+            effect_mask: 2,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(h.app.world().get::<UnitFlags2>(other).is_none());
+    assert!(h.app.world().get::<UnitFlags3>(other).is_none());
+}
+
 /// TC spell_ruby_life_pools_storm_infusion offsets effect1 TARGET_DEST_DEST by
 /// Position::RelocateOffset(local9,0,4), relative to the destination's orientation.
 #[test]

@@ -7,6 +7,7 @@ use crate::auras::{
     scripts::{AuraScript, AuraScripts},
 };
 
+const EXECUTED: u32 = 371652;
 const ICE_SHIELD_PERIODIC: u32 = 384933;
 const ICE_SHIELD: u32 = 372749;
 const EXCAVATE_PERIODIC: u32 = 372793;
@@ -25,6 +26,13 @@ pub(crate) fn relocate_storm_destination(dest: &mut crate::spell_cast::targets::
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
+        EXECUTED,
+        AuraScript {
+            on_apply: Some(set_executed_flags),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         ICE_SHIELD_PERIODIC,
         AuraScript {
             on_periodic: Some(refresh_ice_shield),
@@ -38,6 +46,26 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// Executed's effect0/STUN OnEffectApply only; source has no flag cleanup hook.
+fn set_executed_flags(world: &mut World, target: Entity, aura: &AuraInstance) {
+    use shared::components::{UnitFlags, UnitFlags2, UnitFlags3};
+    let applied_stun = aura
+        .effects
+        .iter()
+        .any(|effect| effect.index == 0 && effect.aura_type == handlers::MOD_STUN);
+    if !applied_stun {
+        return;
+    }
+    let flags = world.get::<UnitFlags>(target).map_or(0, |flags| flags.0);
+    let flags2 = world.get::<UnitFlags2>(target).map_or(0, |flags| flags.0);
+    let flags3 = world.get::<UnitFlags3>(target).map_or(0, |flags| flags.0);
+    world.entity_mut(target).insert((
+        UnitFlags(flags | UnitFlags::PREVENT_EMOTES_FROM_CHAT_TEXT),
+        UnitFlags2(flags2 | UnitFlags2::FEIGN_DEATH),
+        UnitFlags3(flags3 | UnitFlags3::FAKE_DEAD),
+    ));
 }
 
 fn is_periodic_effect_zero(aura: &AuraInstance, index: u8) -> bool {
