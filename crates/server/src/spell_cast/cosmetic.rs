@@ -19,6 +19,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     176594, // Touch of the Naaru
     // Gladiator back banners: existing native race/sex condition selection proven.
     176899, 176900, 185712, // Seafarer's Slidewhistle
+    187146, // Tome of Secrets: source5min ordinary attachment1097945.
     193333, // Death's Door Charm's Helheim ghost-state attachment
     196783, // Darkshard Fragment (crystal growth attachments)
     203657, // Noble's Eternal Elementium Signet
