@@ -167,6 +167,7 @@ pub(super) fn epidemic(world: &mut World, caster: Entity, target: Entity, depth:
 
 /// The infected enemy receives212739s1; other nearby foes receive212739s2.
 pub(super) fn epidemic_splash(
+    _world: &World,
     _spell: &SpellInfo,
     explicit: Option<Entity>,
     units: &mut Vec<Entity>,
