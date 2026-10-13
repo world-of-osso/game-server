@@ -2149,6 +2149,12 @@ fn resolve_effects(
             }
             continue;
         }
+        // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
+        // hit units, but still cast their child once with the parent's destination.
+        if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
+            effects::trigger_missile_at_destination(world, &ctx, effect);
+            continue;
+        }
         // Item unlock is persisted before the cast success receipt; it has no
         // unit target and must not enter the gathering-node effect handler.
         if open_lock::is_item_cast(spell) && open_lock::is_item_effect(effect) {

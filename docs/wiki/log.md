@@ -1,5 +1,7 @@
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Ragefire Koranthal source appearance/combat/death/evade;119973 dummy exposed missing destination-only effect32 dispatch, now forwards child destination. Three fixtures GREEN; native/credit publication/whole-instance gaps remain. [Boss scripts](systems/boss-scripts.md).
+
 - 2026-10-13: Executed371652 additive source flags1/2/3, no real death and no cleanup hook. Raw flags2/3 protocol fields added; native pose delivery remains unproved. [Boss scripts](systems/boss-scripts.md).
 
 - 2026-10-13: Storm Infusion395029 source-oriented(9,0,4) destination hook; actual area-trigger positions tested at two facings. Area actions/native visual behavior remain gaps. [Boss scripts](systems/boss-scripts.md).

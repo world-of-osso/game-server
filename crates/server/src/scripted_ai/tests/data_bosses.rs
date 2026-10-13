@@ -257,23 +257,24 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if entry == 135322 && initial_state != EncounterState::NotStarted {
-            // Keep the relocated source branch idle until its fixture explicitly pulls.
-            let position = app.world().get::<Position>(boss).unwrap();
-            [
-                position.x + 500.0,
-                -position.z,
-                position.y,
-                std::f32::consts::PI,
-            ]
-        } else {
-            [
-                spawn.position_x + 3.0,
-                spawn.position_y,
-                spawn.position_z,
-                std::f32::consts::PI,
-            ]
-        };
+        let near =
+            if entry == 61412 || (entry == 135322 && initial_state != EncounterState::NotStarted) {
+                // Keep these hostile source actors idle until their fixture explicitly pulls.
+                let position = app.world().get::<Position>(boss).unwrap();
+                [
+                    position.x + 500.0,
+                    -position.z,
+                    position.y,
+                    std::f32::consts::PI,
+                ]
+            } else {
+                [
+                    spawn.position_x + 3.0,
+                    spawn.position_y,
+                    spawn.position_z,
+                    std::f32::consts::PI,
+                ]
+            };
         (Some(boss), near)
     };
     let (player, connection) = spawn_player(&mut app, map, near, 1);
@@ -882,6 +883,173 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(!h.has_aura(champion, 269928));
     h.advance(0.3);
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
+}
+
+/// TC boss_dark_shaman_koranthal: appearance Vortex, engage Talk/remove Vortex,
+/// Twisted6s/7.3s, Storm20.5s/47.2s; Storm reschedules Twisted to +15.7s.
+#[test]
+fn encounter_coverage_koranthal_uses_source_combat_schedule_and_storm_damage() {
+    let (mut h, boss, map) =
+        encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, false);
+    let boss = boss.unwrap();
+    h.advance(0.1);
+    assert!(h.has_aura(boss, 119928), "Shadow Vortex on appearance");
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.1);
+    assert!(!h.has_aura(boss, 119928));
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 1),
+        Some(EncounterState::InProgress)
+    );
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|chat| chat.content.contains("overwhelm"))
+    );
+    let casting = |h: &Harness| {
+        h.app
+            .world()
+            .get::<CastState>(boss)
+            .map(|cast| cast.spell_id)
+    };
+    h.advance(5.8);
+    assert_eq!(casting(&h), None, "Twisted waits6s");
+    h.advance(0.2);
+    assert_eq!(casting(&h), Some(119300));
+    h.advance(2.1);
+    assert_eq!(
+        h.casts(0, boss, 119300),
+        1,
+        "real2s cast completes on victim"
+    );
+    h.advance(5.0);
+    assert_eq!(casting(&h), None);
+    h.advance(0.2);
+    assert_eq!(casting(&h), Some(119300), "repeat at13.3s");
+    h.advance(7.0);
+    assert!(!h.has_aura(boss, 119971), "Storm waits20.5s");
+    h.advance(0.2);
+    assert!(h.has_aura(boss, 119971));
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|chat| chat.content.contains("Shadow Storm"))
+    );
+    let before = h.health(h.player()).current;
+    h.advance(3.2);
+    assert!(
+        h.health(h.player()).current < before,
+        "119973 dummy ->119965 missile -> actual storm damage"
+    );
+    assert_eq!(
+        h.casts(0, boss, 119300),
+        2,
+        "Storm reschedules, no Twisted at20.6s"
+    );
+    h.advance(12.3);
+    assert_eq!(casting(&h), None);
+    h.advance(0.2);
+    assert_eq!(casting(&h), Some(119300), "rescheduled to36.2s");
+    h.advance(31.3);
+    assert!(!h.has_aura(boss, 119971), "next Storm waits until67.7s");
+    h.advance(0.2);
+    assert!(h.has_aura(boss, 119971), "Storm repeats47.2s after20.5s");
+}
+
+/// TC119973 effect0 dummy reads its effect value119965 and casts that triggered;
+/// the actual missile chain hits with119964, independently of119971's other effect.
+#[test]
+fn encounter_coverage_koranthal_shadow_storm_dummy_launches_authored_damage() {
+    let (mut h, boss, _) =
+        encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, false);
+    let boss = boss.unwrap();
+    let target = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(target).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    let before = h.health(target).current;
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 119973, None, true)
+        .expect("real119973 source-area-enemy dummy");
+    h.advance(1.0);
+    assert!(h.health(target).current < before);
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(119964)
+                && event.source == Some(boss.to_bits())
+                && event.target == Some(target.to_bits())
+        }),
+        "effect value119965 triggers actual119964 damage on the selected enemy"
+    );
+}
+
+#[test]
+fn encounter_coverage_koranthal_death_and_evade_use_source_lifecycle() {
+    for killed in [false, true] {
+        let (mut h, boss, map) =
+            encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, false);
+        let boss = boss.unwrap();
+        let player = h.player();
+        let position = *h.app.world().get::<Position>(boss).unwrap();
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: position.x + 3.0,
+            ..position
+        });
+        h.engage(boss);
+        h.advance(0.1);
+        if killed {
+            h.hit_pct(boss, 1_000.0);
+            h.advance(0.1);
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, 1),
+                Some(EncounterState::Done)
+            );
+            assert!(
+                h.inbox(0)
+                    .chat
+                    .iter()
+                    .any(|chat| chat.content.contains("My death"))
+            );
+        } else {
+            crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+            h.advance(0.1);
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, 1),
+                Some(EncounterState::Fail)
+            );
+            assert!(
+                h.app
+                    .world()
+                    .get::<crate::combat::DeathState>(boss)
+                    .is_some(),
+                "_DespawnAtEvade retires actor without a kill"
+            );
+            assert!(h.inbox(0).ends.iter().all(|end| !end.success));
+            h.app.world_mut().entity_mut(player).insert(Position {
+                x: position.x + 500.0,
+                ..position
+            });
+            h.advance(30.1);
+            assert!(
+                h.app
+                    .world()
+                    .get::<crate::combat::DeathState>(boss)
+                    .is_none(),
+                "authored30s respawn"
+            );
+            assert!(h.has_aura(boss, 119928), "reappearance Shadow Vortex");
+        }
+    }
 }
 
 /// TC Executed371652 effect0 apply sets three independent flag fields, preserves

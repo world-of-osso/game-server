@@ -23,6 +23,15 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Ragefire Chasm source hooks
+
+Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then Deadmines). Source: TC a352b1fa `RagefireChasm`.
+
+- [x] Koranthal61412 appearance casts119928, engage removes it/talks, Twisted119300 first6s/repeat7.3s, Storm119971 first20.5s/repeat47.2s and reschedules Twisted to15.7s. Casting blocks event dispatch as source.
+- [x] Shadow Storm119973 effect0 dummy casts its actual effect value119965 triggered; destination-only missile effect32 forwards its destination to119964 and deals real damage.
+- [x] Koranthal death marks DONE/talks; evade retires without kill credit and respawns after source30s, recasting appearance Vortex.
+- [ ] Canonical primary credit-binding publication, loot/lockout/native acceptance and the other Ragefire boss/intro scripts remain open. Fixtures bind the source actor/bit in an independent map resource; they do not mutate canonical data.
+
 ## Ruby Life Pools source hooks
 
 Pinned TC `ruby_life_pools.cpp` has four spell scripts and no boss AIs. Local Melidrussa/Kokia/Kyrakka/Erkhart templates have empty AIName/ScriptName; no boss schedules are inferred.

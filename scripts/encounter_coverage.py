@@ -24,8 +24,12 @@ TARGETS = {0, 1, 2, 5, 7, 8, 12, 16, 19}
 CPP_IDENTITIES = {(2813,3101): [234648], (2813,3102): [234649],
                   (2813,3103): [234647], (2813,3105): [237415], (1762,2139): [135322]}
 PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240,474183,1223906,1217989,1265412],
-                 'boss_the_golden_serpent': [265773,265781,265910,265923]}
+                 'boss_the_golden_serpent': [265773,265781,265910,265923],
+                 'boss_dark_shaman_koranthal': [119928,119300,119971,119973]}
 PARTIAL_GAPS = {
+    'boss_dark_shaman_koranthal': [
+        'source appearance,6s/7.3s Twisted and20.5s/47.2s Storm/reschedule15.7s supported; dummy119973 effect value119965 forwards missile destination to119964 damage',
+        'source death/30s evade-respawn fixtures supported; canonical primary credit binding, loot/lockout, native visuals and full instance remain unproved'],
     'boss_kystia_manaheart': [
         'infusion completion blocked: local15s Light/20s Destabilized; exact474238 flags do not bypass caster auras',
         'mirror Normal template/callbacks/retirement supported on private copy; other difficulties and Felstorm damage unproved',
