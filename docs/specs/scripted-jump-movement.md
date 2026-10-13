@@ -6,8 +6,9 @@ Source-authenticated `MotionMaster::MoveJump` subset used by Gordoth, from TC a3
 
 - [x] Move between source positions on a two-point linear spline plus parabolic elevation, using the explicit speed capped at50 and source gravity/min-height/default max1000. Duration starts at1ms plus the truncated segment travel time.
 - [x] Emit effect-motion arrival only at the endpoint; Gordoth sets landing facing, destroys its three nearby vials and its seven researchers cast the sourced gore sequence/Bloody Suicide120022, whose immediate periodic51744 instakill causes real self-deaths without boss credit.
-- [ ] Highest-priority ownership blocks lower motion throughout the landing tick and releases on the next unit update. Code is wired; independent competing-driver proof remains open.
-- [ ] Death interrupts a running jump without an arrival callback. Code is wired; interruption proof remains open.
+- [x] Suspend an existing point generator while the jump owns movement, then resume it. Real Mortimer POINT1's delayed self-death observes both boundaries, without querying controller class selection.
+- [ ] Landing-tick handoff against every lower driver remains unproved; code retains ownership until the next unit update.
+- [x] Gordoth's mid-jump death suppresses arrival effects: vials/researchers remain unchanged while the real boss death completes.
 
 ## How it works
 
@@ -23,7 +24,7 @@ Source-authenticated `MotionMaster::MoveJump` subset used by Gordoth, from TC a3
 
 ## Tests asserting this spec
 
-- `scripted_ai/tests/data_bosses.rs`: `encounter_coverage_gordoth_source_jump_lands_breaks_vials_and_researchers_die`, real map389 population/objects/spells.
+- `scripted_ai/tests/data_bosses.rs`: real map389 parabola/landing/self-death, jump interruption and real Mortimer point-arrival lifecycle.
 
 ## Known gaps (current cycle)
 
