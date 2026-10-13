@@ -196,7 +196,7 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, characte
                 .map(|a| a.points)
                 .sum();
             let (suggestions, census) = data.suggestions(level);
-            AdventureGuideSnapshot{month,activities,tags:data.tags.clone(),suggestions,suggestion_census:census,points,activity_scope_notice:Some("All source activities shown: source interval values have no verified calendar mapping. Reward interval binding unavailable; no currency/reward grant is inferred.".into()),source_error:None}
+            AdventureGuideSnapshot{month,activities,tags:data.tags.clone(),suggestions,suggestion_census:census,points,activity_scope_notice:Some("All source activities shown: interval/calendar binding unavailable. Osso default group1 Tender thresholds apply; seasonal reward binding unavailable.".into()),source_error:None}
         }
     };
     if let AdventureCatalog::Ready(data) = world.resource::<AdventureCatalog>() {
