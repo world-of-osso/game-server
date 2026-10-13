@@ -56,9 +56,47 @@ pub(super) fn sync_preparation(world: &mut World) {
 }
 
 pub(super) fn reset_entry(world: &mut World, entity: Entity) {
+    clear_entry_auras(world, entity);
+    let pet = world
+        .get::<crate::hunter_pet::PetStable>(entity)
+        .and_then(|stable| stable.summoned);
+    if let Some(pet) = pet {
+        clear_entry_auras(world, pet);
+    }
     reset_resources(world, entity);
     crate::spell_cast::reset_arena_cooldowns(world, entity);
     world.entity_mut(entity).remove::<PreparationResetAt>();
+}
+
+/// TC Unit.cpp4445: remove entering-arena buffs/debuffs by source attributes,
+/// preserving passives, entering-arena stances and negative death-persistent auras.
+fn clear_entry_auras(world: &mut World, entity: Entity) {
+    const ALLOW_ENTERING_ARENA: u32 = 0x0020_0000;
+    const ALLOW_WHILE_DEAD: u32 = 0x0010_0000;
+    const REMOVE_ENTERING_ARENA: u32 = 0x4;
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(entity) else {
+        return;
+    };
+    let spells = world.resource::<crate::spell_info::SpellStore>();
+    let removed: std::collections::BTreeSet<_> = auras
+        .iter()
+        .filter(|aura| {
+            let spell = spells
+                .get(aura.spell_id)
+                .expect("applied aura source spell");
+            let attributes = spell.misc.as_ref().map_or([0; 17], |misc| misc.attributes);
+            let protected = aura.passive || attributes[4] & ALLOW_ENTERING_ARENA != 0;
+            let death_persistent = aura.harmful && attributes[3] & ALLOW_WHILE_DEAD != 0;
+            (!protected && !death_persistent) || attributes[5] & REMOVE_ENTERING_ARENA != 0
+        })
+        .map(|aura| aura.instance_id)
+        .collect();
+    crate::auras::remove_auras(
+        world,
+        entity,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| removed.contains(&aura.instance_id),
+    );
 }
 
 fn reset_preparing_resources(world: &mut World, entity: Entity) {
@@ -108,6 +146,50 @@ mod tests {
     use super::*;
     use crate::spell_cast::powers::{PowerPool, PowerPools, power_value};
     use shared::components::{Health, Mana, PowerType};
+
+    #[test]
+    fn arena_entry_removes_prior_round_shadow_sight_and_delivers_native_cooldown_clear() {
+        let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[498, 34709], 2).unwrap();
+        h.cast_and_deliver(498, Some(h.caster));
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(498)
+            .unwrap()
+            .clone();
+        assert!(
+            h.app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(h.caster)
+                .unwrap()
+                .on_cooldown(&spell, h.app.world().resource::<Time>().elapsed_secs_f64())
+        );
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: 34709,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 34709));
+        h.inbox.cooldowns.clear();
+        reset_entry(h.app.world_mut(), h.caster);
+        h.advance(1);
+        assert!(
+            !crate::auras::has_aura(h.app.world(), h.caster, 34709),
+            "prior-round Shadow Sight cannot persist into the new source preparation"
+        );
+        assert!(
+            h.inbox
+                .cooldowns
+                .iter()
+                .any(|update| update.spell_id == 498 && !update.is_gcd && update.remaining_ms == 0)
+        );
+    }
 
     #[test]
     fn arena_preparation_resets_only_primary_power_at_entry_after_five_seconds_and_exit() {
