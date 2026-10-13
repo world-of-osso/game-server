@@ -1,3 +1,19 @@
+## 2026-10-13 — PlayerHasAura Some alternatives
+
+[Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
+
+## 2026-10-13 — PlayerIsInArea Some alternatives
+
+[Complete area alternatives](systems/dungeon-achievements.md#player-area-alternatives) reuse recursive ancestry and retain every authenticated leaf. Five controlled cached authority snapshots drive real queued death109755/character61456 and reopened persistence; no terrain-travel or holiday/NPC content claim. Focused3/3, compiler24/24; four additional ordinary definitions are structural only.
+
+## 2026-10-13 — PlayerMap Some alternatives
+
+[Complete map alternatives](systems/dungeon-achievements.md#player-map-alternatives) retain every sourced leaf and reject a missing map at load. Native Warsong2106 lethal damage credits5538 once to its killer and survives reopen; source489 catalog evaluation is not legacy-map playability. Type56 is independent of accepted battleground reward70. Focused5/5, compiler23/23; census5430 ordinary/1812 statistics is structural only.
+
+## 2026-10-13 — Target-creature Some alternatives
+
+[Complete target alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) preserve one-of native request matching. Source-backed Love alternatives and six Wave selectors add seven structural account definitions; unknown qualifiers and NPC content closure remain explicit.
+
 ## 2026-10-13 — Single-child Some criterion semantics
 
 [Some1-of-1](systems/dungeon-achievements.md#single-child-some-trees--verified-2026-10-13) preserves the supported child check. Native per-request target negatives and slime/wave credit add structural40475/1065; NPC spawn/model closure remains unclaimed.
