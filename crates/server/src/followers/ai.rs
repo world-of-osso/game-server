@@ -44,6 +44,9 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         regroup(world, unit, follower.owner);
         return;
     };
+    if interrupt_enemy(world, unit, enemy, follower.profile.spec_id) {
+        return;
+    }
     if !pursue(
         world,
         unit,
@@ -130,6 +133,37 @@ fn select_enemy(
         (!lost_threat, selected != Some(*enemy), enemy.to_bits())
     });
     enemies.first().map(|(enemy, _)| *enemy)
+}
+
+/// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
+/// are verified in local SpellName/SpellEffect12.1.0.69933 (Skull Bash's
+/// effect68 child93985 is referenced by its source description). Holy/Restoration
+/// have no selected kick; Demonology's pet interrupt is not a player cast.
+fn interrupt_spell(spec: u32) -> Option<u32> {
+    match spec {
+        66 => Some(96231),    // Protection Paladin: Rebuke.
+        73 => Some(6552),     // Protection Warrior: Pummel.
+        63 => Some(2139),     // Fire Mage: Counterspell.
+        262 => Some(57994),   // Elemental Shaman: Wind Shear.
+        253 => Some(147362),  // Beast Mastery Hunter: Counter Shot.
+        1467 => Some(351338), // Devastation Evoker: Quell.
+        269 => Some(116705),  // Windwalker Monk: Spear Hand Strike.
+        103 => Some(106839),  // Feral Druid: Skull Bash.
+        _ => None,
+    }
+}
+
+fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
+    let interruptible = world
+        .get::<CastState>(enemy)
+        .is_some_and(|cast| cast.interruptible);
+    if !interruptible {
+        return false;
+    }
+    let Some(spell) = interrupt_spell(spec) else {
+        return false;
+    };
+    cast(world, unit, enemy, spell)
 }
 
 fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) -> bool {
