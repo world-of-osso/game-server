@@ -213,6 +213,7 @@ pub(super) fn create_match(
             silvershard: None,
             deephaul: None,
             seething: None,
+            alterac: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
             arena: Some(arena),
