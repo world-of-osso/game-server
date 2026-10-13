@@ -1900,6 +1900,81 @@ fn achievements_criteria_player_has_aura_gates_native_kill_credit() {
     );
 }
 
+/// Twin Peaks Killing Blows5797: criterion17416 DeliveredKillingBlow56 behind TC PlayerMap32
+/// 726 (CriteriaHandler1922): only a native killing blow on that map counts.
+#[test]
+fn achievements_criteria_player_map_gates_native_killing_blow() {
+    for (map_id, expected) in [(1, None), (726, Some(1))] {
+        let mut h =
+            crate::spell_cast::test_harness::harness_with_plugins(vec![], &[], 1, false, |app| {
+                app.add_plugins(AchievementPlugin);
+            })
+            .unwrap();
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        let map = InMap {
+            map_id,
+            instance_id: 1,
+        };
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((PlayerAchievementState::default(), map));
+        h.app.world_mut().entity_mut(h.npc).insert(map);
+        crate::combat::kill_unit(h.app.world_mut(), h.caster, h.npc);
+        h.advance(1);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .get(&17416)
+                .copied(),
+            expected,
+            "map {map_id}"
+        );
+    }
+}
+
+/// Dynamic Flight Power 1 40172 (account): criterion67179 ReachLevel5 behind TC
+/// PlayerLevelEqualOrGreaterThan69 10 (CriteriaHandler2094) at the level-up update.
+#[test]
+fn achievements_criteria_player_level_gates_reach_level_credit() {
+    use shared::components::CharacterAppearance;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut world = World::new();
+    world.insert_resource(load_achievement_catalog(&conn).unwrap());
+    world.init_resource::<crate::maps::ServerClock>();
+    let player = world
+        .spawn((
+            Player {
+                name: "Levelproof".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            Level(9),
+            InMap::continent(0),
+            PlayerAchievementState::default(),
+        ))
+        .id();
+    let progress = |world: &World| {
+        world
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&67179)
+            .copied()
+    };
+    update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(9)], None).unwrap();
+    assert_eq!(progress(&world), None, "level 9");
+    world.entity_mut(player).insert(Level(10));
+    update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(10)], None).unwrap();
+    assert_eq!(progress(&world), Some(10), "level 10");
+}
+
 /// Scenario and Adventure Guide credit use the same reference-player conditions:
 /// criterion16784 (legacy Heroic Erudax) under Erudax kills5733 needs a Heroic copy.
 #[test]
