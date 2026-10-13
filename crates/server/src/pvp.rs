@@ -51,6 +51,10 @@ mod arena_rating;
 #[path = "pvp_arena_sight.rs"]
 mod arena_sight;
 
+#[path = "pvp_kill_criteria.rs"]
+mod kill_criteria;
+pub(crate) use kill_criteria::record_battleground_player_kill;
+
 #[path = "pvp_alterac.rs"]
 mod pvp_alterac;
 pub(crate) use pvp_alterac::is_banner as is_alterac_banner;
