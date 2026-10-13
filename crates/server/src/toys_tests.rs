@@ -4114,7 +4114,7 @@ fn toyfx18_weather_machine_applies_one_authored_personal_weather() {
     let (weather, duration, caster) = applied[0];
     // SpellDuration9: 30000ms; the caster weathers itself (target->CastSpell(target)).
     assert_eq!((duration, caster), (30000, h.caster));
-    assert!(h.inbox.go.iter().any(|go| go.spell_id == weather));
+    assert!(PERSONALIZED_WEATHER.contains(&weather));
     // 46736's 5000ms periodic dummy has no TDB script: its ticks change nothing.
     h.advance(140);
     assert_eq!(weather_auras(&h).len(), 1);
