@@ -149,7 +149,7 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 5015);
+    assert_eq!(union.len(), 5144);
 }
 
 #[test]

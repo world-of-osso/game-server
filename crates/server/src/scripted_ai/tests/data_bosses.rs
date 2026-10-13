@@ -1227,62 +1227,86 @@ fn data_selected_grim_batol_preserves_owned_summon_cleanup_on_evade() {
 /// (31656 Normal14, 31666 Heroic15, 31454 Mythic16, 64394 LFR7/17).
 #[test]
 fn achievements_criteria_dungeon_difficulty_credits_only_the_copy_difficulty() {
-    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
     for (difficulty, credited) in [(14, 31656), (15, 31666)] {
-        let (mut h, boss, map) = bound_boss_at_difficulty(102263, 1530, 1, difficulty, None);
-        let conn = Connection::open(world_db_path()).unwrap();
-        h.app
-            .insert_resource(load_achievement_catalog(&conn).unwrap());
-        let database_file = tempfile::NamedTempFile::new().unwrap();
-        h.app.insert_resource(crate::persistence::GameDatabase {
-            db: redb::Database::create(database_file.path()).unwrap(),
-        });
-        crate::persistence::create_tables(
-            &h.app
-                .world()
-                .resource::<crate::persistence::GameDatabase>()
-                .db,
+        assert_copy_difficulty_credit(
+            (102263, 1530, 1),
+            difficulty,
+            credited,
+            &[31656, 31666, 31454, 64394],
         );
-        let player = h.player();
-        h.app
-            .world_mut()
-            .entity_mut(player)
-            .insert(PlayerAchievementState::default());
-        let other = h.players[1].0;
-        h.app
-            .world_mut()
-            .entity_mut(other)
-            .insert(PlayerAchievementState::default());
-        h.engage(boss);
-        h.advance(0.05);
-        h.hit_pct(boss, 200.0);
-        h.advance(0.05);
-        assert_eq!(h.inbox(0).ends.last().map(|end| end.success), Some(true));
-        let instances = h.app.world().resource::<crate::maps::InstanceManager>();
-        assert_eq!(instances.completed_encounters(map), 1 << 1);
-        assert_eq!(
-            instances.copy_difficulty(map).unwrap().difficulty_id,
-            difficulty
-        );
-        let progress = |h: &Harness, entity: Entity, criterion: u32| {
-            h.app
-                .world()
-                .get::<PlayerAchievementState>(entity)
-                .unwrap()
-                .criteria_progress
-                .get(&criterion)
-                .copied()
-        };
-        for criterion in [31656, 31666, 31454, 64394] {
-            let expected = (criterion == credited).then_some(1);
-            assert_eq!(
-                progress(&h, player, criterion),
-                expected,
-                "{difficulty}:{criterion}"
-            );
-            assert_eq!(progress(&h, other, criterion), None, "other copy");
-        }
-        h.advance(0.05);
-        assert_eq!(progress(&h, player, credited), Some(1), "idle tick");
     }
+}
+
+/// Erudax (Grim Batol670, encounter1049, bit1): KillCreature0 leaves gated by TC
+/// LegacyDungeonDifficulty20 compare the copy's Difficulty.db2 OldEnumValue
+/// (16783 Normal0 -> Erudax kills5732; 16784 Heroic1 -> Heroic: Grim Batol5062).
+#[test]
+fn achievements_criteria_legacy_dungeon_difficulty_credits_only_the_copy_difficulty() {
+    for (difficulty, credited) in [(1, 16783), (2, 16784)] {
+        assert_copy_difficulty_credit((40484, 670, 1), difficulty, credited, &[16783, 16784]);
+    }
+}
+
+fn assert_copy_difficulty_credit(
+    (entry, map_id, bit): (u32, u32, u32),
+    difficulty: u32,
+    credited: u32,
+    criteria: &[u32],
+) {
+    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    let (mut h, boss, map) = bound_boss_at_difficulty(entry, map_id, bit, difficulty, None);
+    let conn = Connection::open(world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    h.app.insert_resource(crate::persistence::GameDatabase {
+        db: redb::Database::create(database_file.path()).unwrap(),
+    });
+    crate::persistence::create_tables(
+        &h.app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+    );
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    let other = h.players[1].0;
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert(PlayerAchievementState::default());
+    h.engage(boss);
+    h.advance(0.05);
+    h.hit_pct(boss, 200.0);
+    h.advance(0.05);
+    assert_eq!(h.inbox(0).ends.last().map(|end| end.success), Some(true));
+    let instances = h.app.world().resource::<crate::maps::InstanceManager>();
+    assert_eq!(instances.completed_encounters(map), 1 << bit);
+    assert_eq!(
+        instances.copy_difficulty(map).unwrap().difficulty_id,
+        difficulty
+    );
+    let progress = |h: &Harness, entity: Entity, criterion: u32| {
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(entity)
+            .unwrap()
+            .criteria_progress
+            .get(&criterion)
+            .copied()
+    };
+    for &criterion in criteria {
+        let expected = (criterion == credited).then_some(1);
+        assert_eq!(
+            progress(&h, player, criterion),
+            expected,
+            "{difficulty}:{criterion}"
+        );
+        assert_eq!(progress(&h, other, criterion), None, "other copy");
+    }
+    h.advance(0.05);
+    assert_eq!(progress(&h, player, credited), Some(1), "idle tick");
 }

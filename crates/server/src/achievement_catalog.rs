@@ -381,7 +381,8 @@ mod overlays;
 #[path = "achievement_single_modifiers.rs"]
 mod single_modifiers;
 
-/// Compiled TC DungeonDifficulty68 tree: the player's current map difficulty must
+/// Compiled TC DungeonDifficulty68/LegacyDungeonDifficulty20 tree: the player's current
+/// map difficulty must
 /// (`allowed`) or must not be one of `ids`.
 #[derive(Debug, Clone, Copy)]
 struct DifficultyRule {
