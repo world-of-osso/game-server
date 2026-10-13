@@ -18,6 +18,13 @@
 - 2026-10-12 — [Golden spawn gate](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): manual group1256 withheld at copy fill and spawned on the copy's last TempleEvent death; group1255 comes from the Serpentine Seal → Shadow of Zul `SerpentBossEvent` chain (script-set StringId), not yet ported.
 - 2026-10-12 — [Golden intro paths](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): script `MovePath` ports the used WaypointMovementGenerator/Catmull-Rom subset; NotStarted Serpent flies TDB 13532200/01/02, drops emerge at the apex and lands hostile. Spawn-group trigger and fly/hover visuals still open.
 - 2026-10-12 — [Golden partial TC combat](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): explicit lead timing authorization separates exact pinned TC combat events from unavailable Retail12.1 timeline inputs; stale alerts rejected, friendly intro remains closed, InitializeAI/FAIL/30s evade lifecycle ported. Moving Gold stop, authenticated model geometry and last-definition-wins Retail boss-mod extraction have focused proof. Full current union gate/native/remaining mechanics pending; no complete boss claimed.
+- 2026-10-12 — [Portals, dual wield and parry](../class-completeness6.md#dual-wield-and-parry-knowledge--batch34): all29 class trans-door spells proved (census analyzer fix), off-hand weapons gated on native Dual Wield knowledge, Parry knowledge characterized; census3105/4540/182 (+113 working). Unlearn-time off-hand removal remains a gap.
+
+- 2026-10-12 — [Fear control and armor percentage](../class-completeness6.md#fear-control-state-and-armor-percentage--batch32): native aura7 cast admission/swings/target/avoidance (flee movement pending direction decision) and aura101 armor TOTAL_PCT for players and creatures; census2992/4653/182, nine armor memberships now working.
+
+- 2026-10-12 — [Creature-immunity definitions](../class-completeness6.md#native-creature-immunity-definitions--batch31): authentic235-row TDB importer, aura147 definition lookup, per-effect immunity miss logging; RED→GREEN plus403 adjacent passes. Census2983/4662/182, Bladestorm Arms/Fury now working; knockback effect lists and four absent TDB definitions remain gaps.
+
+- 2026-10-12 — [Victim melee critical chance](../class-completeness6.md#victim-melee-critical-chance--batch30): native187 RED2→ten behavior controls, positive/negative/additive fields, actual attack type and expiry/removal; nine adjacent controls. Native form process evidence remains bounded by unverified starter art.
 - 2026-10-13 — [Master arena/class regressions](investigations/master-arena-fixture-regressions.md): pinned TC target/cost/cap rules; duplicate Arcane discount removed, reciprocal Moloch success/refusal controls, unchanged mastery expiry assertions isolated from capped selection. Historical bisect limitations retained explicitly.
 
 - 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
@@ -980,3 +987,8 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-13 — [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13): class/race-only native evaluator reuse, no dropped unknown fields; authentic Human/Orc cap transitions earn7380 and survive reopen.
 - 2026-10-12: Golden Molten Gold gameplay sphere from local TDB12928, source Player reach/ordinary null-target casting, per-area enter/exit, copy/attachment/removal and real periodic damage. Source default-target omission reproduced/fixed;13 supported Golden/companion tests PASS. Intro/follow/native areas remain open.
+- 2026-10-13: Updated auras script hooks with native Power Strike Chi proc and actual Chaos Strike ProcChance consumption; real cast proofs and remaining Combat Wisdom effect-1 gap.
+
+- 2026-10-13: Corrected selector56 from caster-only to modeled party/raid area; native145110 group-heal priority and lifecycle tests, explicit charm/static-NPC source boundaries.
+
+- 2026-10-13: Native Ysera145108 owner-health ticks/self-group switching and CannotCrit; six Bevy App controls, isolated per-cast override, no rendered parity claim.
