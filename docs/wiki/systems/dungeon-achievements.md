@@ -2,6 +2,30 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Player-aura alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerHasAura8 leaves compiles to `CompiledConditions::PlayerAuras`. Existing spell validation rejects a missing alternative; `CriteriaFact::PlayerAuras` tests nonempty intersection with the reference player's current `ActiveAuras` snapshot. TC a352b1fa CriteriaHandler1738–1750/1798–1801. Native fixture casts sourced Jaguar136775/136777/136778 buffs, then Mighty Loa136749; target-hit credit28 is evaluated before effect dispatch (spell_cast/mod.rs2164–2166), not from stored historical aura possession. Cancellation/refusal/idle/reopen boundaries are exercised without synthetic credit. Boss/form acquisition and full8111 remain unclaimed. [Contract](../../specs/dungeon-achievements.md).
+
+## Player-area alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerIsInArea17 leaves compiles to `CompiledConditions::PlayerAreas`. Loader reuses existing area validation/recursive ancestry, then unions complete member sets into `CriteriaFact::Area`; one missing source area disables the entire predicate. TC a352b1fa CriteriaHandler1738–1750/1842–1847 and DB2Stores1985–1999 define one-of and recursive parent membership. Native queued death fixture exercises109755/character61456 from controlled cached area snapshots; this is not actual terrain travel or every holiday/NPC content lifecycle. [Contract](../../specs/dungeon-achievements.md).
+
+## Player-map alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerMap32 leaves compiles to `CompiledConditions::PlayerMaps`. Catalog checks every authored map before constructing `CriteriaFact::PlayerMaps`; missing rows disable the entire predicate. Reference-player map membership implements pinned TC a352b1fa CriteriaHandler1738–1750/1922–1925; missing reference state rejects. TC Unit::Kill11449–11453 emits killing-blow56 independently of battleground kill-reward70, including self/unfinished-match lethal events; map membership does not add accepted-match restrictions. Native accepted Warsong2106 lethal-damage fixture exercises criterion5538, killer-only credit and redb reopen; catalog tests evaluate both sourced489/2106 and wrong maps without claiming legacy-map playability. Mixed/nested children, zero assets and higher amounts remain disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Target-creature alternatives — verified 2026-10-13
+
+Pinned TC1738–1750 Some8 with Amount0/1 requires one successful child; TargetCreatureId4 reads the request's native unit (1782–1785). Compiler preserves every plain SingleTrue target-entry alternative for DoEmote54 as exact set membership, not AND and not an unconditional event. Native63288/64798 Love requests each credit20817 independently; wrong/foreign/player/absent targets and Wave reject. Six authored Wave selectors grant account40624; idle/reopened counters are covered. Higher amounts, mixed/nested/unknown children and other producer types remain disabled. IDs are sourced selectors, not certification of authored NPC spawns/models. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Single-child Some trees — verified 2026-10-13
+
+TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. Other multi-child non-difficulty OR and unknown children stay disabled; bounded aura/area/map/target-creature exceptions are described above. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Empty All modifier trees — verified 2026-10-13
+
+TC a352b1fa CriteriaHandler1733–1737 returns true after looping over zero children. Compiler accepts only plain empty All4; empty Some8/SingleTrue2, nonplain roots and other unsupported conditions still reject. Native127117–127123 triggered casts produce each authored goggle77533–77539 and account18905, with refused depth and reopened state. Canonical content_item lacks those seven rows: private fixture projects exact existing Retail Item/ItemSparse metadata through `content_policy.ITEM_COLUMNS` without changing costs/effects or canonical data. This is cast/predicate/persistence proof, not the full production engineering flow. [Inventory](../../achievement-criteria-producer-inventory.md).
+
 ## Exact reference-player levels — verified 2026-10-13
 
 Modifier39 (TC a352b1fa CriteriaHandler1956–1959) compiles as the existing69 minimum and71 maximum with the same value; no new runtime field or comparator. Native Unit::Kill at levels1/2/3 proves orphan16188/16402 exactness, lower/higher negatives and reopened persistence. Twenty-four additional raw rows become evaluable while current-root census stays unchanged; internal/title21 and orphan relinking remain disabled. [Inventory](../../achievement-criteria-producer-inventory.md).

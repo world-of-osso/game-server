@@ -96,6 +96,9 @@ fn create_world_schema(conn: &rusqlite::Connection) {
         CREATE TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, VignetteID INTEGER,
             StringId TEXT);
         CREATE TABLE tdb_creature (guid INTEGER PRIMARY KEY, id INTEGER, StringId TEXT);
+        CREATE TABLE tdb_conditions (SourceTypeOrReferenceId INTEGER, SourceEntry INTEGER,
+            ElseGroup INTEGER, ConditionTypeOrReference INTEGER, ConditionValue1 INTEGER,
+            ConditionValue2 INTEGER, ConditionValue3 INTEGER, NegativeCondition INTEGER);
         CREATE TABLE tdb_spawn_group (groupId INTEGER, spawnType INTEGER, spawnId INTEGER);
         CREATE TABLE tdb_spawn_group_template (groupId INTEGER PRIMARY KEY, groupName TEXT,
             groupFlags INTEGER);
