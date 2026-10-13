@@ -253,6 +253,9 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     156086, 241494, 246171, 267634,
     # Source-complete stationary warning signs, without interactions.
     73781, 88280, 156052, 218978,
+    # Placed Attraction Sign arrow, Ornate Dragon Statue and Stuffed Bear statue:
+    # item text is placement only; no TDB AI/script/spell/click/npcflag binding.
+    90335, 194793, 203158,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
