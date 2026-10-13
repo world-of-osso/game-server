@@ -986,6 +986,10 @@ fn startup_load_world_data(mut commands: Commands) {
         crate::scripted_ai::kings_rest::load_gold_model_reaches(&conn)
             .expect("Failed to load authored Kings' Rest model combat reaches"),
     );
+    commands.insert_resource(
+        crate::scripted_ai::waypoint_path::load_script_paths(&conn)
+            .expect("Failed to load TDB waypoint paths for scripted MovePath"),
+    );
     let achievements = crate::achievement::load_achievement_catalog(&conn)
         .expect("Failed to load achievements; run scripts/import_achievements.py with locally extracted DB2s");
     let scenarios = crate::achievement::load_scenarios(&conn, &achievements).expect(
