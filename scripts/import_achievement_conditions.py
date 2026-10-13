@@ -97,9 +97,13 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
     some = some_difficulties(root, modifiers, children, legacy)
     if some is not None:
         return ((True, tuple(sorted(some))), ()) if some else None
-    if int(parent['Operator']) != ALL:
+    single_some = (int(parent['Operator']) == SOME
+                   and max(int(parent['Amount']), 1) == 1
+                   and len(children[root]) == 1)
+    if int(parent['Operator']) != ALL and not single_some:
         return None
-    # TC All (CriteriaHandler1733–1737) returns true when its child list is empty.
+    # TC Some1738–1750 with one required/one child has the same child truth as All.
+    # TC All1733–1737 returns true when its child list is empty.
     allowed, excluded, facts = None, frozenset(), []
     for child in children[root]:
         node = modifiers[child]

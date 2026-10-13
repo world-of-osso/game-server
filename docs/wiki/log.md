@@ -1,3 +1,7 @@
+## 2026-10-13 — Single-child Some criterion semantics
+
+[Some1-of-1](systems/dungeon-achievements.md#single-child-some-trees--verified-2026-10-13) preserves the supported child check. Native per-request target negatives and slime/wave credit add structural40475/1065; NPC spawn/model closure remains unclaimed.
+
 ## 2026-10-13 — Empty All criterion semantics
 
 [Plain empty All4](systems/dungeon-achievements.md#empty-all-modifier-trees--verified-2026-10-13) matches TC's true result. Seven native goggle casts/store outcomes grant18905 in a sourced private fixture; missing canonical item projections and production/UI closure remain explicit.
