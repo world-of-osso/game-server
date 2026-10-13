@@ -40,6 +40,9 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     if world.get::<CastState>(unit).is_some() {
         return;
     }
+    if prepare_pet(world, unit, follower) {
+        return;
+    }
     if heal_party_member(world, unit, follower, &party) {
         return;
     }
@@ -48,6 +51,21 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
+    // The approved player-spec bridge's Demonology summon names its own creature
+    // in SpellEffect; Hunter's empty stable never receives a guessed pet.
+    if follower.profile.spec_id != 266 || crate::hunter_pet::summoned_pet(world, unit).is_some() {
+        return false;
+    }
+    match crate::spell_cast::creature_cast(world, unit, 30146, Some(unit), false) {
+        Ok(()) => true,
+        Err(failure) => {
+            warn!("Follower {unit} cannot prepare authored Felguard: {failure:?}");
+            true
+        }
+    }
 }
 
 fn heal_party_member(

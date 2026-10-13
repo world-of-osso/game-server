@@ -47,6 +47,22 @@ pub(super) fn spawn_profile_fixture_with_plugins(
 
 fn assert_profile_combat(entry: u32) {
     let (mut h, unit, profile) = spawn_profile_fixture(entry);
+    let _summon_source = if profile.spec_id == 266 {
+        let prepared = crate::spell_cast::test_harness::prepare_class_world();
+        let mut data = crate::world_data::load_world_data(&prepared.path());
+        data.templates.retain(|entry, _| *entry == 17252);
+        h.app.insert_resource(data);
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(crate::pet_control::load_pet_levelup_spells(&db).unwrap());
+        Some(prepared)
+    } else {
+        None
+    };
     let enemy = h.npc;
     if profile.role == GroupRole::Healer {
         h.app
