@@ -211,6 +211,8 @@ pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
 pub const MECHANIC_DURATION_MOD: u32 = 232;
 pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
+/// Read at landing by `networking::fall_damage_multiplier` (`Player::HandleFall`).
+pub const MODIFY_FALL_DAMAGE_PCT: u32 = 374;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -245,6 +247,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_CASTING_SPEED_NOT_STACK
         | MOD_DAMAGE_PERCENT_DONE
         | MOD_THREAT
+        | MODIFY_FALL_DAMAGE_PCT
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT

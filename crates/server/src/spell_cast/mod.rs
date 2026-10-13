@@ -2375,6 +2375,17 @@ pub(crate) fn cast_triggered(
     cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None);
 }
 
+/// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
+pub(crate) fn try_cast_triggered(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> bool {
+    cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None)
+}
+
 pub(super) fn cast_triggered_with_item_level(
     world: &mut World,
     caster: Entity,
@@ -2382,13 +2393,13 @@ pub(super) fn cast_triggered_with_item_level(
     explicit: Option<Entity>,
     depth: u8,
     item_level: Option<u16>,
-) {
+) -> bool {
     if depth > effects::MAX_TRIGGER_DEPTH {
         warn!(
             "Triggered spell {spell_id} skipped: depth {depth} exceeds {}",
             effects::MAX_TRIGGER_DEPTH
         );
-        return;
+        return false;
     }
     let Some(mut spell) = world
         .get_resource::<SpellStore>()
@@ -2396,7 +2407,7 @@ pub(super) fn cast_triggered_with_item_level(
         .cloned()
     else {
         warn!("Triggered spell {spell_id} not found");
-        return;
+        return false;
     };
     spell.cast_item_level = item_level;
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
@@ -2404,8 +2415,12 @@ pub(super) fn cast_triggered_with_item_level(
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, &spell, plan, depth);
+            true
         }
-        Err(failure) => warn!("Triggered spell {spell_id} skipped: {failure:?}"),
+        Err(failure) => {
+            warn!("Triggered spell {spell_id} skipped: {failure:?}");
+            false
+        }
     }
 }
 
