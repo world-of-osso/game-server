@@ -172,7 +172,14 @@ fn classify(
             {
                 reasons.insert(reason);
             }
-            // The wild object's use is the toy's action: its spell must work too.
+        }
+        let summons_object = [
+            crate::game_objects::summoned::EFFECT_TRANSMITTED,
+            crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD,
+        ]
+        .contains(&effect.effect);
+        if summons_object {
+            // A spellcaster object's use is the toy's action: its spell must work too.
             let entry = effect.misc_values[0] as u32;
             if let Some(object_spell) =
                 crate::game_objects::summoned::spellcaster_spell(world, entry)
