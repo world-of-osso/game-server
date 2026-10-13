@@ -22,6 +22,67 @@ fn love_counts(app: &App, player: Entity) -> [Option<u64>; 2] {
 }
 
 #[test]
+fn achievements_criteria_native_single_some_target_keeps_wave_and_love_qualified() {
+    let (file, mut app, player, connection, character) = emote_app();
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    let spawn = |app: &mut App, template_id, map| {
+        app.world_mut()
+            .spawn((
+                Npc {
+                    template_id,
+                    name: "Controlled target unit".into(),
+                },
+                map,
+            ))
+            .id()
+    };
+    // Authenticated69933 target IDs; this fixture proves selector semantics, not NPC asset closure.
+    let slime = spawn(&mut app, 216058, crate::maps::InMap::continent(0));
+    let wave_target = spawn(&mut app, 224734, crate::maps::InMap::continent(0));
+    let foreign_slime = spawn(&mut app, 216058, crate::maps::InMap::continent(1));
+    for target in [None, Some(player), Some(wave_target), Some(foreign_slime)] {
+        send_emote(&mut app, connection, EmoteKind::Love, target);
+    }
+    send_emote(&mut app, connection, EmoteKind::Wave, Some(slime));
+    advance(&mut app);
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert!(!state.criteria_progress.contains_key(&68751));
+    assert!(!state.criteria_progress.contains_key(&3236));
+    send_emote(&mut app, connection, EmoteKind::Love, Some(slime));
+    send_emote(&mut app, connection, EmoteKind::Wave, Some(wave_target));
+    advance(&mut app);
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(state.criteria_progress.get(&68751), Some(&1));
+    assert_eq!(state.criteria_progress.get(&3236), Some(&1));
+    for entry in [
+        217559, 220413, 219842, 220168, 219366, 217316, 223663, 220370, 214726, 220177, 217461,
+        220369, 221146, 220173, 217756, 219585, 226626,
+    ] {
+        let target = spawn(&mut app, entry, crate::maps::InMap::continent(0));
+        send_emote(&mut app, connection, EmoteKind::Love, Some(target));
+    }
+    advance(&mut app);
+    assert!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&40475)
+    );
+    advance(&mut app);
+    drop(app);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    let stored = persistence::load_achievements(&reopened, character);
+    assert_eq!(stored.criteria_progress.get(&68751), Some(&1));
+    assert_eq!(stored.criteria_progress.get(&3236), Some(&1));
+}
+
+#[test]
 fn achievements_criteria_native_targeted_emote_uses_request_entity_and_persists() {
     let (file, mut app, player, connection, character) = emote_app();
     let spawn_npc = |app: &mut App, template_id, map| {
