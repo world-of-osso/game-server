@@ -1,3 +1,7 @@
+## 2026-10-13 — Shared PvP reconnect and near teleport
+
+[Persistence](systems/persistence.md#pvp-reconnect-verified-2026-10-13): durable captured entry points, exact reserved-copy rejoin and missing/expired-match origin restoration; reopened-redb and real disconnect/SelectCharacter tests pass. Shared Warsong mercenary restoration and last-living arena logout preserve behavior. Full-copy near teleport RED exposed dungeon-only lookup; reserved PvP-copy lookup fixes it. Native/UDP proof and ongoing map/skin captures remain in [arenas](../../../game-engine/docs/wiki/systems/arenas.md#pvp-reconnect--verified-2026-10-13).
+
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
