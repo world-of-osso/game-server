@@ -4,6 +4,10 @@ use shared::battleground::{BgTeam, template_by_id};
 use super::{PlayerPvpState, PvpServerState};
 use crate::maps::{InMap, InstanceManager, MapStore, TeleportOptions, WorldLocation};
 
+// Local195843/195838 effect0 MOD_FACTION243 EffectMiscValue_0.
+const MERCENARY_ALLIANCE_REACTION: u32 = 1;
+const MERCENARY_HORDE_REACTION: u32 = 2;
+
 pub(super) fn enter_battleground(
     world: &mut World,
     state: &mut PvpServerState,
@@ -12,6 +16,7 @@ pub(super) fn enter_battleground(
     match_id: u64,
 ) -> Result<(), String> {
     let destination = entry_location(world, player)?;
+    let reaction = read_team_reaction(world, player)?;
     let sources = world
         .get_resource::<crate::game_objects::GameObjectSpawns>()
         .ok_or("gameobject catalog unavailable")?;
@@ -35,6 +40,7 @@ pub(super) fn enter_battleground(
     if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
         return Err("battleground map entry was refused".into());
     }
+    apply_team_reaction(world, player, reaction);
     state
         .battleground_matches
         .get_mut(&match_id)
@@ -42,6 +48,46 @@ pub(super) fn enter_battleground(
         .origins
         .insert(character_id, origin);
     Ok(())
+}
+
+/// TC Battleground::AddPlayer's mercenary reactions: local195838/195843
+/// effect0 MOD_FACTION243 changes Horde/Alliance reactions to template2/1.
+/// Preserve matching racial reactions and restore the original value on Leave.
+fn read_team_reaction(world: &World, player: Entity) -> Result<Option<(u32, u32)>, String> {
+    let race = world
+        .get::<shared::components::Player>(player)
+        .ok_or("battleground player race missing")?
+        .race;
+    let original = world
+        .get::<shared::components::UnitFactionTemplate>(player)
+        .ok_or("battleground player faction missing")?
+        .0;
+    let team = world
+        .get::<PlayerPvpState>(player)
+        .and_then(|state| state.battleground.as_ref())
+        .ok_or("battleground invitation missing")?
+        .team;
+    let assigned = match team {
+        BgTeam::A => MERCENARY_ALLIANCE_REACTION,
+        BgTeam::B => MERCENARY_HORDE_REACTION,
+    };
+    Ok(
+        (u32::from(crate::faction::faction_for_race(race)) != assigned)
+            .then_some((original, assigned)),
+    )
+}
+
+fn apply_team_reaction(world: &mut World, player: Entity, reaction: Option<(u32, u32)>) {
+    if let Some((original, assigned)) = reaction {
+        world
+            .get_mut::<shared::components::UnitFactionTemplate>(player)
+            .expect("validated player faction")
+            .0 = assigned;
+        world
+            .get_mut::<PlayerPvpState>(player)
+            .expect("validated participant")
+            .battleground_original_faction = Some(original);
+    }
 }
 
 fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String> {
