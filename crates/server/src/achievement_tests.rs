@@ -2447,6 +2447,32 @@ fn achievements_criteria_native_zero_map_killing_blow_requires_known_world_map_a
             qualifies.then_some(&1),
             "native killing blow map {map:?}"
         );
+        let shared::protocol::AchievementCatalogPage::Criteria { criteria, .. } =
+            h.app.world().resource::<AchievementCatalog>().page(
+                state,
+                shared::protocol::QueryAchievementCatalog::Criteria {
+                    achievement_id: 1488,
+                    after_id: 0,
+                },
+                1,
+            )
+        else {
+            panic!("World Killing Blows criteria reply")
+        };
+        let line = criteria.iter().find(|row| row.criteria_id == 5512).unwrap();
+        assert!(
+            line.progress_supported,
+            "existing statistic1488 exposes the zero-map counter"
+        );
+        assert_eq!(
+            line.current,
+            u64::from(qualifies),
+            "authoritative statistic criterion map {map:?}"
+        );
+        assert!(
+            !state.earned_ids.contains(&1488),
+            "statistics are not ordinary grants"
+        );
         assert!(
             !state.criteria_progress.contains_key(&5492),
             "no inferred world-honor credit"
