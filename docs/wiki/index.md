@@ -273,3 +273,5 @@ Debug logs and root cause analyses.
 - [Reported motion fixture correction](systems/skyborne.md#reported-motion-fixture-correction-2026-10-07) — adjacent-cell fixture fix a7616cd, retained exact GREEN and independent scoped gate; unchanged production/protocol, remote consumer gates open.
 
 - [Auction subcategory/sort proof](systems/auction-house.md#subcategory--current-bid--available--2026-10-08) — class/subclass/inventory alternatives and stable Bid/Quantity paging.
+
+- [Category charge-recovery rates](systems/auras.md#category-charge-recovery-rates) — native148 real Aimed Shot charges, live clocks, serial expiry and source-bounded negative/per-cast controls; broader parity remains open.

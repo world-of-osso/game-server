@@ -181,3 +181,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] Commit/push batches, regenerate census counts, merge origin/master and run targeted tests/check/fmt before final report.
 
 Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast suite and unfiltered server tests are prohibited. [Continuation proof](../class-completeness2.md).
+
+## Category charge-recovery rates
+
+- [x] Native aura148 applies100/(100+max(amount,−99)) per matching charge-category effect to future recovery durations. Existing running recovery preserves completed progress on application, amount refresh, removal and expiry; queued charges retain serial recovery and owner updates. Native Trueshot effect1 amount40/category1715 must accelerate actual Aimed Shot recovery.
+- Type-mask rates, global ModTimeRate, charm inheritance and full Trueshot/rendered parity remain separate unproved boundaries.

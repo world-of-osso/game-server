@@ -39,6 +39,8 @@ mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
 #[cfg(test)]
+mod charge_rate_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
@@ -475,7 +477,8 @@ impl SpellHistory {
             (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
         let recharge_ms = ((categories.charge_recovery_ms as f32 + mods.recovery_flat_ms)
             * mods.recovery_mult)
-            .max(0.0);
+            .max(0.0)
+            .floor();
         let state = self
             .charges
             .entry(categories.charge_category)
