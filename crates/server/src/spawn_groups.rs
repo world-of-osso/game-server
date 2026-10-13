@@ -39,7 +39,6 @@ struct Condition {
 
 #[derive(Debug)]
 pub struct SpawnGroup {
-    pub id: u32,
     pub despawn_on_failure: bool,
     /// Content creature spawn guids.
     pub creatures: Vec<u32>,
@@ -77,7 +76,6 @@ impl SpawnGroups {
                 groups.member_of.insert(guid, index);
             }
             groups.groups.push(SpawnGroup {
-                id,
                 despawn_on_failure: flags & DESPAWN_ON_CONDITION_FAILURE != 0,
                 creatures,
                 alternatives,
@@ -160,7 +158,12 @@ pub(crate) fn synchronize(
         }
         inactive.extend(&group.creatures);
         if group.despawn_on_failure {
-            despawn.extend(group.creatures.iter().filter_map(|guid| present.get(guid)));
+            despawn.extend(
+                group
+                    .creatures
+                    .iter()
+                    .filter_map(|guid| present.get(guid).copied()),
+            );
         }
     }
     for entity in despawn {
