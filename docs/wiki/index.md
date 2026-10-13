@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Prepared follower Group Finder catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13) — authenticated source-backed sorted entries and explicit empty reply; native UI/full-dungeon proof remains separate.
+
 - [Source summon flags and privacy](systems/toys.md#source-summon-flag-import-2026-10-12) —3610 readable source records, atomic legacy import, real owner/observer UDP proof and preserved337 census; group/private flag boundaries explicit.
 
 - [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
