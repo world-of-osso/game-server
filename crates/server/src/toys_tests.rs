@@ -23,12 +23,12 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
-            398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
-            203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
-            239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090, 381262,
-            401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618, 128327,
-            196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909, 127803,
-            128150, 128151, 128152,
+            398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762, 388088, 289277, 384585,
+            203533, 203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870,
+            383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090,
+            381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
+            128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
+            127803, 128150, 128151, 128152,
         ],
         class,
     )
@@ -4372,6 +4372,62 @@ fn toyfx18_transmitted_spellcaster_with_unscripted_object_spell_is_unavailable()
     // Costume Chest 252775 casts 222360, a caster dummy no TC/TDB script implements.
     let reasons = toy_catalog::unsupported_types(h.app.world(), 222367);
     assert!(reasons.contains("effect 3"), "{reasons:?}");
+    // Audited object spells keep their banners: 424023 and 1215373 are cosmetic kits.
+    for root in [424022, 1215364] {
+        let reasons = toy_catalog::unsupported_types(h.app.world(), root);
+        assert!(reasons.is_empty(), "{root}: {reasons:?}");
+    }
+}
+
+#[test]
+fn toyfx18_celebration_banner_use_applies_its_cosmetic_aura() {
+    use crate::persistence::ClientId;
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("banner.redb"));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
+    learn_effect_toy(&mut h, character, 210042);
+    assert_eq!(
+        activate_at(&mut h, 210042, Some([2.0, 0.0, 0.0]))[0].error,
+        None
+    );
+    h.advance(70);
+    let banner = {
+        let world = h.app.world_mut();
+        world
+            .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+            .iter(world)
+            .find(|(_, info)| info.entry == 409869)
+            .unwrap()
+            .0
+    };
+    let model = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, banner).unwrap();
+    h.advance(5);
+    let aura = h
+        .app
+        .world()
+        .get::<UnitAuras>(h.caster)
+        .unwrap()
+        .auras
+        .iter()
+        .find(|aura| aura.spell_id == 424023)
+        .cloned()
+        .unwrap();
+    assert_eq!(aura.duration_ms, 3_600_000);
+    assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), model.as_ref());
+    assert_eq!(*h.app.world().get::<Health>(h.caster).unwrap(), health);
 }
 
 #[test]
