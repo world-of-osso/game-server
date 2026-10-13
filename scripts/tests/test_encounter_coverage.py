@@ -44,7 +44,8 @@ class CoverageTests(unittest.TestCase):
         self.assertTrue(actor['runtime_ai'].startswith('partial TC C++ port'))
         gaps = [reason for gap in actor['ai_gaps'] for reason in gap['reasons']]
         self.assertTrue(any('Retail 12.1 timeline inputs unavailable' in reason for reason in gaps))
-        self.assertTrue(any('intro' in reason for reason in gaps))
+        self.assertTrue(any('source intro supported' in reason and 'spawn-group' in reason for reason in gaps))
+        self.assertFalse(any('intro remains closed' in reason for reason in gaps))
         self.assertFalse(any('missing emerge271598' in reason for reason in gaps))
         self.assertTrue(any('delayed follow/absorption/announcement supported' in reason for reason in gaps))
         self.assertTrue(any('near-point' in reason for reason in gaps))
