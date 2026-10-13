@@ -528,6 +528,16 @@ pub(crate) fn record_environmental_death(world: &mut World, player: Entity, kind
     );
 }
 
+/// TC Unit::Kill11453: direct player or genuine HunterPet owner, not all tap recipients.
+pub(crate) fn record_delivered_killing_blow(world: &mut World, killer: Entity) {
+    let player = world
+        .get::<crate::hunter_pet::HunterPet>(killer)
+        .map_or(killer, |pet| pet.owner);
+    if world.get::<Player>(player).is_some() {
+        record_criteria_event(world, player, CriteriaEvent::DeliveredKillingBlow);
+    }
+}
+
 /// TC Unit::Kill uses the actual lethal unit, not a previous nonlethal LastDamager.
 pub(crate) fn record_player_killed_by(world: &mut World, player: Entity, killer: Entity) {
     if world.get::<Player>(player).is_none() {

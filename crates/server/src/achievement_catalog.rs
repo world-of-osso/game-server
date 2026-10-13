@@ -17,7 +17,7 @@ use super::PlayerAchievementState;
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
     66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162, 165,
-    13, 54, 55, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -66,6 +66,7 @@ pub(crate) enum CriteriaEvent {
     TotalHealReceived(u64),
     HighestHealReceived(u64),
     DoEmote(u32),
+    DeliveredKillingBlow,
     UseItem(u32),
     EquipItem(u32),
     UseGameObject(u32),
@@ -165,6 +166,7 @@ impl CriteriaEvent {
             Self::TotalHealReceived(_) => 105,
             Self::HighestHealReceived(_) => 106,
             Self::DoEmote(_) => 54,
+            Self::DeliveredKillingBlow => 56,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -240,7 +242,8 @@ impl CriteriaEvent {
                         .max_level_class
                         .is_none_or(|required| required == class)
             }
-            Self::TotalExaltedFactions(_)
+            Self::DeliveredKillingBlow
+            | Self::TotalExaltedFactions(_)
             | Self::TotalReveredFactions(_)
             | Self::TotalHonoredFactions(_)
             | Self::GainLevels(_)
@@ -1108,7 +1111,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

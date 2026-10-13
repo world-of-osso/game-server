@@ -14,7 +14,7 @@ Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT
 
 ## Complete raw-type matrix
 
-Counts: supported raw / raw; supported current-root rows / all current-root rows. Orphans are supported raw rows outside all Achievement roots. A declared producer may have zero eligible rows. Missing primary names stay unknown instead of being invented. Source/qualification gaps are OPEN, not completion claims.
+Counts: supported raw / raw; supported current-root rows / all current-root rows. Orphans are supported raw rows outside all Achievement roots. A declared producer may have zero eligible rows. Primary names use independently refetched TC a352b1fa DBCEnums.h (SHA256 a00f6c7d8c771e91cb0dfad37b87ade5f9f9e74f960ccad47426029bd8f7f4e1). The enum ends at its standalone closing line, not the inline `{FactionID};` comment at243. Types245–272 are therefore not mislabeled absent. Missing primary names stay unknown instead of being invented. Source/qualification gaps are OPEN, not completion claims.
 
 | Type | Pinned source name | Raw | Current roots | Orphans | State / producer evidence |
 |---:|---|---:|---:|---:|---|
@@ -232,26 +232,26 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 240 | ParticipateInRatedSoloShuffleRound | 0/2 | 0/0 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 243 | ReputationAmountGained | 0/352 | 0/0 | 0 | Source semantics gap: native candidate event/state exists, but pinned evaluator supplies no executable progress rule for this raw type; do not infer count/reset/asset semantics. |
 | 244 | Newer ID — no pinned enum name | 0/40 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
-| 245 | Newer ID — no pinned enum name | 2/67 | 1/16 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 246 | Newer ID — no pinned enum name | 4/9 | 3/3 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 249 | Newer ID — no pinned enum name | 0/1 | 0/1 | 0 | Producer gap: adventure_guide.rs has activity points but no sourced monthly reward/interval-completion binding. |
-| 250 | Newer ID — no pinned enum name | 0/14 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
+| 245 | FulfillAnyCraftingOrder | 2/67 | 1/16 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 246 | FulfillCraftingOrderType | 4/9 | 3/3 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 249 | PerksProgramMonthComplete | 0/1 | 0/1 | 0 | Producer gap: adventure_guide.rs has activity points but no sourced monthly reward/interval-completion binding. |
+| 250 | CompleteTrackingQuest | 0/14 | 0/0 | 0 | Source/qualification gap: pinned enum marks NYI; do not infer criteria from an ordinary quest reward or discard qualifiers. |
 | 252 | Newer ID — no pinned enum name | 0/54 | 0/3 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
-| 253 | Newer ID — no pinned enum name | 4/12 | 0/1 | 4 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 253 | GainLevels | 4/12 | 0/1 | 4 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 254 | Newer ID — no pinned enum name | 0/10 | 0/9 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 255 | Newer ID — no pinned enum name | 0/50 | 0/16 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 256 | Newer ID — no pinned enum name | 0/16 | 0/16 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
-| 257 | Newer ID — no pinned enum name | 0/2 | 0/1 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
-| 260 | Newer ID — no pinned enum name | 3/3 | 2/2 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 261 | Newer ID — no pinned enum name | 0/42 | 0/36 | 0 | Producer/state gap: no native Renown amount/level authority; traditional reputation cannot stand in for renown currencies. |
-| 262 | Newer ID — no pinned enum name | 45/45 | 41/41 | 4 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 257 | CompleteQuestsCountOnAccount | 0/2 | 0/1 | 0 | Source/state gap: pinned enum marks NYI; distinct/repeat/account quest-count policy is not supplied by a type9 per-character maximum. |
+| 260 | BankTabPurchased | 3/3 | 2/2 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 261 | ReachRenownLevel | 0/42 | 0/36 | 0 | Producer/state gap: no native Renown amount/level authority; traditional reputation cannot stand in for renown currencies. |
+| 262 | LearnTaxiNode | 45/45 | 41/41 | 4 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 263 | Newer ID — no pinned enum name | 0/4 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 266 | Newer ID — no pinned enum name | 0/12 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 267 | Newer ID — no pinned enum name | 0/1 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 269 | Newer ID — no pinned enum name | 0/3 | 0/3 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
-| 270 | Newer ID — no pinned enum name | 0/10 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
-| 271 | Newer ID — no pinned enum name | 0/4 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
-| 272 | Newer ID — no pinned enum name | 0/1 | 0/1 | 0 | Source gap: housing storage exists, but unique DecorID/lifetime/current and Asset2 criteria semantics are not sourced. |
+| 270 | PlaceDecor | 0/10 | 0/0 | 0 | Source semantics gap: native housing placement exists, but pinned enum is NYI and evaluator has no counter/asset/reset rule. No guessed criteria credit. |
+| 271 | RemoveDecor | 0/4 | 0/0 | 0 | Source semantics gap: native housing removal exists, but pinned enum is NYI and evaluator has no counter/asset/reset rule. No guessed criteria credit. |
+| 272 | CollectUniqueDecor | 0/1 | 0/1 | 0 | Source gap: housing storage exists, but unique DecorID/lifetime/current and Asset2 criteria semantics are not sourced. |
 | 273 | Newer ID — no pinned enum name | 0/34 | 0/22 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 274 | Newer ID — no pinned enum name | 0/24 | 0/21 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 275 | Newer ID — no pinned enum name | 0/1 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
