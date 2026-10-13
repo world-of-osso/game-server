@@ -202,6 +202,11 @@ pub(crate) fn unload_map_content(world: &mut World, maps: &[InMap]) {
     if let Some(mut pools) = world.get_resource_mut::<crate::spawn_pools::PoolSpawns>() {
         pools.0.retain(|map, _| !maps.contains(map));
     }
+    if let Some(mut inactive) =
+        world.get_resource_mut::<crate::spawn_groups::InactiveGroupedSpawns>()
+    {
+        inactive.0.retain(|map, _| !maps.contains(map));
+    }
     crate::scripted_ai::instance_script::unload_instance_scripts(world, maps);
 }
 
