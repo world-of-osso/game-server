@@ -1,9 +1,63 @@
+## 2026-10-13 — Unrated Shuffle and authored cooldown reset
+
+[Native arenas](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13): six source-role solo entrants, real first-kill rounds, spec lock, source gate/start/reset restoration and character wins; both-skin live proof and four-map full-channel exact origins. Item overrides survive real cast-time completion and reset only the actual category; RED/GREEN fixtures preserve unrelated600s timers, charges/GCD/school locks and prove active-pet reset. Current Retail rated/leaver policy and dampening remain unclaimed.
+
+## 2026-10-13 — Shared PvP reconnect and near teleport
+
+[Persistence](systems/persistence.md#pvp-reconnect-verified-2026-10-13): durable captured entry points, exact reserved-copy rejoin and missing/expired-match origin restoration; reopened-redb and real disconnect/SelectCharacter tests pass. Shared Warsong mercenary restoration and last-living arena logout preserve behavior. Full-copy near teleport RED exposed dungeon-only lookup; reserved PvP-copy lookup fixes it. Native/UDP proof and completed32-case map/skin captures are in [arenas](../../../game-engine/docs/wiki/systems/arenas.md#pvp-reconnect--verified-2026-10-13).
+
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
+
+- 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
+
+- 2026-10-13: Explicit Gordoth landing home/facing independent of respawn coordinates; home-return/leash honor it and respawn resets it. Real return proof,30s boundary test. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Gordoth source DoAction jump/landing, vial state and researcher Bloody Suicide→51744 instakill. Real-population parabola/landing/self-death proof; home/static trigger/cage/animkit/native gaps retained. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Gordoth already-started relocation/first casts/one-shot31% enrage/30s reset; source0x2 bypass with native category/cast-time and GCD/stun/mana proofs. Intro/repeats/native/map389 navigation remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Ragefire Koranthal source appearance/combat/death/evade;119973 dummy exposed missing destination-only effect32 dispatch, now forwards child destination. Three fixtures GREEN; native/credit publication/whole-instance gaps remain. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Executed371652 additive source flags1/2/3, no real death and no cleanup hook. Raw flags2/3 protocol fields added; native pose delivery remains unproved. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Storm Infusion395029 source-oriented(9,0,4) destination hook; actual area-trigger positions tested at two facings. Area actions/native visual behavior remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Ruby Life Pools Ice Shield/Excavate periodic source hooks, immediate initial +1s ticks. Two hook-boundary fixtures pass; SAI prerequisites and absent boss AIs remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Zul +1s activates pool289347 in its own copy; authoritative GO state and collision, with timing/copy isolation proof. Native state animation remains open. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Minion of Zul appearance, Bound by Shadow self-death and Fixate128 preference/clear; different-caster channel coexist. Three real Kings' Rest fixtures pass. [Boss scripts](systems/boss-scripts.md).
 
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
 
 # Wiki Log
 
+- 2026-10-13 — [Category cooldown offsets](systems/auras.md#category-cooldown-offsets): source341 additive milliseconds applied after haste/spellmods, actual25s→20s Counterspell RED/GREEN, category/learning/unlearn/both-timer/zero controls; no whole-role or rendered parity claim.
+
+- 2026-10-13 — [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage): native25%-of-owner-crit aura updater, real Aimed Shot RED/GREEN, live crit/unlearn and heal isolation; full-class/rendered parity remains open.
+- 2026-10-13 — [Full-roster criterion limit](systems/dungeon-achievements.md#full-roster-limit-verified-2026-10-13): LessThanTappers29 uses full native group membership, not physical tappers; authored Malygos solo/8/9 roster RED/GREEN, offline-member and persistence controls. +8 ordinary; complete raw inventory counts reconciled. Full boss mechanics/rendering unclaimed.
+
+- 2026-10-13 — [Rated arena map criteria](systems/dungeon-achievements.md#rated-map-wins-and-participation-verified-2026-10-13): committed WinArena32/ParticipateInArena33, qualified native team-size24/ranked60, real-channel2v2/3v3 RED/GREEN and persistence controls; +World Wide Winner699/+40 statistics.5v5/rating39 mapping remain disabled.
+
+- 2026-10-13 — [Per-request emote targets](systems/dungeon-achievements.md#per-request-emote-targets-verified-2026-10-13): native target-entry snapshots, text-only Love225, emote-only TargetCreatureId4; real-channel RED/GREEN and persistence controls. Structural census gains five account achievements; spawn completeness and other target modifiers unclaimed.
+
+- 2026-10-13 — [Conditional Gladiator banners](../toy-effects14-coverage.md#conditional-gladiator-back-banners-2026-10-13): existing race/sex PlayerConditions resolve both banner models; aura4 lifecycle/faction refusal, all104 visual contexts and representative both-skin native proof. Census354→356; War Banners remain blocked by CurrentPvpFaction.
+- 2026-10-12 — [Placed statues](../toy-effects14-coverage.md#placed-statues-and-the-missing-template-audit-2026-10-12): 110 missing-template summon toys were audited. Ornate Dragon Statue and Stuffed Bear are imported; prepared census354→356. Attraction Sign (invisible weighted display) and the interaction toys stay blocked.
+- 2026-10-12 — [Toy root scripts](../toy-effects14-coverage.md): Unusual Compass (ForcedFacing epoch), Titanium Seal coin, Goblin Weather Machine and Wormhole Generator: Pandaria are admitted only for their exact TC/TDB source shapes; census338→348. Transporter/Teleporting/Taunt Flag are named gaps.
+- 2026-10-12 — [Source summon flags/privacy](systems/toys.md#source-summon-flag-import-2026-10-12): atomic3610-record flags import, real two-peer owner-only/public-control proof, wild spawn/target visibility fixes and preserved337 census; group-private remains explicit gap.
+
+- 2026-10-12 — [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12): source31442/7353 environmental activation, snapshotted versatility retention, seven actual-use identities and census330→337; representative native both-skin proof and lead-only asset publication recorded.
+- 2026-10-12 — [Achievement criteria producer inventory](../achievement-criteria-producer-inventory.md): all243 raw types separated from current-root rows and unsupported actors/conditions; earned XP196/221/253,13 sourced class predicates, traditional ranks47/87/88 and real terrain163/164. Native account Dynamic Duo, authenticated45068 settlement, five terrain destinations and reopened persistence proved; current-build both-skin/integration gate remains open.
+- 2026-10-12 — [Golden spawn gate](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): manual group1256 withheld at copy fill and spawned on the copy's last TempleEvent death; group1255 comes from the Serpentine Seal → Shadow of Zul `SerpentBossEvent` chain (script-set StringId), not yet ported.
+- 2026-10-12 — [Golden intro paths](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): script `MovePath` ports the used WaypointMovementGenerator/Catmull-Rom subset; NotStarted Serpent flies TDB 13532200/01/02, drops emerge at the apex and lands hostile. Spawn-group trigger and fly/hover visuals still open.
+- 2026-10-12 — [Golden partial TC combat](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): explicit lead timing authorization separates exact pinned TC combat events from unavailable Retail12.1 timeline inputs; stale alerts rejected, friendly intro remains closed, InitializeAI/FAIL/30s evade lifecycle ported. Moving Gold stop, authenticated model geometry and last-definition-wins Retail boss-mod extraction have focused proof. Full current union gate/native/remaining mechanics pending; no complete boss claimed.
+- 2026-10-12 — [Portals, dual wield and parry](../class-completeness6.md#dual-wield-and-parry-knowledge--batch34): all29 class trans-door spells proved (census analyzer fix), off-hand weapons gated on native Dual Wield knowledge, Parry knowledge characterized; census3105/4540/182 (+113 working). Unlearn-time off-hand removal remains a gap.
+
+- 2026-10-12 — [Fear control and armor percentage](../class-completeness6.md#fear-control-state-and-armor-percentage--batch32): native aura7 cast admission/swings/target/avoidance (flee movement pending direction decision) and aura101 armor TOTAL_PCT for players and creatures; census2992/4653/182, nine armor memberships now working.
+
+- 2026-10-12 — [Creature-immunity definitions](../class-completeness6.md#native-creature-immunity-definitions--batch31): authentic235-row TDB importer, aura147 definition lookup, per-effect immunity miss logging; RED→GREEN plus403 adjacent passes. Census2983/4662/182, Bladestorm Arms/Fury now working; knockback effect lists and four absent TDB definitions remain gaps.
+
+- 2026-10-12 — [Victim melee critical chance](../class-completeness6.md#victim-melee-critical-chance--batch30): native187 RED2→ten behavior controls, positive/negative/additive fields, actual attack type and expiry/removal; nine adjacent controls. Native form process evidence remains bounded by unverified starter art.
 - 2026-10-13 — [Master arena/class regressions](investigations/master-arena-fixture-regressions.md): pinned TC target/cost/cap rules; duplicate Arcane discount removed, reciprocal Moloch success/refusal controls, unchanged mastery expiry assertions isolated from capped selection. Historical bisect limitations retained explicitly.
 
 - 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
@@ -959,3 +1013,17 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-12 — Transmog metadata and saved configuration
 
 [Authoritative transmog](systems/transmog-apply.md): pinned local-CASC metadata, authored source enums, primary collection states and account-isolated outfit/Custom Set persistence. Current33 transmog tests pass; both-skin private5926 native paid-save, illusion selection, set membership and paged preset load proof links to the client SSOT. Paid Apply unchanged; conditional acquisition/event eligibility and equipped enchant/price policy remain explicit gaps.
+
+- 2026-10-13 — [Rated arena win criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13): native committed online-winner Type37, rated2v2/3v3/skirmish/loser/idle/redb proof; source/data mismatch keeps39 disabled.
+
+- 2026-10-13 — [Current-head achievement live sample](systems/dungeon-achievements.md#current-head-live-sample-verified-2026-10-13): fresh both-skin paid grants, actual2→4 mounts and isolated online comparison; revision-specific source/PNG receipt and owned cleanup.
+
+- 2026-10-13 — [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13): class/race-only native evaluator reuse, no dropped unknown fields; authentic Human/Orc cap transitions earn7380 and survive reopen.
+- 2026-10-12: Golden Molten Gold gameplay sphere from local TDB12928, source Player reach/ordinary null-target casting, per-area enter/exit, copy/attachment/removal and real periodic damage. Source default-target omission reproduced/fixed;13 supported Golden/companion tests PASS. Intro/follow/native areas remain open.
+- 2026-10-13: Updated auras script hooks with native Power Strike Chi proc and actual Chaos Strike ProcChance consumption; real cast proofs and remaining Combat Wisdom effect-1 gap.
+
+- 2026-10-13: Corrected selector56 from caster-only to modeled party/raid area; native145110 group-heal priority and lifecycle tests, explicit charm/static-NPC source boundaries.
+
+- 2026-10-13: Native Ysera145108 owner-health ticks/self-group switching and CannotCrit; six Bevy App controls, isolated per-cast override, no rendered parity claim.
+
+- 2026-10-13: Native163 school-mask critical-damage product and KnowYourEnemy percent updater; actual damage/order/lifecycle controls, retained floating-rounding and rendered-parity limits.

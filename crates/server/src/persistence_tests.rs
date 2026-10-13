@@ -7,6 +7,44 @@ use shared::components::{
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
+#[test]
+fn achievements_criteria_reputation_migrates_known_delta_once_and_retains_earned_ids() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = Database::create(file.path()).unwrap();
+    create_tables(&db);
+    let (character, _) = create_character(&db, 1, "Repmigrate", 1, 1).unwrap();
+    let legacy: CharacterReputation = serde_json::from_value(serde_json::json!({
+        "values": {"72": 21250, "76": 0, "576": 12200},
+        "tracked": [72], "watched": 72
+    }))
+    .unwrap();
+    let txn = db.begin_write().unwrap();
+    txn.open_table(TableDefinition::<u64, &[u8]>::new("reputations"))
+        .unwrap()
+        .insert(character, bitcode::encode(&legacy).as_slice())
+        .unwrap();
+    txn.commit().unwrap();
+    let mut earned = crate::achievement::PlayerAchievementState::default();
+    earned.earned_ids.insert(944);
+    save_achievements(&db, character, &earned);
+    let registry = shared::reputation::default_faction_registry();
+    let migrated = load_reputation(&db, character, || {
+        CharacterReputation::new_for_race(&registry, 1)
+    });
+    assert_eq!(migrated.get_value(72), 4250);
+    assert_eq!(migrated.get_value(76), -42000);
+    assert_eq!(migrated.get_value(576), -2700);
+    assert_eq!(migrated.watched_faction(), Some(72));
+    assert_eq!(
+        load_achievements(&db, character).earned_ids,
+        earned.earned_ids
+    );
+    drop(db);
+    let db = Database::open(file.path()).unwrap();
+    let reloaded = load_reputation(&db, character, || panic!("already migrated"));
+    assert_eq!(reloaded, migrated);
+}
+
 fn env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))

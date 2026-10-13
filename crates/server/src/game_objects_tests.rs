@@ -174,6 +174,7 @@ fn follower_normal_population_spawns_normal_gameobjects_in_205_copy() {
         spawn_difficulties: vec![1, 2, 23],
         chair: None,
         quest_object: None,
+        script_name: String::new(),
     };
     let mut mythic = normal.clone();
     mythic.guid = 2;
@@ -223,7 +224,7 @@ fn reach_is_the_model_box_grown_by_five_yards() {
 fn bundle_places_the_vault_in_server_space() {
     let Some(spawns) = spawns() else { return };
     let vault = &spawns.0[0];
-    let (position, _, info, _, _) = game_object_bundle(vault);
+    let (position, _, info, _, _, _) = game_object_bundle(vault);
     assert_eq!(wow_position(&position), vault.position);
     assert_eq!(info, vault.info);
 }

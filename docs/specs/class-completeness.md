@@ -23,6 +23,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Unspawned class/spec/talent summon templates/models/addons are retained from authentic TDB rows without creating world spawns.
 - [x] Native spellcaster portals restrict party access and apply authored class/race conditions before casting their destination chain.
 - [x] Finite harmful auras apply the receiver's native232/234 duration rule to the spell/category and actually applied effect mechanics: min(sum232, strongest negative234), with native integer AddPct. Positive/permanent auras and NoTargetDurationMod remain unchanged; positive-only232 fields and selectors outside the pinned mechanic mask remain named partials without invented extension or selector interpretations.
+- [x] Native aura187 adds its victim-owned percentage to incoming melee auto-attack and non-ranged weapon-attack spell crit chance, clamped at zero. Removal/expiry restores ordinary chance; actual ranged weapon and magic spells remain unchanged. Native spell damage class and GetAttackType inputs determine the exception, not physical school alone.
 - [x] Native aura263 restricts player casts at admission and completion, except ranged-slot spells, attack effects, explicit IgnoreCastingDisabled attributes or native parent-spell family flags matching caster-class metadata and the cast's flags. Its effect mask is not substituted for the parent flags; NPC/triggered casts remain exempt. Removal/expiry restores ordinary casting, and rejected casts do not pay costs or launch effects. Aura264 remains separate.
 - [x] Native cast starts honor the spell's 64-bit required/excluded form masks, NotShapeshifted and AllowCasterForm attributes, and authored Stance/CanOnlyCastShapeshiftSpells form flags. Masked aura275 bypasses the form check only on its recipient; removal/expiry restores validation. Forbidden and missing-required forms produce distinct wire failures before payment. Unknown form rows retain pinned TC's explicit logged acceptance, not invented flags. Triggered casts preserve their existing form-check exemption.
 - [x] Native330 permits matching-family casts and channels while moving; native Attr13 prevents that aura exception without changing intrinsically mobile spells. Gain/removal/expiry updates existing casts and the replicated permission; unrelated families remain restricted. This does not certify unrelated charged-buff or empower behavior.
@@ -51,12 +52,105 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `spell_cast/class_completeness_probe.rs`: opt-in controlled native-row census.
 - `spell_cast/open_lock.rs`, `game_objects/locks.rs`, `persistence_inventory.rs`: native bag-item lock metadata, ordered alternatives and per-GUID unlock state.
 
+## Immunity definition source compatibility
+
+- [x] The creature-immunity importer reads all235 authentic TDB1210 rows, verifies the pinned full-row fingerprint, and transactionally replaces only `creature_immunities` in an existing database copy. Invalid/incomplete input changes no database state; repeated imports are idempotent. Canonical publication belongs to lead.
+- [x] Native147 resolves its MiscValue0 through authentic creature-immunity definitions before using mechanic/effect immunity and the parent's authored purge flag. Definition IDs are not mistaken for masks. Missing IDs and unmodeled nonzero school/dispel/aura/other definition fields remain named partials.
+- [x] Explicit compatibility requirement: the immunity loader warns and returns empty definitions when the table is absent, without crashing spell loading. Missing definition IDs remain named unsupported inputs; no immunity masks are invented from the aura147 ID itself.
+- [x] Effect and mechanic immunity remove only the immune effects from a target. The spell still lands its other effects without an immune miss; the immune miss is logged only when no planned effect remains on that target (TC `Spell::AddUnitTarget`, `UpdateSpellCastDataTargets`).
+- [ ] Knockback/pull effects98/124/144/145 are not executed, so the definition effect-list filter has no observable runtime boundary yet; it is not certified as knockback immunity.
+
+## Fear control state
+
+- [x] Native aura7 makes the unit fleeing: its cast stops, auto-attacks stop, a creature shows no target and stops chasing, and a fleeing victim cannot dodge, parry or block. Removal restores swings and the creature's target.
+- [x] A fleeing caster fails with "Can't do that while fleeing" unless the spell purges every active fear effect through its own mechanic, school or definition immunity (Attr1 ImmunityPurgesEffect). Spells with Attr5 AllowWhileFleeing pass only when each fear spell's mechanics intersect the spell's allowed mechanics, including TC's Barkskin/Dispersion/Lichborne cases.
+- [ ] Flee movement (TC FleeingMovementGenerator) is pending a direction decision: pinned TC adds the owner's orientation to the away-from-caster angle. Aura7 therefore remains an unhandled census type. Player client-control loss is not modelled.
+
+## Armor percentage
+
+- [x] Native aura101 with the physical bit multiplies final armor as TC's armor TOTAL_PCT: after base/gear and stat-derived armor, alongside aura466, with independent auras multiplying. Creatures (including level-scaled ones) multiply their armor before the attacker-level armor multiplier. Removal restores the remaining factors. Nonphysical resistance bits are logged unmodelled.
+
+## Class trans-door portals
+
+- [x] All 29 native class TRANS_DOOR (effect50) spells spawn their authored TDB type22 spellcaster objects; an absent template fails cast admission with its reason instead of silently succeeding.
+
+## Dual wield and parry knowledge
+
+- [x] Knowing a native SPELL_EFFECT_DUAL_WIELD (40) spell permits one-hand and off-hand weapons in the off hand; without it they fail with CantDualWield, and auto-equip offers only the main hand. One-hand polearms never fit the off hand.
+- [ ] When a player stops knowing Dual Wield (spec/talent change), TC moves the off-hand weapon to the bags or mails it (OffhandCheckAtSpellUnlearn defaults on). Not yet modelled.
+- [x] Knowing any of the six native SPELL_EFFECT_PARRY (22) spells enables parry; without one, parry chance never applies.
+
+## Melee attack speed
+
+- [x] Native aura319 multiplies melee swing time by 100/(100+amount) per aura (negative amounts by (100−amount)/100) for players and creatures, independently of haste and cast time.
+
+## Tiger Dash decay
+
+- [x] Native Tiger Dash 252216 starts at its effect0 run-speed bonus and loses effect1's amount on every 500 ms periodic tick (TC spell_dru_tiger_dash_aura); expiry restores normal speed.
+
+## Bloodsurge
+
+- [x] Native Bloodsurge 384361 rolls every 3 s periodic tick with chance sqrt(units carrying the warrior's own Rend 388539 within 50 yd) × its amount and energizes 384362 on success; Rends from another caster do not count.
+
+## Demon Hunter Metamorphosis toggles
+
+- [x] Monster Rising 452414 and Enduring Torment 452410 apply their buff (452550, 453314) on each 1 s tick outside Metamorphosis (Havoc/Vengeance, Havoc/Devourer) and remove it inside. A player's 453314 keeps effects 0–1 only as Havoc and 2–3 only as Devourer.
+
+## Periodic class proc hooks
+
+- [x] Combat Wisdom 121817 casts Power Strike Proc 129914 on each effect-0 tick, immediately on the first due tick (authored ExtraInitialPeriod) and then every 15 s. Effect 1 remains unmodeled.
+- [x] Power Strike Proc 129914 casts native 121283 for one Chi on its authored melee-ability proc event and consumes its one charge; a later ability cannot trigger the spent proc.
+- [x] Critical Chaos 320413 adds effect 1's percentage of the owner's crit chance to Chaos Strike's proc chance on application and recalculates it on each 1 s effect-1 tick. Chaos Strike's refund roll consumes that live modifier once per landed root, not per weapon child.
+
+## Raid-area healing
+
+- [x] For player casts, native selector 56 selects living members of the caster's party/raid and their controlled units in range and the same map copy, not just the caster. ExcludeCaster applies before caps.
+- [x] Ysera's Gift group heal 145110 selects one target, preferring injured players over full-health members; outsiders and the caster are excluded. Charmed controllers and NPCs marked TreatAsRaidUnit through unmodeled CreatureStaticFlags remain outside this proof.
+
+## Ysera's Gift periodic healing
+
+- [x] Native passive 145108's effect-0 tick heals 3% of the owner's live maximum health every 5 s, through 145109 when the owner is injured and 145110 when full. The first tick is delayed by the authored period.
+- [x] Both heal children honor Can'tCrit even with 100% crit; normal health clamping and overflow logging remain intact. Unlearning the passive removes its ticks.
+
+## Critical-damage bonuses
+
+- [x] Aura163 multiplies existing critical-damage paths by every matching school-mask effect once, including mixed-school hits and melee auto-attacks; it does not modify critical healing.
+- [x] Know Your Enemy388118 calculates effect0 from effect1's native40% of the owner's crit on application and every1s effect1 tick; live damage consumes the recalculated amount.
+- [x] Penetrating Shots459783 calculates effect0 from effect1's native25% of the owner's crit on application and every1s effect1 tick; real ranged critical damage consumes the live bonus. Noncritical damage and healing remain unchanged; unlearning removes the bonus.
+- [x] CritDamageAndHealing spell modifiers precede aura163 for weapon attacks and follow its critical bonus for magic. Existing floating damage/final-rounding behavior is retained; exact Retail intermediate-integer parity is not asserted.
+
+## Category cooldown modifiers
+
+- [x] Aura341 sums signed milliseconds for the spell's native nonzero category and applies after cooldown spellmods/haste to each positive spell/category cooldown, clamping at zero. It does not create cooldowns for zero-duration entries, retime running cooldowns or alter charge recovery.
+- [x] Native Quick Witted382297 reduces Counterspell2139 category88 lockout from25s to20s; real casts remain blocked before recovery and succeed afterward.
+
 ## Tests asserting this spec
+
+- `crates/server/src/auras/crit_damage_bonus_tests.rs`: actual static/mixed-school damage, magic/weapon spellmod ordering, dynamic crit percentage, auto-attacks and no crit-heal leakage.
+
+- `crates/server/src/auras/yseras_gift_tests.rs`: native timing, owner-max scaling, self/group switching, unlearning, overflow and Can'tCrit.
+
+- `crates/server/src/spell_cast/raid_area_tests.rs`: real native group healing, one target and injured-member priority.
+
+- `crates/server/src/auras/power_strike_tests.rs`, `critical_chaos_tests.rs`: native periodic proc application and live crit-scaled proc modifier.
+
+- `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
+- `crates/server/src/spell_info/immunity_tests.rs`: authentic definition1733 root purge/admission, explicitly requested absent-table compatibility, and native1887/1733 partial versus whole-target immunity with Tail Swipe and Thunderstorm.
 
 - `crates/server/src/spell_cast/class_completeness_tests.rs`: native owner/label, charge/cooldown, level80 resources and immune/partial-school boundaries.
 - `crates/server/src/spell_cast/class_completeness_probe.rs`: executed membership receipts (manifest supplied explicitly).
 - `crates/server/src/spell_cast/bonus_armor_tests.rs`: native466 factors, actual physical damage, removal/expiry, zero class fields and final rounding.
 - `crates/server/src/spell_cast/cast_while_moving_tests.rs`: native330 masks, real cast/channel damage, live cast permission gain/removal/expiry and metadata veto controls.
+- `crates/server/src/auras/fear_tests.rs`: native fear swings/target/removal, Slam/Berserker Rage/Will of the Forsaken/Barkskin admission against Intimidating Shout, Sleep Walk and Turn Evil, and fleeing dodge loss.
+- `crates/server/src/spell_cast/resistance_pct_tests.rs`: native Armor Specialization/Reinforced Plates player armor with aura466, removal, and level-scaled creature mitigation.
+- `crates/server/src/spell_cast/portal_tests.rs`: all29 class trans-door spawns and absent-template admission failure.
+- `crates/server/src/inventory_tests.rs`: native Dual Wield off-hand admission, rejection and auto-equip.
+- `crates/server/src/auras/defensives_tests.rs`: six native Parry spells versus none.
+- `crates/server/src/spell_cast/attack_speed_tests.rs`: native Ruthless Aggression/Swift as a Coursing River creature swing intervals and unchanged Fireball cast time.
+- `crates/server/src/auras/tiger_dash_tests.rs`: native Tiger Dash per-tick decay and expiry.
+- `crates/server/src/auras/bloodsurge_tests.rs`: native Bloodsurge certain (12 owned Rends) and zero-chance (none, foreign) controls.
+- `crates/server/src/auras/monster_rising_tests.rs`, `enduring_torment_tests.rs`: native tick toggles, Metamorphosis removal/return and spec-filtered buff effects.
+- `crates/server/src/spell_cast/melee_crit_taken_tests.rs`: native187 real damage, victim ownership, additive fields, expiry/removal, positive and ranged/magic controls.
 - `crates/server/src/spell_cast/mechanic_duration_tests.rs`: native232/234 stacking, mixed signs, actual clocks/expiry, integer arithmetic and named source-gap exclusions.
 - Existing targeted resource/regen/generator tests remain bounded proofs, not every talent combination.
 

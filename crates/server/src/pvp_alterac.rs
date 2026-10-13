@@ -373,6 +373,7 @@ fn apply_player_loss(
     matched.instance.deduct_reinforcements(team, 1);
     if let Some(row) = matched
         .scoreboard
+        .rows
         .iter_mut()
         .find(|row| row.character_id == character)
     {

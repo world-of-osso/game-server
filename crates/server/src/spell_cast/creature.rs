@@ -53,6 +53,19 @@ pub(crate) fn creature_cast(
     Ok(())
 }
 
+/// TC source flag0x2: ordinary cast except SpellHistory::IsReady/HandleCooldowns.
+/// GCD, cast time, caster-aura and power checks remain independent.
+pub(crate) fn creature_cast_ignoring_cooldowns(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    spell.cast_ignore_cooldowns = true;
+    start_cast(world, caster, &spell, explicit, None)
+}
+
 /// TC TRIGGERED_IGNORE_CAST_IN_PROGRESS: retain cast time, costs, cooldowns,
 /// caster-aura and school checks; only permit a concurrent scripted cast.
 pub(crate) fn creature_cast_ignoring_in_progress(
@@ -77,9 +90,33 @@ fn load_creature_cast(
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
-    let needs_unit = targets::explicit_requirement(handled_effects(&spell)).is_some();
-    let explicit = target.or_else(|| needs_unit.then(|| victim(world, caster)).flatten());
+    let requirement = targets::explicit_requirement(handled_effects(&spell));
+    let explicit = target.or_else(|| default_scripted_target(world, caster, requirement));
     Ok((spell, explicit))
+}
+
+/// TC Spell.cpp621–664 InitExplicitTargets: player selection / creature victim,
+/// then caster for a non-enemy unit requirement. Explicit requests are unchanged.
+fn default_scripted_target(
+    world: &World,
+    caster: Entity,
+    requirement: Option<targets::Relation>,
+) -> Option<Entity> {
+    let relation = requirement?;
+    let selected = if world.get::<shared::components::Player>(caster).is_some() {
+        world
+            .get::<crate::networking::CombatTarget>(caster)
+            .and_then(|target| target.0)
+            .filter(|&target| {
+                world.get::<shared::components::Health>(target).is_some()
+                    && targets::relation_matches(world, caster, target, relation)
+            })
+    } else if relation == targets::Relation::Ally {
+        None
+    } else {
+        victim(world, caster)
+    };
+    selected.or_else(|| (relation != targets::Relation::Enemy).then_some(caster))
 }
 
 /// `AISpellInfoType::target` (`UnitAI::FillAISpellInfo`), which `DoCast(spellId)`

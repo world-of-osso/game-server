@@ -208,6 +208,13 @@ pub struct WorldData {
     pub spawn_groups: crate::spawn_groups::SpawnGroups,
     /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
     pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
+    /// TDB `creature_template.StringId` keyed by entry.
+    pub(crate) template_string_ids: HashMap<u32, String>,
+    /// TDB `creature.StringId` keyed by content spawn guid.
+    pub(crate) spawn_string_ids: HashMap<u32, String>,
+    /// Members of the manual spawn groups ported scripts spawn (`SpawnGroupSpawn`),
+    /// keyed by group; copy fill withholds them.
+    pub(crate) script_spawn_groups: HashMap<u32, Vec<u32>>,
 }
 
 impl WorldData {
@@ -238,15 +245,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let spawns = load_spawns(&conn);
     let spawns_by_map = build_spawns_by_map(&spawns);
     let waypoints = load_waypoints(&conn);
-    let addons = load_addons(
-        &conn,
-        "SELECT guid, path_id, mount, auras, bytes1, bytes2, emote FROM content_creature_addon",
-    );
-    let template_addons = load_addons(
-        &conn,
-        "SELECT entry, path_id, mount, auras, bytes1, bytes2, emote
-         FROM content_creature_template_addon",
-    );
+    let addons = load_spawn_addons(&conn);
+    let template_addons = load_template_addons(&conn);
     let formations = load_formations(&conn);
     let equipment = load_equipment(&conn);
     let class_level_base_hp = load_class_level_base_hp(&conn);
@@ -257,6 +257,13 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let spawn_groups = crate::spawn_groups::SpawnGroups::load(&conn)
         .unwrap_or_else(|error| panic!("Failed to load TDB spawn groups: {error}"));
     let vignettes = crate::vignettes::load_creature_vignettes(&conn);
+    let template_string_ids =
+        load_template_string_ids(&conn).expect("Failed to load TDB creature_template.StringId");
+    let spawn_string_ids =
+        load_spawn_string_ids(&conn).expect("Failed to load TDB creature.StringId");
+    let script_spawn_groups =
+        load_script_spawn_groups(&conn, crate::scripted_ai::SCRIPT_SPAWN_GROUPS)
+            .expect("Failed to load script-owned TDB spawn groups");
 
     info!(
         "WorldData loaded: {} templates, {} spawns, {} maps, {} waypoint paths, {} addons, {} formation members",
@@ -284,7 +291,55 @@ pub fn load_world_data(path: &Path) -> WorldData {
         pools,
         spawn_groups,
         vignettes,
+        template_string_ids,
+        spawn_string_ids,
+        script_spawn_groups,
     }
+}
+
+/// `import_instance_population.OFFSET`: content guid of a TDB creature row.
+const TDB_GUID_OFFSET: u32 = 20_000_000;
+
+pub(crate) fn load_template_string_ids(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<u32, String>> {
+    conn.prepare("SELECT entry, StringId FROM tdb_creature_template WHERE StringId <> ''")?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect()
+}
+
+pub(crate) fn load_spawn_string_ids(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
+    conn.prepare(
+        "SELECT creature.guid, tdb.StringId FROM content_creature creature
+         JOIN tdb_creature tdb ON creature.guid = tdb.guid + ?1 AND creature.id1 = tdb.id
+         WHERE tdb.StringId <> ''",
+    )?
+    .query_map([TDB_GUID_OFFSET], |row| Ok((row.get(0)?, row.get(1)?)))?
+    .collect()
+}
+
+pub(crate) fn load_script_spawn_groups(
+    conn: &Connection,
+    groups: &[u32],
+) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
+    let mut query = conn.prepare(
+        "SELECT creature.guid FROM tdb_spawn_group grp
+         JOIN tdb_spawn_group_template template USING(groupId)
+         JOIN content_creature creature ON creature.guid = grp.spawnId + ?2
+         WHERE grp.groupId = ?1 AND grp.spawnType = 0 AND template.groupFlags & 4",
+    )?;
+    groups
+        .iter()
+        .map(|&group| {
+            let guids = query
+                .query_map([group, TDB_GUID_OFFSET], |row| row.get(0))?
+                .collect::<rusqlite::Result<Vec<u32>>>()?;
+            if guids.is_empty() {
+                error!("script spawn group {group} has no manual-spawn content creatures");
+            }
+            Ok((group, guids))
+        })
+        .collect()
 }
 
 fn creature_stats(row: &Row) -> rusqlite::Result<CreatureStats> {
@@ -663,7 +718,7 @@ pub(crate) fn load_spawn(conn: &Connection, guid: u32) -> rusqlite::Result<Creat
     )
 }
 
-fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
+pub(crate) fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
     // No events are activated yet. Negative memberships spawn while inactive.
     let mut stmt = conn
         .prepare(&format!(
@@ -686,7 +741,7 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
         .collect()
 }
 
-fn build_spawns_by_map(spawns: &[CreatureSpawn]) -> HashMap<u16, Vec<usize>> {
+pub(crate) fn build_spawns_by_map(spawns: &[CreatureSpawn]) -> HashMap<u16, Vec<usize>> {
     let mut map: HashMap<u16, Vec<usize>> = HashMap::new();
     for (idx, spawn) in spawns.iter().enumerate() {
         map.entry(spawn.map).or_default().push(idx);
@@ -776,6 +831,23 @@ fn parse_addon_auras(text: &str) -> Vec<u32> {
         }
     }
     auras
+}
+
+/// `content_creature_addon` keyed by spawn guid.
+pub(crate) fn load_spawn_addons(conn: &Connection) -> HashMap<u32, CreatureAddon> {
+    load_addons(
+        conn,
+        "SELECT guid, path_id, mount, auras, bytes1, bytes2, emote FROM content_creature_addon",
+    )
+}
+
+/// `content_creature_template_addon` keyed by template entry.
+pub(crate) fn load_template_addons(conn: &Connection) -> HashMap<u32, CreatureAddon> {
+    load_addons(
+        conn,
+        "SELECT entry, path_id, mount, auras, bytes1, bytes2, emote
+         FROM content_creature_template_addon",
+    )
 }
 
 fn load_addons(conn: &Connection, sql: &str) -> HashMap<u32, CreatureAddon> {
@@ -990,6 +1062,27 @@ fn startup_load_world_data(mut commands: Commands) {
         maps.area_triggers.len()
     );
     commands.insert_resource(maps);
+    commands.insert_resource(
+        crate::scripted_ai::ragefire_chasm::gordoth_intro::load_trigger(&conn)
+            .expect("Failed to load authored Gordoth intro area7899 from local DB2/TDB"),
+    );
+    commands.insert_resource(
+        crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn)
+            .expect("Failed to load authored Molten Gold area12928 from local TDB"),
+    );
+    commands.insert_resource(
+        crate::scripted_ai::kings_rest::load_gust_slash_shape(&conn).expect(
+            "Failed to load Gust Slash area13339 and its orbit; run scripts/import-battlegrounds.py",
+        ),
+    );
+    commands.insert_resource(
+        crate::scripted_ai::kings_rest::load_gold_model_reaches(&conn)
+            .expect("Failed to load authored Kings' Rest model combat reaches"),
+    );
+    commands.insert_resource(
+        crate::scripted_ai::waypoint_path::load_script_paths(&conn)
+            .expect("Failed to load TDB waypoint paths for scripted MovePath"),
+    );
     let achievements = crate::achievement::load_achievement_catalog(&conn)
         .expect("Failed to load achievements; run scripts/import_achievements.py with locally extracted DB2s");
     let scenarios = crate::achievement::load_scenarios(&conn, &achievements).expect(

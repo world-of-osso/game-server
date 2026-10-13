@@ -40,6 +40,7 @@ use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
+pub const EFFECT_INSTAKILL: u32 = 1;
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
@@ -53,12 +54,13 @@ pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
 pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
 pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
+pub const EFFECT_SEND_EVENT: u32 = 61;
 pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
 pub const EFFECT_FORCE_CAST: u32 = 140;
-/// TC a352b1fa SharedDefines.h:1549; SpellEffects.cpp:295 uses EffectRemoveAura.
+/// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA: u32 = 164;
 pub const EFFECT_REMOVE_AURA_2: u32 = 203;
 pub const EFFECT_TELEPORT_UNITS: u32 = 252;
@@ -88,6 +90,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 /// APPLY_AURA) are resolved per target by `resolve_effects`, not here.
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
+        EFFECT_INSTAKILL => instakill,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         33 | 95 => crate::gathering::effect_gather,
         EFFECT_HEALTH_LEECH => health_leech,
@@ -106,6 +109,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
         // missile's spell hits the unit target, like TRIGGER_SPELL.
         EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
+        EFFECT_SEND_EVENT => send_game_event,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
@@ -125,6 +129,12 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     })
 }
 
+/// TC EffectInstaKill hit-target branch. The existing Unit::Kill path handles
+/// death/AI/credit once; instakill packet details and player CHEAT_GOD are unmodelled.
+fn instakill(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
+    crate::combat::kill_unit(world, ctx.caster, target);
+}
+
 /// TC EffectKillCreditPersonal/EffectKillCredit: credit the hit player, not the caster
 /// or the NPC hit. Only effect134 shares with that player's nearby group.
 fn quest_kill_credit(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
@@ -141,6 +151,18 @@ fn quest_kill_credit(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, 
     );
 }
 
+/// TC EffectSendEvent → GameEvents::TriggerForPlayer: event is the authored MiscValue.
+pub(super) fn send_game_event(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    _target: Entity,
+) {
+    if let Ok(event) = u32::try_from(effect.misc_values[0]) {
+        crate::achievement::record_player_game_event(world, ctx.caster, event);
+    }
+}
+
 fn attack_me(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
     crate::creature_aggro::taunt(world, target, ctx.caster);
 }
@@ -155,6 +177,9 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
         254 => super::teleport::jump_to_destination,
         crate::game_objects::summoned::EFFECT_TRANSMITTED => {
             crate::game_objects::summoned::spawn_transmitted
+        }
+        crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD => {
+            crate::game_objects::summoned::spawn_wild
         }
         crate::hunter_pet::EFFECT_SUMMON_PET => crate::hunter_pet::effect_summon_pet,
         crate::hunter_pet::EFFECT_RESURRECT_PET => crate::hunter_pet::effect_revive_pet,
@@ -551,7 +576,9 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
                 world.get::<crate::hunter_pet::HunterPet>(target),
                 world.get::<super::summon::SummonedCreature>(target),
             );
+            let modifiers = world.get::<crate::stats::StatModifiers>(target);
             target_scaling.armor_against(armor.0 * multiplier, &caster_scaling)
+                * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
@@ -565,15 +592,64 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
     )
 }
 
-/// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
-fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    if let Some(chance) = super::scripts::crit_chance(world, caster, target, spell.id) {
-        return chance;
+/// TC SpellInfo::IsRangedWeaponSpell; ItemTemplate.h weapon subclass mask.
+fn is_ranged_weapon_spell(spell: &SpellInfo) -> bool {
+    const HUNTER_FAMILY: u32 = 9;
+    const HUNTER_NON_WEAPON_FLAG: u32 = 0x1000_0000;
+    const RANGED_WEAPON_SUBCLASSES: u32 = (1 << 2) | (1 << 3) | (1 << 18);
+    const USES_RANGED_SLOT: u32 = 0x2;
+    let hunter_weapon = spell.class_options.as_ref().is_some_and(|options| {
+        options.spell_class_set == HUNTER_FAMILY
+            && options.spell_class_mask[1] & HUNTER_NON_WEAPON_FLAG == 0
+    });
+    let ranged_item = spell
+        .equipped_items
+        .as_ref()
+        .is_some_and(|items| items.item_subclass & RANGED_WEAPON_SUBCLASSES != 0);
+    hunter_weapon || ranged_item || super::attributes(spell, 0) & USES_RANGED_SLOT != 0
+}
+
+const DEFENSE_MELEE: u32 = 2;
+const DEFENSE_RANGED: u32 = 3;
+
+/// Unit::SpellCritChanceTaken plus SpellInfo::GetAttackType (a352b1fa).
+fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
+    match spell
+        .categories
+        .as_ref()
+        .map(|categories| categories.defense_type)
+    {
+        Some(DEFENSE_MELEE) => true,
+        Some(DEFENSE_RANGED) => !is_ranged_weapon_spell(spell),
+        _ => false,
     }
-    let base = world
-        .get::<CharacterStats>(caster)
-        .map_or(0.0, |stats| stats.crit_pct);
-    spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+}
+
+/// SharedDefines.h:539, SPELL_ATTR2_CANT_CRIT.
+const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
+
+/// CritChance mods and script values precede the victim's melee crit modifier.
+fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT != 0 {
+        return 0.0;
+    }
+    let chance =
+        super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
+            let base = world
+                .get::<CharacterStats>(caster)
+                .map_or(0.0, |stats| stats.crit_pct);
+            spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+        });
+    let modifier = if takes_melee_crit_modifier(spell) {
+        world
+            .get::<crate::auras::ActiveAuras>(target)
+            .map_or(0.0, |auras| {
+                auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
+            })
+    } else {
+        0.0
+    };
+    (chance + modifier).max(0.0)
 }
 
 fn with_crit(
@@ -597,12 +673,57 @@ fn with_crit(
     (amount + bonus, true)
 }
 
+fn uses_weapon_crit_bonus_order(spell: &SpellInfo) -> bool {
+    spell
+        .categories
+        .as_ref()
+        .is_some_and(|categories| matches!(categories.defense_type, DEFENSE_MELEE | DEFENSE_RANGED))
+}
+
+/// TC Unit.cpp:1222-1237/7297-7324:163 multiplies the whole critical hit;
+/// CritDamageAndHealing mods apply before163 for weapons, after163 for magic.
+fn with_damage_crit(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+) -> (f32, bool) {
+    let crit = rand::random::<f32>() * 100.0 < crit_chance(world, caster, target, spell);
+    if !crit {
+        return (amount, false);
+    }
+    let multiplier = world
+        .get::<AuraStatMods>(caster)
+        .map_or(1.0, |mods| mods.critical_damage(spell.school_mask()));
+    let weapon_order = uses_weapon_crit_bonus_order(spell);
+    let base_bonus = if weapon_order {
+        amount
+    } else {
+        amount * 2.0 * multiplier - amount
+    };
+    let bonus = spell_mods::modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::CritDamageAndHealing,
+        base_bonus,
+    );
+    let total = amount + bonus;
+    let total = if weapon_order {
+        total * multiplier
+    } else {
+        total
+    };
+    (total, true)
+}
+
 fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, amount);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
@@ -611,7 +732,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let normalized = effect.effect == EFFECT_NORMALIZED_WEAPON_DMG;
     let base =
         (weapon_hit(world, ctx.caster, normalized) + effect.base_points) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
@@ -619,7 +740,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let base =
         weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0 * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
@@ -749,7 +870,7 @@ fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_leech(world, ctx, effect, target, amount, crit, false);
 }
 
@@ -859,6 +980,7 @@ fn deal_damage_and_report(
         crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, incoming_loss);
     }
     let lethal = crate::auras::apply_attack_damage(world, target, loss);
+    crate::achievement::record_damage(world, ctx.caster, target, before, amount, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
     }
@@ -1031,6 +1153,7 @@ fn apply_resolved_heal(
     }
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
+    crate::achievement::record_healing(world, ctx.caster, target, amount, effective);
     crate::creature_aggro::add_healing_threat(
         world,
         ctx.caster,
@@ -1118,7 +1241,7 @@ fn dispel(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Enti
     crate::auras::dispel(world, &event, dispel_type, count);
 }
 
-/// 203 REMOVE_AURA_2 (`Spell::EffectRemoveAura`, TC a352b1fa
+/// 164 REMOVE_AURA / 203 REMOVE_AURA_2 (`Spell::EffectRemoveAura`, TC a352b1fa
 /// SpellEffects.cpp:5154-5163): remove all target auras of `TriggerSpell`,
 /// regardless of their caster (`RemoveAurasDueToSpell`'s default remove mode).
 fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
@@ -1131,6 +1254,59 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
 }
 
 /// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
+/// TC EffectTriggerMissileSpell HIT mode (SpellEffects.cpp:757-788), distinct from
+/// the existing HIT_TARGET handler: forward destination, retaining child costs.
+pub(super) fn trigger_missile_at_destination(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+) {
+    if ctx.depth >= MAX_TRIGGER_DEPTH {
+        warn!("Spell {} missile child exceeds trigger depth", ctx.spell.id);
+        return;
+    }
+    let Some(destination) = ctx.dest else {
+        warn!("Spell {} missile child has no destination", ctx.spell.id);
+        return;
+    };
+    let Some(mut child) = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(effect.trigger_spell)
+        .cloned()
+    else {
+        warn!(
+            "Spell {} missile child {} missing",
+            ctx.spell.id, effect.trigger_spell
+        );
+        return;
+    };
+    child.cast_destination = Some(destination.position.to_array());
+    child.cast_item_level = ctx.spell.cast_item_level;
+    if let Err(error) = cast_destination_missile_child(world, ctx.caster, &child, ctx.depth + 1) {
+        warn!(
+            "Spell {} missile child {} failed: {error:?}",
+            ctx.spell.id, child.id
+        );
+    }
+}
+
+fn cast_destination_missile_child(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+) -> Result<(), super::CastFailure> {
+    // TC uses FULL_MASK except IGNORE_POWER_COST/IGNORE_REAGENT_COST.
+    let costs = super::spell_costs(world, caster, spell)?;
+    crate::profession::check_cast_items(world, caster, spell)?;
+    let plan = super::plan_targets(world, caster, spell, Some(caster), true)?;
+    super::spend_costs(world, caster, &costs);
+    crate::profession::take_reagents(world, caster, spell);
+    crate::achievement::record_spell_cast(world, caster, spell.id);
+    super::missiles::launch(world, caster, spell, plan, depth);
+    Ok(())
+}
+
 fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     super::cast_triggered_with_item_level(
         world,

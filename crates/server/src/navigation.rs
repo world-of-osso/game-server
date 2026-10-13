@@ -12,6 +12,7 @@ const TELEPORT_DISTANCE: f32 = 2.0;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Goal {
     Chase(u64),
+    Follow(u64),
     Home,
     Waypoint(u32, usize),
 }
@@ -158,7 +159,11 @@ impl Navigation {
 impl Route {
     fn reusable(&self, request: &MoveRequest) -> bool {
         let same_goal = self.map_id == request.map_id && self.goal == request.goal;
-        let target_is_current = self.destination.distance(point(request.to)) <= REPATH_DISTANCE;
+        let target_is_current = if matches!(request.goal, Goal::Follow(_)) {
+            self.destination == point(request.to)
+        } else {
+            self.destination.distance(point(request.to)) <= REPATH_DISTANCE
+        };
         let position_is_current =
             horizontal(self.expected_from - point(request.from)) <= TELEPORT_DISTANCE;
         same_goal && target_is_current && position_is_current

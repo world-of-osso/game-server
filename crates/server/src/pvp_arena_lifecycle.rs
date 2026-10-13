@@ -46,6 +46,7 @@ pub(super) fn update_matches(world: &mut World) {
             .filter_map(|(id, matched)| update_match(matched, &actors, now).then_some(*id))
             .collect::<Vec<_>>()
     });
+    super::arena_shuffle::reset_pending_rounds(world);
     super::arena_preparation::sync_preparation(world);
     super::arena_objects::update_gates(world, now);
     super::arena_sight::update_sight(world, now);
@@ -137,7 +138,8 @@ fn update_match(
                     && actors.get(id).is_some_and(|actor| actor.map == map)
             })
     });
-    if matched.instance.phase == BgPhase::Waiting && ready {
+    if matched.instance.phase == BgPhase::Waiting && (ready || arena.preparation_started.is_some())
+    {
         let start = *arena.preparation_started.get_or_insert(now);
         let remaining = (60.0 - (now - start)).ceil().max(0.0) as u32;
         arena.snapshot.preparation_remaining_secs = Some(remaining);
@@ -164,8 +166,8 @@ fn update_match(
             })
         })
         .collect();
-    if matched.scoreboard.is_empty() && ready {
-        matched.scoreboard = arena
+    if matched.scoreboard.rows.is_empty() && ready {
+        matched.scoreboard.rows = arena
             .snapshot
             .units
             .iter()
@@ -186,13 +188,18 @@ fn update_match(
             .collect();
     }
     if matched.instance.phase == BgPhase::InProgress {
-        for score in &mut matched.scoreboard {
+        let shuffle = arena.shuffle.is_some();
+        for score in &mut matched.scoreboard.rows {
             // TC Battleground.cpp:1359 counts combat deaths, not living departures.
             if actors
                 .get(&score.character_id)
                 .is_some_and(|actor| actor.map == map && actor.unit.health == 0)
             {
-                score.deaths = 1;
+                if shuffle {
+                    score.deaths += 1;
+                } else {
+                    score.deaths = 1;
+                }
             }
         }
         // TC checks gold first. Simultaneous elimination therefore awards green,
@@ -205,18 +212,42 @@ fn update_match(
                 .filter(|unit| unit.team == team && unit.health > 0)
                 .count()
         };
-        let outcome = if alive(BgTeam::A) == 0 && !matched.instance.team_b_players.is_empty() {
+        let defeated = |team| {
+            if shuffle {
+                arena
+                    .snapshot
+                    .units
+                    .iter()
+                    .filter(|unit| unit.team == team)
+                    .any(|unit| {
+                        actors
+                            .get(&unit.character_id)
+                            .is_some_and(|actor| actor.map == map && actor.unit.health == 0)
+                    })
+            } else {
+                alive(team) == 0
+            }
+        };
+        let outcome = if defeated(BgTeam::A) && !matched.instance.team_b_players.is_empty() {
             Some(BgOutcome::Winner(BgTeam::B))
-        } else if !matched.instance.team_a_players.is_empty() && alive(BgTeam::B) == 0 {
+        } else if !matched.instance.team_a_players.is_empty() && defeated(BgTeam::B) {
             Some(BgOutcome::Winner(BgTeam::A))
         } else {
             None
         };
-        if let Some(outcome) = outcome {
-            matched.instance.end(outcome);
-        }
         arena.snapshot.shadow_sight_available =
             arena.started.is_some_and(|start| now - start >= 90.0);
+        if let Some(outcome) = outcome {
+            if shuffle {
+                if let BgOutcome::Winner(winner) = outcome {
+                    super::arena_shuffle::finish_round(matched, winner);
+                }
+            } else {
+                matched.instance.end(outcome);
+            }
+        }
     }
-    scores_changed || previous != arena.snapshot || old_phase != matched.instance.phase
+    scores_changed
+        || previous != matched.arena.as_ref().expect("arena").snapshot
+        || old_phase != matched.instance.phase
 }

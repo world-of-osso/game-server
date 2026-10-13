@@ -13,9 +13,15 @@
 //! See `docs/wiki/systems/spell-casting.md`.
 
 #[cfg(test)]
+mod achievement_damage_tests;
+#[cfg(test)]
+mod achievement_healing_tests;
+#[cfg(test)]
 mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
+#[cfg(test)]
+mod attack_speed_tests;
 #[cfg(test)]
 mod base_armor_tests;
 pub(crate) mod blooming_infusion;
@@ -30,6 +36,8 @@ mod cast_while_moving_tests;
 mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
+#[cfg(test)]
+mod category_cooldown_tests;
 #[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
@@ -108,6 +116,8 @@ mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
 #[cfg(test)]
+mod melee_crit_taken_tests;
+#[cfg(test)]
 mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;
@@ -120,7 +130,11 @@ mod portal_tests;
 pub mod powers;
 #[cfg(test)]
 mod protective_growth_tests;
+#[cfg(test)]
+mod raid_area_tests;
 mod reflect;
+#[cfg(test)]
+mod resistance_pct_tests;
 mod resources;
 pub mod runes;
 pub mod scripts;
@@ -158,7 +172,8 @@ use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_in_progress,
+    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
+    creature_cast_ignoring_in_progress,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -184,6 +199,10 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
+mod arena_cooldowns;
+pub(crate) use arena_cooldowns::reset_arena_cooldowns;
+#[cfg(test)]
+mod arena_cooldown_tests;
 mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
@@ -193,15 +212,20 @@ mod knockback;
 mod knockback_tests;
 mod school_costs;
 pub(crate) mod teleport;
-mod teleport_positions;
+pub(crate) mod teleport_positions;
+mod toy_coin;
+mod toy_foam_sword;
 pub(crate) mod toy_scripts;
+mod toy_weather;
+mod toy_wormhole;
 
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::knockback::KnockbackPlugin);
-        app.init_resource::<disenchant::DisenchantData>()
+        app.init_resource::<crate::group::GroupRegistry>()
+            .init_resource::<disenchant::DisenchantData>()
             .add_systems(Startup, (disenchant::load_startup, open_lock::load_startup))
             .init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
@@ -247,6 +271,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    toy_coin::catch_landed_coins.after(advance_casts),
                 ),
             );
     }
@@ -315,7 +340,10 @@ impl CastFailure {
                 crate::auras::CastBlock::NoActions => {
                     (R::NotSupported, Some("Can't do that right now".into()))
                 }
-                // SPELL_FAILED_CONFUSED has no CastFailReason in shared-protocol yet.
+                // SPELL_FAILED_FLEEING/CONFUSED have no CastFailReason in shared-protocol yet.
+                crate::auras::CastBlock::Fleeing => {
+                    (R::NotSupported, Some("Can't do that while fleeing".into()))
+                }
                 crate::auras::CastBlock::Confused => {
                     (R::NotSupported, Some("Can't do that while confused".into()))
                 }
@@ -385,6 +413,8 @@ impl ChargeState {
 pub struct SpellHistory {
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
+    /// Actual item-use authored durations/categories, which can override SpellInfo.
+    item_cooldown_sources: HashMap<u32, ItemCooldownSource>,
     /// By `StartRecoveryCategory`.
     gcd_ready_at: HashMap<u32, f64>,
     /// By `ChargeCategory`.
@@ -587,6 +617,24 @@ fn channel_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bo
     intrinsic || aura_allows_moving(world, caster, spell)
 }
 
+/// The channel half of `Unit::RemoveAurasWithInterruptFlags` (Unit.cpp:4278-4284): a
+/// channel whose `ChannelInterruptFlags` share `flags` ends (`InterruptNonMeleeSpells`).
+/// Moving and Turning are enforced through `CastState::cast_while_moving` instead.
+pub(crate) fn interrupt_channel_with_flags(world: &mut World, caster: Entity, flags: [u32; 2]) {
+    let Some((spell, CastType::Channel)) = read_active_cast_spell(world, caster) else {
+        return;
+    };
+    let channel_flags = spell
+        .interrupts
+        .as_ref()
+        .map_or([0; 2], |interrupts| interrupts.channel_interrupt_flags);
+    let handled_elsewhere = [CHANNEL_INTERRUPT_MOVING, 0];
+    let matches = (0..2).any(|i| channel_flags[i] & flags[i] & !handled_elsewhere[i] != 0);
+    if matches {
+        cancel_cast(world, caster);
+    }
+}
+
 /// TC Unit::CanCastSpellWhileMoving: native330 uses a family mask, not its amount.
 fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
@@ -737,13 +785,13 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     crate::pvp::record_arena_event(world, &event);
     scripts::record_health_change(world, &event);
     if event.kind == CombatLogKind::Death {
-        let source = event
-            .source
-            .and_then(Entity::try_from_bits)
-            .map(|unit| combat_event_owner(world, unit));
+        let source = event.source.and_then(Entity::try_from_bits);
         let target = event.target.and_then(Entity::try_from_bits);
         if let (Some(killer), Some(victim)) = (source, target) {
-            crate::quest::record_player_kill(world, killer, victim);
+            crate::achievement::record_delivered_killing_blow(world, killer);
+            crate::achievement::record_player_killed_by(world, victim, killer);
+            let owner = combat_event_owner(world, killer);
+            crate::quest::record_player_kill(world, owner, victim);
         }
     }
     let mut players: Vec<Entity> = Vec::new();
@@ -929,15 +977,17 @@ pub(crate) fn cast_granted(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    cast_granted_with_item_level(world, caster, spell_id, target, None)
+    cast_granted_with_item_context(world, caster, spell_id, target, None, None, None)
 }
 
-fn cast_granted_with_item_level(
+fn cast_granted_with_item_context(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
     target: Option<Entity>,
     item_level: Option<u16>,
+    retail_item_id: Option<u32>,
+    item_cooldown: Option<ItemCooldown>,
 ) -> Result<(), CastFailure> {
     let result = world
         .get_resource::<SpellStore>()
@@ -946,6 +996,19 @@ fn cast_granted_with_item_level(
         .ok_or(CastFailure::UnknownSpell)
         .and_then(|mut spell| {
             spell.cast_item_level = item_level;
+            spell.cast_retail_item_id = retail_item_id;
+            if let Some(cooldown) =
+                item_cooldown.filter(|cd| cd.category != 0 && cd.category_ms > 0)
+            {
+                spell
+                    .categories
+                    .get_or_insert_with(Default::default)
+                    .category = cooldown.category;
+                spell
+                    .cooldowns
+                    .get_or_insert_with(Default::default)
+                    .category_recovery_ms = cooldown.category_ms;
+            }
             start_cast(world, caster, &spell, target, None)
         });
     if let Err(failure) = &result {
@@ -961,6 +1024,13 @@ fn cast_granted_with_item_level(
         );
     }
     result
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ItemCooldownSource {
+    recovery_ms: u32,
+    category_ms: u32,
+    category: u32,
 }
 
 /// The cooldown an item effect puts on its spell's category (`ItemEffect`
@@ -982,6 +1052,7 @@ pub(crate) fn cast_item_spell(
     target: Option<Entity>,
     cooldown: ItemCooldown,
     item_level: u16,
+    retail_item_id: Option<u32>,
 ) -> Result<(), CastFailure> {
     let now = now(world);
     let cooling = cooldown.category != 0
@@ -1004,31 +1075,15 @@ pub(crate) fn cast_item_spell(
         );
         return Err(CastFailure::OnCooldown);
     }
-    cast_granted_with_item_level(world, caster, spell_id, target, Some(item_level))?;
-    if cooldown.category != 0 && cooldown.category_ms > 0 {
-        world
-            .entity_mut(caster)
-            .entry::<SpellHistory>()
-            .or_default()
-            .get_mut()
-            .category_ready_at
-            .insert(
-                cooldown.category,
-                now + f64::from(cooldown.category_ms) / 1000.0,
-            );
-        send_to_owner(
-            world,
-            caster,
-            SpellCooldownUpdate {
-                spell_id,
-                category: cooldown.category,
-                duration_ms: cooldown.category_ms,
-                remaining_ms: cooldown.category_ms,
-                is_gcd: false,
-            },
-        );
-    }
-    Ok(())
+    cast_granted_with_item_context(
+        world,
+        caster,
+        spell_id,
+        target,
+        Some(item_level),
+        retail_item_id,
+        Some(cooldown),
+    )
 }
 
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
@@ -1384,11 +1439,16 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
         return Ok(());
     };
     let now = now(world);
-    if history.school_locked(spell.school_mask(), now) {
+    // TC source 0x2 skips SpellHistory::IsReady, including its school/charge
+    // readiness checks; GCD and caster-aura checks are independent.
+    if !spell.cast_ignore_cooldowns && history.school_locked(spell.school_mask(), now) {
         return Err(CastFailure::SchoolLockedOut);
     }
     if history.on_gcd(spell, now) {
         return Err(CastFailure::OnGlobalCooldown);
+    }
+    if spell.cast_ignore_cooldowns {
+        return Ok(());
     }
     if history.on_cooldown(spell, now) {
         return Err(CastFailure::OnCooldown);
@@ -1845,6 +1905,10 @@ pub(crate) fn execute_cast(
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     open_lock::unlock_cast(world, spell)?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
+    if let Some(item) = spell.cast_retail_item_id {
+        // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
+        crate::achievement::record_item_use(world, caster, item);
+    }
     spend_costs(world, caster, &costs);
     scripts::empower_gargoyles(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
@@ -1928,7 +1992,7 @@ type TargetPlan = Vec<PlannedEffect>;
 /// The first effect whose targets `Spell::SelectSpellTargets` selects together with
 /// effect `index` (Spell.cpp:741-781): an effect with the same implicit targets and, for
 /// area selections, the same radii. Its selection (its chain) serves both.
-fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
+fn target_group_leader(world: &World, spell: &SpellInfo, index: usize) -> usize {
     let effect = &spell.effects[index];
     spell.effects[..index]
         .iter()
@@ -1936,9 +2000,14 @@ fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
             other.effect != 0
                 && targets::unsupported_target(other).is_none()
                 && other.implicit_targets == effect.implicit_targets
+                && world
+                    .get_resource::<crate::conditions::SpellTargetConditions>()
+                    .is_none_or(|conditions| {
+                        conditions.share_targets(spell.id, other.index, effect.index)
+                    })
                 && other.attributes & EFFECT_ATTR_PLAYERS_ONLY
                     == effect.attributes & EFFECT_ATTR_PLAYERS_ONLY
-                && (!targets::selects_area(effect)
+                && (!targets::shared_selection_checks_radius(effect)
                     || (other.radius[0] == effect.radius[0] && other.radius[1] == effect.radius[1]))
         })
         .unwrap_or(index)
@@ -2007,6 +2076,13 @@ fn plan_targets(
                 return Err(CastFailure::Unsupported(reason));
             }
         }
+        if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+            if let Some(reason) =
+                crate::game_objects::summoned::wild_unsupported_reason(world, effect)
+            {
+                return Err(CastFailure::Unsupported(reason));
+            }
+        }
         if effect.effect == disenchant::EFFECT_DISENCHANT {
             plan.push(PlannedEffect {
                 index,
@@ -2016,7 +2092,7 @@ fn plan_targets(
             });
             continue;
         }
-        let leader = target_group_leader(spell, index);
+        let leader = target_group_leader(world, spell, index);
         let mut units = match selected.iter().find(|(selected, _)| *selected == leader) {
             Some((_, units)) => units.clone(),
             None => {
@@ -2037,7 +2113,7 @@ fn plan_targets(
             }
         };
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
-            filter(spell, explicit, &mut units);
+            filter(world, spell, explicit, &mut units);
         }
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {
@@ -2081,7 +2157,7 @@ fn resolve_effects(
 ) {
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
-        crate::achievement::record_spell_target(world, unit, spell.id);
+        crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
     }
     for effect in &spell.effects {
         if !selects_targets(spell, effect) {
@@ -2124,6 +2200,18 @@ fn resolve_effects(
                     None => aura_masks.push((unit, 1 << effect.index)),
                 }
             }
+            continue;
+        }
+        // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
+        // hit units, but still cast their child once with the parent's destination.
+        if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
+            effects::trigger_missile_at_destination(world, &ctx, effect);
+            continue;
+        }
+        // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
+        // Unit-targeted events use the normal hit/immunity boundary below.
+        if effect.effect == effects::EFFECT_SEND_EVENT && effect.implicit_targets == [0, 0] {
+            effects::send_game_event(world, &ctx, effect, caster);
             continue;
         }
         // Item unlock is persisted before the cast success receipt; it has no
@@ -2394,31 +2482,67 @@ pub(super) fn cast_triggered_with_item_level(
     depth: u8,
     item_level: Option<u16>,
 ) -> bool {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return false;
+    };
+    spell.cast_item_level = item_level;
+    launch_triggered_spell(world, caster, &spell, explicit, depth)
+}
+
+/// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
+pub(crate) fn cast_triggered_with_effect0_amount(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    amount: f32,
+) {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
+        warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
+        return;
+    };
+    effect.base_points = amount;
+    launch_triggered_spell(world, caster, &spell, explicit, depth);
+}
+
+fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {
     if depth > effects::MAX_TRIGGER_DEPTH {
         warn!(
             "Triggered spell {spell_id} skipped: depth {depth} exceeds {}",
             effects::MAX_TRIGGER_DEPTH
         );
-        return false;
+        return None;
     }
-    let Some(mut spell) = world
+    let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
-        .cloned()
-    else {
+        .cloned();
+    if spell.is_none() {
         warn!("Triggered spell {spell_id} not found");
-        return false;
-    };
-    spell.cast_item_level = item_level;
+    }
+    spell
+}
+
+fn launch_triggered_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> bool {
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
-    match plan_targets(world, caster, &spell, explicit, true) {
+    match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
-            missiles::launch(world, caster, &spell, plan, depth);
+            missiles::launch(world, caster, spell, plan, depth);
             true
         }
         Err(failure) => {
-            warn!("Triggered spell {spell_id} skipped: {failure:?}");
+            warn!("Triggered spell {} skipped: {failure:?}", spell.id);
             false
         }
     }
@@ -2457,31 +2581,75 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
     (duration / haste.max(0.01)).trunc()
 }
 
+/// TC a352b1fa SpellHistory.cpp:469-481: native category341 is independent
+/// of spell class masks and applies after ordinary cooldown/haste modifiers.
+fn category_cooldown_modifier_ms(world: &World, caster: Entity, category: u32) -> f32 {
+    if category == 0 {
+        return 0.0;
+    }
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(caster) else {
+        return 0.0;
+    };
+    let mut total = 0.0;
+    for aura in auras.iter() {
+        for effect in &aura.effects {
+            if effect.aura_type == crate::auras::handlers::MOD_SPELL_CATEGORY_COOLDOWN
+                && u32::try_from(effect.misc_values[0]).ok() == Some(category)
+            {
+                total += (effect.amount * f32::from(aura.stacks)).trunc();
+            }
+        }
+    }
+    total
+}
+
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // SpellHistory::HandleCooldowns returns before consuming a charge or starting
+    // a clock when source flag 0x2 is set. The cast's GCD remains independent.
+    if spell.cast_ignore_cooldowns {
+        return;
+    }
     let now = now(world);
     let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
     let (base_recovery_ms, base_category_ms) = spell
         .cooldowns
         .as_ref()
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let category = spell.categories.as_ref().map_or(0, |c| c.category);
+    let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
     let cooldown = |base: u32| {
         if base == 0 {
             return 0;
         }
         let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
-        haste_regen_cooldown_ms(world, caster, spell, modified)
-            .max(0.0)
-            .round() as u32
+        let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
+        let adjusted = if hasted > 0.0 {
+            hasted + category_modifier_ms
+        } else {
+            hasted
+        };
+        adjusted.max(0.0).round() as u32
     };
     let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
     let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
-    let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
+    if spell.cast_item_level.is_some() {
+        history.item_cooldown_sources.insert(
+            spell.id,
+            ItemCooldownSource {
+                recovery_ms: base_recovery_ms,
+                category_ms: base_category_ms,
+                category,
+            },
+        );
+    } else {
+        history.item_cooldown_sources.remove(&spell.id);
+    }
     // A fully discounted authored cooldown becomes ready now, not at its old deadline.
-    if base_recovery_ms > 0 {
+    if base_recovery_ms > 0 || base_category_ms > 0 {
         history
             .spell_ready_at
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);
@@ -2742,6 +2910,8 @@ mod regen_tests;
 mod rezrtap_tests;
 #[cfg(test)]
 mod rogue_stealth_tests;
+#[cfg(test)]
+mod source_cast_flags_tests;
 #[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]

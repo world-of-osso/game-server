@@ -50,6 +50,8 @@ enum Selector {
     Explicit(Relation),
     ///119: dead party/raid members selected at their stored corpse positions.
     RaidCorpses,
+    ///56: living members of the caster's party/raid (and their controlled units).
+    RaidArea,
     /// Area center = caster (SRC/DEST_CASTER).
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
@@ -68,6 +70,8 @@ enum Selector {
     EntryAreaSource,
     EntryAreaDestination,
     AreaAroundDest(Relation),
+    ///38 UNIT_NEARBY_ENTRY: nearest qualifying unit in the spell's range.
+    NearbyEntry,
     /// Area center = the explicit target's position, the radius behind it.
     DestTargetBack,
     /// The caster's channel target.
@@ -96,7 +100,8 @@ fn selector(id: u32) -> Option<Selector> {
     use Relation::*;
     Some(match id {
         0 | 9 | 17 => Selector::None, // Homebind / spell database destinations handled by teleport.
-        1 | 56 | 120 => Selector::Caster,
+        1 | 120 => Selector::Caster,
+        56 => Selector::RaidArea,
         5 => Selector::Pet,
         119 => Selector::RaidCorpses,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
@@ -122,6 +127,7 @@ fn selector(id: u32) -> Option<Selector> {
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
+        38 => Selector::NearbyEntry,
         28 => Selector::DynObj(Enemy),
         29 => Selector::DynObj(Ally),
         65 => Selector::DestTargetBack,
@@ -402,6 +408,19 @@ pub fn select_targets(
                     ));
                 }
             }
+            Selector::RaidArea => {
+                selected_any = true;
+                let mut candidates = area_units(
+                    world,
+                    caster,
+                    caster_pos,
+                    radius(effect, slot),
+                    Relation::Ally,
+                    0,
+                );
+                candidates.retain(|&unit| shares_raid(world, caster, unit));
+                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
+            }
             Selector::RaidCorpses => {
                 selected_any = true;
                 units.extend(raid_corpses(
@@ -481,14 +500,9 @@ pub fn select_targets(
                 } else {
                     center.unwrap_or(caster_pos)
                 };
-                units.extend(entry_area_units(
-                    world,
-                    caster,
-                    spell,
-                    effect,
-                    origin,
-                    radius(effect, slot),
-                ));
+                let candidates =
+                    entry_area_units(world, caster, spell, effect, origin, radius(effect, slot));
+                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
             }
             Selector::ConeEntry => {
                 selected_any = true;
@@ -499,6 +513,10 @@ pub fn select_targets(
                     effect,
                     radius(effect, slot),
                 ));
+            }
+            Selector::NearbyEntry => {
+                selected_any = true;
+                units.extend(nearby_entry_unit(world, caster, spell, effect));
             }
             Selector::AreaAroundDest(relation) => {
                 selected_any = true;
@@ -517,6 +535,39 @@ pub fn select_targets(
     units = limit_spell_targets(spell, caster, units, 0);
     units.dedup();
     Ok(units)
+}
+
+fn nearby_entry_unit(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> Option<Entity> {
+    let negative = crate::spell_info::positivity::negative_effects(
+        world.resource::<crate::spell_info::SpellStore>(),
+        spell,
+    );
+    let range = spell_range(spell, negative != 0).1;
+    let origin = position(world, caster)?;
+    let candidates = area_units(world, caster, origin, range, Relation::Any, 0);
+    let qualifying = filter_entry_targets(world, candidates, spell.id, effect.index);
+    limit_spell_targets(spell, caster, qualifying, 1)
+        .into_iter()
+        .next()
+}
+
+/// The spell's implicit target conditions for `effect_index` (part of TC CheckTarget).
+fn filter_entry_targets(
+    world: &World,
+    candidates: Vec<Entity>,
+    spell_id: u32,
+    effect_index: u8,
+) -> Vec<Entity> {
+    let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
+    candidates
+        .into_iter()
+        .filter(|&unit| conditions.target_meets(world, spell_id, effect_index, unit))
+        .collect()
 }
 
 pub(super) fn excludes_caster(spell: &SpellInfo) -> bool {
@@ -540,6 +591,33 @@ fn limit_spell_targets(
         units.truncate(cap as usize);
     }
     units
+}
+
+fn raid_character(world: &World, unit: Entity) -> Option<u64> {
+    let controller = match world.get::<shared::components::UnitSummonedBy>(unit) {
+        Some(owner) => Entity::try_from_bits(owner.0)?,
+        None => unit,
+    };
+    world
+        .get::<crate::persistence::ClientId>(controller)
+        .map(|id| id.0)
+}
+
+/// TC TARGET_CHECK_RAID uses IsInRaidWith, including a controlled unit's owner.
+fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
+    if caster == target {
+        return true;
+    }
+    let Some(caster_id) = raid_character(world, caster) else {
+        return false;
+    };
+    let Some(target_id) = raid_character(world, target) else {
+        return false;
+    };
+    caster_id == target_id
+        || world
+            .resource::<crate::group::GroupRegistry>()
+            .is_in_same_group(caster_id, target_id)
 }
 
 ///TC a352b1fa SpellInfo.cpp:367/Spell.cpp:9361 selects raid corpse owners.
@@ -989,9 +1067,8 @@ pub(super) fn ground_destination(
     Ok(Some(destination))
 }
 
-/// Whether a slot of `effect` selects units in an area (the selections whose radius
-/// `Spell::SelectSpellTargets` compares: Spell.cpp:757-775).
-pub fn selects_area(effect: &SpellEffect) -> bool {
+/// Nearby/cone/area/line selections whose radii TC compares before sharing targets.
+pub fn shared_selection_checks_radius(effect: &SpellEffect) -> bool {
     effect.implicit_targets.iter().any(|&id| {
         matches!(
             selector(id),
@@ -999,6 +1076,10 @@ pub fn selects_area(effect: &SpellEffect) -> bool {
                 Selector::RaidCorpses
                     | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
+                    | Selector::EntryAreaSource
+                    | Selector::EntryAreaDestination
+                    | Selector::NearbyEntry
+                    | Selector::ConeEntry
                     | Selector::ConeEnemy
                     | Selector::CasterLine
                     | Selector::ConeToDest

@@ -47,6 +47,20 @@ CREATE TABLE `transports` (
   PRIMARY KEY (`guid`)
 ) ENGINE=InnoDB;
 INSERT INTO `transports` VALUES (35,278407,'Sword of Dawn',0,0,0,'transport_seething_shore'),(36,279254,'The warbringer',0,0,0,'transport_seething_shore');
+CREATE TABLE `areatrigger_create_properties_orbit` (
+  `AreaTriggerCreatePropertiesId` int unsigned NOT NULL,
+  `IsCustom` tinyint unsigned NOT NULL,
+  `ExtraTimeForBlending` int NOT NULL DEFAULT '0',
+  `CircleRadius` float NOT NULL DEFAULT '0',
+  `BlendFromRadius` float NOT NULL DEFAULT '0',
+  `InitialAngle` float NOT NULL DEFAULT '0',
+  `ZOffset` float NOT NULL DEFAULT '0',
+  `CounterClockwise` tinyint unsigned NOT NULL DEFAULT '0',
+  `CanLoop` tinyint unsigned NOT NULL DEFAULT '0',
+  `VerifiedBuild` int unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`AreaTriggerCreatePropertiesId`,`IsCustom`)
+) ENGINE=InnoDB;
+INSERT INTO `areatrigger_create_properties_orbit` VALUES (5838,0,0,0,0,0,0,0,1,52129),(13339,0,0,5,0,0,0,0,1,55165);
 '''
 
 
@@ -72,6 +86,7 @@ class BattlegroundImportTests(unittest.TestCase):
                     (35,278407,'Sword of Dawn','transport_seething_shore'),
                     (36,279254,'The warbringer','transport_seething_shore'),
                 ])
+                self.assertEqual(conn.execute('SELECT CircleRadius,BlendFromRadius,CounterClockwise,CanLoop FROM tdb_areatrigger_create_properties_orbit WHERE AreaTriggerCreatePropertiesId=13339').fetchone(), (5.0,0.0,0,1))
 
 
 if __name__ == '__main__':

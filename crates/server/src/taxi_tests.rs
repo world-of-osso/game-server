@@ -561,3 +561,58 @@ fn a_flight_steps_through_its_points_at_the_given_distance() {
     assert!(advance_flight(&mut flight, &mut position, 100.0));
     assert_eq!(position, Vec3::new(10.0, 0.0, 10.0));
 }
+
+#[test]
+fn achievements_criteria_paid_flight_counts_flight_and_copper_but_refusals_do_not() {
+    use crate::achievement::PlayerAchievementState;
+    let Some(mut h) = harness() else { return };
+    let conn = Connection::open(world_db_path().unwrap()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    h.app.init_resource::<crate::maps::ServerClock>();
+    let (player, connection) = (h.player, h.connection);
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    let progress = |h: &Harness, criterion: u32| {
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&criterion)
+            .copied()
+    };
+    let dungar = h.spawn_dungar();
+    h.learn(&[STORMWIND, SENTINEL_HILL]);
+    h.set_gold(4);
+    h.talk_to_dungar(dungar);
+    h.fly_to(dungar, SENTINEL_HILL);
+    assert_eq!(h.failures(), vec![TaxiError::NotEnoughMoney]);
+    // Flight paths taken349 (criterion5305) and Gold spent on travel1146 (3356).
+    assert_eq!((progress(&h, 5305), progress(&h, 3356)), (None, None));
+    h.set_gold(12);
+    h.fly_to(dungar, SENTINEL_HILL);
+    assert!(h.failures().is_empty());
+    assert_eq!(h.gold(), 7);
+    assert_eq!((progress(&h, 5305), progress(&h, 3356)), (Some(1), Some(5)));
+}
+
+#[test]
+fn achievements_criteria_learned_taxi_node_is_a_boolean_node_fact() {
+    let conn = Connection::open(world_db_path().unwrap()).unwrap();
+    let catalog = crate::achievement::load_achievement_catalog(&conn).unwrap();
+    let mut state = crate::achievement::PlayerAchievementState::default();
+    // Khaz Algar Flight Master40430 leaf68170 is TaxiNodes2928 (no hosted Khaz Algar
+    // network, so only the event semantics are exercised here).
+    let event = crate::achievement::CriteriaEvent::LearnTaxiNode(2928);
+    catalog.update(&mut state, event, None, 1);
+    catalog.update(&mut state, event, None, 1);
+    assert_eq!(state.criteria_progress.get(&68170), Some(&1));
+    assert!(!state.criteria_progress.contains_key(&68171));
+}

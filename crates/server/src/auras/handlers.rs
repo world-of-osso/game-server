@@ -29,8 +29,12 @@ pub enum AuraKind {
     DamageFromCaster,
     ///Creature victim selection and caster-specific threat generation.
     Taunt,
+    /// The caster's preferred victim while applied (`fixate.rs`).
+    Fixate,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
     Script,
+    /// Casts its trigger spell on a health-percent crossing (`health_pct_trigger.rs`).
+    HealthTrigger,
     /// Charge-category max/recovery modifier (`charge_mods`).
     ChargeMod,
     /// Blocks casting (`cast_blocker`); MOD_STUN also roots.
@@ -104,9 +108,17 @@ pub const MOD_DECREASE_SPEED: u32 = 33;
 pub const MOD_DODGE_PERCENT: u32 = 49;
 pub const MOD_PARRY_PERCENT: u32 = 47;
 pub const MECHANIC_IMMUNITY: u32 = 77;
+/// MiscValue0 is a creature_immunities row ID, not the mechanics bitmask itself.
+pub const MECHANIC_IMMUNITY_MASK: u32 = 147;
 pub const MOD_ATTACKER_MELEE_HIT_CHANCE: u32 = 184;
 pub const MOD_ATTACKER_RANGED_HIT_CHANCE: u32 = 185;
 pub const MOD_ATTACKER_SPELL_HIT_CHANCE: u32 = 186;
+/// TC HandleModRating applies integer points to every selected CombatRating.
+pub const MOD_RATING: u32 = 189;
+/// The three versatility ratings share one value in our CombatRatings component.
+pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
+/// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
+pub const MOD_ATTACKER_MELEE_CRIT_CHANCE: u32 = 187;
 /// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
 pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
@@ -155,6 +167,8 @@ pub const FLY: u32 = 201;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
 pub const ADV_FLYING: u32 = 446;
+/// Unit::SpellCriticalDamageBonus / CalculateMeleeDamage, school-mask multiplier.
+pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
@@ -165,6 +179,8 @@ pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
 /// TC a352b1fa HandleUnused: viewer-local humanoid appearance, client-side only.
 pub const CHANGE_MODEL_FOR_ALL_HUMANOIDS: u32 = 233;
 pub const MOD_SPEED_SLOW_ALL: u32 = 252;
+/// Melee attack time only (`HandleModMeleeSpeedPct`); no cast-time effect.
+pub const MOD_MELEE_HASTE_3: u32 = 319;
 /// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
 pub const SCREEN_EFFECT: u32 = 260;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
@@ -195,15 +211,21 @@ pub const MOD_ROOT_2: u32 = 455;
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 /// TC a352b1fa SpellHistory::StartCooldown: spell-mask-scoped haste regen.
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
+/// SpellHistory::StartCooldown adds signed milliseconds to matching categories.
+pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
+/// SPELL_AURA_MOD_FIXATE (SpellAuraDefines.h, TrinityCore a352b1fa).
+pub const MOD_FIXATE: u32 = 128;
 pub const LINKED_2: u32 = 285;
 pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
 pub const MOD_BONUS_ARMOR_PCT: u32 = 466;
 pub const MOD_STAT_BONUS_PCT: u32 = 467;
 pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
+/// Physical bit: armor TOTAL_PCT (StatSystem.cpp:273); other schools unmodelled.
+pub const MOD_RESISTANCE_PCT: u32 = 101;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
@@ -226,7 +248,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
+        super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
         MOD_TAUNT => Taunt,
+        MOD_FIXATE => Fixate,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
@@ -246,6 +270,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DECREASE_SPEED
         | MOD_CASTING_SPEED_NOT_STACK
         | MOD_DAMAGE_PERCENT_DONE
+        | MOD_CRIT_DAMAGE_BONUS
         | MOD_THREAT
         | MODIFY_FALL_DAMAGE_PCT
         | MOD_DAMAGE_PERCENT_TAKEN
@@ -265,10 +290,12 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
         | MOD_CRIT_PCT
+        | MOD_RATING
         | MASTERY
         | MOD_STAT_BONUS_PCT
         | MOD_BONUS_ARMOR_PCT
         | MOD_BASE_RESISTANCE_PCT
+        | MOD_RESISTANCE_PCT
         | MOD_MINIMUM_SPEED
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
@@ -277,6 +304,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_MANA_REGEN_PCT
         | MOD_HIT_CHANCE
         | MOD_SPEED_SLOW_ALL
+        | MOD_MELEE_HASTE_3
         | WATER_BREATHING
         | MOD_WATER_BREATHING
         | MOD_INCREASE_ENERGY
@@ -315,13 +343,14 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
         | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
-        | MOD_COOLDOWN_BY_HASTE_REGEN => SpellMod,
+        | MOD_COOLDOWN_BY_HASTE_REGEN
+        | MOD_SPELL_CATEGORY_COOLDOWN => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
-        MECHANIC_IMMUNITY => MechanicImmunity,
+        MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
         MOD_SPELL_DAMAGE_FROM_CASTER | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
         MOD_MAX_CHARGES
@@ -332,6 +361,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_ATTACKER_MELEE_HIT_CHANCE
         | MOD_ATTACKER_RANGED_HIT_CHANCE
         | MOD_ATTACKER_SPELL_HIT_CHANCE
+        | MOD_ATTACKER_MELEE_CRIT_CHANCE
         | DEFLECT_SPELLS
         | IGNORE_HIT_DIRECTION => HitDefense,
         _ => return None,

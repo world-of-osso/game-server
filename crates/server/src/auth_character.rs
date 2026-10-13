@@ -349,7 +349,7 @@ fn handle_select(
     {
         data.health = 0.0;
     }
-    let state = load_selected_character_state(db, character_id, data.race);
+    let state = load_selected_character_state(db, character_id, data.race, data.class);
     let guild = state.guild.clone();
     let player_entity = spawn_player_entity(
         commands,
@@ -401,6 +401,9 @@ fn handle_select(
         }
     }
     insert_world_components(commands, selection.connection, player_entity, character_id);
+    commands.queue(move |world: &mut World| {
+        crate::pvp::reconnect::logged_in(world, player_entity, character_id);
+    });
     send_enter_success(selection.connection, enter_senders, player_entity);
     send_load_terrain(
         selection.connection,
@@ -452,6 +455,7 @@ fn load_selected_character_state(
     db: &GameDatabase,
     character_id: u64,
     race: u8,
+    class: u8,
 ) -> SelectedCharacterState {
     let currencies = persistence::load_currencies(&db.db, character_id);
     let mut pvp = persistence::load_pvp(&db.db, character_id);
@@ -469,7 +473,11 @@ fn load_selected_character_state(
         collections: persistence::load_collections(&db.db, character_id),
         currencies,
         reputation: persistence::load_reputation(&db.db, character_id, || {
-            shared::reputation::CharacterReputation::new_for_race(&default_faction_registry(), race)
+            shared::reputation::CharacterReputation::new_for_player(
+                &default_faction_registry(),
+                race,
+                class,
+            )
         }),
     }
 }

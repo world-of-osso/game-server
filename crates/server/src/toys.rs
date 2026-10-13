@@ -30,7 +30,7 @@ fn load_catalog(mut commands: Commands) {
     info!("Loaded {} Toy.db2 entries", catalog.0.len());
     commands.insert_resource(catalog);
     commands.insert_resource(
-        crate::spell_cast::toy_scripts::load_dice_texts(&conn)
+        crate::spell_cast::toy_scripts::load_toy_texts(&conn)
             .expect("load authored dice BroadcastText rows"),
     );
 }
@@ -58,12 +58,13 @@ pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
 }
 
 fn send_initial(world: &mut World) {
-    let mut query = world.query_filtered::<(Entity, &Authenticated), Added<InWorld>>();
+    let mut query = world.query_filtered::<(Entity, &Authenticated, &PlayerLink), Added<InWorld>>();
     let connections: Vec<_> = query
         .iter(world)
-        .map(|(entity, auth)| (entity, auth.account_id))
+        .map(|(entity, auth, link)| (entity, auth.account_id, link.0))
         .collect();
-    for (connection, account) in connections {
+    for (connection, account, player) in connections {
+        crate::achievement::record_toy_ownership(world, player, account);
         send_snapshot(world, connection, account);
     }
 }
@@ -303,6 +304,7 @@ pub(crate) fn learn_item(
     world
         .resource_mut::<crate::gold::GoldUpdateQueue>()
         .record_items(character_id);
+    crate::achievement::record_toy_ownership(world, player, account);
     broadcast(world, account);
     Ok(true)
 }

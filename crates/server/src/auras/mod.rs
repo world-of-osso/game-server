@@ -18,7 +18,10 @@ pub(crate) mod area_avoidance;
 pub(crate) mod base_armor;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
+mod fear;
+mod fixate;
 pub(crate) mod handlers;
+pub(crate) mod health_pct_trigger;
 pub mod invisibility;
 mod linked;
 pub(crate) mod linked_summon;
@@ -54,7 +57,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub use unit_state::{Confused, is_polymorphed};
+pub use unit_state::{Confused, Feared, is_polymorphed};
 pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
@@ -121,6 +124,7 @@ impl Plugin for AuraPlugin {
                     sync_passive_auras,
                     update_auras,
                     procs::process_aura_events,
+                    health_pct_trigger::trigger_on_health_pct,
                     sync_unit_auras,
                 )
                     .chain()
@@ -162,6 +166,7 @@ pub struct AuraApplication {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuraEffectState {
     pub index: u8,
+    pub immunity: Option<Box<crate::spell_info::SpellImmunityDefinition>>,
     pub aura_type: u32,
     /// Per-stack amount computed at application: `BasePoints` with the
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
@@ -310,10 +315,15 @@ impl ActiveAuras {
         self.has_type(handlers::MOD_CONFUSE)
     }
 
-    /// `UNIT_STATE_CANNOT_AUTOATTACK`: stunned or confused (fear and charges are
-    /// not modelled).
+    /// Under a `SPELL_AURA_MOD_FEAR` effect (TrinityCore `UNIT_STATE_FLEEING`).
+    pub fn is_feared(&self) -> bool {
+        self.has_type(handlers::MOD_FEAR)
+    }
+
+    /// `UNIT_STATE_CANNOT_AUTOATTACK`: stunned, confused or fleeing (charges are not
+    /// modelled).
     pub fn cannot_auto_attack(&self) -> bool {
-        self.is_stunned() || self.is_confused() || self.is_pacified()
+        self.is_stunned() || self.is_confused() || self.is_feared() || self.is_pacified()
     }
 
     pub fn is_pacified(&self) -> bool {
@@ -508,6 +518,7 @@ fn build_effect(
     };
     AuraEffectState {
         index: effect.index,
+        immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
         misc_values: effect.misc_values,
@@ -618,9 +629,19 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
         let duration_gap = mechanic_duration::positive_source_gap(effect)
             || mechanic_duration::invalid_mechanic_source_gap(effect);
         let duration_supported = !duration_gap;
-        let handled =
-            handlers::is_handled(effect.aura_type) && supported_amount && duration_supported;
-        if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
+        let immunity_supported = effect.aura_type != handlers::MECHANIC_IMMUNITY_MASK
+            || effect
+                .immunity
+                .as_ref()
+                .is_some_and(|definition| !definition.has_unmodeled_fields());
+        let handled = handlers::is_handled(effect.aura_type)
+            && supported_amount
+            && duration_supported
+            && immunity_supported;
+        if handled
+            || scripts::consumes_named_field(aura.spell_id, effect.index)
+            || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
+        {
             continue;
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
@@ -635,6 +656,19 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
 }
 
 fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if effect.aura_type == handlers::MECHANIC_IMMUNITY_MASK {
+        return if effect.immunity.is_some() {
+            format!(
+                "has unmodeled school/dispel/aura/other fields in definition {}",
+                effect.misc_values[0]
+            )
+        } else {
+            format!(
+                "requires missing native creature_immunities definition {}",
+                effect.misc_values[0]
+            )
+        };
+    }
     if linked::is_linked(effect.aura_type) {
         format!(
             "nonzero linked amount {} for child {} remains a source gap",
@@ -842,9 +876,11 @@ pub(crate) fn apply_aura_with_spell(
             excluded.contains(&aura.spell_id)
         });
     }
-    // Atonement marks from different priests remain independently owned.
+    // Atonement marks from different priests remain independently owned; other
+    // casters' channelled auras stack (Aura::CanStackWith, SpellAuras.cpp:1695).
     let coexist = instance.harmful
         || spell.id == 194384
+        || crate::spell_cast::is_channeled(&spell)
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
@@ -867,6 +903,7 @@ pub(crate) fn apply_aura_with_spell(
         .cloned()
         .expect("aura just stored");
     if kind == CombatLogKind::AuraApplied {
+        crate::achievement::record_gain_aura(world, target, aura.spell_id);
         crate::quest::record_gain_aura(world, target, spell.id);
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
@@ -874,6 +911,7 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        fixate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
         let stuns = aura
@@ -1043,6 +1081,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    fixate::on_removed(world, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
@@ -1067,6 +1106,26 @@ pub fn remove_auras(
     }
     auras_changed(world, unit);
     removed
+}
+
+/// Reset an existing finite aura to its stored maximum duration, without
+/// refilling absorb capacity or changing its periodic timer (Aura::RefreshDuration).
+pub(crate) fn refresh_duration(world: &mut World, target: Entity, spell_id: u32) {
+    let now = aura_now(world);
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id)
+    else {
+        return;
+    };
+    if aura.expires_at.is_some() {
+        aura.expires_at = Some(now + f64::from(aura.duration_ms) / 1_000.0);
+        auras.dirty = true;
+    }
 }
 
 /// Extend existing finite auras owned by this caster without restarting ticks.
@@ -1412,6 +1471,9 @@ pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<
     if no_actions_prevention(spell) && has(&[handlers::MOD_NO_ACTIONS]) {
         return Some(CastBlock::NoActions);
     }
+    if fear::blocks_cast(world, auras, spell) {
+        return Some(CastBlock::Fleeing);
+    }
     if attributes(spell, 5) & ATTR5_ALLOW_WHILE_CONFUSED == 0 && has(&[handlers::MOD_CONFUSE]) {
         return Some(CastBlock::Confused);
     }
@@ -1424,6 +1486,7 @@ pub enum CastBlock {
     Silenced,
     Pacified,
     NoActions,
+    Fleeing,
     Confused,
 }
 
@@ -1700,14 +1763,18 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
     }
 }
 
-/// Auras whose caster entity despawned end (their ticks need a source).
+/// Source-dependent auras end when their caster despawns. Rating snapshots
+/// retain their authored duration (TC Aura::Update accepts a null caster).
 fn remove_casterless(world: &mut World, unit: Entity) {
     let gone: Vec<u32> = world
         .get::<ActiveAuras>(unit)
         .map(|auras| {
             auras
                 .iter()
-                .filter(|aura| world.get_entity(aura.caster).is_err())
+                .filter(|aura| {
+                    world.get_entity(aura.caster).is_err()
+                        && !stat_mods::retains_rating_snapshot(aura)
+                })
                 .map(|aura| aura.instance_id)
                 .collect()
         })
@@ -1781,6 +1848,9 @@ fn state_interrupts(world: &mut World, unit: Entity) {
         auras.bypass_change_detection().spec = spec;
     }
     interrupt_auras(world, unit, flags, None);
+    // Proc-derived interrupt flags approximate other TC call sites (triggered casts
+    // skip Action there), so only these state changes end matching channels.
+    crate::spell_cast::interrupt_channel_with_flags(world, unit, flags);
 }
 
 /// Rebuild `UnitAuras` for units whose auras changed; remaining times are
@@ -1866,7 +1936,25 @@ mod tests;
 mod toy_effects_tests;
 
 #[cfg(test)]
+mod bloodsurge_tests;
+#[cfg(test)]
+mod crit_damage_bonus_tests;
+#[cfg(test)]
+mod critical_chaos_tests;
+#[cfg(test)]
 mod defensives_tests;
+#[cfg(test)]
+mod enduring_torment_tests;
+#[cfg(test)]
+mod fear_tests;
+#[cfg(test)]
+mod monster_rising_tests;
+#[cfg(test)]
+mod power_strike_tests;
+#[cfg(test)]
+mod tiger_dash_tests;
+#[cfg(test)]
+mod yseras_gift_tests;
 
 #[cfg(test)]
 mod override_tests;
