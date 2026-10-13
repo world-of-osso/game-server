@@ -86,6 +86,7 @@ const REGROWTH: u32 = 8_936;
 const LINGERING_HEALING: u32 = 231_040;
 const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
+const TIGER_DASH: u32 = 252_216;
 
 /// Native441675s3: Frenzied Regeneration also increases your maximum health.
 pub(super) fn fount_max_health_pct(unit: Entity, auras: &super::ActiveAuras) -> f32 {
@@ -340,6 +341,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        TIGER_DASH,
+        AuraScript {
+            on_periodic: Some(decay_tiger_dash),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         crate::spell_cast::scripts::RAPID_FIRE,
         AuraScript {
             on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
@@ -371,6 +379,32 @@ fn barkskin_brambles(world: &mut World, unit: Entity, _aura: &AuraInstance, effe
     if effect_index == 2 && super::has_aura(world, unit, BRAMBLES) {
         crate::spell_cast::cast_triggered(world, unit, BRAMBLES_DAMAGE, Some(unit), 1);
     }
+}
+
+/// TC a352b1fa spell_druid.cpp:2827-2843, spell_dru_tiger_dash_aura: each effect1
+/// PERIODIC_DUMMY tick lowers effect0's run-speed amount by effect1's amount.
+fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
+    if effect_index != 1 {
+        return;
+    }
+    let Some(decay) = aura.effects.iter().find(|effect| effect.index == 1) else {
+        return;
+    };
+    let decay = decay.amount;
+    {
+        let Some(mut auras) = world.get_mut::<super::ActiveAuras>(unit) else {
+            return;
+        };
+        let Some(speed) = auras
+            .get_mut(aura.instance_id)
+            .and_then(|live| live.effects.iter_mut().find(|effect| effect.index == 0))
+        else {
+            return;
+        };
+        speed.amount -= decay;
+    }
+    super::auras_changed(world, unit);
+    crate::spell_cast::mark_dirty(world, unit);
 }
 
 /// TrinityCore a352b1fa spell_hun_aspect_of_the_turtle applies catalog 205769
