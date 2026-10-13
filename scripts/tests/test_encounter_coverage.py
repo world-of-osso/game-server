@@ -44,7 +44,8 @@ class CoverageTests(unittest.TestCase):
         self.assertTrue(actor['runtime_ai'].startswith('partial TC C++ port'))
         gaps = [reason for gap in actor['ai_gaps'] for reason in gap['reasons']]
         self.assertTrue(any('Retail 12.1 timeline inputs unavailable' in reason for reason in gaps))
-        self.assertTrue(any('group1256 spawns on last TempleEvent death' in reason and 'Serpentine Seal' in reason for reason in gaps))
+        self.assertTrue(any('group1256 spawns on last TempleEvent death' in reason and 'Serpentine Seal gossip summons Zul' in reason for reason in gaps))
+        self.assertFalse(any('chain unported' in reason for reason in gaps))
         self.assertFalse(any('intro remains closed' in reason for reason in gaps))
         self.assertFalse(any('missing emerge271598' in reason for reason in gaps))
         self.assertTrue(any('delayed follow/absorption/announcement supported' in reason for reason in gaps))
