@@ -262,7 +262,7 @@ fn class_completeness_native_charge_rate_per_cast_amount_refresh_preserves_progr
         .base_points = quick
         .effects
         .iter()
-        .find(|e| e.aura_type == 148)
+        .find(|e| e.aura == 148)
         .unwrap()
         .base_points;
     crate::auras::apply_aura_with_spell(
