@@ -45,6 +45,17 @@ pub(crate) fn load_catalog(
     }
 }
 
+#[derive(Component, Clone, Copy, Default)]
+pub(crate) struct MonthlySummary {
+    pub points: u32,
+    pub start_unix: i64,
+    pub end_unix: i64,
+}
+
+pub(crate) fn calendar_month(now: i64) -> shared::protocol::JournalMonth {
+    month::month_at(now, 0, now)
+}
+
 pub(crate) struct AdventureGuidePlugin;
 impl Plugin for AdventureGuidePlugin {
     fn build(&self, app: &mut App) {
@@ -201,6 +212,11 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, characte
             &data.thresholds,
         );
     }
+    world.entity_mut(connection).insert(MonthlySummary {
+        points: snapshot.points,
+        start_unix: snapshot.month.start_unix,
+        end_unix: snapshot.month.end_unix,
+    });
     if let Some(mut sender) = world.get_mut::<MessageSender<AdventureGuideSnapshot>>(connection) {
         sender.send::<InstanceChannel>(snapshot);
     }

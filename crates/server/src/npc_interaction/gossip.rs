@@ -182,6 +182,7 @@ pub(crate) fn roles_from_flags(flags: NpcFlags) -> Vec<NpcRole> {
         (NpcFlags::STABLEMASTER, NpcRole::StableMaster),
         (NpcFlags::TRANSMOGRIFIER, NpcRole::Transmogrifier),
         (NpcFlags::CRAFTING_ORDERS, NpcRole::CraftingOrders),
+        (NpcFlags::TRADING_POST, NpcRole::TradingPost),
     ]
     .into_iter()
     .filter(|(mask, _)| flags.contains(*mask))
@@ -208,6 +209,8 @@ fn option_action(option_type: u8, action_menu_id: u32) -> Option<GossipAction> {
         13 => GossipAction::Role(NpcRole::AuctionHouse),
         14 => GossipAction::Role(NpcRole::StableMaster),
         34 => GossipAction::Role(NpcRole::Transmogrifier),
+        // Mainline GossipNpcOption::PerksProgramVendor; TDB Seabraid menus30312/30315.
+        47 => GossipAction::Role(NpcRole::TradingPost),
         // TDB1210 menu30243 OptionNpc50: create a crafting order.
         50 => GossipAction::Role(NpcRole::CraftingOrders),
         _ => return None,
@@ -227,7 +230,20 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
             Ok((row.get::<_, i64>(0)? as u32, row.get::<_, i64>(1)? as u32))
         })?
         .collect::<rusqlite::Result<_>>()?;
-    load_crafting_broker_options(conn, &mut menus, &mut template_menus)?;
+    load_retail_service_options(
+        conn,
+        &mut menus,
+        &mut template_menus,
+        NpcFlags::CRAFTING_ORDERS,
+        50,
+    )?;
+    load_retail_service_options(
+        conn,
+        &mut menus,
+        &mut template_menus,
+        NpcFlags::TRADING_POST,
+        47,
+    )?;
     Ok(GossipCatalog {
         menus,
         template_menus,
@@ -239,19 +255,21 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
 }
 
 /// Source Retail brokers retain their TDB customer-service choice, not a synthetic menu.
-fn load_crafting_broker_options(
+fn load_retail_service_options(
     conn: &Connection,
     menus: &mut HashMap<u32, GossipMenuData>,
     templates: &mut HashMap<u32, u32>,
+    flag: u64,
+    option_type: u8,
 ) -> rusqlite::Result<()> {
     let mut statement = conn.prepare(
         "SELECT c.entry,g.MenuID,o.OptionID,o.OptionText
         FROM tdb_creature_template c
         JOIN tdb_creature_template_gossip g ON g.CreatureID=c.entry
         JOIN tdb_gossip_menu_option o ON o.MenuID=g.MenuID
-        WHERE (c.npcflag & ?1)!=0 AND o.OptionNpc=50 ORDER BY c.entry,o.OptionID",
+        WHERE (c.npcflag & ?1)!=0 AND o.OptionNpc=?2 ORDER BY c.entry,o.OptionID",
     )?;
-    for row in statement.query_map([NpcFlags::CRAFTING_ORDERS as i64], |row| {
+    for row in statement.query_map(params![flag as i64, option_type], |row| {
         Ok((
             row.get::<_, u32>(0)?,
             row.get::<_, u32>(1)?,
@@ -273,8 +291,8 @@ fn load_crafting_broker_options(
             option_id,
             icon: 0,
             text,
-            option_type: 50,
-            npc_flag: NpcFlags(NpcFlags::CRAFTING_ORDERS),
+            option_type,
+            npc_flag: NpcFlags(flag),
             action_menu_id: 0,
         });
     }

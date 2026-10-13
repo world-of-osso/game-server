@@ -31,6 +31,8 @@ MAX_LEVEL = 123
 # creature_classlevelstats has basehp0..2 (Classic, TBC, Wrath); TrinityCore's
 # HealthScalingExpansion -1 is the current expansion.
 WRATH_HEALTH_EXPANSIONS = 2
+# TDB1210 Seabraid service, NPCFlags2 bit19; retain only this implemented high flag.
+TRADING_POST_NPC_FLAG = 0x0008_0000_0000_0000
 
 MAP_LIST = ", ".join(str(m) for m in RETAIL_MAPS)
 
@@ -307,7 +309,7 @@ def insert_tdb_templates(conn, entries, *, replace_legacy=False):
             ContentTuningID, HealthScalingExpansion, LevelScalingDeltaMin, LevelScalingDeltaMax)
         SELECT t.entry, t.KillCredit1, t.KillCredit2, t.name, t.subname, t.IconName,
             COALESCE(l.minlevel, 1), COALESCE(l.maxlevel, 1), health_expansion(d.HealthScalingExpansion), t.faction,
-            t.npcflag & 4294967295, t.speed_walk, t.speed_run, t.scale,
+            t.npcflag & (4294967295 | {TRADING_POST_NPC_FLAG}), t.speed_walk, t.speed_run, t.scale,
             t.Classification, t.dmgschool, d.DamageModifier, t.BaseAttackTime, t.RangeAttackTime, t.BaseVariance,
             t.RangeVariance, t.unit_class, t.unit_flags, t.unit_flags2, t.family, t.type, d.TypeFlags, t.VehicleId,
             d.GoldMin, d.GoldMax, t.AIName, t.MovementType, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
