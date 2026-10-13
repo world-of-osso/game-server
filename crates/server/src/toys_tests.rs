@@ -4331,6 +4331,38 @@ fn toyfx18_foam_sword_rack_grants_one_source_sword_until_it_expires() {
 }
 
 #[test]
+fn toyfx18_summoned_objects_replicate_ready_collision_state() {
+    // TC EffectTransmitted/EffectSummonObjectWild create GO_STATE_READY objects; the
+    // client draws no game object without its replicated collision state.
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("collision.redb"));
+    let rack = place_foam_sword_rack(&mut h, character);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(rack),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
+    learn_effect_toy(&mut h, character, 45011);
+    assert_eq!(activate(&mut h, 45011)[0].error, None);
+    h.advance(70);
+    let world = h.app.world_mut();
+    let banners: Vec<_> = world
+        .query::<(
+            &shared::protocol::GameObjectInfo,
+            Option<&shared::protocol::GameObjectCollision>,
+        )>()
+        .iter(world)
+        .filter(|(info, _)| info.entry == 194274)
+        .map(|(_, collision)| collision.copied())
+        .collect();
+    assert_eq!(
+        banners,
+        vec![Some(shared::protocol::GameObjectCollision(true))]
+    );
+}
+
+#[test]
 fn toyfx18_foam_sword_rack_counts_a_banked_sword() {
     use crate::persistence::banks::{BankData, BankOwner, save_bank_move};
     let directory = tempfile::tempdir().unwrap();
