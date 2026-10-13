@@ -1003,6 +1003,10 @@ fn startup_load_world_data(mut commands: Commands) {
     commands.insert_resource(prices);
     commands.insert_resource(load_creature_spell_stats(&conn));
     commands.insert_resource(
+        crate::transport_catalog::TransportCatalog::load(&conn)
+            .expect("Load authored transport routes; run scripts/import-battlegrounds.py"),
+    );
+    commands.insert_resource(
         crate::pvp::arena_objects::GateCatalog::load(&conn)
             .expect("Load source-backed arena gates; run scripts/import-arenas.py before startup"),
     );
