@@ -13,6 +13,7 @@ const TELEPORT_DISTANCE: f32 = 2.0;
 pub enum Goal {
     Chase(u64),
     Follow(u64),
+    Hazard(u64),
     Home,
     Waypoint(u32, usize),
 }
@@ -74,7 +75,12 @@ impl Navigation {
     }
 
     /// None means an entirely unbaked map, never a missing tile on a baked map.
-    fn query_path(&self, map_id: u32, from: Vec3, to: Vec3) -> Result<Option<Vec<Vec3>>, String> {
+    pub(crate) fn query_path(
+        &self,
+        map_id: u32,
+        from: Vec3,
+        to: Vec3,
+    ) -> Result<Option<Vec<Vec3>>, String> {
         let mut maps = self.maps.lock().unwrap();
         if !maps.contains_key(&map_id) {
             let dir = self.dir.join(map_id.to_string());
@@ -105,6 +111,13 @@ impl Navigation {
             Some(map) => map.path(from, to).map(Some),
             None => Ok(None),
         }
+    }
+
+    pub(crate) fn route_destination(&self, entity: Entity, goal: Goal) -> Option<Vec3> {
+        self.routes
+            .get(&entity)
+            .filter(|route| route.goal == goal)
+            .map(|route| route.destination)
     }
 
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {

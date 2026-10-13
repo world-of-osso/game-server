@@ -24,6 +24,7 @@ mod batch9;
 mod chrono_flame;
 pub(crate) use chrono_flame::record_health_change;
 
+pub(crate) use batch9::hostile_ground_fields;
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;

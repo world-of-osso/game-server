@@ -10,7 +10,7 @@ fn start_enemy_fireball(
     unit: bevy::prelude::Entity,
 ) {
     let enemy = h.npc;
-    prepare_enemy_mage(h, enemy);
+    prepare_enemy_spec(h, enemy, 63);
     let at = *h.app.world().get::<Position>(enemy).unwrap();
     h.app.world_mut().entity_mut(unit).insert(Position {
         x: at.x - 2.0,
@@ -20,9 +20,10 @@ fn start_enemy_fireball(
     assert!(h.app.world().get::<CastState>(enemy).is_some());
 }
 
-fn prepare_enemy_mage(
+pub(super) fn prepare_enemy_spec(
     h: &mut crate::spell_cast::test_harness::Harness,
     enemy: bevy::prelude::Entity,
+    spec: u32,
 ) {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -33,7 +34,7 @@ fn prepare_enemy_mage(
         .unwrap()
         .profiles
         .into_iter()
-        .find(|profile| profile.spec_id == 63)
+        .find(|profile| profile.spec_id == spec)
         .unwrap();
     let (stats, pools, passives) = super::spawning::class_stats(h.app.world(), &mage, 12).unwrap();
     let mana = shared::components::Mana {
