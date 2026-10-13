@@ -326,6 +326,7 @@ pub(crate) fn learn_companion_from_item(
         .get_mut::<AccountPetJournal>(owner)
         .expect("journal checked")
         .journal = journal;
+    crate::achievement::record_learned_pet(world, owner, species);
     refresh_catalog_snapshot(world, owner);
     let mut connections = world.query::<(Entity, &PlayerLink)>();
     let connection = connections

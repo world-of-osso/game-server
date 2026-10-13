@@ -2,7 +2,7 @@
 
 verified: 2026-10-12
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **4529 ordinary (3234 account/1295 character),256 statistics**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **4548 ordinary (3253 account/1295 character),257 statistics; 93 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -72,7 +72,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 53 | DeliverKillingBlowToRace | 0/149 | 0/148 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 54 | DoEmote | 1/398 | 0/254 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 55 | HealingDone | 1/16 | 0/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 56 | DeliveredKillingBlow | 0/80 | 0/63 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
+| 56 | DeliveredKillingBlow | 1/80 | 1/63 | 0 | Native: authenticated in-world killer on actual lethal health commits, plus genuine HunterPet owner credit (TC Unit::Kill); dead replay/self raw KillUnit idle. See spec. |
 | 57 | EquipItem | 162/163 | 11/11 | 151 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 58 | CompleteQuestsInSort | 0/3 | 0/0 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
 | 59 | MoneyEarnedFromSales | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -94,7 +94,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 75 | LearnSpellFromSkillLine | 12/16 | 2/2 | 10 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 76 | WinDuel | 3/27 | 1/16 | 2 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 77 | LoseDuel | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 78 | KillAnyCreature | 0/112 | 0/21 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 78 | KillAnyCreature | 2/112 | 1/21 | 1 | Native: TC KillRewarder:185 via shared TapRewardRecipients (map copy, range, group, corpse eligibility). See spec. |
 | 79 | CreatedItemsByCastingSpellWithLimit | 0/5 | 0/5 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
 | 80 | MoneyEarnedFromAuctions | 1/2 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 81 | BattlePetAchievementPointsEarned | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -164,7 +164,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 151 | CompleteAnyScenario | 0/8 | 0/2 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 152 | CompleteScenario | 577/1070 | 67/139 | 510 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 153 | EnterAreaTriggerWithActionSet | 0/33 | 0/8 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
-| 155 | LearnedNewPet | 0/127 | 0/122 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 155 | LearnedNewPet | 127/127 | 122/122 | 5 | Native: battle_pets::learn_companion_from_item and wild capture credit species after the new-GUID journal commit (TC BattlePetMgr::AddPet:483); compiled AND4→BattlePetSpecies91 leaves only. Local item sources exist for species1928/1929 only; Coiled Isle wild species lack battle abilities. See spec. |
 | 156 | UniquePetsOwned | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 157 | AccountObtainPetThroughBattle | 1/510 | 1/459 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 158 | WinPetBattle | 1/2034 | 1/1540 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |

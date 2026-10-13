@@ -629,6 +629,11 @@ pub(crate) fn record_pet_capture(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::CaptureBattlePet);
 }
 
+/// TC BattlePetMgr::AddPet:483 after a new GUID is saved; never journal loads or changes.
+pub(crate) fn record_learned_pet(world: &mut World, player: Entity, species: u32) {
+    record_criteria_event(world, player, CriteriaEvent::LearnedNewPet(species));
+}
+
 /// TC Spell.cpp3543-3546 credits the casting Retail item after successful cast checks.
 pub(crate) fn record_item_use(world: &mut World, player: Entity, item: u32) {
     record_criteria_event(world, player, CriteriaEvent::UseItem(item));
