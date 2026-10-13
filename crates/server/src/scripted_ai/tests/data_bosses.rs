@@ -986,6 +986,65 @@ fn encounter_coverage_gordoth_source_jump_lands_breaks_vials_and_researchers_die
         Some(EncounterState::NotStarted),
         "researcher self-deaths never grant Gordoth credit"
     );
+    let original_spawn = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(boss)
+        .unwrap()
+        .clone();
+    // Exercise HomeMovementGenerator after source SetHomePosition, not a field or
+    // controller-selection assertion. Original respawn coordinates must survive.
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(crate::creature_ai::CreatureState::Returning);
+    h.advance(0.2);
+    let returned = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        Vec3::new(returned.x, returned.y, returned.z).distance(landing) < 0.001,
+        "source home is landing point, not the original cage spawn"
+    );
+    assert!(
+        (h.app
+            .world()
+            .get::<shared::components::Rotation>(boss)
+            .unwrap()
+            .y
+            - std::f32::consts::FRAC_PI_2
+            - 0.30812347)
+            .abs()
+            < 0.001
+    );
+    let spawn = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(boss)
+        .unwrap();
+    assert_eq!(
+        (spawn.x, spawn.y, spawn.z),
+        (original_spawn.x, original_spawn.y, original_spawn.z)
+    );
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(30.2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_none()
+    );
+    let respawned = *h.app.world().get::<Position>(boss).unwrap();
+    let spawn_point = Vec3::new(original_spawn.x, original_spawn.y, original_spawn.z);
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(crate::creature_ai::CreatureState::Returning);
+    h.advance(0.2);
+    let returning = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        Vec3::new(returning.x, returning.y, returning.z).distance(spawn_point)
+            < Vec3::new(respawned.x, respawned.y, respawned.z).distance(spawn_point),
+        "respawn resets home to spawn before source InitializeAI relocates the actor"
+    );
 }
 
 /// A real Mortimer POINT1 callback schedules self-death7s later. A competing

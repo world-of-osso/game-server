@@ -6,6 +6,7 @@ Source-authenticated `MotionMaster::MoveJump` subset used by Gordoth, from TC a3
 
 - [x] Move between source positions on a two-point linear spline plus parabolic elevation, using the explicit speed capped at50 and source gravity/min-height/default max1000. Duration starts at1ms plus the truncated segment travel time.
 - [x] Emit effect-motion arrival only at the endpoint; Gordoth sets landing facing, destroys its three nearby vials and its seven researchers cast the sourced gore sequence/Bloody Suicide120022, whose immediate periodic51744 instakill causes real self-deaths without boss credit.
+- [x] Gordoth records landing home/facing independently of immutable spawn coordinates; home return honors that landing position/orientation. Respawn resets the explicit home before InitializeAI.
 - [x] Suspend an existing point generator while the jump owns movement, then resume it. Real Mortimer POINT1's delayed self-death observes both boundaries, without querying controller class selection.
 - [ ] Landing-tick handoff against every lower driver remains unproved; code retains ownership until the next unit update.
 - [x] Gordoth's mid-jump death suppresses arrival effects: vials/researchers remain unchanged while the real boss death completes.
@@ -28,7 +29,7 @@ Source-authenticated `MotionMaster::MoveJump` subset used by Gordoth, from TC a3
 
 ## Known gaps (current cycle)
 
-- [ ] Original spawn-independent home/facing, static AT7899/GM handling, animkit, cage task and native jump/GO animations.
+- [ ] Static AT7899/GM handling, animkit, cage task and native jump/GO animations.
 - [ ] Source Gordoth UpdateAI never pumps its scheduled +30ms cage task; no synthetic pump is introduced.
 - [ ] Instakill-specific packet/player CHEAT_GOD state are unmodelled; current proof is the researcher NPC self-kill chain.
 
