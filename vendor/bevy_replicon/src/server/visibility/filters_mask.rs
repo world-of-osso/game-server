@@ -73,7 +73,7 @@ impl FiltersMask {
 }
 
 /// Bit that represents a visibility filter from [`FilterRegistry`].
-#[derive(Deref, Default, Debug, PartialEq, Clone, Copy)]
+#[derive(Deref, Default, Debug, PartialEq, Clone, Copy, Reflect)]
 pub struct FilterBit(u8);
 
 impl FilterBit {
