@@ -1906,6 +1906,7 @@ pub(crate) fn execute_cast(
     ));
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
+    debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
     const DISCOUNT_POWER_ON_MISS: u32 = 0x0800_0000;
     let discounted_player =
         world.get::<Player>(caster).is_some() && attributes(spell, 1) & DISCOUNT_POWER_ON_MISS != 0;
@@ -2890,6 +2891,7 @@ struct PendingCastSpell(SpellInfo);
 
 fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Option<Entity>) {
     let Some(PendingCastSpell(spell)) = world.entity_mut(caster).take::<PendingCastSpell>() else {
+        debug!(caster = ?caster, spell_id, "Cast completion has no pending spell snapshot");
         return;
     };
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
