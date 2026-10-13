@@ -155,6 +155,7 @@ mod tests {
                         encounter_id: 663,
                     }],
                     boss_creatures: vec![],
+                    handled_area_triggers: Default::default(),
                 },
             )])));
         assert!(set_boss_state(
