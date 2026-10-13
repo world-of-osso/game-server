@@ -1,5 +1,7 @@
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
+
 - 2026-10-13: Explicit Gordoth landing home/facing independent of respawn coordinates; home-return/leash honor it and respawn resets it. Real return proof,30s boundary test. [Boss scripts](systems/boss-scripts.md).
 
 - 2026-10-13: Gordoth source DoAction jump/landing, vial state and researcher Bloody Suicide→51744 instakill. Real-population parabola/landing/self-death proof; home/static trigger/cage/animkit/native gaps retained. [Boss scripts](systems/boss-scripts.md).

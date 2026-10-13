@@ -2,6 +2,8 @@
 //! Koranthal and Gordoth combat; Gordoth's intro and other Ragefire bosses are open.
 use bevy::prelude::*;
 
+pub(crate) mod gordoth_intro;
+
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx, DamageTaken, instance_script};
 
