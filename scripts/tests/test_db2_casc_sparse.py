@@ -103,6 +103,12 @@ class SparseDecodeTest(unittest.TestCase):
     def test_sparse_secondary_key_flag_preserves_foreign_relationship(self):
         data = bytearray(sparse_fixture())
         struct.pack_into('<H', data, 172, 7)
+        end = struct.unpack_from('<I', data, 224)[0]
+        relation_at = end + 8 + 8 + 12
+        relation = data[relation_at:relation_at + 20]
+        ids = data[relation_at + 20:relation_at + 28]
+        # Active 70340 secondary-key sparse tables put offset-map IDs before relations.
+        data[relation_at:relation_at + 28] = ids + relation
         _, rows = decode_fixture(bytes(data), {101, 103})
         self.assertEqual(rows[101][-1], 77)
         self.assertEqual(rows[103][-1], 77)
