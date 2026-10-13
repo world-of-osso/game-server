@@ -311,6 +311,14 @@ Aura341 contributes signed integer milliseconds to the caster's matching native 
 
 Native Counterspell/Quick Witted tests prove25s→20s recovery with real blocked/successful recasts. Native Optical Blast supplies both24s timers, using an Energy-bearing fixture; Angel's Mercy reduces Desperate Prayer90s→70s. Tests also cover category0 exclusion, absent talent, unlearning, learning during an active lockout and native30000−30000ms clamping. Cross-class/internal-trigger fixtures do not claim player spellbook availability. [Contract](../../specs/class-completeness.md#category-cooldown-modifiers).
 
+## Cooldown recovery rates
+
+Aura286 matches native class masks and multiplies cooldowns by100/(100+amount), clamping the amount to−99. `spell_cast::recovery_rate` applies the factor after haste and before341 offsets. Aura apply/remove rescales only remaining time; unchanged refreshes do nothing, while changed native amounts undo/reapply the factor. Expiry follows the same removal path. Source: TC SpellHistory.cpp432–455/608–628 and SpellAuraEffects.cpp6258.
+
+`SpellHistory.category_spell_ids` stores the spell that started each category timer: Sprint has only a category timer, so its class-mask association cannot be recovered from `spell_ready_at`. Active spell/category deadlines are updated once each and owner messages report the remaining maximum. Existing charge timers and GCDs are untouched.
+
+Ten native App controls prove Rapid Fire16s→10s, Sprint120s→40s, real blocked/successful active-timer recasts, expiry, unchanged refresh, native Hot Hand label1935's zero→34 rate refresh, recipient/mask negatives and owner updates. Hot Hand's controlled refresh does not prove the random proc's availability; full abilities, global ModTimeRate interactions and native-rendered parity remain open. [Contract](../../specs/class-completeness.md#cooldown-recovery-rates).
+
 ## Script hooks
 
 Know Your Enemy388118 and Penetrating Shots459783 share Critical Chaos's effect1-percent-of-owner-crit updater. They recalculate effect0 on apply/effect1 ticks; `auras_changed` refreshes stat multipliers for live damage. Source: TC spell_dh.cpp:1571-1593/632-655 and spell_hunter.cpp:869-891. Penetrating Shots uses native25% with1s ticks; real Aimed Shot casts retain native variance, coefficient, cast time and missile travel. Tests cover live crit changes, unlearning, zero-crit damage and healing isolation. Guaranteed-crit endpoints and cross-class healing fixtures are test boundaries, not player-build or talent-availability claims.
