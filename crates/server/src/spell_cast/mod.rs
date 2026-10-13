@@ -123,6 +123,8 @@ pub mod powers;
 #[cfg(test)]
 mod protective_growth_tests;
 mod reflect;
+#[cfg(test)]
+mod resistance_pct_tests;
 mod resources;
 pub mod runes;
 pub mod scripts;
