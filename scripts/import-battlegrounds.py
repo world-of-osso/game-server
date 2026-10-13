@@ -16,6 +16,7 @@ from mysql_dump import INSERT_RE, parse_values
 TABLES = frozenset({
     'battleground_template', 'battleground_scripts', 'spawn_group', 'spawn_group_template',
     'world_state', 'areatrigger', 'areatrigger_template', 'areatrigger_create_properties',
+    'areatrigger_create_properties_orbit',
     'areatrigger_template_actions', 'areatrigger_scripts', 'areatrigger_teleport',
     'npc_spellclick_spells',
 })
