@@ -2,6 +2,30 @@
 
 - 2026-10-12 — [Golden partial TC combat](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): explicit lead timing authorization separates exact pinned TC combat events from unavailable Retail12.1 timeline inputs; stale alerts rejected, friendly intro remains closed, InitializeAI/FAIL/30s evade lifecycle ported. Moving Gold stop, authenticated model geometry and last-definition-wins Retail boss-mod extraction have focused proof. Full current union gate/native/remaining mechanics pending; no complete boss claimed.
 
+- 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
+
+- 2026-10-12 — [Native form admission](../class-completeness6.md#native-form-admission--batch28): aura275 native mask bypass and distinct form failures; RED3→GREEN10. Census2981/4664/182 retains32 required-form prerequisites and improves13 memberships. Lead gate diagnoses preserve live-target, level-scaling and placement requirements.
+
+- 2026-10-12 — [Receiver mechanic durations](../class-completeness2.md#receiver-mechanic-durations--batch27): native232/234 stronger-negative matching, integer AddPct, applied-effect masks and finite/harmful exemptions; RED5→twelve controls and35 adjacent controls. Positive-only Oppressing Roar and invalid selector1825 remain explicit source gaps.
+
+- 2026-10-12 — [Masked moving casts/channels](../class-completeness2.md#masked-moving-casts-and-channels--batch26): native330 admission and dynamic CastState permission, family/recipient masks and native Attr13 veto; RED4→eight controls and22 adjacent controls. Full Hover, empowerment and client/live movement remain uncertified.
+
+- 2026-10-12 — [Zero-amount linked auras](../class-completeness2.md#zero-amount-linked-auras--batch25): native284/285 child ownership/application/removal, stack clocks and trigger depth; RED3→seven controls,37 adjacent controls. Nonzero amounts remain named source gaps; no invented sign or magnitude conversion.
+
+- 2026-10-12 — [Final armor factors](../class-completeness2.md#final-armor-factors--batch24): native466 final player multiplier, preserved fractional stat armor, native zero class fields; six arithmetic/damage/lifecycle controls and34 adjacent stat/armor/summon controls. Pet inheritance and non-player parity remain uncertified.
+
+- 2026-10-12 — [Minimum-speed floors](../class-completeness2.md#minimum-speed-floors--batch23): native305 player speed floor after normalization/slows; RED2→six lifecycle/recipient controls and twelve adjacent movement/mount controls. Non-player template-relative rates and whole-dash parity remain uncertified.
+
+- 2026-10-12 — [Representative class gate](../class-completeness2.md#representative-both-skin-class-gate--2026-10-12): all13 both-skin representatives and26 inspected PNGs, authentic private datasets/assets, no shared-realm changes. Full spell/talent goal remains2889 working-boundary/4756 partial/182 broken; no legal-build/rotation certificate.
+
+- 2026-10-12 — [AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229): native Feint RED1000vs600, five school/stacking/expiry/sibling/periodic controls; batch16 census2878/4767/182 recovered, fresh private DB snapshot, Stealth source-row mismatch and Lycara mastery gap preserved.
+
+- 2026-10-11 — [Chrono Flames continuation](../class-completeness2.md#chrono-flames-partial-mechanic-follow-up): native replacement/child-impact history, ownership/window/cap/healing/missing-record controls and explicit Retail timing limits; remaining class/talent/live acceptance stays open.
+
+- 2026-10-11 — [Class completeness continuation](../class-completeness2.md): native ground/rectangle selectors, retail ritual metadata, controlled elemental lifecycle and persisted owned-item unlocks; batch12 receipts and source/threshold limits recorded. Whole13-class/40-spec and remaining-class live acceptance stay open.
+
+- 2026-10-11 — [Level80 class completeness](systems/spell-casting.md#level80-class-completeness):7827 native memberships/all13/all40 build-union cast/passive receipts;2841 working-boundary/4607 partial/379 broken. Source-derived537 owner/label,457 category charge haste/progress,416 masked truncated cooldowns; signed Rune/Runic generation and full/partial-school miss cost boundaries. Real-row RED/GREEN, targeted resource controls, no full suite/DB write/master merge/UDP5000. [Contract](../specs/class-completeness.md) and [proof limits](../class-completeness.md) retain legal-build, missing-data and underivable mechanic gaps.
+- 2026-10-11 — [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11): source items/costumes/kits/scenery, clicked ground points, real sight witnesses and focused-search recipient retention; private both-skin proofs and explicit320 prepared-candidate versus full-effect boundary. Source-scaled scenery live proof remains pending.
 - 2026-10-12 — [Kings' Rest source admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): Golden primary-only SQL preparation from pinned instance/header/script and local journal/TDB; no companion credit or canonical mutation. Missing emerge/intro pipeline and mutable-damage ordering remain named gaps, not a whole-boss port.
 
 - 2026-10-12 — [Murder Row mirror callbacks](systems/boss-scripts.md#murder-row-continuation-2026-10-12): source aura23 callback, random destination offset and wild creature-spawn lifecycle implemented after the inherited mirror test reproduced missing summons. Infusion remains a named source gap; no full-encounter or native acceptance claimed.
@@ -57,7 +81,6 @@
 - 2026-10-11 — [Retail follower data](investigations/follower-data.md): pinned local CASC 27 difficulty205 entries, Ruby map2521/306 reference spawns; 37 Expedition Escort candidates have no TDB combat spell/SmartAI assignment. Prepared reference SQL and read-only audit; no canonical DB application, combat AI, queue, class-kit or both-skin fighting claim.
 - 2026-10-11 — [DB2 instance coverage](../instance-coverage-counts.md): union231 dungeon/raid maps with authored difficulties, excluding garrison expansion; shared-base priority retains old124-map rows and Hogger source-backed loot. Targeted importer RED→GREEN7/7; private snapshot row diff zero. Entrance/ground census separates hostability, walk-in reachability and sparse-source gaps; no canonical DB writes.
 - 2026-10-11 — [Open-world population](systems/content-import.md#open-world-population-2026-10-11):589-map/762-zone census;31 scoped terrain-backed expansion maps,12,427 NPC/2,424 GO additions on private copy; Python2/2, Rust admission/ECS2/2, unchanged raw/non-target rows and42-table final equivalence. Private UDP5820 native Wixler Brass pick in Boralus in both skins; PNGs inspected. Authored same-map overlays retained; source-empty/phase/event/appearance gaps explicit. No canonical write, master merge or UDP5000.
-- 2026-10-11 — [Level80 class completeness](systems/spell-casting.md#level80-class-completeness):7827 native memberships/all13/all40 build-union cast/passive receipts;2841 working-boundary/4607 partial/379 broken. Source-derived537 owner/label,457 category charge haste/progress,416 masked truncated cooldowns; signed Rune/Runic generation and full/partial-school miss cost boundaries. Real-row RED/GREEN, targeted resource controls, no full suite/DB write/master merge/UDP5000. [Contract](../specs/class-completeness.md) and [proof limits](../class-completeness.md) retain legal-build, missing-data and underivable mechanic gaps.
 
 - 2026-10-11 — [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry): scripted197835 points consume121471 native100-percent modifier; actual49028/27893 spawn grants native81256 owner30-percent parry, lifetime/early removal controlled. Genuine per-target combo and missing-parry RED→targeted12/12 GREEN at449bb8e.2031 exact native rows, all28 previously underived roots reviewed and30 deferred revisited. [Census/limits](../spell-dummy23-coverage.md):157/129/28→157/157/0, all157 unresolved roots and missing mechanics retained; no no-op closure, full suite, DB write, realm/server/UDP5000 or master merge.
 
@@ -917,6 +940,7 @@ Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reus
 
 - [Gathering](systems/gathering.md): requested master snapshots integrated without merging into master; scoped checks/format and six real private-realm cases pass. Native images, numeric rank gains, timer boundaries and remaining limits are linked from the engine proof ledger.
 
+- 2026-10-11 class-completeness2: [continuation](../class-completeness2.md) records cone24/corpse119, portals/identity predicates, corrected random72/86/91, and authentic class summon-template closure. Latest probe2854/4776/197; Monk cone has private both-skin receipts. Whole goal remains open.
 ## 2026-10-11 — additional profession references
 
 Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [receipt](reference/profession-reference-import.md) separates concrete data from unresolved quality/concentration/recraft formulas. No canonical DB mutation or runtime acceptance claim.
@@ -927,6 +951,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-12: [Release tick profiling](investigations/server-tick-lag.md#release-catalog-copy-regression-2026-10-12): idle objective tick copied the full gameobject catalog; restrict reads to mapped match flag homes, preserving gameplay.
 
+- 2026-10-12: [Class cast-state continuation](../class-completeness2.md#blooming-infusion-and-consumed-missile-modifiers--batch20): current-owner summon/raw-mastery controls, native unused-ready cooldown credit and Blooming Infusion counters; consumed charged modifiers retain launched damage without altering old missiles with new buffs. Native RED/GREEN and scoped adjacency retained; Symbiotic raw/effective basis remains source-blocked, full goal open.
 ## 2026-10-12 — Transmog metadata and saved configuration
 
 [Authoritative transmog](systems/transmog-apply.md): pinned local-CASC metadata, authored source enums, primary collection states and account-isolated outfit/Custom Set persistence. Current33 transmog tests pass; both-skin private5926 native paid-save, illusion selection, set membership and paged preset load proof links to the client SSOT. Paid Apply unchanged; conditional acquisition/event eligibility and equipped enchant/price policy remain explicit gaps.

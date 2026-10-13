@@ -267,6 +267,31 @@ TOY_SUMMON_ENTRIES = f"""SELECT s.EffectMiscValue_0 FROM toy t
     UNION SELECT entry FROM tdb_creature_template WHERE entry IN {TOY_SCENERY_SUMMON_ENTRIES}"""
 
 
+CLASS_SUMMON_ENTRIES = """WITH RECURSIVE class_line AS (
+    SELECT l.ID, c.ID AS class_id FROM skill_line l JOIN chr_classes c
+      ON c.Name_lang=l.DisplayName_lang WHERE l.CategoryID=7 AND c.ID BETWEEN 1 AND 13
+), roots(id) AS (
+    SELECT a.Spell FROM skill_line_ability a JOIN class_line l ON l.ID=a.SkillLine
+      WHERE a.AcquireMethod<>3 AND (a.ClassMask=0 OR (a.ClassMask & (1 << (l.class_id-1)))<>0)
+    UNION SELECT s.SpellID FROM specialization_spells s JOIN chr_specialization c ON c.ID=s.SpecID
+      WHERE c.ClassID BETWEEN 1 AND 13 AND c.OrderIndex<>4
+    UNION SELECT MasterySpellID_0 FROM chr_specialization WHERE ClassID BETWEEN 1 AND 13 AND OrderIndex<>4
+    UNION SELECT MasterySpellID_1 FROM chr_specialization WHERE ClassID BETWEEN 1 AND 13 AND OrderIndex<>4
+    UNION SELECT d.SpellID FROM trait_definition d
+      JOIN trait_node_entry e ON e.TraitDefinitionID=d.ID
+      JOIN trait_node_x_trait_node_entry x ON x.TraitNodeEntryID=e.ID
+      JOIN trait_node n ON n.ID=x.TraitNodeID
+      JOIN skill_line_x_trait_tree t ON t.TraitTreeID=n.TraitTreeID
+      JOIN class_line l ON l.ID=t.SkillLineID
+), reachable(id) AS (
+    SELECT id FROM roots WHERE id>0
+    UNION SELECT e.EffectTriggerSpell FROM spell_effect e JOIN reachable r ON r.id=e.SpellID
+      WHERE e.DifficultyID=0 AND e.EffectTriggerSpell>0
+)
+SELECT e.EffectMiscValue_0 FROM spell_effect e JOIN reachable r ON r.id=e.SpellID
+WHERE e.DifficultyID=0 AND e.Effect IN (28,56) AND e.EffectMiscValue_0>0"""
+
+
 def insert_tdb_templates(conn, entries, *, replace_legacy=False):
     """TrinityCore's templates (difficulty 0 values, ContentTuning levels) of the `entries` query AzerothCore lacks
     and content_creature_template does not hold yet. Needs temp.tdb_difficulty, content_tuning_level and
@@ -308,7 +333,7 @@ def take_retail_taming_columns(conn):
 
 def build_templates(conn, report):
     """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks and for
-    entries a spell transforms into (TRANSFORM_ENTRIES)."""
+    entries spells transform into or class/spec/talent spell closures summon. No world spawns are added."""
     clone_table(conn, "creature_template", "content_creature_template")
     conn.execute("INSERT INTO content_creature_template SELECT * FROM creature_template")
     for column in ("ContentTuningID", "HealthScalingExpansion", "LevelScalingDeltaMin", "LevelScalingDeltaMax"):
@@ -319,6 +344,7 @@ def build_templates(conn, report):
     insert_tdb_templates(conn, "SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn)")
     insert_tdb_templates(conn, TRANSFORM_ENTRIES)
     insert_tdb_templates(conn, TOY_SUMMON_ENTRIES)
+    insert_tdb_templates(conn, CLASS_SUMMON_ENTRIES)
     # Retail quest objectives count Retail kill credits (Player::KilledMonster credits the entry
     # and its KillCredit1/2): an AzerothCore template TrinityCore also has takes them.
     conn.execute("""UPDATE content_creature_template SET KillCredit1 = t.KillCredit1, KillCredit2 = t.KillCredit2
