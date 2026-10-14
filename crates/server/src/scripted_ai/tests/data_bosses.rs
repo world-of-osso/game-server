@@ -7,6 +7,9 @@ mod group_criteria;
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
 
+#[path = "shadowfang_keep.rs"]
+mod shadowfang_keep;
+
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
 }
