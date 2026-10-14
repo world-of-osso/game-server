@@ -859,7 +859,16 @@ fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing()
         "native target at exactly5percent must credit before healing"
     );
     assert!(state.earned_ids.contains(&141));
+    eprintln!(
+        "bandage applied: {:?}",
+        h.app.world().get::<crate::auras::ActiveAuras>(target)
+    );
     h.advance(24);
+    eprintln!(
+        "bandage after ticks: health={:?}, auras={:?}",
+        h.app.world().get::<Health>(target),
+        h.app.world().get::<crate::auras::ActiveAuras>(target)
+    );
     assert!(
         h.app.world().get::<Health>(target).unwrap().current > 5.0,
         "real periodic bandage heals after the qualifying hit"
