@@ -66,6 +66,8 @@ def fixture_database():
         | {
             "content_item",
             "content_npc_vendor",
+            "tdb_npc_vendor",
+            "currency_types",
             "chr_classes",
             "spell_equipped_items",
             "db2_row_source",
