@@ -141,7 +141,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 76 | WinDuel | 5/27 | 3/16 | 2 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 77 | LoseDuel | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 78 | KillAnyCreature | 5/112 | 1/21 | 4 | Native: TC KillRewarder:185 via shared TapRewardRecipients (map copy, range, group, corpse eligibility). See spec. |
-| 79 | CreatedItemsByCastingSpellWithLimit | 0/5 | 0/5 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 79 | CreatedItemsByCastingSpellWithLimit | 0/5 | 0/5 | 0 | Source progress gap (rechecked2026-10-13): native store_created_item commits ownership, but pinned CriteriaHandler854 is in the unimplemented810–878 block and no player/spell caller exists. Quantity-versus-receipt and limit policy cannot be inferred; unknownskill96/modern390 qualifiers also remain. |
 | 80 | MoneyEarnedFromAuctions | 1/2 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 81 | BattlePetAchievementPointsEarned | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 82 | ItemsPostedAtAuction | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -182,7 +182,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 123 | AbandonedLFGDungeon | 0/1 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |
 | 124 | MoneySpentOnGuildRepair | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
 | 125 | GuildAttainedLevel | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
-| 126 | CreatedItemsByCastingSpell | 0/15 | 0/10 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
+| 126 | CreatedItemsByCastingSpell | 0/15 | 0/10 | 0 | Source progress gap (rechecked2026-10-13): native store_created_item commits Retail acquisition, but pinned CriteriaHandler814 is unimplemented and has no player/spell caller. Existing acquisition91 cannot establish craft-specific count/reset/actor semantics. Missing items, incomplete alternatives and other unknown qualifiers stay blocked. |
 | 127 | FishInAnyPool | 0/4 | 0/3 | 0 | Producer gap: no fishing pool/catch settlement (toy transmitted-object placeholders are not fishing). |
 | 128 | GuildBankTabsPurchased | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
 | 129 | EarnGuildAchievementPoints | 0/1 | 0/1 | 0 | Actor gap: player/account achievements cannot impersonate Guild progress; no Guild criteria aggregation. |
