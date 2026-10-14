@@ -180,6 +180,63 @@ fn ragefire_completion_four_real_deaths_persist_credit_and_repopulate_without_bo
 }
 
 #[test]
+#[ignore = "requires RAGEFIRE_NAV_ROOT containing the authenticated map389 bake"]
+fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival_injection() {
+    let navigation = std::path::PathBuf::from(std::env::var_os("RAGEFIRE_NAV_ROOT").unwrap());
+    let (mut h, _, _) =
+        encounter_fixture(ADAROGG, 389, 0, 1, None, EncounterState::NotStarted, true);
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&navigation));
+    let boss = h.creatures_of(ADAROGG)[0];
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (x, y, z): (f32, f32, f32) = conn
+        .query_row(
+            "SELECT Pos_0,Pos_1,Pos_2 FROM area_trigger WHERE ID=7904",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(Position { x, y, z });
+    // Real trigger, scheduler, route movement and arrival callbacks. No point/path
+    // completion hook is dispatched by the fixture, and the boss is never repositioned.
+    let spawn = h.wow_position(boss);
+    h.advance(60.0);
+    assert_eq!(
+        spell_gos(&h, boss, 120113).len(),
+        3,
+        "three source chow tasks"
+    );
+    let eats = spell_gos(&h, boss, 120064);
+    assert!(
+        eats.len() >= 6,
+        "three authored path arrivals must each eat twice: {}",
+        eats.len()
+    );
+    assert!(
+        h.wow_position(boss).distance(spawn) > 5.0,
+        "boss actually traversed its route"
+    );
+    assert!(
+        eats.iter().all(|eat| hits_entry(&mut h, eat, 61659)),
+        "source Slain Trogg targets"
+    );
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|chat| chat.content.contains("He's cornered!"))
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn ragefire_completion_normal_loot_uses_each_authored_boss_pool_and_money_range() {
     use rand::SeedableRng;
     let path = world_db_path();
