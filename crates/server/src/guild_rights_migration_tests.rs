@@ -31,6 +31,7 @@ fn guild_ranks_layout_two_preserves_each_capability_and_bank_data_across_restart
     save_guild_member_rank(&db, character, 1);
     let mut guild = GuildData::default();
     guild.money = 987_654;
+    guild.ranks[0].rights = 0xFFF;
     guild.ranks[1].name = "Custom Officer".into();
     guild.ranks[1].withdraw_gold = false;
     guild.ranks[1].withdraw_repair = true;
@@ -96,6 +97,8 @@ fn guild_ranks_layout_two_preserves_each_capability_and_bank_data_across_restart
                 );
             }
             let mut expected_guild = guild.clone();
+            expected_guild.ranks[0].rights =
+                GUILD_RIGHT_ALL & !(GUILD_RIGHT_WITHDRAW_GOLD | GUILD_RIGHT_WITHDRAW_REPAIR);
             expected_guild.ranks[1].rights = expected;
             assert_eq!(loaded, expected_guild);
             loaded
