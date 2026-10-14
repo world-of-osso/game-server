@@ -17,6 +17,12 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [x] Toy presentation preflight is shared across owner snapshots and refreshed when source catalogs change; ownership/favourites remain account-specific.
 - [x] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
 
+## Release acceptance (lead 2026-10-14)
+
+- [ ] A private release scripted session covering login, combat/loot/quests, trade/mail/AH, guild/currency/achievements and logout records zero synchronous redb commit spans on the tick thread and frame p99 below 50 ms.
+- [ ] Land converted writer families in slices with durability-gated acknowledgement proof and release measurements; a slice is not global completion.
+- Frame logs report nearest-rank p99 for each completed 10-second window, alongside mean, maximum, overruns and tick rate. Label per-window percentiles explicitly; do not average percentiles.
+
 ## Persistence (approved 2026-10-13)
 
 - [ ] One serial FIFO writer persists owned snapshots off the tick thread, preserving enqueue/commit order across accounts and monthly contributions. Actor polling order must not regress an already committed runtime snapshot.

@@ -20,6 +20,7 @@ pub struct FrameStats {
     fixed_steps: u32,
     total_work: Duration,
     max_work: Duration,
+    work_samples: Vec<Duration>,
     over_budget: u32,
 }
 
@@ -37,6 +38,8 @@ pub struct FrameReport {
     pub fixed_steps: u32,
     pub mean_work: Duration,
     pub max_work: Duration,
+    /// Nearest-rank p99 over outer frames in this reporting window.
+    pub p99_work: Duration,
     pub over_budget: u32,
 }
 
@@ -56,6 +59,7 @@ impl FrameStats {
             fixed_steps: 0,
             total_work: Duration::ZERO,
             max_work: Duration::ZERO,
+            work_samples: Vec::new(),
             over_budget: 0,
         }
     }
@@ -75,6 +79,7 @@ impl FrameStats {
             self.frames += 1;
             self.total_work += work;
             self.max_work = self.max_work.max(work);
+            self.work_samples.push(work);
             self.over_budget += u32::from(work > budget);
         }
         let wall = now.saturating_duration_since(self.window_start);
@@ -87,11 +92,21 @@ impl FrameStats {
             fixed_steps: self.fixed_steps,
             mean_work: self.total_work / self.frames.max(1),
             max_work: self.max_work,
+            p99_work: nearest_rank_p99(&mut self.work_samples),
             over_budget: self.over_budget,
         };
         *self = Self::starting_at(now);
         Some(report)
     }
+}
+
+fn nearest_rank_p99(samples: &mut [Duration]) -> Duration {
+    if samples.is_empty() {
+        return Duration::ZERO;
+    }
+    let rank = (samples.len() * 99).div_ceil(100) - 1;
+    let (_, percentile, _) = samples.select_nth_unstable(rank);
+    *percentile
 }
 
 pub struct FrameStatsPlugin {
@@ -124,7 +139,7 @@ fn end_frame(mut stats: ResMut<FrameStats>, budget: Res<FrameBudget>) {
         return;
     };
     info!(
-        "Frames: {:.1} ticks/s ({} steps, {} frames in {:.1}s), work mean {:.1} ms max {:.1} ms, {} over budget",
+        "Frames: {:.1} ticks/s ({} steps, {} frames in {:.1}s), work mean {:.1} ms max {:.1} ms, {} over budget, p99 {:.1} ms",
         report.ticks_per_second(),
         report.fixed_steps,
         report.frames,
@@ -132,6 +147,7 @@ fn end_frame(mut stats: ResMut<FrameStats>, budget: Res<FrameBudget>) {
         report.mean_work.as_secs_f64() * 1000.0,
         report.max_work.as_secs_f64() * 1000.0,
         report.over_budget,
+        report.p99_work.as_secs_f64() * 1000.0,
     );
 }
 
@@ -152,6 +168,26 @@ mod tests {
             stats.record_fixed_step();
         }
         stats.end_frame(start + Duration::from_millis(work_ms), BUDGET)
+    }
+
+    #[test]
+    fn p99_uses_nearest_rank_and_does_not_retain_an_older_window() {
+        let t0 = Instant::now();
+        let mut stats = FrameStats::starting_at(t0);
+        let mut now = t0;
+        for index in 0..100 {
+            let work_ms = if index == 0 { 400 } else { 10 };
+            assert_eq!(run_frame(&mut stats, now, work_ms, 1), None);
+            now += Duration::from_millis(work_ms + 1);
+        }
+        let report = stats.end_frame(t0 + REPORT_WINDOW, BUDGET).unwrap();
+        assert_eq!(report.frames, 100);
+        assert_eq!(report.p99_work, Duration::from_millis(10));
+        assert_eq!(report.max_work, Duration::from_millis(400));
+        assert_eq!(report.over_budget, 1);
+        assert_eq!(run_frame(&mut stats, t0 + REPORT_WINDOW, 25, 1), None);
+        let next = stats.end_frame(t0 + REPORT_WINDOW * 2, BUDGET).unwrap();
+        assert_eq!(next.p99_work, Duration::from_millis(25));
     }
 
     #[test]
