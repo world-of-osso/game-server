@@ -38,7 +38,7 @@ class ToyItemImportTests(unittest.TestCase):
                 self.assertEqual(actual, expected)
                 self.assertEqual(conn.execute("SELECT * FROM content_item WHERE ID=32782").fetchone(), original)
                 self.assertIsNone(conn.execute("SELECT ID FROM content_item WHERE ID=72231").fetchone())
-                source_ids = retail_content.tdb_item_ids(conn)
+                source_ids = retail_content.retail_item_ids(conn)
                 self.assertTrue({64646, 109183, 113542}.issubset(source_ids))
                 conn.execute("CREATE TEMP TABLE item_map(source_id INTEGER,retail_id INTEGER)")
                 content_policy.build_items(conn, {}, {}, source_ids, Report())
