@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Native fear fleeing](../class-completeness6.md#native-fear-navmesh-fleeing--batch53) — real player/creature Detour movement/control/lifecycle; source model geometry import and21 shared aura memberships, whole-ability limits retained.
+
 - [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
 
 - [Current personal arena ratings](systems/dungeon-achievements.md#current-personal-arena-ratings) — current asset0/1, durable post-result highest values; native rated fixture, other brackets unclaimed.

@@ -64,6 +64,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## Fear control state
 
+- [x] Native aura7 runs players and creatures along collision-limited navmesh flee paths. Native caster distance subtracts both source combat reaches; random points use quiet distances28..43 and the pinned near/far/quiet rules, paths≤30yd, LOS200ms/path100ms retry and800..1500ms pause. Players lose movement control; last-aura removal/expiry stops fleeing and restores its owned control without releasing a newer owner. Missing navigation/model metadata never becomes guessed direct movement.
 - [x] Native aura7 makes the unit fleeing: its cast stops, auto-attacks stop, a creature shows no target and stops chasing, and a fleeing victim cannot dodge, parry or block. Removal restores swings and the creature's target.
 - [x] A fleeing caster fails with "Can't do that while fleeing" unless the spell purges every active fear effect through its own mechanic, school or definition immunity (Attr1 ImmunityPurgesEffect). Spells with Attr5 AllowWhileFleeing pass only when each fear spell's mechanics intersect the spell's allowed mechanics, including TC's Barkskin/Dispersion/Lichborne cases.
 - [ ] Flee movement (TC FleeingMovementGenerator) is pending a direction decision: pinned TC adds the owner's orientation to the away-from-caster angle. Aura7 therefore remains an unhandled census type. Player client-control loss is not modelled.
