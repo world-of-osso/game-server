@@ -145,6 +145,25 @@ impl GroundMap {
     /// Static ground plus enabled live GO collision in this exact map copy.
     pub(crate) fn ground_in(&mut self, map: crate::maps::InMap, feet: Vec3) -> GroundProbe {
         let base = self.ground_at(map.map_id, feet);
+        self.add_live_height(map, feet, base)
+    }
+
+    /// Creature movement uses map collision height, not player slope admission.
+    pub(crate) fn creature_ground_in(
+        &mut self,
+        map: crate::maps::InMap,
+        feet: Vec3,
+    ) -> GroundProbe {
+        let base = self.creature_ground_at(map.map_id, feet);
+        self.add_live_height(map, feet, base)
+    }
+
+    fn add_live_height(
+        &self,
+        map: crate::maps::InMap,
+        feet: Vec3,
+        base: GroundProbe,
+    ) -> GroundProbe {
         let live = self
             .live_hulls
             .get(&map)
@@ -211,12 +230,20 @@ impl GroundMap {
     /// Ground under `feet` (Bevy space) on map `map_id`, loading the map and its tile on
     /// first use.
     pub fn ground_at(&mut self, map_id: u32, feet: Vec3) -> GroundProbe {
+        self.sample_ground_at(map_id, feet, true)
+    }
+
+    pub(crate) fn creature_ground_at(&mut self, map_id: u32, feet: Vec3) -> GroundProbe {
+        self.sample_ground_at(map_id, feet, false)
+    }
+
+    fn sample_ground_at(&mut self, map_id: u32, feet: Vec3, walkable_only: bool) -> GroundProbe {
         if !self.maps.contains_key(&map_id) {
             let loaded = self.open_map(map_id);
             self.maps.insert(map_id, loaded);
         }
         let base = match self.maps.get_mut(&map_id) {
-            Some(Some(map)) => map.ground_at(feet),
+            Some(Some(map)) => map.ground_at(feet, walkable_only),
             _ => GroundProbe::Unloaded,
         };
         let m2 = self
@@ -363,21 +390,15 @@ impl MapGround {
         self.tiles.get(&tile)?.as_ref()
     }
 
-    fn ground_at(&mut self, feet: Vec3) -> GroundProbe {
+    fn ground_at(&mut self, feet: Vec3, walkable_only: bool) -> GroundProbe {
         if let Some(wmo) = &self.global_wmo {
-            return match shared::ground::ground_at(feet, None, std::slice::from_ref(wmo)) {
-                Some(ground) => GroundProbe::Supported(ground.height),
-                None => GroundProbe::Unsupported,
-            };
+            return probe_collision_height(feet, None, std::slice::from_ref(wmo), walkable_only);
         }
         let Some(tile) = self.tile(bevy_to_tile(feet.x, feet.z)) else {
             return GroundProbe::Unloaded;
         };
         let terrain = tile.terrain.height_at_bevy(feet.x, feet.z);
-        match shared::ground::ground_at(feet, terrain, &tile.wmos) {
-            Some(ground) => GroundProbe::Supported(ground.height),
-            None => GroundProbe::Unsupported,
-        }
+        probe_collision_height(feet, terrain, &tile.wmos, walkable_only)
     }
 
     fn load_tile(&mut self, (row, col): (u32, u32)) -> Option<TileGround> {
@@ -428,6 +449,23 @@ impl MapGround {
         }
         let groups = self.wmo_models[&placement.fdid].clone();
         Some(WmoCollision::new(placement.world_from_local(), groups))
+    }
+}
+
+fn probe_collision_height<'a>(
+    feet: Vec3,
+    terrain: Option<f32>,
+    wmos: impl IntoIterator<Item = &'a WmoCollision>,
+    walkable_only: bool,
+) -> GroundProbe {
+    let support = if walkable_only {
+        shared::ground::ground_at(feet, terrain, wmos)
+    } else {
+        shared::ground::collision_height(feet, terrain, wmos)
+    };
+    match support {
+        Some(ground) => GroundProbe::Supported(ground.height),
+        None => GroundProbe::Unsupported,
     }
 }
 
@@ -853,6 +891,10 @@ mod m2_floor_tests;
 #[cfg(test)]
 #[path = "ground_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "ground_achievement_fall_tests.rs"]
+mod achievement_fall_tests;
 
 #[cfg(test)]
 #[path = "ground_private_runs_tests.rs"]
