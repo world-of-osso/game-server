@@ -441,29 +441,42 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
     assert_eq!(hits[0].blocked, (total as f32 * 0.5).trunc() as i32);
 }
 
-#[test]
-fn class_completeness_native_creature_spell_block_uses_creature_percent_not_player_shield() {
-    for critical in [false, true] {
-        let mut h = harness(Vec::new(), &[1464, 10021, 203524], 1).unwrap();
-        h.app.insert_resource(load_native_creature_world(&[6]));
-        let target = h.npc;
-        h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
-        h.app.world_mut().entity_mut(target).insert(Rotation {
+fn creature_block_duel(entry: u32) -> Harness {
+    let mut h = harness(Vec::new(), &[1464, 10021, 203524, 853], 1).unwrap();
+    let data = load_native_creature_world(&[entry]);
+    let name = data.templates[&entry].name.clone();
+    h.app.insert_resource(data);
+    h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        shared::components::Npc {
+            template_id: entry,
+            name,
+        },
+        Rotation {
             x: 0.0,
             y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
             z: 0.0,
-        });
-        // Native10021 effect0 gives100 block percentage points to a creature.
-        crate::auras::apply_aura(
-            h.app.world_mut(),
-            &AuraApplication {
-                caster: target,
-                target,
-                spell_id: 10021,
-                effect_mask: 1,
-                source: AuraSource::Cast,
-            },
-        );
+        },
+    ));
+    // Native10021 effect0 gives100 block percentage points to a creature.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.npc,
+            target: h.npc,
+            spell_id: 10021,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h
+}
+
+#[test]
+fn class_completeness_native_creature_spell_block_uses_creature_percent_not_player_shield() {
+    for critical in [false, true] {
+        let mut h = creature_block_duel(6);
+        let target = h.npc;
         if critical {
             crate::auras::apply_aura(
                 h.app.world_mut(),
@@ -488,5 +501,48 @@ fn class_completeness_native_creature_spell_block_uses_creature_percent_not_play
             "{:?}",
             hits[0]
         );
+    }
+}
+
+#[test]
+fn class_completeness_native_creature_no_block_flag_overrides_block_aura() {
+    let mut h = creature_block_duel(1511);
+    let target = h.npc;
+    let hits = cast_damage_spell(&mut h, target, 1464, 3);
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].blocked, 0);
+    assert!(varied(303.0).contains(&(hits[0].amount as f32)));
+}
+
+#[test]
+fn class_completeness_native_creature_block_requires_facing_and_active_defense() {
+    for stunned in [false, true] {
+        let mut h = creature_block_duel(6);
+        let target = h.npc;
+        if stunned {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster: h.caster,
+                    target,
+                    spell_id: 853,
+                    effect_mask: 1,
+                    source: AuraSource::Cast,
+                },
+            );
+            assert!(
+                h.app
+                    .world()
+                    .get::<ActiveAuras>(target)
+                    .unwrap()
+                    .is_stunned()
+            );
+        } else {
+            h.app.world_mut().get_mut::<Rotation>(target).unwrap().y = 0.0;
+        }
+        let hits = cast_damage_spell(&mut h, target, 1464, 3);
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].blocked, 0);
+        assert!(varied(303.0).contains(&(hits[0].amount as f32)));
     }
 }
