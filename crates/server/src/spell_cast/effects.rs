@@ -93,6 +93,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_INSTAKILL => instakill,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         33 | 95 => crate::gathering::effect_gather,
+        87 => crate::pvp::isle_siege::effect_damage,
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
