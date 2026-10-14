@@ -114,6 +114,10 @@ Hash-matched local Forever Creature 841631 (`6E14C900`, 179 readable rows) and C
 
 Evidence: checkout `target/zephras-content-proof/` (scratch DB, reports, native/Python logs and ledger). Full base-policy scratch regeneration passed; local/desktop scratch overlay counts agree. This is server data/message proof, not complete zone gameplay or rendered-client acceptance.
 
+### DB2 refresh preserves derived factions
+
+Verified2026-10-14: `db2.py import` regenerates the six approved Zephras reaction templates from existing `zephras_row_source.source_json` via `zephras_content.faction_row`, after replacing Retail tables and reapplying Skyborne DB2 rows, before commit. `db2_row_source` marks these as derived (receipt scrape, FDID0, layout`derived`, exact source-JSON SHA256); malformed keys/collisions roll back. Build receipts owned by other importers remain untouched. No capture fetch or copying stale runtime values. [Regression receipts and118-table audit](../../master-reds-70391.md#zephras-derived-factions-and-replacement-audit) distinguish six lost derived rows from retained Skyborne rows and two unavailable old-source comparisons. Canonical application remains lead-owned.
+
 ### Loader
 
 `mysql_dump.py` tokenizes dump `INSERT`s and decodes MySQL string escapes before binding parameters. The previous awk/sed path rewrote only `\'`, so 168 creature names were stored with literal backslashes (`Remy \"Two Times\"`); they now load as `Remy "Two Times"`. `--schema` runs `world_schema.sql` inside the load transaction, so the dump tables can be reloaded into a populated `world.db` without touching DB2 tables, and a failed parse rolls back. The full script still deletes and rebuilds `world.db`.
