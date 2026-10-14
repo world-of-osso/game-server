@@ -281,7 +281,7 @@ fn class_completeness_native_berserk_does_not_restore_mangle_charges() {
     h.cast_and_deliver(33917, Some(h.npc));
     assert_eq!(
         h.inbox.failed[0].reason,
-        shared::spell_data::CastFailReason::NoCharges
+        shared::spell_data::CastFailReason::NoChargesRemain
     );
     h.advance(70);
     h.inbox = Inbox::default();
