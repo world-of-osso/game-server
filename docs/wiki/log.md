@@ -1,3 +1,7 @@
+## 2026-10-14 — Active installed achievement import
+
+[Importer](systems/dungeon-achievements.md#active-installed-achievement-import) no longer selects69933. Actual70391 process RED→GREEN2/2 covers current row counts, source build, Stockade and unrelated SQL; corrupt actual layout rejects before mutation. Build-selection/native-golden unit3/3; work-copy fingerprint/swap and native census gate pending.
+
 ## 2026-10-14 — Player-anchored spell-hit target class
 
 [TargetIsPlayer5/TargetClass28](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) use the actual Player hit snapshot, with a complete positive player/race anchor for class predicates. Compiler32/32; native/catalog2/2 at b2b90543 include actual rose/turkey hits, wrong identity, missing authority and idle/reopen. Census5456/1816 adds1699/3559 structurally, excluding13 hypothetical unanchored class orphans. Mandatory acceptance pending.
