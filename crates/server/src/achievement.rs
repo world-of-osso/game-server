@@ -1066,19 +1066,13 @@ fn battle_pet_team_min_level(world: &World, player: Entity) -> Option<u8> {
 }
 
 fn earned_player_achievement_ids(world: &World, player: Entity) -> BTreeSet<u32> {
-    let Some(state) = world.get::<PlayerAchievementState>(player) else {
+    let Some((state, catalog)) = world
+        .get::<PlayerAchievementState>(player)
+        .zip(world.get_resource::<AchievementCatalog>())
+    else {
         return BTreeSet::new();
     };
-    let account_ids = state
-        .account
-        .iter()
-        .flat_map(|account| account.earned_ids.iter());
-    state
-        .earned_ids
-        .iter()
-        .chain(account_ids)
-        .copied()
-        .collect()
+    catalog.iter_earned_achievement_ids(state).collect()
 }
 
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
