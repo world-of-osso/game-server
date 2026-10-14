@@ -10,7 +10,7 @@ use shared::protocol::CombatLogKind;
 const CRITICAL_BLOCK: u32 = 76857;
 
 fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
-    let mut h = harness(Vec::new(), &[CRITICAL_BLOCK, 203524], 1).unwrap();
+    let mut h = harness(Vec::new(), &[CRITICAL_BLOCK, 203524, 1464], 1).unwrap();
     let defender = spawn_player(&mut h.app, 1, 3.0);
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::duel::DuelOpponent(defender),
@@ -185,4 +185,52 @@ fn class_completeness_native_finite_critical_block_field_expires_on_its_source_c
     h.advance(65);
     assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
     assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
+}
+
+#[test]
+fn class_completeness_native_slam_rolls_block_and_critical_block_before_absorbs() {
+    for critical in [false, true] {
+        let (mut h, defender) = shield_duel(if critical { 100.0 } else { 0.0 });
+        let caster = h.caster;
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert(crate::class_progression::KnownSpells::fixture(vec![1464]));
+        h.app
+            .world_mut()
+            .get_mut::<CharacterStats>(caster)
+            .unwrap()
+            .attack_power = 100.0;
+        h.set_power(shared::components::PowerType::Rage, 1000.0);
+        apply_mastery(&mut h, defender);
+        h.inbox = Inbox::default();
+        let health = h.health(defender);
+        h.cast_and_deliver(1464, Some(defender));
+        h.advance(3);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let hits: Vec<_> = h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(1464)
+                    && event.target == Some(defender.to_bits())
+                    && event.kind == CombatLogKind::Damage
+            })
+            .collect();
+        assert_eq!(hits.len(), 1);
+        let hit = hits[0];
+        let total = hit.amount + hit.blocked;
+        // Active1464 effect462:3.03484988AP,5% variance. Fixture100AP.
+        assert!(varied(303.0).contains(&(total as f32)), "{hit:?}");
+        assert!(!hit.crit, "critical block is not a critical strike");
+        if critical {
+            // Spell blocks double50% BEFORE truncation: full block, unlike autoswings.
+            assert_eq!(hit.amount, 0, "{hit:?}");
+            assert_eq!(h.health(defender), health);
+        } else {
+            assert_eq!(hit.blocked, (total as f32 * 0.5).trunc() as i32, "{hit:?}");
+            assert_eq!(health - h.health(defender), hit.amount as f32);
+        }
+    }
 }
