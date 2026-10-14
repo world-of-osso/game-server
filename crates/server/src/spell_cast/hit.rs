@@ -167,7 +167,7 @@ fn roll_weapon_spell_defense(
     } else {
         incoming_miss_chance(world, caster, spell, unit, defense)
     };
-    let roll = rand::random_range(0..10_000);
+    let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000);
     let mut threshold = spell_chance_units(miss);
     if roll < threshold {
         return Some(MissKind::Miss);
