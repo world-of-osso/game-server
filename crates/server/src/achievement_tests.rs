@@ -845,21 +845,40 @@ fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing()
     );
     let missing = h.app.world_mut().spawn_empty().id();
     record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 45544);
-    h.app.world_mut().get_mut::<Health>(target).unwrap().max = 0.0;
-    record_targeted_spell_hit(h.app.world_mut(), h.caster, target, 45544);
-    h.app.world_mut().get_mut::<Health>(target).unwrap().max = 100.0;
-    h.app.world_mut().get_mut::<Health>(target).unwrap().current = f32::NAN;
-    record_targeted_spell_hit(h.app.world_mut(), h.caster, target, 45544);
-    assert!(
-        !h.app
-            .world()
-            .get::<PlayerAchievementState>(h.caster)
-            .unwrap()
-            .criteria_progress
-            .contains_key(&6799),
-        "unknown/invalid target health cannot qualify"
-    );
-    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 5.0;
+    for health in [
+        Health {
+            current: 5.0,
+            max: 0.0,
+        },
+        Health {
+            current: f32::NAN,
+            max: 100.0,
+        },
+        Health {
+            current: 5.0,
+            max: f32::INFINITY,
+        },
+        Health {
+            current: f32::INFINITY,
+            max: 100.0,
+        },
+    ] {
+        h.app.world_mut().entity_mut(target).insert(health);
+        record_targeted_spell_hit(h.app.world_mut(), h.caster, target, 45544);
+        assert!(
+            !h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&6799),
+            "invalid target health {health:?} cannot qualify"
+        );
+    }
+    h.app.world_mut().entity_mut(target).insert(Health {
+        current: 5.0,
+        max: 100.0,
+    });
     crate::spell_cast::cast_triggered_with_item_level(
         h.app.world_mut(),
         h.caster,
