@@ -683,3 +683,39 @@ fn class_completeness_native_creature_type_damage_reapplication_reads_current_pe
         "updated per-cast30%, not stale20% or stacked56%: {loss}"
     );
 }
+
+#[test]
+fn class_completeness_native_creature_type_damage_tracking_zero_amount_is_identity() {
+    let mut h = harness_with_plugins(Vec::new(), &[1494], 3, false, |app| {
+        app.insert_resource(native_undead());
+    })
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<crate::stats::CharacterStats>();
+    place_native_npc(&mut h, 113);
+    let (caster, victim) = (h.caster, h.npc);
+    // Native1494 effect1 is168/amount0/mask127. This does not certify tracking44.
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 1494,
+            effect_mask: 2,
+            source: AuraSource::Cast,
+        },
+    );
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::combat::AutoAttack::new(victim));
+    let before = h.health(victim);
+    h.advance(2);
+    assert_eq!(
+        before - h.health(victim),
+        10.0,
+        "zero-amount native168 leaves actual unarmed damage unchanged"
+    );
+}
