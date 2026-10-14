@@ -347,6 +347,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | FEATHER_FALL
         | MOD_UNATTACKABLE
         | MOD_CONFUSE
+        | MOD_FEAR
         | TRANSFORM
         | MOD_SHAPESHIFT
         | MOUNTED
