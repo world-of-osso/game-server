@@ -258,6 +258,15 @@ fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript>
         .and_then(|scripts| scripts.0.get_mut(&map))
 }
 
+/// Runtime slot of an encounter identity, independent of source ordinals/DB2 bits.
+pub(super) fn boss_id_for_encounter(world: &mut World, map: InMap, encounter: u32) -> Option<u32> {
+    instance_script(world, map)?
+        .bosses
+        .iter()
+        .position(|boss| boss.encounter_id == encounter)
+        .map(|slot| slot as u32)
+}
+
 /// `InstanceScript::GetBossState`; `None` outside an instance script.
 pub fn get_boss_state(world: &mut World, map: InMap, boss_id: u32) -> Option<EncounterState> {
     instance_script(world, map)?
@@ -335,6 +344,7 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
         }
         EncounterState::NotStarted | EncounterState::Fail => {}
     }
+    super::wailing_caverns::on_boss_state_changed(world, map, encounter_id, state);
     true
 }
 

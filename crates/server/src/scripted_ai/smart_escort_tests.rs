@@ -1536,3 +1536,131 @@ fn smartai_coverage_erland_set_run_survives_the_next_leg() {
             .is_none()
     );
 }
+
+/// Actual Serpentis death action34 carries TC data3, stateDONE3, mode1.
+/// Source data3 is encounter590; with legacy Cobrahn0 plus the Serpentis binding,
+/// that encounter lives at runtime slot1. Test the action directly so generic
+/// SmartAI BossAi::just_died cannot mask an ignored or misdirected source row.
+#[test]
+fn smartai_coverage_wailing_source_ordinal_updates_only_its_encounter() {
+    use super::super::instance_script::{EncounterState, get_boss_state};
+    use crate::maps::InMap;
+
+    let path = crate::test_data::world_db_path();
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let mut maps = crate::maps::store::load_map_store(&conn).unwrap();
+    maps.raid_creature_encounters
+        .retain(|(map, _), _| *map != 43);
+    maps.raid_creature_encounters.insert((43, 3673), 5);
+    let scripts = load_smart_scripts(&path).unwrap();
+    let events = scripts.0[&3673].clone();
+    let action = events.iter().find(|event| event.id == 0).unwrap().clone();
+    let mut ai = SmartAi {
+        states: vec![EventState::default(); events.len()],
+        events,
+        phase: 0,
+        boss: None,
+        stored_targets: HashMap::new(),
+        timed_list: None,
+        processing_timed_list: false,
+        escort: None,
+        path_event_id: None,
+        follow: None,
+    };
+    let mut world = World::new();
+    world.insert_resource(maps);
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(crate::maps::ServerClock {
+        offset_secs: 0,
+        fixed_unix: Some(1_791_705_600),
+    });
+    let map = InMap {
+        map_id: 43,
+        instance_id: 7,
+    };
+    let other = InMap {
+        instance_id: 8,
+        ..map
+    };
+    let actor = world
+        .spawn((
+            Npc {
+                template_id: 3673,
+                name: "Lord Serpentis".into(),
+            },
+            map,
+        ))
+        .id();
+    assert_eq!(
+        get_boss_state(&mut world, map, 1),
+        Some(EncounterState::NotStarted)
+    );
+    ai.execute_action(
+        &mut Ctx {
+            world: &mut world,
+            me: actor,
+        },
+        &action,
+        None,
+    );
+    assert_eq!(
+        get_boss_state(&mut world, map, 1),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        get_boss_state(&mut world, map, 0),
+        Some(EncounterState::NotStarted)
+    );
+    assert_eq!(
+        get_boss_state(&mut world, other, 1),
+        Some(EncounterState::NotStarted)
+    );
+
+    // Actual Anacondra row5 is SetData mode0, not SetBossState. Its field3 must
+    // not be silently reinterpreted as a Serpentis completion in another copy.
+    let lady = world
+        .spawn((
+            Npc {
+                template_id: 3671,
+                name: "Lady Anacondra".into(),
+            },
+            other,
+        ))
+        .id();
+    ai.execute_action(
+        &mut Ctx {
+            world: &mut world,
+            me: lady,
+        },
+        &tdb_action(3671, 0, 5),
+        None,
+    );
+    assert_eq!(
+        get_boss_state(&mut world, other, 1),
+        Some(EncounterState::NotStarted)
+    );
+
+    // A source ordinal alone must not authorize an unbound encounter.
+    world
+        .resource_mut::<crate::maps::MapStore>()
+        .raid_creature_encounters
+        .remove(&(43, 3673));
+    let unbound = InMap {
+        instance_id: 9,
+        ..map
+    };
+    world.entity_mut(actor).insert(unbound);
+    ai.execute_action(
+        &mut Ctx {
+            world: &mut world,
+            me: actor,
+        },
+        &action,
+        None,
+    );
+    assert_eq!(
+        get_boss_state(&mut world, unbound, 0),
+        Some(EncounterState::NotStarted)
+    );
+    assert_eq!(get_boss_state(&mut world, unbound, 1), None);
+}
