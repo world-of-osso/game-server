@@ -265,6 +265,9 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     149954, 163441, 199054, 231372,
     # Sea-Blessed Shrine: source cursor placement, no click/AI/script payload.
     246037,
+    # Xan'tish's Flute: preserve all four weighted native Snake display choices.
+    # Source wild/default count is separate from template publication.
+    71500,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
