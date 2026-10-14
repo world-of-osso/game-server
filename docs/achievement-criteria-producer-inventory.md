@@ -2,9 +2,11 @@
 
 verified: 2026-10-13
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5450 ordinary (3445 account/2005 character),1815 statistics; 103 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5453 ordinary (3448 account/2005 character),1815 statistics; 103 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Positive PlayerKnowsSpell104 follows TC CriteriaHandler2282–2285/Player3666–3670. ReferencePlayer captures existing effective class spell IDs, PlayerProfessions.spells and owned account mount spells; global SpellStore availability is never ownership. Every authored spell is validated at load; absent knowledge, negated/zero/unknown companion predicates remain unqualified. Native profession-learner RED learned the real recipes and correct marker but lacked61271 progress. Compiler29/29; +3 account roots18805/19704/19716. Native/final gate pending; marker acquisition through traits/public UI is not certified.
 
 - LootAnyItem90/ObtainAnyItem91 use the existing committed Retail receipt queues (TC Player11339/27204), one increment per receipt (CriteriaHandler503–553), not stack count. Compiler supports itemID19 and bounded item-quality14/15 for these families only, with complete Some19 alternatives; missing item disables the entire predicate and all companion aura leaves remain required. Loader reads canonical content_item quality, never the display loot quality. Pinned IsCompletedCriteria1300–1327 is statistic-only for91, so contradictory ordinary12927/13707 rows41244/45924 remain disabled. Structural counts unchanged; only eight additional supported orphan rows, two event types. Compiler28/28; five targeted native/catalog scopes pass across9ef69b8b+fixtureebc151ae: paid33999 epic acquisition, controlled authentic Aethril5/Sulfuron3 native loot receipts, wrong display quality, refusal/retake/idle/reopen, complete alternatives, account sum and completion contradictions. No authored NPC-drop closure. Full four-thread workspace filter163/0/1ignored and server/engine/three-repo checks pass; remote/independent certification remains unclaimed.
 
@@ -96,7 +98,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 31 | PVPKillInArea | 0/51 | 0/45 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 32 | WinArena | 57/82 | 56/62 | 1 | Native committed rated winners: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
 | 33 | ParticipateInArena | 55/87 | 55/61 | 0 | Native committed rated participants, including losers: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
-| 34 | LearnOrKnowSpell | 530/578 | 441/467 | 89 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 34 | LearnOrKnowSpell | 568/578 | 467/467 | 101 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 35 | EarnHonorableKill | 0/62 | 0/52 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 36 | AcquireItem | 1650/1759 | 1123/1132 | 527 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 37 | WinAnyRankedArena | 4/60 | 1/34 | 3 | Native rated2v2/3v3 committed settlement: authenticated online winners only; pre-result rating minimum1 (TC Arena.cpp249), one accumulated win. Real-channel rated wins/skirmish/losers/no-replay/redb-reopen proved. Timers and unsupported qualifiers stay disabled. |
@@ -137,7 +139,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 72 | CatchFishInFishingHole | 0/38 | 0/36 | 0 | Producer gap: no fishing pool/catch settlement (toy transmitted-object placeholders are not fishing). |
 | 73 | PlayerTriggerGameEvent | 241/804 | 76/587 | 165 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 74 | Login | 12/462 | 11/372 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 75 | LearnSpellFromSkillLine | 12/16 | 2/2 | 10 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 75 | LearnSpellFromSkillLine | 15/16 | 2/2 | 13 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 76 | WinDuel | 5/27 | 3/16 | 2 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 77 | LoseDuel | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 78 | KillAnyCreature | 5/112 | 1/21 | 4 | Native: TC KillRewarder:185 via shared TapRewardRecipients (map copy, range, group, corpse eligibility). See spec. |

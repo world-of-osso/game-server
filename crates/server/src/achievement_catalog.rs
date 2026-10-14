@@ -461,6 +461,8 @@ pub(crate) struct PlayerConditions {
 pub(crate) struct ReferencePlayer {
     /// Spell IDs of active auras.
     pub auras: BTreeSet<u32>,
+    /// IDs in existing class/profession knowledge and the owning mount journal.
+    pub known_spells: BTreeSet<u32>,
     /// Current terrain area (TC Player::GetAreaId).
     pub area: Option<u32>,
     pub map: u32,
@@ -481,6 +483,7 @@ enum CriteriaFact {
     /// Bounded native PlayerCondition2 class/race rule; all other fields reject at load.
     Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
+    KnownSpell(u32),
     /// Some8 requiring one of these complete, authenticated PlayerHasAura8 spells.
     PlayerAuras(BTreeSet<u32>),
     /// ItemId19 or item-template quality14/15 against this native receipt's itemID.
@@ -513,6 +516,7 @@ impl CriteriaFact {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
+            Self::KnownSpell(spell) => player.known_spells.contains(spell),
             Self::PlayerAuras(spells) => !player.auras.is_disjoint(spells),
             Self::EventItems(items) => match event {
                 CriteriaEvent::ObtainAnyItem(item) | CriteriaEvent::LootAnyItem(item) => {
@@ -1301,6 +1305,7 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
+            104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
             19 => exists("content_item")?
@@ -1334,7 +1339,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/29/32/35/41/60/69/71/122"
+                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/29/32/35/41/60/69/71/104/122"
                 )
             }
         };
