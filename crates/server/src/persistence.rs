@@ -897,11 +897,7 @@ pub fn load_world_map(db: &Database, character_id: u64) -> crate::world_map::Pla
             serde_json::from_slice::<crate::world_map::PlayerWorldMapState>(guard.value())
                 .expect("decode world map")
         }
-        None => {
-            let state = crate::world_map::PlayerWorldMapState::default();
-            save_world_map(db, character_id, &state);
-            state
-        }
+        None => crate::world_map::PlayerWorldMapState::default(),
     }
 }
 

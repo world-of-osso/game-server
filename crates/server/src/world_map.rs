@@ -1,3 +1,5 @@
+mod actor;
+use actor::{PendingDiscoveries, publish_discoveries};
 use std::collections::BTreeSet;
 
 use bevy::prelude::*;
@@ -19,11 +21,12 @@ pub struct WorldMapPlugin;
 
 impl Plugin for WorldMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.init_resource::<PendingDiscoveries>().add_systems(
             Update,
             (
                 send_initial_world_map_snapshot,
                 process_zone_discovery_updates,
+                publish_discoveries,
             )
                 .chain(),
         );
@@ -41,6 +44,7 @@ fn send_initial_world_map_snapshot(
     connections: NewInWorldConnection,
     mut world_maps: Query<(&Zone, &mut PlayerWorldMapState)>,
     db: Option<Res<GameDatabase>>,
+    mut pending: ResMut<PendingDiscoveries>,
     mut senders: Query<&mut MessageSender<WorldMapStateUpdate>>,
 ) {
     for (conn_entity, link, in_world) in &connections {
@@ -52,9 +56,17 @@ fn send_initial_world_map_snapshot(
             );
             continue;
         };
-        let discovered_new_zone = discover_zone(&mut state, zone.id);
-        if discovered_new_zone && let Some(db) = db.as_ref() {
-            persistence::save_world_map(&db.db, in_world.character_id, &state);
+        discover_zone(&mut state, zone.id);
+        if let Some(db) = db.as_ref() {
+            pending.enqueue(
+                db,
+                conn_entity,
+                link.0,
+                in_world.character_id,
+                state.clone(),
+                "world map discovery loaded".into(),
+            );
+            continue;
         }
         send_world_map_update(
             conn_entity,
@@ -70,7 +82,7 @@ fn process_zone_discovery_updates(
     connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     mut world_maps: Query<(Entity, &Zone, &mut PlayerWorldMapState), Changed<Zone>>,
     db: Option<Res<GameDatabase>>,
-    mut senders: Query<&mut MessageSender<WorldMapStateUpdate>>,
+    mut pending: ResMut<PendingDiscoveries>,
 ) {
     let Some(db) = db else { return };
     for (player_entity, zone, mut state) in &mut world_maps {
@@ -81,13 +93,13 @@ fn process_zone_discovery_updates(
         else {
             continue;
         };
-        persistence::save_world_map(&db.db, character_id, &state);
-        send_world_map_update(
+        pending.enqueue(
+            &db,
             conn_entity,
-            build_world_map_snapshot(&state),
-            Some(format!("discovered zone {}", zone.id)),
-            None,
-            &mut senders,
+            player_entity,
+            character_id,
+            state.clone(),
+            format!("discovered zone {}", zone.id),
         );
     }
 }
@@ -148,6 +160,112 @@ fn send_world_map_error(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn world_map_discovery_waits_for_fifo_without_blocking_updates() {
+        use lightyear::connection::host::HostClient;
+        use std::time::{Duration, Instant};
+        let db = persistence::temp_database();
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: Duration::from_millis(50),
+        });
+        app.register_message::<WorldMapStateUpdate>();
+        app.insert_resource(GameDatabase::new(db))
+            .add_plugins(WorldMapPlugin);
+        app.finish();
+        app.cleanup();
+        let player = app
+            .world_mut()
+            .spawn((Zone { id: 12 }, PlayerWorldMapState::default()))
+            .id();
+        let connection = app
+            .world_mut()
+            .spawn((
+                Connected,
+                RemoteId(PeerId::Local(1)),
+                HostClient { buffer: Vec::new() },
+                Authenticated { account_id: 1 },
+                InWorld { character_id: 42 },
+                PlayerLink(player),
+                MessageSender::<WorldMapStateUpdate>::default(),
+                MessageReceiver::<WorldMapStateUpdate>::default(),
+            ))
+            .id();
+        let held = app
+            .world()
+            .resource::<GameDatabase>()
+            .db
+            .begin_write()
+            .unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            held.abort().unwrap();
+        });
+        let started = Instant::now();
+        app.update();
+        app.world_mut().get_mut::<Zone>(player).unwrap().id = 1519;
+        app.update();
+        let elapsed = started.elapsed();
+        let premature = app
+            .world_mut()
+            .get_mut::<MessageReceiver<WorldMapStateUpdate>>(connection)
+            .unwrap()
+            .receive()
+            .next();
+        release.join().unwrap();
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "world map tick waited: {elapsed:?}"
+        );
+        assert!(premature.is_none(), "discovery snapshot precedes commit");
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            app.update();
+            let responses: Vec<_> = app
+                .world_mut()
+                .get_mut::<MessageReceiver<WorldMapStateUpdate>>(connection)
+                .unwrap()
+                .receive()
+                .collect();
+            if responses.iter().any(|response| {
+                response
+                    .snapshot
+                    .as_ref()
+                    .is_some_and(|snapshot| snapshot.discovered_zone_ids == vec![12, 1519])
+            }) {
+                break;
+            }
+            assert!(Instant::now() < deadline, "no committed discovery snapshot");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(
+            persistence::load_world_map(&app.world().resource::<GameDatabase>().db, 42)
+                .discovered_zone_ids,
+            BTreeSet::from([12, 1519])
+        );
+    }
+
+    #[test]
+    fn absent_world_map_reader_does_not_wait_for_a_writer() {
+        use std::time::{Duration, Instant};
+        let db = persistence::temp_database();
+        let held = db.begin_write().unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            held.abort().unwrap();
+        });
+        let started = Instant::now();
+        let state = persistence::load_world_map(&db, 42);
+        let elapsed = started.elapsed();
+        release.join().unwrap();
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "world map reader waited: {elapsed:?}"
+        );
+        assert_eq!(state, PlayerWorldMapState::default());
+    }
 
     #[test]
     fn discover_zone_ignores_zero_and_duplicates() {
