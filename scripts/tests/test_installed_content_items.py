@@ -38,6 +38,24 @@ def copy_source_table(source, destination, table, item_ids=None):
 
 
 class InstalledContentItemsTest(unittest.TestCase):
+    def test_item_only_refresh_preserves_isolated_overlay_and_provenance(self):
+        import skyborne_kit_fixture
+
+        with closing(skyborne_kit_fixture.fixture_database()) as db:
+            # Keep authentic extra provenance after the overlay rows, as in world.db.
+            with closing(sqlite3.connect(f"file:{ROOT / 'data/world.db'}?mode=ro", uri=True)) as source:
+                existing = set(db.execute("SELECT table_name,row_id FROM db2_row_source"))
+                extra = next(
+                    row for row in source.execute("SELECT * FROM db2_row_source")
+                    if row[:2] not in existing
+                )
+                db.execute("INSERT INTO db2_row_source VALUES (?,?,?,?,?,?)", extra)
+            before = db.execute("SELECT rowid,* FROM db2_row_source ORDER BY rowid").fetchall()
+            overlay = db.execute("SELECT * FROM skyborne_content_item ORDER BY ID").fetchall()
+            content_policy.refresh_items(db)
+            self.assertEqual(db.execute("SELECT rowid,* FROM db2_row_source ORDER BY rowid").fetchall(), before)
+            self.assertEqual(db.execute("SELECT * FROM skyborne_content_item ORDER BY ID").fetchall(), overlay)
+
     def test_every_installed_definition_is_projected_without_tdb_membership(self):
         with (
             closing(sqlite3.connect(f"file:{ROOT / 'data/world.db'}?mode=ro", uri=True)) as source,
