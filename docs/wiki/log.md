@@ -1,3 +1,7 @@
+## 2026-10-14 — Shared weapon-spell defense roll
+
+[Implemented physical defenses](systems/player-damage.md#shared-weapon-spell-defense-roll) share one quantized cumulative roll. Native Sling Mud/Improved Blocking produces genuine unblocked-hit RED;60 Slam and60 Aimed Shot/Veil trials now pass with retained controls (19 total). Missing dodge/parry, mechanic resistance, player baseline and independent acceptance remain explicit.
+
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 
 [Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.

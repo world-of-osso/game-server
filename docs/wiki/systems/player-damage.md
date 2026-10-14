@@ -79,6 +79,10 @@ Live proof: `game-engine/data/diagnostics/playerdamage-20260926/` (server and cl
 - [[auras]] — `AuraStatMods` (MOD_AUTOATTACK_DAMAGE, damage done/taken)
 
 
+### Shared weapon-spell defense roll
+
+Weapon-spell miss, ranged deflection and block consume one native integer roll and cumulative truncated hundredths. Magic behavior remains separate; native dodge/parry, mechanic resistance and player hit baseline remain unimplemented boundaries. Two actual native cast invariants and quantization controls pass alongside retained block controls; current integration and independent acceptance are pending. [Exact source and proof](../../class-completeness6.md#shared-weapon-spell-roll-boundary--batch59-in-progress).
+
 ### Native player critical/block hit state
 
 Autoswings consume integer aura253 chance on the defender and double the already-truncated blocked amount. Player weapon-spell hit plans retain sparse per-unit block results through flight; the existing innermost matching `ResolvingHits` frame supplies that result before absorption. Critical spell blocks double the integer shield percentage before truncation/full-block cap, not the amount after truncation. Chance is read at impact; facing/block hit result belongs to launch. Source: TC a352b1fa Unit.cpp2564–2570,1469–1473,2610–2741,1243–1257.
