@@ -24,6 +24,7 @@ pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fixate;
+mod fleeing;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
 pub mod invisibility;
@@ -130,6 +131,7 @@ impl Plugin for AuraPlugin {
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,
                     sync_unit_auras,
+                    fleeing::update,
                 )
                     .chain()
                     .after(crate::spell_cast::advance_casts)

@@ -95,7 +95,8 @@ fn load_team(world: &World, owner: Entity) -> Result<Vec<Identity>, String> {
                 .ok_or("loadout pet no longer owned")
         })
         .collect::<Result<Vec<_>, _>>()?;
-    build_team(world.resource::<WildCatalog>(), &identities)?;
+    let states = load_or_initialize_pet_states(world, owner)?;
+    build_team(world.resource::<WildCatalog>(), &identities, &states)?;
     Ok(identities)
 }
 fn queue_request(
@@ -233,10 +234,14 @@ fn next_id(world: &mut World) -> u64 {
 }
 fn start_match(world: &mut World, id: u64, owners: [Entity; 2]) -> Result<(), String> {
     let identities = [load_team(world, owners[0])?, load_team(world, owners[1])?];
+    let states = [
+        load_or_initialize_pet_states(world, owners[0])?,
+        load_or_initialize_pet_states(world, owners[1])?,
+    ];
     let catalog = world.resource::<WildCatalog>();
     let teams = [
-        build_team(catalog, &identities[0])?,
-        build_team(catalog, &identities[1])?,
+        build_team(catalog, &identities[0], &states[0])?,
+        build_team(catalog, &identities[1], &states[1])?,
     ];
     let encounter = Encounter {
         id,
@@ -262,6 +267,7 @@ fn start_match(world: &mut World, id: u64, owners: [Entity; 2]) -> Result<(), St
         let snapshot = snapshot(world, &battle, team);
         let connection = connection(world, *owner)?;
         send_update(world, connection, WildPetBattleUpdate::Start(snapshot));
+        send_pet_details(world, connection, *owner, None);
     }
     info!("PvP pet battle {id} started between {:?}", owners);
     world
@@ -485,6 +491,15 @@ fn resolve_round(
         .filter_map(|event| format_combat_event(event, world.resource::<WildCatalog>()))
         .collect();
     battle.decisions = [None; 2];
+    for team in 0..2 {
+        let owner = battle.owners[team];
+        let journal = world
+            .get::<AccountPetJournal>(owner)
+            .ok_or("Account pet journal unavailable")?
+            .journal
+            .clone();
+        persist_battle_progress(world, owner, &journal, &battle.encounter.owned_health(team))?;
+    }
     if let Some(outcome) = battle.encounter.battle.outcome {
         finish_match(world, id, &battle, outcome, actions, text);
     } else {
@@ -548,6 +563,9 @@ fn finish_match(
         }
         if let Ok(mut entity) = world.get_entity_mut(owner) {
             entity.remove::<PvpParticipant>();
+        }
+        if let Ok(connection) = connection(world, owner) {
+            send_pet_update(world, connection, owner, None);
         }
         send_queue(world, owner, PetBattleQueueState::Idle, None);
     }

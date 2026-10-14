@@ -90,6 +90,9 @@ mod persistence_character;
 mod persistence_progression;
 mod persistence_types;
 mod pet_control;
+mod pet_journal_state;
+#[cfg(test)]
+mod pet_journal_state_tests;
 mod pet_stable;
 mod player_create_info;
 mod player_start;
@@ -137,6 +140,7 @@ mod transmog_store;
 mod transport;
 mod transport_catalog;
 mod transport_movement;
+mod unit_creature_type;
 mod unit_target;
 mod vehicle;
 mod vignettes;
