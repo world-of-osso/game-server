@@ -80,10 +80,20 @@ def catalog_records(encounters, journals, journal_maps, hosted):
     return sorted(records.values(), key=lambda r: (r['map_id'], r['encounter_id'], r['journal_ids']))
 
 
-def row_gaps(row):
+def wailing_boss_state_action(row, map_id):
+    return (map_id == 43 and row['action_type'] == 34
+            and row['action_param3'] == 1
+            and 0 <= row['action_param1'] < 8
+            and 0 <= row['action_param2'] < 4)
+
+
+def row_gaps(row, map_id=None):
     gaps = []
     for field, kinds in [('event_type', EVENTS), ('action_type', ACTIONS), ('target_type', TARGETS)]:
-        if row[field] not in kinds:
+        supported = row[field] in kinds
+        if field == 'action_type':
+            supported = supported or wailing_boss_state_action(row, map_id)
+        if not supported:
             gaps.append(f"{field.split('_')[0]} {row[field]}")
     if row['event_flags'] & ~0x101:
         gaps.append(f"event flags {row['event_flags']}")
@@ -154,9 +164,9 @@ def collect(connection, journals, actors, journal_maps, compat, order):
             rows = scripts[entry]
             loaded = template is not None and template['AIName'] == 'SmartAI'
             script = template['ScriptName'] if template else origin.get('ScriptName', '')
-            supported = sorted({r['action_param1'] for r in rows if r['action_type'] == 11 and loaded and not row_gaps(r)})
+            supported = sorted({r['action_param1'] for r in rows if r['action_type'] == 11 and loaded and not row_gaps(r, mid)})
             authored = sorted({r['action_param1'] for r in rows if r['action_type'] in (11,85,86)})
-            row_issues = [dict(row=r['id'], reasons=row_gaps(r)) for r in rows if row_gaps(r)]
+            row_issues = [dict(row=r['id'], reasons=row_gaps(r, mid)) for r in rows if row_gaps(r, mid)]
             if conditions[entry]:
                 row_issues.append(dict(row='conditions', reasons=['SmartScript conditions not interpreted']))
             has_binding = entry in {b['creature_entry'] for b in bound}
