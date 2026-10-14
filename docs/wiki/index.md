@@ -4,6 +4,11 @@
 - [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
 
+- [Wailing native summon groups](systems/boss-scripts.md#wailing-native-summon-groups) — authored Mutanus group/copy/target/credit/corpse lifetime, shared SmartAI implementation; activation/escort/native acceptance remain separate.
+
+- [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
+
+- [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; prepared follower73/player-pet persistence10 plus checks/fmt pass; full-instance/authored-kit/stat-budget acceptance remains open.
 
 - [Follower class/native follow](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13) — eleven actual basic-role casts, Cobra Shot class-level crash fixed, real Stockade navmesh/collision/progress regression and authored private12-tile Ruby ground package; advanced AI/live completion open.
@@ -279,3 +284,5 @@ Debug logs and root cause analyses.
 - [Auction subcategory/sort proof](systems/auction-house.md#subcategory--current-bid--available--2026-10-08) — class/subclass/inventory alternatives and stable Bid/Quantity paging.
 
 - [Category charge-recovery rates](systems/auras.md#category-charge-recovery-rates) — native148 real Aimed Shot charges, live clocks, serial expiry and source-bounded negative/per-cast controls; broader parity remains open.
+
+- [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
