@@ -644,7 +644,7 @@ fn class_completeness_native_creature_type_damage_multiplies_actual_periodic_sha
         h.inbox.log
     );
     assert!(
-        ticks.iter().all(|event| event.amount == 15.0),
+        ticks.iter().all(|event| event.amount == 15),
         "native100SP×0.1246×1.2: {ticks:?}"
     );
 }
