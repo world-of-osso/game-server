@@ -142,13 +142,15 @@ impl PathMovement {
 
     /// WaypointMovementGenerator::DoReset: stop the old spline, then relaunch
     /// the current target from the owner's real position, not stale controls.
-    fn reactivate(&mut self) {
-        if self.deactivated {
-            self.deactivated = false;
-            if self.wait_ms <= 0 {
-                self.wait_ms = MINIMAL_DURATION_MS;
-            }
+    fn reactivate(&mut self) -> bool {
+        if !self.deactivated {
+            return false;
         }
+        self.deactivated = false;
+        if self.wait_ms <= 0 {
+            self.wait_ms = MINIMAL_DURATION_MS;
+        }
+        true
     }
 }
 
@@ -500,7 +502,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
     {
         // MotionMaster updates only its top generator: active chase/home wins
         // over this default-slot MovePath; route generation is not changed.
-        match state {
+        let reset = match state {
             Some(
                 crate::creature_ai::CreatureState::Pursuing { .. }
                 | crate::creature_ai::CreatureState::Returning,
@@ -509,18 +511,20 @@ pub(crate) fn path_movement_system(world: &mut World) {
                 continue;
             }
             _ => movement.reactivate(),
-        }
+        };
+        // A reset top generator receives diff0 on its initialization update.
+        let update_ms = if reset { 0 } else { dt_ms };
         // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
         let before = *position;
         if let Some(spline) = &mut movement.spline {
-            spline.elapsed_ms = (spline.elapsed_ms + dt_ms).min(spline.end_ms);
+            spline.elapsed_ms = (spline.elapsed_ms + update_ms).min(spline.end_ms);
             *position = bevy(spline.position(spline.elapsed_ms));
             if spline.elapsed_ms == spline.end_ms {
                 movement.node = spline.last_node;
                 movement.spline = None;
             }
         } else if movement.wait_ms > 0 {
-            movement.wait_ms -= dt_ms;
+            movement.wait_ms -= update_ms;
         }
         if movement.spline.is_none() && movement.wait_ms <= 0 {
             let launch_from = Launch {
