@@ -86,3 +86,259 @@ fn class_completeness_native_aimed_shot_uses_source_ranged_ap_not_melee_ap() {
         "native ranged AP {ranged_ap}: expected {expected:?}, damage={damage}"
     );
 }
+
+fn one_melee_hit(h: &mut Harness) -> f32 {
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    let before = h.health(h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::combat::AutoAttack::new(h.npc));
+    for _ in 0..360 {
+        h.advance(1);
+        let damage = before - h.health(h.npc);
+        if damage > 0.0 {
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .remove::<crate::combat::AutoAttack>();
+            return damage;
+        }
+    }
+    panic!("no actual damaging melee swing in18s");
+}
+
+#[test]
+fn class_completeness_native_melee_ap_percent_changes_actual_autoattack_damage() {
+    let mut h = harness_with(Vec::new(), &[81420], 1, true).unwrap();
+    h.advance(5);
+    let before = stats(&h).attack_power;
+    let baseline_damage = one_melee_hit(&mut h);
+    let caster = h.caster;
+    apply_mask(&mut h, 81420, caster, 1);
+    assert_power(stats(&h).attack_power, before * 0.70);
+    let reduced_damage = one_melee_hit(&mut h);
+    assert!(
+        reduced_damage < baseline_damage,
+        "native166 -30% AP: actual swings {baseline_damage}→{reduced_damage}"
+    );
+}
+
+fn stats(h: &Harness) -> CharacterStats {
+    *h.app.world().get::<CharacterStats>(h.caster).unwrap()
+}
+
+fn apply_mask(h: &mut Harness, spell: u32, target: bevy::prelude::Entity, mask: u32) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target,
+            spell_id: spell,
+            effect_mask: mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(3);
+}
+
+fn assert_power(actual: f32, expected: f32) {
+    assert!(
+        (actual - expected).abs() < 0.001,
+        "AP {actual} != {expected}"
+    );
+}
+
+fn assert_aimed_damage(h: &mut Harness, ranged_ap: f32) {
+    let coefficient =
+        world_db().unwrap().store.get(AIMED_SHOT).unwrap().effects[0].bonus_coefficient_from_ap;
+    let expected = varied(ranged_ap * coefficient);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    let before = h.health(h.npc);
+    h.cast_and_deliver(AIMED_SHOT, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(70);
+    let damage = before - h.health(h.npc);
+    assert!(
+        expected.contains(&damage),
+        "expected {expected:?}, damage={damage}"
+    );
+}
+
+#[test]
+fn class_completeness_native_ap_percentage_effects_keep_melee_and_ranged_separate() {
+    for (mask, melee_factor, ranged_factor) in [(1, 1.05, 1.0), (2, 1.0, 1.05)] {
+        let mut h = actor(3);
+        let before = stats(&h);
+        let caster = h.caster;
+        apply_mask(&mut h, BATTLE_SHOUT, caster, mask);
+        let after = stats(&h);
+        assert_power(after.attack_power, before.attack_power * melee_factor);
+        assert_power(
+            after.ranged_attack_power,
+            before.ranged_attack_power * ranged_factor,
+        );
+        assert_aimed_damage(&mut h, before.ranged_attack_power * ranged_factor);
+    }
+}
+
+#[test]
+fn class_completeness_native_ap_buff_on_other_recipient_does_not_change_caster() {
+    let mut h = actor(3);
+    let before = stats(&h);
+    let npc = h.npc;
+    apply_mask(&mut h, BATTLE_SHOUT, npc, 3);
+    assert_power(stats(&h).attack_power, before.attack_power);
+    assert_power(stats(&h).ranged_attack_power, before.ranged_attack_power);
+    assert_aimed_damage(&mut h, before.ranged_attack_power);
+}
+
+#[test]
+fn class_completeness_native_ap_zero_ranged_sibling_is_identity() {
+    let mut h = actor(3);
+    let before = stats(&h);
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 1 << 3);
+    assert_power(stats(&h).attack_power, before.attack_power);
+    assert_power(stats(&h).ranged_attack_power, before.ranged_attack_power);
+    assert_aimed_damage(&mut h, before.ranged_attack_power);
+}
+
+#[test]
+fn class_completeness_native_ap_reapplication_does_not_compound_the_same_buff() {
+    let mut h = actor(3);
+    let before = stats(&h);
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 3);
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 3);
+    assert_power(stats(&h).attack_power, before.attack_power * 1.05);
+    assert_power(
+        stats(&h).ranged_attack_power,
+        before.ranged_attack_power * 1.05,
+    );
+    assert_aimed_damage(&mut h, before.ranged_attack_power * 1.05);
+}
+
+#[test]
+fn class_completeness_native_ap_removal_restores_both_values_and_ranged_damage() {
+    let mut h = actor(3);
+    let before = stats(&h);
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 3);
+    assert_power(
+        stats(&h).ranged_attack_power,
+        before.ranged_attack_power * 1.05,
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == BATTLE_SHOUT,
+    );
+    h.advance(3);
+    assert_power(stats(&h).attack_power, before.attack_power);
+    assert_power(stats(&h).ranged_attack_power, before.ranged_attack_power);
+    assert_aimed_damage(&mut h, before.ranged_attack_power);
+}
+
+#[test]
+fn class_completeness_native_ap_buff_expires_on_its_authored_clock() {
+    let mut h = actor(3);
+    let before = stats(&h);
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 3);
+    let duration = world_db()
+        .unwrap()
+        .store
+        .get(BATTLE_SHOUT)
+        .unwrap()
+        .duration
+        .as_ref()
+        .unwrap()
+        .duration_ms;
+    assert!(duration > 0);
+    let step = std::time::Duration::from_millis(duration as u64 + 1000);
+    h.app
+        .world_mut()
+        .resource_mut::<bevy::prelude::Time<bevy::time::Virtual>>()
+        .set_max_delta(step);
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(step));
+    h.advance(2);
+    assert!(!crate::auras::has_aura(h.app.world(), caster, BATTLE_SHOUT));
+    assert_power(stats(&h).attack_power, before.attack_power);
+    assert_power(stats(&h).ranged_attack_power, before.ranged_attack_power);
+}
+
+#[test]
+fn class_completeness_native_ap_signed_independent_percentages_multiply() {
+    // Native Super Shrink Ray81420:166=-30%,167=-30%; no synthetic modifier values.
+    let mut h = harness_with(Vec::new(), &[BATTLE_SHOUT, AIMED_SHOT, 81420], 3, true).unwrap();
+    h.advance(5);
+    let before = stats(&h);
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 3);
+    apply_mask(&mut h, 81420, caster, (1 << 0) | (1 << 2));
+    assert_power(stats(&h).attack_power, before.attack_power * 1.05 * 0.70);
+    assert_power(
+        stats(&h).ranged_attack_power,
+        before.ranged_attack_power * 1.05 * 0.70,
+    );
+    assert_aimed_damage(&mut h, before.ranged_attack_power * 1.05 * 0.70);
+}
+
+#[test]
+fn class_completeness_native_mastery_ap_percent_consumes_live_raw_mastery_points() {
+    for (class, spell) in [
+        (2, 76671),
+        (1, 76857),
+        (6, 77513),
+        (10, 117906),
+        (11, 159195),
+        (12, 321299),
+    ] {
+        let mut h = harness_with(Vec::new(), &[spell], class, true).unwrap();
+        if matches!(class, 11 | 12) {
+            h.app
+                .world_mut()
+                .get_mut::<shared::components::Player>(h.caster)
+                .unwrap()
+                .race = 4;
+        }
+        h.advance(6);
+        let current = stats(&h);
+        let data = world_db().unwrap();
+        let class_info = data
+            .classes
+            .classes
+            .iter()
+            .find(|info| info.class_id == class)
+            .unwrap();
+        let base = current.primary.strength * class_info.attack_power_per_strength
+            + current.primary.agility * class_info.attack_power_per_agility;
+        let effect = data
+            .store
+            .get(spell)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.aura == 166)
+            .unwrap();
+        let amount = effect.base_points + current.mastery_points * effect.bonus_coefficient;
+        assert!(
+            amount > 0.0,
+            "native mastery166 must not be treated as static zero"
+        );
+        assert_power(current.attack_power, base * (1.0 + amount / 100.0));
+        assert_eq!(current.ranged_attack_power, 0.0);
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, spell));
+    }
+}
