@@ -67,9 +67,7 @@ fn quest_log_story_rewards_and_pushability_survive_restart_without_a_giver_dialo
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("quest-relog.redb");
     let mut app = setup_app().expect("authentic quest data");
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(redb::Database::create(&path).unwrap()));
     persistence::create_tables(db(&app));
     let client = spawn_client(&mut app, 1);
     enter_world(&mut app, &client);
@@ -93,9 +91,7 @@ fn quest_log_story_rewards_and_pushability_survive_restart_without_a_giver_dialo
     drop(app);
 
     let mut restarted = setup_app().expect("authentic quest data");
-    restarted.insert_resource(GameDatabase {
-        db: redb::Database::open(&path).unwrap(),
-    });
+    restarted.insert_resource(GameDatabase::new(redb::Database::open(&path).unwrap()));
     let saved = persistence::load_character(db(&restarted), character_id).unwrap();
     let player = restarted
         .world_mut()
