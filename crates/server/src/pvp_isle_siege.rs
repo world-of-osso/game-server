@@ -100,16 +100,7 @@ pub(crate) fn effect_damage(
     if world.get::<GateHealth>(target).is_none() {
         return;
     }
-    let active = world
-        .resource::<super::PvpServerState>()
-        .battleground_matches
-        .values()
-        .any(|matched| {
-            matched.map == Some(map)
-                && matched.instance.bg_id == 30
-                && matched.instance.phase == shared::battleground::BgPhase::InProgress
-        });
-    if !active {
+    if !has_active_match(world, map) {
         debug!(gate=?target, "Isle gate damage refused outside active match");
         return;
     }
@@ -117,18 +108,32 @@ pub(crate) fn effect_damage(
     let mut health = world
         .get_mut::<GateHealth>(target)
         .expect("source gate health");
-    if health.current == 0 || amount == 0 {
-        return;
-    }
-    health.current = health.current.saturating_sub(amount);
-    if !health.damaged && health.current <= health.template.damaged_health {
-        health.damaged = true;
-        debug!(gate=?target, health=health.current, "Isle gate damaged");
-    }
-    let destroyed_event = (health.current == 0).then_some(health.template.destroyed_event);
+    let destroyed_event = subtract_gate_health(&mut health, amount);
+    debug!(gate=?target, amount, health=health.current, damaged=health.damaged, "Isle gate damage evaluated");
     if let Some(event) = destroyed_event {
         apply_gate_destruction(world, target, map, event);
     }
+}
+
+fn has_active_match(world: &World, map: crate::maps::InMap) -> bool {
+    world
+        .resource::<super::PvpServerState>()
+        .battleground_matches
+        .values()
+        .any(|matched| {
+            matched.map == Some(map)
+                && matched.instance.bg_id == 30
+                && matched.instance.phase == shared::battleground::BgPhase::InProgress
+        })
+}
+
+fn subtract_gate_health(health: &mut GateHealth, amount: u32) -> Option<u32> {
+    if health.current == 0 || amount == 0 {
+        return None;
+    }
+    health.current = health.current.saturating_sub(amount);
+    health.damaged |= health.current <= health.template.damaged_health;
+    (health.current == 0).then_some(health.template.destroyed_event)
 }
 
 fn apply_gate_destruction(world: &mut World, target: Entity, map: crate::maps::InMap, event: u32) {
@@ -196,10 +201,10 @@ fn open_gate_and_keep(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
-    fn source_catalog() -> Connection {
+    pub(crate) fn source_catalog() -> Connection {
         let source = Connection::open_in_memory().unwrap();
         source.execute_batch("CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY, type INTEGER, Data2 INTEGER, Data14 INTEGER);
             CREATE TABLE tdb_destructible_hitpoint (Id INTEGER PRIMARY KEY, IntactNumHits INTEGER, DamagedNumHits INTEGER);
@@ -298,6 +303,30 @@ mod tests {
         )
         .unwrap();
         assert_eq!(targets, vec![near]);
+    }
+
+    #[test]
+    fn source_bomb_damage_crosses_damaged_threshold_and_destroys_once_at_zero() {
+        let template = GateTemplate {
+            max_health: 600001,
+            damaged_health: 600000,
+            destroyed_event: 22079,
+        };
+        let mut gate = GateHealth {
+            current: template.max_health,
+            damaged: false,
+            template,
+        };
+        assert_eq!(subtract_gate_health(&mut gate, 0), None);
+        assert!(!gate.damaged);
+        for _ in 0..100 {
+            assert_eq!(subtract_gate_health(&mut gate, 6000), None);
+        }
+        assert_eq!(gate.current, 1);
+        assert!(gate.damaged);
+        assert_eq!(subtract_gate_health(&mut gate, 6000), Some(22079));
+        assert_eq!(gate.current, 0);
+        assert_eq!(subtract_gate_health(&mut gate, 6000), None);
     }
 
     #[test]
