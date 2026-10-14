@@ -30,7 +30,7 @@ Seismic's source `TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD`0x2 becomes `SpellInfo:
 
 Verified: 2026-10-14. Pinned TC `ShadowfangKeep/shadowfang_keep.h` maps NPC3887 to `BOSS_BARON_SILVERLAINE`1; `instance_shadowfang_keep.cpp` maps that boss to encounter1070 on map33. Current canonical DungeonEncounter bit1 and Journal97/actor367/display37288 corroborate it. `encounter_cpp_bindings.py --encounter silverlaine` checks both source hashes, catalogs and the existing empty ScriptName/SmartAI before emitting copy-only SQL. Private application120→121 is idempotent, retains unrelated bindings and changes no live model, spawn or spell row.
 
-Only Silverlaine is admitted by this profile; Ashbury, Springvale, Walden and Godfrey remain without authenticated combat schedules. Silverlaine's existing TDB SmartAI row casts7068 at its victim after1s/repeat22.3–35.1s; this source observation is not a runtime cast, kill-credit, loot/lockout or native certificate. [Contract](../../specs/boss-scripts.md#shadowfang-keep-source-identity).
+Only Silverlaine is admitted by this profile; Ashbury, Springvale, Walden and Godfrey remain without authenticated combat schedules. Silverlaine's existing TDB SmartAI row casts7068 at its victim after1s/repeat22.3–35.1s. The real actor/spell fixture now proves two successful victim casts, aura isolation and the actual controlled-death callback granting only1070/bit1 to the owning copy. It stages high-health player survival and the source-authenticated runtime binding; no timer/chance changes. Healing-reduction effect, full fight, corpse loot/Normal persistence and native acceptance remain unproved. [Contract](../../specs/boss-scripts.md#shadowfang-keep-source-identity).
 
 ## Creature spells
 
