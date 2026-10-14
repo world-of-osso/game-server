@@ -1,4 +1,4 @@
-//! Retail TDB1210 vendors and local build 69933 ItemExtendedCost fixtures.
+//! Retail TDB1210 vendors and installed-build currency/item metadata.
 use super::*;
 use shared::currency::{CurrencyEntry, CurrencyWallet};
 use shared::protocol::{CurrencyStateUpdate, SelectGossipOption};
@@ -16,6 +16,24 @@ fn shopper() -> Harness {
         .entity_mut(h.connection)
         .insert((pair::<SelectGossipOption>(), pair::<CurrencyStateUpdate>()));
     add_inbox::<CurrencyStateUpdate>(&mut h.app);
+    h
+}
+
+// TDB1210: Samamba33554 npcflag129, mount46760/ExtendedCost2671 and
+// mount45593/ExtendedCost2600. Arthur33307 has only gossip flag1, not vendor128.
+fn troll_shopper() -> Harness {
+    let mut h = shopper();
+    let faction: u32 = h
+        .conn
+        .query_row("SELECT FactionID FROM chr_races WHERE ID=8", [], |row| {
+            row.get(0)
+        })
+        .expect("installed Troll race faction");
+    h.app.world_mut().get_mut::<Player>(h.player).unwrap().race = 8;
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(UnitFactionTemplate(faction));
     h
 }
 
@@ -115,15 +133,15 @@ fn mount_costs_insufficient_turnins_and_full_bags_preserve_payment() {
 
 #[test]
 fn mount_costs_currency_and_gold_refusals_are_atomic() {
-    let mut h = shopper();
+    let mut h = troll_shopper();
     wallet(&mut h, 241, 9);
     h.set_gold(10_000_000);
     h.app
         .world_mut()
         .get_mut::<CharacterReputation>(h.player)
         .unwrap()
-        .set_rep(72, threshold_for_standing(Standing::Exalted));
-    let (npc, item) = offer(&mut h, 33307, 46758);
+        .set_rep(530, threshold_for_standing(Standing::Exalted));
+    let (npc, item) = offer(&mut h, 33554, 46760);
     assert_eq!(item.price, 5_000_000);
     assert_eq!(
         (
@@ -163,12 +181,12 @@ fn mount_costs_currency_and_gold_refusals_are_atomic() {
 
 #[test]
 fn mount_costs_currency_payment_and_inventory_survive_database_reopen() {
-    let mut h = shopper();
+    let mut h = troll_shopper();
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("merchant.redb");
     let db = redb::Database::create(&path).unwrap();
     persistence::create_tables(&db);
-    let (id, _) = persistence::create_character_with_test_bags(&db, 1, "Shopper", 1, 1).unwrap();
+    let (id, _) = persistence::create_character_with_test_bags(&db, 1, "Shopper", 8, 1).unwrap();
     assert_eq!(id, h.character_id);
     h.app.insert_resource(GameDatabase { db });
     wallet(&mut h, 241, 13);
@@ -177,8 +195,8 @@ fn mount_costs_currency_payment_and_inventory_survive_database_reopen() {
         .world_mut()
         .get_mut::<CharacterReputation>(h.player)
         .unwrap()
-        .set_rep(72, threshold_for_standing(Standing::Exalted));
-    let (npc, item) = offer(&mut h, 33307, 46758);
+        .set_rep(530, threshold_for_standing(Standing::Exalted));
+    let (npc, item) = offer(&mut h, 33554, 46760);
     h.buy(npc, item.slot, item.item_id, 2);
     assert!(h.failures().is_empty());
     assert_eq!(balance(&h, 241), 3);
@@ -198,7 +216,7 @@ fn mount_costs_currency_payment_and_inventory_survive_database_reopen() {
         3
     );
     assert_eq!(h.inventory().gold, 7);
-    assert_eq!(h.count_of(46758), vec![1, 1]);
+    assert_eq!(h.count_of(46760), vec![1, 1]);
     drop(h);
     let db = redb::Database::open(path).unwrap();
     let inventory = persistence::load_inventory(&db, id);
@@ -207,7 +225,7 @@ fn mount_costs_currency_payment_and_inventory_survive_database_reopen() {
         inventory
             .items
             .iter()
-            .filter(|i| i.item_id == 46758)
+            .filter(|i| i.item_id == 46760)
             .map(|i| i.stack_count)
             .sum::<u32>(),
         2
@@ -274,7 +292,7 @@ fn mount_costs_two_item_price_rolls_back_first_turnin_when_second_is_missing() {
 
 #[test]
 fn mount_costs_unavailable_metadata_is_not_a_free_offer_or_currency_alias() {
-    let mut h = shopper();
+    let mut h = troll_shopper();
     assert!(
         !h.app
             .world()
@@ -284,7 +302,7 @@ fn mount_costs_unavailable_metadata_is_not_a_free_offer_or_currency_alias() {
             .any(|slot| slot.item_id == 19030)
     );
     wallet(&mut h, 5, 1000); // Legacy fake Champion's Seal is not CurrencyTypes241.
-    let (npc, item) = offer(&mut h, 33307, 45125);
+    let (npc, item) = offer(&mut h, 33554, 45593);
     let before = h.inventory();
     h.buy(npc, item.slot, item.item_id, 1);
     assert_eq!(h.failures(), vec![MerchantError::MissingTurnins]);
