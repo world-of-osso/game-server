@@ -10,7 +10,16 @@ use shared::protocol::CombatLogKind;
 const CRITICAL_BLOCK: u32 = 76857;
 
 fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
-    let mut h = harness(Vec::new(), &[CRITICAL_BLOCK, 203524, 1464, 17], 1).unwrap();
+    shield_duel_for_class(mastery_points, 1)
+}
+
+fn shield_duel_for_class(mastery_points: f32, caster_class: u8) -> (Harness, Entity) {
+    let mut h = harness(
+        Vec::new(),
+        &[CRITICAL_BLOCK, 203524, 1464, 17, 853, 7384, 64382, 19434],
+        caster_class,
+    )
+    .unwrap();
     let defender = spawn_player(&mut h.app, 1, 3.0);
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::duel::DuelOpponent(defender),
@@ -250,5 +259,90 @@ fn class_completeness_native_slam_rolls_block_and_critical_block_before_absorbs(
             );
             assert_eq!(health - h.health(defender), hit.amount as f32);
         }
+    }
+}
+
+fn cast_damage_spell(
+    h: &mut Harness,
+    defender: Entity,
+    spell: u32,
+    frames: usize,
+) -> Vec<shared::protocol::CombatLogEvent> {
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![spell]));
+    {
+        let mut stats = h.app.world_mut().get_mut::<CharacterStats>(caster).unwrap();
+        stats.attack_power = 100.0;
+        stats.ranged_attack_power = 100.0;
+    }
+    h.set_power(shared::components::PowerType::Rage, 1000.0);
+    h.set_power(shared::components::PowerType::Focus, 100.0);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(spell, Some(defender));
+    h.advance(frames);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(spell)
+                && event.target == Some(defender.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn class_completeness_native_player_spell_block_requires_frontal_direction() {
+    let (mut h, defender) = shield_duel(100.0);
+    apply_mastery(&mut h, defender);
+    h.app.world_mut().get_mut::<Rotation>(defender).unwrap().y = std::f32::consts::FRAC_PI_2;
+    let hits = cast_damage_spell(&mut h, defender, 1464, 3);
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].blocked, 0);
+    assert!(varied(303.0).contains(&(hits[0].amount as f32)));
+}
+
+#[test]
+fn class_completeness_native_stunned_player_cannot_block_weapon_spell() {
+    let (mut h, defender) = shield_duel(100.0);
+    apply_mastery(&mut h, defender);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: defender,
+            spell_id: 853,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(defender)
+            .unwrap()
+            .is_stunned()
+    );
+    let hits = cast_damage_spell(&mut h, defender, 1464, 3);
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].blocked, 0);
+    assert!(hits[0].amount > 0);
+}
+
+#[test]
+fn class_completeness_native_weapon_spell_no_active_defense_and_no_block_flags_are_honored() {
+    // Native Overpower7384 Attr0NoActiveDefense; ShatteringThrow64382 Attr8NoAttackBlock.
+    for (spell, frames) in [(7384, 3), (64382, 40)] {
+        let (mut h, defender) = shield_duel(100.0);
+        apply_mastery(&mut h, defender);
+        let hits = cast_damage_spell(&mut h, defender, spell, frames);
+        assert_eq!(hits.len(), 1, "{spell}: {hits:?}");
+        assert_eq!(hits[0].blocked, 0, "{spell}: {:?}", hits[0]);
+        assert!(hits[0].amount > 0);
     }
 }
