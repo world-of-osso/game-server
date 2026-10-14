@@ -75,9 +75,15 @@ fn damage_native_undead(bonus: bool) -> f32 {
 fn class_completeness_native_creature_type_damage_adds_twenty_percent_against_undead() {
     let baseline = damage_native_undead(false);
     let enhanced = damage_native_undead(true);
-    assert_eq!(
-        enhanced,
-        (baseline * 1.2).round(),
-        "native aura168 mask32 must affect actual Fire damage"
+    // Native Fireball:100 SP×3.8812499 with its authored±2.5% variance.
+    // Baseline378..398 and +20%454..477 do not overlap; independent rolls need
+    // not match exactly, and cannot explain away a missing damage modifier.
+    assert!(
+        (378.0..=398.0).contains(&baseline),
+        "native baseline {baseline}"
+    );
+    assert!(
+        (454.0..=477.0).contains(&enhanced),
+        "native aura168 mask32 must affect actual Fire damage: {enhanced}"
     );
 }
