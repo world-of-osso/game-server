@@ -65,6 +65,31 @@ INSERT INTO `areatrigger_create_properties_orbit` VALUES (5838,0,0,0,0,0,0,0,1,5
 
 
 class BattlegroundImportTests(unittest.TestCase):
+    def test_selected_gate_hitpoints_publish_without_replacing_existing_world_states(self):
+        health = '''CREATE TABLE `destructible_hitpoint` (
+  `Id` int unsigned NOT NULL,
+  `IntactNumHits` int unsigned NOT NULL,
+  `DamagedNumHits` int unsigned NOT NULL,
+  PRIMARY KEY (`Id`)
+) ENGINE=InnoDB;
+INSERT INTO `destructible_hitpoint` VALUES (28,1,600000),(32,1,600000);
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'source.sql'
+            database = root / 'fixture.sqlite'
+            source.write_text(SOURCE + health)
+            with sqlite3.connect(database) as conn:
+                conn.execute('CREATE TABLE tdb_world_state (ID INTEGER PRIMARY KEY, DefaultValue INTEGER)')
+                conn.execute('INSERT INTO tdb_world_state VALUES (17303,7)')
+            result = subprocess.run([sys.executable, str(SCRIPT), '--dump', str(source),
+                '--db', str(database), '--table', 'destructible_hitpoint'], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with sqlite3.connect(database) as conn:
+                self.assertEqual(conn.execute('SELECT * FROM tdb_destructible_hitpoint ORDER BY Id').fetchall(),
+                                 [(28,1,600000),(32,1,600000)])
+                self.assertEqual(conn.execute('SELECT * FROM tdb_world_state').fetchall(), [(17303,7)])
+
     def test_authored_metadata_round_trip_and_idempotent_reapply(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
