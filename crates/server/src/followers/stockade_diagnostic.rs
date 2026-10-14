@@ -309,7 +309,16 @@ mod tests {
                 .is_some(),
             "diagnostic initial admission must request an ordinary transfer"
         );
-        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&before));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::maps::MapTransfer>(h.caster)
+                .unwrap()
+                .origin
+                .bevy_position(),
+            before,
+        );
+        assert!(h.app.world().get::<InMap>(h.caster).is_none());
         assert!(h.app.world().get::<DiagnosticParty>(h.caster).is_none());
         h.advance(4);
         let messages = crate::spell_cast::test_harness::drain::<NewWorld>(&mut h.app, h.connection);
