@@ -449,6 +449,15 @@ fn finish_fixture_writes(app: &mut App) {
     fence.result().unwrap().unwrap();
     app.update();
     app.update();
+    while !app.world().resource::<PendingInventoryCommits>().is_idle() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "inventory fixture publication timeout"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+        app.update();
+    }
+    app.update();
 }
 
 fn db(app: &App) -> &Database {
