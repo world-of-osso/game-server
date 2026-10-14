@@ -627,6 +627,9 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             continue;
         }
         let moving = direction_length(&latest.direction) >= 0.001;
+        if !moving {
+            debug!(player = ?link.0, epoch = latest.epoch, position = ?latest.position, resumed, transport = ?latest.transport, "BG_TRAVEL_STATIONARY_INPUT");
+        }
         if !resumed {
             crate::friends::mark_player_activity(
                 link.0,
@@ -813,6 +816,9 @@ pub(crate) fn apply_terrain_gravity(
         } else {
             None
         };
+        let survived_landing = fall.is_some() && next_health.current > 0.0 && !fell_to_void;
+        let fall_distance =
+            (fall_tracker.peak_y.max(fall_tracker.last_y).max(pos.y) - next_pos.y).max(0.0);
         let mut logs: Vec<_> = fall.into_iter().collect();
         if fell_to_void {
             logs.extend(fall_to_void(entity, &mut next_health));
@@ -844,6 +850,11 @@ pub(crate) fn apply_terrain_gravity(
             replication_dirty.as_deref(),
             &mut player_deaths,
         );
+        if survived_landing {
+            commands.queue(move |world: &mut World| {
+                crate::achievement::record_survived_fall(world, entity, fall_distance);
+            });
+        }
         if let Some(kind) = death_kind {
             commands.queue(move |world: &mut World| {
                 crate::achievement::record_environmental_death(world, entity, kind);
