@@ -72,6 +72,7 @@ pub(super) fn healing_wave_plan(
         units: vec![explicit.expect("Healing Wave requires a validated ally")],
         dest: None,
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }]
 }
 

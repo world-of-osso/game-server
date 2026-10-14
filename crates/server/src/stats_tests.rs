@@ -29,6 +29,7 @@ fn paladin_80_holy() -> StatInputs {
         mastery_coefficient: 1.5,
         attack_power_per_strength: 1.0,
         attack_power_per_agility: 0.0,
+        ranged_attack_power_per_agility: 0.0,
         gear_primary: UnitStats::default(),
         gear_ratings: CombatRatings::default(),
     }
@@ -67,6 +68,7 @@ fn level_10_orc_warrior_base_stats_include_racial_mods() {
         mastery_coefficient: 0.0,
         attack_power_per_strength: 1.0,
         attack_power_per_agility: 0.0,
+        ranged_attack_power_per_agility: 0.0,
         gear_primary: UnitStats::default(),
         gear_ratings: CombatRatings::default(),
     };

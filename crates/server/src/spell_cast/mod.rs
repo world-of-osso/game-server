@@ -21,6 +21,8 @@ mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
+mod attack_power_tests;
+#[cfg(test)]
 mod attack_speed_tests;
 #[cfg(test)]
 mod autoattack_range_tests;
@@ -55,6 +57,8 @@ pub(crate) mod cosmetic;
 pub mod creature;
 #[cfg(test)]
 mod creature_type_damage_tests;
+#[cfg(test)]
+mod critical_block_tests;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
@@ -120,6 +124,9 @@ mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+#[cfg(test)]
+mod warrior_stun_tests;
+mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
 mod linked_aura_tests;
@@ -163,7 +170,7 @@ pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
@@ -2025,6 +2032,8 @@ struct PlannedEffect {
     /// to the power of the unit's place in the chain (`m_damageMultipliers`,
     /// Spell.cpp:1840-1844, 8631-8636). Empty for an unchained effect.
     chain_multipliers: Vec<(Entity, f32)>,
+    /// Native block hit result, retained across flight for these unit targets.
+    blocked_units: Vec<Entity>,
 }
 
 impl PlannedEffect {
@@ -2089,6 +2098,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                blocked_units: Vec::new(),
             })
             .collect());
     }
@@ -2104,6 +2114,7 @@ fn plan_targets(
                 units: vec![target],
                 dest: None,
                 chain_multipliers: Vec::new(),
+                blocked_units: Vec::new(),
             })
             .collect());
     }
@@ -2138,6 +2149,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                blocked_units: Vec::new(),
             });
             continue;
         }
@@ -2164,6 +2176,9 @@ fn plan_targets(
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
         }
+        warrior_stuns::filter_storm_bolt_targets(
+            world, caster, spell, effect, explicit, &mut units,
+        );
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {
                 Some(multiplier * effect.chain_amplitude)
@@ -2191,6 +2206,7 @@ fn plan_targets(
             units,
             dest,
             chain_multipliers,
+            blocked_units: Vec::new(),
         });
     }
     hit::remove_defended_targets(world, caster, spell, &mut plan);
@@ -2219,6 +2235,10 @@ fn resolve_effects(
             spell_id: spell.id,
             depth,
             damage: Vec::new(),
+            blocked: plan
+                .iter()
+                .flat_map(|effect| effect.blocked_units.iter().copied())
+                .collect(),
         });
     }
     // Aura effects hitting the same unit form one aura (per-unit effect mask).
@@ -2294,6 +2314,7 @@ fn resolve_effects(
                     chain_multiplier: planned.chain_multiplier(unit),
                     ..ctx
                 };
+                warrior_stuns::cast_hit_stun(world, &ctx, effect, unit);
                 handler(world, &ctx, effect, unit);
             }
             if let Some(hook) = hook
@@ -2404,6 +2425,16 @@ struct HitFrame {
     spell_id: u32,
     depth: u8,
     damage: Vec<(Entity, f32)>,
+    blocked: HashSet<Entity>,
+}
+
+/// Read the innermost matching hit's block result; nested casts own their frame.
+fn hit_was_blocked(world: &World, caster: Entity, spell_id: u32, target: Entity) -> bool {
+    world.get_resource::<ResolvingHits>().is_some_and(|hits| {
+        hits.0.last().is_some_and(|frame| {
+            frame.caster == caster && frame.spell_id == spell_id && frame.blocked.contains(&target)
+        })
+    })
 }
 
 /// A linked child inherits the active hit's trigger depth, without persisting cast state in an aura.
