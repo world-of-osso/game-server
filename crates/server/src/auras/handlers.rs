@@ -19,6 +19,8 @@ pub enum AuraKind {
     AreaAvoidance,
     /// Redirects native school-mask damage to the aura caster.
     DamageTransfer,
+    /// Retaliates after damaging melee swings, not ordinary aura procs.
+    DamageShield,
     /// Negates damage of its school mask.
     SchoolImmunity,
     /// Rejects matching spell/effect mechanics and removes matching auras.
@@ -78,6 +80,7 @@ pub const PERIODIC_LEECH: u32 = 53;
 pub const MOD_THREAT: u32 = 10;
 pub const MOD_TAUNT: u32 = 11;
 pub const MOD_STUN: u32 = 12;
+pub const DAMAGE_SHIELD: u32 = 15;
 pub const MOD_STEALTH: u32 = 16;
 pub const MOD_STEALTH_DETECT: u32 = 17;
 pub const MOD_STEALTH_LEVEL: u32 = 154;
@@ -257,6 +260,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
         MOD_TAUNT => Taunt,
         MOD_FIXATE => Fixate,
+        DAMAGE_SHIELD => DamageShield,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
