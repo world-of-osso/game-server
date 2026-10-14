@@ -2,10 +2,15 @@
 
 - [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
 
+- [Generic item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) — one loot/acquisition event versus stack quantity; canonical item predicates, current-root contradictions retained.
+
+- [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
+- [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
 - [Druid automatic forms](systems/spell-casting.md#druid-automatic-forms) — five source BeforeCast native children, Berserk spell/category reset and actual form receipts; charges/GCD and whole-ability limits retained.
 
 - [Native fear fleeing](../class-completeness6.md#native-fear-navmesh-fleeing--batch53) — real player/creature Detour movement/control/lifecycle; source model geometry import and21 shared aura memberships, whole-ability limits retained.
 
+- [Slagmaw source primary](systems/boss-scripts.md#slagmaw-source-primary) — pinned NPC61463/BOSS2→1445/bit2 authenticates identity despite distinct Journal/live models; copy-only SQL preserves both appearances.
 - [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
 - [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
 
@@ -18,6 +23,9 @@
 - [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
 
 - [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
+- [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
+- [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
+
 - [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; prepared follower73/player-pet persistence10 plus checks/fmt pass; full-instance/authored-kit/stat-budget acceptance remains open.
 
 - [Follower class/native follow](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13) — eleven actual basic-role casts, Cobra Shot class-level crash fixed, real Stockade navmesh/collision/progress regression and authored private12-tile Ruby ground package; advanced AI/live completion open.
