@@ -269,6 +269,13 @@ impl Harness {
         for _ in 0..3 {
             self.app.update();
         }
+        if self
+            .app
+            .world()
+            .contains_resource::<crate::auction_house::PendingMarketCommits>()
+        {
+            crate::auction_house::tests::finish_market_work(&mut self.app);
+        }
     }
 
     /// What the server sent the harness connection since the last take.

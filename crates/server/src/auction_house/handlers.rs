@@ -321,6 +321,13 @@ pub(super) fn process_bid_list_requests(
 #[derive(Resource, Default)]
 pub(crate) struct PendingMarketCommits(std::collections::VecDeque<PendingMarketCommit>);
 
+impl PendingMarketCommits {
+    #[cfg(test)]
+    pub(crate) fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 struct PendingMarketCommit {
     connection: Option<Entity>,
     receipt: crate::persistence_writer::CommitReceipt<MarketPublication>,
@@ -549,13 +556,12 @@ pub(super) fn expire_auctions(
     mut expiry: Local<Option<crate::persistence_writer::CommitReceipt<MarketPublication>>>,
 ) {
     let Some(db) = db else { return };
-    if expiry
-        .as_ref()
-        .is_some_and(|receipt| receipt.result().is_none())
-    {
+    if let Some(receipt) = expiry.as_ref() {
+        if receipt.result().is_some() {
+            *expiry = None;
+        }
         return;
     }
-    *expiry = None;
     let now = clock.unix().max(0) as u64;
     if !state
         .auctions

@@ -11,6 +11,37 @@ use crate::persistence;
 #[path = "auction_house_tests/load_fixture.rs"]
 mod load_fixture;
 
+fn install_expiry_fixture(app: &mut App) {
+    app.init_resource::<super::PendingMarketCommits>();
+    app.init_resource::<GoldUpdateQueue>();
+    app.add_systems(
+        Update,
+        (
+            super::handlers::expire_auctions,
+            super::handlers::publish_market_commits,
+        )
+            .chain(),
+    );
+}
+
+pub(crate) fn finish_market_work(app: &mut App) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while !app
+        .world()
+        .resource::<super::PendingMarketCommits>()
+        .is_empty()
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "market operation did not complete"
+        );
+        app.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    app.update();
+    app.update();
+}
+
 /// Take a mail's money and items at a mailbox (`TakeInboxMoney`, `TakeInboxItem`).
 fn take_mail(db: &redb::Database, character_id: u64, mail_id: u64, gold: &mut GoldUpdateQueue) {
     use shared::protocol::MailAction;

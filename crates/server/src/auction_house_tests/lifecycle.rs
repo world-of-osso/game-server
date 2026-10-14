@@ -703,8 +703,9 @@ fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
         ..Default::default()
     });
     app.init_resource::<crate::maps::ServerClock>();
-    app.add_systems(Update, super::super::handlers::expire_auctions);
+    install_expiry_fixture(&mut app);
     app.update();
+    finish_market_work(&mut app);
     assert_eq!(
         app.world().resource::<AuctionHouseState>().auctions[&91],
         auction
@@ -736,13 +737,15 @@ fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
         ..Default::default()
     });
     app.init_resource::<crate::maps::ServerClock>();
-    app.add_systems(Update, super::super::handlers::expire_auctions);
+    install_expiry_fixture(&mut app);
     app.update();
+    finish_market_work(&mut app);
     app.world_mut()
         .resource_mut::<AuctionHouseState>()
         .auctions
         .insert(91, auction);
     app.update();
+    finish_market_work(&mut app);
     let db = &app.world().resource::<GameDatabase>().db;
     assert!(persistence::load_auctions(db).is_empty());
     assert_eq!(mail_store::load_mailbox(db, 1).len(), 1);

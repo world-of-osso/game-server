@@ -262,9 +262,8 @@ fn achievements_criteria_auctions_native_expiry_distinguishes_sold_unsold_and_of
         // The production expiry function at its injected deadline, not a 24-hour wall-clock claim.
         h.app
             .add_systems(Update, super::super::handlers::expire_auctions);
-        for _ in 0..4 {
-            h.app.update();
-        }
+        h.app.update();
+        finish_market_work(&mut h.app);
         assert!(persistence::load_auctions(h.db()).is_empty());
         let sale = with_bid && !offline;
         let payout = sale.then_some(190 + auction.deposit);

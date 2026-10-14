@@ -84,7 +84,7 @@ fn assert_clock_expiry(with_bid: bool, delete_buyer: bool) {
         fixed_unix: Some(auction.expires_at_unix_secs as i64 - 1),
         offset_secs: 0,
     });
-    app.add_systems(Update, super::super::handlers::expire_auctions);
+    install_expiry_fixture(&mut app);
     app.update();
     assert_eq!(
         app.world().resource::<AuctionHouseState>().auctions[&auction_id],
@@ -97,7 +97,7 @@ fn assert_clock_expiry(with_bid: bool, delete_buyer: bool) {
 
     advance_clock_through_admin(&mut app);
     app.update();
-    app.update();
+    finish_market_work(&mut app);
     assert!(
         app.world()
             .resource::<AuctionHouseState>()

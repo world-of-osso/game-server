@@ -177,8 +177,7 @@ fn post(app: &mut App, connection: Entity, guid: u64) -> AuctionOperationRespons
             duration: AuctionDuration::Short,
         });
     app.update();
-    app.update();
-    app.update();
+    crate::auction_house::tests::finish_market_work(app);
     app.world_mut()
         .resource_mut::<Responses>()
         .0
@@ -315,9 +314,8 @@ fn bid(
         .get_mut::<MessageSender<PlaceBid>>()
         .unwrap()
         .send::<AuctionChannel>(PlaceBid { auction_id, amount });
-    for _ in 0..3 {
-        app.update();
-    }
+    app.update();
+    crate::auction_house::tests::finish_market_work(app);
     app.world_mut()
         .resource_mut::<Responses>()
         .0
