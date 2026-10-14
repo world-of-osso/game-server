@@ -10,7 +10,7 @@ The driver commands peer autoattacks, one Shield Wall871 per tank, and repeated 
 
 ## Source stats, not a health override
 
-The private runtime `content_creature_template`11947 has ContentTuning663, HealthScalingExpansion11, HealthModifier175, DamageModifier35, BaseAttackTime2000 and BaseVariance1. Its raw legacy `creature_template` row instead has level61 and HealthModifier25; replacing current content with that row would mix versions, not fix combat.
+The private runtime `content_creature_template`11947 has ContentTuning663, HealthScalingExpansion11, HealthModifier175, DamageModifier35, BaseAttackTime2000 and BaseVariance1. Those values match `tdb_creature_template` plus its authored difficulty0 row; no importer multiplier drift was found for these fields. Its raw legacy `creature_template` row instead has level61 and HealthModifier25; replacing current content with that row would mix versions, not fix combat.
 
 At level90 the selected ExpectedStat row475 (ExpansionID-2, used because11 has no level90 row) supplies CreatureHealth141482.016 and CreatureAutoAttackDps6855.70312. There are no tuning663 ExpectedStat modifiers; warrior class modifier4 is1 for these stats. Existing server f32 arithmetic produces24,759,352 HP, matching the receipt. Its ordinary two-second swing range is approximately479,899–719,849 **before** armor, avoidance, absorbs and active reductions. Allies' observed maximum HP spans482,140–699,120. Thus the template can threaten these actors with ordinary melee alone; that comparison is not per-hit attribution.
 
