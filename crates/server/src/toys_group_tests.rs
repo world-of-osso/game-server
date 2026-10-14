@@ -24,7 +24,7 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     h.app.insert_resource(store.clone());
     learn_group_toy(&mut h, character, item);
-    let destination = matches!(item, 160751 | 199894).then(|| {
+    let destination = (item == 160751).then(|| {
         let origin = h.app.world().get::<Position>(h.caster).unwrap();
         [origin.x + 2.0, origin.y, origin.z]
     });
@@ -125,6 +125,17 @@ pub(super) fn learn_group_toy(h: &mut Harness, character: u64, item_id: u32) {
     while results.is_empty() && std::time::Instant::now() < deadline {
         std::thread::sleep(std::time::Duration::from_millis(10));
         results.extend(pump(h).0);
+    }
+    if results.is_empty() {
+        eprintln!(
+            "learning-dispatch diagnostic item {item_id}: {:?}",
+            crate::toys::learn_item(
+                h.app.world_mut(),
+                character,
+                h.caster,
+                ItemLocation::Bag { bag: 0, slot: 0 }
+            )
+        );
     }
     let owned = toy_store::load(&h.app.world().resource::<GameDatabase>().db, 1);
     let inventory =
