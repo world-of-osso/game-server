@@ -140,7 +140,7 @@ fn world_quest_publication_keeps_watched_bar_in_step_with_committed_reputation()
         .unwrap();
     let txn = h.db().begin_write().unwrap();
     settlement.persist_in(&txn, h.character_id);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<ReputationStateUpdate>::default(),
         MessageReceiver::<ReputationStateUpdate>::default(),
