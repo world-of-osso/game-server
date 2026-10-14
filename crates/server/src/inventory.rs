@@ -586,7 +586,6 @@ fn send_inventory_deltas(
             .insert(AppearanceSourceItems(model.appearance_sources()));
         let appearance = model.appearance().clone();
         let equipped = model.equipped_items();
-        save_inventory_record(db, in_world.character_id, &model.into_record());
         let changes = diff_views(&sent.0, &view);
         if !changes.is_empty()
             && let Ok((mut sender, mut snapshot_sender)) = senders.get_mut(connection)

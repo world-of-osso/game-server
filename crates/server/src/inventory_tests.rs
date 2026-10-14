@@ -165,6 +165,10 @@ fn setup_app_with(db: Database, extra: impl FnOnce(&mut App)) -> App {
     // This inventory fixture contains no toy definitions; item use still needs
     // the catalog owned by ToysPlugin in the production app.
     app.init_resource::<crate::toy_catalog::ToyCatalog>();
+    install_test_inbox::<InventoryError>(&mut app);
+    install_test_inbox::<InventoryDelta>(&mut app);
+    install_test_inbox::<InventorySnapshot>(&mut app);
+    install_test_inbox::<EquipmentSnapshot>(&mut app);
     app.add_plugins(InventoryPlugin);
     app.add_plugins(crate::trade::TradePlugin);
     extra(&mut app);
@@ -274,13 +278,59 @@ fn request<M: Message>(app: &mut App, client: &Client, message: M) {
     app.update();
 }
 
+#[derive(Resource)]
+struct TestInbox<M: Message>(Vec<(Entity, M)>);
+
+fn collect_test_messages<M: Message>(
+    mut receivers: Query<(Entity, &mut MessageReceiver<M>)>,
+    mut inbox: ResMut<TestInbox<M>>,
+) {
+    for (connection, mut receiver) in &mut receivers {
+        inbox
+            .0
+            .extend(receiver.receive().map(|message| (connection, message)));
+    }
+}
+
+fn install_test_inbox<M: Message>(app: &mut App) {
+    app.insert_resource(TestInbox::<M>(Vec::new()));
+    app.add_systems(First, collect_test_messages::<M>);
+}
+
 fn received<M: Message>(app: &mut App, client: &Client) -> Vec<M> {
-    app.world_mut()
-        .entity_mut(client.connection)
-        .get_mut::<MessageReceiver<M>>()
-        .expect("connection receiver")
-        .receive()
-        .collect()
+    let mut inbox = app.world_mut().resource_mut::<TestInbox<M>>();
+    let (mut messages, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut inbox.0)
+        .into_iter()
+        .partition(|(connection, _)| *connection == client.connection);
+    inbox.0 = kept;
+    messages.extend(
+        app.world_mut()
+            .get_mut::<MessageReceiver<M>>(client.connection)
+            .expect("connection receiver")
+            .receive()
+            .map(|message| (client.connection, message)),
+    );
+    messages.into_iter().map(|(_, message)| message).collect()
+}
+
+fn finish_fixture_writes(app: &mut App) {
+    let fence = app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("inventory fixture fence", |_| Ok(()));
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while fence.result().is_none() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "inventory fixture writer timeout"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+        app.update();
+    }
+    fence.result().unwrap().unwrap();
+    app.update();
+    app.update();
 }
 
 fn db(app: &App) -> &Database {
@@ -1117,6 +1167,7 @@ fn completed_trade_emits_inventory_deltas_to_both_owners() {
     send::<_, TradeChannel>(&mut app, &taker, ConfirmTrade);
     app.update();
     app.update();
+    finish_fixture_writes(&mut app);
 
     assert_eq!(
         received::<InventoryDelta>(&mut app, &giver),
