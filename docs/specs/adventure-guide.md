@@ -9,6 +9,10 @@ Authoritative Suggested Content and Traveler's Log snapshots for the [client con
 - [x] Apply the [World of Osso monthly access/reset policy](../../../game-engine/docs/specs/adventure-guide.md#world-of-osso-monthly-policy) to every character; preserve tracking and reset only monthly counters.
 - [x] Reuse existing criteria tracking, attribute real events once across overlapping activity trees, persist/account-aggregate contributions, and exclude historical login reconstruction from monthly credit. Unsupported criteria show unavailable, not zero.
 
+## Journeys watched faction
+
+Renown requests use Faction IDs, not Covenant IDs, for Retail`C_Reputation.SetWatchedFactionByID`. Zero clears the existing character reputation watch. Queries read live`CharacterReputation`; accepted writes persist through the existing reputation store. Refusals retain both the previous watch and catalog, with an explicit watch error. Unevaluated unlock gates never establish eligibility; all29 current source factions remain gated. This is backing, not certification of native hover controls or the main-screen reputation bar.
+
 ## How it works
 
 - [Realm Adventure Guide](../../../game-engine/docs/wiki/systems/adventure-guide.md#realm-activities-and-suggestions)
