@@ -1,4 +1,4 @@
-//! Real-DB tests against data/world.db (DB2 12.1.0.69933). Each test skips
+//! Real-DB tests against the published data/world.db. Each test skips
 //! when the DB is absent.
 
 use std::path::PathBuf;
@@ -73,10 +73,23 @@ fn store_indexes_every_spell_name_row() {
     let (Some(conn), Some((store, classes))) = (open_world_db(), world()) else {
         return;
     };
-    let names: usize = conn
-        .query_row("SELECT COUNT(*) FROM spell_name", [], |r| r.get(0))
+    let mut names = conn
+        .prepare("SELECT ID, Name_lang FROM spell_name")
         .unwrap();
-    assert_eq!(store.len(), names);
+    let names = names
+        .query_map([], |row| {
+            Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?))
+        })
+        .unwrap();
+    for row in names {
+        let (id, name) = row.unwrap();
+        let loaded = store
+            .get(id)
+            .unwrap_or_else(|| panic!("spell {id} missing"));
+        assert_eq!(loaded.name, name, "spell {id}");
+    }
+    // TC also loads non-conflicting DifficultyID0 server-side spells; those
+    // additional entries must not make indexing every file spell a failure.
     let class_ids: Vec<u8> = classes.classes.iter().map(|c| c.class_id).collect();
     assert_eq!(class_ids, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
 }
