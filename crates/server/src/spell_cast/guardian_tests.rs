@@ -368,7 +368,7 @@ fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
         .world_mut()
         .entity_mut(h.caster)
         .insert(crate::hunter_pet::PetStable {
-            character_id: 1,
+            character_id: Some(1),
             stored: default(),
             summoned: Some(pet),
         });
