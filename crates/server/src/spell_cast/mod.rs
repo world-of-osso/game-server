@@ -21,6 +21,8 @@ mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
+mod attack_power_tests;
+#[cfg(test)]
 mod attack_speed_tests;
 #[cfg(test)]
 mod autoattack_range_tests;
