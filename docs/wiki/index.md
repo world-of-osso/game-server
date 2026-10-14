@@ -17,7 +17,7 @@
 - [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
 - [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13) — native evaluator reused; actual faction-isolated XP-cap Double Agent and reopened account persistence.
 
-- [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
+- [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; [current Type39](systems/dungeon-achievements.md#current-personal-arena-ratings) maps authored0/1 separately; other bracket sources remain disabled.
 
 - [Recovery rates](systems/auras.md#cooldown-recovery-rates) — native286 future/running spell/category timers, real Rapid Fire/Sprint/Hot Hand boundaries and owner updates; full ability/rendered limits retained.
 

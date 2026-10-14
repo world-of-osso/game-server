@@ -58,59 +58,68 @@ fn spawn_rating_players(
     requested: PvpBracketSnapshot,
 ) -> Vec<(u64, Entity)> {
     (0..size * 2)
-        .map(|index| {
-            let name = format!("Rating{}", char::from(b'a' + index as u8));
-            let (character, _) = crate::persistence::create_character(
-                &world.resource::<GameDatabase>().db,
-                index as u64 + 1,
-                &name,
-                1,
-                1,
-            )
-            .unwrap();
-            let pvp = controlled_starting_progress(requested.clone());
-            crate::persistence::save_pvp(
-                &world.resource::<GameDatabase>().db,
-                character,
-                &pvp.progress,
-            );
-            let player = world
-                .spawn((
-                    Player {
-                        name,
-                        race: 1,
-                        class: 1,
-                        appearance: Default::default(),
-                    },
-                    Level(90),
-                    ClientId(character),
-                    Position {
-                        x: 0.0,
-                        y: 0.0,
-                        z: 0.0,
-                    },
-                    InMap::continent(0),
-                    Health {
-                        current: 1000.0,
-                        max: 1000.0,
-                    },
-                    pvp,
-                    PlayerAchievementState::default(),
-                    crate::death::PlayerDeathState::default(),
-                ))
-                .id();
-            world.spawn((
-                Authenticated {
-                    account_id: index as u64 + 1,
-                },
-                InWorld {
-                    character_id: character,
-                },
-                PlayerLink(player),
-            ));
-            (character, player)
-        })
+        .map(|index| create_rating_participant(world, index, requested.clone()))
         .collect()
+}
+
+fn create_rating_participant(
+    world: &mut World,
+    index: usize,
+    requested: PvpBracketSnapshot,
+) -> (u64, Entity) {
+    let name = format!("Rating{}", char::from(b'a' + index as u8));
+    let pvp = controlled_starting_progress(requested);
+    let db = &world.resource::<GameDatabase>().db;
+    let (character, _) =
+        crate::persistence::create_character(db, index as u64 + 1, &name, 1, 1).unwrap();
+    crate::persistence::save_pvp(db, character, &pvp.progress);
+    let player = spawn_rating_actor(world, character, name, pvp);
+    world.spawn((
+        Authenticated {
+            account_id: index as u64 + 1,
+        },
+        InWorld {
+            character_id: character,
+        },
+        PlayerLink(player),
+    ));
+    (character, player)
+}
+
+fn spawn_rating_actor(
+    world: &mut World,
+    character: u64,
+    name: String,
+    pvp: PlayerPvpState,
+) -> Entity {
+    let identity = Player {
+        name,
+        race: 1,
+        class: 1,
+        appearance: Default::default(),
+    };
+    let health = Health {
+        current: 1000.0,
+        max: 1000.0,
+    };
+    let position = Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    world
+        .spawn((
+            identity,
+            Level(90),
+            ClientId(character),
+            position,
+            InMap::continent(0),
+            health,
+            pvp,
+            PlayerAchievementState::default(),
+            crate::death::PlayerDeathState::default(),
+        ))
+        .id()
 }
 
 fn form_real_parties(world: &mut World, players: &[(u64, Entity)], size: usize) {
@@ -152,6 +161,12 @@ fn admit_rating_match(
     let mode = mode(requested).unwrap();
     form_matches(world, mode, None);
     let id = world.resource::<PvpServerState>().next_battleground_match;
+    accept_rating_copy(world, id, players);
+    run_rating_preparation(world, id);
+    id
+}
+
+fn accept_rating_copy(world: &mut World, id: u64, players: &[(u64, Entity)]) {
     let map_id = world.resource::<PvpServerState>().battleground_matches[&id]
         .arena
         .as_ref()
@@ -178,6 +193,9 @@ fn admit_rating_match(
         .get_mut(&id)
         .unwrap()
         .map = Some(map);
+}
+
+fn run_rating_preparation(world: &mut World, id: u64) {
     arena::update_matches(world);
     assert_eq!(
         world.resource::<PvpServerState>().battleground_matches[&id]
@@ -198,7 +216,6 @@ fn admit_rating_match(
             .phase,
         BgPhase::InProgress
     );
-    id
 }
 
 fn eliminate_rating_team(world: &mut World, id: u64, loser: BgTeam, players: &[(u64, Entity)]) {
@@ -219,6 +236,10 @@ fn eliminate_rating_team(world: &mut World, id: u64, loser: BgTeam, players: &[(
         assert_eq!(world.get::<Health>(player).unwrap().current, 0.0);
     }
     arena::update_matches(world);
+    assert_settled_rating_match(world, id, loser);
+}
+
+fn assert_settled_rating_match(world: &World, id: u64, loser: BgTeam) {
     let matched = &world.resource::<PvpServerState>().battleground_matches[&id];
     assert_eq!(
         matched.instance.outcome,

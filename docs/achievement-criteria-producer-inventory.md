@@ -2,9 +2,11 @@
 
 verified: 2026-10-13
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5438 ordinary (3445 account/1993 character),1813 statistics; 99 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5448 ordinary (3445 account/2003 character),1815 statistics; 100 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Personal arena rating39 supports current asset0/1 only: authored criteria451/447 feed2v2/3v3 statistics370/595 and ten character thresholds. Existing accepted rated settlement supplies actual after-rating after durable progress and the applied-once marker; highest counters take max, not win count or pre-rating. Native full-party/invitation/preparation/lethal-result fixture uses controlled1539 inputs (no credit), yields1551 winners/1527 losers, grants real1550 thresholds, rejects other bracket/retired5v5, preserves highest through a second actual loss, idle/replay and redb reopen. Statistics request returns raw rating; Criteria request stays target-clamped. Native1/1, compiler/policy28/28. No proprietary Retail MMR or other-bracket claim.
 
 - Exact PlayerMap32/asset0 is a real authenticated map, not missing authority (TC1922–1925). Root592 All4→leaf593 SingleTrue32/0 admits native5512; known map0 qualifies, map1/missing map/dead/idle reject, redb reopen retains1 and no honor5492 is inferred. Current statistic1488 World Killing Blows gains numeric5512 support; no ordinary gain or relinking. Compiler5437→5439, focused native1/1 and compiler26/26. Multi-child Some zero-map alternatives remain excluded.
 
@@ -95,7 +97,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 36 | AcquireItem | 1650/1759 | 1123/1132 | 527 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 37 | WinAnyRankedArena | 4/60 | 1/34 | 3 | Native rated2v2/3v3 committed settlement: authenticated online winners only; pre-result rating minimum1 (TC Arena.cpp249), one accumulated win. Real-channel rated wins/skirmish/losers/no-replay/redb-reopen proved. Timers and unsupported qualifiers stay disabled. |
 | 38 | EarnTeamArenaRating | 0/6 | 0/3 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
-| 39 | EarnPersonalArenaRating | 0/88 | 0/68 | 0 | Native rated settlement exists, but source/data mapping unresolved: pinned TC ArenaTeam.cpp448 passes team size2/3/5 while local Retail criteria447/451/452 use slot-like assets1/0/2. No guessed remap; still unwired. No native rated5v5. |
+| 39 | EarnPersonalArenaRating | 4/88 | 2/68 | 2 | Native committed2v2/3v3 current after-rating, current authored assets0/1, highest and reopened persistence; exact370/595 and1550 grants proved. Old TC team-type2/3/5 is not current asset mapping; retired5v5/RBG/Shuffle/Blitz and unknown qualifiers remain disabled. |
 | 40 | AchieveSkillStep | 12/36 | 12/12 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 41 | UseItem | 1310/1404 | 1216/1231 | 94 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 42 | LootItem | 388/579 | 292/292 | 96 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
