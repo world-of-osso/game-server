@@ -745,15 +745,12 @@ pub fn load_currencies(db: &Database, character_id: u64) -> shared::currency::Cu
             })
             .unwrap_or_default()
     };
-    if migrate_pvp_currency_ids(&mut wallet) {
-        save_currencies(db, character_id, &wallet);
-    }
+    normalize_pvp_currency_ids(&mut wallet);
     wallet
 }
 
-/// One-way storage conversion: obsolete internal IDs are never alternate API IDs.
-fn migrate_pvp_currency_ids(wallet: &mut shared::currency::CurrencyWallet) -> bool {
-    let mut changed = false;
+/// Obsolete internal IDs are never alternate API IDs; the next owned write stores normalization.
+fn normalize_pvp_currency_ids(wallet: &mut shared::currency::CurrencyWallet) {
     for (old, current) in [
         (1, shared::currency::HONOR_CURRENCY_ID),
         (2, shared::currency::CONQUEST_CURRENCY_ID),
@@ -775,9 +772,7 @@ fn migrate_pvp_currency_ids(wallet: &mut shared::currency::CurrencyWallet) -> bo
             legacy.id = current;
             wallet.entries.push(legacy);
         }
-        changed = true;
     }
-    changed
 }
 
 pub fn save_currencies(

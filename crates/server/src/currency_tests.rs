@@ -109,6 +109,35 @@ fn currency_ack_waits_for_fifo_without_blocking_updates() {
 }
 
 #[test]
+fn legacy_currency_reader_normalizes_without_waiting_for_the_writer() {
+    use std::time::{Duration, Instant};
+    let db = persistence::temp_database();
+    let wallet = CurrencyWallet {
+        entries: vec![shared::currency::CurrencyEntry {
+            id: 1,
+            amount: 37,
+            week_earned: 37,
+        }],
+    };
+    persistence::save_currencies(&db, 42, &wallet);
+    let held = db.begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = Instant::now();
+    let wallet = persistence::load_currencies(&db, 42);
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "legacy currency read waited: {elapsed:?}"
+    );
+    assert_eq!(wallet.get(1792), 37);
+    assert_eq!(wallet.get(1), 0);
+}
+
+#[test]
 fn earn_currency_adds_to_wallet() {
     let mut wallet = CurrencyWallet::default();
 
@@ -196,6 +225,7 @@ fn legacy_pvp_currency_balances_migrate_durably_without_duplicates() {
         assert_eq!(migrated.get(1602), 80);
         assert_eq!(migrated.get(1), 0);
         assert_eq!(migrated.entries.len(), 2);
+        persistence::save_currencies(&db, 42, &migrated);
     }
     let db = redb::Database::open(&path).unwrap();
     let wallet = persistence::load_currencies(&db, 42);
