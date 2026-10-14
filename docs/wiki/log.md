@@ -1,3 +1,7 @@
+## 2026-10-13 — Slagmaw logical identity versus preview
+
+[Pinned primary identity](systems/boss-scripts.md#slagmaw-source-primary) authenticates61463→1445/bit2 independently of Journal preview38391 versus live model42247. Producer/census RED→GREEN and actual idempotent private SQL preserve both models/unrelated bindings; publication and full-fight/native gates stay separate.
+
 ## 2026-10-13 — Wailing native summon groups
 
 [Authored group spawning](systems/boss-scripts.md#wailing-native-summon-groups) now serves both C++ ports and SmartAI. Source Disciple targeting and real Mutanus group4 placement/credit/corpse lifetime are covered beside Wizzle storage/expiry preservation; this does not certify escort activation or scheduling.
