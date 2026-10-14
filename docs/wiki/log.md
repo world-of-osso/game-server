@@ -1,3 +1,7 @@
+## 2026-10-14 — FIFO appearance refreshes
+
+[Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): source-derived refresh grants now merge on FIFO; owner cache and complete snapshots follow receipts. Held-writer, account union, initial/equip/disposal/reopen scopes pass5/5; release gameplay acceptance remains open.
+
 ## 2026-10-14 — FIFO toy learning and consumption
 
 [Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): toy learning atomically consumes from fresh FIFO inventory, gates results and credits, and retains earlier queued wallet changes. Six targeted learning/favourite/ownership/reopen/achievement cases pass; other item-use families remain open.
