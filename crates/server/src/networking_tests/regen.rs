@@ -12,7 +12,7 @@ use shared::components::{Level, Mana, Player, PowerType, UnitPowers};
 use std::net::UdpSocket;
 use std::time::{Duration, Instant};
 
-fn network_server(address: std::net::SocketAddr) -> App {
+pub(super) fn network_server(address: std::net::SocketAddr) -> App {
     let mut server = App::new();
     server.add_plugins((
         bevy::MinimalPlugins,
