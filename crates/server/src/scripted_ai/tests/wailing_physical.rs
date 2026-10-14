@@ -21,10 +21,12 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
     // Source progress event1 faction is staged; activation flag/spell gaps stay open.
+    // Keep the authored/default react state: TC Creature.cpp:1304–1313 selects
+    // Aggressive and Disciple never sets Passive. A fabricated Passive override
+    // skips victim cleanup and leaves Pursuing after the first camp's corpses.
     // High fixture HP bounds wave survival; no NPC position or arrival is changed.
     h.app.world_mut().entity_mut(disciple).insert((
         UnitFactionTemplate(250),
-        ReactState::Passive,
         Health {
             current: 1_000_000_000.0,
             max: 1_000_000_000.0,
