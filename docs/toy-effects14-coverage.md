@@ -1,12 +1,14 @@
 # Toy effects14 — active whole-goal coverage
 
-## Sea-Blessed Shrine — source lifecycle, native gate open
+## Sea-Blessed Shrine — bounded source and release-native lifecycle
 
 Exact245942/1240082 is a source cursor87 summon: TDB246037/display129958, property2910/control0/title0/flags256, instant cast and180000ms lifetime. No template AI, spell/click/addon payload or root binding in4066 TDB1210 script rows; no invented interaction. Source70391 CSV hashes and read-only DB rows are in `shrine29-current-{csv-source,source-db}.json` under the continuation evidence directory.
 
 Actual bag learning/UseToy RED missing246037 → GREEN1 preserves clicked point, one stationary actor, owner/map, source180s simulation expiry and caster health/body. Maintained CLI source/import idempotence1PASS. Eleven installed70391 CASC assets and three aliases authenticate body1995758 and state models2339771/3023279; private NPC cache adds only ordinary129958 coverage, retaining all prior profiles/choices/geosets.
 
-Native Modern PASS: real cursor point, display129958, state kit234717 starts once; ground attachments retain scales.2/.15 and disappear with actor. Observed198986ms from activation, not exact180s wall. Forever source body/attachments/scale/origin and pixels pass, but natural-expiry wait times out; lifecycle NOT certified. Two inspected1920×1080 PNGs published in AgentShared `toys/shrine29/`. Captures precede the latest master merge; post-merge native build/proof remains open. No complete-toy or classifier gain claim.
+Matched post-master release server plus native client pass both skins: real cursor point, display129958, state kit234717 starts once; ground attachments retain scales.2/.15 and disappear with actor. Observed Modern180298ms/Forever180130ms from activation; no exact wall-time claim. Five-second host samples plus start/end pressure/free-memory logs keep full PSI avg60 at or below.89/.96. Clean receipts: `modern-shrine29-release2` and `forever-shrine29-release`; release SHA2562d8c639f6a36f17f4662f6e0e8546b9da262006320f24c61a947922cfe09b693. Inspected1920×1080 PNGs published in AgentShared `toys/shrine29/`.
+
+Earlier debug runs retain their failed observation-window results (quiet Forever217043ms); pressured runs are discarded for timing, including a release Modern PASS with PSI1.27. No assertions, deadlines, dev profiles or runtime clock were changed. Summon deadlines use Time<Virtual>, whose default250ms clamp clips slow frames; the debug work culprit remains unassigned. These bounded release receipts are not the server performance owner's full scripted50ms-budget proof. No full1166 or classifier gain claim; independent artifact verification remains unavailable (expired OAuth).
 
 ## Prismatic Bauble — source admission, native gaps open (2026-10-13)
 
