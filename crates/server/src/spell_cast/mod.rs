@@ -1972,6 +1972,7 @@ pub(crate) fn execute_cast(
     }
     spell_mods::consume_charges(world, caster, spell);
     blooming_infusion::after_cast(world, caster, spell);
+    druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
     if attributes(spell, 0) & SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT != 0 {
         crate::combat::attack_stop(world, caster);
@@ -2571,6 +2572,7 @@ fn launch_triggered_spell(
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, spell, plan, depth);
+            druid_transform::after_cast(world, caster, spell);
             true
         }
         Err(failure) => {
@@ -2688,9 +2690,16 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     // A fully discounted authored cooldown becomes ready now, not at its old deadline.
     if base_recovery_ms > 0 || base_category_ms > 0 {
+        // TC SpellHistory.cpp:505: when spell recovery is zero, its entry
+        // lasts until category recovery, so ResetCooldown can erase both.
+        let spell_ms = if recovery_ms > 0 {
+            recovery_ms
+        } else {
+            category_ms
+        };
         history
             .spell_ready_at
-            .insert(spell.id, now + recovery_ms as f64 / 1000.0);
+            .insert(spell.id, now + spell_ms as f64 / 1000.0);
     }
     if category != 0 && base_category_ms > 0 {
         history.category_spell_ids.insert(category, spell.id);
