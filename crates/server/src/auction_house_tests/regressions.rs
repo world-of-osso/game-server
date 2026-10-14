@@ -176,13 +176,22 @@ fn post(app: &mut App, connection: Entity, guid: u64) -> AuctionOperationRespons
             buyout_price: None,
             duration: AuctionDuration::Short,
         });
-    app.update();
-    crate::auction_house::tests::finish_market_work(app);
-    app.world_mut()
-        .resource_mut::<Responses>()
-        .0
-        .pop()
-        .expect("auction response")
+    wait_for_response(app)
+}
+
+fn wait_for_response(app: &mut App) -> AuctionOperationResponse {
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    loop {
+        app.update();
+        if let Some(response) = app.world_mut().resource_mut::<Responses>().0.pop() {
+            return response;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "no durable auction wire response"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
 }
 
 #[test]
@@ -314,11 +323,5 @@ fn bid(
         .get_mut::<MessageSender<PlaceBid>>()
         .unwrap()
         .send::<AuctionChannel>(PlaceBid { auction_id, amount });
-    app.update();
-    crate::auction_house::tests::finish_market_work(app);
-    app.world_mut()
-        .resource_mut::<Responses>()
-        .0
-        .pop()
-        .expect("bid response")
+    wait_for_response(app)
 }
