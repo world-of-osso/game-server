@@ -587,6 +587,48 @@ fn achievements2_holiday_and_missing_spell_assets_remain_untrackable() {
 }
 
 #[test]
+fn achievements_criteria_target_class_rejects_missing_target_even_when_caster_matches() {
+    let catalog = catalog();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            race: 2,
+            class: 6,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    for (target, qualifies) in [
+        (None, false),
+        (Some(SpellHitPlayer { race: 1, class: 6 }), false),
+        (Some(SpellHitPlayer { race: 2, class: 1 }), false),
+        (Some(SpellHitPlayer { race: 2, class: 6 }), true),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::LandTargetedSpell(27571, target),
+            None,
+            2,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&6302), qualifies.then_some(&1));
+    }
+    let mut state = PlayerAchievementState::default();
+    let target = Some(SpellHitPlayer { race: 2, class: 6 });
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::LandTargetedSpell(27571, target),
+        None,
+        2,
+        &PlayerConditions::default(),
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&6302),
+        "missing caster authority stays rejected"
+    );
+}
+
+#[test]
 fn achievements2_pinned_snapshot_trackable_union_matches_census() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
@@ -601,10 +643,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Pinned census:5453 +291 behind actual native spell-hit TargetRace27 leaves.
+    // Pinned census:5454 +1699/3559 behind native player-target/class5/28 leaves.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5454);
-    assert!(union.contains(&291));
+    assert_eq!(union.len(), 5456);
+    for achievement in [291, 1699, 3559] {
+        assert!(union.contains(&achievement));
+    }
     for achievement in [
         578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
         6030, 6031, 6350, 6584, 6621, 6973, 13025, 13026, 13623, 14728, 14729, 14730, 14731, 16729,
