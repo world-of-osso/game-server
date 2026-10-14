@@ -360,7 +360,7 @@ Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's pe
   - no armor, block or avoidance model: 142, 51, 187, 229;
   - no haste-regen stat: 416, 417, 457;
   - no consumer: 418 max power, 443 leech;
-  - not yet: 63 additional power cost, 168 damage vs creature type, 213 rage from damage, 220 ability school, 285 linked, 468/396 trigger on health/power, 191/305 speed rules, 467 stat bonus pct, 320, 531.
+  - not yet: 63 additional power cost, 213 rage from damage, 220 ability school, 285 linked, 468/396 trigger on health/power, 191/305 speed rules, 467 stat bonus pct, 320, 531.
 
 ## Sources
 
@@ -400,3 +400,7 @@ Batch48 proof: native Aimed Shot15,000→10,714ms, running application/removal o
 Pinned TC a352b1fa `spell_dh.cpp480–519` checks Fire school, accumulates each proc into a uint32 and overrides child213011 effect0 on periodic effect0. Native213010 carries3%/1000ms and CanProcFromProcs. The implementation stores pending integer heals per aura instance on its recipient; normal proc masks/chance/trigger eligibility still apply. Proc scripts can inspect the existing AuraEvent before proc admission and consume its actual damage after a successful proc. Refresh retains instance state; removal discards it. No generic periodic-dummy certification. [Contract](../../specs/class-completeness.md#charred-warblades).
 
 Eight native controls plus12 adjacent controls/check/fmt pass at d9d216d9. Three source-bounded memberships promote; full class/talent and rendered parity remain open. [Exact proof ledger and fixture corrections](../../class-completeness6.md#native-charred-warblades--batch49).
+
+## Damage versus creature type
+
+Aura168 stores `(creature mask,multiplier)` pairs in `AuraStatMods`, combining matching entries multiplicatively on actual spell/periodic and main/off-hand damage, independent of school. The shared `unit_creature_type.rs` resolver uses NPC template type; player positive native form type, else exact race type, and also serves target admission. Runtime loads required `chr_races.CreatureType` through the world connection; `prepare_site_catalog.py` retains the exact selected product CSV field. Canonical59-row equality is verified. No inferred Humanoid or generated source map. Zero masks/amounts do not boost damage; removal/expiry/reapplication, native Attr3/6 exemptions, resolved copies and healing retain their contracts. [Source/behavior receipts and boundaries](../../class-completeness6.md#native-creature-type-damage--batch54), [contract](../../specs/class-completeness.md). Generic tracking44 and whole-ability/talent/rendered acceptance remain separate.

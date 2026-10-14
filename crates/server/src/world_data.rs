@@ -1025,6 +1025,10 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load taxi_nodes/taxi_path/taxi_path_node; run scripts/db2.py import");
     info!("Loaded {} flight points", taxi.nodes.len());
     commands.insert_resource(taxi);
+    commands.insert_resource(
+        crate::unit_creature_type::load_race_types(&conn)
+            .expect("Failed to load chr_races.CreatureType; prepare the authored race catalog"),
+    );
     let durability = crate::durability::load_item_durability(&conn)
         .expect("Failed to load item durability; run scripts/db2.py import");
     info!("Loaded durability for {} items", durability.0.len());

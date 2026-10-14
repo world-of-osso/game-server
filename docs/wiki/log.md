@@ -21,6 +21,22 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-14 — Actual spell-hit target race
+
+[TargetRace27](systems/dungeon-achievements.md#actual-spell-hit-target-race) carries each hit player's race only for type110. Compiler31/31 and native1/1 at cc546863 prove delayed44212 Human/Orc hits, caster isolation, NPC/missing/depth/idle/reopen; census adds only account291 structurally. Required full four-thread workspace filter171/0/1ignored plus site-export1/1 passes at2e6a8661; server/engine checks and three-repo fmt pass. No full291/content/UI certificate.
+
+## 2026-10-13 — Battle-pet team minimum level
+
+[BattlePetTeamLevel34](systems/dungeon-achievements.md#battle-pet-team-minimum-level) reads all three equipped owned journal slots. Compiler30/30; native level25-team win RED lacks23257. Native/catalog3/3 proves matched-team win/lower equipped slot, numeric8278, idle/reopen and missing journal/slot qualification. Statistic8278 only; required full170/0/1ignored plus site-export1/1, server/engine checks and three-repo fmt pass at4531ce2b code scope.
+
+## 2026-10-13 — Encounter loot eligibility ordering
+
+[Type97](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) reads existing active lock bits before native DONE saves them. Actual Skorpyron Normal14 death RED commits bit1 but lacks35448; native2/2 and required full167/0/1ignored plus checks/fmt pass at fa181cea code scope. No new lock state or bag-loot substitute; current roots remain unchanged.
+
+## 2026-10-13 — Positive known-spell marker
+
+[Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) reads existing class/profession/owned-mount IDs, not global spell metadata. Compiler RED→GREEN29/29; native/catalog2/2 prove all26 learned recipe facts and three account grants, absent/wrong knowledge and reopened persistence. Fixture runs standard ClassProgression PostUpdate publication before the next Update credit. Full four-thread workspace filter165/0/1ignored and server/engine/three-repo checks pass; no trait/public-UI marker acquisition claim.
+
 ## 2026-10-13 — Ground C++ waypoint arrivals
 
 [Ground paths](systems/boss-scripts.md#ground-c-waypoint-paths) now use sourced baked routes rather than reject all non-exact ground MovePath calls. Real AT7904/Adarogg reaches the three authored paths and both meal-condition branches; empty-bake rejection and Golden Serpent flying-path controls accompany the walking-gait RED→GREEN. Native clear and both-skin loot remain open.
@@ -1181,3 +1197,6 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: native Druid/Fear master integration85 controls pass,17 actual unshifted BeforeCast receipts and current check/fmt; canonical model-info98,609 rows verified equal to source-prepared slot. Full class census/rendered acceptance remains open.
 
 - 2026-10-13 — [Signed summon titles](systems/toys.md#signed-summon-title-source-boundary-2026-10-13): current source3001/-1 exposed unsigned loader failure; preserve TC int32 without aborting unrelated toys.
+- 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
+
+- 2026-10-14 — [Quest fixture refresh](../../quest-objectives-coverage.md#fixture-refresh--2026-10-14): reproduced missing SpellTargetConditions in real Tear item cast and stale empty-loot Netherwing Egg fixture; load authored conditions and use real9548/181746/23830 chest data. Both tests GREEN with unchanged gameplay/data; original open/autoloot ordering retained.
