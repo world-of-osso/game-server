@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export pinned local CASC achievement DB2s, then import them into world.db.
+"""Export active installed CASC achievement DB2s, then import them into world.db.
 
 Extract the four FDIDs with casc-local first. Never downloads anything. Uses the
 same WDC5 decoder as db2.py extract; .csv.import files are Godot translation
@@ -11,9 +11,11 @@ import csv
 import sqlite3
 from pathlib import Path
 
+import casc_locale
 import db2_casc
 
-BUILD = "12.1.0.69933"
+ACTIVE_DB2 = Path(__file__).resolve().parents[1] / "data/db2/active"
+BUILD_INFO = casc_locale.INSTALL / ".build.info"
 TABLES = {
     "Achievement": (1260179, 0x6FC5281B, {0, 1, 2}, [
         ("ID", 3), ("Title_lang", 1), ("Description_lang", 0),
@@ -38,12 +40,29 @@ SQL_NAMES = {"Achievement": "achievement", "Achievement_Category": "achievement_
              "Criteria": "criteria", "CriteriaTree": "criteria_tree"}
 
 
+def read_active_build(active_directory, build_info):
+    with build_info.open(encoding="utf-8") as stream:
+        columns = [column.split("!")[0] for column in next(stream).strip().split("|")]
+        records = csv.DictReader(stream, fieldnames=columns, delimiter="|")
+        builds = {row["Version"] for row in records
+                  if row["Product"] == "wow" and row["Active"] == "1"}
+    if len(builds) != 1:
+        raise ValueError(f"{build_info}: expected one active wow build, got {sorted(builds)}")
+    build = builds.pop()
+    active = active_directory.resolve(strict=True)
+    if active.name != build:
+        raise ValueError(f"{active_directory}: build {active.name}, installed wow build {build}")
+    return build
+
+
 def export_tables(directory):
     tables = {}
     for name, (fdid, layout, text, columns) in TABLES.items():
-        header, records = db2_casc.decode((directory / f"{fdid}.db2").read_bytes(), text)
+        data = (directory / f"{fdid}.db2").read_bytes()
+        header = db2_casc.read_header(data)
         if header["layout_hash"] != layout:
             raise ValueError(f"{name}: layout {header['layout_hash']:08X}, expected {layout:08X}")
+        _, records = db2_casc.decode(data, text)
         rows = [[values[index] for _, index in columns] for _, values in sorted(records.items())]
         if name == "Achievement":
             for row in rows:
@@ -60,7 +79,7 @@ def export_tables(directory):
     return tables
 
 
-def import_tables(database, tables):
+def import_tables(database, tables, build):
     with sqlite3.connect(database) as db:
         db.execute("BEGIN IMMEDIATE")
         for name, (columns, rows) in tables.items():
@@ -70,14 +89,19 @@ def import_tables(database, tables):
                             + (" PRIMARY KEY" if column == "ID" else " NOT NULL") for column, _ in columns]
             db.execute(f"CREATE TABLE {table} ({', '.join(declarations)})")
             db.executemany(f"INSERT INTO {table} VALUES ({','.join('?' for _ in columns)})", rows)
-            db.execute("INSERT OR REPLACE INTO db2_build (table_name, build) VALUES (?, ?)", (table, BUILD))
+            db.execute("INSERT OR REPLACE INTO db2_build (table_name, build) VALUES (?, ?)", (table, build))
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db2-dir", type=Path, required=True)
     parser.add_argument("--db", type=Path, required=True)
     args = parser.parse_args()
-    if args.db2_dir.name != BUILD:
-        parser.error(f"requires build {BUILD}")
-    import_tables(args.db, export_tables(args.db2_dir))
+    build = read_active_build(ACTIVE_DB2, BUILD_INFO)
+    if args.db2_dir.resolve().name != build:
+        parser.error(f"requires active installed build {build}, got {args.db2_dir.resolve().name}")
+    import_tables(args.db, export_tables(args.db2_dir), build)
+
+
+if __name__ == "__main__":
+    main()

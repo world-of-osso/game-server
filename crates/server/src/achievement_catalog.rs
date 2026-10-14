@@ -146,7 +146,7 @@ pub(crate) enum CriteriaEvent {
     MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
-    LandTargetedSpell(u32, Option<u8>),
+    LandTargetedSpell(u32, Option<SpellHitPlayer>),
     LearnSpell(u32),
     DefeatEncounter(u32),
     /// One DONE while the character's active encounter loot-lock bit was unset.
@@ -461,6 +461,13 @@ pub(crate) struct PlayerConditions {
     pub player: Option<ReferencePlayer>,
 }
 
+/// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SpellHitPlayer {
+    pub race: u8,
+    pub class: u8,
+}
+
 /// The reference player's own state read by TC player-only ModifierTree leaves.
 #[derive(Debug, Default)]
 pub(crate) struct ReferencePlayer {
@@ -500,6 +507,9 @@ enum CriteriaFact {
     TargetCreature(u32),
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
+    TargetIsPlayer,
+    /// Accepted only with positive player/race authority; NPC class predicates stay disabled.
+    TargetClass(u8),
     /// Some8 requiring one of these complete TargetCreatureId4 leaves.
     TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
@@ -541,7 +551,11 @@ impl CriteriaFact {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
             Self::TargetRace(race) => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target)) if target == *race)
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target)) if target.race == *race)
+            }
+            Self::TargetIsPlayer => matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(_))),
+            Self::TargetClass(class) => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target)) if target.class == *class)
             }
             Self::TargetCreatures(entries) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
@@ -1320,6 +1334,7 @@ fn load_criteria_facts(
                 .ok()
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
+            5 => Some(CriteriaFact::TargetIsPlayer),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
@@ -1342,6 +1357,9 @@ fn load_criteria_facts(
             27 => small
                 .filter(|race| crate::race_class::race_bit(*race).is_some())
                 .map(CriteriaFact::TargetRace),
+            28 => small
+                .filter(|class| (1..=13).contains(class))
+                .map(CriteriaFact::TargetClass),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
             34 => small
@@ -1361,7 +1379,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/27/29/32/34/35/41/60/69/71/104/122"
+                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/60/69/71/104/122"
                 )
             }
         };
