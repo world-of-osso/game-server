@@ -145,6 +145,12 @@ Crits:
 
 Melee auto-attack (`combat.rs`) takes the attacker's physical `damage_done` × `autoattack_damage_mult` (344) and the target's physical `damage_taken`. It shares school immunity and absorb consumption with spell damage; query reads and target capacity mutations are separated by `ParamSet`. See [defensives audit](../../defensives-audit.md) for outcomes, Brew's health effect and verification limits.
 
+## Autoattack range
+
+Native153 folds signed yards into `AuraStatMods.autoattack_range_bonus`. `combat::try_swing` adds the attacker's value to existing nominal5yd range for both hands, comparing squared distance inclusively as TC a352b1fa Unit.cpp691–709. Independent effects/stacks sum; ordinary aura reconciliation handles removal, expiry and per-cast refresh. Victim modifiers and spell range do not consume it. Existing combat-reach geometry is not implemented by this change.
+
+Native Cat768 effect8 and Astral Influence197524 effect1 are zero in current lead-published rows; no talent-to-form amount binding is invented. Actual positive326486/+5 and338449/+10, negative225319/−3 and zero/native ownership/lifecycle fixtures prove the consumer, not a whole Cat/Astral Influence certificate. [Batch51 proof](../../class-completeness6.md#native-autoattack-range--batch51).
+
 ## Damage shields
 
 `damage_shield.rs` implements native aura15 at the damaging-melee boundary, not through ordinary aura proc flags. `combat::record_swing` queues it after health/death handling; lethal swings run shared death-aura removal first because the normal lifetime sweep is later. Passive/allow-while-dead exceptions remain native. Effects are copied before retaliation, since damage can mutate aura lists.
@@ -276,6 +282,7 @@ Every aura change recomputes two components, each written only when its value ch
 | `damage_done_mult[7]` / `damage_taken_mult[7]` | 79 / 87 per school bit | spell, periodic and melee damage |
 | `healing_done_mult` / `healing_taken_mult` | 136 / 118, 283 | heals |
 | `autoattack_damage_mult` | 344 | melee swing |
+| `autoattack_range_bonus` | 153 signed additive yards | attacker-only main/off-hand swing distance |
 | `rage_from_damage_dealt_pct` | 213 | rage per melee swing dealt (summed percent) |
 | `power_regen_mult` | 110 (by power), 379 (mana) | regen |
 | `movement_speed` | 31, 129, 33, 26, 455, 12 | movement |
@@ -387,3 +394,9 @@ Aura148 uses its native MiscValue charge category and rate100/(100+max(amount,�
 Pinned TC a352b1fa SpellHistory.cpp880–914 and1003–1005, SpellAuraEffects.cpp6285–6293 establish current/running semantics. Native Trueshot288613 effect1 uses40/category1715 for Aimed Shot19434. [Contract](../../specs/class-completeness.md#category-charge-recovery-rates). Type-mask/global-time/charm and complete ability/rendered proof remain open.
 
 Batch48 proof: native Aimed Shot15,000→10,714ms, running application/removal owner receipts, unchanged refresh, serial two-charge expiry/replenishment, foreign recipient/category exclusions, independent Quick Shot150 product4,285ms, native Demonic Resolve−25/Fiery Brand slower recovery. The per-cast amount-refresh API fixture uses native Quick Shot150 as an override; it proves clock refresh only, not a Retail Quick Shot→Trueshot binding. Native−99 clamp edge/global time/charm/rendered parity remain unproved.
+
+## Charred Warblades
+
+Pinned TC a352b1fa `spell_dh.cpp480–519` checks Fire school, accumulates each proc into a uint32 and overrides child213011 effect0 on periodic effect0. Native213010 carries3%/1000ms and CanProcFromProcs. The implementation stores pending integer heals per aura instance on its recipient; normal proc masks/chance/trigger eligibility still apply. Proc scripts can inspect the existing AuraEvent before proc admission and consume its actual damage after a successful proc. Refresh retains instance state; removal discards it. No generic periodic-dummy certification. [Contract](../../specs/class-completeness.md#charred-warblades).
+
+Eight native controls plus12 adjacent controls/check/fmt pass at d9d216d9. Three source-bounded memberships promote; full class/talent and rendered parity remain open. [Exact proof ledger and fixture corrections](../../class-completeness6.md#native-charred-warblades--batch49).

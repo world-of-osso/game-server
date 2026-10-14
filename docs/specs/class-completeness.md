@@ -7,6 +7,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Record native cast/passive-sync outcomes, warning tuples and raw resources for all 13 classes/all 40 local Retail specs, using level-80 actors and real spell rows, without writing world.db or opening a realm port.
 - [x] Preserve exact missing effect/aura types and source/state prerequisites; never close unidentified Dummy fields with no-ops or guessed coefficients.
 - [x] Census uses authored production destinations/maps, actor identity and group state rather than reporting absent fixture startup resources as product gaps.
+- [x] Druid census exercises required, non-excluded Cat/Bear/Moonkin forms through real native casts. Preserve separate prerequisite cast/observed-form/warning/resource receipts; never inject form auras or bypass admission. Moonkin setup does not certify talent eligibility or combinations. Unmatched forms, prerequisite failures and underlying mechanics remain explicit gaps.
+- [x] Native aura153 adds signed attacker-owned yards to autoattack range, summing independent applied effects/stacks. Main/off-hand swings consume it at the inclusive distance boundary; removal/expiry and refreshed amounts update range. Victim-owned modifiers and zero amounts do not extend attacker range, and weapon-spell range remains independent. Combat-reach geometry and unnamed talent-to-form amount bindings are separate, unproved requirements.
 - [x] Native target24 selects hostile units within the authored caster-facing cone/radius.
 - [ ] Aura229 reduces only area damage whose school overlaps its native mask, multiplying independent aura factors. Direct damage and periodic damage/leech use the actual effect's selector or area-aura classification, plus native treat-as-area flags; periodic IgnoreDamageTakenModifiers excludes this mitigation. Single-target siblings and removed/expired auras do not reduce damage.
 - [ ] Native429433 Blooming Infusion counts completed Regrowth and Starsurge/eligible Starfall casts independently using its authored threshold, granting the corresponding native next-spell buff. Triggered copies, ticks and rejected/cancelled casts do not count. Native class masks determine consumption, and a charged damage modifier remains with an already launched missile after its charge is consumed.
@@ -186,3 +188,7 @@ Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast s
 
 - [x] Native aura148 applies100/(100+max(amount,−99)) per matching charge-category effect to future recovery durations. Existing running recovery preserves completed progress on application, amount refresh, removal and expiry; queued charges retain serial recovery and owner updates. Native Trueshot effect1 amount40/category1715 must accelerate actual Aimed Shot recovery.
 - Type-mask rates, global ModTimeRate, charm inheritance and full Trueshot/rendered parity remain separate unproved boundaries.
+
+## Charred Warblades
+
+- [x] Native213010 must collect eligible owner Fire-school damage using effect0's native percentage, truncate each event contribution, cast self213011 once at the1000ms tick and clear accumulated damage after ticking/removal. Non-Fire damage, other actors and already-spent contributions must not heal. Refresh of the same aura preserves pending contributions.

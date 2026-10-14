@@ -5,6 +5,13 @@
 ## 2026-10-13 — Slagmaw logical identity versus preview
 
 [Pinned primary identity](systems/boss-scripts.md#slagmaw-source-primary) authenticates61463→1445/bit2 independently of Journal preview38391 versus live model42247. Producer/census RED→GREEN and actual idempotent private SQL preserve both models/unrelated bindings; publication and full-fight/native gates stay separate.
+## 2026-10-13 — Native autoattack range
+
+[Attacker range153](systems/auras.md#autoattack-range) now affects real main/off-hand swings, preserving signed addition, inclusive boundaries and unchanged weapon-spell ranges. Native Cat/Astral zero fields are not converted into invented positive bindings; whole13/40 remains open.
+
+## 2026-10-13 — Current personal arena ratings
+
+[Personal-rating39](systems/dungeon-achievements.md#current-personal-arena-ratings) maps current authored0/1 to native2v2/3v3, uses actual durable after-results and highest counters. Native full-party/accepted/prepared lethal matches prove1550 crossing, losers, second-loss maxima, replay and reopen. Raw Statistics replies retain the rating; Criteria replies retain bounded target progress. Ten character definitions and two statistics are structurally enabled; other brackets and proprietary Retail MMR remain unclaimed.
 
 ## 2026-10-13 — Wailing native summon groups
 
@@ -1118,3 +1125,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 [Profile/navigation proof](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13): eleven actual labelled basic-role casts/resource publications; Cobra Shot193455 missile-resolution Level panic RED→11GREEN. Real Stockade follow crossed wall at tick19 and lost moving-state progress4.8527yd; native route/progress fix GREEN3. Strict follower missing-bake standing, ordinary behavior retained. Private Ruby12LOS+12NAV/authored zero-gap geometry package staged; advanced AI and new whole-route live proof open.
 - 2026-10-13: [Category charge rates](systems/auras.md#category-charge-recovery-rates): native148 through existing category clocks, authentic Trueshot/Aimed Shot RED/GREEN, negative native Fiery Brand and bounded refresh API proof.
+
+- 2026-10-13: Charred Warblades native3%/1000ms delayed self-heal producer; real-damage RED at eb9fbf29 (500HP stays500 instead of504); GREEN verification pending.
+
+- 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.
