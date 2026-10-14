@@ -19,8 +19,9 @@ fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
     h.app.world_mut().entity_mut(defender).insert((
         crate::duel::DuelOpponent(h.caster),
         Rotation {
+            x: 0.0,
             y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
-            ..Default::default()
+            z: 0.0,
         },
     ));
     h.advance(2);
