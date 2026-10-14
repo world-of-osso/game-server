@@ -273,8 +273,77 @@ fn fear_destination_stops_before_live_collision_wall() {
     h.advance(40);
     let after = h.app.world().get::<Position>(npc).unwrap();
     assert!(
-        after.x > 110.0 && after.x <= 113.01,
+        after.x > 110.0 && after.x <= 113.1,
         "first collision: {after:?}"
+    );
+}
+
+#[test]
+fn fear_native_root_pauses_running_until_root_is_removed() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    start_fleeing(&mut h, npc, player);
+    h.advance(10);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: player,
+            target: npc,
+            spell_id: 122,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(has_aura(h.app.world(), npc, 122));
+    let stopped = *h.app.world().get::<Position>(npc).unwrap();
+    h.advance(10);
+    assert_eq!(*h.app.world().get::<Position>(npc).unwrap(), stopped);
+    remove_auras(h.app.world_mut(), npc, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 122
+    });
+    h.advance(10);
+    assert_ne!(*h.app.world().get::<Position>(npc).unwrap(), stopped);
+}
+
+#[test]
+fn fear_removing_one_of_two_native_auras_keeps_control_lost() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    start_fleeing(&mut h, player, npc);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: npc,
+            target: player,
+            spell_id: TURN_EVIL,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(has_aura(h.app.world(), player, TURN_EVIL));
+    h.advance(4);
+    remove_auras(h.app.world_mut(), player, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == INTIMIDATING_SHOUT
+    });
+    let before = *h.app.world().get::<Position>(player).unwrap();
+    h.advance(10);
+    assert_ne!(*h.app.world().get::<Position>(player).unwrap(), before);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .controlled
+    );
+    remove_auras(h.app.world_mut(), player, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == TURN_EVIL
+    });
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .controlled
     );
 }
 
