@@ -4,6 +4,7 @@ mod catalog;
 mod hazards;
 mod party;
 mod spawning;
+mod stockade_diagnostic;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
@@ -40,14 +41,19 @@ impl Follower {
         entity.to_bits() | (1 << 63)
     }
 
-    pub(crate) fn online(&self, entity: Entity, level: u8) -> crate::group::OnlineMember {
+    pub(crate) fn online(
+        &self,
+        entity: Entity,
+        level: u8,
+        dungeon_difficulty: u32,
+    ) -> crate::group::OnlineMember {
         crate::group::OnlineMember {
             entity: entity.to_bits(),
             name: self.profile.name.clone(),
             class: self.profile.class_id,
             level,
             portrait: Default::default(),
-            dungeon_difficulty: catalog::FOLLOWER_DIFFICULTY,
+            dungeon_difficulty,
             raid_difficulty: Default::default(),
         }
     }
@@ -94,8 +100,14 @@ pub(crate) struct FollowerPlugin;
 impl Plugin for FollowerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FollowerCatalog>()
-            .add_systems(Startup, catalog::load_startup)
-            .add_systems(Update, party::advance_runs)
+            .add_systems(
+                Startup,
+                (catalog::load_startup, stockade_diagnostic::load_request),
+            )
+            .add_systems(
+                Update,
+                (stockade_diagnostic::advance, party::advance_runs).chain(),
+            )
             .add_systems(
                 FixedUpdate,
                 update_ai

@@ -154,3 +154,7 @@ Logs: `/home/osso/.worktrees/follower-dungeons-2026-10-13/utility-{interrupt,cas
 - [Follower contract](../../specs/follower-dungeons.md)
 - [Content import](../systems/content-import.md)
 - [Groups](../../specs/groups.md), [navigation](../../specs/navigation.md), [creature aggro](../../specs/creature-aggro.md)
+
+## Stockade diagnostic attachment — 2026-10-13
+
+The lead authorized Stockade diagnostic full-party completion before Azure sourced partial work. `followers/stockade_diagnostic.rs` reads one named request from `GAME_SERVER_STOCKADE_FOLLOWER_DIAGNOSTIC` at startup and waits for the authenticated solo player in an existing Normal map34 copy. It summons the source-selected four profiles using the production initializer and joins their ordinary companion group without moving the owner, creating a Retail catalog row or queuing LFG. The separate diagnostic component owns exact-copy lifetime; existing follow/combat systems remain unchanged. Group presence now takes companion difficulty from the owner rather than hardcoding205. Shared summon/rollback and group join/leave primitives serve both paths. [Acceptance and limits](../../specs/follower-dungeons.md#stockade-diagnostic-completion-not-retail-admission). Bootstrap and full walked completion are distinct proof gates; the latter is not yet established.

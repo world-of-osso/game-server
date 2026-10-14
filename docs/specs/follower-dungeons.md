@@ -52,6 +52,13 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 - [ ] Physical walked route: native movement blocked near1434/-180; private admin reposition supplied boss approach. Do not claim navigation/full-dungeon completion.
 - [ ] Authenticated first-boss loot: Melidrussa188252 has lootid0 at all local difficulties and zero source/runtime loot rows. Do not fabricate a drop table.
 
+## Stockade diagnostic completion (not Retail admission)
+
+- `GAME_SERVER_STOCKADE_FOLLOWER_DIAGNOSTIC=<character>` requests a one-shot diagnostic Damage-role party when that authenticated solo character enters an existing Normal Stockade copy. It does not move the player, alter difficulty, insert a catalog entry, send a follower match or change authored population. Empty/invalid configuration fails explicitly.
+- The four companions use the same authenticated profiles, production summon/class initialization, group binding and ordinary follow/combat systems as follower admission. Group metadata retains the owner's real Normal difficulty. Leaving the exact copy retires the diagnostic companions and party without altering LFG state.
+- Acceptance requires physical navigation and ordinary combat through all three authored Stockade bosses, with real encounter completion and owner/group credit. A successful diagnostic does not certify Retail follower admission or Ruby/Azure completion; HP priming, damage buffs and admin reposition remain prohibited.
+- `followers/stockade_diagnostic.rs` tests native four-companion attachment, unchanged position/map/difficulty/catalog/LFG state, source class health, wrong-map refusal and exact-copy lifecycle. Full walked instance proof remains pending.
+
 ## Out of scope
 - Agent writes to canonical world.db or UDP5000 operations: lead-only.
 - Invented spell IDs/coefficients, roles inferred from creature unit_class and garrison-mission abilities treated as combat spells remain prohibited. Player-spec assignments are permitted solely by the approved workaround.
