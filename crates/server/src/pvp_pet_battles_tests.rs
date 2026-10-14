@@ -650,6 +650,7 @@ fn assert_native_pet_team_level_win(levels: [u8; 3], qualifies: bool) {
 fn achievements_criteria_pet_team_journal_authority_rejects_empty_or_missing_slots() {
     use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
     let mut app = build_app(true);
+    crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     let owner = player_with_levels(&mut app, 41, [25; 3]).0;
