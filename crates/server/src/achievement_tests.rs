@@ -676,6 +676,109 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_player_aura_some_requires_actual_jaguar_aura_at_loa_landing() {
+    for buff in [136775, 136777, 136778] {
+        let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+            vec![],
+            &[136749, 136775, 136777, 136778],
+            1,
+            false,
+            |app| {
+                app.add_plugins(AchievementPlugin);
+            },
+        )
+        .unwrap();
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("jaguar-aura.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) = persistence::create_character(&db, 1, "Jaguarproof", 1, 1).unwrap();
+        h.app.insert_resource(GameDatabase { db });
+        h.app
+            .world_mut()
+            .get_mut::<InWorld>(h.connection)
+            .unwrap()
+            .character_id = character;
+        h.app.world_mut().entity_mut(h.caster).insert((
+            persistence::ClientId(character),
+            PlayerAchievementState::default(),
+        ));
+        h.app.update();
+        let count = |h: &crate::spell_cast::test_harness::Harness| {
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .get(&22840)
+                .copied()
+        };
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(1);
+        assert_eq!(count(&h), None, "no Jaguar aura");
+        // Mighty Loa itself is a real installed aura, but not a Jaguar leaf.
+        assert!(
+            crate::auras::has_aura(h.app.world(), h.caster, 136749),
+            "real unrelated native Mighty Loa aura"
+        );
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(1);
+        assert_eq!(
+            count(&h),
+            None,
+            "unrelated aura is not a Jaguar alternative"
+        );
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, buff, None, u8::MAX);
+        assert!(
+            !crate::auras::has_aura(h.app.world(), h.caster, buff),
+            "refused-depth buff cast"
+        );
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, buff, None, 0);
+        h.advance(1);
+        assert!(
+            crate::auras::has_aura(h.app.world(), h.caster, buff),
+            "real sourced Jaguar buff {buff}"
+        );
+        assert_eq!(count(&h), None, "buff alone is not Mighty Loa landing");
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, u8::MAX);
+        assert_eq!(count(&h), None, "refused-depth Mighty Loa cast");
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(1);
+        assert_eq!(
+            count(&h),
+            Some(1),
+            "real Mighty Loa landing under independent Jaguar {buff}"
+        );
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == buff,
+        );
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, buff));
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
+        h.advance(3);
+        assert_eq!(
+            count(&h),
+            Some(1),
+            "removed aura and idle cannot borrow previous state"
+        );
+        drop(h);
+        let reopened = redb::Database::open(&path).unwrap();
+        assert_eq!(
+            persistence::load_achievements(&reopened, character)
+                .criteria_progress
+                .get(&22840),
+            Some(&1),
+            "reopened actual landing {buff}"
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_native_death_player_area_some_uses_cached_authority_and_persists() {
     for (area, qualifies) in [
         (Some(153), true),
@@ -2283,6 +2386,111 @@ fn achievements_criteria_player_has_aura_gates_native_kill_credit() {
 
 /// Twin Peaks Killing Blows5797: criterion17416 DeliveredKillingBlow56 behind TC PlayerMap32
 /// 726 (CriteriaHandler1922): only a native killing blow on that map counts.
+#[test]
+fn achievements_criteria_native_zero_map_killing_blow_requires_known_world_map_and_persists() {
+    for (map, qualifies) in [(Some(0), true), (Some(1), false), (None, false)] {
+        let mut h =
+            crate::spell_cast::test_harness::harness_with_plugins(vec![], &[], 1, false, |app| {
+                app.add_plugins(AchievementPlugin);
+            })
+            .unwrap();
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("zero-map-blow.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) = persistence::create_character(&db, 1, "Worldblow", 1, 1).unwrap();
+        h.app.insert_resource(GameDatabase { db });
+        h.app
+            .world_mut()
+            .get_mut::<InWorld>(h.connection)
+            .unwrap()
+            .character_id = character;
+        h.app.world_mut().entity_mut(h.caster).insert((
+            persistence::ClientId(character),
+            PlayerAchievementState::default(),
+        ));
+        if let Some(map) = map {
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert(InMap::continent(map));
+            h.app
+                .world_mut()
+                .entity_mut(h.npc)
+                .insert(InMap::continent(map));
+        } else {
+            h.app.world_mut().entity_mut(h.caster).remove::<InMap>();
+        }
+        h.app.update();
+        assert!(
+            !h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&5512),
+            "known map alone cannot credit"
+        );
+        crate::combat::kill_unit(h.app.world_mut(), h.caster, h.npc);
+        h.advance(1);
+        assert_eq!(h.health(h.npc), 0.0);
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap();
+        assert_eq!(
+            state.criteria_progress.get(&5512),
+            qualifies.then_some(&1),
+            "native killing blow map {map:?}"
+        );
+        let shared::protocol::AchievementCatalogPage::Criteria { criteria, .. } =
+            h.app.world().resource::<AchievementCatalog>().page(
+                state,
+                shared::protocol::QueryAchievementCatalog::Criteria {
+                    achievement_id: 1488,
+                    after_id: 0,
+                },
+                1,
+            )
+        else {
+            panic!("World Killing Blows criteria reply")
+        };
+        let line = criteria.iter().find(|row| row.criteria_id == 5512).unwrap();
+        assert!(
+            line.progress_supported,
+            "existing statistic1488 exposes the zero-map counter"
+        );
+        assert_eq!(
+            line.current,
+            u64::from(qualifies),
+            "authoritative statistic criterion map {map:?}"
+        );
+        assert!(
+            !state.earned_ids.contains(&1488),
+            "statistics are not ordinary grants"
+        );
+        assert!(
+            !state.criteria_progress.contains_key(&5492),
+            "no inferred world-honor credit"
+        );
+        crate::combat::kill_unit(h.app.world_mut(), h.caster, h.npc);
+        h.advance(3);
+        drop(h);
+        let reopened = redb::Database::open(&path).unwrap();
+        let saved = persistence::load_achievements(&reopened, character);
+        assert_eq!(
+            saved.criteria_progress.get(&5512),
+            qualifies.then_some(&1),
+            "dead/idle/reopen map {map:?}"
+        );
+        assert!(!saved.criteria_progress.contains_key(&5492));
+    }
+}
+
 #[test]
 fn achievements_criteria_player_map_gates_native_killing_blow() {
     for (map_id, expected) in [(1, None), (726, Some(1))] {

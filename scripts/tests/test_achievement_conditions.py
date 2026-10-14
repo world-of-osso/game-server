@@ -76,11 +76,11 @@ class Conditions(unittest.TestCase):
             'difference empties': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 3, 68, 1)},
             'unknown legacy value': {10: node(0, 4), 11: node(10, 2, 20, 7)},
             'some needing two': {10: node(0, 8, amount=2), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
-            'some of multiple facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 8, 2)},
+            'some of mixed aura/map facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 32, 2)},
             'negated fact': {10: node(0, 4), 11: node(10, 3, 8, 46598)},
             'target leaf': {10: node(0, 4), 11: node(10, 2, 4, 448)},
             'nested all': {10: node(0, 4), 11: node(10, 4), 12: node(11, 2, 8, 1)},
-            'zero fact asset': {10: node(0, 4), 11: node(10, 2, 32, 0)},
+            'zero aura asset': {10: node(0, 4), 11: node(10, 2, 8, 0)},
         }
         for name, modifiers in cases.items():
             with self.subTest(name):
@@ -213,6 +213,35 @@ class Conditions(unittest.TestCase):
             self.assertEqual(self.compile(rejected), {})
         modifiers[13] = node(12, 2, 17, 2738)
         self.assertEqual(self.compile(modifiers), {}, 'nested child cannot be dropped')
+
+    def test_player_aura_some_preserves_every_complete_spell_alternative(self):
+        modifiers = {10: node(0, 8, amount=1),
+                     11: node(10, 2, 8, 136775), 12: node(10, 2, 8, 136777),
+                     13: node(10, 2, 8, 136778)}
+        for amount in ('0', '1'):
+            modifiers[10]['Amount'] = amount
+            self.assertEqual(self.compile(modifiers),
+                             {1: [None, ((8, 136775), (8, 136777), (8, 136778))]})
+        for change in ({'Amount': '2'}, {'Asset': '99'}, {'SecondaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[10].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        for change in ({'Type': '9'}, {'Operator': '3'}, {'Asset': '0'},
+                       {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[13].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        modifiers[14] = node(13, 2, 8, 1459)
+        self.assertEqual(self.compile(modifiers), {}, 'nested child cannot be dropped')
+
+    def test_player_map_zero_is_a_real_world_map_not_missing_reference_state(self):
+        for operator in (4, 8):
+            modifiers = {10: node(0, operator, amount=1), 11: node(10, 2, 32, 0)}
+            self.assertEqual(self.compile(modifiers), {1: [None, ((32, 0),)]})
+            modifiers[11]['Operator'] = '3'
+            self.assertEqual(self.compile(modifiers), {}, 'negated map remains unsupported')
+        modifiers[11] = node(10, 2, 32, -1)
+        self.assertEqual(self.compile(modifiers), {}, 'negative map is not a known ID')
 
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
         with closing(sqlite3.connect(':memory:')) as db:

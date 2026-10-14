@@ -208,7 +208,7 @@ fn arena_entry_resets_active_pet_even_for_long_excluded_cooldowns() {
     let pet = world.spawn(history).id();
     let player = world
         .spawn(crate::hunter_pet::PetStable {
-            character_id: 1,
+            character_id: Some(1),
             stored: Default::default(),
             summoned: Some(pet),
         })

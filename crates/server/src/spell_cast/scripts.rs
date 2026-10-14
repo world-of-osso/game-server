@@ -24,6 +24,7 @@ mod batch9;
 mod chrono_flame;
 pub(crate) use chrono_flame::record_health_change;
 
+pub(crate) use batch9::hostile_ground_fields;
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
@@ -122,6 +123,9 @@ const CHAIN_HEAL: u32 = 1_064;
 const DEMON_SPIKES: u32 = 203_720;
 const DEMON_SPIKES_AURA: u32 = 203_819;
 const DEFLECTING_SPIKES: u32 = 321_028;
+const SKULL_BASH: u32 = 106_839;
+const SKULL_BASH_CHARGE: u32 = 221_514;
+const SKULL_BASH_INTERRUPT: u32 = 93_985;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -222,6 +226,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch3::MOONFIRE, 0) => Some(batch3::moonfire),
         (batch3::THUNDER_CLAP, 0) => Some(batch3::thunder_clap),
         (batch3::DEVASTATE, 0) => Some(batch3::devastate),
+        (SKULL_BASH, 0) => Some(skull_bash),
         (FORTIFYING_BREW, 0) => Some(fortifying_brew),
         (SHIELD_BLOCK, 0) => Some(shield_block),
         (BLOODTHIRST, 0) => Some(bloodthirst),
@@ -827,6 +832,13 @@ fn holy_shock(world: &mut World, caster: Entity, target: Entity, depth: u8) {
         HOLY_SHOCK_DAMAGE
     };
     super::cast_triggered(world, caster, spell, Some(target), depth + 1);
+}
+
+/// TC a352b1fa spell_druid.cpp:2037-2053: Skull Bash's DUMMY casts
+/// its authored charge and interrupt children, in that order, triggered.
+fn skull_bash(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    super::cast_triggered(world, caster, SKULL_BASH_CHARGE, Some(target), depth + 1);
+    super::cast_triggered(world, caster, SKULL_BASH_INTERRUPT, Some(target), depth + 1);
 }
 
 /// TC a352b1fa spell_warrior.cpp:1754-1769, spell_warr_shield_block:

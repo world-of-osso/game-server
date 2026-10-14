@@ -39,6 +39,8 @@ mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
 #[cfg(test)]
+mod charge_rate_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
@@ -111,6 +113,7 @@ mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
@@ -176,7 +179,7 @@ use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
     AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress,
+    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -475,7 +478,8 @@ impl SpellHistory {
             (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
         let recharge_ms = ((categories.charge_recovery_ms as f32 + mods.recovery_flat_ms)
             * mods.recovery_mult)
-            .max(0.0);
+            .max(0.0)
+            .floor();
         let state = self
             .charges
             .entry(categories.charge_category)
@@ -816,12 +820,14 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     }
 }
 
-fn combat_event_owner(world: &World, unit: Entity) -> Entity {
+pub(crate) fn combat_event_owner(world: &World, unit: Entity) -> Entity {
     if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
         return follower.owner;
     }
     match world.get::<crate::hunter_pet::HunterPet>(unit) {
-        Some(pet) => pet.owner,
+        Some(pet) => world
+            .get::<crate::followers::Follower>(pet.owner)
+            .map_or(pet.owner, |follower| follower.owner),
         None => unit,
     }
 }
