@@ -2406,7 +2406,7 @@ fn achievements_criteria_native_zero_map_killing_blow_requires_known_world_map_a
         let db = redb::Database::create(&path).unwrap();
         persistence::create_tables(&db);
         let (character, _) = persistence::create_character(&db, 1, "Worldblow", 1, 1).unwrap();
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
         h.app
             .world_mut()
             .get_mut::<InWorld>(h.connection)

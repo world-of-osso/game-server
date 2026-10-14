@@ -28,7 +28,7 @@ fn idle_client_receives_admin_position_and_teleport_epoch_over_udp() {
     assert!(client.world().get::<Connected>(connection).is_some());
     let db = crate::persistence::temp_database();
     let (character, _) = crate::persistence::create_character(&db, 1, "Bgtravel", 1, 1).unwrap();
-    let db = crate::persistence::GameDatabase { db };
+    let db = crate::persistence::GameDatabase::new(db);
     let origin = Position {
         x: 0.0,
         y: 0.0,
