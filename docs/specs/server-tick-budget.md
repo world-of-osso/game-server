@@ -5,7 +5,7 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 ## What it must do
 
 - [ ] Keep steady simulation within the existing 50 ms frame budget; login/catalog/admission work must not occupy a frame beyond one budget period. Preserve frame-overrun reporting and tick rate.
-- [ ] Attribute slow frames to individual systems, serialized message types/bytes, and tick-thread database operations.
+- [ ] Attribute slow frames to individual systems, serialized message types/bytes, and tick-thread database operations. With `system-timings` enabled, each system exceeding50ms logs its name and elapsed work immediately, not only in a later aggregate window.
 - [x] Evaluate simultaneously observed achievement facts without rescanning grants for each fact; preserve final counters, earned IDs and every toast.
 - [x] Publish one final achievement snapshot and one Adventure Guide refresh per connection per frame; retain every toast and persisted contribution, with no idle replay.
 - [x] Health-percent aura observation must not scan idle world populations; preserve threshold crossing, removal, reapplication and apply-below-threshold behavior.

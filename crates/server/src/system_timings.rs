@@ -19,6 +19,7 @@ use std::time::{Duration, Instant};
 
 const REPORT_WINDOW: Duration = Duration::from_secs(10);
 const REPORT_TOP: usize = 15;
+const SYSTEM_STALL_BUDGET: Duration = Duration::from_millis(50);
 
 #[derive(Default)]
 struct SystemTotal {
@@ -85,8 +86,23 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
             return;
         };
         let elapsed = entered.0.elapsed();
+        let name = name.0.clone();
+        drop(ext);
+        self.record_system_work(&name, elapsed);
+        if elapsed > SYSTEM_STALL_BUDGET {
+            bevy::log::tracing::warn!(
+                system = %name,
+                system_work_ms = elapsed.as_secs_f64() * 1000.0,
+                "System stall"
+            );
+        }
+    }
+}
+
+impl SystemTimingLayer {
+    fn record_system_work(&self, name: &str, elapsed: Duration) {
         let mut totals = self.totals.lock().expect("system timings lock");
-        let total = totals.entry(name.0.clone()).or_default();
+        let total = totals.entry(name.to_string()).or_default();
         total.time += elapsed;
         total.runs += 1;
         total.max = total.max.max(elapsed);
@@ -102,6 +118,60 @@ pub fn system_timing_layer(app: &mut App) -> Option<BoxedLayer> {
     })
     .add_systems(Last, report_system_timings);
     Some(Box::new(SystemTimingLayer { totals }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::log::tracing_subscriber::prelude::*;
+    use std::io::Write;
+
+    #[derive(Clone)]
+    struct CapturedLog(Arc<Mutex<Vec<u8>>>);
+
+    impl Write for CapturedLog {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn slow_system_logs_its_name_and_elapsed_work_before_window_end() {
+        let bytes = Arc::new(Mutex::new(Vec::new()));
+        let writer = CapturedLog(Arc::clone(&bytes));
+        let subscriber = bevy::log::tracing_subscriber::registry()
+            .with(SystemTimingLayer {
+                totals: Totals::default(),
+            })
+            .with(
+                bevy::log::tracing_subscriber::fmt::layer()
+                    .with_ansi(false)
+                    .without_time()
+                    .with_writer(move || writer.clone()),
+            );
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            let span = bevy::log::tracing::info_span!("system", name = "deliberate_fixture_stall");
+            let _entered = span.enter();
+            std::thread::sleep(Duration::from_millis(60));
+        });
+        let output = String::from_utf8(bytes.lock().unwrap().clone()).unwrap();
+        assert!(
+            output.contains("System stall"),
+            "no immediate stall attribution: {output}"
+        );
+        assert!(
+            output.contains("deliberate_fixture_stall"),
+            "missing slow system name: {output}"
+        );
+        assert!(
+            output.contains("system_work_ms="),
+            "missing measured work: {output}"
+        );
+    }
 }
 
 fn report_system_timings(mut timings: ResMut<SystemTimings>) {
