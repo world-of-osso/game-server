@@ -1182,3 +1182,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-14: [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation): regenerate same supported predicate families,5479 ordinary/1821 statistics, reconcile243 inventory rows; coherent-source delta+23/+5, no removals versus69933. Runtime gate pending.
 
 - 2026-10-14: Installed70391 runtime acceptance at a4de9864:173/0/1ignored plus site-export1/1, compiler/policy38/38, server/engine checks and three-repo fmt pass; sibling quest schema aligned before gate. Whole audit continues.
+
+- 2026-10-14: [Target health46](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health): inclusive pre-effect native110 health; bandage45544 RED reaches real aura before6799 counter failure, structural+141 only; acceptance pending.

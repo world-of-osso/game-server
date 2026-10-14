@@ -753,10 +753,16 @@ pub(crate) fn record_targeted_spell_hit(
             race: player.race,
             class: player.class,
         });
+    // TC CriteriaHandler1998–2001 reads the hit unit before spell effects.
+    let target_health_percent = world
+        .get::<shared::components::Health>(target)
+        .filter(|health| health.max > 0.0)
+        .map(|health| health.current / health.max * 100.0)
+        .filter(|percent| percent.is_finite() && *percent >= 0.0);
     record_criteria_event(
         world,
         caster,
-        CriteriaEvent::LandTargetedSpell(spell, target_player),
+        CriteriaEvent::LandTargetedSpell(spell, target_player, target_health_percent),
     );
 }
 
