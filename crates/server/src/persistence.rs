@@ -609,11 +609,7 @@ pub fn load_inventory(db: &Database, character_id: u64) -> InventoryData {
         .expect("Failed to open inventories table");
     match table.get(character_id).expect("Failed to read inventory") {
         Some(guard) => bitcode::decode::<InventoryData>(guard.value()).expect("decode inventory"),
-        None => {
-            let inventory = InventoryData::default();
-            save_inventory(db, character_id, &inventory);
-            inventory
-        }
+        None => InventoryData::default(),
     }
 }
 
@@ -807,19 +803,8 @@ pub fn load_achievements(
         .get(character_id)
         .expect("Failed to read achievements")
     {
-        Some(guard) => {
-            let (state, migrated) =
-                crate::achievement::decode_saved_achievement_state(guard.value());
-            if migrated {
-                save_achievements(db, character_id, &state);
-            }
-            state
-        }
-        None => {
-            let state = crate::achievement::PlayerAchievementState::default();
-            save_achievements(db, character_id, &state);
-            state
-        }
+        Some(guard) => crate::achievement::decode_saved_achievement_state(guard.value()).0,
+        None => crate::achievement::PlayerAchievementState::default(),
     }
 }
 

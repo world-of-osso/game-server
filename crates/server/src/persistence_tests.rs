@@ -725,6 +725,36 @@ fn stored_position(db: &Database, character_id: u64) -> (f32, f32, f32) {
 }
 
 #[test]
+fn missing_and_legacy_character_reads_do_not_wait_for_writer() {
+    let db = temp_database();
+    let txn = db.begin_write().unwrap();
+    txn.open_table(ACHIEVEMENTS)
+        .unwrap()
+        .insert(42, br#"{"earned_ids":[1,2]}"#.as_slice())
+        .unwrap();
+    txn.commit().unwrap();
+    let held = db.begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = std::time::Instant::now();
+    let empty = load_achievements(&db, 41);
+    let legacy = load_achievements(&db, 42);
+    let inventory = load_inventory(&db, 41);
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "read waited for writer: {elapsed:?}"
+    );
+    assert!(empty.earned_ids.is_empty() && empty.criteria_progress.is_empty());
+    assert_eq!(legacy.earned_ids, std::collections::BTreeSet::from([6, 7]));
+    assert_eq!(inventory.gold, 0);
+    assert!(inventory.items.is_empty());
+}
+
+#[test]
 fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
