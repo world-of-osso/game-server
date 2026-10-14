@@ -1,3 +1,8 @@
+## 2026-10-14 — Disciple first escort camp
+
+[First camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) ports path367800-end events4–7. Controlled arrival RED→GREEN proves authored speech/two Ravagers, actual combat pause and source-facing callback; existing Sleep/Potion remains passing. Physical traversal, activation data and native clear remain open.
+
+## 2026-10-14 — Silverlaine primary identity
 ## 2026-10-14 — Derived factions survive DB2 replacement
 
 [DB2 refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) restores six Zephras factions from existing authored receipts atomically; preserves124 build receipts. Private import changes only faction_template+6/db2_row_source+6, integrity OK; native reaction test and9 importer/Skyborne tests pass. Old-source audit118/120; AreaTable/OverrideSpellData explicitly unavailable. Canonical untouched.
@@ -1193,6 +1198,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-14: Native melee/RAP166/167 controls13/13 pass across two scoped receipts; all13 class AP coefficients equal active source. Frontend RAP propagation and NPC/weapon/base budgets remain explicit next layers.
 - 2026-10-14 — [Quest fixture refresh](../../quest-objectives-coverage.md#fixture-refresh--2026-10-14): reproduced missing SpellTargetConditions in real Tear item cast and stale empty-loot Netherwing Egg fixture; load authored conditions and use real9548/181746/23830 chest data. Both tests GREEN with unchanged gameplay/data; original open/autoloot ordering retained.
 
+- 2026-10-14: [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14): eight controlled deaths persist bits0–7; fresh owner isolation and eight staged corpse reward commits. Not natural/native clear.
 - 2026-10-14: [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation): regenerate same supported predicate families,5479 ordinary/1821 statistics, reconcile243 inventory rows; coherent-source delta+23/+5, no removals versus69933. Runtime gate pending.
 
 - 2026-10-14: Installed70391 runtime acceptance at a4de9864:173/0/1ignored plus site-export1/1, compiler/policy38/38, server/engine checks and three-repo fmt pass; sibling quest schema aligned before gate. Whole audit continues.
