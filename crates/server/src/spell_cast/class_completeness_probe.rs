@@ -294,6 +294,71 @@ fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
 }
 
 #[test]
+fn class_completeness_probe_druid_native_forms_precede_required_abilities() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(11, &prepared.path());
+    let spec = Spec {
+        id: 103,
+        class: 11,
+        spells: Vec::new(),
+    };
+    for (id, form_spell, form) in [(5221, 768, 1), (6795, 5487, 5), (164862, 197625, 35)] {
+        let spell = Spell {
+            id,
+            passive: false,
+            origin: vec!["SkillLineAbility".into()],
+        };
+        let receipt = record_case(&mut h, &spec, &spell);
+        assert_eq!(
+            receipt["failed"],
+            json!([]),
+            "native ability {id}: {receipt}"
+        );
+        assert!(!receipt["go"].as_array().unwrap().is_empty(), "{receipt}");
+        let prerequisite = &receipt["form_prerequisite"];
+        assert_eq!(prerequisite["spell"], form_spell, "{receipt}");
+        assert_eq!(prerequisite["observed_form"], form, "{receipt}");
+        assert_eq!(prerequisite["failed"], json!([]), "{receipt}");
+        assert!(
+            !prerequisite["go"].as_array().unwrap().is_empty(),
+            "{receipt}"
+        );
+        if id == 5221 {
+            assert!(h.inbox.log.iter().any(|event| event.spell_id == Some(id)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0));
+        }
+    }
+}
+
+#[test]
+fn class_completeness_probe_druid_unrestricted_spells_do_not_gain_a_form() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(11, &prepared.path());
+    let spec = Spec {
+        id: 105,
+        class: 11,
+        spells: Vec::new(),
+    };
+    let spell = Spell {
+        id: 774,
+        passive: false,
+        origin: vec!["SkillLineAbility".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &spell);
+    assert!(receipt["form_prerequisite"].is_null(), "{receipt}");
+    assert_eq!(receipt["failed"], json!([]), "{receipt}");
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 774));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .and_then(crate::auras::shapeshift::current_form)
+            .is_none()
+    );
+}
+
+#[test]
 fn class_completeness_probe_native_warlock_rituals_use_retail_template_spells() {
     let prepared = prepare_class_world();
     for (id, entry, casters, completion) in [(698, 194108, 3, 62330), (342601, 177193, 5, 342607)] {
