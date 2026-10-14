@@ -1,3 +1,7 @@
+## 2026-10-14 — Disciple second escort camp
+
+[Second camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) ports events8–11 without a cast-state guard or replacement buff. RED→GREEN proves real30s6270, three source Adders appearing at18s while casting, combat pause and12s resumed speech. Exact birth positions are observed before chase; physical onward path/native clear remain open.
+
 ## 2026-10-14 — Disciple first escort camp
 
 [First camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) ports path367800-end events4–7. Controlled arrival RED→GREEN proves authored speech/two Ravagers, actual combat pause and source-facing callback; existing Sleep/Potion remains passing. Physical traversal, activation data and native clear remain open.
