@@ -381,7 +381,8 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 stats.attack_power_pct += amount * (1.0 + stats.attack_power_pct / 100.0);
             }
             MOD_RANGED_ATTACK_POWER_PCT => {
-                stats.ranged_attack_power_pct += amount * (1.0 + stats.ranged_attack_power_pct / 100.0);
+                stats.ranged_attack_power_pct +=
+                    amount * (1.0 + stats.ranged_attack_power_pct / 100.0);
             }
             MOD_VERSATILITY => stats.versatility_pct += effect.amount.trunc() * stacks,
             // HandleModRating truncates each effect before ApplyRatingMod. Do not
