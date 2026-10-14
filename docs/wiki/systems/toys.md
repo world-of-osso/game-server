@@ -272,3 +272,9 @@ Pinned TC `SpellEffects.cpp`1890–1904 captures the private group GUID, and `Ob
 ### Signed summon title source boundary (2026-10-13)
 
 The current canonical import publishes SummonProperties3001.Title=-1. The old u32 loader aborted the entire store at that row, preventing unrelated source toys from casting. Pinned TC `DB2Structure.h`4318–4325 declares Title as int32; `SummonProperties.title` and title constants now preserve that signed representation. Unknown titles remain explicitly unsupported; the loader neither wraps the sentinel nor substitutes old data. Concrete3001/4493 loader regression accompanies the actual ten toy loader failures.
+
+## Wild variable-count summons (2026-10-14)
+
+Wild/default E28 rolls source CalcValue variance before int32 truncation and minimum1, only for TC's explicit MiscValueB list. The first actor uses the selected destination; secondary actors use TargetA's primary disk radius and native caster orientation, not TargetB's destination radius. Valid map heights adjust secondary elevation; invalid map heights preserve the source elevation, matching `WorldObject::GetRandomPoint`. Count resolution does not add SP/AP damage coefficients. Other effect handlers retain their existing unrandomized base-point helper.
+
+Flute98552 is the concrete zero-primary-radius case; native6122 proves nonzero primary scatter. Guardian/ally count and Scarab2301 are not implemented by this wild-only slice. [Source, behavioral evidence and pending native scope](../../toy-effects14-coverage.md#xantishs-flute--wild-variable-count-slice-2026-10-14); [contract](../../specs/toys.md).

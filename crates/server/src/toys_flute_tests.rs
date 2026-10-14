@@ -2,6 +2,45 @@
 use super::*;
 
 #[test]
+fn toyfx32_wild_count_truncates_fractional_values_and_clamps_nonpositive_values() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::Npc;
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let source_store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (value, expected) in [(4.5, 4), (1.9, 1), (0.0, 1), (-2.0, 1)] {
+        let (mut h, character) = setup(&directory.path().join(format!("count-{value}.redb")));
+        let mut spell = source_store.get(142917).unwrap().clone();
+        // Isolate CalcValue's conversion boundary, not a claim these modified
+        // values are the authentic Flute contract. The other test uses raw source.
+        spell.effects[0].base_points = value;
+        spell.effects[0].variance = 0.0;
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        learn_effect_toy(&mut h, character, 98552);
+        assert_eq!(activate(&mut h, 98552)[0].error, None);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let world = h.app.world_mut();
+        let count = world
+            .query::<(&Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(npc, summon)| npc.template_id == 71500 && summon.spell_id == 142917)
+            .count();
+        assert_eq!(count, expected, "effect value{value}");
+    }
+}
+
+#[test]
 fn toyfx32_flute_learn_use_summons_source_snakes_at_one_destination_and_expires() {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Health, ModelDisplay, Npc, UnitIsPet, UnitSummonedBy};
