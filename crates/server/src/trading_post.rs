@@ -276,9 +276,22 @@ fn send_snapshot(
         }
         Err(error) => snapshot.source_gaps.push(error.clone()),
     }
+    for row in &mut snapshot.items {
+        row.usable = item_usability(world, connection, row.item_id);
+    }
     if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
         sender.send::<InstanceChannel>(snapshot);
     }
+}
+
+/// Existing Player::CanUseItem class/race/level facts, also used by merchant lists.
+fn item_usability(world: &World, connection: Entity, item_id: u32) -> Option<bool> {
+    let player_id = world.get::<PlayerLink>(connection)?.0;
+    let player = world.get::<shared::components::Player>(player_id)?;
+    let level = u16::from(world.get::<shared::components::Level>(player_id)?.0);
+    let templates = world.get_resource::<crate::item_templates::ItemTemplates>()?;
+    let item = templates.get(shared::item_data::ItemDefinitionSource::Retail, item_id)?;
+    Some(item.allows(player.class, player.race) && item.required_level <= level)
 }
 
 fn refund_gap(window: u32) -> String {
