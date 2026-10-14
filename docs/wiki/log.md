@@ -1173,3 +1173,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
 
 - 2026-10-14 — [Quest fixture refresh](../../quest-objectives-coverage.md#fixture-refresh--2026-10-14): reproduced missing SpellTargetConditions in real Tear item cast and stale empty-loot Netherwing Egg fixture; load authored conditions and use real9548/181746/23830 chest data. Both tests GREEN with unchanged gameplay/data; original open/autoloot ordering retained.
+
+- 2026-10-14: [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14): eight controlled deaths persist bits0–7; fresh owner isolation and eight staged corpse reward commits. Not natural/native clear.

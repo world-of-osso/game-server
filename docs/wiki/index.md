@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14) — eight controlled deaths, redb reopen, fresh-copy isolation and eight staged corpse commits; no natural/native clear.
+
 - [Silverlaine source primary](systems/boss-scripts.md#silverlaine-source-primary) — pinned map33/3887→1070/bit1, source SmartAI identity and copy-only SQL; combat/native/full-instance proof remains open.
 - [Actual spell-hit target race](systems/dungeon-achievements.md#actual-spell-hit-target-race) — per-hit Player race, not caster race; NPC/missing snapshots rejected.
 

@@ -26,6 +26,14 @@ fn complete_controlled_wailing_run(h: &mut Harness, map: InMap) {
         h.hit_pct(bosses[0], 1_000.0);
         h.advance(0.1);
     }
+    let boss = summon_authored_mutanus(h, map);
+    h.engage(boss);
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    assert_full_wailing_credit(h, map);
+}
+
+fn summon_authored_mutanus(h: &mut Harness, map: InMap) -> Entity {
     let disciples = h.creatures_of(DISCIPLE);
     assert_eq!(disciples.len(), 1);
     // Stage only the source group4 callback; this does not prove the escort.
@@ -46,9 +54,10 @@ fn complete_controlled_wailing_run(h: &mut Harness, map: InMap) {
         MUTANUS
     );
     assert_eq!(h.app.world().get::<InMap>(boss), Some(&map));
-    h.engage(boss);
-    h.hit_pct(boss, 1_000.0);
-    h.advance(0.1);
+    boss
+}
+
+fn assert_full_wailing_credit(h: &Harness, map: InMap) {
     for encounter in ENCOUNTERS {
         assert_eq!(
             h.inbox(0)
