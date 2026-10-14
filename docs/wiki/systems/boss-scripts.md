@@ -151,6 +151,12 @@ Wailing Caverns Cobrahn3669: actual TDB SmartAI row casts Lightning Bolt20805 at
 
 The source pre-wave endpoint/faction is staged only as a fixture input. Actual group membership/coordinates, copy ownership, NPC target, living beyond301s, real death credit592 and300s corpse retirement are exercised; Wizzle's existing group storage/expiry fixture remains the regression control. This is not gossip activation, escort travel, scheduled EVENT_PROGRESS_20, ordinary balance or native/loot acceptance. [Contract](../../specs/boss-scripts.md#wailing-caverns-source-slices). Anacondra's aura15 implementation is documented once in [damage shields](auras.md#damage-shields).
 
+### Wailing Normal run and corpse rewards (2026-10-14)
+
+`tests/wailing_progress.rs` proves all eight controlled primary deaths in one Normal copy, including Mutanus from actual Disciple group4. Every encounter585–592 completes once, other-copy messages stay empty, and bits0–7 persist across redb close/reopen. Restored population filters all defeated primaries while retaining Disciple/unrelated spawns; fresh owner starts at zero. No scheduled raid/Heroic lock is created. Populated fixtures load real gathering metadata because authored Wailing gameobjects include gathering nodes.
+
+`loot/encounter_tests.rs` separately generates all eight staged corpses, opens/takes their actual loot slots and checks saved coins/items plus duplicate rejection. Kresh/Skum correctly grant zero coins. Mutanus' current group1 contains only two33.3333% rows, so a rare item is not guaranteed; tests do not invent a third reward. This is controlled lifecycle/persistence and staged loot proof, not eight natural fights, escort activation, traversal, balanced party play or native clear.
+
 Deadmines source audit (TC a352b1fa): header `e3beb3f1a16472f10655148b1cd6ffd07187ff58aa0b6fee3ebfc584bcc9944a`, instance `156a63da23e1ac0f725ba9d1b7397a024b61077537816e279cef4dba54f749af`. That directory contains only those two files, no boss AIs; local primary templates have no AIName/ScriptName/SmartScripts. Instance maps Helix to47296;47297 is Lumbering Oaf, despite its journal display joining the Helix encounter. `encounter_coverage.py` lists source primaries separately and renders actual actor names. Neither census identity nor a journal companion confers credit. Normal/Heroic DB2 bits differ for the same entry, beyond the current single-bit binding key; no ambiguous binding is emitted. [Contract/gaps](../../specs/boss-scripts.md#deadmines-source-audit).
 
 ## Ground C++ waypoint paths
