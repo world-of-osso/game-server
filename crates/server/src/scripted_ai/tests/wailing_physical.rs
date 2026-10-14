@@ -35,6 +35,19 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     ).unwrap();
     let endpoint = Vec3::new(endpoint.0, endpoint.1, endpoint.2);
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
+    );
+    let projected = Vec3::new(endpoint.x, endpoint.z, -endpoint.y);
+    let crate::ground::GroundProbe::Supported(floor) = ground.creature_ground_at(43, projected)
+    else {
+        panic!("authored path2 endpoint requires exact collision support");
+    };
+    let endpoint = Vec3::new(endpoint.x, endpoint.y, floor);
+    h.app.insert_resource(ground);
+    let mut los = los::LosMap::new(&root.parent().unwrap().parent().unwrap().join("los/43"));
     let start = h.wow_position(disciple);
     let player = h.player();
     let position = *h.app.world().get::<Position>(disciple).unwrap();
@@ -61,6 +74,12 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         assert!(
             step < 0.5,
             "no relocation/shortcut: tick={tick} step={step} from={previous:?} to={point:?}"
+        );
+        let a = Vec3::new(previous.x, previous.z, -previous.y);
+        let b = Vec3::new(point.x, point.z, -point.y);
+        assert!(
+            los.clear(a + Vec3::Y, b + Vec3::Y).unwrap(),
+            "physical escort crossed collision at tick{tick}: {previous:?}->{point:?}"
         );
         walked += step;
         previous = point;
