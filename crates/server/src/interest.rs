@@ -596,8 +596,12 @@ fn sync_observer_groups(
     characters: Query<&crate::persistence::ClientId>,
     mut index: ResMut<InterestIndex>,
 ) {
-    let mut changed = Vec::new();
-    for (connection, observer) in &mut index.observers {
+    let InterestIndex {
+        observers,
+        dirty_observers,
+        ..
+    } = &mut *index;
+    for (connection, observer) in observers {
         let group = characters.get(observer.player).ok().and_then(|character| {
             groups
                 .as_ref()
@@ -605,10 +609,9 @@ fn sync_observer_groups(
         });
         if observer.group != group {
             observer.group = group;
-            changed.push(*connection);
+            dirty_observers.insert(*connection);
         }
     }
-    index.dirty_observers.extend(changed);
 }
 
 fn update_interest(
