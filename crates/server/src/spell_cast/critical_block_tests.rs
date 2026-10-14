@@ -442,7 +442,7 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
 }
 
 fn creature_block_duel(entry: u32) -> Harness {
-    let mut h = harness(Vec::new(), &[1464, 10021, 203524, 853], 1).unwrap();
+    let mut h = harness(Vec::new(), &[1464, 10021, 203524, 853, 3248, 3650], 1).unwrap();
     let data = load_native_creature_world(&[entry]);
     let template = &data.templates[&entry];
     let name = template.name.clone();
@@ -562,4 +562,51 @@ fn class_completeness_native_creature_no_xp_flag_does_not_disable_block() {
     let total = hits[0].amount + hits[0].blocked;
     assert!(varied(303.0).contains(&(total as f32)));
     assert_eq!(hits[0].blocked, (total as f32 * 0.3).trunc() as i32);
+}
+
+#[test]
+fn class_completeness_native_weapon_spell_miss_and_block_share_one_hit_table() {
+    let mut h = creature_block_duel(6);
+    let target = h.npc;
+    crate::auras::remove_aura(h.app.world_mut(), target, 10021, None);
+    // Native3650 reduces caster hit by50;3248 adds55 to NPC block's3.
+    // Their cumulative table fills100%: no random draw can be an unblocked hit.
+    for attempt in 0..60 {
+        h.advance(40);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap()
+            .current = 5000.0;
+        for (recipient, spell_id) in [(h.caster, 3650), (target, 3248)] {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster: recipient,
+                    target: recipient,
+                    spell_id,
+                    effect_mask: 1,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        let hits = cast_damage_spell(&mut h, target, 1464, 3);
+        if let Some(hit) = hits.first() {
+            assert_eq!(hits.len(), 1);
+            assert!(
+                hit.blocked > 0,
+                "native cumulative table admitted unblocked hit at{attempt}: {hit:?}"
+            );
+        } else {
+            assert!(
+                h.inbox.log.iter().any(|event| {
+                    event.spell_id == Some(1464)
+                        && event.target == Some(target.to_bits())
+                        && event.kind == CombatLogKind::Miss(shared::protocol::MissKind::Miss)
+                }),
+                "no actual native miss/block result at{attempt}: {:?}",
+                h.inbox.log
+            );
+        }
+    }
 }
