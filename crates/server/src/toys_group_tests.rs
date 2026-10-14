@@ -14,7 +14,16 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    let (mut h, character) = setup(&directory.path().join(format!("group-{item}.redb")));
+    let class = if matches!(item, 120857 | 151877) {
+        4
+    } else {
+        8
+    };
+    let (mut h, character) = setup_for_race_class(
+        &directory.path().join(format!("group-{item}.redb")),
+        1,
+        class,
+    );
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app
         .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
@@ -23,6 +32,13 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
     h.app
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     h.app.insert_resource(store.clone());
+    let source_recovery = h.app.world().resource::<ToyCatalog>().0[&item].item_cooldown_ms;
+    let owner_health = *h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    let owner_display = h.app.world().get::<ModelDisplay>(h.caster).copied();
     learn_group_toy(&mut h, character, item);
     let destination = (item == 160751).then(|| {
         let origin = h.app.world().get::<Position>(h.caster).unwrap();
@@ -99,6 +115,20 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
             "item {item} did not expire"
         );
     }
+    assert_eq!(
+        h.app.world().get::<shared::components::Health>(h.caster),
+        Some(&owner_health)
+    );
+    assert_eq!(
+        h.app.world().get::<ModelDisplay>(h.caster).copied(),
+        owner_display
+    );
+    if source_recovery > duration as i32 + 10000 {
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error.as_deref(),
+            Some("OnCooldown")
+        );
+    }
 }
 
 pub(super) fn learn_group_toy(h: &mut Harness, character: u64, item_id: u32) {
@@ -120,23 +150,7 @@ pub(super) fn learn_group_toy(h: &mut Harness, character: u64, item_id: u32) {
             }],
         },
     );
-    let mut results = learn(h, 0);
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-    while results.is_empty() && std::time::Instant::now() < deadline {
-        std::thread::sleep(std::time::Duration::from_millis(10));
-        results.extend(pump(h).0);
-    }
-    if results.is_empty() {
-        eprintln!(
-            "learning-dispatch diagnostic item {item_id}: {:?}",
-            crate::toys::learn_item(
-                h.app.world_mut(),
-                character,
-                h.caster,
-                ItemLocation::Bag { bag: 0, slot: 0 }
-            )
-        );
-    }
+    let results = learn(h, 0);
     let owned = toy_store::load(&h.app.world().resource::<GameDatabase>().db, 1);
     let inventory =
         persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character);
