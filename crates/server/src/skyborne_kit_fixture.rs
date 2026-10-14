@@ -165,8 +165,11 @@ INSERT INTO "content_item" VALUES(187760,'Mage''s Sash',1,1,0,12,2,1,1,0,4,1,6,2
 INSERT INTO "content_item" VALUES(187761,'Mage''s Robes',1,1,0,12,2,1,1,0,4,1,5,2,0,0.0,-1,-1,-1,0,0,0,0,0,8192,8388608,0,0,191556,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,NULL);
 INSERT INTO "content_item" VALUES(187762,'Mage''s Mitts',1,1,0,12,2,1,1,0,4,1,10,2,0,0.0,-1,-1,-1,0,0,0,0,0,8192,8388608,0,0,191561,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,NULL);
 CREATE TABLE content_npc_vendor (entry INTEGER,slot INTEGER,item INTEGER,maxcount INTEGER,incrtime INTEGER,ExtendedCost INTEGER);
-CREATE TABLE tdb_npc_vendor (entry INTEGER NOT NULL DEFAULT 0,slot INTEGER NOT NULL DEFAULT 0,item INTEGER NOT NULL DEFAULT 0,maxcount INTEGER NOT NULL DEFAULT 0,incrtime INTEGER NOT NULL DEFAULT 0,ExtendedCost INTEGER NOT NULL DEFAULT 0,type INTEGER NOT NULL DEFAULT 1,BonusListIDs TEXT,PlayerConditionID INTEGER NOT NULL DEFAULT 0,IgnoreFiltering INTEGER NOT NULL DEFAULT 0,VerifiedBuild INTEGER NOT NULL DEFAULT 0,PRIMARY KEY (entry, item, ExtendedCost, type));
-CREATE TABLE "currency_types" ("ID" INTEGER PRIMARY KEY, "Name_lang" TEXT NOT NULL, "Description_lang" TEXT NOT NULL, "InventoryIconFileID" INTEGER NOT NULL, "MaxQty" INTEGER NOT NULL, "MaxEarnablePerWeek" INTEGER NOT NULL, "AwardConditionID" INTEGER NOT NULL, "MaxQtyWorldStateID" INTEGER NOT NULL, "Flags_0" INTEGER NOT NULL, "Flags_1" INTEGER NOT NULL);
+CREATE TABLE currency_types (
+        ID INTEGER PRIMARY KEY, Name_lang TEXT NOT NULL, Description_lang TEXT NOT NULL,
+        InventoryIconFileID INTEGER NOT NULL, MaxQty INTEGER NOT NULL,
+        MaxEarnablePerWeek INTEGER NOT NULL, AwardConditionID INTEGER NOT NULL,
+        MaxQtyWorldStateID INTEGER NOT NULL, Flags_0 INTEGER NOT NULL, Flags_1 INTEGER NOT NULL);
 CREATE TABLE db2_row_source (
     table_name TEXT NOT NULL, row_id INTEGER NOT NULL, build TEXT NOT NULL,
     file_data_id INTEGER NOT NULL, layout_hash TEXT NOT NULL, sha256 TEXT NOT NULL,
@@ -1058,6 +1061,20 @@ CREATE TABLE spell_equipped_items (
 CREATE TABLE spell_name (
   ID INTEGER PRIMARY KEY,
   Name_lang TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE tdb_npc_vendor (
+  entry INTEGER NOT NULL DEFAULT 0,
+  slot INTEGER NOT NULL DEFAULT 0,
+  item INTEGER NOT NULL DEFAULT 0,
+  maxcount INTEGER NOT NULL DEFAULT 0,
+  incrtime INTEGER NOT NULL DEFAULT 0,
+  ExtendedCost INTEGER NOT NULL DEFAULT 0,
+  type INTEGER NOT NULL DEFAULT 1,
+  BonusListIDs TEXT,
+  PlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  IgnoreFiltering INTEGER NOT NULL DEFAULT 0,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (entry, item, ExtendedCost, type)
 );
 CREATE TABLE tdb_playercreateinfo (
     race INTEGER NOT NULL, class INTEGER NOT NULL, map INTEGER NOT NULL,

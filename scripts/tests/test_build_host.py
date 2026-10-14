@@ -377,14 +377,21 @@ class BuildHostTests(unittest.TestCase):
     def test_release_exports_through_container_adapter(self):
         (self.common / "desktop-server-build.py").write_text(
             "import json, os\nfrom pathlib import Path\n"
-            "def build(root, host, release, binary):\n"
+            "def build(root, host, release, binary, features=None):\n"
             "    Path(os.environ['FAKE_RECORD']).write_text(json.dumps(dict("
-            "root=str(root), host=host, release=release, binary=binary)))\n"
+            "root=str(root), host=host, release=release, binary=binary, features=features)))\n"
         )
         for host in ("local", "desktop"):
             result = self.observed(self.invoke("--release", "--bin", "game-cli", host=host))
-            self.assertEqual(result, dict(root=str(self.root), host=host, release=True, binary="game-cli"))
-        for options in (("--test",), ("--check",), ("--run",), ("--features", "a")):
+            self.assertEqual(
+                result,
+                dict(root=str(self.root), host=host, release=True, binary="game-cli", features=None),
+            )
+        result = self.observed(
+            self.invoke("--release", "--bin", "game-server", "--features", "system-timings", host="local")
+        )
+        self.assertEqual(result["features"], "system-timings")
+        for options in (("--test",), ("--check",), ("--run",)):
             result = self.invoke("--release", *options, host="local")
             self.assertEqual(result.returncode, 1)
             self.assertIn("container release exports", result.stderr)

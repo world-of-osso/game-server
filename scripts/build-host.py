@@ -128,9 +128,9 @@ def build(args, tail, depot, native):
             "release artifacts use the bookworm container: --build-host local|desktop"
         )
     if args.release:
-        if args.test or args.check or args.features or args.run:
+        if args.test or args.check or args.run:
             raise ValueError(
-                "container release exports support --bin, not test/check/features/run"
+                "container release exports support --bin and --features, not test/check/run"
             )
         spec = importlib.util.spec_from_file_location(
             "desktop_server_build",
@@ -138,7 +138,9 @@ def build(args, tail, depot, native):
         )
         exporter = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(exporter)
-        exporter.build(root, host=host, release=True, binary=args.binary)
+        exporter.build(
+            root, host=host, release=True, binary=args.binary, features=args.features
+        )
         return 0
     if host == "native":
         from native_cargo import native_slot, run_cargo
