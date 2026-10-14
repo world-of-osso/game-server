@@ -139,6 +139,8 @@ pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
 pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
+/// TC Unit.cpp:6962/8110: percentage done versus creature-type mask, not school.
+pub const MOD_DAMAGE_DONE_VERSUS: u32 = 168;
 pub const WATER_BREATHING: u32 = 82;
 pub const MOD_REGEN: u32 = 84;
 pub const MOD_POWER_REGEN: u32 = 85;
@@ -334,7 +336,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_PARRY_PERCENT
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT
-        | MOD_VERSATILITY => StatMod,
+        | MOD_VERSATILITY
+        | MOD_DAMAGE_DONE_VERSUS => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL
