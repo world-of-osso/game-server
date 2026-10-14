@@ -21,7 +21,7 @@ Local69933 SpellCastingRequirements contains exactly two Toy root INFRONT bindin
 | Actual learned UseToy rear rejection, both roots | RED: missing NotInFront; actual-use GREEN at386286444b560d21c5886493655444afa1fa6c25 |
 | Completion turn-away, both roots, retained recovery | RED: missing NotInFront; both-root completion GREEN at386286444b560d21c5886493655444afa1fa6c25; legitimate start GCD retained |
 | Inclusive side arc; strict2yd/exact3D/player scale; TDB radius vs reach | Concrete actual-use fixtures GREEN at386286444b560d21c5886493655444afa1fa6c25 |
-| Coin toss/catch master regression | Prior709082c0 fix retained; named post-merge test PASS at386286444b560d21c5886493655444afa1fa6c25 |
+| Coin toss/catch master regression | Clean masterc732ab79 reproduces missing emote; existing709082c0 dispatch fix passes after merging that master at90839e14. [Root cause and proof](#coin-dispatch-regression-recheck-2026-10-13) |
 | Native both skins / entire1166 | Facing native proof pending; entire goal open |
 
 
@@ -161,6 +161,12 @@ The remaining TC root bindings stay explicit gaps:
 Read-only canonical census346→347/1166 (+35227, zero removed; `weather-canonical-after.json`). Source: TC a352b1fa `spell_item_goblin_weather_machine` makes the hit unit cast RAND(46740, 46739, 46738, 46736) on itself. The TDB1210 `spell_script_names` scan (4066 rows) binds 46203/60458/60476/64385 to exactly the scripts used here and binds none of the four weather spells. So 46736's5000ms PERIODIC_DUMMY tick is a no-op (TC PeriodicTick leaves226 to scripts). All four are single self auras with SpellVisual bindings and DurationIndex9 (30000ms).
 
 RED `00468623` refused effect77. GREEN `2643ea09`/`65974226`: actual bag learning/UseToy applies exactly one weather aura, cast by the caster, 30000ms; it stays through 46736 ticks with unchanged health/position and expires naturally. Refusals cover a missing weather spell, weather trigger drift, missing visual binding and an extra machine effect. Presentation comes from aura replication; the triggered weather cast sends no separate SpellGo. Native actual journal use: Modern46738 (observed29.0s to expiry from first capture) and Forever46740 (29.6s). The first Forever attempt hit a fixture bag-readiness race, fixed in engine `8780ec91a`. PNGs in `toys/weather18/` show the buff icon/timer, but the camera is obstructed, so the weather visual itself is not certified.
+
+## Coin dispatch regression recheck (2026-10-13)
+
+Clean masterc732ab79 actual `UseToy` test fails with no toss emote (`[]`) at toys_tests.rs:4236. Commit3ca41770, "Port Koranthal source AI and destination-only trigger missiles", put generic targetless `TRIGGER_MISSILE` handling before authored cast scripts. That branch consumed the coin effect before its source-specific toss/flight/catch handler ran. Pinned TC `Spell::HandleEffects` calls script effect handlers before default effect dispatch (`reference/Spell.cpp:5726–5734`).
+
+Existing fix709082c0 was already in toy-effects14 but absent from master; no second runtime fix was added. After merging c732ab79 into the candidate (90839e14), the exact named toss/catch test passes1/1. Evidence: private continuation `coin27-master-red.log`, `coin27-candidate-green.log`. This is source/backend ordering proof, not a new native capture or transport-delivery claim.
 
 ## Titanium Seal coin (2026-10-12)
 
