@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from content_policy import ITEM_COLUMNS
 
 GOGGLE_IDS = range(77533, 77540)
-PINNED_BUILD = "12.1.0.69933"
+PINNED_BUILD = "12.1.5.70391"
 
 
 def prepare(source, destination):
