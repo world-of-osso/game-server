@@ -274,13 +274,7 @@ fn send_snapshot(
             start_unix: calendar.start_unix,
             end_unix: calendar.end_unix,
         });
-    let state = store::settle(
-        &world.resource::<GameDatabase>().db,
-        account,
-        summary.start_unix,
-        0,
-        &[],
-    );
+    let state = store::load(&world.resource::<GameDatabase>().db, account);
     let npc = world
         .get::<PlayerLink>(connection)
         .and_then(|link| active_vendor(world, connection, link.0).ok())

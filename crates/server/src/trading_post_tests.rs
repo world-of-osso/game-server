@@ -63,6 +63,57 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
 }
 
 #[test]
+fn trading_post_completed_receipt_publishes_without_opening_another_write() {
+    use std::time::{Duration, Instant};
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderpoll").unwrap();
+    prepare(&mut h, 1790812900);
+    request(&mut h, TradingPostRequest::Balance);
+    let commit: TradingPostCommit = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("ready Trading Post receipt", |_| Ok(None));
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while commit.result().is_none() {
+        assert!(Instant::now() < deadline, "query receipt timeout");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let mut pending = vec![PendingTradingPost {
+        connection: h.connection,
+        account: ACCOUNT,
+        catalog: false,
+        commit,
+    }];
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = Instant::now();
+    publish_completed_requests(h.app.world_mut(), &mut pending);
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "completed Trading Post publication waited: {elapsed:?}"
+    );
+    h.app.update();
+    let reply = h
+        .app
+        .world_mut()
+        .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+        .unwrap()
+        .receive()
+        .next()
+        .unwrap();
+    assert!(reply.error.is_none());
+    assert_eq!(reply.tender, 0);
+    assert!(reply.items.is_empty());
+}
+
+#[test]
 fn trading_post_writer_reply_waits_for_durable_settlement_without_blocking_tick() {
     use std::time::{Duration, Instant};
     let file = tempfile::NamedTempFile::new().unwrap();
