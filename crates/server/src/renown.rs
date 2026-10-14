@@ -39,18 +39,39 @@ pub(crate) struct MajorFaction {
 
 #[derive(Deserialize)]
 struct Catalog {
+    build: String,
     major_factions: Vec<MajorFaction>,
 }
 
-/// Pinned Retail 12.1.0.69933 export (game-engine `scripts/export_renown_catalog.py`).
+fn read_catalog(path: &std::path::Path) -> Result<Catalog, String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|error| format!("Renown catalog {}: {error}", path.display()))?;
+    let catalog: Catalog = serde_json::from_str(&text)
+        .map_err(|error| format!("Renown catalog {}: {error}", path.display()))?;
+    crate::db2_source_build::validate_build(&catalog.build)?;
+    Ok(catalog)
+}
+
+#[cfg(not(test))]
+fn default_catalog_path() -> std::path::PathBuf {
+    std::path::PathBuf::from("data/db2/active/renown.json")
+}
+
+/// Cargo runs unit tests from the crate directory, not the repo root.
+#[cfg(test)]
+fn default_catalog_path() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active/renown.json")
+}
+
+/// Installed-build export; refreshed data does not require recompiling the realm.
 pub(crate) fn catalog() -> &'static [MajorFaction] {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
     &CATALOG
         .get_or_init(|| {
-            serde_json::from_str(include_str!(
-                "../../../scripts/reference/retail-12.1.0.69933/renown.json"
-            ))
-            .expect("decode pinned Retail renown catalog")
+            let path = std::env::var_os("GAME_SERVER_RENOWN_CATALOG")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(default_catalog_path);
+            read_catalog(&path).unwrap_or_else(|error| panic!("{error}"))
         })
         .major_factions
 }

@@ -32,6 +32,7 @@ mod creature_tap;
 mod creature_tooltip;
 mod currency;
 mod damage_meter;
+mod db2_source_build;
 mod death;
 mod duel;
 mod durability;
