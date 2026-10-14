@@ -627,6 +627,9 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             continue;
         }
         let moving = direction_length(&latest.direction) >= 0.001;
+        if !moving {
+            debug!(player = ?link.0, epoch = latest.epoch, position = ?latest.position, resumed, transport = ?latest.transport, "BG_TRAVEL_STATIONARY_INPUT");
+        }
         if !resumed {
             crate::friends::mark_player_activity(
                 link.0,
