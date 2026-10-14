@@ -352,12 +352,18 @@ fn sync_durability_from_equipment_appearance(
 fn persist_changed_durability(db: Option<Res<GameDatabase>>, players: ChangedDurabilityQuery) {
     let Some(db) = db.as_ref() else { return };
     for (character_id, durability) in &players {
-        let Some(mut data) = persistence::load_character(&db.db, character_id.0) else {
-            continue;
-        };
-        data.durability = saved_entries(durability);
-        persistence::save_character(&db.db, character_id.0, &data);
+        enqueue_durability(db, character_id.0, saved_entries(durability));
     }
+}
+
+fn enqueue_durability(db: &GameDatabase, character: u64, entries: Vec<DurabilityEntryData>) {
+    db.writer.enqueue("character durability", move |db| {
+        let mut data = persistence::load_character(db, character)
+            .ok_or_else(|| format!("durability character {character} no longer exists"))?;
+        data.durability = entries;
+        persistence::save_character(db, character, &data);
+        Ok(())
+    });
 }
 
 fn saved_entries(durability: &EquippedDurability) -> Vec<DurabilityEntryData> {
@@ -397,13 +403,12 @@ pub fn set_durability_percent(world: &mut World, character_id: u64, percent: u32
     ) else {
         return;
     };
-    let Some(mut data) = persistence::load_character(&db.db, character_id) else {
+    let Some(data) = persistence::load_character(&db.db, character_id) else {
         return;
     };
     let mut durability = load_equipped_durability(&data, rules);
     scale(&mut durability);
-    data.durability = saved_entries(&durability);
-    persistence::save_character(&db.db, character_id, &data);
+    enqueue_durability(db, character_id, saved_entries(&durability));
 }
 
 fn send_changed_durability_snapshot(
@@ -515,6 +520,71 @@ mod tests {
     use shared::components::EquippedAppearanceEntry;
 
     use super::*;
+
+    #[test]
+    fn durability_save_enqueues_without_waiting_and_preserves_earlier_fifo_fields() {
+        use std::time::Instant;
+        let db = persistence::temp_database();
+        let (character, _) = persistence::create_character(&db, 1, "Fifodamage", 1, 1).unwrap();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(GameDatabase::new(db));
+        app.add_systems(Update, persist_changed_durability);
+        app.world_mut().spawn((
+            Player {
+                name: "Fifodamage".into(),
+                race: 1,
+                class: 1,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            ClientId(character),
+            EquippedDurability {
+                slots: vec![slot(
+                    EquipmentVisualSlot::Chest,
+                    TARNISHED_CHAIN_VEST,
+                    17,
+                    55,
+                )],
+            },
+        ));
+        let db = app.world().resource::<GameDatabase>();
+        let held = db.db.begin_write().unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            held.abort().unwrap();
+        });
+        db.writer
+            .enqueue("preceding character movement", move |db| {
+                let mut data = persistence::load_character(db, character).unwrap();
+                data.x = 42.0;
+                persistence::save_character(db, character, &data);
+                Ok(())
+            });
+        let started = Instant::now();
+        app.update();
+        let elapsed = started.elapsed();
+        release.join().unwrap();
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "durability tick waited: {elapsed:?}"
+        );
+        let fence = app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .enqueue("durability fixture fence", |_| Ok(()));
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while fence.result().is_none() {
+            assert!(Instant::now() < deadline, "durability fence timeout");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        fence.result().unwrap().unwrap();
+        let data =
+            persistence::load_character(&app.world().resource::<GameDatabase>().db, character)
+                .unwrap();
+        assert_eq!(data.x, 42.0);
+        assert_eq!(data.durability[0].current, 17);
+    }
 
     fn setup_changed_snapshot_app() -> App {
         let mut app = App::new();
