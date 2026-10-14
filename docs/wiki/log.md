@@ -2,6 +2,13 @@
 
 [Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.
 
+## 2026-10-13 — NPC Felguard learned interrupt
+
+[Follower data](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13): native level17 learned Axe Toss89766→347008 interrupts actual Fireball without canceling the owner's Shadow Bolt; below-level/cooldown/non-interruptible/stunned controls pass5/5 at72e754d5. Authenticated catalog is installed after generic fixture startup; native missile landing and existing persistence baseline are observed, not guessed. Ten pet motion/hazard/lifetime/credit cases additionally pass af677305, including real overlapping fields and movement CC. Current prepared follower73/73 and player-pet persistence10/10 pass; current server checks/fmt pass with later unrelated master changes. Full-dungeon/authored-kit/stat-budget acceptance remains open.
+
+## 2026-10-13 — Follower utilities and strict-nav boundaries
+
+[Follower data](investigations/follower-data.md#advanced-bridge-utilities-and-bound-fields--2026-10-13): real interrupts, casting-time readiness/cancellation, eleven-profile defensive mitigation/healing and real Stockade hostile-field escape; native Group Finder current-source Ruby admission does not close its disconnected authored route or full-dungeon acceptance. No source-coordinate changes, canonical writes or direct movement substitute.
 ## 2026-10-13 — PlayerHasAura Some alternatives
 
 [Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
@@ -1088,3 +1095,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-13 — Prepared follower Group Finder catalog
 
 [Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.
+
+## 2026-10-13 — Native follower class level and routed follow
+
+[Profile/navigation proof](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13): eleven actual labelled basic-role casts/resource publications; Cobra Shot193455 missile-resolution Level panic RED→11GREEN. Real Stockade follow crossed wall at tick19 and lost moving-state progress4.8527yd; native route/progress fix GREEN3. Strict follower missing-bake standing, ordinary behavior retained. Private Ruby12LOS+12NAV/authored zero-gap geometry package staged; advanced AI and new whole-route live proof open.
