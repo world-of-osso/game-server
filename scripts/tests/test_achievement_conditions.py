@@ -135,6 +135,17 @@ class Conditions(unittest.TestCase):
         modifiers[11] = node(10, 3, 39, 3)
         self.assertEqual(self.compile(modifiers), {}, 'negated level stays unsupported')
 
+    def test_known_spell_preserves_the_marker_and_all_companion_leaves(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 104, 406106), 12: node(10, 2, 8, 419239)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((8, 419239), (104, 406106))]})
+        modifiers[11]['Asset'] = '0'
+        self.assertEqual(self.compile(modifiers), {}, 'unknown zero spell is not knowledge')
+        modifiers[11] = node(10, 3, 104, 406106)
+        self.assertEqual(self.compile(modifiers), {}, 'negated knowledge stays unsupported')
+        modifiers[11] = node(10, 2, 104, 406106)
+        modifiers[13] = node(10, 2, 67, 4546)
+        self.assertEqual(self.compile(modifiers), {}, 'unknown companion rejects the whole predicate')
+
     def test_native_item_facts_preserve_ids_quality_and_all_required_leaves(self):
         for kind in (90, 91):
             criteria = copy.deepcopy(self.criteria)

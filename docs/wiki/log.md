@@ -1,3 +1,7 @@
+## 2026-10-13 — Positive known-spell marker
+
+[Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) reads existing class/profession/owned-mount IDs, not global spell metadata. Compiler RED→GREEN29/29; native/catalog2/2 prove all26 learned recipe facts and three account grants, absent/wrong knowledge and reopened persistence. Fixture runs standard ClassProgression PostUpdate publication before the next Update credit. Full four-thread workspace filter165/0/1ignored and server/engine/three-repo checks pass; no trait/public-UI marker acquisition claim.
+
 ## 2026-10-13 — Ground C++ waypoint arrivals
 
 [Ground paths](systems/boss-scripts.md#ground-c-waypoint-paths) now use sourced baked routes rather than reject all non-exact ground MovePath calls. Real AT7904/Adarogg reaches the three authored paths and both meal-condition branches; empty-bake rejection and Golden Serpent flying-path controls accompany the walking-gait RED→GREEN. Native clear and both-skin loot remain open.
@@ -1150,3 +1154,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: five native Druid BeforeCast form transformers and Berserk AfterCast reset;14 current controls, actual census post-cast form telemetry, no generic dummy certification. See [batch52](../class-completeness6.md#native-druid-beforecast-transformers--batch52).
 
 - 2026-10-13: native Druid/Fear master integration85 controls pass,17 actual unshifted BeforeCast receipts and current check/fmt; canonical model-info98,609 rows verified equal to source-prepared slot. Full class census/rendered acceptance remains open.
+
+- 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).

@@ -38,6 +38,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 ### Authority and durability
 - [x] Rank list and affected member positions commit together and survive database reopen.
 - [x] Stored bank balances, tabs, limits, logs and repair permissions survive layout upgrades.
+- [x] Social and monetary wire masks use pinned TC `a352b1fa` GuildRankRights values. Layout 3 translates each old layout-2 compact right independently without granting/revoking capabilities; mixed officer permissions remain mixed. Layout 0/1 retain their existing grants; repeated startup never remaps already-migrated rights.
 - [ ] Only authenticated in-world connections can request controls; the actor comes from the connection, never the packet.
 - [ ] Success broadcasts recipient-specific state; errors use typed Retail GlobalStrings refusals.
 
@@ -60,6 +61,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - `crates/server/src/guild_ranks_tests.rs` — GM controls, hierarchy/flags, bounds, immutable leader, rank identity and restart round-trip.
 - `crates/server/src/guild_bank_tests.rs` — actual player packets, open-vault edits, item/gold limits and hidden logs.
 - `crates/server/src/persistence_banks_tests.rs` — previous layouts and preserved limits.
+- `crates/server/src/guild_rights_migration_tests.rs` — persisted single/mixed/empty/full layout-2 masks, enforcement, bank fields/member positions, reopen and idempotent startup.
 - `crates/server/src/messaging.rs` tests — guild/officer recipients and chat history.
 - `crates/server/src/merchant_guild_repair_tests.rs` — shared repair/gold allowance.
 
