@@ -60,6 +60,9 @@ pub struct StatModifiers {
     /// OVERRIDE_SPELL_POWER_BY_AP_PCT: when positive, spell and healing power are
     /// this percent of attack power.
     pub spell_power_from_ap_pct: f32,
+    /// Composed independent aura166/167 percentages, kept separate.
+    pub attack_power_pct: f32,
+    pub ranged_attack_power_pct: f32,
     /// MOD_DODGE_PERCENT: nondiminishing percentage points.
     pub dodge_pct: f32,
     /// MOD_PARRY_PERCENT: nondiminishing percentage points.
@@ -112,6 +115,7 @@ pub struct StatInputs {
     /// `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility`.
     pub attack_power_per_strength: f32,
     pub attack_power_per_agility: f32,
+    pub ranged_attack_power_per_agility: f32,
     pub gear_primary: UnitStats,
     pub gear_ratings: CombatRatings,
 }
@@ -134,7 +138,9 @@ pub struct CharacterStats {
     /// (Unit::SpellBaseHealingBonusDone, Unit.cpp:7622-7624), so a Strength
     /// paladin heals with its Intellect.
     pub healing_power: f32,
+    /// Melee AP; ranged casts use the separate source RangedAttackPower field.
     pub attack_power: f32,
+    pub ranged_attack_power: f32,
     pub crit_pct: f32,
     pub haste_pct: f32,
     pub mastery_pct: f32,
@@ -346,8 +352,12 @@ pub fn compute_character_stats(
     let mut ratings = input.gear_ratings;
     ratings += mods.ratings_flat;
     let base_mana = base_mana(input.class, input.level);
-    let attack_power = primary.strength * input.attack_power_per_strength
+    let base_attack_power = primary.strength * input.attack_power_per_strength
         + primary.agility * input.attack_power_per_agility;
+    let attack_power = base_attack_power * (1.0 + mods.attack_power_pct / 100.0);
+    let base_ranged_attack_power = (f32::from(input.level) + primary.agility.max(0.0))
+        * input.ranged_attack_power_per_agility;
+    let ranged_attack_power = base_ranged_attack_power * (1.0 + mods.ranged_attack_power_pct / 100.0);
     let (spell_power, healing_power) = if mods.spell_power_from_ap_pct > 0.0 {
         // Unit::SpellBaseDamageBonusDone / SpellBaseHealingBonusDone return
         // int32(AP × pct + 0.5) before anything else (Unit.cpp:7103-7108, 7602-7607).
@@ -379,6 +389,7 @@ pub fn compute_character_stats(
         spell_power,
         healing_power,
         attack_power,
+        ranged_attack_power,
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
         haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,
@@ -712,6 +723,7 @@ pub(crate) fn update_character_stats(
             mastery_coefficient,
             attack_power_per_strength: class.map_or(0.0, |class| class.attack_power_per_strength),
             attack_power_per_agility: class.map_or(0.0, |class| class.attack_power_per_agility),
+            ranged_attack_power_per_agility: class.map_or(0.0, |class| class.ranged_attack_power_per_agility),
             gear_primary,
             gear_ratings,
         };
