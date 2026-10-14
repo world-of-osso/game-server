@@ -22,6 +22,7 @@ fn create_rating_world(file: &tempfile::NamedTempFile) -> World {
     );
     world.init_resource::<PvpServerState>();
     world.init_resource::<Time>();
+    world.init_resource::<Time<bevy::time::Virtual>>();
     world.init_resource::<Time<Fixed>>();
     world.init_resource::<GroupRegistry>();
     world.init_resource::<crate::maps::ServerClock>();
@@ -186,6 +187,9 @@ fn admit_rating_match(
     );
     world
         .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(60));
+    world
+        .resource_mut::<Time<bevy::time::Virtual>>()
         .advance_by(std::time::Duration::from_secs(60));
     arena::update_matches(world);
     assert_eq!(
