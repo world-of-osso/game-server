@@ -135,66 +135,112 @@ fn roll_defense(
     if attributes(spell, 3) & ATTR3_NO_AVOIDANCE != 0 {
         return None;
     }
-    let auras = world.get::<ActiveAuras>(unit);
     let defense = spell
         .categories
         .as_ref()
         .map_or(0, |categories| categories.defense_type);
+    if matches!(defense, DEFENSE_MELEE | DEFENSE_RANGED) {
+        return roll_weapon_spell_defense(world, caster, spell, unit, defense);
+    }
+    let auras = world.get::<ActiveAuras>(unit);
     let can_miss = attributes(spell, 7) & ATTR7_NO_ATTACK_MISS == 0;
     let chance = incoming_miss_chance(world, caster, spell, unit, defense);
     if can_miss && roll_percent(chance) {
         return Some(MissKind::Miss);
     }
-    let deflectable = matches!(defense, DEFENSE_MAGIC | DEFENSE_RANGED);
-    let deflected = auras.is_some_and(|auras| {
-        let controlled = auras.is_stunned() || auras.is_confused();
-        deflectable
-            && !controlled
-            && can_deflect_from(world, caster, unit, Some(auras))
-            && roll_percent(auras.modifier(handlers::DEFLECT_SPELLS))
-    });
-    if deflected {
+    let deflect = spell_deflection_chance(world, caster, unit, defense, auras);
+    roll_percent(deflect).then_some(MissKind::Deflect)
+}
+
+/// Unit.cpp2622–2743: one uniform integer roll, cumulative truncated buckets.
+/// Dodge/parry, mechanic resistance and baseline hit statistics remain separate gaps.
+fn roll_weapon_spell_defense(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    unit: Entity,
+    defense: u32,
+) -> Option<MissKind> {
+    let auras = world.get::<ActiveAuras>(unit);
+    let miss = if attributes(spell, 7) & ATTR7_NO_ATTACK_MISS != 0 {
+        0.0
+    } else {
+        incoming_miss_chance(world, caster, spell, unit, defense)
+    };
+    let roll = rand::random_range(0..10_000);
+    let mut threshold = spell_chance_units(miss);
+    if roll < threshold {
+        return Some(MissKind::Miss);
+    }
+    if attributes(spell, 0) & ATTR0_NO_ACTIVE_DEFENSE != 0 {
+        return None;
+    }
+    threshold += spell_chance_units(spell_deflection_chance(world, caster, unit, defense, auras));
+    if roll < threshold {
         return Some(MissKind::Deflect);
     }
-    if matches!(defense, DEFENSE_MELEE | DEFENSE_RANGED)
-        && roll_spell_block(world, caster, spell, unit, auras)
-    {
-        return Some(MissKind::Block);
+    threshold += spell_chance_units(spell_block_chance(world, caster, spell, unit, auras));
+    (roll < threshold).then_some(MissKind::Block)
+}
+
+fn spell_chance_units(chance: f32) -> u32 {
+    (chance.max(0.0) * 100.0) as u32
+}
+
+fn spell_deflection_chance(
+    world: &World,
+    caster: Entity,
+    unit: Entity,
+    defense: u32,
+    auras: Option<&ActiveAuras>,
+) -> f32 {
+    let Some(auras) = auras else {
+        return 0.0;
+    };
+    let deflectable = matches!(defense, DEFENSE_MAGIC | DEFENSE_RANGED);
+    let controlled = auras.is_stunned() || auras.is_confused();
+    if deflectable && !controlled && can_deflect_from(world, caster, unit, Some(auras)) {
+        auras.modifier(handlers::DEFLECT_SPELLS)
+    } else {
+        0.0
     }
-    None
 }
 
 /// Unit::MeleeSpellHitResult2610–2741: shared active-defense gates precede
 /// player shield or native creature block chance. Full hit-table ordering is separate.
-fn roll_spell_block(
+fn spell_block_chance(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     unit: Entity,
     auras: Option<&ActiveAuras>,
-) -> bool {
+) -> f32 {
     let disabled = attributes(spell, 0) & ATTR0_NO_ACTIVE_DEFENSE != 0
         || attributes(spell, 8) & ATTR8_NO_ATTACK_BLOCK != 0;
     if disabled || caster_ignores_spell_block(world, caster, spell) {
-        return false;
+        return 0.0;
     }
     let controlled =
         auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared());
     let casting = world.get::<shared::casting::CastState>(unit).is_some();
     if controlled || casting {
-        return false;
+        return 0.0;
     }
     if !can_deflect_from(world, caster, unit, auras) {
-        return false;
+        return 0.0;
     }
     if world.get::<shared::components::Player>(unit).is_some() {
         return world
             .get::<crate::stats::CharacterStats>(unit)
-            .is_some_and(|stats| {
-                stats.defense.shield_block > 0.0 && roll_percent(stats.defense.block)
+            .map_or(0.0, |stats| {
+                if stats.defense.shield_block > 0.0 {
+                    stats.defense.block
+                } else {
+                    0.0
+                }
             });
     }
-    roll_percent(creature_spell_block_chance(world, caster, unit, auras))
+    creature_spell_block_chance(world, caster, unit, auras)
 }
 
 /// Unit::GetUnitBlockChance2832–2861. Specialized Totem/Lightwell summons
@@ -321,4 +367,23 @@ fn can_deflect_from(
 
 fn roll_percent(chance: f32) -> bool {
     chance > 0.0 && rand::random::<f32>() * 100.0 < chance
+}
+
+#[cfg(test)]
+mod tests {
+    use super::spell_chance_units;
+
+    #[test]
+    fn weapon_spell_probability_truncates_to_native_hundredths() {
+        assert_eq!(spell_chance_units(1.239), 123);
+        assert_eq!(spell_chance_units(50.0), 5000);
+        assert_eq!(spell_chance_units(58.0), 5800);
+        assert_eq!(spell_chance_units(150.0), 15_000);
+    }
+
+    #[test]
+    fn weapon_spell_negative_probability_has_no_hit_table_bucket() {
+        assert_eq!(spell_chance_units(-50.0), 0);
+        assert_eq!(spell_chance_units(0.0), 0);
+    }
 }
