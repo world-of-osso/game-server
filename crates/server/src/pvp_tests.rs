@@ -687,12 +687,13 @@ fn new_pvp_progress_does_not_invent_rated_or_season_cap_numbers() {
 fn native_flag_match(
     template: &shared::battleground::BgTemplate,
 ) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
-    native_flag_match_in_world(template, World::new())
+    native_flag_match_in_world(template, World::new(), |index| index)
 }
 
 fn native_flag_match_in_world(
     template: &shared::battleground::BgTemplate,
     mut world: World,
+    account_for_index: impl Fn(u64) -> u64,
 ) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
     use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
     use crate::auth::{Authenticated, InWorld};
@@ -717,7 +718,8 @@ fn native_flag_match_in_world(
     let mut players = Vec::new();
     for index in 1..=10 {
         let name = format!("Bgproof{}", char::from(b'a' + index as u8 - 1));
-        let (character, _) = persistence::create_character(&db, index, &name, 1, 1).unwrap();
+        let account = account_for_index(index);
+        let (character, _) = persistence::create_character(&db, account, &name, 1, 1).unwrap();
         let player = world
             .spawn((
                 Player {
@@ -742,7 +744,9 @@ fn native_flag_match_in_world(
             ))
             .id();
         world.spawn((
-            Authenticated { account_id: index },
+            Authenticated {
+                account_id: account,
+            },
             PlayerLink(player),
             InWorld {
                 character_id: character,
