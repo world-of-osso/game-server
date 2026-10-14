@@ -49,8 +49,10 @@ Tests and externally visible contract: [banks spec](../../specs/banks.md). Warba
 
 `guild_ranks.rs` handles authenticated `GuildRankRequest` packets on GuildChannel.
 `save_guild_ranks` commits the rank list and materialized member positions together;
-`ChangedGuilds` refreshes open vaults after edits. `guilds` layout 2 adds social flags
-and migrates layouts 0/1 once, preserving bank state. Chat gates speaker and listener
+`ChangedGuilds` refreshes open vaults after edits. `guilds` layout 3 uses pinned TC
+`a352b1fa` right values. Layout-2 compact flags translate bit by bit, preserving
+mixed officer masks; layouts 0/1 keep their original default grants. Startup writes
+rows and the version together once, preserving bank state and member positions. Chat gates speaker and listener
 before recording recipients in history. Social permission checks include the persisted
 guild ID, not only a cached component; hidden tab settings stay stored independently
 from the view/action gate.

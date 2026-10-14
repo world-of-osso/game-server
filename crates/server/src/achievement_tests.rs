@@ -2,6 +2,103 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_encounter_loot_eligibility_reads_active_native_locks_and_authority() {
+    use crate::maps::instances::{InstanceEntrant, Now};
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let store = crate::maps::store::load_map_store(&conn).unwrap();
+    let now = Now {
+        elapsed: 0.0,
+        unix: 1791763200,
+    };
+    let mut manager = crate::maps::InstanceManager::default();
+    let map = manager
+        .create_map(
+            &store,
+            1530,
+            InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 14,
+                ..Default::default()
+            },
+            now,
+        )
+        .unwrap()
+        .map;
+    let mut world = World::new();
+    world.insert_resource(store);
+    world.insert_resource(manager);
+    world.init_resource::<Time>();
+    world.insert_resource(crate::maps::ServerClock {
+        offset_secs: 0,
+        fixed_unix: Some(now.unix),
+    });
+    let player = world
+        .spawn((
+            Player {
+                name: "Looteligible".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            map,
+            crate::persistence::ClientId(1),
+        ))
+        .id();
+    let connection = world
+        .spawn((
+            Authenticated { account_id: 1 },
+            InWorld { character_id: 1 },
+            PlayerLink(player),
+        ))
+        .id();
+    assert_eq!(
+        encounter_loot_eligible_players(&mut world, map, 1849, 14),
+        vec![player]
+    );
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 15).is_empty());
+    assert!(
+        encounter_loot_eligible_players(
+            &mut world,
+            InMap {
+                instance_id: map.instance_id + 900,
+                ..map
+            },
+            1849,
+            14
+        )
+        .is_empty()
+    );
+    assert!(encounter_loot_eligible_players(&mut world, map, u32::MAX, 14).is_empty());
+    world.entity_mut(connection).remove::<Authenticated>();
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty());
+    world
+        .entity_mut(connection)
+        .insert(Authenticated { account_id: 1 });
+    world
+        .entity_mut(connection)
+        .insert(InWorld { character_id: 2 });
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty());
+    world
+        .entity_mut(connection)
+        .insert(InWorld { character_id: 1 });
+    world
+        .entity_mut(player)
+        .remove::<crate::persistence::ClientId>();
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty());
+    world
+        .entity_mut(player)
+        .insert(crate::persistence::ClientId(1));
+    world
+        .resource_mut::<crate::maps::InstanceManager>()
+        .update_instance_lock(map, &[(player, 1)], 2, Some(1), now.unix);
+    assert!(
+        encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty(),
+        "native saved encounter bit is already loot locked"
+    );
+}
+
+#[test]
 fn achievements_criteria_top_level_area_uses_authentic_dragon_isles_terrain_and_persists() {
     use shared::components::{CharacterAppearance, Position};
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -673,6 +770,148 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
             .get(&23250),
         Some(&2)
     );
+}
+
+#[test]
+fn achievements_criteria_native_target_race_uses_each_actual_spell_hit_unit() {
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[44212], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Racehitproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = 2;
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 3.0);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(target), u8::MAX);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), target, 44212),
+        "refused depth installs no aura"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5777)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(target), 0);
+    // Authored Speed10 and TC minimum5yd flight take500ms; the fixture advances50ms/frame.
+    h.advance(9);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), target, 44212),
+        "launch is not a landing"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5777)
+    );
+    h.advance(3);
+    assert!(
+        crate::auras::has_aura(h.app.world(), target, 44212),
+        "actual sourced pumpkin aura landed"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5777),
+        Some(&1),
+        "native Human target hit must credit its authored race leaf"
+    );
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert!(
+        !progress.contains_key(&5779),
+        "Orc caster cannot supply target race"
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(h.npc), 0);
+    h.advance(12);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 44212));
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert_eq!(progress.get(&5777), Some(&1));
+    assert!(
+        !progress.contains_key(&5779),
+        "NPC has no playable target race"
+    );
+    let missing = h.app.world_mut().spawn_empty().id();
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 44212);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5779)
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().race = 2;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(target), 0);
+    h.advance(12);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5779),
+        Some(&1)
+    );
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5777),
+        Some(&1)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5779),
+        Some(&1)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&5777), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&5779), Some(&1));
 }
 
 #[test]
