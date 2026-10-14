@@ -33,6 +33,99 @@ fn test_db() -> GameDatabase {
 }
 
 #[test]
+fn character_delete_ack_waits_for_fifo_writer_without_blocking_updates() {
+    use lightyear::connection::host::HostClient;
+    use std::time::{Duration, Instant};
+    let db = test_db();
+    let (character, _) = persistence::create_character(&db.db, 41, "Deleteproof", 1, 1).unwrap();
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<DeleteCharacter>();
+    app.register_message::<DeleteCharacterResponse>();
+    app.add_systems(Update, process_delete_character);
+    app.insert_resource(db);
+    app.finish();
+    app.cleanup();
+    let connection = app
+        .world_mut()
+        .spawn((
+            Connected,
+            RemoteId(PeerId::Local(41)),
+            HostClient { buffer: Vec::new() },
+            Authenticated {
+                account_id: 41,
+                username: "fb_perf_delete".into(),
+            },
+            MessageSender::<DeleteCharacter>::default(),
+            MessageReceiver::<DeleteCharacter>::default(),
+            MessageSender::<DeleteCharacterResponse>::default(),
+            MessageReceiver::<DeleteCharacterResponse>::default(),
+        ))
+        .id();
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    app.world_mut()
+        .get_mut::<MessageSender<DeleteCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(DeleteCharacter {
+            character_id: character,
+        });
+    let started = Instant::now();
+    app.update();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature = app
+        .world_mut()
+        .get_mut::<MessageReceiver<DeleteCharacterResponse>>(connection)
+        .unwrap()
+        .receive()
+        .next();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "delete tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature.is_none(),
+        "delete success precedes durable commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let reply = loop {
+        app.update();
+        if let Some(reply) = app
+            .world_mut()
+            .get_mut::<MessageReceiver<DeleteCharacterResponse>>(connection)
+            .unwrap()
+            .receive()
+            .next()
+        {
+            break reply;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "missing durability-gated deletion reply"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert!(reply.success, "{:?}", reply.error);
+    assert!(
+        persistence::load_character(&app.world().resource::<GameDatabase>().db, character)
+            .is_none()
+    );
+}
+
+#[test]
 fn queued_gold_updates_coalesce_and_skip_equal_or_offline_players() {
     let mut app = App::new();
     app.add_plugins(GoldPlugin);
