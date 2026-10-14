@@ -185,8 +185,13 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
     let entry = effect.misc_values[0] as u32;
     if properties.control == CONTROL_WILD && properties.title == 0 {
         let count = roll_wild_summon_count(world, ctx, effect, properties_id);
-        for _ in 0..count {
-            spawn_wild_summon(world, ctx, properties_id, properties, entry, dest);
+        for index in 0..count {
+            let destination = if index == 0 {
+                dest
+            } else {
+                scatter_wild_destination(world, ctx.caster, effect, dest)
+            };
+            spawn_wild_summon(world, ctx, properties_id, properties, entry, destination);
         }
         return;
     }
@@ -215,6 +220,48 @@ fn roll_wild_summon_count(
     }
     let value = super::effects::roll_base_points(world, ctx.caster, ctx.spell, effect);
     (value as i32).max(1) as usize
+}
+
+/// TC GetRandomPoint: disk distribution in the primary radius, caster facing.
+/// TargetB's radius selects the initial destination, not additional scatter.
+fn scatter_wild_destination(
+    world: &mut World,
+    caster: Entity,
+    effect: &SpellEffect,
+    mut destination: super::targets::Dest,
+) -> super::targets::Dest {
+    let maximum = super::targets::radius(effect, 0);
+    let minimum = effect.radius[0].map_or(0.0, |radius| radius.radius_min);
+    if maximum > 0.0 {
+        let angle = rand::random::<f32>() * std::f32::consts::TAU;
+        let distance = minimum + (maximum - minimum) * rand::random::<f32>().sqrt();
+        destination.position.x += distance * angle.cos();
+        destination.position.z -= distance * angle.sin();
+        update_scattered_ground_height(world, caster, &mut destination);
+    }
+    if let Some(rotation) = world.get::<Rotation>(caster) {
+        destination.orientation = rotation.0;
+    }
+    destination
+}
+
+/// Native UpdateGroundPositionZ retains the source Z when map height is invalid.
+fn update_scattered_ground_height(
+    world: &mut World,
+    caster: Entity,
+    destination: &mut super::targets::Dest,
+) {
+    let Some(map) = world.get::<InMap>(caster).copied() else {
+        return;
+    };
+    let Some(mut ground) = world.get_resource_mut::<crate::ground::GroundMap>() else {
+        return;
+    };
+    if let crate::ground::GroundProbe::Supported(height) =
+        ground.ground_in(map, destination.position)
+    {
+        destination.position.y = height;
+    }
 }
 
 /// TC EffectSummonType's wild/default branch uses Map::SummonCreature,
