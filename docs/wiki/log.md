@@ -10,6 +10,9 @@
 
 [TargetIsPlayer5/TargetClass28](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) use the actual Player hit snapshot, with a complete positive player/race anchor for class predicates. Compiler32/32; native/catalog2/2 at b2b90543 include actual rose/turkey hits, wrong identity, missing authority and idle/reopen. Census5456/1816 adds1699/3559 structurally, excluding13 hypothetical unanchored class orphans. Mandatory acceptance pending.
 
+## 2026-10-14 — Silverlaine primary identity
+
+[Silverlaine](systems/boss-scripts.md#silverlaine-source-primary) adds pinned header/instance plus current canonical Journal/SmartAI validation to the copy-only producer. RED→GREEN and private120→121 application preserve unrelated/model data; no other Shadowfang boss is admitted. A real actor/spell fixture separately proves two victim casts/aura isolation and controlled-death1070/bit1 copy isolation; staged corpse→inventory once and Normal redb reopen/population/fresh-owner boundaries now have separate behavioral proof. Full fights and native acceptance remain open.
 ## 2026-10-14 — Actual spell-hit target race
 
 [TargetRace27](systems/dungeon-achievements.md#actual-spell-hit-target-race) carries each hit player's race only for type110. Compiler31/31 and native1/1 at cc546863 prove delayed44212 Human/Orc hits, caster isolation, NPC/missing/depth/idle/reopen; census adds only account291 structurally. Required full four-thread workspace filter171/0/1ignored plus site-export1/1 passes at2e6a8661; server/engine checks and three-repo fmt pass. No full291/content/UI certificate.
