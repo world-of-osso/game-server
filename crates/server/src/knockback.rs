@@ -254,6 +254,7 @@ fn apply_landing_damage(world: &mut World, target: Entity, distance: f32) {
         damage,
     );
     if let Some(log) = log {
+        crate::achievement::record_survived_fall(world, target, distance);
         crate::spell_cast::log_event(world, log);
     }
     let current = world.get::<Health>(target).expect("player health").current;

@@ -403,9 +403,9 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Pinned census:5438 + ten current personal-rating definitions (assets0/1).
+    // Pinned census:5448 +964/8354 from fall24 behind retained Alive16/Area17.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5448);
+    assert_eq!(union.len(), 5450);
     for achievement in [
         578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
         6030, 6031, 6350, 6584, 6621, 6973, 13025, 13026, 13623, 14728, 14729, 14730, 14731, 16729,
@@ -416,6 +416,8 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
         8111, 9601, 9838, 13014,
         // Authored2v2/3v3 personal-rating thresholds; retired5v5 excluded.
         399, 400, 401, 402, 403, 405, 1159, 1160, 5266, 5267,
+        // Fall24; Alive16 retained, and8354 additionally requires area6665.
+        964, 8354,
     ] {
         assert!(
             union.contains(&achievement),
