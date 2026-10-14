@@ -1,6 +1,49 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_known_spell_needs_player_knowledge_and_an_authored_spell_row() {
+    let catalog = catalog();
+    for (spells, qualifies) in [(vec![], false), (vec![432962], false), (vec![406106], true)] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                known_spells: spells.into_iter().collect(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::LearnSpell(370465),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&61271).copied(),
+            qualifies.then_some(1)
+        );
+    }
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE spell (ID INTEGER PRIMARY KEY);")
+        .unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(104, 406106)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    conn.execute("INSERT INTO spell VALUES (406106)", [])
+        .unwrap();
+    let facts = load_criteria_facts(&conn, &[(104, 406106)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    assert!(!facts[0].holds(
+        &ReferencePlayer::default(),
+        CriteriaEvent::LearnSpell(370465)
+    ));
+}
+
+#[test]
 fn achievements_criteria_item_template_predicates_match_ids_and_quality_without_dropping_missing_items()
  {
     let conn = Connection::open_in_memory().unwrap();
