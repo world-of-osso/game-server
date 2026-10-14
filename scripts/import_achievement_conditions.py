@@ -120,6 +120,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
     maps = some_leaf_alternatives(root, modifiers, children, 32)
     if maps is not None:
         return None, tuple((32, map_id) for map_id in maps)
+    items = some_leaf_alternatives(root, modifiers, children, 19) if criteria_type in (90, 91) else None
+    if items is not None:
+        return None, tuple((19, item) for item in items)
     targets = some_leaf_alternatives(root, modifiers, children, 4) if criteria_type == 54 else None
     if targets is not None:
         return None, tuple((4, target) for target in targets)
@@ -159,6 +162,11 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         elif kind == 32 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
             # TC PlayerMap1922–1925: map0 is a real map, not missing authority.
             facts.append((kind, 0))
+        elif criteria_type in (90, 91) and operator == SINGLE_TRUE and (
+                (kind == 19 and int(node['Asset']) > 0)
+                or (kind in (14, 15) and 0 <= int(node['Asset']) <= 8)):
+            # TC reads these fields from miscValue1 itemID, never slot or spell ID.
+            facts.append((kind, int(node['Asset'])))
         elif kind == 16 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
             # TC PlayerIsAlive1838–1841; preserve the actual life-state predicate.
             facts.append((kind, 0))
@@ -212,6 +220,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// TC CriteriaHandler.cpp1723-1751 operators over difficulty (20/68) and',
         '// player-only (2/8/17/25/26/29/32/41/69/71; exact39 lowers to69+71), emote-only TargetCreatureId4,',
         '// including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerIsInArea17 or PlayerHasAura8 alternatives,',
+        '// native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.',
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
@@ -229,7 +238,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
             difficulty = 'None'
         alternative_kind = facts[0][0] if facts else None
         variant = {4: 'TargetCreatures', 32: 'PlayerMaps', 17: 'PlayerAreas',
-                   8: 'PlayerAuras'}.get(alternative_kind)
+                   8: 'PlayerAuras', 19: 'EventItems'}.get(alternative_kind)
         complete_some = (int(modifiers[modifier]['Operator']) == SOME
                          and len(facts) > 1
                          and all(kind == alternative_kind for kind, _ in facts))
