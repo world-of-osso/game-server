@@ -135,6 +135,29 @@ class Conditions(unittest.TestCase):
         modifiers[11] = node(10, 3, 39, 3)
         self.assertEqual(self.compile(modifiers), {}, 'negated level stays unsupported')
 
+    def test_native_item_facts_preserve_ids_quality_and_all_required_leaves(self):
+        for kind in (90, 91):
+            criteria = copy.deepcopy(self.criteria)
+            criteria[1]['Type'] = str(kind)
+            modifiers = {10: node(0, 4), 11: node(10, 2, 19, 124101), 12: node(10, 2, 8, 419239)}
+            self.assertEqual(self.compile(modifiers, criteria), {1: [None, ((8, 419239), (19, 124101))]})
+            for quality_kind in (14, 15):
+                modifiers = {10: node(0, 4), 11: node(10, 2, quality_kind, 4)}
+                self.assertEqual(self.compile(modifiers, criteria), {1: [None, ((quality_kind, 4),)]})
+                modifiers[11]['Asset'] = '0'
+                self.assertEqual(self.compile(modifiers, criteria), {1: [None, ((quality_kind, 0),)]})
+                modifiers[11]['Asset'] = '9'
+                self.assertEqual(self.compile(modifiers, criteria), {})
+            modifiers = {10: node(0, 8, amount=1), 11: node(10, 2, 19, 173032), 12: node(10, 2, 19, 45199)}
+            self.assertEqual(self.compile(modifiers, criteria), {1: [None, ((19, 45199), (19, 173032))]})
+            modifiers[10]['Amount'] = '2'
+            self.assertEqual(self.compile(modifiers, criteria), {})
+            modifiers[10]['Amount'] = '1'
+            modifiers[12]['Type'] = '359'
+            self.assertEqual(self.compile(modifiers, criteria), {}, 'unknown alternatives reject the whole tree')
+            modifiers = {10: node(0, 4), 11: node(10, 2, 19, 124101)}
+            self.assertEqual(self.compile(modifiers), {}, 'other families have no declared native item receipt snapshot')
+
     def test_alive_condition_preserves_zero_asset_and_other_required_leaves(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 16, 0), 12: node(10, 2, 17, 6665)}
         self.assertEqual(self.compile(modifiers), {1: [None, ((16, 0), (17, 6665))]})

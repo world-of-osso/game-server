@@ -4,7 +4,7 @@
 TC a352b1fa Golden Serpent follows at both units' actual CombatReach plus its
 authored range, then uses invisible display11686 on absorption; Slagmaw61463's
 boundary check measures `GetDistance`, which subtracts both units' CombatReach. Import the TDB1210 model-info
-rows for the source templates and that display, without activating movement,
+rows for every display (also required by native fear distance), without activating movement,
 changing templates or substituting a guessed reach. Input is the local full
 TDB mysqldump (its INSERT records are single-line), never a CDN download.
 """
@@ -38,7 +38,7 @@ def select_source_displays(connection):
     return {display for _, display in models} | {INVISIBLE_DISPLAY}
 
 
-def read_model_info(dump, displays):
+def read_model_info(dump, displays=None):
     selected = {}
     with dump.open(encoding='utf-8') as source:
         for statement in source:
@@ -49,17 +49,23 @@ def read_model_info(dump, displays):
                     raise ValueError(f'{dump}: unexpected model-info column order {columns}')
                 if len(row) != len(COLUMNS):
                     raise ValueError(f'{dump}: incompatible model-info row with {len(row)} fields')
-                if row[0] in displays:
+                if displays is None or row[0] in displays:
                     selected[row[0]] = row
-    missing = displays - selected.keys()
-    if missing:
-        raise ValueError(f'{dump}: missing authored model-info displays {sorted(missing)}')
-    return [selected[display] for display in sorted(displays)]
+    if displays is not None:
+        missing = displays - selected.keys()
+        if missing:
+            raise ValueError(f'{dump}: missing authored model-info displays {sorted(missing)}')
+    if not selected:
+        raise ValueError(f'{dump}: no authored model-info rows')
+    return [selected[display] for display in sorted(selected)]
 
 
 def import_geometry(connection, dump):
     displays = select_source_displays(connection)
-    rows = read_model_info(dump, displays)
+    rows = read_model_info(dump)
+    missing = displays - {row[0] for row in rows}
+    if missing:
+        raise ValueError(f'{dump}: missing authored model-info displays {sorted(missing)}')
     connection.execute(SCHEMA)
     connection.executemany(
         'INSERT OR REPLACE INTO encounter_creature_model_info VALUES (?,?,?,?,?)', rows,
@@ -82,7 +88,7 @@ def main():
     with closing(sqlite3.connect(args.db)) as connection:
         with connection:
             displays = import_geometry(connection, args.source_dump)
-    print(f'Imported source model geometry for {displays}; no runtime behavior activated')
+    print(f'Imported {len(displays)} source model geometry rows; no runtime behavior activated')
 
 
 if __name__ == '__main__':

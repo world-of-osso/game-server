@@ -15,6 +15,346 @@ use crate::spell_cast::test_harness::{Harness, harness, harness_with, harness_wi
 use crate::stats::CharacterStats;
 use crate::world_data::WorldData;
 
+/// Native aura7 on a real baked 180yd floor, not an injected route.
+fn fleeing_harness() -> (Harness, tempfile::TempDir) {
+    let dir = tempfile::tempdir().unwrap();
+    let map = dir.path().join("0");
+    std::fs::create_dir(&map).unwrap();
+    let a = Vec3::new(10.0, 0.0, 10.0);
+    let b = Vec3::new(10.0, 0.0, 190.0);
+    let c = Vec3::new(190.0, 0.0, 190.0);
+    let d = Vec3::new(190.0, 0.0, 10.0);
+    let tile = navigation::bake::bake_tile(&[[a, b, c], [a, c, d]], (32, 31)).unwrap();
+    assert!(!tile.is_empty());
+    std::fs::write(map.join("32_31.nav"), tile).unwrap();
+    let mut h = harness_with_plugins(
+        Vec::new(),
+        &[INTIMIDATING_SHOUT, 122, TURN_EVIL],
+        WARRIOR,
+        false,
+        |app| {
+            app.insert_resource(crate::navigation::Navigation::new(dir.path()));
+            let conn = Connection::open_with_flags(
+                crate::test_data::world_db_path(),
+                OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )
+            .unwrap();
+            app.insert_resource(
+                crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap(),
+            );
+        },
+    )
+    .unwrap();
+    h.app.world_mut().entity_mut(h.caster).insert((
+        Position {
+            x: 100.0,
+            y: 0.2,
+            z: 100.0,
+        },
+        shared::components::MovementControl::default(),
+    ));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Position {
+            x: 110.0,
+            y: 0.2,
+            z: 100.0,
+        },
+        ModelDisplay {
+            display_id: KOBOLD_DISPLAY,
+        },
+    ));
+    (h, dir)
+}
+
+fn assert_flees_then_stops(mut h: Harness, caster: Entity, victim: Entity) {
+    let before = *h.app.world().get::<Position>(victim).unwrap();
+    let origin = *h.app.world().get::<Position>(caster).unwrap();
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: victim,
+            spell_id: INTIMIDATING_SHOUT,
+            effect_mask: 2,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(has_aura(h.app.world(), victim, INTIMIDATING_SHOUT));
+    h.advance(20);
+    let after = *h.app.world().get::<Position>(victim).unwrap();
+    assert!(
+        (after.x - origin.x).hypot(after.z - origin.z)
+            > (before.x - origin.x).hypot(before.z - origin.z) + 2.0,
+        "native feared unit must flee away: {before:?} -> {after:?}"
+    );
+    if victim == h.caster {
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::MovementControl>(victim)
+                .unwrap()
+                .controlled
+        );
+    }
+    remove_auras(h.app.world_mut(), victim, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == INTIMIDATING_SHOUT
+    });
+    h.advance(20);
+    assert_eq!(*h.app.world().get::<Position>(victim).unwrap(), after);
+    if victim == h.caster {
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::MovementControl>(victim)
+                .unwrap()
+                .controlled
+        );
+    }
+}
+
+#[test]
+fn fear_native_creature_flees_on_navmesh_and_stops_on_removal() {
+    let (h, _dir) = fleeing_harness();
+    let (caster, victim) = (h.caster, h.npc);
+    assert_flees_then_stops(h, caster, victim);
+}
+
+#[test]
+fn fear_native_player_flees_on_navmesh_loses_control_and_stops_on_removal() {
+    let (h, _dir) = fleeing_harness();
+    let (caster, victim) = (h.npc, h.caster);
+    assert_flees_then_stops(h, caster, victim);
+}
+
+fn start_fleeing(h: &mut Harness, victim: Entity, caster: Entity) {
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: victim,
+            spell_id: INTIMIDATING_SHOUT,
+            effect_mask: 2,
+            source: AuraSource::Cast,
+        },
+    );
+}
+
+#[test]
+fn fear_native_expiry_stops_player_and_restores_control() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    start_fleeing(&mut h, player, npc);
+    h.advance(20);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .controlled
+    );
+    h.advance(200);
+    assert!(!has_aura(h.app.world(), player, INTIMIDATING_SHOUT));
+    let stopped = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .controlled
+    );
+    h.advance(20);
+    assert_eq!(*h.app.world().get::<Position>(player).unwrap(), stopped);
+}
+
+#[test]
+fn fear_removal_does_not_release_newer_player_movement_owner() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    start_fleeing(&mut h, player, npc);
+    h.advance(4);
+    let owner = {
+        let mut control = h
+            .app
+            .world_mut()
+            .get_mut::<shared::components::MovementControl>(player)
+            .unwrap();
+        control.epoch += 1;
+        *control
+    };
+    let stopped = *h.app.world().get::<Position>(player).unwrap();
+    h.advance(10);
+    assert_eq!(*h.app.world().get::<Position>(player).unwrap(), stopped);
+    remove_auras(h.app.world_mut(), player, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == INTIMIDATING_SHOUT
+    });
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap(),
+        owner
+    );
+}
+
+#[test]
+fn fear_unbaked_map_never_substitutes_direct_movement() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::maps::InMap::continent(34));
+    let before = *h.app.world().get::<Position>(player).unwrap();
+    start_fleeing(&mut h, player, npc);
+    h.advance(80);
+    assert_eq!(*h.app.world().get::<Position>(player).unwrap(), before);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .controlled
+    );
+}
+
+#[test]
+fn fear_runs_at_native_speed_then_pauses_before_next_route() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    start_fleeing(&mut h, player, npc);
+    let mut travelled = 0.0;
+    let mut previous = *h.app.world().get::<Position>(player).unwrap();
+    let mut stopped = None;
+    for _ in 0..120 {
+        h.advance(1);
+        let next = *h.app.world().get::<Position>(player).unwrap();
+        let step = (next.x - previous.x).hypot(next.z - previous.z);
+        assert!(step <= 7.0 * 0.05 + 0.001, "run speed: {step}");
+        travelled += step;
+        if travelled > 1.0 && step < 0.0001 {
+            stopped = Some(next);
+            break;
+        }
+        previous = next;
+    }
+    let stopped = stopped.expect("route≤30yd ends and pauses");
+    assert!(travelled <= 30.01);
+    h.advance(14);
+    assert_eq!(
+        *h.app.world().get::<Position>(player).unwrap(),
+        stopped,
+        "pause≥800ms"
+    );
+    h.advance(20);
+    assert_ne!(
+        *h.app.world().get::<Position>(player).unwrap(),
+        stopped,
+        "pause≤1500ms"
+    );
+}
+
+#[test]
+fn fear_destination_stops_before_live_collision_wall() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    let mut los =
+        crate::line_of_sight::LineOfSight::load(&crate::ground::ground_data_dir().join("los"))
+            .unwrap();
+    let vertices = vec![
+        Vec3::new(114.0, 0.0, 0.0),
+        Vec3::new(114.0, 4.0, 0.0),
+        Vec3::new(114.0, 4.0, 200.0),
+        Vec3::new(114.0, 0.0, 200.0),
+    ];
+    let wall = std::sync::Arc::new(los::LosTile::build(
+        32,
+        31,
+        vertices,
+        vec![[0, 1, 2], [0, 2, 3]],
+    ));
+    los.set_live_hulls(std::collections::HashMap::from([(
+        crate::maps::InMap::continent(0),
+        vec![wall],
+    )]));
+    h.app.insert_resource(los);
+    start_fleeing(&mut h, npc, player);
+    h.advance(40);
+    let after = h.app.world().get::<Position>(npc).unwrap();
+    assert!(
+        after.x > 110.0 && after.x <= 113.1,
+        "first collision: {after:?}"
+    );
+}
+
+#[test]
+fn fear_native_root_pauses_running_until_root_is_removed() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    start_fleeing(&mut h, npc, player);
+    h.advance(10);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: player,
+            target: npc,
+            spell_id: 122,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(has_aura(h.app.world(), npc, 122));
+    let stopped = *h.app.world().get::<Position>(npc).unwrap();
+    h.advance(10);
+    assert_eq!(*h.app.world().get::<Position>(npc).unwrap(), stopped);
+    remove_auras(h.app.world_mut(), npc, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 122
+    });
+    h.advance(10);
+    assert_ne!(*h.app.world().get::<Position>(npc).unwrap(), stopped);
+}
+
+#[test]
+fn fear_removing_one_of_two_native_auras_keeps_control_lost() {
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    start_fleeing(&mut h, player, npc);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: npc,
+            target: player,
+            spell_id: TURN_EVIL,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(has_aura(h.app.world(), player, TURN_EVIL));
+    h.advance(4);
+    remove_auras(h.app.world_mut(), player, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == INTIMIDATING_SHOUT
+    });
+    let before = *h.app.world().get::<Position>(player).unwrap();
+    h.advance(10);
+    assert_ne!(*h.app.world().get::<Position>(player).unwrap(), before);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .controlled
+    );
+    remove_auras(h.app.world_mut(), player, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == TURN_EVIL
+    });
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .controlled
+    );
+}
+
 const INTIMIDATING_SHOUT: u32 = 5246;
 const SLEEP_WALK: u32 = 360806;
 const SLAM: u32 = 1464;
