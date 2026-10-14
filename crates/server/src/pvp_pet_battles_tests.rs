@@ -514,9 +514,9 @@ fn assert_native_pet_team_level_win(levels: [u8; 3], qualifies: bool) {
     use shared::components::{CharacterAppearance, Player};
     let mut app = build_app(true);
     let file = tempfile::NamedTempFile::new().unwrap();
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(file.path()).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(
+        redb::Database::create(file.path()).unwrap(),
+    ));
     crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
     let character = crate::persistence::create_character(
         &app.world().resource::<GameDatabase>().db,

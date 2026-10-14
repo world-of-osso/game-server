@@ -5048,7 +5048,7 @@ fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     h.app
-        .insert_resource(crate::persistence::GameDatabase { db });
+        .insert_resource(crate::persistence::GameDatabase::new(db));
     let player = h.player();
     let character = h
         .app
