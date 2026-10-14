@@ -51,7 +51,8 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
     h.npc = spawn_npc(&mut h.app, 3.0);
     let mut known = source_passives(spec);
     known.push(spell.id);
-    if let Some((form_spell, _)) = select_form_prerequisite(spec, spell) {
+    if let Some((form_spell, _)) = select_form_prerequisite(spec, spell, &world_db().unwrap().store)
+    {
         known.push(form_spell);
     }
     h.app.world_mut().entity_mut(h.caster).insert((
@@ -215,11 +216,14 @@ fn place_ground_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
 /// A controlled native form environment, not a legal talent-build certificate.
 /// Cat/Bear are native Druid abilities; Moonkin is a separately declared talent setup.
 /// Only a required, non-excluded form is selected. Other prerequisites remain exposed.
-fn select_form_prerequisite(spec: &Spec, row: &Spell) -> Option<(u32, i32)> {
+fn select_form_prerequisite(
+    spec: &Spec,
+    row: &Spell,
+    store: &crate::spell_info::SpellStore,
+) -> Option<(u32, i32)> {
     if spec.class != 11 || row.passive {
         return None;
     }
-    let store = &world_db().unwrap().store;
     let masks = store.get(row.id)?.shapeshift.as_ref()?;
     let required =
         u64::from(masks.shapeshift_mask[0]) | (u64::from(masks.shapeshift_mask[1]) << 32);
@@ -239,8 +243,9 @@ fn select_form_prerequisite(spec: &Spec, row: &Spell) -> Option<(u32, i32)> {
 }
 
 fn cast_form_prerequisite(h: &mut Harness, spec: &Spec, row: &Spell) -> Option<Value> {
-    let (id, expected_form) = select_form_prerequisite(spec, row)?;
-    let spell = world_db().unwrap().store.get(id).unwrap();
+    let store = &world_db().unwrap().store;
+    let (id, expected_form) = select_form_prerequisite(spec, row, store)?;
+    let spell = store.get(id).unwrap();
     cast_case(h, spell);
     let observed_form = h
         .app
