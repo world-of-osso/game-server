@@ -262,12 +262,7 @@ fn class_completeness_native_slam_rolls_block_and_critical_block_before_absorbs(
     }
 }
 
-fn cast_damage_spell(
-    h: &mut Harness,
-    defender: Entity,
-    spell: u32,
-    frames: usize,
-) -> Vec<shared::protocol::CombatLogEvent> {
+fn start_damage_spell(h: &mut Harness, defender: Entity, spell: u32) {
     let caster = h.caster;
     h.app
         .world_mut()
@@ -290,6 +285,15 @@ fn cast_damage_spell(
     h.set_power(power, maximum);
     h.inbox = Inbox::default();
     h.cast_and_deliver(spell, Some(defender));
+}
+
+fn cast_damage_spell(
+    h: &mut Harness,
+    defender: Entity,
+    spell: u32,
+    frames: usize,
+) -> Vec<shared::protocol::CombatLogEvent> {
+    start_damage_spell(h, defender, spell);
     h.advance(frames);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     h.inbox
@@ -354,4 +358,85 @@ fn class_completeness_native_weapon_spell_no_active_defense_and_no_block_flags_a
         assert_eq!(hits[0].blocked, 0, "{spell}: {:?}", hits[0]);
         assert!(hits[0].amount > 0);
     }
+}
+
+fn wait_for_aimed_launch(h: &mut Harness) {
+    for _ in 0..65 {
+        if h.inbox.go.iter().any(|event| event.spell_id == 19434) {
+            return;
+        }
+        h.advance(1);
+    }
+    panic!("native Aimed Shot never launched: {:?}", h.inbox.failed);
+}
+
+fn aimed_damage(h: &Harness, defender: Entity) -> Vec<&shared::protocol::CombatLogEvent> {
+    h.inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(19434)
+                && event.target == Some(defender.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .collect()
+}
+
+#[test]
+fn class_completeness_native_weapon_spell_block_survives_flight_and_facing_change() {
+    let (mut h, defender) = shield_duel_for_class(0.0, 3);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(defender)
+        .unwrap()
+        .x = 40.0;
+    start_damage_spell(&mut h, defender, 19434);
+    wait_for_aimed_launch(&mut h);
+    assert!(
+        aimed_damage(&h, defender).is_empty(),
+        "must observe launch before impact"
+    );
+    h.app.world_mut().get_mut::<Rotation>(defender).unwrap().y = std::f32::consts::FRAC_PI_2;
+    h.advance(12);
+    let hits = aimed_damage(&h, defender);
+    assert_eq!(hits.len(), 1);
+    let total = hits[0].amount + hits[0].blocked;
+    assert!(total > 0);
+    assert_eq!(hits[0].blocked, (total as f32 * 0.5).trunc() as i32);
+}
+
+#[test]
+fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
+    let (mut h, defender) = shield_duel_for_class(0.0, 3);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(defender)
+        .unwrap()
+        .x = 40.0;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: defender,
+            target: defender,
+            spell_id: 203524,
+            effect_mask: 1 << 2,
+            source: AuraSource::Cast,
+        },
+    );
+    // Native2500ms cast +400ms flight; loopback3frames makes the3s buff
+    // expire after launch but before impact, without changing spell metadata.
+    start_damage_spell(&mut h, defender, 19434);
+    wait_for_aimed_launch(&mut h);
+    assert!(crate::auras::has_aura(h.app.world(), defender, 203524));
+    assert!(aimed_damage(&h, defender).is_empty());
+    h.advance(12);
+    assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
+    let hits = aimed_damage(&h, defender);
+    assert_eq!(hits.len(), 1);
+    assert!(
+        hits[0].amount > 0,
+        "expired chance must not produce a full critical block"
+    );
+    let total = hits[0].amount + hits[0].blocked;
+    assert_eq!(hits[0].blocked, (total as f32 * 0.5).trunc() as i32);
 }
