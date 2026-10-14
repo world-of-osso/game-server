@@ -441,8 +441,13 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
     assert_eq!(hits[0].blocked, (total as f32 * 0.5).trunc() as i32);
 }
 
-fn creature_block_duel(entry: u32) -> Harness {
-    let mut h = harness(Vec::new(), &[1464, 10021, 203524, 853, 3248, 3650], 1).unwrap();
+fn creature_block_duel(entry: u32, class: u8) -> Harness {
+    let mut h = harness(
+        Vec::new(),
+        &[1464, 10021, 203524, 853, 3248, 3650, 19434, 87322],
+        class,
+    )
+    .unwrap();
     let data = load_native_creature_world(&[entry]);
     let template = &data.templates[&entry];
     let name = template.name.clone();
@@ -480,7 +485,7 @@ fn creature_block_duel(entry: u32) -> Harness {
 #[test]
 fn class_completeness_native_creature_spell_block_uses_creature_percent_not_player_shield() {
     for critical in [false, true] {
-        let mut h = creature_block_duel(6);
+        let mut h = creature_block_duel(6, 1);
         let target = h.npc;
         if critical {
             crate::auras::apply_aura(
@@ -512,7 +517,7 @@ fn class_completeness_native_creature_spell_block_uses_creature_percent_not_play
 #[test]
 fn class_completeness_native_creature_no_block_flag_overrides_block_aura() {
     // Native36980 Ice Tomb has NO_BLOCK0x10; 1511 has only NO_XP0x40.
-    let mut h = creature_block_duel(36980);
+    let mut h = creature_block_duel(36980, 1);
     let target = h.npc;
     let hits = cast_damage_spell(&mut h, target, 1464, 3);
     assert_eq!(hits.len(), 1);
@@ -523,7 +528,7 @@ fn class_completeness_native_creature_no_block_flag_overrides_block_aura() {
 #[test]
 fn class_completeness_native_creature_block_requires_facing_and_active_defense() {
     for stunned in [false, true] {
-        let mut h = creature_block_duel(6);
+        let mut h = creature_block_duel(6, 1);
         let target = h.npc;
         if stunned {
             crate::auras::apply_aura(
@@ -555,7 +560,7 @@ fn class_completeness_native_creature_block_requires_facing_and_active_defense()
 
 #[test]
 fn class_completeness_native_creature_no_xp_flag_does_not_disable_block() {
-    let mut h = creature_block_duel(1511);
+    let mut h = creature_block_duel(1511, 1);
     let target = h.npc;
     let hits = cast_damage_spell(&mut h, target, 1464, 3);
     assert_eq!(hits.len(), 1);
@@ -566,7 +571,7 @@ fn class_completeness_native_creature_no_xp_flag_does_not_disable_block() {
 
 #[test]
 fn class_completeness_native_weapon_spell_miss_and_block_share_one_hit_table() {
-    let mut h = creature_block_duel(6);
+    let mut h = creature_block_duel(6, 1);
     let target = h.npc;
     crate::auras::remove_auras(
         h.app.world_mut(),
@@ -610,6 +615,63 @@ fn class_completeness_native_weapon_spell_miss_and_block_share_one_hit_table() {
                         && event.kind == CombatLogKind::Miss(shared::protocol::MissKind::Miss)
                 }),
                 "no actual native miss/block result at{attempt}: {:?}",
+                h.inbox.log
+            );
+        }
+    }
+}
+
+#[test]
+fn class_completeness_native_ranged_deflection_and_block_share_one_hit_table() {
+    let mut h = creature_block_duel(6, 3);
+    let target = h.npc;
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 10021,
+    );
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(target)
+        .unwrap()
+        .x = 40.0;
+    // Native87322 gives50 deflection;3248 gives55 plusNPC3 block.
+    // Actual Hunter Aimed Shot must be deflected or partially blocked for every draw.
+    for attempt in 0..60 {
+        h.advance(300);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap()
+            .current = 5000.0;
+        for spell_id in [3248, 87322] {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster: target,
+                    target,
+                    spell_id,
+                    effect_mask: 1,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        let hits = cast_damage_spell(&mut h, target, 19434, 65);
+        if let Some(hit) = hits.first() {
+            assert_eq!(hits.len(), 1);
+            assert!(
+                hit.blocked > 0,
+                "native ranged table admitted unblocked hit at{attempt}: {hit:?}"
+            );
+        } else {
+            assert!(
+                h.inbox.log.iter().any(|event| {
+                    event.spell_id == Some(19434)
+                        && event.target == Some(target.to_bits())
+                        && event.kind == CombatLogKind::Miss(shared::protocol::MissKind::Deflect)
+                }),
+                "no actual native deflect/block result at{attempt}: {:?}",
                 h.inbox.log
             );
         }
