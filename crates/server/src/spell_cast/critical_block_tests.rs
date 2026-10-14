@@ -10,7 +10,7 @@ use shared::protocol::CombatLogKind;
 const CRITICAL_BLOCK: u32 = 76857;
 
 fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
-    let mut h = harness(Vec::new(), &[CRITICAL_BLOCK], 1).unwrap();
+    let mut h = harness(Vec::new(), &[CRITICAL_BLOCK, 203524], 1).unwrap();
     let defender = spawn_player(&mut h.app, 1, 3.0);
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::duel::DuelOpponent(defender),
@@ -136,5 +136,53 @@ fn class_completeness_native_critical_block_doubles_already_truncated_autoattack
 fn class_completeness_native_zero_critical_block_keeps_ordinary_block() {
     let (mut h, defender) = shield_duel(0.0);
     apply_mastery(&mut h, defender);
+    assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
+}
+
+#[test]
+fn class_completeness_native_attacker_critical_block_aura_does_not_protect_defender() {
+    let (mut h, defender) = shield_duel(0.0);
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(caster)
+        .unwrap()
+        .mastery_points = 100.0;
+    apply_mastery(&mut h, caster);
+    assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
+}
+
+#[test]
+fn class_completeness_native_critical_block_removal_restores_ordinary_block() {
+    let (mut h, defender) = shield_duel(100.0);
+    apply_mastery(&mut h, defender);
+    assert_eq!(blocked_swing(&mut h, defender), (1, 332, false));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        defender,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == CRITICAL_BLOCK,
+    );
+    assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
+}
+
+#[test]
+fn class_completeness_native_finite_critical_block_field_expires_on_its_source_clock() {
+    let (mut h, defender) = shield_duel(0.0);
+    // Neltharion's Fury203524 effect2: native100%, Duration3000ms.
+    // This isolates that aura field, not the parent channel's other effects.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: defender,
+            target: defender,
+            spell_id: 203524,
+            effect_mask: 1 << 2,
+            source: AuraSource::Cast,
+        },
+    );
+    assert_eq!(blocked_swing(&mut h, defender), (1, 332, false));
+    h.advance(65);
+    assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
     assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
 }
