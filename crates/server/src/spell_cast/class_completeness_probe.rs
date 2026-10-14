@@ -51,6 +51,9 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
     h.npc = spawn_npc(&mut h.app, 3.0);
     let mut known = source_passives(spec);
     known.push(spell.id);
+    if let Some((form_spell, _)) = select_form_prerequisite(spec, spell) {
+        known.push(form_spell);
+    }
     h.app.world_mut().entity_mut(h.caster).insert((
         Level(80),
         crate::persistence::ClientId(u64::from(spell.id)),
@@ -209,6 +212,63 @@ fn place_ground_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
         .insert(Position { x, y, z });
 }
 
+/// A controlled native form environment, not a legal talent-build certificate.
+/// Cat/Bear are native Druid abilities; Moonkin is a separately declared talent setup.
+/// Only a required, non-excluded form is selected. Other prerequisites remain exposed.
+fn select_form_prerequisite(spec: &Spec, row: &Spell) -> Option<(u32, i32)> {
+    if spec.class != 11 || row.passive {
+        return None;
+    }
+    let store = &world_db().unwrap().store;
+    let masks = store.get(row.id)?.shapeshift.as_ref()?;
+    let required =
+        u64::from(masks.shapeshift_mask[0]) | (u64::from(masks.shapeshift_mask[1]) << 32);
+    let excluded =
+        u64::from(masks.shapeshift_exclude[0]) | (u64::from(masks.shapeshift_exclude[1]) << 32);
+    [768, 5487, 197625].into_iter().find_map(|id| {
+        let form = store
+            .get(id)?
+            .effects
+            .iter()
+            .find(|effect| effect.aura == crate::auras::handlers::MOD_SHAPESHIFT)?
+            .misc_values[0];
+        let bit = u32::try_from(form - 1).ok()?;
+        let stance = 1u64.checked_shl(bit)?;
+        (stance & required != 0 && stance & excluded == 0).then_some((id, form))
+    })
+}
+
+fn cast_form_prerequisite(h: &mut Harness, spec: &Spec, row: &Spell) -> Option<Value> {
+    let (id, expected_form) = select_form_prerequisite(spec, row)?;
+    let spell = world_db().unwrap().store.get(id).unwrap();
+    cast_case(h, spell);
+    let observed_form = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .and_then(crate::auras::shapeshift::current_form)
+        .map(|(_, form)| form);
+    let warnings = crate::auras::take_unhandled_auras(h.app.world_mut());
+    let effects = h
+        .app
+        .world()
+        .resource::<super::effects::UnhandledEffects>()
+        .0
+        .clone();
+    let receipt = json!({"spell": id, "expected_form": expected_form,
+        "observed_form": observed_form, "failed": h.inbox.failed, "go": h.inbox.go,
+        "aura_warnings": warnings, "effect_warnings": effects,
+        "combat_log": h.inbox.log, "resources_after_cast": resources(h)});
+    h.inbox = Inbox::default();
+    h.app
+        .world_mut()
+        .resource_mut::<super::effects::UnhandledEffects>()
+        .0
+        .clear();
+    fill_resources(h);
+    Some(receipt)
+}
+
 fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
     let Some(spell) = world_db().unwrap().store.get(row.id).cloned() else {
         return json!({"spec": spec.id, "spell": row.id, "missing_store": true});
@@ -221,6 +281,7 @@ fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
         .resource_mut::<super::effects::UnhandledEffects>()
         .0
         .clear();
+    let form_prerequisite = cast_form_prerequisite(h, spec, row);
     let before = resources(h);
     if !row.passive {
         cast_case(h, &spell);
@@ -237,7 +298,8 @@ fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
         .collect();
     let applied = crate::auras::has_aura(h.app.world(), h.caster, row.id);
     json!({"spec": spec.id, "spell": row.id, "passive": row.passive,
-        "passive_applied": applied, "failed": h.inbox.failed, "go": h.inbox.go,
+        "passive_applied": applied, "form_prerequisite": form_prerequisite,
+        "failed": h.inbox.failed, "go": h.inbox.go,
         "baseline_aura_warnings": baseline_warnings, "aura_warnings": warnings,
         "effect_warnings": effects, "resources_before": before, "resources_after": after,
         "combat_log": h.inbox.log})
