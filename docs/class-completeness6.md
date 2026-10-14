@@ -284,3 +284,15 @@ Race producer `1ebd704f` genuine data-lossRED: selected four-field CSV becomes t
 All17 controls have scoped receipts, not one current-head all-green17 batch yet. Current merged checks/bounded21/source-gap attribution remain pending below; no fresh whole-census, independent or rendered claim. Whole13/40 goalOPEN and leases retained.
 
 Current master union6cc3698c (wiki conflict resolved by union helper), protocol5d9454a, enginea111e632f. `creature-type-merged-controls`90PASS/oneignored exit0/862.194s (190.97s tests), including all17 new controls plus polymorph, fear, Druid/form, autoattack range, Charred and four ordinary census fixtures. Expected long compile detached as job01a138f3-41b2-784c-9ecd-23422bf62fcf; retained exit receipt confirms completion, never rerun to recover logs. `census-batch54-bounded`21/21 exit0/81.455s: all168 gaps/warnings cleared, all21 stillpartial from their genuine tracking44 gaps. No full tracking/ability promotions. `creature-type-current-check` workspace/all-target exit0/108.232s and fmt exit0/4.429s; no current warnings. Manual changed-Rust readability audit completed; independent/rendered gate unavailable/unclaimed. No Rust changes since merged proof. Last full global census remains3155/4490/182.
+
+
+## Post-publication master regressions (2026-10-14)
+
+Branch `cc-master-reds-70391` starts at origin/master `24068495`; AP work remains on `class-completeness2`. No build pin or production fallback. Active authority at investigation: `data/db2/active` resolved to installed `12.1.5.70391`.
+
+Existing native tests reproduced eight failures (`master70391-native-red.log/.exit`: exit101, 298.541s; 95 passed). Five damage expectations used superseded coefficients: Mind Blast Shadow passive effect1040380 is +360%, Pyre891602 4.84SP, Consume1192725 3.67SP, Reap1215275 6.0156SP, Wildfire bleed718207 0.252AP. Fixture SP100/AP22 gives794.2457,484,367,602 rounded,6 rounded respectively; variance retained only where source authors it. Execute's three cost rows9491/314870/314872 now require native specialization auras137049/137048/325446. Both Arms tests lacked137049; supply its actual aura rather than bypassing cost admission or changing refund expectations. SpellStore now additionally loads six TDB DifficultyID0 spells119297/119298/119424/119425/119426/119428, so DB2-only cardinality is invalid; assert every DB2 ID maps to its exact source name (server-side behavior has separate native loader tests).
+
+Source receipt: `data/class-completeness6-2026-10-12/master70391-source-receipt.json`: 8 SpellEffect,3 SpellPower,3 Spell CSV/slot SQL rows matched; numeric tolerance1e-5 and CRLF/LF prose normalization only. CSV hashes:
+- `SpellEffect.csv`: `cfeb5b99be323da7e3c23f7d6b956247eafeb255d41135e57aac6b3abe16a115`
+- `SpellPower.csv`: `651b3b5d3fdd80365fc6765cf174e5f3f44d3b6e2b94e1ca87a6e0c14a622c1a`
+- `Spell.csv`: `2d3bdfef700fc8e762a20a5430bdb6402cdeada48a4f0ccd2b92c431cf61f772`
