@@ -276,3 +276,5 @@ Debug logs and root cause analyses.
 - [Auction subcategory/sort proof](systems/auction-house.md#subcategory--current-bid--available--2026-10-08) — class/subclass/inventory alternatives and stable Bid/Quantity paging.
 
 - [Category charge-recovery rates](systems/auras.md#category-charge-recovery-rates) — native148 real Aimed Shot charges, live clocks, serial expiry and source-bounded negative/per-cast controls; broader parity remains open.
+
+- [Ruby authored support and search](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13) — sourced metalplate normals, creature/player map-height separation and TC nominalY5; query/native fixture proof is not full-dungeon completion.

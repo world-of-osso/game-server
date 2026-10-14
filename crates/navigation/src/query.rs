@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 const MAX_PATH: usize = 2048;
 const MAX_NODES: i32 = 8192;
-// TC a352b1fa PathGenerator.cpp:128 nominal Y5; no Y50 retry or shortcuts.
+// TC a352b1fa PathGenerator.cpp:141 nominal Y5; no Y50 retry or shortcuts.
 const NEAREST_EXTENTS: [f32; 3] = [0.8, 5.0, 0.8];
 
 /// Owns a mesh and its mutable query scratch space; callers serialize queries with &mut.
