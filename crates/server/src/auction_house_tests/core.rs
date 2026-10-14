@@ -77,6 +77,12 @@ fn successful_auction_deposit_updates_online_gold() {
     let mut state = AuctionHouseState::default();
     let mut app = App::new();
     app.add_plugins(crate::gold::GoldPlugin);
+    app.insert_resource(crate::persistence::GameDatabase::new(db));
+    let db = std::sync::Arc::clone(
+        &app.world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+    );
     let player = app
         .world_mut()
         .spawn((
@@ -156,6 +162,12 @@ fn place_bid_refunds_previous_bidder_and_updates_current_bid() {
     let bidder_b_gold_before = persistence::load_inventory(&db, bidder_b_id).gold;
     let mut app = App::new();
     app.add_plugins(crate::gold::GoldPlugin);
+    app.insert_resource(crate::persistence::GameDatabase::new(db));
+    let db = std::sync::Arc::clone(
+        &app.world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+    );
     let bidder_a = app
         .world_mut()
         .spawn((

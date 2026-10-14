@@ -111,6 +111,12 @@ fn deposit_refunded_on_successful_sale() {
     let mut state = AuctionHouseState::default();
     let mut app = App::new();
     app.add_plugins(crate::gold::GoldPlugin);
+    app.insert_resource(crate::persistence::GameDatabase::new(db));
+    let db = std::sync::Arc::clone(
+        &app.world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+    );
     let seller = app
         .world_mut()
         .spawn((
