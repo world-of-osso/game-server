@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Authored goober spell dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) — native persistent-owner Workshop pickup RED6; Data10/23 implementation, GREEN pending; timed siege activation remains separate.
+- [Authored goober spell dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) — native persistent-owner Workshop pickup RED6→GREEN1/1 with leased dependency provenance; timed siege activation remains separate.
 
 - [DB2 derived-faction refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) — atomic Zephras reconstruction and other importers' build-receipt preservation; source audit and private-copy proof.
 - [Pre-effect spell-hit target health](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health) — inclusive46, actual unit health before effects; missing authority rejects.
