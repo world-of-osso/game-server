@@ -26,6 +26,7 @@ const FORM_GHOST_WOLF: i32 = 16;
 struct ShapeshiftForm {
     display_id: u32,
     flags: u32,
+    creature_type: u32,
 }
 
 /// Authored display and cast-gating flags by form ID.
@@ -42,14 +43,18 @@ impl ShapeshiftForms {
             .filter(|&display| display != 0)
     }
 
+    pub(crate) fn creature_type(&self, form: i32) -> Option<u32> {
+        self.0.get(&form).map(|row| row.creature_type)
+    }
+
     pub(crate) fn flags(&self, form: i32) -> Option<u32> {
         self.0.get(&form).map(|row| row.flags)
     }
 }
 
 pub fn load_shapeshift_forms(conn: &Connection) -> rusqlite::Result<ShapeshiftForms> {
-    let mut stmt =
-        conn.prepare("SELECT ID, CreatureDisplayID, Flags FROM spell_shapeshift_form")?;
+    let mut stmt = conn
+        .prepare("SELECT ID, CreatureDisplayID, Flags, CreatureType FROM spell_shapeshift_form")?;
     let forms = stmt
         .query_map([], |r| {
             Ok((
@@ -57,6 +62,7 @@ pub fn load_shapeshift_forms(conn: &Connection) -> rusqlite::Result<ShapeshiftFo
                 ShapeshiftForm {
                     display_id: r.get::<_, i64>(1)? as u32,
                     flags: r.get::<_, i64>(2)? as u32,
+                    creature_type: r.get(3)?,
                 },
             ))
         })?
