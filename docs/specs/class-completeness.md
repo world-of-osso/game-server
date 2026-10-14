@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] Implemented weapon-spell miss, ranged deflection and block chances share one native integer roll0..9999 with cumulative probabilities truncated to hundredths of a percent. NativeNoAttackMiss/NoActiveDefense and existing target guards retain their ordering. Magic hit behavior remains separate. Missing dodge/parry, mechanic resistance and player baseline hit statistics remain explicit gaps; this bounded table does not certify the full source hit system.
+
 - [ ] Native weapon-spell blocks on ordinary NPCs use authenticated template `flags_extra` (NO_BLOCK16, distinct from NO_XP64), 3% plus victim aura51 and 1.5% per positive effective level difference. They stop native30% damage, or60% on a critical block, before shields. Shared facing/control/attribute exclusions remain intact. Missing template authority fails explicitly. Totem identity requires the source summon runtime, never creature type or title alone; unsupported Totem/Lightwell spawning and full cumulative hit-table ordering remain separate gaps.
 
 - [x] Record native cast/passive-sync outcomes, warning tuples and raw resources for all 13 classes/all 40 local Retail specs, using level-80 actors and real spell rows, without writing world.db or opening a realm port.
