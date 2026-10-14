@@ -161,6 +161,7 @@ mod tests {
             .init_resource::<crate::group::GroupRegistry>();
         h.app.world_mut().entity_mut(h.caster).insert((
             crate::persistence::ClientId(30),
+            shared::components::UnitLevel(10),
             DungeonDifficulty(1),
             copy,
             crate::lfg::PlayerLfgState::default(),
