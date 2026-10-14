@@ -104,8 +104,9 @@ fn class_completeness_native_charred_warblades_accumulates_fire_damage_then_heal
 #[test]
 fn class_completeness_native_charred_warblades_isolates_two_recipients() {
     let mut h = fixture();
-    let owner_damage = hit(&mut h, FIRE_HIT);
+    let owner_damage = hit(&mut h, CHAOS_HIT);
     let expected_owner = expected_heal(&h, owner_damage);
+    assert!(expected_owner > 0);
     let other = spawn_player(&mut h.app, 12, 2.0);
     h.app.world_mut().get_mut::<Health>(other).unwrap().current = 400.0;
     apply_aura(
@@ -119,11 +120,12 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
         },
     );
     let before = h.health(h.npc);
-    crate::spell_cast::cast_triggered(h.app.world_mut(), other, FIRE_HIT, Some(h.npc), 1);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), other, CHAOS_HIT, Some(h.npc), 1);
     h.advance(1);
     let other_damage = (before - h.health(h.npc)) as u32;
     assert!(other_damage > 0);
     let expected_other = expected_heal(&h, other_damage);
+    assert!(expected_other > 0);
     h.advance(22);
     assert_eq!(h.health(h.caster), 500.0 + expected_owner as f32);
     assert_eq!(h.health(other), 400.0 + expected_other as f32);
@@ -140,7 +142,8 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
 #[test]
 fn class_completeness_native_charred_warblades_unlearning_discards_pending_heals() {
     let mut h = fixture();
-    assert!(hit(&mut h, FIRE_HIT) > 0);
+    let damage = hit(&mut h, CHAOS_HIT);
+    assert!(expected_heal(&h, damage) > 0);
     let owner = h.caster;
     h.app
         .world_mut()
@@ -193,7 +196,8 @@ fn class_completeness_native_charred_warblades_truncates_each_hit_before_accumul
 #[test]
 fn class_completeness_native_charred_warblades_removal_discards_pending_heals() {
     let mut h = fixture();
-    assert!(hit(&mut h, FIRE_HIT) > 0);
+    let damage = hit(&mut h, CHAOS_HIT);
+    assert!(expected_heal(&h, damage) > 0);
     let unit = h.caster;
     remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {
         aura.spell_id == CHARRED
@@ -214,8 +218,9 @@ fn class_completeness_native_charred_warblades_removal_discards_pending_heals() 
         500.0,
         "replacement instance cannot inherit stale accumulated damage"
     );
-    let new_damage = hit(&mut h, FIRE_HIT);
+    let new_damage = hit(&mut h, CHAOS_HIT);
     let expected = expected_heal(&h, new_damage);
+    assert!(expected > 0);
     h.advance(22);
     assert_eq!(h.health(unit), 500.0 + expected as f32);
 }
@@ -223,8 +228,9 @@ fn class_completeness_native_charred_warblades_removal_discards_pending_heals() 
 #[test]
 fn class_completeness_native_charred_warblades_refresh_keeps_pending_heals() {
     let mut h = fixture();
-    let damage = hit(&mut h, FIRE_HIT);
+    let damage = hit(&mut h, CHAOS_HIT);
     let expected = expected_heal(&h, damage);
+    assert!(expected > 0);
     let unit = h.caster;
     apply_aura(
         h.app.world_mut(),
