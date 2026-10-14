@@ -1057,7 +1057,13 @@ fn try_swing(
     };
     // Typed detection was checked for this attacker before the swing.
     let attackable = flags.is_none_or(|flags| flags.can_be_attacked_by(!attacker.creature));
-    if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 || !attackable {
+    let range_bonus = attacker
+        .mods
+        .map_or(0.0, |mods| mods.autoattack_range_bonus);
+    if !in_melee_range(attacker.position, target_pos, range_bonus)
+        || health.current <= 0.0
+        || !attackable
+    {
         return None;
     }
     if !context.sight.sees(attacker.entity, target_entity) {
@@ -1277,9 +1283,11 @@ fn reset_swing_timers(auto_attack: &mut AutoAttack, hand: Hand, swing_time: f32)
     *other = other.max(ATTACK_DISPLAY_DELAY);
 }
 
-/// Check if two positions are within melee range.
-fn in_melee_range(a: &Position, b: &Position) -> bool {
-    distance(a, b) <= MELEE_RANGE
+/// TC IsWithinMeleeRangeAt: nominal range plus attacker-owned aura153 yards.
+/// Spell range does not consume this modifier.
+fn in_melee_range(a: &Position, b: &Position, range_bonus: f32) -> bool {
+    let range = MELEE_RANGE + range_bonus;
+    distance(a, b).powi(2) <= range * range
 }
 
 /// Euclidean distance between two positions.
