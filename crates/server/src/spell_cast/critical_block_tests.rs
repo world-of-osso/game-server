@@ -10,7 +10,7 @@ use shared::protocol::CombatLogKind;
 const CRITICAL_BLOCK: u32 = 76857;
 
 fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
-    let mut h = harness(Vec::new(), &[CRITICAL_BLOCK, 203524, 1464], 1).unwrap();
+    let mut h = harness(Vec::new(), &[CRITICAL_BLOCK, 203524, 1464, 17], 1).unwrap();
     let defender = spawn_player(&mut h.app, 1, 3.0);
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::duel::DuelOpponent(defender),
@@ -203,6 +203,16 @@ fn class_completeness_native_slam_rolls_block_and_critical_block_before_absorbs(
             .attack_power = 100.0;
         h.set_power(shared::components::PowerType::Rage, 1000.0);
         apply_mastery(&mut h, defender);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &AuraApplication {
+                caster: defender,
+                target: defender,
+                spell_id: 17,
+                effect_mask: 1,
+                source: AuraSource::Cast,
+            },
+        );
         h.inbox = Inbox::default();
         let health = h.health(defender);
         h.cast_and_deliver(1464, Some(defender));
@@ -220,16 +230,24 @@ fn class_completeness_native_slam_rolls_block_and_critical_block_before_absorbs(
             .collect();
         assert_eq!(hits.len(), 1);
         let hit = hits[0];
-        let total = hit.amount + hit.blocked;
+        let total = hit.amount + hit.blocked + hit.absorbed;
         // Active1464 effect462:3.03484988AP,5% variance. Fixture100AP.
         assert!(varied(303.0).contains(&(total as f32)), "{hit:?}");
         assert!(!hit.crit, "critical block is not a critical strike");
         if critical {
             // Spell blocks double50% BEFORE truncation: full block, unlike autoswings.
             assert_eq!(hit.amount, 0, "{hit:?}");
+            assert_eq!(
+                hit.absorbed, 0,
+                "full block precedes and preserves the shield"
+            );
             assert_eq!(h.health(defender), health);
         } else {
             assert_eq!(hit.blocked, (total as f32 * 0.5).trunc() as i32, "{hit:?}");
+            assert!(
+                hit.absorbed > 0,
+                "ordinary block must reduce damage before absorb"
+            );
             assert_eq!(health - h.health(defender), hit.amount as f32);
         }
     }
