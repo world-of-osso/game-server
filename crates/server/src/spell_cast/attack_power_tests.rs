@@ -412,3 +412,20 @@ fn class_completeness_native_mastery_ap_percent_consumes_live_raw_mastery_points
         assert!(crate::auras::has_aura(h.app.world(), h.caster, spell));
     }
 }
+
+#[test]
+fn class_completeness_native_owner_wire_publishes_distinct_ranged_attack_power() {
+    let h = actor(3);
+    let stats = h.app.world().get::<CharacterStats>(h.caster).unwrap();
+    assert!(stats.ranged_attack_power > stats.attack_power);
+    let owner_wire = serde_json::to_value(stats.derived()).unwrap();
+    assert_eq!(
+        owner_wire["attack_power"].as_f64(),
+        Some(f64::from(stats.attack_power))
+    );
+    assert_eq!(
+        owner_wire["ranged_attack_power"].as_f64(),
+        Some(f64::from(stats.ranged_attack_power)),
+        "ranged owner field must not be omitted or replaced with melee AP"
+    );
+}
