@@ -8,6 +8,8 @@ use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, 
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
 mod group_private;
+#[path = "toys_shrine_tests.rs"]
+mod shrine;
 
 const FIGURINE: u32 = 32782;
 const TRANSFORM: u32 = 41301;
