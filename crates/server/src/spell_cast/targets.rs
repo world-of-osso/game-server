@@ -406,7 +406,10 @@ pub fn select_targets(
                     0,
                 );
                 candidates.retain(|&unit| shares_raid(world, caster, unit));
-                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
+                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                units.extend(filter_area_sight(
+                    world, caster, spell, effect, caster_pos, candidates,
+                ));
             }
             Selector::RaidCorpses => {
                 selected_any = true;
@@ -463,7 +466,10 @@ pub fn select_targets(
                 selected_any = true;
                 let src = center.unwrap_or(caster_pos);
                 let candidates = area_units(world, caster, src, radius(effect, slot), relation, 0);
-                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
+                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                units.extend(filter_area_sight(
+                    world, caster, spell, effect, src, candidates,
+                ));
             }
             Selector::ConeEnemy
             | Selector::CasterLine
@@ -498,7 +504,10 @@ pub fn select_targets(
                 };
                 let candidates =
                     entry_area_units(world, caster, spell, effect, origin, radius(effect, slot));
-                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
+                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                units.extend(filter_area_sight(
+                    world, caster, spell, effect, origin, candidates,
+                ));
             }
             Selector::ConeEntry => {
                 selected_any = true;
@@ -521,7 +530,10 @@ pub fn select_targets(
                     .or_else(|| explicit.and_then(|target| position(world, target)))
                     .unwrap_or(caster_pos);
                 let candidates = area_units(world, caster, dest, radius(effect, slot), relation, 0);
-                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
+                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                units.extend(filter_area_sight(
+                    world, caster, spell, effect, dest, candidates,
+                ));
             }
         }
     }
@@ -531,6 +543,37 @@ pub fn select_targets(
     units = limit_spell_targets(spell, caster, units, 0);
     units.dedup();
     Ok(units)
+}
+
+/// TC a352b1fa SelectImplicitAreaTargets passes center to AddUnitTarget;
+/// CheckEffectTarget tests recipient-to-center LOS after the target cap.
+fn filter_area_sight(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    center: Vec3,
+    units: Vec<Entity>,
+) -> Vec<Entity> {
+    if super::attributes(spell, 2) & super::SPELL_ATTR2_IGNORE_LINE_OF_SIGHT != 0 {
+        return units;
+    }
+    // SharedDefines.h SPELL_ATTR5_ALWAYS_AOE_LINE_OF_SIGHT and
+    // DBCEnums.h SpellEffectAttributes::AlwaysAoeLineOfSight.
+    const ALWAYS_AOE_LINE_OF_SIGHT: u32 = 0x0400_0000;
+    const EFFECT_ALWAYS_AOE_LINE_OF_SIGHT: u32 = 0x0000_0020;
+    let needs_caster_sight = super::attributes(spell, 5) & ALWAYS_AOE_LINE_OF_SIGHT != 0
+        || effect.attributes & EFFECT_ALWAYS_AOE_LINE_OF_SIGHT != 0;
+    units
+        .into_iter()
+        .filter(|&unit| {
+            let center_clear = crate::line_of_sight::sees_area_center(world, unit, center);
+            let caster_clear = !needs_caster_sight
+                || unit == caster
+                || crate::line_of_sight::sees_in_world(world, caster, unit);
+            center_clear && caster_clear
+        })
+        .collect()
 }
 
 fn area_game_objects(world: &mut World, caster: Entity, center: Vec3, radius: f32) -> Vec<Entity> {

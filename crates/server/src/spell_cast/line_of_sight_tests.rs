@@ -13,6 +13,7 @@ use crate::line_of_sight::{LineOfSight, WITNESS_END_TOLERANCE};
 use crate::maps::InMap;
 
 const FIREBALL: u32 = 133;
+const ARCANE_EXPLOSION: u32 = 1449;
 /// Kobold Vermin's display: an eye row of the bake.
 const KOBOLD_DISPLAY: u32 = 10913;
 
@@ -153,6 +154,134 @@ fn the_wall_beside_the_abbey_door_blocks_the_same_line_moved_aside() {
     assert_eq!(
         cast(&mut h, Some(straight)),
         Some(CastFailReason::LineOfSight)
+    );
+}
+
+fn area_wall_harness() -> Harness {
+    let mut h = harness(Vec::new(), &[ARCANE_EXPLOSION], 8).unwrap();
+    let mut sight = LineOfSight::load(&crate::ground::ground_data_dir().join("los")).unwrap();
+    let wall = std::sync::Arc::new(los::LosTile::build(
+        32,
+        32,
+        vec![
+            Vec3::new(2.0, -5.0, -10.0),
+            Vec3::new(2.0, 10.0, -10.0),
+            Vec3::new(2.0, 10.0, 10.0),
+            Vec3::new(2.0, -5.0, 10.0),
+        ],
+        vec![[0, 1, 2], [0, 2, 3]],
+    ));
+    sight.set_live_hulls(std::collections::HashMap::from([(
+        InMap::continent(0),
+        vec![wall],
+    )]));
+    h.app.insert_resource(sight);
+    h.app.world_mut().entity_mut(h.npc).insert(ModelDisplay {
+        display_id: KOBOLD_DISPLAY,
+    });
+    let visible = spawn_npc(&mut h.app, -3.0);
+    h.app.world_mut().entity_mut(visible).insert(ModelDisplay {
+        display_id: KOBOLD_DISPLAY,
+    });
+    assert!(!crate::line_of_sight::sees_in_world(
+        h.app.world(),
+        h.npc,
+        h.caster
+    ));
+    assert!(crate::line_of_sight::sees_in_world(
+        h.app.world(),
+        visible,
+        h.caster
+    ));
+    h
+}
+
+/// TC a352b1fa SelectImplicitAreaTargets -> AddUnitTarget(center) ->
+/// CheckEffectTarget: the hit must have LOS to the area center.
+#[test]
+fn arcane_explosion_hits_visible_units_but_not_units_behind_a_wall() {
+    let mut h = area_wall_harness();
+    let visible = h
+        .app
+        .world_mut()
+        .query::<(Entity, &Position)>()
+        .iter(h.app.world())
+        .find(|(_, at)| at.x == -3.0)
+        .unwrap()
+        .0;
+    h.cast_and_deliver(ARCANE_EXPLOSION, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(visible)
+            .unwrap()
+            .current
+            < 5000.0
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(h.npc)
+            .unwrap()
+            .current,
+        5000.0,
+        "area damage must not pass through the wall"
+    );
+}
+
+#[test]
+fn area_hit_sight_uses_destination_center_and_authored_los_flags() {
+    let mut h = area_wall_harness();
+    let native = world_db()
+        .unwrap()
+        .store
+        .get(ARCANE_EXPLOSION)
+        .unwrap()
+        .clone();
+    assert_eq!(
+        super::attributes(&native, 2) & 4,
+        0,
+        "native Arcane Explosion does not ignore LOS"
+    );
+    let mut spell = native.clone();
+    // Isolate the destination selector with native radius/damage metadata.
+    let mut effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.implicit_targets.contains(&15))
+        .unwrap()
+        .clone();
+    effect.implicit_targets = [87, 16];
+    spell.cast_destination = Some([3.0, 0.0, 0.0]);
+    let select = |h: &mut Harness,
+                  spell: &crate::spell_info::SpellInfo,
+                  effect: &crate::spell_info::SpellEffect| {
+        super::targets::select_targets(h.app.world_mut(), h.caster, None, spell, effect, 0, false)
+            .unwrap()
+    };
+    let units = select(&mut h, &spell, &effect);
+    assert_eq!(
+        units,
+        vec![h.npc],
+        "recipient sees center even though caster cannot see recipient"
+    );
+    spell.attributes[5] |= 0x0400_0000;
+    assert!(
+        select(&mut h, &spell, &effect).is_empty(),
+        "authored always-AOE-LOS also requires caster sight"
+    );
+    spell.attributes[5] = native.attributes[5];
+    effect.attributes |= 0x20;
+    assert!(
+        select(&mut h, &spell, &effect).is_empty(),
+        "effect always-AOE-LOS also requires caster sight"
+    );
+    spell.attributes[2] |= 4;
+    assert_eq!(
+        select(&mut h, &spell, &effect).len(),
+        2,
+        "ignore-LOS bypasses both checks"
     );
 }
 
