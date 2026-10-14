@@ -19,7 +19,7 @@ from encounter_order import load_order
 EVENTS = {0, 4, 6, 7, 8, 11, 17, 19, 20, 23, 25, 35, 40, 54, 55, 56, 57, 58, 61, 65}
 ACTIONS = {1, 2, 6, 11, 12, 17, 22, 29, 33, 37, 41, 53, 54, 55, 59, 64, 65, 66, 80, 81, 82, 83, 107, 152}
 TARGETS = {0, 1, 2, 5, 7, 8, 12, 16, 19}
-# TC a352b1fa Murder Row / Kings' Rest / Deadmines headers and instances identify these primaries,
+# TC a352b1fa Murder Row / Kings' Rest / Ragefire / Deadmines headers and instances identify these primaries,
 # even where no placement/model join is available. These census facts do not bind runtime credit.
 CPP_IDENTITIES = {(2813,3101): [234648], (2813,3102): [234649],
                   (2813,3103): [234647], (2813,3105): [237415], (1762,2139): [135322],
@@ -27,7 +27,8 @@ CPP_IDENTITIES = {(2813,3101): [234648], (2813,3102): [234649],
                   (36,2977): [47296], (36,2982): [47296],
                   (36,2975): [43778], (36,2980): [43778],
                   (36,2974): [47626], (36,2979): [47626],
-                  (36,2973): [47739], (36,2978): [47739], (36,1081): [49541]}
+                  (36,2973): [47739], (36,2978): [47739], (36,1081): [49541],
+                  (389,1445): [61463]}
 # Header e3beb3f1a16472f10655148b1cd6ffd07187ff58aa0b6fee3ebfc584bcc9944a;
 # instance 156a63da23e1ac0f725ba9d1b7397a024b61077537816e279cef4dba54f749af.
 DEADMINES_SOURCE_GAPS = [
@@ -38,8 +39,13 @@ DEADMINES_SOURCE_GAPS = [
 PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240,474183,1223906,1217989,1265412],
                  'boss_the_golden_serpent': [265773,265781,265910,265923],
                  'boss_dark_shaman_koranthal': [119928,119300,119971,119973],
-                 'boss_lava_guard_gordoth': [119999,120024,50420]}
+                 'boss_lava_guard_gordoth': [119999,120024,50420],
+                 'boss_slagmaw': [119434,120384,119424,119425,119426,119428]}
 PARTIAL_GAPS = {
+    'boss_slagmaw': [
+        'source five Lava Spits/Submerge/nonrepeat teleport/emerge and model-reach boundary supported; server-side spells/model geometry are separate reviewed-copy imports',
+        'pinned NPC61463/BOSS2 maps encounter1445 despite Journal preview38391 versus live TDB model42247; no display replacement or inferred identity from appearance',
+        'primary binding prepared for lead review; accessory61800/encounter-frame engage, loot/lockout/native/full-instance proof remain open'],
     'boss_lava_guard_gordoth': [
         'source already-started relocation,first7.3s Ground/13.3s Seismic and one-shot below31-percent enrage/30s evade-respawn supported; Seismic uses only source0x2 cooldown flag',
         'repeat12.1s/36.3s callbacks coded but moving-target/native proof unproved; source jump/landing/vial state/researcher self-death supported; landing home/facing and ordinary-player AT7899 rotated-box entry/same-copy lookup/OnlyOnce supported; GM/cage task/animkit/native jump gaps; map389 navigation absent',
@@ -208,7 +214,7 @@ def render(records, database, revision):
         priorities.append(f"|{rank}|{p['tier']}|{r['map_id']} {r['instance']}|{refs}; {p['reason']}|")
     lines = ['# Hosted encounter coverage', '', 'Verified: 2026-10-13. **Census, not completion certification.**', '',
              f'Server revision: `{revision}`. Input: `{database}` (read-only).',
-             'Sources: local TDB1210, DB2 12.1.0.69933 JournalEncounter/Creature and Map/DungeonEncounter; work-order relations: locally extracted DisplaySeason4279827, MythicPlusSeasonTrackedMap4521365, JournalTier1349056, JournalTierXInstance1285009, MapChallengeMode801709 and LFGDungeons1361033. TC a352b1fa Murder Row/KingsRest/Deadmines headers and instance scripts supply primary actor identities; pinned hashes are in scripts/encounter_cpp_bindings.py and scripts/encounter_coverage.py.', '',
+             'Sources: local TDB1210, DB2 12.1.0.69933 JournalEncounter/Creature and Map/DungeonEncounter; work-order relations: locally extracted DisplaySeason4279827, MythicPlusSeasonTrackedMap4521365, JournalTier1349056, JournalTierXInstance1285009, MapChallengeMode801709 and LFGDungeons1361033. TC a352b1fa Murder Row/KingsRest/Ragefire/Deadmines headers and instance scripts supply primary actor identities; pinned hashes are in scripts/encounter_cpp_bindings.py and scripts/encounter_coverage.py.', '',
              'Every DungeonEncounter difficulty record and Journal-only encounter on an admissible party/raid map is retained. Garrisons excluded. A missing spawn is not a hosted fight. Display joins identify candidate actors; only imported bindings/compatibility data authorize kill credit. Multi-actor completion remains unproved.', '',
              '“Admitted casts” means current interpreter vocabulary or an existing Stockade Rust port, not correct damage, targeting, phases or complete boss mechanics. Spell effects, conditions, triggered chains and source-9 lists require behavioral certification. “Wired” is code reachability, not passing engage→kill→loot proof. Spawn counts are database placements, not observed live entities. Loot rows/gold are bindings, not awarded loot proof.', '',
              *priorities, '',

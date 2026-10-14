@@ -6,7 +6,8 @@ use std::path::{Path, PathBuf};
 
 const MAX_PATH: usize = 2048;
 const MAX_NODES: i32 = 8192;
-const NEAREST_EXTENTS: [f32; 3] = [0.8, 2.0, 0.8];
+// TC a352b1fa PathGenerator.cpp:141 nominal Y5; no Y50 retry or shortcuts.
+const NEAREST_EXTENTS: [f32; 3] = [0.8, 5.0, 0.8];
 
 /// Owns a mesh and its mutable query scratch space; callers serialize queries with &mut.
 /// Artifacts are trusted outputs of nav-bake, not network-supplied Detour buffers.
@@ -51,6 +52,45 @@ impl NavigationMap {
             )?;
         }
         Ok(map)
+    }
+
+    /// Native MovePositionToFirstCollision's Detour walkable-surface ray.
+    pub fn first_collision(&mut self, start: Vec3, end: Vec3) -> Result<Vec3, String> {
+        self.load_around(start, end)?;
+        let filter = filter();
+        let (reference, start_pos) = self.nearest(start, &filter)?;
+        let mut t = 0.0;
+        let mut normal = [0.0; 3];
+        let mut corridor = [0; MAX_PATH];
+        let mut count = 0;
+        // SAFETY: initialized query, loaded polygon and bounded output arrays.
+        let result = unsafe {
+            (*self.query).raycast(
+                reference,
+                start_pos.as_ptr(),
+                end.to_array().as_ptr(),
+                &filter,
+                &mut t,
+                normal.as_mut_ptr(),
+                corridor.as_mut_ptr(),
+                &mut count,
+                MAX_PATH as i32,
+            )
+        };
+        status(result, "surface raycast")?;
+        if result & DT_BUFFER_TOO_SMALL != 0 || count == 0 {
+            return Err("incomplete surface raycast".into());
+        }
+        let start = Vec3::from_array(start_pos);
+        let distance = Vec3::new(end.x - start.x, 0.0, end.z - start.z).length();
+        let fraction = if t > 1.0 {
+            1.0
+        } else {
+            (t - 0.5 / distance.max(0.5)).max(0.0)
+        };
+        let endpoint = start.lerp(end, fraction);
+        let (_, projected) = self.nearest(endpoint, &filter)?;
+        Ok(Vec3::from_array(projected))
     }
 
     pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
@@ -334,6 +374,77 @@ mod tests {
     }
     fn wow(x: f32, y: f32, z: f32) -> Vec3 {
         Vec3::new(x, z, -y)
+    }
+
+    #[test]
+    #[ignore = "requires FOLLOWER_RUBY_DATA and FOLLOWER_RUBY_GROUND local authored assets"]
+    fn ruby_metalplate_doorway_routes_over_authored_collision() {
+        let data = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_DATA").unwrap());
+        let ground = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_GROUND").unwrap());
+        let db = rusqlite::Connection::open_with_flags(
+            std::env::var("FOLLOWER_RUBY_WORLD_DB").unwrap(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let wdt: u32 = db
+            .query_row("SELECT WdtFileDataID FROM map WHERE ID=2521", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        let mut baker = los::bake::Baker::for_navigation(&data);
+        let tiles = baker.map_tiles(wdt).unwrap();
+        let (geometry, _) = baker.collect_tile(&tiles, (32, 29)).unwrap().unwrap();
+        assert!(
+            baker.problems.is_empty(),
+            "authored collision gaps: {:?}",
+            baker.problems
+        );
+        let baked = crate::bake::bake_collected(&geometry, &[], (32, 29)).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("32_29.nav"), baked).unwrap();
+        let mut nav = NavigationMap::open(dir.path()).unwrap();
+        // Opposite actual component edges at WMO4391189/MODD753 metalplate4496145.
+        let start = Vec3::new(1591.1461, 127.144, 200.2604);
+        let end = Vec3::new(1590.1045, 127.144, 202.60416);
+        let path = nav
+            .path(start, end)
+            .expect("authored metalplate doorway must remain traversable");
+        let mut los = los::LosMap::new(&ground.join("los/2521"));
+        for segment in path.windows(2) {
+            assert!(
+                los.clear(segment[0] + Vec3::Y * 2.0, segment[1] + Vec3::Y * 2.0)
+                    .unwrap(),
+                "doorway route crosses collision: {segment:?}"
+            );
+        }
+        eprintln!("Ruby metalplate doorway route: {path:?}");
+        let approach = nav
+            .path(
+                wow(1386.2, -169.719, 131.0),
+                wow(1551.33, -257.688, 126.01431),
+            )
+            .expect("actual entrance must reach the collected boss floor");
+        for segment in approach.windows(2) {
+            assert!(
+                los.clear(segment[0] + Vec3::Y * 2.0, segment[1] + Vec3::Y * 2.0)
+                    .unwrap(),
+                "Ruby approach crosses collision: {segment:?}"
+            );
+        }
+        eprintln!(
+            "Ruby entrance to collected boss floor: {} corners",
+            approach.len()
+        );
+        nav.path(
+            wow(1386.2, -169.719, 131.0),
+            wow(1551.33, -257.688, 129.782),
+        )
+        .expect("TC nominal vertical search must resolve the unchanged authored boss height");
+        assert!(
+            nav.path(wow(1386.2, -169.719, 131.0), wow(1551.33, -257.688, 133.0))
+                .is_err(),
+            "a boss-column point beyond the nominal vertical extent must not use the TC larger-search fallback"
+        );
     }
 
     #[test]
