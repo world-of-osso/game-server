@@ -89,6 +89,69 @@ fn grey_kill_grants_no_reputation() {
 }
 
 #[test]
+fn initial_reputation_update_restores_persisted_watch_without_a_journeys_query() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let h = crate::bank_test_harness::harness_at(file.path(), "Barlogin").unwrap();
+    let character = h.character_id;
+    let registry = default_faction_registry();
+    let mut reputation = CharacterReputation::new_for_race(&registry, 1);
+    reputation.set_rep(72, 3800);
+    reputation.watch(72);
+    crate::persistence::save_reputation(h.db(), character, &reputation);
+    drop(h);
+    let mut reopened = crate::bank_test_harness::harness_at(file.path(), "Barloginprobe").unwrap();
+    reopened.play_as(character);
+    let persisted = crate::persistence::load_reputation(reopened.db(), character, || {
+        panic!("persisted watch required")
+    });
+    reopened
+        .app
+        .world_mut()
+        .entity_mut(reopened.player)
+        .insert(persisted);
+    reopened.app.insert_resource(ReputationRegistry(registry));
+    reopened
+        .app
+        .add_systems(Update, send_initial_reputation_snapshot);
+    reopened
+        .app
+        .world_mut()
+        .entity_mut(reopened.connection)
+        .remove::<InWorld>();
+    reopened
+        .app
+        .world_mut()
+        .entity_mut(reopened.connection)
+        .insert((
+            InWorld {
+                character_id: character,
+            },
+            MessageSender::<ReputationStateUpdate>::default(),
+            MessageReceiver::<ReputationStateUpdate>::default(),
+        ));
+    let mut updates = Vec::new();
+    for _ in 0..10 {
+        reopened.app.update();
+        updates.extend(
+            reopened
+                .app
+                .world_mut()
+                .get_mut::<MessageReceiver<ReputationStateUpdate>>(reopened.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    let watched = updates
+        .into_iter()
+        .find_map(|update| update.snapshot.and_then(|snapshot| snapshot.watched))
+        .expect("login must publish watched bar without RenownRequest");
+    assert_eq!(
+        (watched.faction_id, watched.value, watched.maximum),
+        (72, 800, 6000)
+    );
+}
+
+#[test]
 fn watched_bar_reads_real_renown_progress_and_standard_tier_values_without_catalog_delivery() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let h = crate::bank_test_harness::harness_at(file.path(), "Barseeker").unwrap();
