@@ -10,6 +10,9 @@ use crate::auras::{ActiveAuras, handlers, mechanic_immunity};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 const ATTR0_NO_IMMUNITIES: u32 = 0x2000_0000;
+const ATTR0_NO_ACTIVE_DEFENSE: u32 = 0x0020_0000;
+const ATTR3_COMPLETELY_BLOCKED: u32 = 0x8;
+const ATTR8_NO_ATTACK_BLOCK: u32 = 0x1;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const DEFENSE_MAGIC: u32 = 1;
@@ -36,6 +39,9 @@ pub(super) fn remove_defended_targets(
         .into_iter()
         .map(|unit| (unit, MissKind::Immune));
     for (unit, kind) in misses.into_iter().chain(immune_misses) {
+        if kind == MissKind::Block && attributes(spell, 3) & ATTR3_COMPLETELY_BLOCKED == 0 {
+            continue;
+        }
         log_event(
             world,
             cast_event(caster, Some(unit), spell, CombatLogKind::Miss(kind)),
@@ -57,7 +63,11 @@ fn remove_immune_effect_targets(
         planned.units.retain(|unit| {
             // A whole-spell miss removes every effect on that unit. Numeric
             // Dummy markers cannot turn an immune primary into a successful hit.
-            if misses.iter().any(|(missed, _)| missed == unit) {
+            if misses.iter().any(|(missed, kind)| {
+                missed == unit
+                    && (*kind != MissKind::Block
+                        || attributes(spell, 3) & ATTR3_COMPLETELY_BLOCKED != 0)
+            }) {
                 return false;
             }
             if crate::auras::effect_immunity::blocks_effect(world, *unit, spell, effect)
@@ -69,6 +79,16 @@ fn remove_immune_effect_targets(
             }
             true
         });
+        planned.blocked_units = planned
+            .units
+            .iter()
+            .copied()
+            .filter(|unit| {
+                misses
+                    .iter()
+                    .any(|(missed, kind)| *missed == *unit && *kind == MissKind::Block)
+            })
+            .collect();
     }
     // TC UpdateSpellCastDataTargets: immune only when no effect still hits the unit.
     immune_units.retain(|unit| !plan.iter().any(|planned| planned.units.contains(unit)));
@@ -125,17 +145,68 @@ fn roll_defense(
     if can_miss && roll_percent(chance) {
         return Some(MissKind::Miss);
     }
-    let auras = auras?;
     let deflectable = matches!(defense, DEFENSE_MAGIC | DEFENSE_RANGED);
-    let controlled = auras.is_stunned() || auras.is_confused();
-    if deflectable
-        && !controlled
-        && can_deflect_from(world, caster, unit, auras)
-        && roll_percent(auras.modifier(handlers::DEFLECT_SPELLS))
-    {
+    let deflected = auras.is_some_and(|auras| {
+        let controlled = auras.is_stunned() || auras.is_confused();
+        deflectable
+            && !controlled
+            && can_deflect_from(world, caster, unit, Some(auras))
+            && roll_percent(auras.modifier(handlers::DEFLECT_SPELLS))
+    });
+    if deflected {
         return Some(MissKind::Deflect);
     }
+    if matches!(defense, DEFENSE_MELEE | DEFENSE_RANGED)
+        && roll_player_spell_block(world, caster, spell, unit, auras)
+    {
+        return Some(MissKind::Block);
+    }
     None
+}
+
+/// Player shields, Unit::MeleeSpellHitResult2610–2741. NPC block remains a
+/// separate unproved boundary; do not certify the generic aura253 handler here.
+fn roll_player_spell_block(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    unit: Entity,
+    auras: Option<&ActiveAuras>,
+) -> bool {
+    if world.get::<shared::components::Player>(unit).is_none() {
+        return false;
+    }
+    let disabled = attributes(spell, 0) & ATTR0_NO_ACTIVE_DEFENSE != 0
+        || attributes(spell, 8) & ATTR8_NO_ATTACK_BLOCK != 0;
+    if disabled || caster_ignores_spell_block(world, caster, spell) {
+        return false;
+    }
+    let controlled =
+        auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared());
+    let casting = world.get::<shared::casting::CastState>(unit).is_some();
+    if controlled || casting {
+        return false;
+    }
+    if !can_deflect_from(world, caster, unit, auras) {
+        return false;
+    }
+    world
+        .get::<crate::stats::CharacterStats>(unit)
+        .is_some_and(|stats| stats.defense.shield_block > 0.0 && roll_percent(stats.defense.block))
+}
+
+fn caster_ignores_spell_block(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    const IGNORE_COMBAT_RESULT: u32 = 186;
+    const MELEE_HIT_BLOCK: i32 = 3;
+    world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            aura.effects.iter().any(|effect| {
+                effect.aura_type == IGNORE_COMBAT_RESULT
+                    && effect.misc_values[0] == MELEE_HIT_BLOCK
+                    && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
+            })
+        })
+    })
 }
 
 fn incoming_miss_chance(
@@ -193,8 +264,13 @@ fn attacker_hit_modifier(auras: &ActiveAuras, defense: u32, school: u32) -> f32 
         .sum()
 }
 
-fn can_deflect_from(world: &World, caster: Entity, unit: Entity, auras: &ActiveAuras) -> bool {
-    if auras.has_type(handlers::IGNORE_HIT_DIRECTION) {
+fn can_deflect_from(
+    world: &World,
+    caster: Entity,
+    unit: Entity,
+    auras: Option<&ActiveAuras>,
+) -> bool {
+    if auras.is_some_and(|auras| auras.has_type(handlers::IGNORE_HIT_DIRECTION)) {
         return true;
     }
     let (Some(from), Some(to)) = (

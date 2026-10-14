@@ -40,6 +40,9 @@ use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
+/// TC SharedDefines.h592: ignore armor/crit/block damage-taken adjustments.
+const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x100;
+
 pub const EFFECT_INSTAKILL: u32 = 1;
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
@@ -957,6 +960,26 @@ fn creature_type_damage_multiplier(
     mods.damage_done_versus(crate::unit_creature_type::mask(kind))
 }
 
+/// Unit.cpp1243–1257: spell blocks double integer percentage before truncating
+/// the resulting amount, with a full-block cap. Critical block is not a crit hit.
+fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f32) -> (f32, f32) {
+    let stats = world
+        .get::<CharacterStats>(target)
+        .expect("blocked player retains native shield stats");
+    let caster = UnitScaling::of(world, ctx.caster);
+    let victim = UnitScaling::of(world, target);
+    let constant = world
+        .resource::<ArmorConstants>()
+        .at(caster.level_against(&victim))
+        .expect("native armor constant for blocked spell caster level");
+    let mut percent = stats.defense.blocked_pct(constant).trunc();
+    if crate::combat::roll_critical_block(world.get::<crate::auras::ActiveAuras>(target)) {
+        percent *= 2.0;
+    }
+    let blocked = (amount * percent / 100.0).trunc().min(amount);
+    (amount - blocked, blocked)
+}
+
 fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
@@ -1018,6 +1041,15 @@ fn deal_damage_and_report(
     } else {
         amount
     };
+    let blockable = !periodic
+        && !resolved_source
+        && super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0;
+    let (amount, blocked) =
+        if blockable && super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target) {
+            spell_block_damage(world, ctx, target, amount)
+        } else {
+            (amount, 0.0)
+        };
     let amount = if periodic {
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, true, amount)
     } else {
@@ -1086,6 +1118,7 @@ fn deal_damage_and_report(
     crate::creature_aggro::add_school_threat(world, target, ctx.caster, amount, school);
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);
     event.amount = amount as i32;
+    event.blocked = blocked as i32;
     event.overflow = overkill as i32;
     event.absorbed = absorbed as i32;
     event.crit = crit;
