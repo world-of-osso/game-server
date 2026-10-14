@@ -1,9 +1,9 @@
-//! Mount favourites persist fresh account ownership before live journal replies.
+//! Mount favourites and dependent random reads retain durable FIFO ordering.
 use super::*;
 use crate::persistence_writer::CommitReceipt;
 use std::collections::VecDeque;
 
-struct FavouriteSession {
+struct MountSession {
     connection: Entity,
     player: Entity,
     account: u64,
@@ -11,12 +11,20 @@ struct FavouriteSession {
 }
 
 struct PendingFavourite {
-    session: FavouriteSession,
+    session: MountSession,
     receipt: CommitReceipt,
 }
 
+struct PendingRandom {
+    session: MountSession,
+    receipt: CommitReceipt<mount_store::AccountMounts>,
+}
+
 #[derive(Resource, Default)]
-pub(super) struct PendingMountFavourites(VecDeque<PendingFavourite>);
+pub(super) struct PendingMountRequests {
+    favourites: VecDeque<PendingFavourite>,
+    randoms: VecDeque<PendingRandom>,
+}
 
 pub(super) fn enqueue_mount_favourite(
     world: &mut World,
@@ -25,10 +33,7 @@ pub(super) fn enqueue_mount_favourite(
     player: Entity,
     request: SetMountFavourite,
 ) {
-    let character = world
-        .get::<InWorld>(connection)
-        .expect("in-world mount requester")
-        .character_id;
+    let session = capture_mount_session(world, connection, account, player);
     let receipt = world
         .resource::<GameDatabase>()
         .writer
@@ -36,25 +41,54 @@ pub(super) fn enqueue_mount_favourite(
             mount_store::favourite(db, account, request.mount_id, request.favourite)
         });
     world
-        .resource_mut::<PendingMountFavourites>()
-        .0
-        .push_back(PendingFavourite {
-            session: FavouriteSession {
-                connection,
-                player,
-                account,
-                character,
-            },
-            receipt,
-        });
+        .resource_mut::<PendingMountRequests>()
+        .favourites
+        .push_back(PendingFavourite { session, receipt });
 }
 
-impl PendingMountFavourites {
-    fn drain_completed(&mut self) -> Vec<(FavouriteSession, Result<(), String>)> {
+pub(super) fn enqueue_random_mount(
+    world: &mut World,
+    connection: Entity,
+    account: u64,
+    player: Entity,
+) {
+    let session = capture_mount_session(world, connection, account, player);
+    let receipt = world
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("random mount ownership", move |db| {
+            Ok(mount_store::load(db, account))
+        });
+    world
+        .resource_mut::<PendingMountRequests>()
+        .randoms
+        .push_back(PendingRandom { session, receipt });
+}
+
+fn capture_mount_session(
+    world: &World,
+    connection: Entity,
+    account: u64,
+    player: Entity,
+) -> MountSession {
+    let character = world
+        .get::<InWorld>(connection)
+        .expect("in-world mount requester")
+        .character_id;
+    MountSession {
+        connection,
+        player,
+        account,
+        character,
+    }
+}
+
+impl PendingMountRequests {
+    fn drain_favourites(&mut self) -> Vec<(MountSession, Result<(), String>)> {
         let mut completed = Vec::new();
-        while let Some(result) = self.0.front().and_then(|job| job.receipt.result()) {
+        while let Some(result) = self.favourites.front().and_then(|job| job.receipt.result()) {
             let job = self
-                .0
+                .favourites
                 .pop_front()
                 .expect("completed mount favourite receipt");
             completed.push((job.session, result));
@@ -62,18 +96,30 @@ impl PendingMountFavourites {
         completed
     }
 
+    fn drain_randoms(&mut self) -> Vec<(MountSession, Result<mount_store::AccountMounts, String>)> {
+        let mut completed = Vec::new();
+        while let Some(result) = self.randoms.front().and_then(|job| job.receipt.result()) {
+            let job = self
+                .randoms
+                .pop_front()
+                .expect("completed random ownership receipt");
+            completed.push((job.session, result));
+        }
+        completed
+    }
+
     #[cfg(test)]
     pub(super) fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.favourites.is_empty() && self.randoms.is_empty()
     }
 }
 
 pub(super) fn publish_mount_favourites(world: &mut World) {
     let completed = world
-        .resource_mut::<PendingMountFavourites>()
-        .drain_completed();
+        .resource_mut::<PendingMountRequests>()
+        .drain_favourites();
     for (session, result) in completed {
-        if !has_favourite_session(world, &session) {
+        if !has_mount_session(world, &session) {
             continue;
         }
         match result {
@@ -83,7 +129,23 @@ pub(super) fn publish_mount_favourites(world: &mut World) {
     }
 }
 
-fn has_favourite_session(world: &World, session: &FavouriteSession) -> bool {
+pub(super) fn publish_random_mounts(world: &mut World) {
+    let completed = world.resource_mut::<PendingMountRequests>().drain_randoms();
+    for (session, result) in completed {
+        if !has_mount_session(world, &session) {
+            continue;
+        }
+        let outcome = result.and_then(|owned| {
+            broadcast_account(world, session.account);
+            summon_random_from_ownership(world, session.player, &owned)
+        });
+        if let Err(error) = outcome {
+            send_snapshot(world, session.connection, session.player, Some(error));
+        }
+    }
+}
+
+fn has_mount_session(world: &World, session: &MountSession) -> bool {
     let authenticated = world
         .get::<Authenticated>(session.connection)
         .is_some_and(|auth| auth.account_id == session.account);

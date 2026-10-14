@@ -25,12 +25,15 @@ pub(crate) struct MountCatalog {
 pub(crate) struct AccountMounts(pub mount_store::AccountMounts);
 
 mod actor;
-use actor::{PendingMountFavourites, enqueue_mount_favourite, publish_mount_favourites};
+use actor::{
+    PendingMountRequests, enqueue_mount_favourite, enqueue_random_mount, publish_mount_favourites,
+    publish_random_mounts,
+};
 
 pub struct MountJournalPlugin;
 impl Plugin for MountJournalPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<PendingMountFavourites>()
+        app.init_resource::<PendingMountRequests>()
             .add_systems(Startup, load_catalog)
             .add_systems(Update, update_mount_journal);
     }
@@ -40,6 +43,7 @@ impl Plugin for MountJournalPlugin {
 // account state initialized first; replies are queued before Lightyear's send cycle.
 fn update_mount_journal(world: &mut World) {
     publish_mount_favourites(world);
+    publish_random_mounts(world);
     sync_accounts(world);
     publish_mount_changes(world);
     receive_favourites(world);
@@ -340,17 +344,24 @@ fn receive_favourites(world: &mut World) {
     }
 }
 
+#[cfg(test)]
 fn random_candidates(world: &World, player: Entity) -> Vec<u32> {
+    world
+        .get::<AccountMounts>(player)
+        .map(|mounts| random_candidates_from_ownership(world, player, &mounts.0))
+        .unwrap_or_default()
+}
+
+fn random_candidates_from_ownership(
+    world: &World,
+    player: Entity,
+    owned: &mount_store::AccountMounts,
+) -> Vec<u32> {
     world
         .resource::<MountCatalog>()
         .entries
         .values()
-        .filter(|entry| {
-            world
-                .get::<AccountMounts>(player)
-                .is_some_and(|mounts| mounts.0.get(&entry.mount_id) == Some(&true))
-                && usable(world, player, entry)
-        })
+        .filter(|entry| owned.get(&entry.mount_id) == Some(&true) && usable(world, player, entry))
         .map(|entry| entry.mount_id)
         .collect()
 }
@@ -378,19 +389,22 @@ fn receive_summons(world: &mut World) {
             send_snapshot(world, connection, player, Some(error));
         }
     }
-    for (connection, _, player, _) in requests::<SummonRandomFavouriteMount>(world) {
-        let candidates = random_candidates(world, player);
-        #[cfg(test)]
-        eprintln!("mount random request received for {player:?}: candidates={candidates:?}");
-        let result = candidates
-            .choose(&mut rand::thread_rng())
-            .copied()
-            .ok_or_else(|| "No usable favourite mounts.".to_string())
-            .and_then(|id| summon(world, player, id));
-        if let Err(error) = result {
-            send_snapshot(world, connection, player, Some(error));
-        }
+    for (connection, account, player, _) in requests::<SummonRandomFavouriteMount>(world) {
+        enqueue_random_mount(world, connection, account, player);
     }
+}
+
+fn summon_random_from_ownership(
+    world: &mut World,
+    player: Entity,
+    owned: &mount_store::AccountMounts,
+) -> Result<(), String> {
+    let candidates = random_candidates_from_ownership(world, player, owned);
+    candidates
+        .choose(&mut rand::thread_rng())
+        .copied()
+        .ok_or_else(|| "No usable favourite mounts.".to_string())
+        .and_then(|id| summon(world, player, id))
 }
 
 fn receive_dismissals(world: &mut World) {

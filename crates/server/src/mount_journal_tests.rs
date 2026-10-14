@@ -35,6 +35,24 @@ fn setup() -> Harness {
     h.advance(2);
     h
 }
+fn finish_mount_request_receipts(h: &mut Harness) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    let mut delivered_frames = 0;
+    while delivered_frames < 3 {
+        h.advance(1);
+        if h.app.world().resource::<PendingMountRequests>().is_empty() {
+            delivered_frames += 1;
+        } else {
+            delivered_frames = 0;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "mount request receipts did not complete"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+}
+
 #[test]
 fn mount_random_delivery_control_with_already_committed_favourite() {
     for coupled in [false, true] {
@@ -60,6 +78,7 @@ fn mount_random_delivery_control_with_already_committed_favourite() {
             .get_mut::<MessageSender<SummonRandomFavouriteMount>>(h.connection)
             .unwrap()
             .send::<CollectionChannel>(SummonRandomFavouriteMount);
+        finish_mount_request_receipts(&mut h);
         h.advance(40);
         assert!(
             h.app.world().get::<Mounted>(h.caster).is_some(),
@@ -396,6 +415,7 @@ fn mount_journal_random_favourite_uses_real_spell_and_rejects_combat_and_unowned
         .get_mut::<MessageSender<SummonRandomFavouriteMount>>(h.connection)
         .unwrap()
         .send::<CollectionChannel>(SummonRandomFavouriteMount);
+    finish_mount_request_receipts(&mut h);
     h.advance(40);
     assert_eq!(
         h.app
@@ -461,11 +481,7 @@ fn mount_journal_spell_learning_and_favourites_publish_only_to_same_account() {
         frames += 1;
         same_updates.extend(drain::<MountJournalUpdate>(&mut h.app, same));
         foreign_updates.extend(drain::<MountJournalUpdate>(&mut h.app, foreign));
-        let pending = !h
-            .app
-            .world()
-            .resource::<PendingMountFavourites>()
-            .is_empty();
+        let pending = !h.app.world().resource::<PendingMountRequests>().is_empty();
         if frames >= 7 && !pending {
             break;
         }
