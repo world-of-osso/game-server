@@ -1,3 +1,7 @@
+## 2026-10-14 — Mount favourite ordering and st138 integration repair
+
+[Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): favourite writes and dependent random ownership reads follow FIFO; direct item-use fixtures install their shared persistence consumer. Watched reputation and atomic multi-item Trading Post checkout survive master integration. Intersecting native scopes pass; full writer/release acceptance remains open.
+
 ## 2026-10-14 — FIFO appearance refreshes
 
 [Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): source-derived refresh grants now merge on FIFO; owner cache and complete snapshots follow receipts. Held-writer, account union, initial/equip/disposal/reopen scopes pass5/5; release gameplay acceptance remains open.
