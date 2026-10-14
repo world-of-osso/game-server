@@ -236,8 +236,16 @@ fn tuned_creature_swings_expected_stat_damage_at_the_targets_level() {
 
 #[test]
 fn test_in_melee_range() {
-    assert!(in_melee_range(&pos(0.0, 0.0, 0.0), &pos(3.0, 4.0, 0.0)));
-    assert!(!in_melee_range(&pos(0.0, 0.0, 0.0), &pos(10.0, 0.0, 0.0)));
+    assert!(in_melee_range(
+        &pos(0.0, 0.0, 0.0),
+        &pos(3.0, 4.0, 0.0),
+        0.0
+    ));
+    assert!(!in_melee_range(
+        &pos(0.0, 0.0, 0.0),
+        &pos(10.0, 0.0, 0.0),
+        0.0
+    ));
 }
 
 #[test]
