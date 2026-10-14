@@ -31,6 +31,31 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_spell_hit_target_creature_keeps_complete_companions_and_alternatives(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[1]['Type'] = '110'
+        mods = {10: node(0, 4), 11: node(10, 2, 4, 16802)}
+        self.assertEqual(self.compile(mods, criteria), {1: [None, ((4, 16802),)]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 25, 1)}, criteria),
+                         {1: [None, ((4, 16802), (25, 1))]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 999, 1)}, criteria), {})
+        mods[10] = node(0, 8, amount=1)
+        self.assertEqual(self.compile(mods, criteria), {1: [None, ((4, 16802),)]})
+        mods[12] = node(10, 2, 4, 10181)
+        self.assertEqual(self.compile(mods, criteria),
+                         {1: [None, ((4, 10181), (4, 16802))]})
+        mods[12]['Type'] = '999'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods.pop(12)
+        mods[11]['Operator'] = '3'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[11]['Operator'] = '2'
+        mods[11]['Asset'] = '0'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[11]['Asset'] = '16802'
+        criteria[1]['Type'] = '28'
+        self.assertEqual(self.compile(mods, criteria), {})
+
     def test_target_aura_requires_native_hit_and_complete_companions(self):
         criteria = copy.deepcopy(self.criteria)
         criteria[1]['Type'] = '110'
