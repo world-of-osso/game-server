@@ -515,7 +515,7 @@ pub(crate) fn effect_power_bonus(
         && spell
             .categories
             .as_ref()
-            .is_none_or(|categories| categories.damage_class != DEFENSE_MELEE)
+            .is_none_or(|categories| categories.defense_type != DEFENSE_MELEE)
     {
         world
             .get::<CharacterStats>(caster)
