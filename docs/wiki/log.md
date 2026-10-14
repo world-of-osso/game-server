@@ -1,6 +1,9 @@
 ## 2026-10-13 — Exact map0 criterion
 
 [Known zero map](systems/dungeon-achievements.md#exact-zero-map) preserves actual map0 versus missing authority. Native killing-blow5512 and redb reopen add existing World Killing Blows statistic1488, not an ordinary grant, world honor or relinked tree. Saved source root592/leaf593 remains authoritative until the coordinated DB2 re-export; no extraction performed.
+## 2026-10-13 — Native damage shields
+
+[Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.
 
 ## 2026-10-13 — NPC Felguard learned interrupt
 
