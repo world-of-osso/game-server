@@ -63,6 +63,97 @@ fn item_templates() -> ItemTemplates {
 }
 
 #[test]
+fn quest_log_story_rewards_and_pushability_survive_restart_without_a_giver_dialog() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("quest-relog.redb");
+    let mut app = setup_app().expect("authentic quest data");
+    app.insert_resource(GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    });
+    persistence::create_tables(db(&app));
+    let client = spawn_client(&mut app, 1);
+    enter_world(&mut app, &client);
+    let npc = spawn_npc(&mut app, MARSHAL_MCBRIDE, 0.0);
+    request(
+        &mut app,
+        &client,
+        QuestGiverQueryQuest {
+            npc,
+            quest_id: BEATING_THEM_BACK,
+        },
+    );
+    let details = received::<QuestGiverQuestDetails>(&mut app, &client)
+        .pop()
+        .unwrap();
+    assert!(details.description.contains("Marshal McBride"));
+    accept(&mut app, &client, npc, BEATING_THEM_BACK);
+    let accepted = last_update(&mut app, &client);
+    assert_eq!(accepted.changed.len(), 1);
+    let character_id = client.character_id;
+    drop(app);
+
+    let mut restarted = setup_app().expect("authentic quest data");
+    restarted.insert_resource(GameDatabase {
+        db: redb::Database::open(&path).unwrap(),
+    });
+    let saved = persistence::load_character(db(&restarted), character_id).unwrap();
+    let player = restarted
+        .world_mut()
+        .spawn((
+            crate::maps::InMap::continent(0),
+            Player {
+                name: saved.name,
+                race: saved.race,
+                class: saved.class,
+                appearance: saved.appearance,
+            },
+            Position {
+                x: saved.x,
+                y: saved.y,
+                z: saved.z,
+            },
+            ClientId(character_id),
+            Level(saved.level as u8),
+            saved.equipment_appearance,
+        ))
+        .id();
+    let connection = restarted
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(1)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            PlayerLink(player),
+        ))
+        .id();
+    add_message_pair::<QuestLogSnapshot>(&mut restarted, connection);
+    add_message_pair::<QuestGiverQuestDetails>(&mut restarted, connection);
+    let reconnected = Client {
+        character_id,
+        player,
+        connection,
+    };
+    let snapshot = enter_world(&mut restarted, &reconnected);
+    assert_eq!(snapshot.entries.len(), 1);
+    assert!(received::<QuestGiverQuestDetails>(&mut restarted, &reconnected).is_empty());
+    let wire = serde_json::to_value(&snapshot.entries[0]).unwrap();
+    assert_eq!(
+        wire["description"].as_str(),
+        Some(details.description.as_str())
+    );
+    assert_eq!(
+        wire["rewards"],
+        serde_json::to_value(&details.rewards).unwrap()
+    );
+    assert_eq!(wire["pushable"], serde_json::json!(false));
+    assert_eq!(
+        serde_json::to_value(&accepted.changed[0]).unwrap()["description"],
+        wire["description"]
+    );
+}
+
+#[test]
 fn quest_share_accept_replay_and_party_change_use_real_message_path() {
     use shared::protocol::{
         PushQuestToParty, QuestPushReason, QuestPushResponse, QuestPushResult, QuestShareOffer,
