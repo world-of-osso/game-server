@@ -1,6 +1,6 @@
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 
-[Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11; integration and independent acceptance remain pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
+[Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
 
 ## 2026-10-14 — Derived factions survive DB2 replacement
 
