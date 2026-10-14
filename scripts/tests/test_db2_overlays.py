@@ -82,6 +82,25 @@ class Db2OverlayTests(unittest.TestCase):
                 (db2.DEFAULT_BUILD,),
             )
 
+    def test_refresh_preserves_build_receipts_owned_by_other_importers(self):
+        tables = ("achievement", "achievement_category", "criteria", "criteria_tree")
+        receipts = [(table, db2.DEFAULT_BUILD) for table in tables]
+        self.connection.executemany("INSERT INTO db2_build VALUES (?,?)", receipts)
+        self.connection.commit()
+        for _ in range(2):
+            self.import_csvs()
+            self.assertEqual(
+                self.connection.execute(
+                    "SELECT table_name,build FROM db2_build WHERE table_name IN (?,?,?,?) "
+                    "ORDER BY table_name", tables
+                ).fetchall(),
+                receipts,
+            )
+            self.assertEqual(
+                self.connection.execute("SELECT COUNT(*) FROM db2_build").fetchone(),
+                (len(db2.TABLES) + len(tables),),
+            )
+
     def test_invalid_reconstruction_key_rolls_back_entire_refresh(self):
         self.connection.execute(
             "UPDATE zephras_row_source SET row_key=? WHERE row_key=?",

@@ -1,3 +1,7 @@
+## 2026-10-14 — Derived factions survive DB2 replacement
+
+[DB2 refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) restores six Zephras factions from existing authored receipts atomically; preserves124 build receipts. Private import changes only faction_template+6/db2_row_source+6, integrity OK; native reaction test and9 importer/Skyborne tests pass. Old-source audit118/120; AreaTable/OverrideSpellData explicitly unavailable. Canonical untouched.
+
 ## 2026-10-14 — Active installed achievement import
 
 [Importer](systems/dungeon-achievements.md#active-installed-achievement-import) no longer selects69933. Actual70391 process RED→GREEN2/2 covers current row counts, source build, Stockade and unrelated SQL; corrupt actual layout rejects before mutation. Build-selection/native-golden unit3/3; work-copy fingerprint/swap and native census gate pending.
