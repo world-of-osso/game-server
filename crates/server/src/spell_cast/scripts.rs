@@ -487,6 +487,7 @@ fn track_switch_plan(
         units: target.into_iter().collect(),
         dest: None,
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }]
 }
 
@@ -519,6 +520,7 @@ fn chain_heal_plan(
         units,
         dest: None,
         chain_multipliers,
+        blocked_units: Vec::new(),
     }]
 }
 
@@ -680,6 +682,7 @@ fn pyre_explosion_plan(
             orientation: super::targets::orientation(world, caster),
         }),
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }]
 }
 

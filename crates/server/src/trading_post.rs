@@ -13,6 +13,7 @@ use crate::{
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::protocol::*;
+use std::collections::HashSet;
 
 /// Refund window for new purchases. Retail's duration is unsourced, so it stays 0
 /// (refunds disabled) unless a server administrator sets it on the admin socket.
@@ -76,12 +77,14 @@ fn receive_requests(world: &mut World) {
         crate::adventure_guide::settle_month_for_connection(world, connection);
         let result = execute(world, connection, account, player, &request);
         info!(?connection, ?result, "TP_DELIVERY_SERVER_EXECUTE");
-        if let Ok(Some((_, grant))) = &result {
-            publish_collections(world, account, grant);
+        if let Ok(changed) = &result {
+            publish_collections(world, account, changed);
         }
         let rows = match (&request, &result) {
             (TradingPostRequest::Query, _) => Rows::Catalog,
-            (_, Ok(Some((vendor, _)))) => Rows::AffectedBy(*vendor),
+            (_, Ok(changed)) if !changed.is_empty() => {
+                Rows::AffectedBy(changed.iter().map(|(vendor, _)| *vendor).collect())
+            }
             _ => Rows::None,
         };
         send_snapshot(world, connection, account, result.err(), rows);
@@ -92,32 +95,93 @@ fn receive_requests(world: &mut World) {
 /// vendor Query sends it; a purchase or refund sends the rows it can change.
 enum Rows {
     Catalog,
-    AffectedBy(u32),
+    AffectedBy(Vec<u32>),
     None,
 }
 
-/// The bought/refunded row and every row whose `collected` shares its collection entry.
-fn affected_by(catalog: &catalog::CatalogData, vendor: u32, row: u32) -> bool {
-    let grant = |id| {
-        catalog
-            .items
-            .get(&id)
-            .and_then(|(_, grant)| grant.as_ref().ok())
-    };
-    row == vendor
-        || grant(vendor)
-            .zip(grant(row))
-            .is_some_and(|(changed, other)| shares_collection(changed, other))
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum CollectionKey {
+    Appearance(u32),
+    Mount(u32),
+    Pet(u32),
+    Toy(u32),
 }
 
-/// Whether owning `a` and `b` depends on a shared account collection entry.
-fn shares_collection(a: &store::Grant, b: &store::Grant) -> bool {
-    use store::Grant::*;
-    match (a, b) {
-        (Appearances(a), Appearances(b)) => a.iter().any(|id| b.contains(id)),
-        (Mount(a), Mount(b)) | (Pet(a), Pet(b)) | (Toy(a), Toy(b)) => a == b,
-        _ => false,
+fn collection_keys(grant: &store::Grant) -> Vec<CollectionKey> {
+    match grant {
+        store::Grant::Appearances(ids) => {
+            ids.iter().copied().map(CollectionKey::Appearance).collect()
+        }
+        store::Grant::Mount(id) => vec![CollectionKey::Mount(*id)],
+        store::Grant::Pet(id) => vec![CollectionKey::Pet(*id)],
+        store::Grant::Toy(id) => vec![CollectionKey::Toy(*id)],
+        // A receipt's concrete pet instance is never a catalog collection key.
+        store::Grant::PetInstance(_) => Vec::new(),
     }
+}
+
+/// Batch lookup avoids scanning every cart product for every catalog row.
+fn affected_rows(catalog: &catalog::CatalogData, vendors: &[u32]) -> HashSet<u32> {
+    let changed: HashSet<_> = vendors.iter().copied().collect();
+    let keys: HashSet<_> = vendors
+        .iter()
+        .filter_map(|id| {
+            catalog
+                .items
+                .get(id)
+                .and_then(|(_, grant)| grant.as_ref().ok())
+        })
+        .flat_map(collection_keys)
+        .collect();
+    catalog
+        .items
+        .iter()
+        .filter(|(id, (_, grant))| {
+            changed.contains(*id)
+                || grant
+                    .as_ref()
+                    .is_ok_and(|grant| collection_keys(grant).iter().any(|key| keys.contains(key)))
+        })
+        .map(|(id, _)| *id)
+        .collect()
+}
+
+fn catalog_offers<'a>(
+    catalog: &'a catalog::CatalogData,
+    vendors: &[u32],
+    refund_duration: u32,
+) -> Result<Vec<store::Offer<'a>>, String> {
+    vendors
+        .iter()
+        .map(|id| {
+            let (row, grant) = catalog.items.get(id).ok_or("Unknown Trading Post item.")?;
+            let grant = grant.as_ref().map_err(Clone::clone)?;
+            Ok(store::Offer {
+                vendor: *id,
+                price: row.price,
+                grant,
+                refund_duration,
+            })
+        })
+        .collect()
+}
+
+fn purchase_cart(
+    world: &World,
+    account: u64,
+    catalog: &catalog::CatalogData,
+    vendors: &[u32],
+    now: i64,
+) -> Result<Vec<(u32, store::Grant)>, String> {
+    let window = world
+        .get_resource::<RefundWindow>()
+        .map_or(0, |window| window.0);
+    let offers = catalog_offers(catalog, vendors, window)?;
+    let state = store::checkout(&world.resource::<GameDatabase>().db, account, &offers, now)?;
+    Ok(offers
+        .iter()
+        .map(|offer| (offer.vendor, state.purchases[&offer.vendor].granted.clone()))
+        .collect())
 }
 
 fn active_vendor(world: &World, connection: Entity, player: Entity) -> Result<Entity, String> {
@@ -139,12 +203,12 @@ fn execute(
     account: u64,
     player: Entity,
     request: &TradingPostRequest,
-) -> Result<Option<(u32, store::Grant)>, String> {
+) -> Result<Vec<(u32, store::Grant)>, String> {
     if matches!(
         request,
         TradingPostRequest::Query | TradingPostRequest::Balance
     ) {
-        return Ok(None);
+        return Ok(Vec::new());
     }
     active_vendor(world, connection, player)?;
     let catalog = world
@@ -155,7 +219,10 @@ fn execute(
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let db = &world.resource::<GameDatabase>().db;
     match request {
-        TradingPostRequest::Query | TradingPostRequest::Balance => Ok(None),
+        TradingPostRequest::Query | TradingPostRequest::Balance => Ok(Vec::new()),
+        TradingPostRequest::Checkout { vendor_item_ids } => {
+            purchase_cart(world, account, catalog, vendor_item_ids, now)
+        }
         TradingPostRequest::Purchase { vendor_item_id } => {
             let (row, grant) = catalog
                 .items
@@ -175,7 +242,7 @@ fn execute(
                 },
                 now,
             )?;
-            Ok(Some((*vendor_item_id, grant.clone())))
+            Ok(vec![(*vendor_item_id, grant.clone())])
         }
         TradingPostRequest::Refund { vendor_item_id } => {
             let state = store::load(db, account);
@@ -185,7 +252,7 @@ fn execute(
                 .ok_or("Trading Post receipt unavailable.")?;
             let grant = receipt.granted.clone();
             store::refund(db, account, *vendor_item_id, now)?;
-            Ok(Some((*vendor_item_id, grant)))
+            Ok(vec![(*vendor_item_id, grant)])
         }
         TradingPostRequest::Freeze { vendor_item_id } => {
             if let Some(id) = vendor_item_id {
@@ -196,7 +263,7 @@ fn execute(
                 grant.as_ref().map_err(Clone::clone)?;
             }
             store::freeze(db, account, *vendor_item_id);
-            Ok(None)
+            Ok(Vec::new())
         }
     }
 }
@@ -269,10 +336,13 @@ fn send_snapshot(
                     snapshot.categories = catalog.categories.clone();
                     collection_rows(world, account, catalog, &state, now)
                 }
-                Rows::AffectedBy(vendor) => collection_rows(world, account, catalog, &state, now)
-                    .into_iter()
-                    .filter(|row| affected_by(catalog, vendor, row.id))
-                    .collect(),
+                Rows::AffectedBy(vendors) => {
+                    let affected = affected_rows(catalog, &vendors);
+                    collection_rows(world, account, catalog, &state, now)
+                        .into_iter()
+                        .filter(|row| affected.contains(&row.id))
+                        .collect()
+                }
                 Rows::None => Vec::new(),
             };
         }
@@ -343,15 +413,36 @@ fn collection_rows(
         .collect()
 }
 
-fn publish_collections(world: &mut World, account: u64, grant: &store::Grant) {
-    if matches!(grant, store::Grant::Mount(_)) {
+fn publish_collections(world: &mut World, account: u64, changed: &[(u32, store::Grant)]) {
+    if changed
+        .iter()
+        .any(|(_, grant)| matches!(grant, store::Grant::Mount(_)))
+    {
         crate::mount_journal::broadcast_account(world, account);
-        return;
     }
-    if matches!(grant, store::Grant::Toy(_)) {
+    if changed
+        .iter()
+        .any(|(_, grant)| matches!(grant, store::Grant::Toy(_)))
+    {
         crate::toys::broadcast(world, account);
-        return;
     }
+    let appearances = changed
+        .iter()
+        .any(|(_, grant)| matches!(grant, store::Grant::Appearances(_)));
+    let pets = changed
+        .iter()
+        .any(|(_, grant)| matches!(grant, store::Grant::Pet(_) | store::Grant::PetInstance(_)));
+    if appearances || pets {
+        publish_appearances_and_pets(world, account, appearances, pets);
+    }
+}
+
+fn publish_appearances_and_pets(
+    world: &mut World,
+    account: u64,
+    appearances_changed: bool,
+    pets_changed: bool,
+) {
     let owners: Vec<_> = world
         .query_filtered::<(Entity, &Authenticated, &PlayerLink), With<InWorld>>()
         .iter(world)
@@ -364,7 +455,7 @@ fn publish_collections(world: &mut World, account: u64, grant: &store::Grant) {
     );
     let journal = crate::battle_pets::load_journal(&world.resource::<GameDatabase>().db, account);
     for (connection, player) in owners {
-        if matches!(grant, store::Grant::Appearances(_))
+        if appearances_changed
             && let Some(mut sender) =
                 world.get_mut::<MessageSender<AppearanceCollectionUpdate>>(connection)
         {
@@ -372,7 +463,7 @@ fn publish_collections(world: &mut World, account: u64, grant: &store::Grant) {
                 appearances: appearances.all().collect(),
             });
         }
-        if matches!(grant, store::Grant::Pet(_) | store::Grant::PetInstance(_))
+        if pets_changed
             && let Some(mut state) = world.get_mut::<crate::battle_pets::AccountPetJournal>(player)
         {
             state.journal = journal.clone();
