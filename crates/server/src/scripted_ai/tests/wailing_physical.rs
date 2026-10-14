@@ -79,7 +79,7 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         let b = Vec3::new(point.x, point.z, -point.y);
         assert!(
             los.clear(a + Vec3::Y, b + Vec3::Y).unwrap(),
-            "physical escort crossed collision at tick{tick}: {previous:?}->{point:?}; path={} waves={camp_counts:?} cleansing={saw_cleansing} combat={:?} motion={:?} speed={:?}",
+            "physical escort crossed collision at tick{tick}: {previous:?}->{point:?}; path={} waves={camp_counts:?} cleansing={saw_cleansing} combat={:?} motion={:?} speed={:?} state={:?} escorthome={:?} explicit_home={:?}",
             h.app
                 .world()
                 .get::<crate::scripted_ai::waypoint_path::PathMovement>(disciple)
@@ -88,7 +88,16 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
             h.app.world().get::<CreatureMotion>(disciple),
             h.app
                 .world()
-                .get::<shared::components::MovementSpeed>(disciple)
+                .get::<shared::components::MovementSpeed>(disciple),
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(disciple),
+            h.app
+                .world()
+                .get::<crate::scripted_ai::movement::ScriptedPath>(disciple),
+            h.app
+                .world()
+                .get::<crate::creature_ai::HomePosition>(disciple)
         );
         walked += step;
         previous = point;
