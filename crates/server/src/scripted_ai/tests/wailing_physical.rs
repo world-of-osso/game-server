@@ -4,6 +4,11 @@ use super::*;
 #[test]
 #[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
 fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injection() {
+    tracing_subscriber::fmt()
+        .with_env_filter("game_server::scripted_ai::waypoint_path=debug")
+        .with_test_writer()
+        .try_init()
+        .expect("isolated physical fixture logger");
     let root = std::path::PathBuf::from(std::env::var_os("WAILING_NAV_ROOT").unwrap());
     let (mut h, unrelated, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
     h.app
