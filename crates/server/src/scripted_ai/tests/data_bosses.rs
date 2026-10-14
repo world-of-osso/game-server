@@ -9,6 +9,8 @@ mod ragefire_completion;
 
 #[path = "shadowfang_keep.rs"]
 mod shadowfang_keep;
+#[path = "wailing_progress.rs"]
+mod wailing_progress;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
