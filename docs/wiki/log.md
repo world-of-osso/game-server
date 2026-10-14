@@ -2,6 +2,10 @@
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
 
+## 2026-10-14 — Matched-protocol goober adjacency
+
+[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) passes source Workshop pickup1/1 on server22ba4903/protocol492ee28. Object fixtures now supply the native45490 summon dependencies rather than skip authored effects; adjacent quest objectives7/7 and scoped binary check pass, assertions unchanged. Historical compile/fixture failures remain separate; no deployed/native pickup or timed-siege acceptance.
+
 ## 2026-10-14 — Authored goober spell dispatch
 
 [Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) retains Data10/23 and source caster selection after normal use validation. Persistent-owner/free-space source Workshop fixture RED6 reaches owned46847 count0 versus1; implementation34d32065 committed before corrected GREEN1/1 (26.43s), with helper-resolved leased protocol/transport provenance. Direct-Cargo API-drift compile failure is retained separately. Native render, timed traps and siege victory remain separate gates.
