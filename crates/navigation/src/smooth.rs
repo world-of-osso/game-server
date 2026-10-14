@@ -8,6 +8,8 @@ const SLOP: f32 = 0.3;
 const STEER_POINTS: usize = 3;
 const VISITED_POLYGONS: usize = 16;
 const HEIGHT_OFFSET: f32 = 0.5;
+const STEER_HEIGHT_SLOP: f32 = 1000.0;
+const END_HEIGHT_SLOP: f32 = 1.0;
 
 struct Steering {
     point: Vec3,
@@ -24,11 +26,21 @@ impl NavigationMap {
         if polygons.len() > SOURCE_PATH_LIMIT {
             return Err("waypoint corridor exceeds source 74-polygon limit".into());
         }
-        let mut at = self.boundary_point(polygons[0], start, polygons.len() > 1)?;
+        let at = self.boundary_point(polygons[0], start, polygons.len() > 1)?;
         let target = self.boundary_point(*polygons.last().unwrap(), end, polygons.len() > 1)?;
+        let points = self.collect_surface_points(at, target, &mut polygons)?;
+        validate_point_count(points)
+    }
+
+    fn collect_surface_points(
+        &self,
+        mut at: Vec3,
+        target: Vec3,
+        polygons: &mut Vec<dtPolyRef>,
+    ) -> Result<Vec<Vec3>, String> {
         let mut points = vec![at];
         while points.len() < SOURCE_PATH_LIMIT {
-            let Some(steering) = self.query_steering(at, target, &polygons)? else {
+            let Some(steering) = self.query_steering(at, target, polygons)? else {
                 // BuildPointPath's same-polygon, one-point special case.
                 if points.len() == 1 && polygons.len() == 1 {
                     points.push(target);
@@ -38,21 +50,12 @@ impl NavigationMap {
                 // NormalizePath subsequently corrects those feet to collision support.
                 break;
             };
-            at = self.step_surface(at, &steering, &mut polygons)?;
-            if steering.end && in_range(at, steering.point, SLOP, 1.0) {
+            at = self.step_surface(at, &steering, polygons)?;
+            if steering.end && in_range(at, steering.point, SLOP, END_HEIGHT_SLOP) {
                 points.push(target);
-                if points.len() < SOURCE_PATH_LIMIT {
-                    return Ok(points);
-                }
                 break;
             }
             points.push(at);
-        }
-        if points.len() >= SOURCE_PATH_LIMIT {
-            return Err("waypoint surface path exhausted source 74-point limit".into());
-        }
-        if points.len() < 2 {
-            return Err("waypoint surface path has fewer than two controls".into());
         }
         Ok(points)
     }
@@ -87,6 +90,28 @@ impl NavigationMap {
         target: Vec3,
         polygons: &[dtPolyRef],
     ) -> Result<Option<Steering>, String> {
+        let corners = self.query_steering_corners(at, target, polygons)?;
+        for (mut point, flags) in corners {
+            let off_mesh =
+                flags & dtStraightPathFlags_DT_STRAIGHTPATH_OFFMESH_CONNECTION as u8 != 0;
+            if off_mesh {
+                return Err("off-mesh C++ waypoint movement is not ported".into());
+            }
+            if !in_range(point, at, SLOP, STEER_HEIGHT_SLOP) {
+                point.y = at.y;
+                let end = flags & dtStraightPathFlags_DT_STRAIGHTPATH_END as u8 != 0;
+                return Ok(Some(Steering { point, end }));
+            }
+        }
+        Ok(None)
+    }
+
+    fn query_steering_corners(
+        &self,
+        at: Vec3,
+        target: Vec3,
+        polygons: &[dtPolyRef],
+    ) -> Result<Vec<(Vec3, u8)>, String> {
         let mut points = [0.0; STEER_POINTS * 3];
         let mut flags = [0; STEER_POINTS];
         let mut count = 0;
@@ -108,20 +133,11 @@ impl NavigationMap {
                 "waypoint steering",
             )?;
         }
-        for index in 0..count as usize {
-            let mut point = Vec3::from_slice(&points[index * 3..index * 3 + 3]);
-            let off_mesh =
-                flags[index] & dtStraightPathFlags_DT_STRAIGHTPATH_OFFMESH_CONNECTION as u8 != 0;
-            if off_mesh {
-                return Err("off-mesh C++ waypoint movement is not ported".into());
-            }
-            if !in_range(point, at, SLOP, 1000.0) {
-                point.y = at.y;
-                let end = flags[index] & dtStraightPathFlags_DT_STRAIGHTPATH_END as u8 != 0;
-                return Ok(Some(Steering { point, end }));
-            }
-        }
-        Ok(None)
+        Ok(points[..count as usize * 3]
+            .chunks_exact(3)
+            .zip(flags)
+            .map(|(point, flags)| (Vec3::from_slice(point), flags))
+            .collect())
     }
 
     fn step_surface(
@@ -138,13 +154,24 @@ impl NavigationMap {
             STEP_SIZE / distance
         };
         let target = at + delta * scale;
+        let (point, visited) = self.query_surface_step(polygons[0], at, target)?;
+        fixup_corridor(polygons, &visited)?;
+        self.project_surface_height(polygons[0], point)
+    }
+
+    fn query_surface_step(
+        &self,
+        polygon: dtPolyRef,
+        at: Vec3,
+        target: Vec3,
+    ) -> Result<(Vec3, Vec<dtPolyRef>), String> {
         let mut result = [0.0; 3];
         let mut visited = [0; VISITED_POLYGONS];
         let mut count = 0;
         // SAFETY: current ref valid, initialized query; fixed-size output buffers.
         let status_code = unsafe {
             (*self.query).moveAlongSurface(
-                polygons[0],
+                polygon,
                 at.to_array().as_ptr(),
                 target.to_array().as_ptr(),
                 &filter(),
@@ -158,18 +185,30 @@ impl NavigationMap {
         if status_code & DT_BUFFER_TOO_SMALL != 0 || count == 0 {
             return Err("incomplete waypoint surface movement".into());
         }
-        fixup_corridor(polygons, &visited[..count as usize])?;
+        Ok((Vec3::from_array(result), visited[..count as usize].to_vec()))
+    }
+
+    fn project_surface_height(&self, polygon: dtPolyRef, point: Vec3) -> Result<Vec3, String> {
         let mut height = 0.0;
         // SAFETY: fixup retains validated mesh refs; point has three floats.
         unsafe {
             status(
-                (*self.query).getPolyHeight(polygons[0], result.as_ptr(), &mut height),
+                (*self.query).getPolyHeight(polygon, point.to_array().as_ptr(), &mut height),
                 "waypoint surface height",
             )?;
         }
-        result[1] = height + HEIGHT_OFFSET;
-        Ok(Vec3::from_array(result))
+        Ok(Vec3::new(point.x, height + HEIGHT_OFFSET, point.z))
     }
+}
+
+fn validate_point_count(points: Vec<Vec3>) -> Result<Vec<Vec3>, String> {
+    if points.len() >= SOURCE_PATH_LIMIT {
+        return Err("waypoint surface path exhausted source 74-point limit".into());
+    }
+    if points.len() < 2 {
+        return Err("waypoint surface path has fewer than two controls".into());
+    }
+    Ok(points)
 }
 
 fn in_range(a: Vec3, b: Vec3, radius: f32, height: f32) -> bool {
