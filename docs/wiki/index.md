@@ -3,6 +3,8 @@
 - [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; native13 controls pass, frontend RAP propagation and whole-AP limits remain open.
 
 - [Warrior effect-hit stuns](systems/spell-casting.md#warrior-effect-hit-stuns) — native Shockwave/Storm Bolt children and caster-owned Storm Bolts selector; 12 native controls pass, other Dummy/talent fields remain gaps.
+- [Wailing second escort camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) — actual30s cleansing cast, three authored Adders and combat-paused progression; controlled arrival.
+
 - [Wailing first escort camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) — source path-end/timed speech, two real Ravagers and combat-paused clock; controlled arrival only.
 
 - [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14) — eight controlled deaths, redb reopen, fresh-copy isolation and eight staged corpse commits; no natural/native clear.
