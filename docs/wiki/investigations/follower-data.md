@@ -1,6 +1,14 @@
 # Retail follower data and approved spec bridge
 
-Verified: 2026-10-11. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
+Verified: 2026-10-13. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
+
+## NPC Felguard utility source — 2026-10-13
+
+Demonology summon30146 resolves to real creature17252/Felguard. Its CreatureFamily29 exposes SkillLine761; SkillLineAbility23475 teaches89766/Axe Toss through AcquireMethod2 at native SpellLevel17. Local SpellEffect89766 index0/effect64 triggers347008, whose index0/effect68 is the actual interrupt; index1 is its stun aura. The bridge checks the pet's actual learned action bar, never assigns Spell Lock19647 (Felhunter) or invents an early-level kick. Ordinary cast readiness applies to the pet, not the companion owner, and active hostile-field escape takes priority.
+
+At72e754d5, five actual pet-utility cases pass: level17 Axe Toss interrupts Fireball through child347008 while owner Shadow Bolt continues; level16 has no invented kick; cooldown/non-interruptible/Hammer-of-Justice controls retain ordinary readiness and sourced damage priorities. Row counts are compared to the fixture's real existing baseline, not an assumed empty database.
+
+First RED had two real omissions: no NPC pet dispatch and a fixture catalog replaced by relative-path Startup loading in cargo's package cwd. The fixture now loads authenticated metadata after generic startup and before summon; it never fabricates action-bar entries. The sourced30yd/s axe needs the native166ms minimum5yd flight plus delivery, so a three-frame assertion was premature; the positive case observes its actual landing. Source dispatch086f1e79 uses ordinary pet readiness; no cast/event or persistence bypass. At af677305, ten NPC pet motion/lifetime/credit cases pass with the authenticated catalog: actual collision-clear/exact-ground Stockade follow4yd/chase2yd, missing-bake refusal, authenticated-player damage/kill taps, owner removal, no-bake field refusal, two distinct overlapping Consecrations escaped before either expired without re-entry, and Hammer-of-Justice no-displacement under active escape intent. New field tests run the same FixedUpdate ordering as FollowerPlugin rather than manually substituting a movement result. Prepared source acceptance: all73 follower cases pass at9fe98137 (including all eleven labelled basic-role profiles, player-spec/pet utilities, fields, actual routes, credit and lifecycle);10 player-pet persistence/reopen/logout/refusal cases pass at598e9869, including all six sourced demon summons. Subsequent master mergec962c18a leaves the tested follower/pet/spell/movement implementations and harness unchanged; its zones diff only prepares an unrelated test schema. Current server check/fmt pass atc962c18a. No redundant full test suite was run. Changed Rust was manually audited; pet escape priority is named rather than nested in the main role loop. This remains bounded prepared-runtime proof, not full rotations, authored NPC kits, inherited-stat budgets or dungeon completion.
 
 ## Source identity
 
@@ -30,7 +38,7 @@ These are eleven specs across ten classes. No Rogue/Death Knight/Demon Hunter fo
 
 Role AI uses ordinary `creature_cast`, native cooldowns/costs/passives, threat/taunt, chase and owner-follow systems. Tanks recover an ally's attacker with their real taunt and approach melee reach; healers pick the lowest living party-health fraction before damage; damage roles use bounded cooldown/filler priorities. Missing cast-range metadata stops combat instead of substituting melee. The bridge uses native class/spec/level stats and consistent health/mana; it does not infer NPC gear. Holy Priest137031 activates the sourced Flash Heal mana-cost row, so passives must be applied rather than allowing a free heal.
 
-The native Godot host now forwards existing LFG IPC requests on LfgChannel and retains authoritative state/refusals. Send acknowledgment does not mean server acceptance. Full pet/guardian rotation, interrupts/defensives, hazard avoidance, NPC portraits, relog recovery and full-instance completion are not established by these bounded proofs.
+The native Godot host now forwards existing LFG IPC requests on LfgChannel and retains authoritative state/refusals. Send acknowledgment does not mean server acceptance. The later utility and bound-field section owns interrupt/defensive/escape proof. Full pet/guardian rotations, general hazardous-path planning, NPC portraits, relog recovery and full-instance completion remain unestablished.
 
 ## Admission data and approved Normal-population bridge
 
@@ -76,6 +84,14 @@ Durable evidence: engine `data/diagnostics/follower-ai3-2026-10-11/`: `{modern,f
 
 Private appearance cache strictly adds138 displays while preserving13,218; existing M2 baker produces142 displays/1,420 eye poses. Maintained frozen-root local-CASC importer publishes768 additive private asset receipts/422 aliases over six fragments. These restore the selected encounter/party render dependencies, not general asset closure. All cache/model/texture/product overlays remain private; no promotion to canonical data. The incomplete loot/walk gates keep the full requested goal open.
 
+## Native class-level and follow navigation — 2026-10-13
+
+All eleven authenticated profiles now have real-source basic-role tests (`profile_behavior_tests.rs`): damage, healer-first triage, both tanks' actual taunts and native resource publication. Initial probe passed10 and crashed Austin's real Cobra Shot193455 during missile resolution: its sourced SpellXDescriptionVariables331 scalar requires `Level`, while NPC initialization supplied only `UnitLevel`. fa4aa3fd adds the exact owner-derived `Level` alongside replicated `UnitLevel`; no default, panic guard or persisted-character identity. Eleven basic-role cases pass. This does not certify full rotations, pets, interrupts or defensives.
+
+Two fixed-order Stockade regressions reproduced actual follow failures: straight movement crossed an authored wall at tick19, and recreating `FollowOwner` every idle AI tick stopped at4.8527yards rather than the actual4yard follow point. 59b264e8 retains in-progress follow state and uses existing baked `Navigation` for follower follow/chase. Missing or blocked bakes hold position, never straight movement; ordinary existing non-follower behavior is unchanged. Three actual-LOS/ground/route-progress/unbaked tests pass.
+
+Ruby lacked static LOS/navigation in the prior private overlay. Existing source collectors now produce all12 authored WDT tiles for private LOS and NAV, zero missing/unreadable geometry. Nav payload is214,541,560bytes. Source data remains unchanged; no authored coordinates/connectors were invented. Inputs are local terrain/WMO/M2 plus read-only world snapshot; private output/hash ledger lives in `/home/osso/.worktrees/follower-dungeons-2026-10-13/ground/` and `ruby-ground-manifest.json`. Canonical publication commands belong only in the lead handoff. New strict-nav/full-route live proof remains pending.
+
 ## Native Group Finder catalog — 2026-10-13
 
 `lfg/follower_catalog.rs` answers authenticated `QueryFollowerDungeons` with sorted IDs/names/maps from prepared catalog destinations. Known205 IDs lacking an authored entrance/Normal population are not offered; an empty prepared catalog produces an empty reply, never fabricated choices. Actual registered host-loopback RED→GREEN exercises both populated and empty replies. Existing admission validation remains authoritative. [Native UI and its proof boundary](../../../../game-engine/docs/wiki/systems/follower-dungeons.md) owns the Group Finder role/type/list rendering; no new full-dungeon or all-class claim follows from catalog publication.
@@ -103,9 +119,30 @@ Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-202
 - Copy/lifecycle: initial2/2 RED; actual party formation→same-map transfer and cross-copy cleanup2/2 GREEN atceec9a1b. Check/fmt exit0 on current Rust scope; no full suite. Eye-data fixture1/1 reloads all142/1,420 authored rows.
 - Live: both-skin first-boss slice above passes; loot source and walked-route gates remain open. All11 specs/full-instance behavior are not certified. UDP5000 and canonical database writes untouched.
 
+## Current strict-nav Ruby boundary — 2026-10-13
+
+Matching private UDP5761 sources: server11ebfd32, engine7218be227, protocol7b76fcfb. Native Modern Group Finder admitted Damage owner30 into difficulty205 copy2 with four companions; real healing restored the owner's health. All24 private Ruby LOS/NAV artifact hashes matched the authored twelve-tile package. This is not full-dungeon proof.
+
+Actual scene positions advanced owner1386.2→1439.6035/128.903/169.75151; companions held1406.0823/127.928696/169.71896. The route query rejected follow1436.7751/128.903/172.57994 and a nearby chase endpoint with no walkable polygon. Party-roster positions were stale: use scene exports and server logs, not that roster snapshot, for movement evidence.
+
+The private diagnostic queried entrance100030→Melidrussa's TDB spawn1551.33/-257.688/129.782. Strict nearest-poly lookup rejected the boss endpoint. Runtime ground and collected collision both reported126.01431 there, with only a terrain support triangle nearby. Grounding the destination still yielded an incomplete corridor. Zero missing collector assets does not prove connectivity. No spawn-height change, enlarged snapping window or synthetic connector was made; the connected authored-route boundary remains unresolved.
+
+Evidence: `/home/osso/.worktrees/follower-dungeons-2026-10-13/routed-modern/`, `ruby-route-diagnostic.rs`, `ruby-entrance-route-probe.log`, `ruby-entrance-floor-trace.log`, `ruby-grounded-endpoint-trace.log`. Temporary diagnostic code is preserved outside the tracked tests. All owned live processes stopped after captures. Startup-only stale private `tdb_transports` schema and obsolete token/layout ownership were resolved with a read-only canonical SQLite backup and fresh private credential login, not product fallbacks.
+
+## Advanced bridge utilities and bound fields — 2026-10-13
+
+Real enemy Fireball fixtures now prove eight selected spec kicks: Rebuke96231, Pummel6552, Counterspell2139, Wind Shear57994, Counter Shot147362, Quell351338, Spear Hand Strike116705 and Skull Bash106839→93985. The missing Skull Bash DUMMY dispatch follows TrinityCore a352b1fa `spell_druid.cpp:2037–2053`, casting charge221514 then interrupt93985. Charge movement itself remains unproved. A replacement kick validates ordinary range/LOS/power/aura/school/cooldowns before cancelling the follower's active cast; unavailable kicks preserve it and normal damage priorities. Twelve utility cases passed atc4394e7a.
+
+Eleven profiles also execute their class's ordinary defensive when wounded and actively targeted. Native damage after the cast proves the authored mitigation, immunity or Desperate Prayer healing, not merely spell selection. This bridge decision is not an authenticated NPC health-threshold policy. Twelve cases passed at64523113; the combined prior/utility source gate passed68/68 atb2bed3f3.
+
+Bound `GroundPulses` and active `SpellAreaTrigger` actions provide field centers/radii/allegiance/lifetime. Escape considers eight supported perimeter candidates, requires complete baked corridors, rejects re-entry into hostile fields, and writes ordinary movement/interest/replication. No direct-movement or teleport substitute exists. Combat/follow targets still inside a field hold approach. Real hostile Consecration during combat originally held the follower in danger (RED); current Stockade proof exits with collision-clear steps, holds outside during continued combat, ignores friendly Consecration and stays put without a bake:3/3 atcee9c693. Ordinary chase paths crossing a field from outside, overlapping-field destinations, separately scripted shapes, cast/CC movement boundaries and live both-skin hazard behavior remain unproved; these bounded fixtures do not close full-dungeon acceptance.
+
+Logs: `/home/osso/.worktrees/follower-dungeons-2026-10-13/utility-{interrupt,casting,defensive}-*.log`, `server-utility-gate-b2bed3f3.log`, `hazard-stockade-{combat-red,green,boundaries}.log`. No canonical data or shared-realm process was changed.
+
 ## Sources
 
 - [Reference importer](../../../scripts/follower_import.py), [profile importer](../../../scripts/follower_profiles.py), [SQL tests](../../../scripts/tests/test_follower_profiles.py)
+- [All labelled profiles](../../../crates/server/src/followers/profile_behavior_tests.rs), [real follow regression](../../../crates/server/src/followers/navigation_tests.rs), [native Cobra Shot scalar](../../../crates/server/src/spell_cast/scripts.rs)
 - [Group Finder catalog](../../../crates/server/src/lfg/follower_catalog.rs), [catalog loopback](../../../crates/server/src/followers/wire_tests.rs)
 - [Runtime bridge](../../../crates/server/src/followers/mod.rs), [group presence](../../../crates/server/src/group/mod.rs), [member health](../../../crates/server/src/group/member_state.rs)
 - Local pinned Spell/Difficulty CSVs, canonical read-only world.db, full TDB1210.26091 SQL, diagnostics receipts

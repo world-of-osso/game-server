@@ -178,7 +178,7 @@ use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
     AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress,
+    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -819,12 +819,14 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     }
 }
 
-fn combat_event_owner(world: &World, unit: Entity) -> Entity {
+pub(crate) fn combat_event_owner(world: &World, unit: Entity) -> Entity {
     if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
         return follower.owner;
     }
     match world.get::<crate::hunter_pet::HunterPet>(unit) {
-        Some(pet) => pet.owner,
+        Some(pet) => world
+            .get::<crate::followers::Follower>(pet.owner)
+            .map_or(pet.owner, |follower| follower.owner),
         None => unit,
     }
 }
