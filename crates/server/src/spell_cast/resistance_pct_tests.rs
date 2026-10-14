@@ -97,6 +97,7 @@ fn armor_with(mods: StatModifiers) -> crate::stats::CharacterStats {
         mastery_coefficient: 0.0,
         attack_power_per_strength: 0.0,
         attack_power_per_agility: 0.0,
+        ranged_attack_power_per_agility: 0.0,
         gear_primary: default(),
         gear_ratings: CombatRatings {
             armor: 1_000.0,

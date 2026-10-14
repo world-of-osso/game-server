@@ -151,6 +151,24 @@ Wailing Caverns Cobrahn3669: actual TDB SmartAI row casts Lightning Bolt20805 at
 
 The source pre-wave endpoint/faction is staged only as a fixture input. Actual group membership/coordinates, copy ownership, NPC target, living beyond301s, real death credit592 and300s corpse retirement are exercised; Wizzle's existing group storage/expiry fixture remains the regression control. This is not gossip activation, escort travel, scheduled EVENT_PROGRESS_20, ordinary balance or native/loot acceptance. [Contract](../../specs/boss-scripts.md#wailing-caverns-source-slices). Anacondra's aura15 implementation is documented once in [damage shields](auras.md#damage-shields).
 
+### Wailing first escort camp (2026-10-14)
+
+Pinned `wailing_caverns.cpp` path367800 completion schedules source events4–7 on an out-of-combat `EventMap`, separate from Sleep/Potion. After1s Disciple talks group2, then7s later summons the two authored3636 Ravagers from3678/group0. Their actual AttackStart targets Disciple and pauses the escort clock. After their real deaths,10 remaining out-of-combat seconds lead to source-facing5.742133 and group3 speech; another3s requests path367801 through the strict existing movement helper. Reset clears only combat events, as authored.
+
+`tests/wailing_escort.rs` controls the path-arrival input but exercises live source summons, combat pause, timing and copy-scoped speech. Facing is observed at the event callback boundary: later generic chase ticks overwrite that transient rotation in this fixture. No physical path arrival, next-path travel, gossip activation, full awakening or native clear is certified. Current source activation gaps remain in the [contract](../../specs/boss-scripts.md#wailing-caverns-source-slices).
+
+### Wailing second escort camp (2026-10-14)
+
+Path367801 completion schedules source event8 immediately: real6270 Serpentine Cleansing and group4 speech. Current casting-time row9 is30,000ms; effect3 is a dummy, not an invented cleansing buff. The independent escort clock summons the exact three5048 Adders from3678/group1 after18s while that cast is still active. Their attacks pause progress; after real wave deaths,12 remaining out-of-combat seconds lead to group5 speech, then5s to the strict existing path367802 request.
+
+The real-data test observes each Adder's actual birth position before chase movement, checks all three source actors target Disciple, and proves cast admission/duration/completion plus combat-paused timing and copy-scoped speech. Controlled arrival does not prove physical onward travel or solve the source activation gaps. [Contract](../../specs/boss-scripts.md#wailing-caverns-source-slices).
+
+### Wailing Normal run and corpse rewards (2026-10-14)
+
+`tests/wailing_progress.rs` proves all eight controlled primary deaths in one Normal copy, including Mutanus from actual Disciple group4. Every encounter585–592 completes once, other-copy messages stay empty, and bits0–7 persist across redb close/reopen. Restored population filters all defeated primaries while retaining Disciple/unrelated spawns; fresh owner starts at zero. No scheduled raid/Heroic lock is created. Populated fixtures load real gathering metadata because authored Wailing gameobjects include gathering nodes.
+
+`loot/encounter_tests.rs` separately generates all eight staged corpses, opens/takes their actual loot slots and checks saved coins/items plus duplicate rejection. Kresh/Skum have zero base money, but authored poor-quality drops convert to their current sell prices under the [project loot contract](../../specs/loot.md). Tests assert exact allowed sale sums (Kresh0/155/903/1058; Skum0/155/202/357; Mutanus0/7/16/23 added to226–300 base coins) and exclude converted grey items from inventory rewards. Mutanus' current group1 contains only two33.3333% rows, so a rare item is not guaranteed; tests do not invent a third reward. This is controlled lifecycle/persistence and staged loot proof, not eight natural fights, escort activation, traversal, balanced party play or native clear.
+
 Deadmines source audit (TC a352b1fa): header `e3beb3f1a16472f10655148b1cd6ffd07187ff58aa0b6fee3ebfc584bcc9944a`, instance `156a63da23e1ac0f725ba9d1b7397a024b61077537816e279cef4dba54f749af`. That directory contains only those two files, no boss AIs; local primary templates have no AIName/ScriptName/SmartScripts. Instance maps Helix to47296;47297 is Lumbering Oaf, despite its journal display joining the Helix encounter. `encounter_coverage.py` lists source primaries separately and renders actual actor names. Neither census identity nor a journal companion confers credit. Normal/Heroic DB2 bits differ for the same entry, beyond the current single-bit binding key; no ambiguous binding is emitted. [Contract/gaps](../../specs/boss-scripts.md#deadmines-source-audit).
 
 ## Ground C++ waypoint paths

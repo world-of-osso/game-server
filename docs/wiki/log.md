@@ -1,3 +1,12 @@
+## 2026-10-14 — Disciple second escort camp
+
+[Second camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) ports events8–11 without a cast-state guard or replacement buff. RED→GREEN proves real30s6270, three source Adders appearing at18s while casting, combat pause and12s resumed speech. Exact birth positions are observed before chase; physical onward path/native clear remain open.
+
+## 2026-10-14 — Disciple first escort camp
+
+[First camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) ports path367800-end events4–7. Controlled arrival RED→GREEN proves authored speech/two Ravagers, actual combat pause and source-facing callback; existing Sleep/Potion remains passing. Physical traversal, activation data and native clear remain open.
+
+## 2026-10-14 — Silverlaine primary identity
 ## 2026-10-14 — Derived factions survive DB2 replacement
 
 [DB2 refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) restores six Zephras factions from existing authored receipts atomically; preserves124 build receipts. Private import changes only faction_template+6/db2_row_source+6, integrity OK; native reaction test and9 importer/Skyborne tests pass. Old-source audit118/120; AreaTable/OverrideSpellData explicitly unavailable. Canonical untouched.
@@ -1184,8 +1193,16 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
 
+- 2026-10-14: Document pinned Warrior per-effect stun dispatch and conditional Storm Bolts selector; native RED3 retained, GREEN pending. Installed70391 slot data follows published canonical snapshot.
+
+- 2026-10-14: Warrior native stun controls12/12 and adjacent61/61 pass; installed70391 census3185/4459/183 over7827 memberships. New1319011 CSV→published-SQLite gap retained; no whole-talent/Dummy promotion.
+
+- 2026-10-14: Add source-distinct melee/ranged AP model and166/167 percentage consumers; native Battle Shout33→33 and Aimed Shot316 versus408..428 genuine RED retained; GREEN pending.
+
+- 2026-10-14: Native melee/RAP166/167 controls13/13 pass across two scoped receipts; all13 class AP coefficients equal active source. Frontend RAP propagation and NPC/weapon/base budgets remain explicit next layers.
 - 2026-10-14 — [Quest fixture refresh](../../quest-objectives-coverage.md#fixture-refresh--2026-10-14): reproduced missing SpellTargetConditions in real Tear item cast and stale empty-loot Netherwing Egg fixture; load authored conditions and use real9548/181746/23830 chest data. Both tests GREEN with unchanged gameplay/data; original open/autoloot ordering retained.
 
+- 2026-10-14: [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14): eight controlled deaths persist bits0–7; fresh owner isolation and eight staged corpse reward commits. Not natural/native clear.
 - 2026-10-14: [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation): regenerate same supported predicate families,5479 ordinary/1821 statistics, reconcile243 inventory rows; coherent-source delta+23/+5, no removals versus69933. Runtime gate pending.
 
 - 2026-10-14: Installed70391 runtime acceptance at a4de9864:173/0/1ignored plus site-export1/1, compiler/policy38/38, server/engine checks and three-repo fmt pass; sibling quest schema aligned before gate. Whole audit continues.
@@ -1194,3 +1211,18 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-14: [Target health46](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health): inclusive pre-effect native110 health; bandage45544 RED reaches real aura before6799 counter failure, structural+141 only; acceptance pending.
 
 - 2026-10-14: TargetHealth46 final integrated acceptance at30a6e515:175/0/1ignored +site-export1/1; server/engine checks and three-repo fmt pass, census5480/1821. Native authentic bandage item-level context and finite-maximum rejection retain pre-effect inclusive semantics.
+
+- 2026-10-14: Distinct native melee/RAP percentages, owner wire and DefenseType-selected tooltip powers; bounded9 leaves5partial. See [[systems/character-stats]] and docs/class-completeness6.md.
+
+- 2026-10-14: Native player autoattack/weapon-spell critical block and launch/impact hit-state proof; NPC/probability/638 boundaries remain open. See [[systems/player-damage]] and docs/class-completeness6.md.
+## 2026-10-14 — Pre-effect spell-hit target auras
+
+[TargetHasAura10](systems/dungeon-achievements.md#pre-effect-spell-hit-target-auras) reads actual hit-unit active auras synchronously before effects. Complete positive type110 leaves retain companions; census5481/1821 adds only3579. Compiler RED→GREEN34/34; native RED1bf78023 reaches actual65403 then food cast but11168 absent; GREEN0a349a77 1/1 proves target authority, negatives and reopen. Full required four-thread filter176/0/1ignored plus site-export1/1, server workspace/all-target and fresh engine four-package checks, three-repo fmt pass without warnings; table acquisition/holiday/UI unclaimed.
+
+## 2026-10-14 — Maximum-health percent effect165
+
+[Effect165](systems/player-damage.md#maximum-health-percent-effect165) supplies the actual67531 hit producer needed by BB King. Native RED9e862790 accepts authentic cast but health50000 does not become49990. Implementation preserves integer max-health percentage and common mitigation while omitting direct caster/target bonuses; native GREEN4091b81b proves actual damage10, Enrage/Barkskin exclusions and zero truncation. TargetCreatureId4 compiler RED→GREEN35/35; required integrated filter178/0/1ignored +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b.
+
+## 2026-10-14 — Pre-effect spell-hit target creature entries
+
+[TargetCreatureId4](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) and complete Some selectors use actual hit NPC.template_id for native110, retaining DoEmote54 and every companion. Source165 actualdamage/bonus-exclusion/zero-hit boundary passes before valid predicate RED12660Nonevs3. Generated5621/census5483+1821 adds account4436/4437 only. Native GREEN4091b81b2/2(18.30s) proves both factions’ actual leader grants, wrong NPC/Player/missing/depth/idle rejection and durable counters/grant dates after reopen/re-entry. All243 matrix/pinned5483 and readability pass; required workspace filter178/0/1ignored(269.99s) +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b source scope. Independent verifier unavailable; no content/acquisition/UI certificate.
