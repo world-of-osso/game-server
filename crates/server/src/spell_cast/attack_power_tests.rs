@@ -87,6 +87,73 @@ fn class_completeness_native_aimed_shot_uses_source_ranged_ap_not_melee_ap() {
     );
 }
 
+#[test]
+fn class_completeness_native_hunter_pet_command_inherits_owner_ranged_not_melee_ap() {
+    let mut h = harness(Vec::new(), &[259489, 259277], 3).unwrap();
+    {
+        let mut owner = h
+            .app
+            .world_mut()
+            .get_mut::<CharacterStats>(h.caster)
+            .unwrap();
+        owner.attack_power = 1.0;
+        owner.ranged_attack_power = 1000.0;
+    }
+    let pet = spawn_player(&mut h.app, 3, 2.0);
+    h.app
+        .world_mut()
+        .entity_mut(pet)
+        .remove::<shared::components::Player>()
+        .insert(crate::hunter_pet::HunterPet {
+            owner: h.caster,
+            slot: 0,
+        });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::hunter_pet::PetStable {
+            character_id: Some(1),
+            stored: Default::default(),
+            summoned: Some(pet),
+        });
+    h.cast_and_deliver(259489, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(3);
+    assert_eq!(
+        5000.0 - h.health(h.npc),
+        660.0,
+        "native pet:3×(1000 owner RAP×0.22), not owner melee AP1"
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(259277)
+                && event.source == Some(pet.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage)
+    );
+}
+
+#[test]
+fn class_completeness_native_ap_derived_spell_and_healing_power_stay_melee_owned() {
+    // Native Retribution1258011:96% of melee AP, despite class RAP being zero.
+    let mut h = harness_with(Vec::new(), &[1258011, BATTLE_SHOUT], 2, true).unwrap();
+    h.advance(6);
+    let before = stats(&h);
+    assert_eq!(before.ranged_attack_power, 0.0);
+    assert_power(
+        before.spell_power,
+        (before.attack_power * 0.96 + 0.5).floor(),
+    );
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 1);
+    let after = stats(&h);
+    assert_power(after.attack_power, before.attack_power * 1.05);
+    assert_power(after.spell_power, (after.attack_power * 0.96 + 0.5).floor());
+    assert_eq!(after.healing_power, after.spell_power);
+    assert!(after.spell_power > before.spell_power);
+}
+
 fn one_melee_hit(h: &mut Harness) -> f32 {
     h.app
         .world_mut()
