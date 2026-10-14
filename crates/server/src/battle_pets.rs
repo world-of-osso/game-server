@@ -16,6 +16,14 @@ use shared::components::{
 use shared::pet_battle::PetJournal;
 use shared::protocol::{CollectionChannel, CollectionStateUpdate, DismissPet, SummonPet};
 use std::collections::HashMap;
+#[path = "pet_journal_details.rs"]
+mod journal_details;
+#[cfg(test)]
+pub(crate) use journal_details::choose_ability;
+use journal_details::receive_ability_requests;
+pub(crate) use journal_details::{
+    load_or_initialize_pet_states, persist_battle_progress, send_pet_details,
+};
 
 pub(crate) const ACCOUNT_PET_JOURNALS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("account_pet_journals");
@@ -61,6 +69,7 @@ struct Species {
     name: String,
     display_id: u32,
     summon_spell_id: u32,
+    can_battle: bool,
 }
 
 #[derive(Resource)]
@@ -68,6 +77,8 @@ pub(crate) struct PetCatalog {
     pub(crate) battle: ::server::pet_battle::Catalog,
     species: HashMap<u32, Species>,
     spells: HashMap<u32, u32>,
+    ability_art: HashMap<u32, (String, u32)>,
+    next_level_xp: HashMap<u8, u32>,
 }
 
 impl PetCatalog {
@@ -77,8 +88,8 @@ impl PetCatalog {
 
     pub(crate) fn load(conn: &Connection) -> rusqlite::Result<Self> {
         let mut query = conn.prepare(
-            "SELECT species_id, creature_id, name, display_id, summon_spell_id \
-             FROM battle_pet_species ORDER BY species_id",
+            "SELECT s.species_id, s.creature_id, s.name, s.display_id, s.summon_spell_id, m.Flags \
+             FROM battle_pet_species s JOIN battle_pet_species_metadata m ON m.ID=s.species_id ORDER BY s.species_id",
         )?;
         let entries = query
             .query_map([], |row| {
@@ -88,6 +99,7 @@ impl PetCatalog {
                     name: row.get(2)?,
                     display_id: row.get(3)?,
                     summon_spell_id: row.get(4)?,
+                    can_battle: row.get::<_, u32>(5)? & 0x80 == 0,
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -102,10 +114,20 @@ impl PetCatalog {
             .collect();
         let battle = ::server::pet_battle::Catalog::load_world_db(conn)
             .map_err(rusqlite::Error::InvalidParameterName)?;
+        let ability_art = conn
+            .prepare("SELECT ID,Name_lang,IconFileDataID FROM battle_pet_ability")?
+            .query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?
+            .collect::<rusqlite::Result<_>>()?;
+        let next_level_xp = conn
+            .prepare("SELECT level,next_level_xp FROM battle_pet_xp WHERE level BETWEEN 1 AND 25")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
         Ok(Self {
             battle,
             species,
             spells,
+            ability_art,
+            next_level_xp,
         })
     }
 }
@@ -160,6 +182,7 @@ impl Plugin for BattlePetPlugin {
             (
                 load_account_journals,
                 receive_pet_requests,
+                receive_ability_requests,
                 despawn_ownerless_companions,
                 crate::wild_pet_battles::receive_wild_battle_requests,
                 crate::wild_pet_battles::remove_abandoned_battles,
@@ -182,6 +205,7 @@ pub(crate) fn load_account_journals(world: &mut World) {
             journal,
             summoned: None,
         });
+        load_or_initialize_pet_states(world, owner).expect("initialize owned pet battle states");
         refresh_catalog_snapshot(world, owner);
         send_pet_update(world, connection, owner, None);
     }
@@ -268,13 +292,14 @@ pub(crate) fn send_pet_update(
             .get::<PlayerCollectionState>(owner)
             .map(build_collection_snapshot),
         message: None,
-        error,
+        error: error.clone(),
         pet_journal: Some(state.journal.clone()),
         summoned_pet_id: state.summoned.map(|(id, _)| id),
     };
     if let Some(mut sender) = world.get_mut::<MessageSender<CollectionStateUpdate>>(connection) {
         sender.send::<CollectionChannel>(message);
     }
+    send_pet_details(world, connection, owner, error);
 }
 
 /// ItemEffect's ITEM_SPELLTRIGGER_LEARN_SPELL identifies the species summon spell.
