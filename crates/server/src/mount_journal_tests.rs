@@ -513,6 +513,7 @@ fn relog_crash_retires_old_world_link_before_mount_journal_next_frame() {
     app.add_plugins(MinimalPlugins);
     app.insert_resource(GameDatabase::new(crate::persistence::temp_database()));
     app.init_resource::<MountCatalog>();
+    app.init_resource::<PendingMountRequests>();
     let old_player = app.world_mut().spawn(crate::persistence::ClientId(32)).id();
     let new_player = app.world_mut().spawn(crate::persistence::ClientId(32)).id();
     let old_connection = app

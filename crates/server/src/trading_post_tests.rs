@@ -605,6 +605,15 @@ fn trading_post_cart_wire_rejects_unknown_offer_without_partial_charge_then_publ
         );
         std::thread::sleep(std::time::Duration::from_millis(1));
     };
+    let collection_deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    while h.app.world().resource::<AppearanceReplies>().0.is_empty() {
+        assert!(
+            std::time::Instant::now() < collection_deadline,
+            "no committed cart collection wire update"
+        );
+        h.app.update();
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
     let updates = &h.app.world().resource::<AppearanceReplies>().0;
     assert_eq!(
         updates.len(),
