@@ -186,3 +186,7 @@ Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast s
 
 - [x] Native aura148 applies100/(100+max(amount,−99)) per matching charge-category effect to future recovery durations. Existing running recovery preserves completed progress on application, amount refresh, removal and expiry; queued charges retain serial recovery and owner updates. Native Trueshot effect1 amount40/category1715 must accelerate actual Aimed Shot recovery.
 - Type-mask rates, global ModTimeRate, charm inheritance and full Trueshot/rendered parity remain separate unproved boundaries.
+
+## Charred Warblades
+
+- [x] Native213010 must collect eligible owner Fire-school damage using effect0's native percentage, truncate each event contribution, cast self213011 once at the1000ms tick and clear accumulated damage after ticking/removal. Non-Fire damage, other actors and already-spent contributions must not heal. Refresh of the same aura preserves pending contributions.
