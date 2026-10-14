@@ -48,7 +48,8 @@ fn dummy8_reap_hits_enemies_along_destination_line_not_single_target_or_radial_a
     h.advance(40);
     landed(&h);
     for e in [npc, beyond] {
-        assert_eq!(logged(&h, 1225827, e, CombatLogKind::Damage), 557);
+        // Active Effect1215275: 6.0156 SP × fixture SP100, rounded.
+        assert_eq!(logged(&h, 1225827, e, CombatLogKind::Damage), 602);
     }
     for e in [behind, outside, far, ally, other_map] {
         assert_eq!(logged(&h, 1225827, e, CombatLogKind::Damage), 0);
