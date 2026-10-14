@@ -511,7 +511,8 @@ fn class_completeness_native_creature_spell_block_uses_creature_percent_not_play
 
 #[test]
 fn class_completeness_native_creature_no_block_flag_overrides_block_aura() {
-    let mut h = creature_block_duel(1511);
+    // Native36980 Ice Tomb has NO_BLOCK0x10; 1511 has only NO_XP0x40.
+    let mut h = creature_block_duel(36980);
     let target = h.npc;
     let hits = cast_damage_spell(&mut h, target, 1464, 3);
     assert_eq!(hits.len(), 1);
@@ -550,4 +551,15 @@ fn class_completeness_native_creature_block_requires_facing_and_active_defense()
         assert_eq!(hits[0].blocked, 0);
         assert!(varied(303.0).contains(&(hits[0].amount as f32)));
     }
+}
+
+#[test]
+fn class_completeness_native_creature_no_xp_flag_does_not_disable_block() {
+    let mut h = creature_block_duel(1511);
+    let target = h.npc;
+    let hits = cast_damage_spell(&mut h, target, 1464, 3);
+    assert_eq!(hits.len(), 1);
+    let total = hits[0].amount + hits[0].blocked;
+    assert!(varied(303.0).contains(&(total as f32)));
+    assert_eq!(hits[0].blocked, (total as f32 * 0.3).trunc() as i32);
 }
