@@ -1036,6 +1036,10 @@ fn startup_load_world_data(mut commands: Commands) {
     );
     commands.insert_resource(game_objects);
     commands.insert_resource(
+        crate::pvp::isle_siege::Catalog::load(&conn)
+            .expect("Load sourced Isle gate health; publish tdb_destructible_hitpoint first"),
+    );
+    commands.insert_resource(
         crate::pvp::load_battleground_objects(&conn)
             .expect("Failed to load source scripted battleground templates/displays"),
     );

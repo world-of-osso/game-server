@@ -55,6 +55,8 @@ mod arena_sight;
 mod kill_criteria;
 pub(crate) use kill_criteria::record_battleground_player_kill;
 
+#[path = "pvp_isle_siege.rs"]
+pub(crate) mod isle_siege;
 #[path = "pvp_alterac.rs"]
 mod pvp_alterac;
 pub(crate) use pvp_alterac::is_banner as is_alterac_banner;
