@@ -74,7 +74,7 @@ fn guild_ranks_layout_two_preserves_each_capability_and_bank_data_across_restart
             } else {
                 let (member, _) = crate::persistence_character::create_character(
                     &db,
-                    1,
+                    2 + index as u64,
                     &format!("Rank{}", char::from(b'A' + index as u8)),
                     1,
                     1,
