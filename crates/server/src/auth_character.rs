@@ -179,7 +179,17 @@ fn collect_account_requests<M: lightyear::prelude::Message>(
     out
 }
 
-/// Process character selection and world entry.
+#[derive(Default)]
+pub struct PendingSelections {
+    requests: Vec<(
+        Entity,
+        u64,
+        SelectCharacter,
+        crate::persistence_writer::CommitReceipt,
+    )>,
+}
+
+/// Process character selection and world entry after prior FIFO snapshots are durable.
 pub fn process_select_character(
     mut receivers: Query<
         (
@@ -197,10 +207,59 @@ pub fn process_select_character(
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
     mut maps: crate::maps::LoginMaps,
     mut geometry: crate::admission_geometry::AdmissionGeometry,
+    mut pending: Local<PendingSelections>,
 ) {
     geometry.poll();
     let Some(db) = db.as_ref() else { return };
-    let mut requests = collect_select_requests(&mut receivers);
+    for (entity, account, request) in collect_select_requests(&mut receivers) {
+        if pending
+            .requests
+            .iter()
+            .any(|(connection, _, _, _)| *connection == entity)
+        {
+            continue;
+        }
+        if !validate_ownership(db, account, request.character_id) {
+            send_enter_error(entity, &mut enter_senders, "Character not found");
+            continue;
+        }
+        save_and_despawn_stale_player(db, &existing_players, request.character_id, &mut commands);
+        let departure = db
+            .departing_characters
+            .lock()
+            .expect("departing character receipts")
+            .get(&request.character_id)
+            .cloned();
+        let fence = db
+            .writer
+            .enqueue("character selection durability fence", move |_| {
+                departure.map_or(Ok(()), |receipt| {
+                    receipt
+                        .result()
+                        .expect("earlier FIFO departure has completed")
+                })
+            });
+        pending.requests.push((entity, account, request, fence));
+    }
+    let mut requests = Vec::new();
+    pending
+        .requests
+        .retain(|(entity, account, request, fence)| {
+            if !receivers.contains(*entity) {
+                return false;
+            }
+            match fence.result() {
+                None => true,
+                Some(Ok(())) => {
+                    requests.push((*entity, *account, request.clone()));
+                    false
+                }
+                Some(Err(error)) => {
+                    send_enter_error(*entity, &mut enter_senders, &error);
+                    false
+                }
+            }
+        });
     for request in geometry.completed_requests() {
         if !requests
             .iter()
@@ -210,7 +269,6 @@ pub fn process_select_character(
         }
     }
     for (entity, account_id, req) in requests {
-        save_and_despawn_stale_player(&db.db, &existing_players, req.character_id, &mut commands);
         handle_select(
             CharacterSelection {
                 connection: entity,
@@ -283,7 +341,7 @@ pub(crate) type LivePlayer = (
 /// still there (re-auth): save that player's live state first, so the new player
 /// loads where the old one was, then despawn it.
 pub(crate) fn save_and_despawn_stale_player(
-    db: &redb::Database,
+    db: &GameDatabase,
     existing: &Query<LivePlayer>,
     character_id: u64,
     commands: &mut Commands,
@@ -294,7 +352,7 @@ pub(crate) fn save_and_despawn_stale_player(
         }
         if let Some((player, position, health, death, map, transfer)) = live {
             let map_id = crate::maps::saved_map_id(map, transfer);
-            persistence::save_live_character(
+            persistence::enqueue_live_character(
                 db,
                 character_id,
                 player,
@@ -302,6 +360,7 @@ pub(crate) fn save_and_despawn_stale_player(
                 health,
                 death,
                 map_id,
+                None,
             );
         }
         warn!("Despawning stale player entity {entity:?} for character {character_id}");

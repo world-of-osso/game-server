@@ -35,7 +35,10 @@ pub(crate) mod toy_store;
 #[path = "persistence_charters_tests.rs"]
 mod charter_tests;
 
-pub use self::persistence_runtime::{ClientId, save_live_character};
+pub use self::persistence_runtime::ClientId;
+pub(crate) use self::persistence_runtime::enqueue_live_character;
+#[cfg(test)]
+pub use self::persistence_runtime::save_live_character;
 use self::persistence_runtime::{flush_all_characters_on_exit, save_dirty_characters};
 pub use crate::persistence_character::*;
 pub use crate::persistence_types::*;
@@ -257,6 +260,8 @@ pub struct GameDatabase {
     pub db: std::sync::Arc<Database>,
     pub(crate) writer: crate::persistence_writer::PersistenceWriter,
     pub(crate) accounts: crate::achievement::AccountProgressCache,
+    pub(crate) departing_characters:
+        std::sync::Mutex<std::collections::HashMap<u64, crate::persistence_writer::CommitReceipt>>,
 }
 
 impl GameDatabase {
@@ -266,6 +271,7 @@ impl GameDatabase {
             db,
             writer,
             accounts,
+            departing_characters: _,
         } = self;
         drop(writer);
         drop(accounts);
@@ -279,6 +285,7 @@ impl GameDatabase {
             writer: crate::persistence_writer::PersistenceWriter::start(std::sync::Arc::clone(&db)),
             db,
             accounts: Default::default(),
+            departing_characters: Default::default(),
         }
     }
 }

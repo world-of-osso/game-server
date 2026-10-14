@@ -1145,6 +1145,61 @@ fn select_again(app: &mut App, account_id: u64, character_id: u64) {
 }
 
 #[test]
+fn reentry_waits_for_durable_stale_snapshot_without_blocking_updates() {
+    use std::time::Instant;
+    let db = test_db();
+    let (character, _) = persistence::create_character(&db.db, 11, "Fiforelog", 1, 1).unwrap();
+    let (mut app, stale) = select_character_in_world(db, 11, character);
+    app.world_mut()
+        .get_mut::<shared::components::Position>(stale)
+        .unwrap()
+        .x = -10550.8;
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = Instant::now();
+    select_again(&mut app, 11, character);
+    let elapsed = started.elapsed();
+    let premature = app
+        .world_mut()
+        .query::<(Entity, &ClientId)>()
+        .iter(app.world())
+        .any(|(entity, id)| entity != stale && id.0 == character);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "reentry tick waited: {elapsed:?}"
+    );
+    assert!(
+        !premature,
+        "new session loads before old snapshot is durable"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        app.update();
+        let fresh = app
+            .world_mut()
+            .query::<(Entity, &ClientId, &shared::components::Position)>()
+            .iter(app.world())
+            .find(|(entity, id, _)| *entity != stale && id.0 == character)
+            .map(|(_, _, position)| position.x);
+        if let Some(x) = fresh {
+            assert_eq!(x, -10550.8);
+            break;
+        }
+        assert!(Instant::now() < deadline, "no durable reentry");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+}
+
+#[test]
 fn re_entering_the_world_keeps_where_the_old_session_moved_to() {
     let db = test_db();
     let account_id = 11;
@@ -1162,6 +1217,20 @@ fn re_entering_the_world_keeps_where_the_old_session_moved_to() {
         .unwrap() = landed;
 
     select_again(&mut app, account_id, character_id);
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while !app
+        .world_mut()
+        .query::<(Entity, &ClientId)>()
+        .iter(app.world())
+        .any(|(entity, id)| entity != stale && id.0 == character_id)
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "durable reentry did not finish"
+        );
+        app.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
 
     let fresh = app
         .world_mut()

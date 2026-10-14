@@ -530,7 +530,7 @@ mod tests {
 
         let character_id = 77;
         let dir = tempfile::tempdir().unwrap();
-        let db = redb::Database::create(dir.path().join("game.redb")).unwrap();
+        let db = GameDatabase::new(redb::Database::create(dir.path().join("game.redb")).unwrap());
         let player = app
             .world_mut()
             .spawn((ClientId(character_id), ReplicationTag, VisibilityTag))

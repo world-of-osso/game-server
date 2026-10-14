@@ -114,7 +114,8 @@ fn live_character<'a>(
     }
 }
 
-/// Save a player's live state (logout and single-character saves).
+/// Direct fixture write; live actors use the FIFO snapshot enqueue.
+#[cfg(test)]
 pub fn save_live_character(
     db: &redb::Database,
     character_id: u64,
@@ -135,6 +136,40 @@ pub fn save_live_character(
             map_id,
         }],
     );
+}
+
+pub(crate) fn enqueue_live_character(
+    db: &GameDatabase,
+    character_id: u64,
+    player: &Player,
+    position: &Position,
+    health: &Health,
+    death: Option<&PlayerDeathState>,
+    map_id: u32,
+    rest: Option<crate::persistence_progression::RestData>,
+) -> crate::persistence_writer::CommitReceipt {
+    let character = LiveCharacter {
+        character_id,
+        player: player.clone(),
+        position: *position,
+        health: *health,
+        death: death.cloned(),
+        map_id,
+    };
+    let receipt = db
+        .writer
+        .enqueue("departing character snapshot", move |db| {
+            save_live_characters(db, &[character]);
+            if let Some(rest) = rest {
+                crate::persistence_progression::save_rest(db, character_id, &rest);
+            }
+            Ok(())
+        });
+    db.departing_characters
+        .lock()
+        .expect("departing character receipts")
+        .insert(character_id, receipt.clone());
+    receipt
 }
 
 fn enqueue_live_characters(

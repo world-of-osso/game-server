@@ -412,12 +412,17 @@ fn save_and_despawn(
         && let Ok((pos, health, player, cid, death, map, transfer, rest)) = player_query.get(entity)
     {
         let map_id = crate::maps::saved_map_id(map, transfer);
-        persistence::save_live_character(&db.db, cid.0, player, pos, health, death, map_id);
-        if let Some(rest) = rest {
-            let data = rest.logout_data(crate::rest::unix_secs());
-            crate::persistence_progression::save_rest(&db.db, cid.0, &data);
-        }
-        info!("Saved character data for character_id {}", cid.0);
+        persistence::enqueue_live_character(
+            db,
+            cid.0,
+            player,
+            pos,
+            health,
+            death,
+            map_id,
+            rest.map(|rest| rest.logout_data(crate::rest::unix_secs())),
+        );
+        info!("Queued character data for character_id {}", cid.0);
     }
     queue_player_despawn(commands, entity);
 }
