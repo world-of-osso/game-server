@@ -2,6 +2,9 @@
 use super::*;
 
 const SILVERLAINE: u32 = 3887;
+const SHADOWFANG_MAP: u32 = 33;
+const NORMAL_DIFFICULTY: u32 = 1;
+const SILVERLAINE_ENCOUNTER: u32 = 1070;
 const VEIL_OF_SHADOW: u32 = 7068;
 const SILVERLAINE_BIT: u32 = 1;
 const HEALING_POTION: u32 = 8141;
@@ -39,9 +42,9 @@ fn apply_potion_heal(h: &mut Harness, target: Entity) -> f32 {
 fn encounter_coverage_silverlaine_real_source_cast_repeat_and_death_credit() {
     let (mut h, boss, map) = encounter_fixture(
         SILVERLAINE,
-        33,
+        SHADOWFANG_MAP,
         SILVERLAINE_BIT,
-        1,
+        NORMAL_DIFFICULTY,
         None,
         EncounterState::NotStarted,
         false,
@@ -77,7 +80,7 @@ fn encounter_coverage_silverlaine_real_source_cast_repeat_and_death_credit() {
         h.inbox(0)
             .ends
             .iter()
-            .any(|end| end.encounter_id == 1070 && end.success)
+            .any(|end| end.encounter_id == SILVERLAINE_ENCOUNTER && end.success)
     );
     assert!(h.inbox(1).ends.is_empty());
     assert_eq!(
