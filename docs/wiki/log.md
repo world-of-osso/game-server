@@ -1,3 +1,7 @@
+## 2026-10-13 — Ragefire copy persistence and corpse rewards
+
+[Whole-copy boundaries](systems/boss-scripts.md#ragefire-whole-copy-proof) now exercise four real primary deaths, Normal redb reopen/dead-boss population and fresh-owner isolation; actual corpse loot requests persist each boss reward once. Native staged entry rendered but encountered missing source LOS eye receipts; no complete-fight or both-skin certificate follows.
+
 ## 2026-10-13 — Slagmaw logical identity versus preview
 
 [Pinned primary identity](systems/boss-scripts.md#slagmaw-source-primary) authenticates61463→1445/bit2 independently of Journal preview38391 versus live model42247. Producer/census RED→GREEN and actual idempotent private SQL preserve both models/unrelated bindings; publication and full-fight/native gates stay separate.
