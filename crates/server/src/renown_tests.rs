@@ -15,6 +15,13 @@ fn query(h: &mut Harness) -> RenownSnapshot {
 }
 
 fn request(h: &mut Harness, request: RenownRequest) -> RenownSnapshot {
+    request_with_updates(h, request).0
+}
+
+fn request_with_updates(
+    h: &mut Harness,
+    request: RenownRequest,
+) -> (RenownSnapshot, Vec<shared::protocol::ReputationStateUpdate>) {
     h.app.add_systems(Update, receive_requests);
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<RenownRequest>::default(),
@@ -30,6 +37,7 @@ fn request(h: &mut Harness, request: RenownRequest) -> RenownSnapshot {
         .unwrap()
         .send::<InstanceChannel>(request);
     let mut replies = Vec::new();
+    let mut updates = Vec::new();
     for _ in 0..10 {
         h.app.update();
         replies.extend(
@@ -39,8 +47,15 @@ fn request(h: &mut Harness, request: RenownRequest) -> RenownSnapshot {
                 .unwrap()
                 .receive(),
         );
+        updates.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<shared::protocol::ReputationStateUpdate>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
     }
-    replies.pop().expect("renown reply")
+    (replies.pop().expect("renown reply"), updates)
 }
 
 #[test]
@@ -52,16 +67,10 @@ fn renown_watch_query_reads_live_reputation_and_zero_clears_persistently() {
     reputation.watch(72);
     h.app.world_mut().entity_mut(h.player).insert(reputation);
     assert_eq!(query(&mut h).watched_faction, Some(72));
-    let cleared = request(&mut h, RenownRequest::SetWatchedFaction { faction_id: 0 });
+    let (cleared, updates) =
+        request_with_updates(&mut h, RenownRequest::SetWatchedFaction { faction_id: 0 });
     assert_eq!(cleared.watched_faction, None);
     assert_eq!(cleared.watch_error, None);
-    let updates: Vec<_> = h
-        .app
-        .world_mut()
-        .get_mut::<MessageReceiver<shared::protocol::ReputationStateUpdate>>(h.connection)
-        .unwrap()
-        .receive()
-        .collect();
     assert!(
         updates.iter().any(|update| update
             .snapshot
@@ -106,7 +115,16 @@ fn renown_watch_unknown_or_unevaluated_faction_does_not_replace_watch() {
     reputation.watch(72);
     h.app.world_mut().entity_mut(h.player).insert(reputation);
     for faction_id in [2503, 4_000_000] {
-        let denied = request(&mut h, RenownRequest::SetWatchedFaction { faction_id });
+        let (denied, updates) =
+            request_with_updates(&mut h, RenownRequest::SetWatchedFaction { faction_id });
+        assert!(
+            updates.iter().any(|update| update
+                .snapshot
+                .as_ref()
+                .and_then(|snapshot| snapshot.watched.as_ref())
+                .is_some_and(|watched| watched.faction_id == 72)),
+            "Refusal must retain the previous main-screen bar"
+        );
         assert!(denied.watch_error.is_some());
         assert_eq!(denied.watched_faction, Some(72));
         assert_eq!(
