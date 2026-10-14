@@ -773,6 +773,493 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_target_aura_reads_food_hit_not_caster() {
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        vec![],
+        &[61925, 65403],
+        1,
+        false,
+        |app| {
+            app.add_plugins(AchievementPlugin);
+        },
+    )
+    .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Foodhitproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 3.0);
+    assert!(crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        65403,
+        Some(h.caster),
+        0,
+        None,
+    ));
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 65403));
+    assert!(!crate::auras::has_aura(h.app.world(), target, 65403));
+    assert!(crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        61925,
+        Some(target),
+        0,
+        None,
+    ));
+    h.advance(30);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&11168),
+        "caster aura cannot replace target aura"
+    );
+    assert!(crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        65403,
+        Some(target),
+        0,
+        None,
+    ));
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), target, 65403));
+    assert!(!crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        61925,
+        Some(target),
+        u8::MAX,
+        None,
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&11168),
+        "rejected depth is not a hit"
+    );
+    assert!(crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        61925,
+        Some(target),
+        0,
+        None,
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&11168),
+        "launch is not landing"
+    );
+    h.advance(30);
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    assert_eq!(
+        state.criteria_progress.get(&11168),
+        Some(&1),
+        "actual food spell hit on aura65403 target must credit"
+    );
+    assert!(state.earned_ids.contains(&3579));
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&11168),
+        Some(&1),
+        "idle cannot replay hit credit"
+    );
+    let missing = h.app.world_mut().spawn_empty().id();
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 61925);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&11168),
+        Some(&1),
+        "missing target cannot inherit caster aura"
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.npc, 65403, Some(h.npc), 0);
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 65403));
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, h.npc, 61925);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&11168),
+        Some(&2),
+        "actual unit aura is not Player-only"
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&11168), Some(&2));
+    assert!(saved.earned_ids.contains(&3579));
+}
+
+#[test]
+fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing() {
+    use shared::components::Health;
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[45544], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    // Authored Heavy Frostweave Bandage supplies the item-level scaling context.
+    let item_level: u16 = conn
+        .query_row(
+            "SELECT i.ItemLevel FROM content_item i JOIN item_x_item_effect x ON x.ItemID=i.ID \
+         JOIN item_effect e ON e.ID=x.ItemEffectID WHERE i.ID=34722 AND e.SpellID=45544",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Triagehit", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 3.0);
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 5.01;
+    h.app.world_mut().get_mut::<Health>(target).unwrap().max = 100.0;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 1.0;
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        u8::MAX,
+        Some(item_level),
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), target, 45544));
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        0,
+        Some(item_level),
+    );
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), target, 45544));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6799),
+        "low caster health cannot replace target above5percent"
+    );
+    let missing = h.app.world_mut().spawn_empty().id();
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 45544);
+    for health in [
+        Health {
+            current: 5.0,
+            max: 0.0,
+        },
+        Health {
+            current: f32::NAN,
+            max: 100.0,
+        },
+        Health {
+            current: 5.0,
+            max: f32::INFINITY,
+        },
+        Health {
+            current: f32::INFINITY,
+            max: 100.0,
+        },
+    ] {
+        h.app.world_mut().entity_mut(target).insert(health);
+        record_targeted_spell_hit(h.app.world_mut(), h.caster, target, 45544);
+        assert!(
+            !h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&6799),
+            "invalid target health {health:?} cannot qualify"
+        );
+    }
+    h.app.world_mut().entity_mut(target).insert(Health {
+        current: 5.0,
+        max: 100.0,
+    });
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        0,
+        Some(item_level),
+    );
+    h.advance(2);
+    assert!(
+        crate::auras::has_aura(h.app.world(), target, 45544),
+        "actual bandage hit landed"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(target).unwrap().current,
+        5.0,
+        "authored periodic healing has not ticked at100ms"
+    );
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    assert_eq!(
+        state.criteria_progress.get(&6799),
+        Some(&1),
+        "native target at exactly5percent must credit before healing"
+    );
+    assert!(state.earned_ids.contains(&141));
+    h.advance(24);
+    assert!(
+        h.app.world().get::<Health>(target).unwrap().current > 5.0,
+        "real periodic bandage heals after the qualifying hit"
+    );
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6799),
+        Some(&1),
+        "idle/heal ticks cannot replay hit credit"
+    );
+    {
+        let mut npc_health = h.app.world_mut().get_mut::<Health>(h.npc).unwrap();
+        npc_health.current = 1.0;
+        npc_health.max = 100.0;
+    }
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, h.npc, 45544);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6799),
+        Some(&2),
+        "hit-unit snapshot is not Player-only"
+    );
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6799),
+        Some(&2)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&6799), Some(&2));
+    assert!(saved.earned_ids.contains(&141));
+}
+
+#[test]
+fn achievements_criteria_native_target_class_uses_actual_player_hit_and_race() {
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        vec![],
+        &[27571, 61781],
+        1,
+        false,
+        |app| {
+            app.add_plugins(AchievementPlugin);
+        },
+    )
+    .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Classhit", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = 2;
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 6, 3.0);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), u8::MAX);
+    assert!(!crate::auras::has_aura(h.app.world(), target, 27571));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6313)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), 0);
+    h.advance(9);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), target, 27571),
+        "authored missile has not landed"
+    );
+    h.advance(3);
+    assert!(
+        crate::auras::has_aura(h.app.world(), target, 27571),
+        "actual sourced rose petals landed"
+    );
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert_eq!(
+        progress.get(&6313),
+        Some(&1),
+        "actual Human Death Knight target qualifies"
+    );
+    assert!(
+        !progress.contains_key(&6302),
+        "Orc caster race cannot substitute for Human target"
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().race = 2;
+    h.app.world_mut().get_mut::<Player>(target).unwrap().class = 1;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), 0);
+    h.advance(12);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6302),
+        "correct race cannot replace required target class"
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().class = 6;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), 0);
+    h.advance(12);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6302),
+        Some(&1)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(h.npc), 0);
+    h.advance(12);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 27571));
+    let missing = h.app.world_mut().spawn_empty().id();
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 27571);
+    h.app.world_mut().get_mut::<Player>(target).unwrap().race = 1;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    h.advance(10);
+    assert!(crate::auras::has_aura(h.app.world(), target, 61781));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&11158),
+        "turkey hit on Death Knight cannot credit Rogue"
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().class = 4;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    h.advance(10);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&11158),
+        Some(&1),
+        "positive race-only authority anchors actual target class"
+    );
+    h.advance(20);
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert_eq!(progress.get(&6313), Some(&1));
+    assert_eq!(progress.get(&6302), Some(&1));
+    assert_eq!(progress.get(&11158), Some(&1));
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&6313), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&6302), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&11158), Some(&1));
+}
+
+#[test]
 fn achievements_criteria_native_target_race_uses_each_actual_spell_hit_unit() {
     let mut h =
         crate::spell_cast::test_harness::harness_with_plugins(vec![], &[44212], 1, false, |app| {
@@ -2816,6 +3303,7 @@ fn achievements_criteria_mixed_difficulty_and_aura_tree_needs_both() {
                 auras: aura.then_some(55817).into_iter().collect(),
                 ..Default::default()
             }),
+            ..Default::default()
         };
         let mut state = PlayerAchievementState::default();
         catalog.update_at(

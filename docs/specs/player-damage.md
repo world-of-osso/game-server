@@ -33,6 +33,7 @@ Armor
 - [x] The level-scaling damage multiplier and health ratio apply after armor and the outcome (Unit::DealDamageMods, Unit::DealDamage).
 
 Spells
+- [x] Source effect165 DAMAGE_FROM_MAX_HEALTH_PCT selects and hits its actual unit target, dealing the integer-truncated authored percent of that target's maximum health, not its current health or caster power. Unlike school damage, omit SpellDamageBonusDone/Taken while retaining common crit, armor, resilience, absorbs, death and hit/achievement boundaries. Preserve sub-one damage truncation to zero; never invent a minimum of one. Native BB gun67531 supplies authored0.01percent; acquisition/equipping and world-leader content remain separate.
 - [x] Spell power is Intellect when the main stat is Intellect, else 0 (Unit::SpellBaseDamageBonusDone, Unit.cpp:7113-7119). The main stat is the spec's, else the class's `chr_classes.PrimaryStatPriority` (Player::GetPrimaryStat, StatSystem.cpp:297-314).
 - [x] Healing power (heals, periodic heals, absorbs) is Intellect for every mana class, so a Strength paladin's Flash of Light heals 3.156 × Intellect (Unit::SpellBaseHealingBonusDone, Unit.cpp:7622-7624).
 - [x] OVERRIDE_SPELL_POWER_BY_AP_PCT (366, e.g. Retribution 1258011 96%, Protection 137028 101%) replaces both with int32(AP × summed pct + 0.5) (Unit.cpp:7103-7108, 7602-7607).

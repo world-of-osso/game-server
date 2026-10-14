@@ -2,6 +2,25 @@ use super::*;
 use crate::bank_test_harness::{ACCOUNT, Harness};
 use shared::components::{Health, Level, Npc, Position, UnitFactionTemplate};
 
+#[test]
+fn db2_follow_install_trading_post_reads_next_build_and_rejects_mixed_sources() {
+    let db = rusqlite::Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE trading_post_source(name TEXT,build TEXT); INSERT INTO trading_post_source VALUES('PerksVendorCategory','12.1.5.70391'); CREATE TABLE perks_vendor_category(ID INTEGER,payload TEXT); CREATE TABLE perks_vendor_item(ID INTEGER,payload TEXT); CREATE TABLE perks_vendor_item_ui_group(ID INTEGER,payload TEXT);").unwrap();
+    db.execute(
+        "INSERT INTO perks_vendor_category VALUES(1,?)",
+        [r#"{"ID":1,"DisplayName_lang":"Armor","DefaultUIModelSceneID":23}"#],
+    )
+    .unwrap();
+    let loaded = catalog::load(&db).unwrap();
+    assert_eq!(loaded.categories[0].name, "Armor");
+    db.execute(
+        "INSERT INTO trading_post_source VALUES('PerksVendorItem','12.1.0.69933')",
+        [],
+    )
+    .unwrap();
+    assert!(catalog::load(&db).is_err());
+}
+
 fn prepare(h: &mut Harness, now: i64) {
     let path = std::env::var_os("TRADING_POST_WORLD_COPY")
         .expect("explicit private Trading Post world copy");
@@ -369,6 +388,97 @@ fn trading_post_purchase_reply_does_not_publish_an_adventure_guide_snapshot() {
         "purchase emitted {} unsolicited Guide snapshots",
         guide_replies.len()
     );
+}
+
+#[test]
+fn trading_post_cart_wire_rejects_unknown_offer_without_partial_charge_then_publishes_all_rows() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tendercart").unwrap();
+    prepare(&mut h, 1790812900);
+    #[derive(Resource, Default)]
+    struct AppearanceReplies(Vec<AppearanceCollectionUpdate>);
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<AppearanceCollectionUpdate>::default(),
+        MessageReceiver::<AppearanceCollectionUpdate>::default(),
+    ));
+    h.app.init_resource::<AppearanceReplies>().add_systems(
+        First,
+        |mut receivers: Query<&mut MessageReceiver<AppearanceCollectionUpdate>>,
+         mut replies: ResMut<AppearanceReplies>| {
+            for mut receiver in &mut receivers {
+                replies.0.extend(receiver.receive());
+            }
+        },
+    );
+    store::grant_tender(h.db(), ACCOUNT, 1000).unwrap();
+    h.app.insert_resource(RefundWindow(600));
+    let closed = request(
+        &mut h,
+        TradingPostRequest::Checkout {
+            vendor_item_ids: vec![4, 5],
+        },
+    );
+    assert!(closed.error.is_some());
+    assert_eq!(closed.tender, 1000);
+    open_tawny(&mut h);
+    let catalog = request(&mut h, TradingPostRequest::Query);
+    for id in [4, 5] {
+        let row = catalog.items.iter().find(|row| row.id == id).unwrap();
+        assert!(
+            row.grant_unavailable.is_none(),
+            "{}: {:?}",
+            row.name,
+            row.grant_unavailable
+        );
+    }
+    let invalid = request(
+        &mut h,
+        TradingPostRequest::Checkout {
+            vendor_item_ids: vec![4, u32::MAX],
+        },
+    );
+    assert!(invalid.error.is_some());
+    assert_eq!(invalid.tender, 1000);
+    assert!(store::load(h.db(), ACCOUNT).purchases.is_empty());
+    h.app
+        .world_mut()
+        .resource_mut::<AppearanceReplies>()
+        .0
+        .clear();
+    let paid = request(
+        &mut h,
+        TradingPostRequest::Checkout {
+            vendor_item_ids: vec![4, 5],
+        },
+    );
+    let updates = &h.app.world().resource::<AppearanceReplies>().0;
+    assert_eq!(
+        updates.len(),
+        1,
+        "one final collection update for the whole checkout"
+    );
+    assert!(updates[0].appearances.contains(&37866));
+    assert!(paid.error.is_none(), "{:?}", paid.error);
+    let total = catalog
+        .items
+        .iter()
+        .filter(|row| [4, 5].contains(&row.id))
+        .map(|row| row.price)
+        .sum::<u32>();
+    assert_eq!(paid.tender, 1000 - total);
+    assert!(!paid.catalog_complete);
+    assert!(paid.items.len() < 20);
+    for id in [4, 5] {
+        let row = paid.items.iter().find(|row| row.id == id).unwrap();
+        assert!(row.purchased && row.collected);
+        assert_eq!(row.refund_seconds, 600);
+    }
+    let first = request(&mut h, TradingPostRequest::Refund { vendor_item_id: 4 });
+    assert!(first.error.is_none(), "{:?}", first.error);
+    assert!(store::load(h.db(), ACCOUNT).purchases.contains_key(&5));
+    let second = request(&mut h, TradingPostRequest::Refund { vendor_item_id: 5 });
+    assert!(second.error.is_none(), "{:?}", second.error);
+    assert_eq!(second.tender, 1000);
 }
 
 #[test]

@@ -38,6 +38,7 @@ fn class_completeness_bonus_stat_percent_scales_gear_and_flat_before_total_perce
         mastery_coefficient: 0.0,
         attack_power_per_strength: 0.0,
         attack_power_per_agility: 0.0,
+        ranged_attack_power_per_agility: 0.0,
         gear_primary: UnitStats {
             intellect: 40.0,
             ..default()
@@ -86,6 +87,7 @@ fn class_completeness_bonus_stat_percent_preserves_unselected_and_spirit_base_va
         mastery_coefficient: 0.0,
         attack_power_per_strength: 0.0,
         attack_power_per_agility: 0.0,
+        ranged_attack_power_per_agility: 0.0,
         gear_primary: UnitStats {
             strength: 7.0,
             agility: 11.0,

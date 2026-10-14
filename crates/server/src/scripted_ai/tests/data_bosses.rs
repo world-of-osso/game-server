@@ -7,6 +7,13 @@ mod group_criteria;
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
 
+#[path = "shadowfang_keep.rs"]
+mod shadowfang_keep;
+#[path = "wailing_escort.rs"]
+mod wailing_escort;
+#[path = "wailing_progress.rs"]
+mod wailing_progress;
+
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
 }
@@ -155,6 +162,10 @@ fn encounter_fixture(
     let mut app = stockade_app_with(data, |app| {
         app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
         if populate {
+            let connection =
+                Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
+                    .unwrap();
+            app.insert_resource(crate::gathering::load_data(&connection).unwrap());
             app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
             app.insert_resource(
                 crate::faction::world_db_faction_templates().expect("world.db faction templates"),
@@ -200,7 +211,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
-            || (map_id == 43 && [3654, 3678, 3679].contains(id))
+            || (map_id == 43 && [3636, 3654, 3678, 3679, 5048].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
