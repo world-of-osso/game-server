@@ -130,6 +130,8 @@ Seething39 requested delay correlation: score1000 serialized `2026-10-14T00:17:0
 
 NPC-kill reputation `1f9fce4f` now queues the faction/amount policy and reads the fresh durable reputation on FIFO. Same-player/character live state and owner replies follow receipts. Actual two-kill HostClient fixture held the real writer: RED251.289ms becomes GREEN4/4 (`reputation-fifo-{red,green}.log`); durable Stormwind100 with stale live baseline becomes ordered replies110/120 and durable/live120. Existing diminished kills and spillover behavior remain covered. Quest-reward transactions remain separately required.
 
+Catalog-derived owned pet combat defaults likewise no longer save from `load_or_initialize_pet_states`. Initialized health/ability values remain in memory; actual ability and battle mutations still persist them. A real held-writer read regressed251.261ms→GREEN5/5 (`derived-pet-reader-{red,green}.log`); default health1563/abilities384,389,459 and unchanged durable empty state are asserted. Injury73/ability202 ownership/reopen cases and the actual PvP forfeit/requeue/reopen scenario pass. Ability/battle mutation FIFO conversion remains open.
+
 Contract: [server tick budget](../../specs/server-tick-budget.md). Existing [persistence](../systems/persistence.md) boundaries remain authoritative.
 
 ## Sources

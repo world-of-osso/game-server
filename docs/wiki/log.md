@@ -1,3 +1,7 @@
+## 2026-10-14 — Pure catalog-derived pet-state reads
+
+[Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): derived pet defaults no longer write while reading; held-writer regression and ownership/injury/ability/reopen behavior pass. Actual pet mutation FIFO conversion remains open.
+
 ## 2026-10-14 — Pressure-controlled login and FIFO kill reputation
 
 [Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): release login960.7ms, six online windows below50ms p99/zero tick commits with PSI fullavg60≤0.93%. NPC-kill reputation preserves fresh durable state and gates owner replies; held-writer RED251.289ms→GREEN4/4. Full gameplay acceptance remains open.
