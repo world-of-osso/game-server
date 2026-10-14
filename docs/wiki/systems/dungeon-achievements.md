@@ -16,6 +16,12 @@ Against the intact69933 backup (5456/1816), ordinary additions are62500,62501,62
 
 Durable receipt: `/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/epoch70391-reconciled-build-delta.json` contains exact ID sets and before/after input SHA256s. WorldMapOverlay remains the existing69933 binary; current overlay source parity is not certified. Goggle test projection now pins its actual installed70391 Item/ItemSparse source. At servera4de9864/engine443ae85c3/protocol7edae0b, required four-thread workspace filter passes173/0/1ignored (250.51s), site-export1/1; pinned5479 and native target-race/class cases pass. Named compiler/policy38/38, server workspace/all-target check, engine four-package check and three-repo fmt pass. First attempt failed compilation against old sibling quest fields; siblings fast-forwarded before successful gate. Terminal unit status is saved. No remote-CI, independent-provider or full achievement/content/UI certification.
 
+## Earned-player prerequisite qualifiers
+
+TC a352b1fa CriteriaHandler2200–2204 reads `Player::HasAchieved`; Player.cpp27534–27536 delegates to AchievementMgr.cpp67–70's completed-achievement set. Positive87 compiler leaves retain complete All/single-child Some companions. Catalog load requires an authored achievement ID; each native player criteria update reads the character's earned set plus its existing account-wide awards. Neither saved progress counters nor another character's character-only grants are prerequisite authority.
+
+Native RED8a4f921a casts authentic220737 on the player, grants10460 Hidden Potential, then rewards a real299 death; criterion32961 remains absent rather than1. This is not a seeded earned ID or substituted effect. Compiler RED rejects the same complete87 leaf. GREEN/integration/census acceptance pending; artifact acquisition, challenge content and UI are unclaimed.
+
 ## Pre-effect spell-hit target creature entries
 
 TC a352b1fa CriteriaHandler1782–1784 compares the supplied target GetEntry; Spell3128–3129 supplies each actual hit before effects. `SpellHitUnit.creature_entry` captures the actual hit NPC.template_id, separately from optional Player identity and aura authority. TargetCreatureId4 and complete Some alternatives now use that snapshot for native110 while preserving existing DoEmote54 target entries. Player/missing targets reject; unknown companions and other target actors remain unsupported.
