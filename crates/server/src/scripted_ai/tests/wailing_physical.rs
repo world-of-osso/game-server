@@ -1,6 +1,104 @@
 //! Actual source paths0–2 and their camp callbacks, without injected arrivals.
 use super::*;
 
+// Existing exact-ground fixture tolerance (navigation_tests/followers tests).
+const GROUND_TOLERANCE: f32 = 0.05;
+const NAV_FLOAT_TOLERANCE: f32 = 0.0001;
+// TC MoveSpline cumulative lengths/durations are integer milliseconds.
+const SPLINE_CLOCK_PRECISION: f32 = 0.001;
+
+struct PhysicalStep {
+    from: Vec3,
+    to: Vec3,
+    speed_before: f32,
+    tick: usize,
+}
+
+fn physical_source_speed(h: &Harness, actor: Entity) -> f32 {
+    let world = h.app.world();
+    let spawn = world.get::<crate::creature_ai::SpawnPoint>(actor).unwrap();
+    match world.get::<CreatureMotion>(actor).unwrap() {
+        CreatureMotion::Still => 0.0,
+        CreatureMotion::Walk => spawn.speed_walk * 2.5,
+        CreatureMotion::Run => {
+            let multiplier = world
+                .get::<crate::auras::AuraStatMods>(actor)
+                .map_or(1.0, |mods| mods.movement_speed);
+            spawn.speed_run * 7.0 * multiplier
+        }
+    }
+}
+
+fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step: &PhysicalStep) {
+    let delta = h.app.world().resource::<Time<Fixed>>().delta_secs();
+    // A handoff may change gait after the frame's sole position update.
+    let speed = step.speed_before.max(physical_source_speed(h, actor));
+    let horizontal = (step.to.x - step.from.x).hypot(step.to.y - step.from.y);
+    let budget = speed * (delta + SPLINE_CLOCK_PRECISION);
+    assert!(
+        horizontal <= budget + NAV_FLOAT_TOLERANCE,
+        "horizontal source budget exceeded tick{}: {}yd > {}yd, speed={} dt={}; {:?}->{:?}",
+        step.tick,
+        horizontal,
+        budget,
+        speed,
+        delta,
+        step.from,
+        step.to
+    );
+    if horizontal <= NAV_FLOAT_TOLERANCE {
+        assert!(
+            (step.to.z - step.from.z).abs() <= GROUND_TOLERANCE,
+            "vertical snap without horizontal travel tick{}: {:?}->{:?}",
+            step.tick,
+            step.from,
+            step.to
+        );
+        return;
+    }
+    let from = Vec3::new(step.from.x, step.from.z, -step.from.y);
+    let to = Vec3::new(step.to.x, step.to.z, -step.to.y);
+    let floors = {
+        let mut ground = h.app.world_mut().resource_mut::<crate::ground::GroundMap>();
+        (
+            ground.creature_ground_in(map, from),
+            ground.creature_ground_in(map, to),
+        )
+    };
+    let (
+        crate::ground::GroundProbe::Supported(before_floor),
+        crate::ground::GroundProbe::Supported(floor),
+    ) = floors
+    else {
+        panic!(
+            "physical step lacks collision support tick{}: {floors:?}",
+            step.tick
+        );
+    };
+    assert!(
+        (step.to.z - floor).abs() <= GROUND_TOLERANCE,
+        "feet must follow exact floor tick{}: {:?}->{:?}; floor={before_floor}->{floor}",
+        step.tick,
+        step.from,
+        step.to
+    );
+    // Detour's WALK_FLAG ray stays on the bake's AGENT_SLOPE/AGENT_CLIMB
+    // surface, not an invented slope bound on floor-snapped 3D displacement.
+    let surface = h
+        .app
+        .world()
+        .resource::<crate::navigation::Navigation>()
+        .first_collision(map.map_id, from, to)
+        .unwrap()
+        .expect("baked walkable surface");
+    let off_surface = (surface.x - to.x).hypot(surface.z - to.z);
+    assert!(
+        off_surface <= NAV_FLOAT_TOLERANCE,
+        "movement left the walkable nav surface tick{}: {from:?}->{to:?}; clipped={surface:?}",
+        step.tick
+    );
+}
+
 #[test]
 #[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
 fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injection() {
@@ -72,24 +170,20 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
     let mut saw_cleansing = false;
     let mut arrived = false;
     for tick in 0..10_000 {
+        let speed_before = physical_source_speed(&h, disciple);
         h.advance(0.05);
         let point = h.wow_position(disciple);
         let step = point.distance(previous);
-        assert!(
-            step < 0.5,
-            "no relocation/shortcut: tick={tick} step={step} from={previous:?} to={point:?}; delta={:?} state={:?} gait={:?} speed={:?} path={}",
-            h.app.world().resource::<Time>().delta(),
-            h.app
-                .world()
-                .get::<crate::creature_ai::CreatureState>(disciple),
-            h.app.world().get::<CreatureMotion>(disciple),
-            h.app
-                .world()
-                .get::<shared::components::MovementSpeed>(disciple),
-            h.app
-                .world()
-                .get::<crate::scripted_ai::waypoint_path::PathMovement>(disciple)
-                .is_some()
+        assert_physical_ground_step(
+            &mut h,
+            disciple,
+            map,
+            &PhysicalStep {
+                from: previous,
+                to: point,
+                speed_before,
+                tick,
+            },
         );
         let a = Vec3::new(previous.x, previous.z, -previous.y);
         let b = Vec3::new(point.x, point.z, -point.y);
