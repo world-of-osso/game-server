@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Player-anchored spell-hit target class](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) — actual Player identity, preserving target/race companions; unanchored NPC class predicates excluded.
+
 - [Actual spell-hit target race](systems/dungeon-achievements.md#actual-spell-hit-target-race) — per-hit Player race, not caster race; NPC/missing snapshots rejected.
 
 - [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.
