@@ -120,8 +120,34 @@ pub(crate) struct PathMovement {
     path: Arc<ScriptPath>,
     node: usize,
     started: bool,
+    deactivated: bool,
     wait_ms: i32,
     spline: Option<Spline>,
+}
+
+impl PathMovement {
+    /// An active chase/home generator preempts this default-slot waypoint.
+    fn deactivate(&mut self) {
+        if let Some(spline) = self.spline.take() {
+            if self.path.exact_spline() {
+                // Exact controls correspond one-for-one with authored nodes.
+                self.node += spline.segment_at(spline.elapsed_ms);
+            }
+            self.started = false;
+        }
+        self.deactivated = true;
+    }
+
+    /// WaypointMovementGenerator::DoReset: stop the old spline, then relaunch
+    /// the current target from the owner's real position, not stale controls.
+    fn reactivate(&mut self) {
+        if self.deactivated {
+            self.deactivated = false;
+            if self.wait_ms <= 0 {
+                self.wait_ms = MINIMAL_DURATION_MS;
+            }
+        }
+    }
 }
 
 /// `MotionMaster::MovePath(pathId, false)`.
@@ -147,6 +173,7 @@ pub(crate) fn move_path(world: &mut World, unit: Entity, path_id: u32) -> bool {
         path,
         node: 0,
         started: false,
+        deactivated: false,
         wait_ms: INITIALIZE_WAIT_MS,
         spline: None,
     });
@@ -199,11 +226,15 @@ impl Spline {
         length
     }
 
+    fn segment_at(&self, time_ms: i32) -> usize {
+        (0..self.segments())
+            .find(|&segment| time_ms < self.times[segment + 1])
+            .unwrap_or(self.segments() - 1)
+    }
+
     /// `MoveSpline::computePosition`.
     fn position(&self, time_ms: i32) -> Vec3 {
-        let segment = (0..self.segments())
-            .find(|&segment| time_ms < self.times[segment + 1])
-            .unwrap_or(self.segments() - 1);
+        let segment = self.segment_at(time_ms);
         let duration = (self.times[segment + 1] - self.times[segment]) as f32;
         let u = if duration > 0.0 {
             ((time_ms - self.times[segment]) as f32 / duration).min(1.0)
@@ -441,6 +472,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         &mut PathMovement,
         &SpawnPoint,
         &crate::maps::InMap,
+        Option<&crate::creature_ai::CreatureState>,
         Has<Walking>,
         Has<GravityDisabled>,
         Option<&mut Rotation>,
@@ -456,6 +488,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         mut movement,
         spawn,
         map,
+        state,
         walking,
         flying,
         rotation,
@@ -463,6 +496,18 @@ pub(crate) fn path_movement_system(world: &mut World) {
         speed,
     ) in movers.iter_mut(world)
     {
+        // MotionMaster updates only its top generator: active chase/home wins
+        // over this default-slot MovePath; route generation is not changed.
+        match state {
+            Some(
+                crate::creature_ai::CreatureState::Pursuing { .. }
+                | crate::creature_ai::CreatureState::Returning,
+            ) => {
+                movement.deactivate();
+                continue;
+            }
+            _ => movement.reactivate(),
+        }
         // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
         let before = *position;
         if let Some(spline) = &mut movement.spline {

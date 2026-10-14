@@ -22,6 +22,12 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 Source and implementation: [smooth script waypoints](../wiki/systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14).
 
+## C++ waypoint motion ownership
+
+- [x] An active chase/home generator preempts the default-slot C++ waypoint; only the active owner advances position and lower waypoint time does not run in parallel.
+- [x] Reactivation relaunches the remaining authored target from the actor's real position; already-visited exact nodes are not replayed. Keep route generation and strict collision/segment thresholds unchanged.
+- [ ] Physical Wailing tick2136 RED must become a complete collision-clear, non-relocating three-path/two-camp walk. Source faction/highHP fixture limits remain explicit; no natural/native-clear claim.
+
 ## How it works
 
 - [Bake choice, profile, command and artifact layout](../wiki/systems/navigation.md)
