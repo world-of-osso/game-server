@@ -134,11 +134,7 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
         .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(HEAL))
         .collect();
     assert_eq!(heals.len(), 2);
-    assert!(
-        heals
-            .iter()
-            .all(|event| event.actor == event.target.unwrap())
-    );
+    assert!(heals.iter().all(|event| event.source == event.target));
 }
 
 #[test]
