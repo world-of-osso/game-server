@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; genuine stats/ranged-cast RED retained, GREEN pending.
+- [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; native13 controls pass, frontend RAP propagation and whole-AP limits remain open.
 
 - [Warrior effect-hit stuns](systems/spell-casting.md#warrior-effect-hit-stuns) — native Shockwave/Storm Bolt children and caster-owned Storm Bolts selector; 12 native controls pass, other Dummy/talent fields remain gaps.
 - [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.
