@@ -20,18 +20,6 @@ pub(crate) fn load_race_types(conn: &rusqlite::Connection) -> rusqlite::Result<R
     Ok(RaceCreatureTypes(types))
 }
 
-pub(crate) fn load_startup(mut commands: Commands) {
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::spell_info::WORLD_DB_PATH,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .expect("open native race CreatureType catalog");
-    commands
-        .insert_resource(load_race_types(&conn).expect(
-            "load chr_races.CreatureType; prepare the source race catalog before starting",
-        ));
-}
-
 pub(crate) struct CreatureTypes<'a> {
     pub races: Option<&'a RaceCreatureTypes>,
     pub forms: Option<&'a ShapeshiftForms>,
