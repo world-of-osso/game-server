@@ -50,6 +50,8 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+# Bake concrete collision fixtures for fleeing's real Detour path boundary.
+navigation = { path = "../navigation", features = ["bake"] }
 # Real local M2/MDDF collision-floor fixtures.
 los = { path = "../los", features = ["bake"] }
 # Exercise pre-world replication and auth traffic against a real local client.
