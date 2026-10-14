@@ -21,3 +21,13 @@ All three failures occur before payment: Arthur33307 opens gossip with no vendor
 Use TDB1210/canonical Samamba33554 (npcflag129), Swift Purple Raptor46760 / ExtendedCost2671 (same5000000 copper +5 Champion seals241, Darkspear530 Exalted), and Darkspear Raptor45593 / ExtendedCost2600. Installed ChrRaces Troll8 supplies the shopper faction. Gold, currency, inventory, rollback, durable-reopen and fake-currency5 assertions retain their original values. No production merchant or canonical-data changes.
 
 Startup mount-cost WARN is unrelated: canonical metadata is absent for currencies392/3252 and item124669. Cost loader deliberately omits those affected offers rather than making them free. Champion seal241 metadata exists; none of the three payment fixtures uses the unavailable IDs. The existing omission assertion for vendor13216/item19030 remains unchanged.
+
+## Zephras derived factions and replacement audit
+
+Production import bug: `db2.py` replaces faction_template, but only re-applied the local Skyborne DB2 rows. `zephras_content.py::import_npcs` originally wrote six approved reconstructed reaction rows using `faction_row` and `OverlayWriter`, leaving source_json in `zephras_row_source`. The DB2 refresh deleted their runtime rows but kept those receipts and NPC references. Keep the original Friendly/Hostile/Neutral assertions; regenerate the factions from the existing authored source_json inside the same import transaction. No page fetch, new reaction mapping, copied stale runtime row, or canonical edit.
+
+`db2_row_source` records the receipt scrape as source label, FDID0 and layout`derived` (not a claim of DB2 byte provenance), SHA256 of the exact source_json. Malformed source keys and collisions abort the entire refresh. Existing receipts remain unchanged; repeated refresh is deterministic.
+
+Audit compares pre-import `world.db.pre-db2import70391-20261014` with118 available canonical old-build CSVs. Extra IDs: faction_template3628,3629 (Skyborne, retained) and90000000,90000002,90000004,90000006,90000007,90000008 (Zephras, dropped); map2991 (retained); character_loadout2373–2378 (retained); character_loadout_item45 IDs (all retained, complete list in `overlay-audit.json`). No other extra rows among available source tables. AreaTable and OverrideSpellData comparisons explicitly UNAVAILABLE: no authenticated old-build export exists; unverified root/archived CSVs were not used and no old CASC extraction performed.
+
+Full pre-import/canonical fingerprint diff: outside db2.py tables, only achievement,criteria,criteria_tree changed (separate DB2 achievement import). No creature/template/gossip/vendor tables changed. Audit and private-import fpdiff live in engine `data/diagnostics/master-reds-70391-2026-10-14/`.
