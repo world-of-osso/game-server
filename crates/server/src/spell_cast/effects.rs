@@ -512,12 +512,17 @@ pub(crate) fn effect_power_bonus(
     let (spell_power, melee_attack_power) = power_stats(world, caster, takes_healing_power(effect));
     // Unit.cpp6880–6890 chooses RAP for non-melee ranged weapon spells only.
     let attack_power = if is_ranged_weapon_spell(spell)
-        && spell.categories.as_ref().is_none_or(|categories| categories.damage_class != DEFENSE_MELEE)
+        && spell
+            .categories
+            .as_ref()
+            .is_none_or(|categories| categories.damage_class != DEFENSE_MELEE)
     {
-        world.get::<CharacterStats>(caster).map_or(0.0, |stats| stats.ranged_attack_power)
+        world
+            .get::<CharacterStats>(caster)
+            .map_or(0.0, |stats| stats.ranged_attack_power)
     } else {
         melee_attack_power
-    }
+    };
     let modify = |op, value| spell_mods::modify(world, caster, spell, op, value);
     let coefficient = modify(SpellModOp::BonusCoefficient, effect.bonus_coefficient);
     let ap_coefficient = modify(

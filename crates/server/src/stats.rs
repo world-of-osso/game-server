@@ -355,9 +355,10 @@ pub fn compute_character_stats(
     let base_attack_power = primary.strength * input.attack_power_per_strength
         + primary.agility * input.attack_power_per_agility;
     let attack_power = base_attack_power * (1.0 + mods.attack_power_pct / 100.0);
-    let base_ranged_attack_power = (f32::from(input.level) + primary.agility.max(0.0))
-        * input.ranged_attack_power_per_agility;
-    let ranged_attack_power = base_ranged_attack_power * (1.0 + mods.ranged_attack_power_pct / 100.0);
+    let base_ranged_attack_power =
+        (f32::from(input.level) + primary.agility.max(0.0)) * input.ranged_attack_power_per_agility;
+    let ranged_attack_power =
+        base_ranged_attack_power * (1.0 + mods.ranged_attack_power_pct / 100.0);
     let (spell_power, healing_power) = if mods.spell_power_from_ap_pct > 0.0 {
         // Unit::SpellBaseDamageBonusDone / SpellBaseHealingBonusDone return
         // int32(AP × pct + 0.5) before anything else (Unit.cpp:7103-7108, 7602-7607).
@@ -723,7 +724,8 @@ pub(crate) fn update_character_stats(
             mastery_coefficient,
             attack_power_per_strength: class.map_or(0.0, |class| class.attack_power_per_strength),
             attack_power_per_agility: class.map_or(0.0, |class| class.attack_power_per_agility),
-            ranged_attack_power_per_agility: class.map_or(0.0, |class| class.ranged_attack_power_per_agility),
+            ranged_attack_power_per_agility: class
+                .map_or(0.0, |class| class.ranged_attack_power_per_agility),
             gear_primary,
             gear_ratings,
         };
