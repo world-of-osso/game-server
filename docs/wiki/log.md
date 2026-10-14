@@ -1,3 +1,7 @@
+## 2026-10-14 — FIFO toy learning and consumption
+
+[Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): toy learning atomically consumes from fresh FIFO inventory, gates results and credits, and retains earlier queued wallet changes. Six targeted learning/favourite/ownership/reopen/achievement cases pass; other item-use families remain open.
+
 ## 2026-10-14 — FIFO Toy Box favourites
 
 [Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): favourite ownership mutations and owner/account publications now use commit receipts; held-writer, ownership, broadcast and reopen cases pass. Toy learning/item consumption remain separate writers.
