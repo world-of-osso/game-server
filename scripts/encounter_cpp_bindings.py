@@ -2,7 +2,7 @@
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
 Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
-Adarogg, Gordoth and Wailing Caverns primaries.
+Adarogg, Slagmaw, Gordoth and Wailing Caverns primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
@@ -80,6 +80,22 @@ ADAROGG_PRIMARY = dict(
     actor_id=1343,
     display_id=38759,
 )
+SLAGMAW_SOURCES = {
+    "Kalimdor/RagefireChasm/boss_slagmaw.cpp": "cd19880df4b1c3a8121a447a2aad3be126d8a44b664e7cf32dd747d43ec21a73",
+    **RAGEFIRE_INSTANCE_SOURCES,
+}
+# C++ NPC_SLAGMAW/BOSS_SLAGMAW identifies the primary independently of appearance.
+# display_id is Journal preview38391; the live TDB actor retains model42247.
+SLAGMAW_PRIMARY = dict(
+    map_id=389,
+    entry=61463,
+    encounter_id=1445,
+    bit=2,
+    script="boss_slagmaw",
+    journal_id=696,
+    actor_id=1344,
+    display_id=38391,
+)
 GORDOTH_SOURCES = {
     "Kalimdor/RagefireChasm/boss_lava_guard_gordoth.cpp": "305aca6990850c74372f4461ab7659f0e35d243c015136d3e2bcca6a0641d395",
     **RAGEFIRE_INSTANCE_SOURCES,
@@ -114,6 +130,7 @@ PROFILES = {
     "golden-serpent": (GOLDEN_PRIMARY, GOLDEN_SOURCES),
     "koranthal": (KORANTHAL_PRIMARY, KORANTHAL_SOURCES),
     "adarogg": (ADAROGG_PRIMARY, ADAROGG_SOURCES),
+    "slagmaw": (SLAGMAW_PRIMARY, SLAGMAW_SOURCES),
     "gordoth": (GORDOTH_PRIMARY, GORDOTH_SOURCES),
     "cobrahn": (COBRAHN_PRIMARY, WAILING_SOURCES),
 }

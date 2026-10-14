@@ -80,6 +80,28 @@ class CoverageTests(unittest.TestCase):
         self.assertNotIn('Helix Gearbreaker [47297]', rendered)
         self.assertIn('pinned TC has no Deadmines boss AI', rendered)
 
+    def test_slagmaw_cpp_identity_does_not_require_journal_preview_model_equality(self):
+        source = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
+        journals = [['Slagmaw', '', 0, 0, 696, 1, 1445]]
+        actors = [['Slagmaw', '', 1344, 696, 38391, 0, 0, 0, 0]]
+        with closing(sqlite3.connect(source.as_uri()+'?mode=ro', uri=True)) as connection:
+            # A TEMP view makes the missing-binding boundary stable even after lead publication.
+            connection.execute('CREATE TEMP VIEW raid_encounter_creature AS '
+                               'SELECT * FROM main.raid_encounter_creature WHERE creature_entry!=61463')
+            order = {row[0]: dict(tier=3, sort=(3,row[0]), reason='test source inventory')
+                     for row in connection.execute('SELECT ID FROM map')}
+            records = coverage.collect(connection, journals, actors, {1: 389}, [], order)
+        slagmaw = next(row for row in records if row['map_id']==389 and row['encounter_id']==1445)
+        by_entry = {actor['entry']: actor for actor in slagmaw['actors']}
+        self.assertIn(61463, by_entry)
+        actor = by_entry[61463]
+        self.assertEqual(actor['source_cpp'], 'boss_slagmaw')
+        self.assertFalse(actor['cpp_gap'])
+        self.assertEqual(actor['runtime_ai'], 'partial TC C++ port blocked by missing binding')
+        self.assertEqual(actor['kill_credit'], 'blocked: no binding/spawn')
+        self.assertEqual(actor['proof'], 'structural inspection only')
+        self.assertIn('journal actor 1344: display 38391 has 0 same-map candidates', slagmaw['binding_gaps'])
+
     def test_wailing_instance_state_action_is_not_universal_support(self):
         row = dict(id=0, event_type=6, action_type=34, target_type=1,
                    event_flags=0, action_param1=3, action_param2=3, action_param3=1)
