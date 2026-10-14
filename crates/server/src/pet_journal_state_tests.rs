@@ -20,6 +20,44 @@ fn journal(level: u8) -> PetJournal {
 }
 
 #[test]
+fn pet_battle_state_reads_never_wait_for_a_writer() {
+    use std::time::{Duration, Instant};
+    for persisted in [false, true] {
+        let directory = tempfile::tempdir().unwrap();
+        let db = redb::Database::create(directory.path().join("pure-state.redb")).unwrap();
+        let expected = if persisted {
+            BTreeMap::from([(
+                17,
+                OwnedPetBattleState {
+                    health: 73,
+                    selected_abilities: [384, 389, 459],
+                },
+            )])
+        } else {
+            BTreeMap::new()
+        };
+        if persisted {
+            save_states(&db, 42, &expected).unwrap();
+        }
+        let held = db.begin_write().unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            held.abort().unwrap();
+        });
+        let started = Instant::now();
+        let loaded = load_states(&db, 42).unwrap();
+        let elapsed = started.elapsed();
+        release.join().unwrap();
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "pet state read waited: {elapsed:?}"
+        );
+        assert_eq!(loaded, expected);
+        assert!(load_states(&db, 43).unwrap().is_empty());
+    }
+}
+
+#[test]
 fn pet_journal_state_preserves_real_injury_and_chosen_ability_after_database_reopen() {
     let catalog = catalog();
     let journal = journal(25);

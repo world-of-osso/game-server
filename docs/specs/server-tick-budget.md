@@ -29,7 +29,7 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [ ] Tick systems enqueue and poll completions without waiting. Logout completion, character deletion, trade, mail/AH money transfers and purchases acknowledge only after their required commit succeeds.
 - [ ] World-map discovery writes run on the same FIFO; discovery snapshots wait for their commit and overlapping zone discoveries preserve their union. Missing world-map reads do not create rows or wait for a writer.
 - [ ] Friends and ignore-list add/remove requests validate the latest FIFO state; successful owner replies and live list changes follow durability, retaining request order. Friend-presence subscriptions change only with committed list publication.
-- [ ] Missing PvP, friends, ignore and collection reads return their existing defaults without creating rows or waiting for the writer; actual mutations persist them.
+- [ ] Missing PvP, friends, ignore and collection reads return their existing defaults without creating rows or waiting for the writer; actual mutations persist them. Pet combat-state reads likewise return existing injuries/abilities or the existing empty-state semantics without initializing a table on the tick.
 - [ ] Writer errors log and increment an observable failure metric; shutdown drains queued work.
 - [ ] Process-crash proof loses only work not acknowledged as durable.
 

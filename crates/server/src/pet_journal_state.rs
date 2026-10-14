@@ -86,24 +86,21 @@ pub(crate) fn default_abilities(catalog: &Catalog, species: u32, level: u8) -> [
 
 pub(crate) fn load_states(db: &Database, account: u64) -> Result<OwnedBattleStates, String> {
     let transaction = db
-        .begin_write()
+        .begin_read()
         .map_err(|e| format!("Begin pet state load: {e}"))?;
-    let states = {
-        let table = transaction
-            .open_table(ACCOUNT_PET_BATTLE_STATES)
-            .map_err(|e| format!("Open pet state table: {e}"))?;
-        match table
-            .get(account)
-            .map_err(|e| format!("Read pet state for account {account}: {e}"))?
-        {
-            Some(row) => serde_json::from_slice(row.value())
-                .map_err(|e| format!("Decode pet state for account {account}: {e}"))?,
-            None => BTreeMap::new(),
-        }
+    let table = match transaction.open_table(ACCOUNT_PET_BATTLE_STATES) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(BTreeMap::new()),
+        Err(error) => return Err(format!("Open pet state table: {error}")),
     };
-    crate::persistence_commit::commit(transaction)
-        .map_err(|e| format!("Commit pet state initialization: {e}"))?;
-    Ok(states)
+    match table
+        .get(account)
+        .map_err(|e| format!("Read pet state for account {account}: {e}"))?
+    {
+        Some(row) => serde_json::from_slice(row.value())
+            .map_err(|e| format!("Decode pet state for account {account}: {e}")),
+        None => Ok(BTreeMap::new()),
+    }
 }
 /// Commit the same accepted transition's journal progression and combat fields together.
 pub(crate) fn save_journal_and_states(
