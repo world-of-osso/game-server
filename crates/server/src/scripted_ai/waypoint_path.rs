@@ -138,10 +138,8 @@ pub(crate) fn move_path(world: &mut World, unit: Entity, path_id: u32) -> bool {
         error!("MovePath {path_id}: node delay/orientation or backwards path not ported");
         return false;
     }
-    if !flying
-        && !path.exact_spline()
-        && !world.contains_resource::<crate::navigation::Navigation>()
-    {
+    let requires_ground_navigation = !flying && !path.exact_spline();
+    if requires_ground_navigation && !world.contains_resource::<crate::navigation::Navigation>() {
         error!("MovePath {path_id}: ground path requires baked navigation");
         return false;
     }
@@ -231,10 +229,13 @@ fn catmull_rom(p: &[Vec3], t: f32) -> Vec3 {
 /// `MoveSplineInit::Launch` (+ `Validate`) for `controls`, the first of which is the
 /// unit's real position; `None` when TC refuses a too-short path.
 fn launch(controls: Vec<Vec3>, smooth: bool, orientation: f32, velocity: f32) -> Option<Spline> {
+    // TC _checkPathLengths exempts the first crossing from the actual owner
+    // position. Two-point paths are permitted, including an already-reached node.
     let short = controls
         .windows(2)
+        .skip(1)
         .any(|pair| pair[0].distance(pair[1]) < MIN_SEGMENT_LENGTH);
-    if short {
+    if controls.len() < 2 || short {
         return None;
     }
     let last_node = controls.len() - 1;
@@ -321,23 +322,22 @@ fn start_move(
         launch_from.walking,
         launch_from.flying,
     );
-    let mut spline = launch(controls, smooth, launch_from.orientation, velocity);
-    if let Some(spline) = &mut spline {
-        spline.last_node = if exact {
-            movement.node + spline.last_node - 1
-        } else {
-            movement.node
-        };
-        let interior = movement.node != 0 && movement.node != path.nodes.len() - 1;
-        if !exact
-            && spline.end_ms > 2 * SEND_NEXT_POINT_EARLY_DELTA_MS
-            && path.nodes.len() > 2
-            && interior
-        {
-            spline.end_ms -= SEND_NEXT_POINT_EARLY_DELTA_MS;
-        }
+    let mut spline = launch(controls, smooth, launch_from.orientation, velocity)
+        .ok_or("spline controls rejected")?;
+    spline.last_node = if exact {
+        movement.node + spline.last_node - 1
+    } else {
+        movement.node
+    };
+    let interior = movement.node != 0 && movement.node != path.nodes.len() - 1;
+    if !exact
+        && spline.end_ms > 2 * SEND_NEXT_POINT_EARLY_DELTA_MS
+        && path.nodes.len() > 2
+        && interior
+    {
+        spline.end_ms -= SEND_NEXT_POINT_EARLY_DELTA_MS;
     }
-    movement.spline = spline;
+    movement.spline = Some(spline);
     Ok(None)
 }
 
@@ -360,7 +360,16 @@ fn query_path_controls(
             .collect());
     }
     let navigation = navigation.ok_or("ground path has no navigation resource")?;
-    let target = bevy(path.nodes[node].1);
+    let route = query_ground_waypoints(navigation, launch_from, path.nodes[node].1)?;
+    Ok(std::iter::once(launch_from.position).chain(route).collect())
+}
+
+fn query_ground_waypoints(
+    navigation: &crate::navigation::Navigation,
+    launch_from: &Launch,
+    target: Vec3,
+) -> Result<Vec<Vec3>, String> {
+    let target = bevy(target);
     let from = bevy(launch_from.position);
     let route = navigation
         .query_path(
@@ -369,14 +378,16 @@ fn query_path_controls(
             Vec3::new(target.x, target.y, target.z),
         )?
         .ok_or("ground path map has no navigation bake")?;
-    Ok(std::iter::once(launch_from.position)
-        .chain(route.into_iter().skip(1).map(|point| {
+    Ok(route
+        .into_iter()
+        .skip(1)
+        .map(|point| {
             wow(&Position {
                 x: point.x,
                 y: point.y,
                 z: point.z,
             })
-        }))
+        })
         .collect())
 }
 
