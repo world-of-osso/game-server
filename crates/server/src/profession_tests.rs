@@ -13,130 +13,181 @@ mod crafting_order_tests;
 #[test]
 fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopens() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("known-marker.redb");
-    let db = redb::Database::create(&path).unwrap();
-    persistence::create_tables(&db);
-    let mut h = harness_with(90, |app| {
-        app.add_plugins((
-            AchievementPlugin,
-            crate::class_progression::ClassProgressionPlugin,
-        ));
-        app.insert_resource(GameDatabase { db });
-    })
-    .unwrap();
-    h.app
-        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
-    let recipes = [
-        370465, 370460, 370438, 370463, 370453, 370462, 370456, 370504, 370457, 370476,
+    let cases = [
+        (
+            406106,
+            432962,
+            18805,
+            vec![
+                (370465, 61271),
+                (370460, 61272),
+                (370438, 61273),
+                (370463, 61274),
+                (370453, 61275),
+                (370462, 61276),
+                (370456, 61277),
+                (370504, 61278),
+                (370457, 61279),
+                (370476, 61280),
+            ],
+        ),
+        (
+            432962,
+            406106,
+            19704,
+            vec![
+                (430601, 65250),
+                (430602, 65251),
+                (430603, 65252),
+                (430604, 65253),
+                (430605, 65254),
+                (430612, 65256),
+            ],
+        ),
+        (
+            432963,
+            406106,
+            19716,
+            vec![
+                (430591, 65274),
+                (430592, 65275),
+                (430593, 65276),
+                (430594, 65277),
+                (430595, 65278),
+                (430596, 65279),
+                (430597, 65280),
+                (430598, 65281),
+                (430599, 65282),
+                (430600, 65283),
+            ],
+        ),
     ];
-    let data = world_db().unwrap();
-    let spells = recipes
-        .into_iter()
-        .chain([406106, 432962])
-        .map(|id| data.store.get(id).unwrap().clone())
-        .collect();
-    h.app.insert_resource(SpellStore::fixture(spells));
-    h.app
-        .world_mut()
-        .entity_mut(h.player)
-        .insert(PlayerAchievementState::default());
-    h.app.update();
-    // Controlled starting profession knowledge uses the production learner and persistence,
-    // never writes criteria; no claim about acquiring these passive markers through traits.
-    with_learner(h.app.world_mut(), h.player, |learner, profs| {
-        for spell in recipes {
-            learner.learn_spell(profs, spell, 0);
-        }
-    })
-    .unwrap();
-    h.advance(2);
-    assert!((61271..=61280).all(|id| {
-        !h.app
-            .world()
-            .get::<PlayerAchievementState>(h.player)
-            .unwrap()
-            .criteria_progress
-            .contains_key(&id)
-    }));
-    with_learner(h.app.world_mut(), h.player, |learner, profs| {
-        learner.learn_spell(profs, 432962, 0)
-    })
-    .unwrap();
-    h.advance(2);
-    assert!(
-        (61271..=61280).all(|id| !h
+    for (marker, wrong_marker, achievement, learned) in cases {
+        let recipes: Vec<_> = learned.iter().map(|&(spell, _)| spell).collect();
+        let criteria: Vec<_> = learned.iter().map(|&(_, criterion)| criterion).collect();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("known-marker.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let mut h = harness_with(90, |app| {
+            app.add_plugins((
+                AchievementPlugin,
+                crate::class_progression::ClassProgressionPlugin,
+            ));
+            app.insert_resource(GameDatabase { db });
+        })
+        .unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&h.conn).unwrap());
+        let data = world_db().unwrap();
+        let spells = recipes
+            .iter()
+            .copied()
+            .chain([marker, wrong_marker])
+            .map(|id| data.store.get(id).unwrap().clone())
+            .collect();
+        h.app.insert_resource(SpellStore::fixture(spells));
+        h.app
+            .world_mut()
+            .entity_mut(h.player)
+            .insert(PlayerAchievementState::default());
+        h.app.update();
+        // Controlled starting profession knowledge uses the production learner and persistence,
+        // never writes criteria; no claim about acquiring these passive markers through traits.
+        with_learner(h.app.world_mut(), h.player, |learner, profs| {
+            for &spell in &recipes {
+                learner.learn_spell(profs, spell, 0);
+            }
+        })
+        .unwrap();
+        h.advance(2);
+        assert!(criteria.iter().copied().all(|id| {
+            !h.app
+                .world()
+                .get::<PlayerAchievementState>(h.player)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&id)
+        }));
+        with_learner(h.app.world_mut(), h.player, |learner, profs| {
+            learner.learn_spell(profs, wrong_marker, 0)
+        })
+        .unwrap();
+        h.advance(2);
+        assert!(
+            criteria.iter().copied().all(|id| !h
+                .app
+                .world()
+                .get::<PlayerAchievementState>(h.player)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&id)),
+            "wrong marker cannot qualify these recipes"
+        );
+        with_learner(h.app.world_mut(), h.player, |learner, profs| {
+            learner.learn_spell(profs, marker, 0)
+        })
+        .unwrap();
+        h.advance(2);
+        assert!(h.professions().knows(marker));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(h.player)
+                .unwrap()
+                .contains(marker)
+        );
+        let state = h
             .app
             .world()
             .get::<PlayerAchievementState>(h.player)
-            .unwrap()
-            .criteria_progress
-            .contains_key(&id)),
-        "wrong marker cannot qualify Draconic recipes"
-    );
-    with_learner(h.app.world_mut(), h.player, |learner, profs| {
-        learner.learn_spell(profs, 406106, 0)
-    })
-    .unwrap();
-    h.advance(2);
-    assert!(h.professions().knows(406106));
-    assert!(
+            .unwrap();
+        for &id in &criteria {
+            assert_eq!(state.criteria_progress.get(&id), Some(&1));
+        }
+        assert!(
+            state
+                .account
+                .as_deref()
+                .unwrap()
+                .earned_ids
+                .contains(&achievement)
+        );
+        h.app.update();
+        let character = h.character_id;
+        drop(h.app.world_mut().remove_resource::<GameDatabase>().unwrap());
+        let reopened = redb::Database::open(&path).unwrap();
+        let profs = persistence::load_professions(&reopened, character);
+        assert!(profs.knows(marker));
+        let saved = persistence::load_achievements(&reopened, character);
+        for &id in &criteria {
+            assert_eq!(saved.criteria_progress.get(&id), Some(&1));
+        }
+        h.app.insert_resource(GameDatabase { db: reopened });
         h.app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(h.player)
-            .unwrap()
-            .contains(406106)
-    );
-    let state = h
-        .app
-        .world()
-        .get::<PlayerAchievementState>(h.player)
-        .unwrap();
-    for id in 61271..=61280 {
-        assert_eq!(state.criteria_progress.get(&id), Some(&1));
-    }
-    assert!(
-        state
-            .account
-            .as_deref()
-            .unwrap()
-            .earned_ids
-            .contains(&18805)
-    );
-    h.app.update();
-    let character = h.character_id;
-    drop(h.app.world_mut().remove_resource::<GameDatabase>().unwrap());
-    let reopened = redb::Database::open(&path).unwrap();
-    let profs = persistence::load_professions(&reopened, character);
-    assert!(profs.knows(406106));
-    let saved = persistence::load_achievements(&reopened, character);
-    for id in 61271..=61280 {
-        assert_eq!(saved.criteria_progress.get(&id), Some(&1));
-    }
-    h.app.insert_resource(GameDatabase { db: reopened });
-    h.app
-        .world_mut()
-        .entity_mut(h.player)
-        .insert(PlayerAchievementState::default());
-    h.app
-        .world_mut()
-        .entity_mut(h.connection)
-        .remove::<InWorld>();
-    h.app.world_mut().entity_mut(h.connection).insert(InWorld {
-        character_id: character,
-    });
-    h.app.update();
-    assert!(
+            .world_mut()
+            .entity_mut(h.player)
+            .insert(PlayerAchievementState::default());
         h.app
-            .world()
-            .get::<PlayerAchievementState>(h.player)
-            .unwrap()
-            .account
-            .as_deref()
-            .unwrap()
-            .earned_ids
-            .contains(&18805)
-    );
+            .world_mut()
+            .entity_mut(h.connection)
+            .remove::<InWorld>();
+        h.app.world_mut().entity_mut(h.connection).insert(InWorld {
+            character_id: character,
+        });
+        h.app.update();
+        assert!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.player)
+                .unwrap()
+                .account
+                .as_deref()
+                .unwrap()
+                .earned_ids
+                .contains(&achievement)
+        );
+    }
 }
 
 #[test]
