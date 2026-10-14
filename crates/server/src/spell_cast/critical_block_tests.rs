@@ -4,7 +4,7 @@ use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
 use crate::melee::PlayerDefense;
 use crate::stats::CharacterStats;
 use bevy::prelude::*;
-use shared::components::Orientation;
+use shared::components::Rotation;
 use shared::protocol::CombatLogKind;
 
 const CRITICAL_BLOCK: u32 = 76857;
@@ -18,7 +18,10 @@ fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
     ));
     h.app.world_mut().entity_mut(defender).insert((
         crate::duel::DuelOpponent(h.caster),
-        Orientation(std::f32::consts::PI),
+        Rotation {
+            y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
+            ..Default::default()
+        },
     ));
     h.advance(2);
     equip_shield_and_weapon(&mut h, defender, mastery_points);
@@ -40,7 +43,7 @@ fn equip_shield_and_weapon(h: &mut Harness, defender: Entity, mastery_points: f3
     stats.mastery_points = mastery_points;
     stats.defense = PlayerDefense {
         block: 100.0,
-        shield_block: armor_constant / 3.0,
+        shield_block: armor_constant,
         ..Default::default()
     };
     drop(stats);
@@ -51,8 +54,8 @@ fn equip_shield_and_weapon(h: &mut Harness, defender: Entity, mastery_points: f3
         .unwrap();
     stats.attack_power = 0.0;
     stats.crit_pct = 0.0;
-    stats.main_hand.min_damage = 333.0;
-    stats.main_hand.max_damage = 333.0;
+    stats.main_hand.min = 333.0;
+    stats.main_hand.max = 333.0;
 }
 
 fn apply_mastery(h: &mut Harness, unit: Entity) {
@@ -106,13 +109,13 @@ fn class_completeness_native_critical_block_doubles_already_truncated_autoattack
             .modifier(253),
         150.0
     );
-    // 333 ×25%=83.25 truncates to83 BEFORE doubling, TC Unit.cpp1469–1473.
-    assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
+    // 333 ×50%=166.5 truncates to166 BEFORE doubling, TC Unit.cpp1469–1473.
+    assert_eq!(blocked_swing(&mut h, defender), (1, 332, false));
 }
 
 #[test]
 fn class_completeness_native_zero_critical_block_keeps_ordinary_block() {
     let (mut h, defender) = shield_duel(0.0);
     apply_mastery(&mut h, defender);
-    assert_eq!(blocked_swing(&mut h, defender), (250, 83, false));
+    assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
 }
