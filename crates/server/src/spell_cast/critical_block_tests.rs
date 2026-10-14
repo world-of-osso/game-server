@@ -24,9 +24,24 @@ fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
             z: 0.0,
         },
     ));
+    load_native_armor_constants(&mut h);
     h.advance(2);
     equip_shield_and_weapon(&mut h, defender, mastery_points);
     (h, defender)
+}
+
+fn load_native_armor_constants(h: &mut Harness) {
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let constants = crate::world_data::load_expected_stats(&conn).armor_constants();
+    assert!(
+        constants.at(10).unwrap() > 1.0,
+        "native level10 armor constant required"
+    );
+    h.app.insert_resource(constants);
 }
 
 fn equip_shield_and_weapon(h: &mut Harness, defender: Entity, mastery_points: f32) {
