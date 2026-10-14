@@ -92,6 +92,7 @@ impl Plugin for GuildBankPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DailyReset>()
             .init_resource::<ChangedGuilds>()
+            .init_resource::<PendingGuildBankCommits>()
             .add_systems(
                 Update,
                 (
@@ -103,12 +104,18 @@ impl Plugin for GuildBankPlugin {
                     process_tab_info,
                     process_tab_text,
                     process_log_queries,
+                    publish_guild_bank_commits,
                     broadcast_changed_guild_banks,
                 )
                     .chain(),
             );
     }
 }
+
+mod actor;
+mod transactions;
+pub(crate) use actor::PendingGuildBankCommits;
+use actor::publish_guild_bank_commits;
 
 type GuildBankResult = Result<(), GuildBankError>;
 
@@ -281,30 +288,6 @@ impl GuildVault<'_, '_> {
         &self.db.as_ref().expect("checked by ready").db
     }
 
-    fn load_template(
-        &self,
-        item: &crate::persistence::InventoryItemData,
-    ) -> Result<(shared::item_data::ItemDefinitionSource, ItemTemplate), GuildBankError> {
-        let source =
-            persistence::inventory_store::load_item_definition_source(self.db(), item.item_guid);
-        let template = self
-            .templates
-            .as_ref()
-            .and_then(|templates| templates.get(source, item.item_id).copied())
-            .ok_or(GuildBankError::ItemNotFound)?;
-        Ok((source, template))
-    }
-
-    fn mint(&self) -> impl FnMut() -> u64 + '_ {
-        let db = self.db();
-        move || persistence::next_id(db, "item_instance")
-    }
-
-    fn load_model(&self, character_id: u64) -> Result<InventoryModel, GuildBankError> {
-        let templates = self.templates.as_ref().expect("checked by ready");
-        load_model(self.db(), templates, character_id).map_err(|_| GuildBankError::ItemNotFound)
-    }
-
     fn today(&self) -> i64 {
         self.reset.day(unix_now())
     }
@@ -387,42 +370,6 @@ impl GuildVault<'_, '_> {
             sender.send::<GuildBankChannel>(GuildBankFailed { object, error });
         }
     }
-
-    /// Write the guild, its logs, the member's usage and (when given) their bags.
-    fn save(
-        &mut self,
-        member: &Member,
-        guild: &GuildData,
-        logs: &GuildBankLogs,
-        usage: Option<&GuildBankUsage>,
-        model: Option<InventoryModel>,
-    ) {
-        let gold = model.as_ref().map(InventoryModel::gold);
-        let record = model.map(InventoryModel::into_record);
-        let owner = BankOwner::Guild {
-            guild_id: member.guild_id,
-            guild,
-            logs,
-            usage,
-        };
-        save_bank_move(self.db(), member.character_id, owner, record.as_ref());
-        if let Some(gold) = gold {
-            self.gold.record(member.character_id, gold);
-        }
-        self.changed.0.push(member.guild_id);
-    }
-
-    fn log(&self, member: &Member, kind: GuildBankLogKindData) -> GuildBankLogData {
-        GuildBankLogData {
-            kind,
-            actor: member.name.clone(),
-            item_id: 0,
-            item_name: String::new(),
-            count: 0,
-            copper: 0,
-            time: unix_now(),
-        }
-    }
 }
 
 type Requests<'w, 's, M> = Query<
@@ -465,28 +412,37 @@ fn member(
     ))
 }
 
-/// Run `handle` for each request; a refusal answers `GuildBankFailed`.
+/// Enqueue owned requests; membership and daily allowances load in FIFO order.
 fn process<M: lightyear::prelude::Message>(
     requests: &mut Requests<M>,
     vault: &mut GuildVault,
+    pending: &mut PendingGuildBankCommits,
     object_of: impl Fn(&M) -> u64,
-    handle: impl Fn(&mut GuildVault, &Member, M) -> GuildBankResult,
+    handle: impl Fn(&mut transactions::Transaction, &Member, M) -> GuildBankResult
+    + Copy
+    + Send
+    + 'static,
 ) {
     if !vault.ready() {
         return;
     }
     for (connection, in_world, interaction, mut receiver) in requests.iter_mut() {
         let open = open_vault(interaction);
+        let character = in_world.character_id;
         for request in receiver.receive() {
             let object = object_of(&request);
-            let Some((member, _)) = member(vault.db(), connection, in_world.character_id, open)
-            else {
-                vault.fail(connection, object, GuildBankError::NotInGuild);
-                continue;
-            };
-            if let Err(error) = handle(vault, &member, request) {
-                vault.fail(connection, object, error);
-            }
+            let templates = vault.templates.as_deref().expect("ready").clone();
+            let prices = vault.prices.clone();
+            let reset = *vault.reset;
+            let receipt = vault.db.as_ref().expect("ready").writer.enqueue(
+                "guild bank transaction",
+                move |db| {
+                    Ok(transactions::execute(
+                        db, templates, prices, reset, connection, character, open, request, handle,
+                    ))
+                },
+            );
+            pending.push(connection, character, object, receipt);
         }
     }
 }
@@ -535,307 +491,102 @@ fn broadcast_changed_guild_banks(
     }
 }
 
-fn process_deposits(mut requests: Requests<GuildBankDeposit>, mut vault: GuildVault) {
-    process(&mut requests, &mut vault, |req| req.object, deposit);
-}
-
-fn process_withdrawals(mut requests: Requests<GuildBankWithdraw>, mut vault: GuildVault) {
-    process(&mut requests, &mut vault, |req| req.object, withdraw);
-}
-
-fn process_money_transfers(mut requests: Requests<GuildBankMoneyTransfer>, mut vault: GuildVault) {
-    process(&mut requests, &mut vault, |req| req.object, transfer_money);
-}
-
-fn process_tab_purchases(mut requests: Requests<GuildBankBuyTab>, mut vault: GuildVault) {
-    process(&mut requests, &mut vault, |req| req.object, buy_tab);
-}
-
-fn process_tab_info(mut requests: Requests<GuildBankSetTabInfo>, mut vault: GuildVault) {
-    process(&mut requests, &mut vault, |req| req.object, set_tab_info);
-}
-
-fn process_tab_text(mut requests: Requests<GuildBankSetTabText>, mut vault: GuildVault) {
-    process(&mut requests, &mut vault, |req| req.object, set_tab_text);
-}
-
-fn process_log_queries(mut requests: Requests<GuildBankQueryLog>, mut vault: GuildVault) {
-    process(&mut requests, &mut vault, |req| req.object, send_log);
-}
-
-/// AzerothCore `Guild::SwapItemsWithInventory` (bags to bank): the rank must view and
-/// deposit into the tab; soulbound and quest items are refused.
-fn deposit(vault: &mut GuildVault, member: &Member, req: GuildBankDeposit) -> GuildBankResult {
-    member.vault_for(req.object)?;
-    let mut guild = load_guild(vault.db(), member.guild_id);
-    let tab = usize::from(req.tab);
-    if tab >= guild.tabs.len() {
-        return Err(GuildBankError::WrongTab);
-    }
-    if !tab_rights(&guild, member.rank, tab).1 {
-        return Err(GuildBankError::Permissions);
-    }
-    let mut model = vault.load_model(member.character_id)?;
-    let item = model
-        .bag_item(req.item_guid)
-        .cloned()
-        .ok_or(GuildBankError::ItemNotFound)?;
-    let (source, template) = vault.load_template(&item)?;
-    if template.bonding == BIND_QUEST {
-        return Err(GuildBankError::QuestItem);
-    }
-    if model.is_soulbound(req.item_guid) {
-        return Err(GuildBankError::BoundItem);
-    }
-    let mut sources = bank_storage::load_tab_definition_sources(vault.db(), &guild.tabs);
-    sources.insert(item.item_guid, source);
-    let mut mint = vault.mint();
-    bank_storage::deposit(
-        &mut guild.tabs,
-        &[tab],
-        item.clone(),
-        template.max_stack,
-        &mut sources,
-        &mut mint,
-    )
-    .map_err(|TabsFull| GuildBankError::TabFull)?;
-    model.remember_definition_sources(sources);
-    model
-        .take_bag_item(req.item_guid, 0, &mut mint)
-        .map_err(|_| GuildBankError::ItemNotFound)?;
-    drop(mint);
-    let mut logs = load_guild_bank_logs(vault.db(), member.guild_id);
-    logs.push(
-        Some(req.tab),
-        GuildBankLogData {
-            item_id: item.item_id,
-            item_name: item.name.clone(),
-            count: item.stack_count,
-            ..vault.log(member, GuildBankLogKindData::DepositItem)
-        },
+fn process_deposits(
+    mut requests: Requests<GuildBankDeposit>,
+    mut pending: ResMut<PendingGuildBankCommits>,
+    mut vault: GuildVault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.object,
+        transactions::deposit,
     );
-    vault.save(member, &guild, &logs, None, Some(model));
-    Ok(())
 }
 
-/// AzerothCore `Guild::SwapItemsWithInventory` (bank to bags): one stack of the
-/// rank's stacks per day (`_UpdateMemberWithdrawSlots`).
-fn withdraw(vault: &mut GuildVault, member: &Member, req: GuildBankWithdraw) -> GuildBankResult {
-    member.vault_for(req.object)?;
-    let mut guild = load_guild(vault.db(), member.guild_id);
-    let tab = usize::from(req.tab);
-    if tab >= guild.tabs.len() {
-        return Err(GuildBankError::WrongTab);
-    }
-    let (viewable, _, per_day) = tab_rights(&guild, member.rank, tab);
-    if !viewable {
-        return Err(GuildBankError::Permissions);
-    }
-    let mut usage = usage_today(vault.db(), member, vault.today());
-    if per_day.is_some_and(|limit| usage.tab_withdrawals[tab] >= limit) {
-        return Err(GuildBankError::WithdrawLimit);
-    }
-    let item = bank_storage::take(&mut guild.tabs, req.tab, req.slot)
-        .ok_or(GuildBankError::ItemNotFound)?;
-    let mut model = vault.load_model(member.character_id)?;
-    let (source, template) = vault.load_template(&item)?;
-    let mut mint = vault.mint();
-    model
-        .store_item(item.clone(), source, template, &mut mint)
-        .map_err(|_| GuildBankError::InventoryFull)?;
-    drop(mint);
-    if per_day.is_some() {
-        usage.tab_withdrawals[tab] += 1;
-    }
-    let mut logs = load_guild_bank_logs(vault.db(), member.guild_id);
-    logs.push(
-        Some(req.tab),
-        GuildBankLogData {
-            item_id: item.item_id,
-            item_name: item.name.clone(),
-            count: item.stack_count,
-            ..vault.log(member, GuildBankLogKindData::WithdrawItem)
-        },
+fn process_withdrawals(
+    mut requests: Requests<GuildBankWithdraw>,
+    mut pending: ResMut<PendingGuildBankCommits>,
+    mut vault: GuildVault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.object,
+        transactions::withdraw,
     );
-    vault.save(member, &guild, &logs, Some(&usage), Some(model));
-    Ok(())
 }
 
-/// AzerothCore `HandleMemberDepositMoney` / `HandleMemberWithdrawMoney`.
-fn transfer_money(
-    vault: &mut GuildVault,
-    member: &Member,
-    req: GuildBankMoneyTransfer,
-) -> GuildBankResult {
-    member.vault_for(req.object)?;
-    let mut guild = load_guild(vault.db(), member.guild_id);
-    let mut model = vault.load_model(member.character_id)?;
-    let gold = model.gold();
-    let mut usage = None;
-    let kind = if req.deposit {
-        if gold < req.copper {
-            return Err(GuildBankError::NotEnoughMoney);
-        }
-        if guild.money > GUILD_BANK_MONEY_LIMIT - req.copper {
-            return Err(GuildBankError::TooMuchMoney);
-        }
-        guild.money += req.copper;
-        model.set_gold(gold - req.copper);
-        GuildBankLogKindData::DepositMoney
-    } else {
-        if guild.money < req.copper {
-            return Err(GuildBankError::NotEnoughGuildMoney);
-        }
-        let mut today = usage_today(vault.db(), member, vault.today());
-        if let Some(limit) = gold_allowance(&guild, member.rank) {
-            if today.copper_withdrawn + req.copper > limit {
-                return Err(GuildBankError::WithdrawLimit);
-            }
-            today.copper_withdrawn += req.copper;
-        }
-        if gold + req.copper > MAX_MONEY {
-            return Err(GuildBankError::TooMuchMoney);
-        }
-        guild.money -= req.copper;
-        model.set_gold(gold + req.copper);
-        usage = Some(today);
-        GuildBankLogKindData::WithdrawMoney
-    };
-    let mut logs = load_guild_bank_logs(vault.db(), member.guild_id);
-    logs.push(
-        None,
-        GuildBankLogData {
-            copper: req.copper,
-            ..vault.log(member, kind)
-        },
+fn process_money_transfers(
+    mut requests: Requests<GuildBankMoneyTransfer>,
+    mut pending: ResMut<PendingGuildBankCommits>,
+    mut vault: GuildVault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.object,
+        transactions::transfer_money,
     );
-    vault.save(member, &guild, &logs, usage.as_ref(), Some(model));
-    Ok(())
 }
 
-/// AzerothCore `Guild::HandleBuyBankTab`: the Guild Master pays the next price.
-fn buy_tab(vault: &mut GuildVault, member: &Member, req: GuildBankBuyTab) -> GuildBankResult {
-    member.vault_for(req.object)?;
-    if !member.is_leader() {
-        return Err(GuildBankError::Permissions);
-    }
-    let mut guild = load_guild(vault.db(), member.guild_id);
-    let cost = vault
-        .next_tab_cost(&guild)
-        .ok_or(GuildBankError::Permissions)?;
-    let mut model = vault.load_model(member.character_id)?;
-    let gold = model.gold();
-    if gold < cost {
-        return Err(GuildBankError::NotEnoughMoney);
-    }
-    model.set_gold(gold - cost);
-    guild.tabs.push(new_tab(guild.tabs.len() + 1));
-    let mut logs = load_guild_bank_logs(vault.db(), member.guild_id);
-    logs.push(
-        None,
-        GuildBankLogData {
-            copper: cost,
-            ..vault.log(member, GuildBankLogKindData::BuyTab)
-        },
+fn process_tab_purchases(
+    mut requests: Requests<GuildBankBuyTab>,
+    mut pending: ResMut<PendingGuildBankCommits>,
+    mut vault: GuildVault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.object,
+        transactions::buy_tab,
     );
-    vault.save(member, &guild, &logs, None, Some(model));
-    Ok(())
 }
 
-fn leader_tab<'a>(
-    guild: &'a mut GuildData,
-    member: &Member,
-    tab: u8,
-) -> Result<&'a mut crate::bank_storage::BankTabData, GuildBankError> {
-    if !member.is_leader() {
-        return Err(GuildBankError::Permissions);
-    }
-    guild
-        .tabs
-        .get_mut(usize::from(tab))
-        .ok_or(GuildBankError::WrongTab)
+fn process_tab_info(
+    mut requests: Requests<GuildBankSetTabInfo>,
+    mut pending: ResMut<PendingGuildBankCommits>,
+    mut vault: GuildVault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.object,
+        transactions::set_tab_info,
+    );
 }
 
-/// `SetGuildBankTabInfo` (AzerothCore `HandleSetBankTabInfo`).
-fn set_tab_info(
-    vault: &mut GuildVault,
-    member: &Member,
-    req: GuildBankSetTabInfo,
-) -> GuildBankResult {
-    member.vault_for(req.object)?;
-    let name = req.name.trim();
-    if name.is_empty() || name.chars().count() > TAB_NAME_LETTERS {
-        return Err(GuildBankError::WrongTab);
-    }
-    let mut guild = load_guild(vault.db(), member.guild_id);
-    let tab = leader_tab(&mut guild, member, req.tab)?;
-    tab.name = name.to_owned();
-    tab.icon = req.icon;
-    let logs = load_guild_bank_logs(vault.db(), member.guild_id);
-    vault.save(member, &guild, &logs, None, None);
-    Ok(())
+fn process_tab_text(
+    mut requests: Requests<GuildBankSetTabText>,
+    mut pending: ResMut<PendingGuildBankCommits>,
+    mut vault: GuildVault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.object,
+        transactions::set_tab_text,
+    );
 }
 
-/// `SetGuildBankText` (AzerothCore `HandleSetBankTabText`).
-fn set_tab_text(
-    vault: &mut GuildVault,
-    member: &Member,
-    req: GuildBankSetTabText,
-) -> GuildBankResult {
-    member.vault_for(req.object)?;
-    let mut guild = load_guild(vault.db(), member.guild_id);
-    let tab = leader_tab(&mut guild, member, req.tab)?;
-    tab.text = req.text.chars().take(TAB_TEXT_LETTERS).collect();
-    let logs = load_guild_bank_logs(vault.db(), member.guild_id);
-    vault.save(member, &guild, &logs, None, None);
-    Ok(())
-}
-
-fn log_kind(kind: GuildBankLogKindData) -> GuildBankLogKind {
-    match kind {
-        GuildBankLogKindData::DepositItem => GuildBankLogKind::DepositItem,
-        GuildBankLogKindData::WithdrawItem => GuildBankLogKind::WithdrawItem,
-        GuildBankLogKindData::DepositMoney => GuildBankLogKind::DepositMoney,
-        GuildBankLogKindData::WithdrawMoney => GuildBankLogKind::WithdrawMoney,
-        GuildBankLogKindData::BuyTab => GuildBankLogKind::BuyTab,
-        GuildBankLogKindData::RepairMoney => GuildBankLogKind::RepairMoney,
-    }
-}
-
-/// `QueryGuildBankLog`: a tab log needs view rights on the tab.
-fn send_log(vault: &mut GuildVault, member: &Member, req: GuildBankQueryLog) -> GuildBankResult {
-    member.vault_for(req.object)?;
-    if let Some(tab) = req.tab {
-        let guild = load_guild(vault.db(), member.guild_id);
-        if usize::from(tab) >= guild.tabs.len() {
-            return Err(GuildBankError::WrongTab);
-        }
-        if !tab_rights(&guild, member.rank, usize::from(tab)).0 {
-            return Err(GuildBankError::Permissions);
-        }
-    }
-    let now = unix_now();
-    let logs = load_guild_bank_logs(vault.db(), member.guild_id);
-    let entries = logs
-        .log(req.tab)
-        .iter()
-        .map(|entry| GuildBankLogEntry {
-            kind: log_kind(entry.kind),
-            actor: entry.actor.clone(),
-            item_id: entry.item_id,
-            item_name: entry.item_name.clone(),
-            count: entry.count,
-            copper: entry.copper,
-            seconds_ago: now.saturating_sub(entry.time),
-        })
-        .collect();
-    if let Ok(mut sender) = vault.logs.get_mut(member.connection) {
-        sender.send::<GuildBankChannel>(GuildBankLog {
-            tab: req.tab,
-            entries,
-        });
-    }
-    Ok(())
+fn process_log_queries(
+    mut requests: Requests<GuildBankQueryLog>,
+    mut pending: ResMut<PendingGuildBankCommits>,
+    mut vault: GuildVault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.object,
+        transactions::send_log,
+    );
 }
 
 #[cfg(test)]

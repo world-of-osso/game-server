@@ -15,6 +15,57 @@ use crate::persistence::set_character_guild_by_id;
 const GUILD: u32 = 7;
 const MEMBER_RANK: u8 = 3;
 
+#[test]
+fn guild_bank_purchase_ack_waits_for_fifo_without_blocking_updates() {
+    use lightyear::prelude::MessageSender;
+    use std::time::{Duration, Instant};
+    let mut h = harness().expect("authentic guild bank database");
+    join_guild(&h, 0);
+    h.set_gold(2_000_000);
+    let object = h.open_vault();
+    h.take::<GuildBankContents>();
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<GuildBankBuyTab>>(h.connection)
+        .unwrap()
+        .send::<GuildBankChannel>(GuildBankBuyTab {
+            object: object.to_bits(),
+        });
+    let started = Instant::now();
+    h.app.update();
+    h.app.update();
+    let elapsed = started.elapsed();
+    let premature = h.take::<GuildBankContents>();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "guild bank tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature.is_empty(),
+        "guild bank response precedes durable commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        h.app.update();
+        if !h.take::<GuildBankContents>().is_empty() {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "no committed guild bank response"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(h.gold(), 1_000_000);
+    assert_eq!(load_guild(h.db(), GUILD).tabs.len(), 1);
+}
+
 fn join_guild(h: &Harness, rank: u8) {
     set_character_guild_by_id(h.db(), h.character_id, GUILD, "Bank Testers").unwrap();
     save_guild_member_rank(h.db(), h.character_id, rank);

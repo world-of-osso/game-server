@@ -275,6 +275,11 @@ impl Harness {
             .world()
             .resource::<crate::bank::PendingBankCommits>()
             .is_idle()
+            || !self
+                .app
+                .world()
+                .resource::<crate::guild_bank::PendingGuildBankCommits>()
+                .is_idle()
         {
             assert!(
                 std::time::Instant::now() < deadline,
