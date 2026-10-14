@@ -985,11 +985,7 @@ fn blocked_pct(
 }
 
 /// TC Unit::IsBlockCritical: integer aura253 amounts on the defender.
-fn roll_critical_block_damage(
-    auras: Option<&crate::auras::ActiveAuras>,
-    damage: f32,
-    blocked: f32,
-) -> (f32, f32) {
+pub(crate) fn roll_critical_block(auras: Option<&crate::auras::ActiveAuras>) -> bool {
     const MOD_BLOCK_CRIT_CHANCE: u32 = 253;
     let chance = auras.map_or(0.0, |auras| {
         auras
@@ -1004,8 +1000,15 @@ fn roll_critical_block_damage(
             })
             .sum::<f32>()
     });
-    let critical = chance >= 100.0 || chance > 0.0 && rand::random::<f32>() * 100.0 < chance;
-    if critical {
+    chance >= 100.0 || chance > 0.0 && rand::random::<f32>() * 100.0 < chance
+}
+
+fn roll_critical_block_damage(
+    auras: Option<&crate::auras::ActiveAuras>,
+    damage: f32,
+    blocked: f32,
+) -> (f32, f32) {
+    if roll_critical_block(auras) {
         // Autoswings double AFTER the ordinary block amount was truncated.
         (damage - blocked, blocked * 2.0)
     } else {

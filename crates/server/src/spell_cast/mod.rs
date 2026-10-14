@@ -170,7 +170,7 @@ pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
@@ -2011,6 +2011,8 @@ struct PlannedEffect {
     /// to the power of the unit's place in the chain (`m_damageMultipliers`,
     /// Spell.cpp:1840-1844, 8631-8636). Empty for an unchained effect.
     chain_multipliers: Vec<(Entity, f32)>,
+    /// Native block hit result, retained across flight for these unit targets.
+    blocked_units: Vec<Entity>,
 }
 
 impl PlannedEffect {
@@ -2075,6 +2077,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                blocked_units: Vec::new(),
             })
             .collect());
     }
@@ -2090,6 +2093,7 @@ fn plan_targets(
                 units: vec![target],
                 dest: None,
                 chain_multipliers: Vec::new(),
+                blocked_units: Vec::new(),
             })
             .collect());
     }
@@ -2124,6 +2128,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                blocked_units: Vec::new(),
             });
             continue;
         }
@@ -2180,6 +2185,7 @@ fn plan_targets(
             units,
             dest,
             chain_multipliers,
+            blocked_units: Vec::new(),
         });
     }
     hit::remove_defended_targets(world, caster, spell, &mut plan);
@@ -2208,6 +2214,10 @@ fn resolve_effects(
             spell_id: spell.id,
             depth,
             damage: Vec::new(),
+            blocked: plan
+                .iter()
+                .flat_map(|effect| effect.blocked_units.iter().copied())
+                .collect(),
         });
     }
     // Aura effects hitting the same unit form one aura (per-unit effect mask).
@@ -2391,6 +2401,16 @@ struct HitFrame {
     spell_id: u32,
     depth: u8,
     damage: Vec<(Entity, f32)>,
+    blocked: HashSet<Entity>,
+}
+
+/// Read the innermost matching hit's block result; nested casts own their frame.
+fn hit_was_blocked(world: &World, caster: Entity, spell_id: u32, target: Entity) -> bool {
+    world.get_resource::<ResolvingHits>().is_some_and(|hits| {
+        hits.0.last().is_some_and(|frame| {
+            frame.caster == caster && frame.spell_id == spell_id && frame.blocked.contains(&target)
+        })
+    })
 }
 
 /// A linked child inherits the active hit's trigger depth, without persisting cast state in an aura.
