@@ -901,8 +901,23 @@ fn an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh() {
 fn world_maps_without_npc_data_are_not_hosted() {
     let Some(store) = map_store() else { return };
     let instances = InstanceManager::default();
-    // Outland (530) is not hosted.
-    for map_id in [530] {
+    // Map.csv: Alliance PVP Barracks (449) is a world map without population.
+    // Outland (530) now has promoted Retail NPCs and is explicitly hosted.
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let (instance_type, spawns): (u32, u32) = conn
+        .query_row(
+            "SELECT InstanceType, (SELECT COUNT(*) FROM content_creature WHERE map=map.ID)
+             FROM map WHERE ID=449",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((instance_type, spawns), (0, 0));
+    for map_id in [449] {
         assert_eq!(
             instances.player_cannot_enter(store, map_id, entrant(1, None), 80, SUNDAY_NOON),
             Some(TransferAbortReason::MapNotAllowed),

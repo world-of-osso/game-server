@@ -2,6 +2,25 @@ use super::*;
 use crate::bank_test_harness::{ACCOUNT, Harness};
 use shared::components::{Health, Level, Npc, Position, UnitFactionTemplate};
 
+#[test]
+fn db2_follow_install_trading_post_reads_next_build_and_rejects_mixed_sources() {
+    let db = rusqlite::Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE trading_post_source(name TEXT,build TEXT); INSERT INTO trading_post_source VALUES('PerksVendorCategory','12.1.5.70391'); CREATE TABLE perks_vendor_category(ID INTEGER,payload TEXT); CREATE TABLE perks_vendor_item(ID INTEGER,payload TEXT); CREATE TABLE perks_vendor_item_ui_group(ID INTEGER,payload TEXT);").unwrap();
+    db.execute(
+        "INSERT INTO perks_vendor_category VALUES(1,?)",
+        [r#"{"ID":1,"DisplayName_lang":"Armor","DefaultUIModelSceneID":23}"#],
+    )
+    .unwrap();
+    let loaded = catalog::load(&db).unwrap();
+    assert_eq!(loaded.categories[0].name, "Armor");
+    db.execute(
+        "INSERT INTO trading_post_source VALUES('PerksVendorItem','12.1.0.69933')",
+        [],
+    )
+    .unwrap();
+    assert!(catalog::load(&db).is_err());
+}
+
 fn prepare(h: &mut Harness, now: i64) {
     let path = std::env::var_os("TRADING_POST_WORLD_COPY")
         .expect("explicit private Trading Post world copy");

@@ -885,7 +885,7 @@ fn stored_spells_carry_labels() {
 }
 
 /// Shadow Priest spec passive: HealingAndDamage mods on Mind Blast from
-/// class-mask 108 effects (idx 0: -7% mask_2 0x100, idx 11: +300% mask_0
+/// class-mask 108 effects (idx 0: -7% mask_2 0x100, idx 11: +360% mask_0
 /// 0x2000) and label 218 effect idx 12 (+137%, label 4040).
 const SHADOW_PRIEST: u32 = 137033;
 const MIND_BLAST: u32 = 8092;
@@ -900,9 +900,9 @@ fn class_mask_and_label_modifiers_scale_damage() {
     h.advance(40);
     let hits = log_of(&h, CombatLogKind::Damage, MIND_BLAST);
     assert_eq!(hits.len(), 1, "{:?}", h.inbox.failed);
-    // 0.78336 × SP 100 × 0.93 × 4.00 × 2.37 = 690.6, ± 2.5% variance.
+    // Active Effect1040380: +360%; 0.78336 × SP100 × 0.93 × 4.6 × 2.37.
     assert!(
-        varied(690.6).contains(&(hits[0].amount as f32)),
+        varied(794.2457).contains(&(hits[0].amount as f32)),
         "{:?}",
         hits[0]
     );

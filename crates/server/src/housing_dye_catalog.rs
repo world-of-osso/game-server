@@ -1,6 +1,6 @@
 //! Retail DyeCostIsValid spends one item per new/changed nondefault slot.
 //! HousingDecorDyeSlot generated docs explicitly accept colors of any category.
-use super::{BUILD, BUILD_KEY, number, read_rows};
+use super::{number, read_build_key, read_rows};
 use rusqlite::Connection;
 use shared::protocol::DecorDye;
 use std::collections::{BTreeMap, BTreeSet};
@@ -13,16 +13,7 @@ pub(crate) struct DyeCatalog {
 
 impl DyeCatalog {
     pub(crate) fn read(db: &Connection) -> Result<Self, String> {
-        let build: String = db
-            .query_row(
-                "SELECT build FROM housing_catalog_build WHERE build_key=?",
-                [BUILD_KEY],
-                |row| row.get(0),
-            )
-            .map_err(|error| format!("Read dye source build: {error}"))?;
-        if build != BUILD {
-            return Err("Dye source build differs from the authenticated Retail build.".into());
-        }
+        read_build_key(db)?;
         Ok(Self {
             slots: read_rows(db, "DecorDyeSlot")?
                 .into_iter()
