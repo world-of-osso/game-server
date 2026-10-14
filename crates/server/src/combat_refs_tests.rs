@@ -145,7 +145,17 @@ fn out_of_combat_harness(
     spell: u32,
     class: u8,
 ) -> Option<crate::spell_cast::test_harness::Harness> {
-    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[spell], class)?;
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        Vec::new(),
+        &[spell],
+        class,
+        false,
+        |app| {
+            app.insert_resource(crate::spell_cast::test_harness::native_creature_world(&[
+                6, 16372,
+            ]));
+        },
+    )?;
     h.app
         .world_mut()
         .entity_mut(h.caster)
