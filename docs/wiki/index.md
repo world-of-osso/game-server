@@ -1,5 +1,9 @@
 # Wiki Index
 
+- [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.
+
+- [Encounter loot eligibility](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) — existing active lock bit at native DONE before save, not bag-loot success; allocated-copy authority retained.
+
 - [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) — actual class/profession/owned-mount IDs versus global spell metadata; recipe-marker boundaries, no trait/UI acquisition claim.
 - [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
 

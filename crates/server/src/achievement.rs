@@ -1005,6 +1005,20 @@ fn known_player_spell_ids(world: &World, player: Entity) -> BTreeSet<u32> {
         .collect()
 }
 
+/// TC BattlePetTeamLevel1935–1939 uses the equipped journal slots, not every owned pet.
+fn battle_pet_team_min_level(world: &World, player: Entity) -> Option<u8> {
+    let journal = &world
+        .get::<crate::battle_pets::AccountPetJournal>(player)?
+        .journal;
+    journal
+        .battle_slots
+        .iter()
+        .try_fold(shared::pet_battle::MAX_PET_LEVEL, |minimum, guid| {
+            let pet = journal.get((*guid)?)?;
+            Some(minimum.min(pet.level))
+        })
+}
+
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
     let identity = world.get::<Player>(player)?;
     let arena = crate::pvp::player_arena_conditions(world, player);
@@ -1015,6 +1029,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
         known_spells: known_player_spell_ids(world, player),
+        battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),
@@ -1212,6 +1227,73 @@ pub(crate) fn record_healing(
 /// TC Player::SummonIfPossible26094 credits a valid acceptance before TeleportTo.
 pub(crate) fn record_accepted_summon(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::AcceptSummon);
+}
+
+/// TC InstanceScript435–441/Player21915–21925: read active loot locks before DONE saves them.
+pub(crate) fn record_encounter_loot_defeat(
+    world: &mut World,
+    map: InMap,
+    encounter: u32,
+    difficulty: u32,
+) {
+    let eligible = encounter_loot_eligible_players(world, map, encounter, difficulty);
+    for player in eligible {
+        record_criteria_event(
+            world,
+            player,
+            CriteriaEvent::DefeatEncounterEligibleForLoot(encounter),
+        );
+    }
+}
+
+fn encounter_loot_eligible_players(
+    world: &mut World,
+    map: InMap,
+    encounter: u32,
+    difficulty: u32,
+) -> Vec<Entity> {
+    let players = authenticated_encounter_players(world, map);
+    let Some(instances) = world.get_resource::<crate::maps::InstanceManager>() else {
+        return Vec::new();
+    };
+    let Some(copy) = instances
+        .copy_difficulty(map)
+        .filter(|copy| copy.difficulty_id == difficulty)
+    else {
+        return Vec::new();
+    };
+    let Some(row) = world
+        .get_resource::<crate::maps::MapStore>()
+        .and_then(|store| store.dungeon_encounter(encounter, map.map_id, difficulty))
+    else {
+        return Vec::new();
+    };
+    let now = crate::maps::difficulty::now(world).unix;
+    players
+        .into_iter()
+        .filter_map(|(player, character)| {
+            let locked = instances
+                .locks
+                .find_active_lock(character, copy, now)
+                .is_some_and(|lock| lock.data.completed_encounters & (1 << row.bit) != 0);
+            (!locked).then_some(player)
+        })
+        .collect()
+}
+
+fn authenticated_encounter_players(world: &mut World, map: InMap) -> Vec<(Entity, u64)> {
+    world
+        .query::<(&Authenticated, &InWorld, &PlayerLink)>()
+        .iter(world)
+        .filter_map(|(_, owner, link)| {
+            let player = link.0;
+            if world.get::<Player>(player).is_none() || world.get::<InMap>(player) != Some(&map) {
+                return None;
+            }
+            let character = world.get::<crate::persistence::ClientId>(player)?.0;
+            (character == owner.character_id).then_some((player, character))
+        })
+        .collect()
 }
 
 /// Successful scripted encounter boundary. A scripted defeat (Hogger's surrender
