@@ -20,11 +20,11 @@ pub const EFFECT_SUMMON: u32 = 28;
 const CONTROL_WILD: u32 = 0;
 const CONTROL_ALLY: u32 = 1;
 const CONTROL_PET: u32 = 2;
-const TITLE_PET: u32 = 1;
-const TITLE_GUARDIAN: u32 = 2;
-const TITLE_MINION: u32 = 3;
-const TITLE_COMPANION: u32 = 5;
-const TITLE_RUNEBLADE: u32 = 6;
+const TITLE_PET: i32 = 1;
+const TITLE_GUARDIAN: i32 = 2;
+const TITLE_MINION: i32 = 3;
+const TITLE_COMPANION: i32 = 5;
+const TITLE_RUNEBLADE: i32 = 6;
 const IMMUNE_TO_PC_AND_NPC: u32 = 0x100 | 0x200;
 const DANCING_RUNE_WEAPON: u32 = 49028;
 const RUNE_WEAPON_PARRY: u32 = 81256;
@@ -36,7 +36,8 @@ const ONLY_VISIBLE_TO_SUMMONER_GROUP: u32 = 0x10000;
 pub struct SummonProperties {
     pub control: u32,
     pub faction: u32,
-    pub title: u32,
+    /// TC a352b1fa DB2Structure.h SummonPropertiesEntry: `int32 Title` (12.1.5 authors -1).
+    pub title: i32,
     pub slot: i32,
     /// The first authored SummonProperties flag word; other flag semantics are separate.
     pub flags: u32,
