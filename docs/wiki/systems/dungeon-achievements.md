@@ -2,6 +2,12 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Active installed achievement import
+
+`import_achievements.py` derives the build from the resolved `data/db2/active` directory and active `wow` `.build.info` entry, rejecting disagreement. Input raw-directory build must agree; each actual WDC5 header is checked against the supported field layout before decode/export. The four content tables replace in one transaction; only their four `db2_build` provenance rows are stamped. No hardcoded69933 build selection or alternate layout fallback. Original native golden fixture raw files copy to owned temporary output before export.
+
+At4d349938, actual authenticated70391 raw inputs reproduce the former CLI rejection of70391, then process2/2 passes:14136 achievements/66663 criteria/121817 tree rows/243 categories, Stockade633/category14808 and unrelated SQL retained; corrupted actual layout fails without DB mutation. Three Python unit/native-golden tests pass. Criteria1/Tree8 missing-key records remain explicitly excluded; no completeness claim. Work-copy fingerprint/swap and rebuilt native census acceptance remain pending. [Contract](../../specs/dungeon-achievements.md).
+
 ## Player-anchored spell-hit target class
 
 TC a352b1fa CriteriaHandler1785–1788/1897–1900 checks the actual target TypeId/Class. `SpellHitPlayer { race, class }` replaces the race-only optional event snapshot; native Player hits alone populate it. Positive TargetIsPlayer5 checks snapshot presence; positive TargetClass28 checks its class. The compiler accepts class only when the complete tree also requires TargetIsPlayer5 or playable TargetRace27; NPC class-only leaves stay disabled rather than inventing a class authority. Unknown companions, negation and invalid classes remain excluded. Compiler32/32; native/catalog2/2 at b2b90543 cover real27571 Human/Orc DK hits, wrong class/race, caster matching despite missing target, absent caster authority, delayed/depth/NPC/missing/idle/reopen, and real61781 Human Rogue behind a race-only anchor. Saved69933 census5456/1816 adds1699/3559 structurally; raw11057/current56/one orphan excludes13 unanchored class orphans from the hypothetical probe. Required acceptance pending; full achievements/acquisition/UI unclaimed. [Contract](../../specs/dungeon-achievements.md).

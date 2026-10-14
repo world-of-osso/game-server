@@ -1,5 +1,6 @@
 """Build selection and supported-layout import proofs; never downloads."""
 import importlib.util
+import shutil
 import sqlite3
 import struct
 import sys
@@ -50,9 +51,13 @@ class AchievementImportTests(unittest.TestCase):
 
     def test_dungeon2_local_categories_and_stockade_metadata(self):
         # Original native golden fixture proves this unchanged supported layout's mapping.
-        directory = SCRIPTS.parent / "data/db2/12.1.0.69933"
-        tables = importer.export_tables(directory)
+        source = SCRIPTS.parent / "data/db2/12.1.0.69933"
         with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary) / source.name
+            directory.mkdir()
+            for fdid, _, _, _ in importer.TABLES.values():
+                shutil.copyfile(source / f"{fdid}.db2", directory / f"{fdid}.db2")
+            tables = importer.export_tables(directory)
             database = Path(temporary) / "world.db"
             with sqlite3.connect(database) as db:
                 db.execute("CREATE TABLE db2_build (table_name TEXT PRIMARY KEY, build TEXT)")
