@@ -140,9 +140,10 @@ fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
         .collect();
     assert_eq!(ticks.len(), 6);
     assert!(
-        ticks
-            .iter()
-            .all(|e| varied(20.988).contains(&(e.amount as f32)))
+        // Active Effect718207 snapshots fixture AP100 at application, before
+        // the first stats update: 0.252 × 100, rounded to25 each native tick.
+        ticks.iter().all(|e| e.amount == 25),
+        "{ticks:?}"
     );
     assert!(!crate::auras::has_aura(h.app.world(), target, 269747));
 }
@@ -234,7 +235,8 @@ fn dummy14_consume_generates_named_fury_once_without_optional_fragments() {
     let target = h.npc;
     execute(&mut h, 473662, Some(target));
     assert_eq!(h.power(PowerType::Fury), 8.0);
-    assert!(varied(315.0).contains(&(5000.0 - h.health(target))));
+    // Active SpellEffect1192725: 3.67 SP × fixture SP100.
+    assert!(varied(367.0).contains(&(5000.0 - h.health(target))));
 }
 
 #[test]

@@ -3,8 +3,8 @@
 -- db2.py fails the import on any mismatch. Applied inside the import transaction,
 -- so it must only touch DB2 tables.
 
-DROP TABLE IF EXISTS db2_build;
-CREATE TABLE db2_build (
+-- Other importers (for example achievements) own additional build receipts.
+CREATE TABLE IF NOT EXISTS db2_build (
   table_name TEXT PRIMARY KEY,
   build TEXT NOT NULL
 );
@@ -308,6 +308,7 @@ CREATE TABLE spell_procs_per_minute_mod (
   Type INTEGER NOT NULL DEFAULT 0,
   Param INTEGER NOT NULL DEFAULT 0,
   Coeff REAL NOT NULL DEFAULT 0,
+  PlayerConditionID INTEGER NOT NULL DEFAULT 0,
   SpellProcsPerMinuteID INTEGER NOT NULL DEFAULT 0
 );
 

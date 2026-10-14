@@ -14,6 +14,8 @@ use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
 use crate::quest_rules::{QuestPlayer, objective_counts, objectives_done, quest_money};
 
+const QUEST_FLAGS_SHARABLE: u32 = 0x8;
+
 /// Quest log entries by quest id, as last sent to a client.
 pub(crate) type QuestLogView = BTreeMap<u32, QuestEntrySnapshot>;
 
@@ -102,6 +104,7 @@ fn quest_entry(
     active: &ActiveQuestData,
     watched: bool,
     inventory: &InventoryData,
+    player: QuestPlayer,
 ) -> QuestEntrySnapshot {
     let counts = objective_counts(quest, active, |item_id| bag_count(db, inventory, item_id));
     QuestEntrySnapshot {
@@ -121,6 +124,9 @@ fn quest_entry(
         level: quest.level,
         sort_id: quest.sort_id,
         objectives_text: quest.objectives_text.clone(),
+        description: quest.description.clone(),
+        rewards: quest_rewards(quests, quest, player),
+        pushable: quest.flags & QUEST_FLAGS_SHARABLE != 0 && !active.failed,
         completion_text: quest.completion_log.clone(),
         watched,
         pois: quests.pois.get(&quest.id).cloned().unwrap_or_default(),
@@ -133,13 +139,16 @@ pub(crate) fn log_entries(
     quests: &QuestDb,
     log: &QuestLogData,
     inventory: &InventoryData,
+    player: QuestPlayer,
 ) -> Vec<QuestEntrySnapshot> {
     log.active
         .iter()
         .filter_map(|active| {
             let quest = quests.quests.get(&active.quest_id)?;
             let watched = log.watched.contains(&active.quest_id);
-            Some(quest_entry(db, quests, quest, active, watched, inventory))
+            Some(quest_entry(
+                db, quests, quest, active, watched, inventory, player,
+            ))
         })
         .collect()
 }
@@ -149,9 +158,10 @@ pub(crate) fn log_snapshot(
     quests: &QuestDb,
     log: &QuestLogData,
     inventory: &InventoryData,
+    player: QuestPlayer,
 ) -> QuestLogSnapshot {
     QuestLogSnapshot {
-        entries: log_entries(db, quests, log, inventory),
+        entries: log_entries(db, quests, log, inventory, player),
         watched_quest_ids: log.watched.clone(),
     }
 }

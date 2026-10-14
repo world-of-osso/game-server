@@ -7,6 +7,9 @@ mod group_criteria;
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
 
+#[path = "shadowfang_keep.rs"]
+mod shadowfang_keep;
+
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
 }
@@ -5035,6 +5038,100 @@ fn achievements_criteria_dungeon_difficulty_credits_only_the_copy_difficulty() {
             &[31656, 31666, 31454, 64394],
         );
     }
+}
+
+#[test]
+fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
+    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    let (mut h, boss, map) = bound_boss_at_difficulty(102263, 1530, 1, 14, None);
+    let conn = Connection::open(world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    h.app
+        .insert_resource(crate::persistence::GameDatabase { db });
+    let player = h.player();
+    let character = h
+        .app
+        .world()
+        .get::<crate::persistence::ClientId>(player)
+        .unwrap()
+        .0;
+    // The generic fixture's transport PeerId1 differs from its character ClientId2001.
+    // Native authority is the authenticated in-world character, not the transport ID.
+    h.app
+        .world_mut()
+        .entity_mut(h.players[0].1)
+        .insert(crate::auth::InWorld {
+            character_id: character,
+        });
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    let other = h.players[1].0;
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert(PlayerAchievementState::default());
+    h.engage(boss);
+    h.advance(0.05);
+    h.hit_pct(boss, 200.0);
+    h.advance(0.05);
+    assert_eq!(h.inbox(0).ends.last().map(|end| end.success), Some(true));
+    let manager = h.app.world().resource::<crate::maps::InstanceManager>();
+    assert_eq!(manager.completed_encounters(map), 2);
+    let difficulty = manager.copy_difficulty(map).unwrap();
+    let now = crate::maps::difficulty::now(h.app.world()).unix;
+    let lock = manager
+        .locks
+        .find_active_lock(character, difficulty, now)
+        .unwrap();
+    assert_eq!(
+        lock.data.completed_encounters & 2,
+        2,
+        "DONE saved the actual loot lock"
+    );
+    let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(
+        state.criteria_progress.get(&35448),
+        Some(&1),
+        "first eligible defeat must credit before its new lock is saved"
+    );
+    assert!(!state.criteria_progress.contains_key(&35458));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(other)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&35448)
+    );
+    let slot = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 1849).unwrap();
+    assert!(
+        !instance_script::set_boss_state(h.app.world_mut(), map, slot, EncounterState::Done),
+        "an already-DONE native transition cannot replay credit"
+    );
+    h.advance(0.05);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&35448),
+        Some(&1)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&35448),
+        Some(&1)
+    );
 }
 
 /// Erudax (Grim Batol670, encounter1049, bit1): KillCreature0 leaves gated by TC
