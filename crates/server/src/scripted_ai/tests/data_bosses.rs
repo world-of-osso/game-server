@@ -5056,6 +5056,14 @@ fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
         .get::<crate::persistence::ClientId>(player)
         .unwrap()
         .0;
+    // The generic fixture's transport PeerId1 differs from its character ClientId2001.
+    // Native authority is the authenticated in-world character, not the transport ID.
+    h.app
+        .world_mut()
+        .entity_mut(h.players[0].1)
+        .insert(crate::auth::InWorld {
+            character_id: character,
+        });
     h.app
         .world_mut()
         .entity_mut(player)
