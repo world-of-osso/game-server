@@ -43,6 +43,15 @@ struct Catalog {
     major_factions: Vec<MajorFaction>,
 }
 
+fn read_catalog(path: &std::path::Path) -> Result<Catalog, String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|error| format!("Renown catalog {}: {error}", path.display()))?;
+    let catalog: Catalog = serde_json::from_str(&text)
+        .map_err(|error| format!("Renown catalog {}: {error}", path.display()))?;
+    crate::db2_source_build::validate_build(&catalog.build)?;
+    Ok(catalog)
+}
+
 /// Installed-build export; refreshed data does not require recompiling the realm.
 pub(crate) fn catalog() -> &'static [MajorFaction] {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
@@ -51,12 +60,7 @@ pub(crate) fn catalog() -> &'static [MajorFaction] {
             let path = std::env::var_os("GAME_SERVER_RENOWN_CATALOG")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| std::path::PathBuf::from("data/db2/active/renown.json"));
-            let text = std::fs::read_to_string(&path)
-                .unwrap_or_else(|error| panic!("Renown catalog {}: {error}", path.display()));
-            let catalog: Catalog = serde_json::from_str(&text)
-                .unwrap_or_else(|error| panic!("Renown catalog {}: {error}", path.display()));
-            crate::db2_source_build::validate_build(&catalog.build).expect("renown source build");
-            catalog
+            read_catalog(&path).unwrap_or_else(|error| panic!("{error}"))
         })
         .major_factions
 }
