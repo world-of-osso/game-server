@@ -15,6 +15,8 @@ use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
 use crate::persistence::{self, GameDatabase};
 
+mod actor;
+use actor::{Mutation, PendingMutations, publish_mutations};
 mod auto_afk;
 pub(crate) use auto_afk::AutoAfkScheduler;
 #[cfg(test)]
@@ -153,6 +155,7 @@ pub struct FriendsPlugin;
 impl Plugin for FriendsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FriendSnapshotIndex>();
+        app.init_resource::<PendingMutations>();
         app.init_resource::<AutoAfkScheduler>();
         app.add_systems(
             Update,
@@ -161,6 +164,7 @@ impl Plugin for FriendsPlugin {
                 process_query_requests,
                 process_add_requests,
                 process_remove_requests,
+                publish_mutations,
                 process_presence_requests,
                 process_due_auto_afk.after(crate::messaging::process_chat_messages),
                 sync_changed_friend_presence,
@@ -297,24 +301,27 @@ fn process_add_requests(
         ),
         With<Authenticated>,
     >,
-    mut friends_q: Query<&mut PlayerFriendsState>,
+    friends_q: Query<&PlayerFriendsState>,
     players: Query<&Player>,
     db: Option<Res<GameDatabase>>,
-    mut index: ResMut<FriendSnapshotIndex>,
+    mut pending: ResMut<PendingMutations>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
     process_mutation_requests(
         &mut receivers,
-        &mut friends_q,
+        &friends_q,
         &db,
-        &mut index,
+        &mut pending,
         &mut senders,
-        |link, request, friends| {
+        |link, request| {
             let player = players
                 .get(link.0)
                 .map_err(|_| "friends unavailable for player".to_string())?;
-            add_friend(&db.db, friends, &player.name, request.name.trim())
+            Ok(Mutation::Add {
+                self_name: player.name.clone(),
+                target: request.name.trim().to_string(),
+            })
         },
     );
 }
@@ -329,19 +336,23 @@ fn process_remove_requests(
         ),
         With<Authenticated>,
     >,
-    mut friends_q: Query<&mut PlayerFriendsState>,
+    friends_q: Query<&PlayerFriendsState>,
     db: Option<Res<GameDatabase>>,
-    mut index: ResMut<FriendSnapshotIndex>,
+    mut pending: ResMut<PendingMutations>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
     process_mutation_requests(
         &mut receivers,
-        &mut friends_q,
+        &friends_q,
         &db,
-        &mut index,
+        &mut pending,
         &mut senders,
-        |_, request, friends| remove_friend(friends, request.name.trim()),
+        |_, request| {
+            Ok(Mutation::Remove {
+                target: request.name.trim().to_string(),
+            })
+        },
     );
 }
 
@@ -350,36 +361,30 @@ fn process_mutation_requests<R, F>(
         (Entity, &PlayerLink, &InWorld, &mut MessageReceiver<R>),
         With<Authenticated>,
     >,
-    friends_q: &mut Query<&mut PlayerFriendsState>,
+    friends_q: &Query<&PlayerFriendsState>,
     db: &GameDatabase,
-    index: &mut FriendSnapshotIndex,
+    pending: &mut PendingMutations,
     senders: &mut Query<&mut MessageSender<FriendsStateUpdate>>,
     mut mutate: F,
 ) where
     R: NetMessage,
-    F: FnMut(&PlayerLink, &R, &mut PlayerFriendsState) -> Result<String, String>,
+    F: FnMut(&PlayerLink, &R) -> Result<Mutation, String>,
 {
     for (conn_entity, link, in_world, mut receiver) in receivers.iter_mut() {
         let requests: Vec<_> = receiver.receive().collect();
         if requests.is_empty() {
             continue;
         }
-        let Ok(mut friends) = friends_q.get_mut(link.0) else {
+        let Ok(_) = friends_q.get(link.0) else {
             send_friends_error(conn_entity, senders, "friends unavailable for player");
             continue;
         };
         for request in requests {
-            let result = mutate(link, &request, &mut friends);
-            index.register_owner(link.0, conn_entity, &friends);
-            let snapshot = build_friends_snapshot(&db.db, &friends, &index.online);
-            match result {
-                Ok(message) => {
-                    persistence::save_friends(&db.db, in_world.character_id, &friends);
-                    send_friends_update(conn_entity, snapshot, Some(message), None, senders);
+            match mutate(link, &request) {
+                Ok(mutation) => {
+                    pending.enqueue(db, conn_entity, link.0, in_world.character_id, mutation)
                 }
-                Err(error) => {
-                    send_friends_update(conn_entity, snapshot, None, Some(error), senders);
-                }
+                Err(error) => send_friends_error(conn_entity, senders, &error),
             }
         }
     }

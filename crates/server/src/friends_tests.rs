@@ -2,6 +2,8 @@ use super::*;
 
 #[path = "friends_tests/auto_afk.rs"]
 mod auto_afk;
+#[path = "friends_tests/fifo.rs"]
+mod fifo;
 
 fn test_player(name: &str) -> Player {
     Player {
