@@ -394,7 +394,6 @@ fn class_completeness_native_creature_type_damage_applies_to_offhand_against_pla
             .get_mut::<crate::stats::CharacterStats>(caster)
             .unwrap();
         stats.attack_power = 0.0;
-        stats.main_hand = None;
         stats.off_hand = Some(weapon);
     }
     let mut attack = crate::combat::AutoAttack::new(victim);
