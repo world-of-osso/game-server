@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
-"""Fetch build-pinned Retail DB2 CSVs from wago.tools and import them into world.db.
+"""Check local Retail DB2 CSVs and import them into world.db.
 
-  db2.py fetch   [--build B] [--csv-root DIR]
-  db2.py extract [--build B] [--csv-root DIR]
   db2.py check   [--build B] [--csv-root DIR]
   db2.py import  [--build B] [--csv-root DIR] [--db PATH]
 
-`extract` writes the LOCAL_TABLES CSVs from the local CASC install (db2_casc.py)
-instead of wago.tools; `fetch` skips them.
-
 CSVs live in <csv-root>/<build>/<Table>.csv. Import replaces every DB2 table
 listed in TABLES inside one transaction (non-DB2 tables are untouched), checks
-each CSV header against scripts/db2_schema.sql, and records the build per table
-in `db2_build`. The pinned local Forever Skyborne overlay is reapplied in that
-same transaction (skyborne_data.py); mixed-source rows use `db2_row_source`.
+each CSV header against scripts/db2_schema.sql, and updates only its tables'
+build receipts in `db2_build`. The pinned local Forever Skyborne overlay is reapplied in that
+same transaction (skyborne_data.py), along with the already-authored Zephras
+reconstructed factions (zephras_content.py); mixed-source rows use `db2_row_source`.
 """
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import sqlite3
@@ -26,6 +23,7 @@ from pathlib import Path
 
 import db2_casc
 import skyborne_data
+import zephras_content
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
@@ -217,6 +215,36 @@ def check_csvs(csv_dir):
             )
 
 
+def reapply_zephras_factions(conn):
+    """Rebuild approved derived rows from their existing receipt, never fetch content."""
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE name='zephras_row_source'"
+    ).fetchone():
+        return
+    sources = conn.execute(
+        "SELECT row_key,scrape,source_json FROM zephras_row_source "
+        "WHERE table_name='faction_template' AND kind='reconstructed' ORDER BY row_key"
+    ).fetchall()
+    for key, scrape, source in sources:
+        faction = zephras_content.faction_row(json.loads(source)["react"])
+        if json.loads(key) != {"ID": faction["ID"]}:
+            raise ValueError(f"Zephras faction source key mismatch: {key}")
+        columns = ",".join(faction)
+        placeholders = ",".join("?" for _ in faction)
+        conn.execute(
+            f"INSERT INTO faction_template ({columns}) VALUES ({placeholders})",
+            tuple(faction.values()),
+        )
+        # Derived reactions are not DB2 bytes: FDID0 and layout 'derived' say so.
+        conn.execute(
+            "INSERT OR REPLACE INTO db2_row_source VALUES (?,?,?,?,?,?)",
+            (
+                "faction_template", faction["ID"], scrape, 0, "derived",
+                hashlib.sha256(source.encode()).hexdigest(),
+            ),
+        )
+
+
 def import_tables(build, csv_root, db_path):
     csv_dir = csv_root / build
     check_csvs(csv_dir)
@@ -234,10 +262,12 @@ def import_tables(build, csv_root, db_path):
             conn.executemany(f"INSERT INTO {name} VALUES ({placeholders})",
                              ([row[index] for index in indexes] for row in rows))
             conn.execute(
-                "INSERT INTO db2_build (table_name, build) VALUES (?, ?)", (name, build)
+                "INSERT INTO db2_build (table_name, build) VALUES (?, ?) "
+                "ON CONFLICT(table_name) DO UPDATE SET build=excluded.build", (name, build)
             )
             counts[name] = len(rows)
         skyborne_data.import_rows(conn, skyborne_rows)
+        reapply_zephras_factions(conn)
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:
