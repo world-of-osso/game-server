@@ -36,6 +36,77 @@ fn setup() -> Harness {
     h
 }
 #[test]
+fn mount_random_request_after_favourite_waits_for_the_committed_choice() {
+    use std::time::{Duration, Instant};
+    let mut h = setup();
+    mount_store::learn_spells(&h.app.world().resource::<GameDatabase>().db, 1, &[18]);
+    broadcast_account(h.app.world_mut(), 1);
+    h.advance(3);
+    drain::<MountJournalUpdate>(&mut h.app, h.connection);
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SetMountFavourite>>(h.connection)
+        .unwrap()
+        .send::<CollectionChannel>(SetMountFavourite {
+            mount_id: 18,
+            favourite: true,
+        });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SummonRandomFavouriteMount>>(h.connection)
+        .unwrap()
+        .send::<CollectionChannel>(SummonRandomFavouriteMount);
+    let started = Instant::now();
+    h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = drain::<MountJournalUpdate>(&mut h.app, h.connection);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "mount request tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature.is_empty(),
+        "random selection answered before earlier favourite commit: {premature:?}"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while h.app.world().get::<Mounted>(h.caster).is_none() {
+        h.advance(1);
+        let replies = drain::<MountJournalUpdate>(&mut h.app, h.connection);
+        assert!(
+            replies.iter().all(|reply| reply.error.is_none()),
+            "{replies:?}"
+        );
+        assert!(
+            Instant::now() < deadline,
+            "committed favourite did not produce a mount; cast failures={:?}; current choices={:?}",
+            h.inbox.failed,
+            random_candidates(h.app.world(), h.caster)
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<Mounted>(h.caster)
+            .unwrap()
+            .mount_display_id,
+        2405
+    );
+}
+
+#[test]
 fn mount_favourite_waits_for_fifo_and_preserves_other_queued_mounts() {
     use std::time::{Duration, Instant};
     let mut h = setup();
