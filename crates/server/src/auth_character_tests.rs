@@ -227,9 +227,67 @@ fn character_create_ack_waits_for_fifo_writer_without_blocking_updates() {
 }
 
 #[test]
+fn gold_publication_uses_latest_durable_balance_when_actors_poll_in_reverse_order() {
+    let database = test_db();
+    let (character, _) = persistence::create_character(&database.db, 1, "Fifogold", 1, 1).unwrap();
+    let first = database.writer.enqueue("first money actor", move |db| {
+        let mut inventory = persistence::load_inventory(db, character);
+        inventory.gold = 100;
+        persistence::save_inventory(db, character, &inventory);
+        Ok(100_u64)
+    });
+    let second = database.writer.enqueue("second money actor", move |db| {
+        let mut inventory = persistence::load_inventory(db, character);
+        inventory.gold = 80;
+        persistence::save_inventory(db, character, &inventory);
+        Ok(80_u64)
+    });
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while second.result().is_none() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "money actor receipt timeout"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(database)
+        .add_plugins(GoldPlugin);
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Fifogold".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            ClientId(character),
+            Gold(0),
+        ))
+        .id();
+    {
+        let mut updates = app.world_mut().resource_mut::<GoldUpdateQueue>();
+        updates.record(character, second.result().unwrap().unwrap());
+        updates.record(character, first.result().unwrap().unwrap());
+    }
+    app.update();
+    assert_eq!(app.world().get::<Gold>(player).unwrap().0, 80);
+    assert_eq!(
+        persistence::load_inventory(&app.world().resource::<GameDatabase>().db, character).gold,
+        80
+    );
+}
+
+#[test]
 fn queued_gold_updates_coalesce_and_skip_equal_or_offline_players() {
     let mut app = App::new();
-    app.add_plugins(GoldPlugin);
+    let database = test_db();
+    let mut inventory = persistence::load_inventory(&database.db, 42);
+    inventory.gold = 150;
+    persistence::save_inventory(&database.db, 42, &inventory);
+    app.insert_resource(database).add_plugins(GoldPlugin);
     let player = app
         .world_mut()
         .spawn((

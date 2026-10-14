@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use bevy::prelude::*;
 use lightyear::prelude::{ReplicationDirtyQueue, ReplicationSystems};
 use shared::components::{Gold, Player};
 
-use crate::persistence::ClientId;
+use crate::persistence::{ClientId, GameDatabase};
 
 /// Retail gold cap, 9,999,999g 99s 99c (TrinityCore `MAX_MONEY_AMOUNT`): the most copper
 /// a player or a Warband bank holds.
@@ -18,11 +18,11 @@ pub(crate) fn format_money(copper: u64) -> String {
     format!("{gold}g {silver}s {copper}c")
 }
 
-/// Persisted `InventoryData` changes: gold values to replicate, plus the characters
-/// whose bag contents need an `InventoryDelta`.
+/// Persisted `InventoryData` changes: owners whose latest durable gold must replicate
+/// and whose bag contents need an `InventoryDelta`.
 #[derive(Resource, Default)]
 pub(crate) struct GoldUpdateQueue {
-    pending: HashMap<u64, u64>,
+    pending: HashSet<u64>,
     changed_inventories: HashSet<u64>,
     acquired_items: Vec<(u64, u32, u32)>,
     looted_items: Vec<(u64, u32, u32, u8)>,
@@ -32,7 +32,7 @@ pub(crate) struct GoldUpdateQueue {
 
 impl GoldUpdateQueue {
     pub(crate) fn record(&mut self, character_id: u64, gold: u64) {
-        self.pending.insert(character_id, gold);
+        self.pending.insert(character_id);
         self.changed_inventories.insert(character_id);
         // TC Player::SetMoney: highest actual wallet on non-loading money changes.
         self.record_criteria(
@@ -101,7 +101,7 @@ impl GoldUpdateQueue {
         self.pending.is_empty()
     }
 
-    fn take(&mut self) -> HashMap<u64, u64> {
+    fn take(&mut self) -> HashSet<u64> {
         std::mem::take(&mut self.pending)
     }
 }
@@ -128,6 +128,7 @@ impl Plugin for GoldPlugin {
 
 pub(crate) fn apply_gold_updates(
     mut updates: ResMut<GoldUpdateQueue>,
+    db: Option<Res<GameDatabase>>,
     mut players: Query<(Entity, &ClientId, &mut Gold), With<Player>>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
 ) {
@@ -135,11 +136,16 @@ pub(crate) fn apply_gold_updates(
         return;
     }
 
+    let Some(db) = db else {
+        return;
+    };
     let mut pending = updates.take();
     for (player_entity, character_id, mut gold) in &mut players {
-        let Some(updated_gold) = pending.remove(&character_id.0) else {
+        if !pending.remove(&character_id.0) {
             continue;
-        };
+        }
+        // Actor queues can poll committed receipts in a different order than the writer.
+        let updated_gold = crate::persistence::load_inventory(&db.db, character_id.0).gold;
         if gold.0 == updated_gold {
             continue;
         }
