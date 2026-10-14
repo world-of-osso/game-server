@@ -197,6 +197,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
+            || (map_id == 43 && [3678, 3679].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
@@ -239,12 +240,11 @@ fn encounter_fixture(
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
-    if [3674, 3669].contains(&entry) {
+    if [3674, 3669, 3670].contains(&entry) {
         // Pin the successful branch of the authored80% chance; keep the
         // selected source timer, spell and target. Production is unchanged.
         for row in std::sync::Arc::make_mut(scripts.0.get_mut(&entry).unwrap()) {
-            if row.action_type == 11 {
-                assert_eq!(row.chance, 80);
+            if row.action_type == 11 && row.chance == 80 {
                 row.chance = 100;
             }
         }
@@ -261,6 +261,21 @@ fn encounter_fixture(
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
+    if map_id == 43 {
+        // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
+        for (entry, bit) in [
+            (3671, 0),
+            (3669, 1),
+            (3653, 2),
+            (3670, 3),
+            (3674, 4),
+            (3673, 5),
+            (5775, 6),
+            (3654, 7),
+        ] {
+            maps.raid_creature_encounters.insert((43, entry), bit);
+        }
+    }
     let mut instances = crate::maps::InstanceManager::default();
     // Raid copies use the entrant's raid difficulty; dungeons its dungeon difficulty.
     let entrant = crate::maps::instances::InstanceEntrant {
@@ -1707,6 +1722,297 @@ fn encounter_coverage_cobrahn_lightning_damage_repeat_and_generic_lifecycle() {
             .any(|end| end.encounter_id == 586 && end.success)
     );
     assert!(h.inbox(0).ends.iter().all(|end| end.encounter_id != 585));
+}
+
+/// Actual Pythas SmartAI: immediate20805/repeat6–8s (successful80% branch),
+/// Thunderclap8147 first6–8s/repeat12–30s; casting defers its due event.
+#[test]
+fn encounter_coverage_pythas_real_lightning_thunderclap_and_source_death_target() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(3670, 43, 3, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.1);
+    assert_eq!(casting(&h, boss), Some(20805));
+    h.advance(5.6);
+    assert_eq!(h.casts(0, boss, 8147), 0, "Thunderclap waits at least6s");
+    h.advance(6.0);
+    assert!(h.casts(0, boss, 20805) >= 1);
+    assert_eq!(h.casts(0, boss, 8147), 1);
+    assert!(h.inbox(0).log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(8147)
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(player.to_bits())
+    }));
+    h.advance(5.0);
+    assert_eq!(
+        h.casts(0, boss, 8147),
+        1,
+        "repeat waits at least12s after first attempt"
+    );
+    // First attempt by11s + repeat at most30s + a3s Lightning cast deferral.
+    h.advance(28.0);
+    assert!(
+        h.casts(0, boss, 8147) >= 2,
+        "source repeat actually executes"
+    );
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    let pythas = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 588).unwrap();
+    let anacondra = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 585).unwrap();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, pythas),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, anacondra),
+        Some(EncounterState::NotStarted)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 588 && end.success)
+    );
+    assert!(h.inbox(0).ends.iter().all(|end| end.encounter_id != 585));
+}
+
+/// Actual Skum6254 row: first3–4s/repeat3–4s, successful80% branch only pinned.
+#[test]
+fn encounter_coverage_skum_real_chain_damage_and_repeat() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(3674, 43, 4, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(2.7);
+    assert_ne!(casting(&h, boss), Some(6254), "first event waits3s");
+    assert_eq!(h.casts(0, boss, 6254), 0);
+    h.advance(3.3);
+    assert_eq!(h.casts(0, boss, 6254), 1, "first4s maximum plus1.8s cast");
+    assert!(h.inbox(0).log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(6254)
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(player.to_bits())
+    }));
+    h.advance(4.5);
+    assert!(h.casts(0, boss, 6254) >= 2);
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    let skum = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 589).unwrap();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, skum),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 589 && end.success)
+    );
+}
+
+/// Verdan's sourced8142 first20–35s applies actual5s MOD_ROOT26, not merely a cast log.
+#[test]
+fn encounter_coverage_verdan_real_vines_root_and_expire() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(5775, 43, 6, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(19.5);
+    assert_eq!(h.casts(0, boss, 8142), 0, "first event waits20s");
+    let mut waited = 0.0;
+    while !h.has_aura(player, 8142) {
+        assert!(waited < 18.0, "first35s maximum plus1.5s cast");
+        h.advance(0.1);
+        waited += 0.1;
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(player)
+            .unwrap()
+            .movement_speed,
+        0.0
+    );
+    assert!(h.inbox(0).log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(8142)
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(player.to_bits())
+    }));
+    h.advance(5.5);
+    assert!(
+        !h.has_aura(player, 8142),
+        "source5s root expires before20s repeat"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(player)
+            .unwrap()
+            .movement_speed
+            > 0.0
+    );
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    let verdan = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 591).unwrap();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, verdan),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 591 && end.success)
+    );
+}
+
+/// The source Disciple combat clock is independent of the unavailable escort activation.
+/// First Sleep1090 is due5–10s; Druid's Potion8141 only below80% health.
+#[test]
+fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
+    let (mut h, enemy, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
+    let position = *h.app.world().get::<Position>(disciple).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(position);
+    // Source EVENT_PROGRESS_1 sets FACTION_ESCORTEE_N_NEUTRAL_ACTIVE250.
+    // Base faction35 cannot attack players. Activation/gossip is not simulated.
+    h.app
+        .world_mut()
+        .entity_mut(disciple)
+        .insert(UnitFactionTemplate(250));
+    h.app.world_mut().entity_mut(enemy).insert((
+        Position {
+            x: position.x + 10.0,
+            ..position
+        },
+        ReactState::Passive,
+    ));
+    h.advance(0.1);
+    let threshold = h.health(disciple).max * 0.8;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(disciple)
+        .unwrap()
+        .current = threshold;
+    crate::creature_aggro::add_threat(h.app.world_mut(), disciple, enemy, 1.0);
+    h.advance(4.7);
+    assert_ne!(casting(&h, disciple), Some(1090), "Sleep waits at least5s");
+    assert!(!h.has_aura(enemy, 1090));
+    let mut waited = 0.0;
+    while !h.has_aura(enemy, 1090) {
+        assert!(waited < 7.5, "actual Sleep aura after10s plus1.5s cast");
+        h.advance(0.05);
+        waited += 0.05;
+    }
+    h.advance(6.0);
+    assert_eq!(
+        h.health(disciple).current,
+        threshold,
+        "exactly80% forbids potion"
+    );
+    h.set_health_pct(disciple, 75.0);
+    let wounded = h.health(disciple).current;
+    let mut healed = false;
+    let mut repeated_sleep = false;
+    for _ in 0..640 {
+        h.advance(0.05);
+        healed |= h.health(disciple).current > wounded;
+        repeated_sleep |= casting(&h, disciple) == Some(1090);
+    }
+    assert!(
+        healed,
+        "real potion healing, including cast-collision retry"
+    );
+    assert!(
+        repeated_sleep,
+        "20–30s Sleep repeat starts another actual cast"
+    );
+}
+
+/// Instance source sends ACTION_ALL_DONE0 to its own Disciple when all four
+/// druids become DONE. This proves the state condition/notification, not four
+/// complete fights or the Anacondra mode0 source-data discrepancy.
+#[test]
+fn encounter_coverage_wailing_four_druids_notify_only_their_copy_once() {
+    let (mut h, _boss, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
+    let other = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let (other_disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, other, 1);
+    let position = *h.app.world().get::<Position>(disciple).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(position);
+    let other_player = h.players[1].0;
+    let other_position = *h.app.world().get::<Position>(other_disciple).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(other_player)
+        .insert(other_position);
+    h.advance(0.1);
+    let announcements = |h: &Harness, index: usize| {
+        h.inbox(index)
+            .chat
+            .iter()
+            .filter(|message| message.content.contains("Naralex can be awakened"))
+            .count()
+    };
+    let slots = [586, 588, 585, 590].map(|encounter| {
+        instance_script::boss_id_for_encounter(h.app.world_mut(), map, encounter).unwrap()
+    });
+    for &slot in &slots[..3] {
+        assert!(instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            slot,
+            EncounterState::Done
+        ));
+    }
+    h.advance(0.1);
+    assert_eq!(announcements(&h, 0), 0, "three druids are insufficient");
+    assert!(instance_script::set_boss_state(
+        h.app.world_mut(),
+        map,
+        slots[3],
+        EncounterState::Done
+    ));
+    h.advance(0.1);
+    assert_eq!(announcements(&h, 0), 1);
+    assert_eq!(
+        announcements(&h, 1),
+        0,
+        "another copy cannot receive the notification"
+    );
+    assert!(!instance_script::set_boss_state(
+        h.app.world_mut(),
+        map,
+        slots[3],
+        EncounterState::Done
+    ));
+    h.advance(0.1);
+    assert_eq!(announcements(&h, 0), 1, "repeated DONE cannot notify twice");
 }
 
 const ADAROGG: u32 = 61408;
