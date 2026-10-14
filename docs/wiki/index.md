@@ -15,6 +15,12 @@
 - [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14) — eight controlled deaths, redb reopen, fresh-copy isolation and eight staged corpse commits; no natural/native clear.
 
 - [Silverlaine source primary](systems/boss-scripts.md#silverlaine-source-primary) — pinned map33/3887→1070/bit1, source SmartAI identity and copy-only SQL; combat/native/full-instance proof remains open.
+- [Pre-effect spell-hit target creature entries](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) — actual NPC.template_id/complete4 selectors, authentic67531 source165 producer; world content unclaimed.
+
+- [Maximum-health percent effect165](systems/player-damage.md#maximum-health-percent-effect165) — actual target maximum, integer truncation and direct-bonus exclusion; authentic BB gun producer boundary.
+
+- [Pre-effect spell-hit target auras](systems/dungeon-achievements.md#pre-effect-spell-hit-target-auras) — positive10, synchronous actual hit-unit aura authority; table acquisition/holiday content unclaimed.
+
 - [DB2 derived-faction refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) — atomic Zephras reconstruction and other importers' build-receipt preservation; source audit and private-copy proof.
 - [Pre-effect spell-hit target health](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health) — inclusive46, actual unit health before effects; missing authority rejects.
 
