@@ -124,7 +124,6 @@ mod actor;
 mod transactions;
 pub(crate) use actor::PendingBankCommits;
 use actor::publish_bank_commits;
-pub(crate) use transactions::criteria_bank_type;
 
 type BankResult = Result<(), BankError>;
 
@@ -163,20 +162,6 @@ impl Vault<'_, '_> {
 
     fn db(&self) -> &Database {
         &self.db.as_ref().expect("checked by ready").db
-    }
-
-    fn load_template(
-        &self,
-        item: &crate::persistence::InventoryItemData,
-    ) -> Result<(shared::item_data::ItemDefinitionSource, ItemTemplate), BankError> {
-        let source =
-            persistence::inventory_store::load_item_definition_source(self.db(), item.item_guid);
-        let template = self
-            .templates
-            .as_ref()
-            .and_then(|templates| templates.get(source, item.item_id).copied())
-            .ok_or(BankError::ItemNotFound)?;
-        Ok((source, template))
     }
 
     fn load_bank(&self, patron: &Patron, bank: BankType) -> BankData {
