@@ -88,6 +88,39 @@ fn grey_kill_grants_no_reputation() {
     assert_eq!(reputation.get_value(72), stormwind);
 }
 
+/// Seed only the assigned private native-proof characters; never production/gameplay eligibility.
+#[test]
+#[ignore = "requires an offline owned private DB and explicit proof character"]
+fn private_reputation_bar_fixture_persists_standard_watch() {
+    let path = std::path::PathBuf::from(
+        std::env::var("REPUTATION_BAR_PRIVATE_DB").expect("explicit private DB required"),
+    );
+    assert_eq!(
+        path.canonicalize().unwrap(),
+        std::path::PathBuf::from("/home/osso/.worktrees/adventure-guide4-proof/private.redb")
+    );
+    let name = std::env::var("REPUTATION_BAR_PRIVATE_CHARACTER")
+        .expect("explicit private character required");
+    assert!(matches!(name.as_str(), "Guidefourm" | "Guidefourf"));
+    let db = redb::Database::open(&path).expect("owned server must be stopped before seeding");
+    let character = crate::persistence_character::find_character_id_by_name(&db, &name)
+        .expect("private character exists");
+    let mut reputation =
+        crate::persistence::load_reputation(&db, character, CharacterReputation::default);
+    reputation.set_rep(72, 3800);
+    reputation.watch(72);
+    crate::persistence::save_reputation(&db, character, &reputation);
+    drop(db);
+    let reopened = redb::Database::open(&path).unwrap();
+    let persisted = crate::persistence::load_reputation(&reopened, character, || {
+        panic!("private watch must persist")
+    });
+    assert_eq!(
+        (persisted.watched_faction(), persisted.get_value(72)),
+        (Some(72), 3800)
+    );
+}
+
 #[test]
 fn initial_reputation_update_restores_persisted_watch_without_a_journeys_query() {
     let file = tempfile::NamedTempFile::new().unwrap();
