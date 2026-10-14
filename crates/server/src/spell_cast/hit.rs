@@ -277,7 +277,8 @@ fn creature_spell_block_chance(
 }
 
 fn caster_ignores_spell_block(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
-    const IGNORE_COMBAT_RESULT: u32 = 186;
+    // SpellAuraDefines.h289; aura186 is incoming spell-hit chance instead.
+    const IGNORE_COMBAT_RESULT: u32 = 202;
     const MELEE_HIT_BLOCK: i32 = 3;
     world.get::<ActiveAuras>(caster).is_some_and(|auras| {
         auras.iter().any(|aura| {
