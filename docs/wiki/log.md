@@ -1,3 +1,7 @@
+## 2026-10-14 — Ordinary NPC weapon-spell blocks
+
+[Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11; integration and independent acceptance remain pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
+
 ## 2026-10-14 — Derived factions survive DB2 replacement
 
 [DB2 refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) restores six Zephras factions from existing authored receipts atomically; preserves124 build receipts. Private import changes only faction_template+6/db2_row_source+6, integrity OK; native reaction test and9 importer/Skyborne tests pass. Old-source audit118/120; AreaTable/OverrideSpellData explicitly unavailable. Canonical untouched.
