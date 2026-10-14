@@ -440,3 +440,52 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
     let total = hits[0].amount + hits[0].blocked;
     assert_eq!(hits[0].blocked, (total as f32 * 0.5).trunc() as i32);
 }
+
+#[test]
+fn class_completeness_native_creature_spell_block_uses_creature_percent_not_player_shield() {
+    for critical in [false, true] {
+        let mut h = harness(Vec::new(), &[1464, 10021, 203524], 1).unwrap();
+        let target = h.npc;
+        h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
+        h.app.world_mut().entity_mut(target).insert(Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+        // Native10021 effect0 gives100 block percentage points to a creature.
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &AuraApplication {
+                caster: target,
+                target,
+                spell_id: 10021,
+                effect_mask: 1,
+                source: AuraSource::Cast,
+            },
+        );
+        if critical {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster: target,
+                    target,
+                    spell_id: 203524,
+                    effect_mask: 1 << 2,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        let hits = cast_damage_spell(&mut h, target, 1464, 3);
+        assert_eq!(hits.len(), 1);
+        let total = hits[0].amount + hits[0].blocked;
+        assert!(varied(303.0).contains(&(total as f32)));
+        // Creature::GetBlockPercent is30%, critical doubles it to60%.
+        let percent = if critical { 0.6 } else { 0.3 };
+        assert_eq!(
+            hits[0].blocked,
+            (total as f32 * percent).trunc() as i32,
+            "{:?}",
+            hits[0]
+        );
+    }
+}
