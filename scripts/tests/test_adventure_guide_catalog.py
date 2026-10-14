@@ -18,18 +18,20 @@ class CatalogPrepareTests(unittest.TestCase):
         before = world.stat().st_mtime_ns
         decoder = module.load_decoder(Path(os.environ['ADVENTURE_GUIDE_DECODER']))
         tables = module.decode_sources(decoder, source / 'db2', source / 'definitions')
-        sql, report = module.prepare_sql(tables, world, '12.1.0.69933')
+        receipt = json.loads((source / 'db2/receipt.json').read_text())
+        build = receipt['identity']['build']
+        sql, report = module.prepare_sql(tables, world, build)
         self.assertEqual(world.stat().st_mtime_ns, before)
         with tempfile.TemporaryDirectory() as temporary:
             with closing(sqlite3.connect(Path(temporary) / 'catalog.sqlite')) as connection:
                 connection.executescript(sql)
                 row = json.loads(connection.execute('SELECT payload FROM perks_activity WHERE ID=3').fetchone()[0])
                 self.assertEqual((row['ActivityName_lang'], row['CriteriaTreeID'], row['ThresholdContributionAmount']), ('Complete 30 Quests', 135693, 200))
-                self.assertEqual(connection.execute('SELECT COUNT(*) FROM perks_activity').fetchone()[0], 945)
-                self.assertEqual(connection.execute('SELECT COUNT(*) FROM adventure_journal').fetchone()[0], 698)
-                self.assertEqual(connection.execute('SELECT build FROM adventure_guide_source WHERE name=?', ('PerksActivity',)).fetchone()[0], '12.1.0.69933')
-        self.assertEqual(report['sources']['PerksActivityThreshold']['unreadable'], 5)
-        self.assertEqual(report['sources']['PerksActivityThresholdGroup']['unreadable'], 1)
+                self.assertEqual(connection.execute('SELECT COUNT(*) FROM perks_activity').fetchone()[0], receipt['tables']['PerksActivity']['rows'])
+                self.assertEqual(connection.execute('SELECT COUNT(*) FROM adventure_journal').fetchone()[0], receipt['tables']['AdventureJournal']['rows'])
+                self.assertEqual(connection.execute('SELECT build FROM adventure_guide_source WHERE name=?', ('PerksActivity',)).fetchone()[0], build)
+        for name in ['PerksActivityThreshold', 'PerksActivityThresholdGroup']:
+            self.assertEqual(report['sources'][name]['unreadable'], receipt['tables'][name]['unreadable_records'])
         self.assertIn('no verified', report['month_assignment'])
 
 if __name__ == '__main__':
