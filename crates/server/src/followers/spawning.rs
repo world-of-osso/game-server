@@ -4,6 +4,30 @@ use shared::components::{Level, Mana, UnitFactionTemplate, UnitFlags, UnitLevel,
 use super::{Follower, Profile};
 use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 
+pub(super) fn spawn_members(
+    world: &mut World,
+    owner: Entity,
+    profiles: &[Profile],
+) -> Result<Vec<Entity>, String> {
+    let mut members = Vec::with_capacity(profiles.len());
+    for profile in profiles {
+        match spawn(world, owner, profile.clone()) {
+            Ok(unit) => members.push(unit),
+            Err(error) => {
+                unsummon_members(world, &members);
+                return Err(error);
+            }
+        }
+    }
+    Ok(members)
+}
+
+pub(super) fn unsummon_members(world: &mut World, members: &[Entity]) {
+    for &unit in members {
+        crate::zones::unsummon(world, unit);
+    }
+}
+
 pub(super) fn spawn(world: &mut World, owner: Entity, profile: Profile) -> Result<Entity, String> {
     let position = *world
         .get::<shared::components::Position>(owner)
