@@ -1122,3 +1122,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: Charred Warblades native3%/1000ms delayed self-heal producer; real-damage RED at eb9fbf29 (500HP stays500 instead of504); GREEN verification pending.
 
 - 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.
+
+- 2026-10-13: native aura7 fleeing — pinned timing/distance, Detour collision/routes, player control ownership and14 current controls; all-source TDB model geometry producer, lead-only canonical publication pending. See [batch53](../class-completeness6.md#native-fear-navmesh-fleeing--batch53).
