@@ -416,6 +416,7 @@ fn eater_with_spells(items: &[u32], count: u32, spells: &[u32], class: u8) -> Op
     .unwrap();
     app.insert_resource(crate::toy_catalog::load(&conn).unwrap());
     app.init_resource::<crate::gold::GoldUpdateQueue>();
+    crate::toys::ToyPersistencePlugin::install(app);
     app.add_systems(Update, process_use_requests);
     app.world_mut().entity_mut(h.connection).insert((
         crate::auth::InWorld { character_id },
@@ -458,10 +459,30 @@ fn use_slot(eater: &mut Eater, index: u8) {
             location: slot(index),
             target: None,
         });
-    for _ in 0..6 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    let mut frames = 0;
+    let mut delivered_frames = 0;
+    loop {
         eater.h.advance(1);
+        frames += 1;
         let errors = drain::<InventoryError>(&mut eater.h.app, connection);
         eater.errors.extend(errors);
+        let pending = crate::toys::persistence_pending(eater.h.app.world());
+        if pending {
+            delivered_frames = 0;
+        } else {
+            delivered_frames += 1;
+        }
+        if frames >= 6 && delivered_frames >= 3 {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "item-use toy receipts did not complete"
+        );
+        if pending {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
     }
 }
 

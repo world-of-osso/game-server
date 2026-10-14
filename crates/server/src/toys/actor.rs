@@ -48,10 +48,10 @@ impl PendingToyFavourites {
     }
 }
 
-pub(super) struct ToyPersistencePlugin;
+pub(crate) struct ToyPersistencePlugin;
 
 impl ToyPersistencePlugin {
-    pub(super) fn install(app: &mut App) {
+    pub(crate) fn install(app: &mut App) {
         app.init_resource::<PendingToyFavourites>()
             .init_resource::<PendingToyLearning>()
             .add_systems(

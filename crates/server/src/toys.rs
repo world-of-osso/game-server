@@ -12,7 +12,8 @@ use shared::protocol::{
 
 mod actor;
 mod learning;
-use actor::{PendingToyFavourites, ToyPersistencePlugin};
+use actor::PendingToyFavourites;
+pub(crate) use actor::ToyPersistencePlugin;
 use learning::{LearningRequest, PendingToyLearning, enqueue_toy_learning};
 
 pub struct ToysPlugin;
@@ -306,6 +307,12 @@ pub(crate) fn learn_item(
         },
     );
     Ok(true)
+}
+
+#[cfg(test)]
+pub(crate) fn persistence_pending(world: &World) -> bool {
+    !world.resource::<PendingToyLearning>().is_empty()
+        || !world.resource::<PendingToyFavourites>().is_empty()
 }
 
 #[cfg(test)]
