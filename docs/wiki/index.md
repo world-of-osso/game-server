@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Actual spell-hit target race](systems/dungeon-achievements.md#actual-spell-hit-target-race) — per-hit Player race, not caster race; NPC/missing snapshots rejected.
+
 - [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.
 
 - [Encounter loot eligibility](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) — existing active lock bit at native DONE before save, not bag-loot success; allocated-copy authority retained.
