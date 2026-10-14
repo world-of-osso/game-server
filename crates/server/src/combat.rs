@@ -684,6 +684,7 @@ fn record_swing(
             .0
             .extend(swing_aura_events(attacker_entity, target_entity, &outcome));
     }
+    let caused_damage = outcome.damage > 0.0;
     record_swing_events(
         &mut params.commands,
         events,
@@ -692,6 +693,12 @@ fn record_swing(
         target_entity,
         outcome,
     );
+    if caused_damage {
+        // TC Unit::DealMeleeDamage: after health/death and only for damaging swings.
+        params.commands.queue(move |world: &mut World| {
+            crate::auras::damage_shield::retaliate(world, target_entity, attacker_entity);
+        });
+    }
 }
 
 /// Melee swing proc/interrupt events: DEAL/TAKE_MELEE_SWING and
@@ -1681,6 +1688,9 @@ fn record_swing_events(
     let swing = swing_log_event(attacker, target, &outcome);
     commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
     if outcome.npc_died || outcome.player_died {
+        // Unit::Kill removes death-interrupted auras before damage-shield reactions.
+        // The ordinary aura-lifetime sweep runs later than this deferred melee batch.
+        commands.queue(move |world: &mut World| crate::auras::remove_on_death(world, target));
         let death = death_log_event(attacker, target);
         commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, death));
     }
