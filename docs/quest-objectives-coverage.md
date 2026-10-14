@@ -42,11 +42,11 @@ Spell effects90/134 reach895 mapped Type0 rows across673 quests; chest loot item
 |---|---|---|
 | GO use |11602: out-of-range/other-map refusal, ten distinct egg sacs, no repeated consumed credit, actual reward | Native server request test |
 | Required key |8889: provided24337 permits first spire; destroying it prevents second spire credit | Native server request test |
-| GO quest-item loot |11049: opening exposes32506, no inventory credit until taken, no reroll, actual reward | Native server request test, including next-frame corpse-cleanup failure boundary |
+| GO quest-item loot |9548: Clopper's Equipment181746 exposes23830, no inventory credit until taken, no reroll, actual reward | Current real-data server request test, including next-frame corpse-cleanup failure boundary |
 | Chest metadata |Crate1586 references24985 for highlighting, not a goober acceptance gate | Native server request test |
 | Personal spell credit |27955/spell94940: no creature death, capped progress, nearby party member not credited, actual reward | Real spell target-resolution test |
 | Group spell credit |10566/spells37221/37320/37322/37323: matching counts, nearby/far/other-map party cases, actual reward | Real spell target-resolution test |
-| Item cast |28175/item63139 → spell89040 → count and actual reward | Actual inventory UseItem request with real scaling/spell data |
+| Item cast |28175/item63139 → spell89040 → count and actual reward | Actual inventory UseItem request with real scaling/spell data and authored implicit-target conditions |
 | Client rendering/input |Chest/goober render admission + Interact cursor; actual UDP UseGameObject in both skins | Native engine tests2/2 |
 | Rendered GO use |26446: eight authored Fertile Dirt Mounds; Gnarl reward dialogs and turn-in,11750XP +10g50s | Modern and Forever native rendered proof |
 | Rendered item spell |28175: provided63139 native bag right-click; Velastrasza reward dialogs and turn-in,11750XP +13g74s | Modern and Forever native rendered proof |
@@ -59,6 +59,10 @@ Evidence: `game-engine/data/diagnostics/quest-objectives-2026-10-11/`; successfu
 Loot boundary: Core Fragment179553 hosted spawn43133 carries difficulty0 on dungeon230 and did not mirror after authentic7848 acceptance/travel. Hosted continent policy rejects530, so10058 is unsuitable. Vin54117 and Jaga54004 exist server-side but their addon89302 applies aura18 with MiscValue35. Mountain-Lord Rendan47393/display35579 exists as entity4294907172 (hosted spawn20359750, map0/difficulty0, no event/pool membership); addon82343 applies aura18 with MiscValue12. `auras/unit_state.rs::reconcile` treats every aura18 as globally Invisible and `interest::set_hidden` excludes it for every observer; no typed invisibility-detection route exists. This explains the unmirrored givers without removing authored auras, granting quest credit or changing world.db. Proper detection/quest visibility remains a product boundary, not a fixture selector issue. Missing giver texture receipts were authenticated against actual local Retail roots before publication; recovery results are under `live-asset-auth/`.
 
 Build reproduction pins immutable shared-protocol44b2b0f, archived under the leased engine slot's target. Current protocolb452322 adds timed QuestEntrySnapshot fields absent from serverae312c3; direct builds against that newer protocol fail. Neither the shared checkout nor master was modified.
+
+## Fixture refresh — 2026-10-14
+
+Two master reds were fixture defects, not repaired gameplay. The current Retail template185915 has `Data1=0`, so it cannot supply the egg loot asserted by the former11049 test. The test now uses authored chest181746, giver17421, quest9548 and guaranteed item23830 (`tdb_gameobject_template.Data1=18498`, remapped content loot20018498), retaining the complete open→later autoloot→bag credit→no reroll→turn-in sequence. No SQLite rows or production loot rules changed. The item63139 test fixture also omitted `SpellTargetConditions`, required by effect89040's entry-area target selection; it now loads the same authored conditions as production rather than installing an empty substitute. Both original failures were reproduced before changing the fixture; both tests then passed. Current DB2 data follows `data/db2/active`12.1.5.70391; the census and older rendered receipts above remain historical, not a new census or live proof.
 
 ## Remaining boundaries
 
