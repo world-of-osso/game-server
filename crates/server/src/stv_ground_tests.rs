@@ -78,6 +78,7 @@ fn stv_audit_teleport_requires_retail_ground_height() {
             &game_db,
             &mut query,
             None,
+            None,
             "Stvprobe",
             xy.0,
             xy.1,

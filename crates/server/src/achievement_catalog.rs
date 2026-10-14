@@ -102,6 +102,11 @@ pub(crate) enum CriteriaEvent {
     WinAnyBattleground,
     /// TC Arena.cpp249: winner's pre-result personal rating, minimum1.
     WinAnyRankedArena(u32),
+    /// Current authored arena asset0/1 and actual post-settlement personal rating.
+    PersonalArenaRating {
+        bracket: u32,
+        rating: u32,
+    },
     /// Native rated result: map of the completed arena.
     WinArena(u32),
     ParticipateInArena(u32),
@@ -146,6 +151,7 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::KillAnyCreature => 78,
             Self::WinAnyRankedArena(_) => 37,
+            Self::PersonalArenaRating { .. } => 39,
             Self::WinArena(_) => 32,
             Self::ParticipateInArena(_) => 33,
             Self::ReachLevel(_) => 5,
@@ -252,6 +258,9 @@ impl CriteriaEvent {
             Self::ReachLevel(_) => true,
             Self::WinArena(map) | Self::ParticipateInArena(map) => criteria.asset == map,
             Self::WinAnyRankedArena(rating) => rating > 0 && criteria.asset == 0,
+            Self::PersonalArenaRating { bracket, rating } => {
+                rating > 0 && criteria.asset == bracket
+            }
             Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
             Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
                 u32::from(level) == criteria.asset
@@ -947,6 +956,7 @@ impl AchievementCatalog {
         let counter = state.criteria_progress.entry(id).or_default();
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
+            CriteriaEvent::PersonalArenaRating { rating, .. } => (*counter).max(u64::from(rating)),
             CriteriaEvent::MostMoneyOwned(amount)
             | CriteriaEvent::HighestAuctionBid(amount)
             | CriteriaEvent::HighestAuctionSale(amount)
@@ -1529,6 +1539,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel/Love.
                         // TDB1210 has no criteria_data overlay for these unconditional rows.
                         || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225))
+                        // Current criteria451/447 and authored370/595 map2v2/3v3 to0/1,
+                        // unlike old TC ArenaTeam numeric2/3/5; no retired/other bracket inference.
+                        || (kind == 39 && matches!(row.get::<_, i32>(2)?, 0 | 1))
                         // Native rated arena result has a real positive map ID, never an all-map alias0.
                         || (matches!(kind, 32 | 33) && row.get::<_, i32>(2)? > 0)
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))

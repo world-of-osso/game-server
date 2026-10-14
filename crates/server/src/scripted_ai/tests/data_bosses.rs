@@ -197,7 +197,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
-            || (map_id == 43 && [3678, 3679].contains(id))
+            || (map_id == 43 && [3654, 3678, 3679].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
@@ -1882,6 +1882,166 @@ fn encounter_coverage_verdan_real_vines_root_and_expire() {
     );
 }
 
+/// Actual Anacondra row7 casts8148 at7s and repeats every63s. This proves
+/// aura application/reapplication only, not DAMAGE_SHIELD15 retaliation or missingSpell2.
+#[test]
+fn encounter_coverage_anacondra_thorns_application_and_source_repeat() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(3671, 43, 0, 1, None);
+    h.engage(boss);
+    h.advance(6.6);
+    assert!(!h.has_aura(boss, 8148), "Thorns waits7s");
+    h.advance(0.7);
+    assert!(h.has_aura(boss, 8148), "actual self/party aura");
+    let removed = crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Dispelled,
+        |aura| aura.spell_id == 8148,
+    );
+    assert_eq!(removed.len(), 1);
+    h.advance(62.0);
+    assert!(!h.has_aura(boss, 8148), "no repeat before63s");
+    h.advance(1.5);
+    assert!(
+        h.has_aura(boss, 8148),
+        "source repeat reapplies removed buff"
+    );
+}
+
+/// Thorns must retaliate against damaging melee swings, not arbitrary spells.
+#[test]
+fn encounter_coverage_anacondra_thorns_retaliates_only_while_applied() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(3671, 43, 0, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(7.3);
+    assert!(h.has_aura(boss, 8148));
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(ReactState::Passive);
+    h.advance(0.1);
+    h.hit(boss, 1.0);
+    h.advance(0.1);
+    let retaliations = |h: &Harness| {
+        h.inbox(0)
+            .log
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(8148)
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+            })
+            .count()
+    };
+    assert_eq!(
+        retaliations(&h),
+        0,
+        "spell damage does not trigger melee shield"
+    );
+    let health = h.health(player).current;
+    let boss_health = h.health(boss).current;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::combat::AutoAttack::new(boss));
+    h.advance(8.5);
+    assert!(
+        h.health(boss).current < boss_health,
+        "real melee swings damaged shield owner"
+    );
+    assert!(
+        retaliations(&h) > 0,
+        "actual Thorns Nature damage reaches attacker"
+    );
+    assert!(h.health(player).current < health);
+    let before_removal = retaliations(&h);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Dispelled,
+        |aura| aura.spell_id == 8148,
+    );
+    h.advance(8.5);
+    assert_eq!(
+        retaliations(&h),
+        before_removal,
+        "removed Thorns cannot retaliate"
+    );
+    // Controlled native reapplication isolates Unit::Kill's death-aura boundary,
+    // not a new AI cast schedule. Existing auto-attacks deliver the lethal swing.
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 8148, Some(boss), true).unwrap();
+    assert!(h.has_aura(boss, 8148));
+    h.app.world_mut().get_mut::<Health>(boss).unwrap().current = 1.0;
+    h.advance(8.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_some()
+    );
+    assert_eq!(
+        retaliations(&h),
+        before_removal,
+        "death-removed Thorns cannot retaliate after lethal melee"
+    );
+}
+
+/// Real deaths/evades use each bound encounter, never another Wailing boss.
+/// Generic BossAi lifecycle is not proof of source action34. Mutanus has no
+/// content_creature placement and must instead use its source summon group.
+#[test]
+fn encounter_coverage_wailing_kresh_serpentis_generic_lifecycle() {
+    for (entry, bit, encounter) in [(3653, 2, 587), (3673, 5, 590)] {
+        for killed in [false, true] {
+            let (mut h, boss, map) = bound_boss_at_difficulty(entry, 43, bit, 1, None);
+            h.engage(boss);
+            h.advance(0.1);
+            let slot =
+                instance_script::boss_id_for_encounter(h.app.world_mut(), map, encounter).unwrap();
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, slot),
+                Some(EncounterState::InProgress)
+            );
+            if killed {
+                h.hit_pct(boss, 1_000.0);
+            } else {
+                crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+            }
+            h.advance(0.1);
+            // Generic BossAi::_Reset returns to NOT_STARTED; no invented FAIL state.
+            let expected = if killed {
+                EncounterState::Done
+            } else {
+                EncounterState::NotStarted
+            };
+            assert_eq!(get_boss_state(h.app.world_mut(), map, slot), Some(expected));
+            assert!(
+                h.inbox(0)
+                    .ends
+                    .iter()
+                    .any(|end| end.encounter_id == encounter && end.success == killed)
+            );
+            assert!(
+                h.inbox(0)
+                    .ends
+                    .iter()
+                    .all(|end| end.encounter_id == encounter)
+            );
+            assert!(
+                h.inbox(1).ends.is_empty(),
+                "other instance receives no completion"
+            );
+        }
+    }
+}
+
 /// The source Disciple combat clock is independent of the unavailable escort activation.
 /// First Sleep1090 is due5–10s; Druid's Potion8141 only below80% health.
 #[test]
@@ -1945,6 +2105,106 @@ fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
     assert!(
         repeated_sleep,
         "20–30s Sleep repeat starts another actual cast"
+    );
+}
+
+/// Source EVENT_PROGRESS_20 summons3678/group4 (Mutanus), not a fabricated
+/// fixed placement. Stage the source pre-wave endpoint/faction; no escort-route proof.
+#[test]
+fn encounter_coverage_wailing_mutanus_authored_group_target_credit_and_corpse_lifetime() {
+    let (mut h, unrelated, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    h.app
+        .world_mut()
+        .entity_mut(unrelated)
+        .insert(ReactState::Passive);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
+    let endpoint: (f32, f32, f32) = conn.query_row(
+        "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=367803 ORDER BY NodeId DESC LIMIT 1",
+        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    ).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(endpoint.0, endpoint.1, endpoint.2);
+    h.app.world_mut().entity_mut(disciple).insert((
+        Position { x, y, z },
+        UnitFactionTemplate(250),
+        ReactState::Passive,
+        Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        },
+    ));
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(Position { x: x + 1.0, y, z });
+    h.advance(0.1);
+    let summons = Ctx {
+        world: h.app.world_mut(),
+        me: disciple,
+    }
+    .summon_creature_group(4)
+    .expect("authored Disciple group4");
+    assert_eq!(summons.len(), 1);
+    let mutanus = summons[0];
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Npc>(mutanus)
+            .unwrap()
+            .template_id,
+        3654
+    );
+    assert_eq!(h.app.world().get::<InMap>(mutanus), Some(&map));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::zones::TempSummon>(mutanus)
+            .unwrap()
+            .summoner,
+        disciple
+    );
+    let position = h.wow_position(mutanus);
+    assert!((position.x - 150.943).abs() < 0.001);
+    assert!((position.y - 262.797).abs() < 0.001);
+    assert!((position.z + 103.904).abs() < 0.001);
+    h.advance(0.1);
+    assert!(
+        matches!(h.app.world().get::<crate::creature_ai::CreatureState>(mutanus),
+        Some(crate::creature_ai::CreatureState::Pursuing { target }) if *target == disciple.to_bits())
+    );
+    h.advance(301.0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(mutanus)
+            .is_none(),
+        "corpse timer does not expire a living summon"
+    );
+    let slot = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 592).unwrap();
+    h.hit_pct(mutanus, 1_000.0);
+    h.advance(0.1);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, slot),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 592 && end.success)
+    );
+    assert!(h.inbox(1).ends.iter().all(|end| end.encounter_id != 592));
+    h.advance(298.0);
+    assert!(
+        h.app.world().get_entity(mutanus).is_ok(),
+        "authored300s corpse lifetime"
+    );
+    h.advance(3.0);
+    assert!(
+        h.app.world().get_entity(mutanus).is_err(),
+        "corpse timer unsummons instead of respawning"
     );
 }
 

@@ -47,6 +47,7 @@ struct AdminResources<'w, 's> {
     autobroadcast: ResMut<'w, shared::motd::Autobroadcast>,
     taxi: Res<'w, crate::taxi::TaxiNetwork>,
     interest_dirty: Option<Res<'w, crate::interest::InterestDirtyQueue>>,
+    replication_dirty: Option<Res<'w, lightyear::prelude::ReplicationDirtyQueue>>,
     item_templates: Option<Res<'w, crate::item_templates::ItemTemplates>>,
     vendor_catalog: Option<Res<'w, crate::merchant::VendorCatalog>>,
     create_info: Option<Res<'w, crate::player_create_info::PlayerCreateInfos>>,
@@ -105,7 +106,13 @@ fn poll_admin_ipc(
             let _ = cmd.respond.send(response);
             continue;
         }
-        dispatch(cmd, &db, &mut queries, res.interest_dirty.as_deref());
+        dispatch(
+            cmd,
+            &db,
+            &mut queries,
+            res.interest_dirty.as_deref(),
+            res.replication_dirty.as_deref(),
+        );
     }
 }
 
@@ -507,6 +514,7 @@ fn dispatch(
     db: &persistence::GameDatabase,
     queries: &mut AdminQueries<'_, '_>,
     interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
+    replication_dirty: Option<&lightyear::prelude::ReplicationDirtyQueue>,
 ) {
     let commands = &mut queries.commands;
     let players = &mut queries.players;
@@ -651,7 +659,16 @@ fn dispatch(
             x,
             y,
             z,
-        } => handle_set_position(db, players, interest_dirty, &character_name, x, y, z),
+        } => handle_set_position(
+            db,
+            players,
+            interest_dirty,
+            replication_dirty,
+            &character_name,
+            x,
+            y,
+            z,
+        ),
         AdminRequest::Teleport {
             character_name,
             map_id,
@@ -1311,8 +1328,9 @@ mod tests {
             .get_mut(app.world_mut())
             .expect("admin position query should be valid");
 
-        let response =
-            handle_set_position(&game_db, &mut query, None, "Mover", -8920.5, -188.25, 97.75);
+        let response = handle_set_position(
+            &game_db, &mut query, None, None, "Mover", -8920.5, -188.25, 97.75,
+        );
 
         assert_eq!(
             response,
