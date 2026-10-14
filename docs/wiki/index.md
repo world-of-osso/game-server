@@ -6,6 +6,7 @@
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
 - [DB2 derived-faction refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) — atomic Zephras reconstruction and other importers' build-receipt preservation; source audit and private-copy proof.
+- [Pre-effect spell-hit target health](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health) — inclusive46, actual unit health before effects; missing authority rejects.
 
 - [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation) — coherent predicates/census5479+1821, build delta and retained auxiliary-source boundary.
 
@@ -328,3 +329,4 @@ Debug logs and root cause analyses.
 - [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
 
 - [Group-private summon runtime](systems/toys.md#source-group-private-runtime-2026-10-13) — source group identity and roster-driven interest transitions.
+- [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.

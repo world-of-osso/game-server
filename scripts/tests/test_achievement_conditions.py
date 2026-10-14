@@ -31,6 +31,27 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_target_health_percent_requires_native_hit_and_complete_companions(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[1]['Type'] = '110'
+        mods = {10: node(0, 4), 11: node(10, 2, 46, 5)}
+        self.assertEqual(self.compile(mods, criteria), {1: [None, ((46, 5),)]})
+        for boundary in (1, 100):
+            mods[11]['Asset'] = str(boundary)
+            self.assertEqual(self.compile(mods, criteria), {1: [None, ((46, boundary),)]})
+        for invalid in (0, 101):
+            mods[11]['Asset'] = str(invalid)
+            self.assertEqual(self.compile(mods, criteria), {})
+        mods[11] = node(10, 2, 46, 5)
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 25, 1)}, criteria),
+                         {1: [None, ((25, 1), (46, 5))]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 999, 1)}, criteria), {})
+        mods[11]['Operator'] = '3'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[11]['Operator'] = '2'
+        criteria[1]['Type'] = '29'
+        self.assertEqual(self.compile(mods, criteria), {})
+
     def test_target_race_requires_a_native_spell_hit_target_and_keeps_companions(self):
         criteria = copy.deepcopy(self.criteria)
         criteria[5777] = criteria.pop(1)
