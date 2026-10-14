@@ -643,10 +643,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Pinned census:5454 +1699/3559 behind native player-target/class5/28 leaves.
+    // Installed 12.1.5.70391 census: 5479; build delta recorded in the wiki.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5456);
-    for achievement in [291, 1699, 3559] {
+    assert_eq!(union.len(), 5479);
+    for achievement in [291, 1699, 3559, 63640] {
         assert!(union.contains(&achievement));
     }
     for achievement in [

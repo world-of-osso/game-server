@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation) — coherent predicates/census5479+1821, build delta and retained auxiliary-source boundary.
+
 - [Active installed achievement import](systems/dungeon-achievements.md#active-installed-achievement-import) — active Retail build agreement, actual layout guards and atomic four-table replacement.
 
 - [Player-anchored spell-hit target class](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) — actual Player identity, preserving target/race companions; unanchored NPC class predicates excluded.

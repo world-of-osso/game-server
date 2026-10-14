@@ -6,7 +6,15 @@ Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated enc
 
 `import_achievements.py` derives the build from the resolved `data/db2/active` directory and active `wow` `.build.info` entry, rejecting disagreement. Input raw-directory build must agree; each actual WDC5 header is checked against the supported field layout before decode/export. The four content tables replace in one transaction; only their four `db2_build` provenance rows are stamped. No hardcoded69933 build selection or alternate layout fallback. Original native golden fixture raw files copy to owned temporary output before export.
 
-At4d349938, actual authenticated70391 raw inputs reproduce the former CLI rejection of70391, then process2/2 passes:14136 achievements/66663 criteria/121817 tree rows/243 categories, Stockade633/category14808 and unrelated SQL retained; corrupted actual layout fails without DB mutation. Three Python unit/native-golden tests pass. Criteria1/Tree8 missing-key records remain explicitly excluded; no completeness claim. Work-copy fingerprint/swap and rebuilt native census acceptance remain pending. [Contract](../../specs/dungeon-achievements.md).
+At4d349938, actual authenticated70391 raw inputs reproduce the former CLI rejection of70391, then process2/2 passes:14136 achievements/66663 criteria/121817 tree rows/243 categories, Stockade633/category14808 and unrelated SQL retained; corrupted actual layout fails without DB mutation. Three Python unit/native-golden tests pass. Criteria1/Tree8 missing-key records remain explicitly excluded; no completeness claim. Lead swapped the isolated four-table work copy into canonical world.db on2026-10-14. The receipt records three content tables changed, category unchanged,380 unrelated tables unchanged and four provenance rows stamped. Native census acceptance is tracked below. [Contract](../../specs/dungeon-achievements.md).
+
+## Installed70391 reconciliation
+
+Verified2026-10-14: regenerated Mythic64, single-modifier140, complete-condition5597 and traditional-rank241 predicates from installed12.1.5.70391 CSVs. No predicate family broadened. Census14136 achievements/66663 criteria/121817 trees/317468 modifiers yields5479 ordinary (3473 account/2006 character),1821 statistics,104 enabled types; all243 inventory rows reconciled. The runtime union expectation is5479 and includes63640 Coiled Isle.
+
+Against the intact69933 backup (5456/1816), ordinary additions are62500,62501,62502,63519,63640,63657,63659,63680,63690,63692,63693,63694,63700,63717,63720,63723,63724,63727,63728,63830,64160,64161,64162; statistics additions63730,63839–63842. No removals. Earlier mixed-profile5449 dropped6537,6538,7380,8679,8680,13741,39997,39998; those eight return with coherent70391 predicate inputs, so that intermediate drift is not the final build delta. Historical earned IDs stay intact.
+
+Durable receipt: `/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/epoch70391-reconciled-build-delta.json` contains exact ID sets and before/after input SHA256s. WorldMapOverlay remains the existing69933 binary; current overlay source parity is not certified. Goggle test projection now pins its actual installed70391 Item/ItemSparse source. Required runtime gate pending; census alone is structural evidence.
 
 ## Player-anchored spell-hit target class
 
