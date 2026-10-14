@@ -79,6 +79,20 @@ pub(crate) fn creature_cast_ignoring_in_progress(
     super::begin_validated_cast(world, caster, &spell, target)
 }
 
+/// Stop the current cast only after the replacement passes ordinary range,
+/// sight, resource, aura, school and cooldown validation. No readiness bypass.
+pub(crate) fn creature_cast_interrupting_self(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    let target = super::validate_start(world, caster, &spell, explicit, None, true)?;
+    super::cancel_cast(world, caster);
+    super::begin_validated_cast(world, caster, &spell, target)
+}
+
 fn load_creature_cast(
     world: &World,
     caster: Entity,
