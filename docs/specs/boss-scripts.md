@@ -66,8 +66,8 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 ## Shadowfang Keep source identity
 
 - [x] Prepare only Silverlaine3887→1070/bit1 (map33, Journal97/actor367/display37288) from pinned TC header/instance and current canonical catalogs. Require the authored empty ScriptName/SmartAI, refuse identity drift, preserve unrelated rows and remain idempotent on independent copies. This admits no unported Shadowfang boss or guessed placement.
-- [x] Silverlaine's existing source row7068 casts on the victim and repeats without changing its authored1s/22.3–35.1s timers or100% chance. Real actor/spell fixture proves two successful casts, aura application/copy isolation and a controlled lethal Fireball callback granting only1070/bit1 in the owning copy.
-- [ ] Full Silverlaine combat, healing-reduction effect, corpse loot/Normal persistence and both-skin native acceptance remain unproved. Fixture stages high-health player survival and a source-authenticated runtime binding; controlled death is not a balanced fight.
+- [x] Silverlaine's existing source row7068 casts on the victim and repeats without changing its authored1s/22.3–35.1s timers or100% chance. Real actor/spell fixture proves two successful casts, aura application/copy isolation and a controlled lethal Fireball callback granting only1070/bit1 in the owning copy. Actual7068 aura reduces a controlled noncritical1000 heal input to500 at the shared healing-modifier boundary; the same input heals1000 before Veil.
+- [ ] Full Silverlaine combat, complete healing-spell cast/coefficient behavior, corpse loot/Normal persistence and both-skin native acceptance remain unproved. Fixture stages high-health player survival and a source-authenticated runtime binding; controlled death is not a balanced fight.
 
 ## Wailing Caverns source slices
 
