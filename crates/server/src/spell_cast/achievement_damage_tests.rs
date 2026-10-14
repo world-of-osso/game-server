@@ -8,6 +8,92 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn achievements_criteria_earned_player_requires_native_prerequisite_before_kill() {
+    use shared::components::Npc;
+    let mut h = harness_with_plugins(vec![], &[220737], 1, false, |app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .unwrap();
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Earnedproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((ClientId(character), PlayerAchievementState::default()));
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    let name: String = conn
+        .query_row(
+            "SELECT name FROM content_creature_template WHERE entry=299",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert(Npc {
+        template_id: 299,
+        name: name.clone(),
+    });
+    h.app.update();
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.caster, h.npc, 10_000.0);
+    h.advance(3);
+    assert_eq!(h.health(h.npc), 0.0);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&32961),
+        "native kills before Hidden Potential must not qualify"
+    );
+    assert!(super::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        220737,
+        Some(h.caster),
+        0,
+        None
+    ));
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .earned_ids
+            .contains(&10460),
+        "actual authored spell hit earns Hidden Potential; no seeded earned ID"
+    );
+    let target = spawn_npc(&mut h.app, 3.0);
+    h.app.world_mut().entity_mut(target).insert(Npc {
+        template_id: 299,
+        name,
+    });
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.caster, target, 10_000.0);
+    h.advance(3);
+    assert_eq!(h.health(target), 0.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&32961),
+        Some(&1),
+        "actual rewarded kill after earned10460 must satisfy Modifier87"
+    );
+}
+
+#[test]
 fn achievements_criteria_bbking_both_factions_hit_actual_leaders_and_reopen() {
     prove_bbking_faction(1, 4436, &[(16802, 12660), (10181, 12661), (3144, 35832)]);
     prove_bbking_faction(2, 4437, &[(42928, 12664), (7999, 12666), (17468, 12667)]);
