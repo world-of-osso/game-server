@@ -1,8 +1,9 @@
 //! TC a352b1fa instance_wailing_caverns.cpp four-druid DONE notification and
 //! wailing_caverns.cpp Disciple DoAction0 and combat spells. Escort, gossip and
-//! targeted random aggro speech remain unported.
+//! targeted random aggro speech remain unported. The first escort camp (source
+//! path367800 end → events4–7) runs on its separate out-of-combat clock.
 use bevy::prelude::*;
-use shared::components::{Health, Npc};
+use shared::components::{CombatStatus, Health, Npc, Rotation};
 
 use super::event_map::EventMap;
 
@@ -38,6 +39,57 @@ pub(crate) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
 #[derive(Default)]
 struct Disciple {
     combat_events: EventMap,
+    escort_events: EventMap,
+}
+
+const PATH_FIRST_CAMP: u32 = 367800;
+const PATH_SECOND_CAMP: u32 = 367801;
+const EVENT_FIRST_CAMP_SPEECH: u32 = 4;
+const EVENT_FIRST_CAMP_SUMMONS: u32 = 5;
+const EVENT_CONTINUE_SPEECH: u32 = 6;
+const EVENT_CONTINUE_PATH: u32 = 7;
+const FIRST_CAMP_GROUP: u32 = 0;
+const SAY_FIRST_CAMP: u8 = 2;
+const SAY_CONTINUE: u8 = 3;
+const CONTINUE_FACING_WOW: f32 = 5.742133;
+
+impl Disciple {
+    fn advance_escort(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        self.escort_events.update(u64::from(diff_ms));
+        while let Some(event) = self.escort_events.execute_event() {
+            match event {
+                EVENT_FIRST_CAMP_SPEECH => {
+                    ctx.talk(SAY_FIRST_CAMP);
+                    self.escort_events.schedule(EVENT_FIRST_CAMP_SUMMONS, 7_000);
+                }
+                EVENT_FIRST_CAMP_SUMMONS => {
+                    ctx.summon_creature_group(FIRST_CAMP_GROUP);
+                    self.escort_events.schedule(EVENT_CONTINUE_SPEECH, 10_000);
+                }
+                EVENT_CONTINUE_SPEECH => {
+                    face_continue_path(ctx);
+                    ctx.talk(SAY_CONTINUE);
+                    self.escort_events.schedule(EVENT_CONTINUE_PATH, 3_000);
+                }
+                EVENT_CONTINUE_PATH => {
+                    super::waypoint_path::move_path(ctx.world, ctx.me, PATH_SECOND_CAMP);
+                }
+                _ => unreachable!("Disciple escort event {event}"),
+            }
+        }
+    }
+}
+
+fn face_continue_path(ctx: &mut Ctx) {
+    if let Some(mut rotation) = ctx.world.get_mut::<Rotation>(ctx.me) {
+        rotation.y = CONTINUE_FACING_WOW + std::f32::consts::FRAC_PI_2;
+    }
+    if let Some(queue) = ctx
+        .world
+        .get_resource::<lightyear::prelude::ReplicationDirtyQueue>()
+    {
+        queue.mark(ctx.me);
+    }
 }
 
 impl CreatureAi for Disciple {
@@ -52,7 +104,21 @@ impl CreatureAi for Disciple {
             .schedule_range(EVENT_DRUIDS_POTION, 5_000, 10_000);
     }
 
+    fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, path_id: u32) {
+        if path_id == PATH_FIRST_CAMP {
+            self.escort_events.schedule(EVENT_FIRST_CAMP_SPEECH, 1_000);
+        }
+    }
+
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        let in_combat = ctx
+            .world
+            .get::<CombatStatus>(ctx.me)
+            .is_some_and(|status| status.0);
+        if !in_combat {
+            self.advance_escort(ctx, diff_ms);
+            return;
+        }
         if !ctx.update_victim() {
             return;
         }
