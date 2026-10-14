@@ -88,10 +88,9 @@ fn achievements_criteria_native_any_item_receipts_use_canonical_quality_and_coun
     h.app.update();
     // Controlled receipt input uses authentic item templates, not an authored Kobold drop claim.
     // The wire slot quality deliberately disagrees; only canonical template quality may gate.
-    for (item_id, count, shown_quality, name) in [
-        (124101, 5, 4, "Aethril"),
-        (33999, 3, 0, "Cenarion War Hippogryph"),
-    ] {
+    for (item_id, count, shown_quality, name) in
+        [(124101, 5, 4, "Aethril"), (17203, 3, 0, "Sulfuron Ingot")]
+    {
         let corpse = h.kill_kobold();
         let loot = CorpseLoot {
             looters: [(
