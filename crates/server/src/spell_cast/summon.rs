@@ -239,9 +239,7 @@ fn scatter_wild_destination(
         destination.position.z -= distance * angle.sin();
         update_scattered_ground_height(world, caster, &mut destination);
     }
-    if let Some(rotation) = world.get::<Rotation>(caster) {
-        destination.orientation = rotation.0;
-    }
+    destination.orientation = super::targets::orientation(world, caster);
     destination
 }
 
