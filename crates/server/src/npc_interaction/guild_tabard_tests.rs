@@ -5,7 +5,9 @@ use shared::protocol::{GuildTabardReply, GuildTabardRequest};
 #[test]
 fn guild_tabard_vendor_host_messages_revalidate_range_role_auth_and_catalog_before_payment() {
     let mut h = harness_with(HUMAN_TEMPLATE, |app| {
-        app.add_plugins(crate::guild_tabards::GuildTabardPlugin);
+        let catalog =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+        app.add_plugins(crate::guild_tabards::GuildTabardPlugin::load(&catalog).unwrap());
         add_inbox::<GuildTabardReply>(app);
     })
     .unwrap();
