@@ -601,9 +601,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Pinned census:5450 +18805/19704/19716 behind known-spell104 markers.
+    // Pinned census:5453 +291 behind actual native spell-hit TargetRace27 leaves.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5453);
+    assert_eq!(union.len(), 5454);
+    assert!(union.contains(&291));
     for achievement in [
         578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
         6030, 6031, 6350, 6584, 6621, 6973, 13025, 13026, 13623, 14728, 14729, 14730, 14731, 16729,

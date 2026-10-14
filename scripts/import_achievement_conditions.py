@@ -155,6 +155,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
             excluded |= difficulty_ids(node, legacy)
         elif kind in PLAYER_FACTS and operator == SINGLE_TRUE and int(node['Asset']) > 0:
             facts.append((kind, int(node['Asset'])))
+        elif criteria_type == 110 and kind == 27 and operator == SINGLE_TRUE and int(node['Asset']) > 0:
+            # TC TargetRace1894–1896 reads the actual unit passed by Spell::PreprocessSpellHit.
+            facts.append((kind, int(node['Asset'])))
         elif kind == 34 and operator == SINGLE_TRUE and 1 <= int(node['Asset']) <= 25:
             # TC BattlePetTeamLevel1935–1939 reads every equipped journal slot.
             facts.append((kind, int(node['Asset'])))
@@ -224,6 +227,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// player-only (2/8/17/25/26/29/32/34/41/69/71/104; exact39 lowers to69+71), emote-only TargetCreatureId4,',
         '// including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerIsInArea17 or PlayerHasAura8 alternatives,',
         '// native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.',
+        '// native type110 spell-hit TargetRace27 from the actual target unit.',
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
