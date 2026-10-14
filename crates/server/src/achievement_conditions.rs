@@ -3,7 +3,7 @@
 // player-only (2/8/17/25/26/29/32/34/41/69/71/104; exact39 lowers to69+71), emote-only TargetCreatureId4,
 // including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerIsInArea17 or PlayerHasAura8 alternatives,
 // native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.
-// native type110 spell-hit TargetRace27 from the actual target unit.
+// native type110 spell-hit TargetIsPlayer5/TargetRace27/TargetClass28; class requires player/race authority.
 // alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.
 // Criteria SHA256 3c999e807e146cec059b73f8e0d45a3f8e384a21b15596bb98645069832f63e0.
 // ModifierTree SHA256 fbb1c0859b58239412169546cc1d57b683cf872ceaa52d5c5c42ae11d2712db3.
@@ -902,6 +902,50 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (6142, 341) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(15, 4)],
+        }),
+        (6302, 94) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 2), (28, 6)],
+        }),
+        (6312, 114) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 7), (28, 9)],
+        }),
+        (6313, 118) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 1), (28, 6)],
+        }),
+        (6314, 98) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 4), (28, 5)],
+        }),
+        (6315, 102) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 2), (28, 7)],
+        }),
+        (6316, 106) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 6), (28, 11)],
+        }),
+        (6317, 90) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 8), (28, 4)],
+        }),
+        (6318, 110) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 5), (28, 1)],
+        }),
+        (6319, 122) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 10), (28, 8)],
+        }),
+        (6320, 130) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 11), (28, 2)],
+        }),
+        (6321, 126) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(5, 0), (27, 3), (28, 3)],
         }),
         (6398, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -2951,6 +2995,38 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (11142, 1551) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 66303), (8, 66304)],
+        }),
+        (11158, 981) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 1), (28, 4)],
+        }),
+        (11159, 999) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 4), (28, 4)],
+        }),
+        (11160, 984) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 2), (28, 4)],
+        }),
+        (11161, 987) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 8), (28, 4)],
+        }),
+        (11162, 990) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 5), (28, 4)],
+        }),
+        (11163, 1002) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 10), (28, 4)],
+        }),
+        (11164, 993) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 3), (28, 4)],
+        }),
+        (11165, 996) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 7), (28, 4)],
         }),
         (11803, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -5222,6 +5298,14 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (18299, 563) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(41, 1497)],
+        }),
+        (18394, 1005) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 9), (28, 4)],
+        }),
+        (18395, 1008) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(27, 22), (28, 4)],
         }),
         (18545, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
