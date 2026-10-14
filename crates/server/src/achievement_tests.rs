@@ -773,6 +773,191 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing() {
+    use shared::components::Health;
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[45544], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    // Authored Heavy Frostweave Bandage supplies the item-level scaling context.
+    let item_level: u16 = conn
+        .query_row(
+            "SELECT i.ItemLevel FROM content_item i JOIN item_x_item_effect x ON x.ItemID=i.ID \
+         JOIN item_effect e ON e.ID=x.ItemEffectID WHERE i.ID=34722 AND e.SpellID=45544",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Triagehit", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 3.0);
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 5.01;
+    h.app.world_mut().get_mut::<Health>(target).unwrap().max = 100.0;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 1.0;
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        u8::MAX,
+        Some(item_level),
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), target, 45544));
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        0,
+        Some(item_level),
+    );
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), target, 45544));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6799),
+        "low caster health cannot replace target above5percent"
+    );
+    let missing = h.app.world_mut().spawn_empty().id();
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 45544);
+    for health in [
+        Health {
+            current: 5.0,
+            max: 0.0,
+        },
+        Health {
+            current: f32::NAN,
+            max: 100.0,
+        },
+        Health {
+            current: 5.0,
+            max: f32::INFINITY,
+        },
+        Health {
+            current: f32::INFINITY,
+            max: 100.0,
+        },
+    ] {
+        h.app.world_mut().entity_mut(target).insert(health);
+        record_targeted_spell_hit(h.app.world_mut(), h.caster, target, 45544);
+        assert!(
+            !h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&6799),
+            "invalid target health {health:?} cannot qualify"
+        );
+    }
+    h.app.world_mut().entity_mut(target).insert(Health {
+        current: 5.0,
+        max: 100.0,
+    });
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        0,
+        Some(item_level),
+    );
+    h.advance(2);
+    assert!(
+        crate::auras::has_aura(h.app.world(), target, 45544),
+        "actual bandage hit landed"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(target).unwrap().current,
+        5.0,
+        "authored periodic healing has not ticked at100ms"
+    );
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    assert_eq!(
+        state.criteria_progress.get(&6799),
+        Some(&1),
+        "native target at exactly5percent must credit before healing"
+    );
+    assert!(state.earned_ids.contains(&141));
+    h.advance(24);
+    assert!(
+        h.app.world().get::<Health>(target).unwrap().current > 5.0,
+        "real periodic bandage heals after the qualifying hit"
+    );
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6799),
+        Some(&1),
+        "idle/heal ticks cannot replay hit credit"
+    );
+    {
+        let mut npc_health = h.app.world_mut().get_mut::<Health>(h.npc).unwrap();
+        npc_health.current = 1.0;
+        npc_health.max = 100.0;
+    }
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, h.npc, 45544);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6799),
+        Some(&2),
+        "hit-unit snapshot is not Player-only"
+    );
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6799),
+        Some(&2)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&6799), Some(&2));
+    assert!(saved.earned_ids.contains(&141));
+}
+
+#[test]
 fn achievements_criteria_native_target_class_uses_actual_player_hit_and_race() {
     let mut h = crate::spell_cast::test_harness::harness_with_plugins(
         vec![],

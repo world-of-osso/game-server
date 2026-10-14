@@ -2,3 +2,4 @@
 /target-admin
 /data
 .codex_verify_server_test.log
+__pycache__/
