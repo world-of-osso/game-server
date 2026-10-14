@@ -137,6 +137,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
         )
             .chain(),
     );
+    ToyPersistencePlugin::install(&mut h.app);
     h.app.add_systems(PostUpdate, send_initial);
     h.app
         .world_mut()
@@ -250,10 +251,24 @@ fn achievements_criteria_toys_native_learning_sets_owned_item_and_distinct_count
 fn pump(h: &mut Harness) -> (Vec<ToyResult>, Vec<ToyCollectionUpdate>) {
     let mut results = Vec::new();
     let mut snapshots = Vec::new();
-    for _ in 0..7 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    let mut frames = 0;
+    loop {
         h.advance(1);
+        frames += 1;
         results.extend(drain::<ToyResult>(&mut h.app, h.connection));
         snapshots.extend(drain::<ToyCollectionUpdate>(&mut h.app, h.connection));
+        let pending = !h.app.world().resource::<PendingToyFavourites>().is_empty();
+        if frames >= 7 && !pending {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "toy FIFO did not complete"
+        );
+        if pending {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
     }
     (results, snapshots)
 }
@@ -294,6 +309,77 @@ fn activate_witnessed(
             witness,
         });
     pump(h).0
+}
+
+#[test]
+fn toy_favourites_wait_for_fifo_without_blocking_updates() {
+    use std::time::{Duration, Instant};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("favourite-fifo.redb");
+    let (mut h, _) = setup(&path);
+    assert!(learn(&mut h, 0).iter().any(|reply| reply.error.is_none()));
+    pump(&mut h);
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    for favourite in [true, false] {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<SetToyFavourite>>(h.connection)
+            .unwrap()
+            .send::<CollectionChannel>(SetToyFavourite {
+                item_id: FIGURINE,
+                favourite,
+            });
+    }
+    let started = Instant::now();
+    h.advance(3);
+    let elapsed = started.elapsed();
+    let premature_results = drain::<ToyResult>(&mut h.app, h.connection);
+    let premature_snapshots = drain::<ToyCollectionUpdate>(&mut h.app, h.connection);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "toy favourite tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature_results.is_empty(),
+        "toy favourite result precedes commit"
+    );
+    assert!(
+        premature_snapshots.is_empty(),
+        "toy favourite snapshot precedes commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let mut replies = Vec::new();
+    while replies.len() < 2 {
+        let (results, _) = pump(&mut h);
+        replies.extend(results);
+        assert!(
+            Instant::now() < deadline,
+            "no committed toy favourite replies"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(replies.len(), 2);
+    assert!(
+        replies
+            .iter()
+            .all(|reply| reply.operation == ToyOperation::Favourite && reply.error.is_none())
+    );
+    assert_eq!(
+        toy_store::load(&h.app.world().resource::<GameDatabase>().db, 1).get(&FIGURINE),
+        Some(&false)
+    );
+    assert!(toy_store::load(&h.app.world().resource::<GameDatabase>().db, 2).is_empty());
 }
 
 #[test]
@@ -355,6 +441,7 @@ fn toys_learn_favourite_and_reopen_on_another_character() {
         MessageSender::<ToyResult>::default(),
         MessageReceiver::<ToyResult>::default(),
     ));
+    ToyPersistencePlugin::install(&mut h.app);
     h.app.add_systems(PostUpdate, send_initial);
     let (_, updates) = pump(&mut h);
     let update = updates

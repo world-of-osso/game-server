@@ -10,9 +10,13 @@ use shared::protocol::{
     UseToy,
 };
 
+mod actor;
+use actor::{PendingToyFavourites, ToyPersistencePlugin};
+
 pub struct ToysPlugin;
 impl Plugin for ToysPlugin {
     fn build(&self, app: &mut App) {
+        ToyPersistencePlugin::install(app);
         app.add_systems(Startup, load_catalog)
             .add_systems(PostStartup, cache_catalog_presentations)
             .add_systems(Update, (receive_favourites, receive_use))
@@ -122,31 +126,29 @@ fn receive_favourites(world: &mut World) {
         })
         .collect();
     for (connection, account, request) in requests {
-        let outcome = if world
+        if world
             .resource::<ToyCatalog>()
             .0
             .contains_key(&request.item_id)
         {
-            toy_store::favourite(
-                &world.resource::<GameDatabase>().db,
-                account,
-                request.item_id,
-                request.favourite,
-            )
+            world.resource_scope(|world, mut pending: Mut<PendingToyFavourites>| {
+                pending.enqueue(
+                    world.resource::<GameDatabase>(),
+                    connection,
+                    account,
+                    request,
+                );
+            });
         } else {
-            Err("unknown toy".into())
-        };
-        if outcome.is_ok() {
-            broadcast(world, account);
+            result(
+                world,
+                connection,
+                request.item_id,
+                ToyOperation::Favourite,
+                None,
+                Err("unknown toy".into()),
+            );
         }
-        result(
-            world,
-            connection,
-            request.item_id,
-            ToyOperation::Favourite,
-            None,
-            outcome,
-        );
     }
 }
 
