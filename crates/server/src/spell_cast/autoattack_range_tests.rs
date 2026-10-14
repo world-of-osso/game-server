@@ -71,7 +71,7 @@ fn class_completeness_native_autoattack_range_extends_actual_swing_to_ten_yards(
             .iter()
             .any(|entry| entry.event.spell_id == 0
                 && entry.event.attacker == caster.to_bits()
-                && entry.event.damage > 0.0)
+                && entry.event.amount > 0)
     );
 }
 
