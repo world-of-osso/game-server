@@ -260,6 +260,9 @@ fn class_completeness_native_ap_buff_expires_on_its_authored_clock() {
         .store
         .get(BATTLE_SHOUT)
         .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
         .duration
         .as_ref()
         .unwrap()
