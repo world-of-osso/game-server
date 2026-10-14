@@ -13,11 +13,6 @@ struct PendingSnapshot {
 pub(super) struct PendingProfessionSnapshots(VecDeque<PendingSnapshot>);
 
 impl PendingProfessionSnapshots {
-    #[cfg(test)]
-    pub(super) fn has_pending(&self) -> bool {
-        !self.0.is_empty()
-    }
-
     pub(super) fn enqueue(
         &mut self,
         db: &GameDatabase,

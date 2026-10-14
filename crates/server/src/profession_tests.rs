@@ -645,14 +645,6 @@ impl Harness {
     }
 
     fn wait_for_profession_publications(&mut self) {
-        if !self
-            .app
-            .world()
-            .resource::<PendingProfessionSnapshots>()
-            .has_pending()
-        {
-            return;
-        }
         let fence = self
             .app
             .world()
