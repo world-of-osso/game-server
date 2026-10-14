@@ -32,7 +32,7 @@ fn fixture() -> Harness {
             target: unit,
             spell_id: CHARRED,
             effect_mask: 1,
-            source: AuraSource::Cast,
+            source: AuraSource::KnownSpell,
         },
     );
     h
@@ -149,7 +149,7 @@ fn class_completeness_native_charred_warblades_removal_discards_pending_heals() 
             target: unit,
             spell_id: CHARRED,
             effect_mask: 1,
-            source: AuraSource::Cast,
+            source: AuraSource::KnownSpell,
         },
     );
     h.advance(22);
@@ -177,7 +177,7 @@ fn class_completeness_native_charred_warblades_refresh_keeps_pending_heals() {
             target: unit,
             spell_id: CHARRED,
             effect_mask: 1,
-            source: AuraSource::Cast,
+            source: AuraSource::KnownSpell,
         },
     );
     h.advance(22);
