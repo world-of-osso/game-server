@@ -22,6 +22,21 @@ pub(crate) fn collection_fixture() -> Connection {
 }
 
 #[test]
+fn db2_follow_install_housing_collection_uses_declared_build() {
+    let db = collection_fixture();
+    let key = "2".repeat(32);
+    db.execute(
+        "UPDATE housing_catalog_build SET build_key=?, build='12.1.5.70391'",
+        [&key],
+    )
+    .unwrap();
+    db.execute("UPDATE housing_catalog_record SET build_key=?", [&key])
+        .unwrap();
+    let rules = read_collection_rules(&db).unwrap();
+    assert_eq!(rules[&245259].decor_id, 1693);
+}
+
+#[test]
 fn housing_collection_rules_resolve_each_authentic_item_and_do_not_require_a_vendor_acquisition() {
     let db = collection_fixture();
     db.execute(
