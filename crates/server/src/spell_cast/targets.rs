@@ -67,6 +67,8 @@ enum Selector {
     /// Area center = explicit target (DEST_TARGET_*).
     CenterExplicit(Relation),
     AreaAroundSrc(Relation),
+    ///52 GAMEOBJECT_SRC_AREA: physical source objects, not units.
+    GameObjectsAroundSource,
     EntryAreaSource,
     EntryAreaDestination,
     AreaAroundDest(Relation),
@@ -123,6 +125,7 @@ fn selector(id: u32) -> Option<Selector> {
         63 => Selector::CenterExplicit(Any),
         7 => Selector::EntryAreaSource,
         8 => Selector::EntryAreaDestination,
+        52 => Selector::GameObjectsAroundSource,
         15 | 151 => Selector::AreaAroundSrc(Enemy),
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
@@ -463,6 +466,15 @@ pub fn select_targets(
                 center = caster_offset(world, caster, angle, radius(effect, slot));
             }
             Selector::DynObj(_) => selected_any = true,
+            Selector::GameObjectsAroundSource => {
+                selected_any = true;
+                units.extend(area_game_objects(
+                    world,
+                    caster,
+                    center.unwrap_or(caster_pos),
+                    radius(effect, slot),
+                ));
+            }
             Selector::AreaAroundSrc(relation) => {
                 selected_any = true;
                 let src = center.unwrap_or(caster_pos);
@@ -535,6 +547,25 @@ pub fn select_targets(
     units = limit_spell_targets(spell, caster, units, 0);
     units.dedup();
     Ok(units)
+}
+
+fn area_game_objects(world: &mut World, caster: Entity, center: Vec3, radius: f32) -> Vec<Entity> {
+    let Some(map) = world.get::<crate::maps::InMap>(caster).copied() else {
+        return Vec::new();
+    };
+    let mut objects = world.query::<(
+        Entity,
+        &Position,
+        &crate::maps::InMap,
+        &shared::protocol::GameObjectInfo,
+    )>();
+    objects
+        .iter(world)
+        .filter(|(_, at, copy, _)| {
+            **copy == map && Vec3::new(at.x, at.y, at.z).distance_squared(center) <= radius * radius
+        })
+        .map(|(entity, _, _, _)| entity)
+        .collect()
 }
 
 fn nearby_entry_unit(
