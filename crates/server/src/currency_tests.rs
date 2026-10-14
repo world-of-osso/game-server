@@ -2,6 +2,113 @@ use super::*;
 use crate::persistence;
 
 #[test]
+fn currency_ack_waits_for_fifo_without_blocking_updates() {
+    use lightyear::connection::host::HostClient;
+    use std::time::{Duration, Instant};
+    let db = persistence::temp_database();
+    let (character, _) = persistence::create_character(&db, 1, "Fifocoin", 1, 1).unwrap();
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<EarnCurrency>();
+    app.register_message::<SpendCurrency>();
+    app.register_message::<CurrencyStateUpdate>();
+    app.insert_resource(GameDatabase::new(db))
+        .add_plugins(CurrencyPlugin);
+    app.finish();
+    app.cleanup();
+    let player = app.world_mut().spawn(PlayerCurrencies::default()).id();
+    let connection = app
+        .world_mut()
+        .spawn((
+            Connected,
+            RemoteId(PeerId::Local(1)),
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            InWorld {
+                character_id: character,
+            },
+            PlayerLink(player),
+            MessageSender::<EarnCurrency>::default(),
+            MessageReceiver::<EarnCurrency>::default(),
+            MessageSender::<SpendCurrency>::default(),
+            MessageReceiver::<SpendCurrency>::default(),
+            MessageSender::<CurrencyStateUpdate>::default(),
+            MessageReceiver::<CurrencyStateUpdate>::default(),
+        ))
+        .id();
+    app.update();
+    app.world_mut()
+        .get_mut::<MessageReceiver<CurrencyStateUpdate>>(connection)
+        .unwrap()
+        .receive()
+        .for_each(drop);
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    app.world_mut()
+        .get_mut::<MessageSender<EarnCurrency>>(connection)
+        .unwrap()
+        .send::<CurrencyChannel>(EarnCurrency {
+            currency_id: 3,
+            amount: 17,
+        });
+    let started = Instant::now();
+    app.update();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature = app
+        .world_mut()
+        .get_mut::<MessageReceiver<CurrencyStateUpdate>>(connection)
+        .unwrap()
+        .receive()
+        .next();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "currency tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_none(), "currency reply precedes commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let response = loop {
+        app.update();
+        if let Some(response) = app
+            .world_mut()
+            .get_mut::<MessageReceiver<CurrencyStateUpdate>>(connection)
+            .unwrap()
+            .receive()
+            .next()
+        {
+            break response;
+        }
+        assert!(Instant::now() < deadline, "no committed currency response");
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert!(response.error.is_none());
+    assert_eq!(
+        persistence::load_currencies(&app.world().resource::<GameDatabase>().db, character).get(3),
+        17
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerCurrencies>(player)
+            .unwrap()
+            .0
+            .get(3),
+        17
+    );
+}
+
+#[test]
 fn earn_currency_adds_to_wallet() {
     let mut wallet = CurrencyWallet::default();
 

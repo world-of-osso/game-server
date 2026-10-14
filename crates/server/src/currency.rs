@@ -13,11 +13,16 @@ use crate::persistence::{self, GameDatabase};
 #[derive(Component, Debug, Clone, PartialEq, Default)]
 pub struct PlayerCurrencies(pub CurrencyWallet);
 
+mod actor;
+use actor::{PendingCurrencyCommits, publish_currency_commits};
+
 pub struct CurrencyPlugin;
 
 impl Plugin for CurrencyPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<crate::achievement::CriteriaCredit>();
+        app.init_resource::<PendingCurrencyCommits>();
+        app.add_systems(Update, publish_currency_commits);
         app.add_systems(Update, send_initial_currency_snapshot);
         app.add_systems(Update, process_currency_requests::<EarnCurrency>);
         app.add_systems(Update, process_currency_requests::<SpendCurrency>);
@@ -90,79 +95,31 @@ fn process_currency_requests<R: CurrencyRequest>(
         (Entity, &PlayerLink, &InWorld, &mut MessageReceiver<R>),
         With<Authenticated>,
     >,
-    mut currencies: Query<&mut PlayerCurrencies>,
-    mut pvp_states: Query<&mut crate::pvp::PlayerPvpState>,
+    currencies: Query<&PlayerCurrencies>,
+    pvp_states: Query<&crate::pvp::PlayerPvpState>,
     db: Option<Res<GameDatabase>>,
+    mut pending: ResMut<PendingCurrencyCommits>,
     mut senders: Query<&mut MessageSender<CurrencyStateUpdate>>,
-    mut credits: MessageWriter<crate::achievement::CriteriaCredit>,
 ) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, in_world, mut receiver) in receivers.iter_mut() {
-        for request in receiver.receive() {
-            if let Some(credit) = handle_currency_request(
-                CurrencyRequestTarget {
-                    conn_entity,
-                    player_entity: link.0,
-                    character_id: in_world.character_id,
-                },
-                &request,
-                &mut currencies,
-                &mut pvp_states,
-                &db,
-                &mut senders,
-            ) {
-                credits.write(credit);
-            }
-        }
-    }
-}
-
-struct CurrencyRequestTarget {
-    conn_entity: Entity,
-    player_entity: Entity,
-    character_id: u64,
-}
-
-fn handle_currency_request<R: CurrencyRequest>(
-    target: CurrencyRequestTarget,
-    request: &R,
-    currencies: &mut Query<&mut PlayerCurrencies>,
-    pvp_states: &mut Query<&mut crate::pvp::PlayerPvpState>,
-    db: &GameDatabase,
-    senders: &mut Query<&mut MessageSender<CurrencyStateUpdate>>,
-) -> Option<crate::achievement::CriteriaCredit> {
-    let Ok(mut wallet) = currencies.get_mut(target.player_entity) else {
-        send_currency_error(
-            target.conn_entity,
-            senders,
-            "currencies unavailable for player",
-        );
-        return None;
+    let Some(db) = db else {
+        return;
     };
-    let gained_currency = request.gained_currency();
-    let previous = gained_currency.map(|id| wallet.0.get(id));
-    match R::apply(&mut wallet.0, request) {
-        Ok(message) => {
-            persistence::save_currencies(&db.db, target.character_id, &wallet.0);
-            if let Ok(mut pvp_state) = pvp_states.get_mut(target.player_entity)
-                && crate::pvp::sync_progress_currencies_from_wallet(
-                    &mut pvp_state.progress,
-                    &wallet.0,
-                )
-            {
-                persistence::save_pvp(&db.db, target.character_id, &pvp_state.progress);
+    for (connection, link, session, mut receiver) in &mut receivers {
+        for request in receiver.receive() {
+            if currencies.get(link.0).is_err() {
+                send_currency_error(
+                    connection,
+                    &mut senders,
+                    "currencies unavailable for player",
+                );
+                continue;
             }
-            send_currency_update(target.conn_entity, &wallet.0, Some(message), None, senders);
-            let currency = gained_currency?;
-            let amount = wallet.0.get(currency).saturating_sub(previous?);
-            (amount != 0).then_some(crate::achievement::CriteriaCredit {
-                player: target.player_entity,
-                event: crate::achievement::CriteriaEvent::CurrencyGained(currency, amount),
-            })
-        }
-        Err(error) => {
-            send_currency_update(target.conn_entity, &wallet.0, None, Some(error), senders);
-            None
+            let character = session.character_id;
+            let maintain_pvp = pvp_states.contains(link.0);
+            let receipt = db.writer.enqueue("currency transaction", move |db| {
+                actor::execute(db, character, maintain_pvp, request)
+            });
+            pending.push(connection, link.0, character, receipt);
         }
     }
 }
