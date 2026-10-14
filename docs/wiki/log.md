@@ -1204,3 +1204,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-14: [Target health46](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health): inclusive pre-effect native110 health; bandage45544 RED reaches real aura before6799 counter failure, structural+141 only; acceptance pending.
 
 - 2026-10-14: TargetHealth46 final integrated acceptance at30a6e515:175/0/1ignored +site-export1/1; server/engine checks and three-repo fmt pass, census5480/1821. Native authentic bandage item-level context and finite-maximum rejection retain pre-effect inclusive semantics.
+
+- 2026-10-14: C++ ground waypoint generation ports pinned TC smooth-surface controls and collision normalization; real Wailing node2 RED retained, GREEN pending. Generic navigation/exact/flying unchanged.

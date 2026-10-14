@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; strict node2 regression and physical traversal proof pending.
+
 - [Wailing second escort camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) — actual30s cleansing cast, three authored Adders and combat-paused progression; controlled arrival.
 
 - [Wailing first escort camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) — source path-end/timed speech, two real Ravagers and combat-paused clock; controlled arrival only.
