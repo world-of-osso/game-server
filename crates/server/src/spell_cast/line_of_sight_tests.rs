@@ -266,18 +266,18 @@ fn area_hit_sight_uses_destination_center_and_authored_los_flags() {
         vec![h.npc],
         "recipient sees center even though caster cannot see recipient"
     );
-    spell.attributes[5] |= 0x0400_0000;
+    spell.misc.as_mut().unwrap().attributes[5] |= 0x0400_0000;
     assert!(
         select(&mut h, &spell, &effect).is_empty(),
         "authored always-AOE-LOS also requires caster sight"
     );
-    spell.attributes[5] = native.attributes[5];
+    spell.misc.as_mut().unwrap().attributes[5] = super::attributes(&native, 5);
     effect.attributes |= 0x20;
     assert!(
         select(&mut h, &spell, &effect).is_empty(),
         "effect always-AOE-LOS also requires caster sight"
     );
-    spell.attributes[2] |= 4;
+    spell.misc.as_mut().unwrap().attributes[2] |= 4;
     assert_eq!(
         select(&mut h, &spell, &effect).len(),
         2,
