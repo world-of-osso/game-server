@@ -5,7 +5,9 @@
 use shared::components::{AuraView, UnitAuras};
 
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness, harness_with};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with, harness_with_plugins, native_creature_world,
+};
 use crate::stats::CharacterStats;
 
 const FROSTBOLT: u32 = 116;
@@ -62,7 +64,9 @@ fn frostbolt_chills_its_target_to_half_run_speed_for_8_seconds() {
 
 #[test]
 fn polymorph_replicates_its_debuff_on_the_target_with_the_caster_and_duration() {
-    let Some(mut h) = harness(Vec::new(), &[POLYMORPH], MAGE) else {
+    let Some(mut h) = harness_with_plugins(Vec::new(), &[POLYMORPH], MAGE, false, |app| {
+        app.insert_resource(native_creature_world(&[6, 16372]));
+    }) else {
         return;
     };
     h.cast(POLYMORPH, Some(h.npc));
@@ -113,7 +117,9 @@ const NEUTRAL_CREATURE: u32 = 7;
 
 #[test]
 fn polymorph_is_a_debuff_on_a_neutral_creature_by_its_negative_effects() {
-    let Some(mut h) = harness(Vec::new(), &[POLYMORPH], MAGE) else {
+    let Some(mut h) = harness_with_plugins(Vec::new(), &[POLYMORPH], MAGE, false, |app| {
+        app.insert_resource(native_creature_world(&[6, 16372]));
+    }) else {
         return;
     };
     h.app
