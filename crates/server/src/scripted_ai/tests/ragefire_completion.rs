@@ -254,7 +254,13 @@ fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival
         2.5,
         "authored walk speed, not the actor's preceding run mode"
     );
-    h.advance(54.0);
+    // Three actual walk paths plus 6148/6996ms source waits and the final meal
+    // repeat exceed60s even before route detours. Wait for completion, bounded90s.
+    let mut elapsed = 6.0;
+    while spell_gos(&h, boss, 120064).len() < 6 && elapsed < 90.0 {
+        h.advance(0.05);
+        elapsed += 0.05;
+    }
     assert_eq!(
         spell_gos(&h, boss, 120113).len(),
         3,
