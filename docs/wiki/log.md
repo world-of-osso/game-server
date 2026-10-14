@@ -1,6 +1,6 @@
 ## 2026-10-14 — Shared weapon-spell defense roll
 
-[Implemented physical defenses](systems/player-damage.md#shared-weapon-spell-defense-roll) share one quantized cumulative roll. Native Sling Mud/Improved Blocking produces genuine unblocked-hit RED;60 Slam and60 Aimed Shot/Veil trials now pass with retained controls (19 total). Missing dodge/parry, mechanic resistance, player baseline and independent acceptance remain explicit.
+[Implemented physical defenses](systems/player-damage.md#shared-weapon-spell-defense-roll) share one quantized cumulative roll. Native Sling Mud/Improved Blocking produces genuine unblocked-hit RED;60 Slam and60 Aimed Shot/Veil trials now pass with retained controls (19 total). 45 adjacent controls/check/fmt also pass. Missing dodge/parry, mechanic resistance, player baseline and independent acceptance remain explicit.
 
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 

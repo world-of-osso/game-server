@@ -81,7 +81,7 @@ Live proof: `game-engine/data/diagnostics/playerdamage-20260926/` (server and cl
 
 ### Shared weapon-spell defense roll
 
-Weapon-spell miss, ranged deflection and block consume one native integer roll and cumulative truncated hundredths. Magic behavior remains separate; native dodge/parry, mechanic resistance and player hit baseline remain unimplemented boundaries. Two actual native cast invariants and quantization controls pass alongside retained block controls; current integration and independent acceptance are pending. [Exact source and proof](../../class-completeness6.md#shared-weapon-spell-roll-boundary--batch59-in-progress).
+Weapon-spell miss, ranged deflection and block consume one native integer roll and cumulative truncated hundredths. Magic behavior remains separate; native dodge/parry, mechanic resistance and player hit baseline remain unimplemented boundaries. Two actual native cast invariants and quantization controls pass alongside retained block controls; 45 adjacent controls, workspace/all-target check and fmt also pass; independent acceptance remains pending. [Exact source and proof](../../class-completeness6.md#shared-weapon-spell-roll-boundary--batch59-in-progress).
 
 ### Native player critical/block hit state
 
