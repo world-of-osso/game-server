@@ -15,6 +15,8 @@ pub type RemoveHook = fn(&mut World, Entity, &AuraInstance, super::RemoveReason)
 pub type PeriodicHook = fn(&mut World, Entity, &AuraInstance, u8);
 /// Also receives the other party of the proc event.
 pub type ProcHook = fn(&mut World, Entity, &AuraInstance, Option<Entity>);
+pub type ProcCheckHook = fn(&World, &AuraInstance, &super::procs::AuraEvent) -> bool;
+pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::AuraEvent);
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AuraScript {
@@ -22,6 +24,8 @@ pub struct AuraScript {
     pub on_remove: Option<RemoveHook>,
     pub on_periodic: Option<PeriodicHook>,
     pub on_proc: Option<ProcHook>,
+    pub check_proc: Option<ProcCheckHook>,
+    pub on_damage_proc: Option<DamageProcHook>,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -51,7 +55,8 @@ pub(super) fn run_remove(
 }
 
 pub(super) fn has_proc_script(world: &World, spell_id: u32) -> bool {
-    script(world, spell_id).is_some_and(|script| script.on_proc.is_some())
+    script(world, spell_id)
+        .is_some_and(|script| script.on_proc.is_some() || script.on_damage_proc.is_some())
 }
 
 pub(super) fn run_proc(
@@ -59,10 +64,24 @@ pub(super) fn run_proc(
     unit: Entity,
     aura: &AuraInstance,
     other: Option<Entity>,
+    event: &super::procs::AuraEvent,
 ) {
     if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_proc) {
         run(world, unit, aura, other);
     }
+    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_damage_proc) {
+        run(world, unit, aura, event);
+    }
+}
+
+pub(super) fn check_proc(
+    world: &World,
+    aura: &AuraInstance,
+    event: &super::procs::AuraEvent,
+) -> bool {
+    script(world, aura.spell_id)
+        .and_then(|script| script.check_proc)
+        .is_none_or(|check| check(world, aura, event))
 }
 
 pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
@@ -380,6 +399,16 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         ENDURING_TORMENT,
         AuraScript {
             on_periodic: Some(toggle_enduring_torment),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        super::charred_warblades::CHARRED_WARBLADES,
+        AuraScript {
+            check_proc: Some(super::charred_warblades::check_fire_damage),
+            on_damage_proc: Some(super::charred_warblades::accumulate_heal),
+            on_periodic: Some(super::charred_warblades::heal_on_tick),
+            on_remove: Some(super::charred_warblades::discard_heal),
             ..Default::default()
         },
     );

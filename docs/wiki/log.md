@@ -1,6 +1,20 @@
+## 2026-10-13 — Current personal arena ratings
+
+[Personal-rating39](systems/dungeon-achievements.md#current-personal-arena-ratings) maps current authored0/1 to native2v2/3v3, uses actual durable after-results and highest counters. Native full-party/accepted/prepared lethal matches prove1550 crossing, losers, second-loss maxima, replay and reopen. Raw Statistics replies retain the rating; Criteria replies retain bounded target progress. Ten character definitions and two statistics are structurally enabled; other brackets and proprietary Retail MMR remain unclaimed.
+
+## 2026-10-13 — Wailing native summon groups
+
+[Authored group spawning](systems/boss-scripts.md#wailing-native-summon-groups) now serves both C++ ports and SmartAI. Source Disciple targeting and real Mutanus group4 placement/credit/corpse lifetime are covered beside Wizzle storage/expiry preservation; this does not certify escort activation or scheduling.
+
+## 2026-10-13 — Native damage shields
+
+[Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.
 ## 2026-10-13 — Exact map0 criterion
 
 [Known zero map](systems/dungeon-achievements.md#exact-zero-map) preserves actual map0 versus missing authority. Native killing-blow5512 and redb reopen add existing World Killing Blows statistic1488, not an ordinary grant, world honor or relinked tree. Saved source root592/leaf593 remains authoritative until the coordinated DB2 re-export; no extraction performed.
+## 2026-10-13 — Native damage shields
+
+[Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.
 
 ## 2026-10-13 — NPC Felguard learned interrupt
 
@@ -1104,3 +1118,6 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-13 — Ruby authored support/vertical search
 
 [Navigation source repair](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13): actual metalplate doorway RED→GREEN, creature/player steep-face distinction, native1500-tick regroup at4yd, nominalY5 source lookup with no larger fallback. Private12-tile NAV/M2 support rebake passes; full-instance/live acceptance remains open.
+- 2026-10-13: Charred Warblades native3%/1000ms delayed self-heal producer; real-damage RED at eb9fbf29 (500HP stays500 instead of504); GREEN verification pending.
+
+- 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.
