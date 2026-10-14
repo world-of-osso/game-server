@@ -5,6 +5,8 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
+
 - [Current personal arena ratings](systems/dungeon-achievements.md#current-personal-arena-ratings) — current asset0/1, durable post-result highest values; native rated fixture, other brackets unclaimed.
 - [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
