@@ -8,7 +8,7 @@ Retail PerksActivity/PerksVendorItem rows from local CASC69933 and Mainline Bliz
 - [x] Calendar rollover is 00:00 UTC on the first, independent of the daily-reset hour; the existing injectable ServerClock controls it.
 - [x] Sourced default PerksActivityThreshold group1 awards once per account/month. Balance persists across month/relog; cap resets, not earned currency. Lead-approved October12 policy replaces the earlier daily-reset-hour rule.
 - [x] Atomic paid collection grants, receipt-bounded refunds, one frozen item and source-backed capital interaction.
-- [ ] Retail cart checkout commits the complete selected offer list, Tender charge and per-item receipts atomically; any rejected offer leaves every charge/grant unchanged. Each receipt retains the existing individual refund policy and survives reopen.
+- [x] Retail cart checkout commits the complete selected offer list, Tender charge and per-item receipts atomically; any rejected offer leaves every charge/grant unchanged. Each receipt retains the existing individual refund policy and survives reopen. Batch publication sends each changed collection family once and includes every affected vendor/collection-alias row in the partial reply.
 - [x] Trading Post requests settle current monthly gameplay credit without publishing an unsolicited full Adventure Guide snapshot ahead of the vendor reply.
 - [x] Zero-duration refund default leaves refund unavailable until an explicit policy is approved; no duration guessed.
 - [x] Vendor replies evaluate existing item class/race/level restrictions for the querying player, carrying optional `usable` state for the source filter. Missing item/player facts remain unknown; usability is not a new purchase restriction.
@@ -38,7 +38,8 @@ Private-server setup only, on the existing admin socket (`GAME_SERVER_ADMIN_SOCK
 
 - `trading_post_store::tests::trading_post_thresholds_once_per_account_month_survive_database_reopen`.
 - `trading_post_store::tests::trading_post_purchase_atomic_collection_grants_and_refund_survive_reopen`: all four collection stores, duplicate/insufficient-funds refusal, zero-duration/expiry/repeated refund and database reopen.
-- `trading_post_tests.rs`: real gameplay death credit/Tender/midnight reset, real message dispatch and sourced vendor gossip, paid purchase/refund refusal/distance closure.
+- `trading_post_tests.rs`: real gameplay death credit/Tender/midnight reset, real message dispatch and sourced vendor gossip, paid purchase/refund refusal/distance closure. Cart wire test refuses unknown offers without partial charge, publishes all paid rows and one final appearance update, then refunds both receipts.
+- `trading_post_store::tests::trading_post_checkout_*`: durable two-product checkout, per-item refunds after database reopen, late owned/duplicate-offer rollback and empty-cart refusal.
 - `trading_post_tests.rs` `trading_post_admin_tender_and_refund_window_enable_wire_refund`: admin grant by username (unknown account refused), administrator window, real wire purchase/refund restoring Tender and revoking the appearance.
 - `bin/admin.rs` `parse_trading_post_setup_requests`.
 - `scripts/tests/test_trading_post_npc.py`: production importer preserves authentic Seabraid flag and source spawn.
