@@ -311,6 +311,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
             orientation: 0.0,
         }),
         chain_multipliers,
+        blocked_units: Vec::new(),
     }];
     //204598 has one targeted native bleed plus a latent duplicate with target0.
     //Keep the field's fixed destination; do not spawn an invented179 actor.
@@ -320,6 +321,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
             units: plan[0].units.clone(),
             dest: plan[0].dest,
             chain_multipliers: Vec::new(),
+            blocked_units: Vec::new(),
         });
     }
     // Named damage/heal effect only: Earthquake's knockdown77 remains unsupported.

@@ -1337,6 +1337,23 @@ pub fn reflect_chance(world: &World, unit: Entity, school_mask: u32) -> f32 {
     })
 }
 
+/// TC Unit::CalculateSpellDamageTaken1198–1285 retains final resilience reduction
+/// even for effect165, which does not call SpellDamageBonusTaken.
+pub(crate) fn damage_resilience_multiplier(
+    world: &World,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x0000_0100;
+    if attributes(spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0 {
+        world
+            .get::<crate::stats::CharacterStats>(target)
+            .map_or(1.0, |stats| stats.versatility_damage_taken_multiplier())
+    } else {
+        1.0
+    }
+}
+
 /// Damage taken multiplier of `target`: MOD_DAMAGE_PERCENT_TAKEN (through
 /// `AuraStatMods`) × MOD_SPELL_DAMAGE_FROM_CASTER auras cast by `attacker`.
 pub fn damage_taken_multiplier(
@@ -1345,14 +1362,7 @@ pub fn damage_taken_multiplier(
     attacker: Entity,
     spell: &SpellInfo,
 ) -> f32 {
-    const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x0000_0100;
-    let versatility = if attributes(spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0 {
-        world
-            .get::<crate::stats::CharacterStats>(target)
-            .map_or(1.0, |stats| stats.versatility_damage_taken_multiplier())
-    } else {
-        1.0
-    };
+    let versatility = damage_resilience_multiplier(world, target, spell);
     let school_mask = spell.school_mask();
     let taken = world
         .get::<AuraStatMods>(target)
