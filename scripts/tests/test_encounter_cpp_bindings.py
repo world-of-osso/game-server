@@ -89,6 +89,30 @@ class PrimaryActorTests(unittest.TestCase):
         self.assertEqual(self.db.execute(
             'SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(), [(12118,)])
 
+    def test_slagmaw_source_primary_keeps_journal_preview_separate_from_live_model(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('slagmaw')
+        self.assertIsNotNone(profile, 'pinned NPC_SLAGMAW primary is missing')
+        primary, _ = profile
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(1445,389,2);
+            INSERT INTO tdb_creature_template VALUES(61463,'boss_slagmaw');
+            CREATE TABLE tdb_creature_template_model(CreatureID INTEGER,CreatureDisplayID INTEGER);
+            INSERT INTO tdb_creature_template_model VALUES(61463,42247);
+        ''')
+        rows = prepare_bindings(self.db, [primary])
+        for _ in range(2):
+            self.db.executescript(binding_sql(rows))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=389').fetchall(),
+            [(61463,1445,2,696,1344,38391)])
+        self.assertEqual(self.db.execute('SELECT * FROM tdb_creature_template_model').fetchall(), [(61463,42247)])
+        self.assertEqual(self.db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(),[(12118,)])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=61463")
+        with self.assertRaisesRegex(ValueError, 'creature script identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_source_identity_drift_refused_before_mutation(self):
         binding = dict(map_id=2813,entry=234648,encounter_id=3101,bit=1,
                        script='boss_kystia_manaheart',journal_id=2679,actor_id=5847,display_id=124578)
