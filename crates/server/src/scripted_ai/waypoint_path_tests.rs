@@ -106,7 +106,65 @@ fn waypoint_authored_wailing_node2_launches_and_reaches_collision_floor() {
     let destination = spline.position(spline.end_ms);
     assert!((destination.x - path.nodes[node].1.x).abs() < 0.01);
     assert!((destination.y - path.nodes[node].1.y).abs() < 0.01);
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
+    );
+    let feet = Vec3::new(destination.x, destination.z, -destination.y);
+    let crate::ground::GroundProbe::Supported(floor) = ground.creature_ground_at(43, feet) else {
+        panic!("node2 destination requires exact collision support");
+    };
+    assert!(
+        (destination.z - floor).abs() < 0.05,
+        "node2 must normalize to exact collision, not approximate nav height: {destination:?} floor={floor}"
+    );
     println!("authored node2 reached {destination:?}: {controls:?}");
+}
+
+#[test]
+fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
+    let spawn = SpawnPoint {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+        wander_distance: 0.0,
+        speed_walk: 1.0,
+        speed_run: 1.0,
+    };
+    let mut path = ScriptPath {
+        id: 1,
+        move_type: MoveType::Run,
+        flags: 0,
+        velocity: None,
+        has_node_timing: false,
+        nodes: vec![(0, Vec3::new(2.0, 3.0, 4.0)), (1, Vec3::new(4.0, 5.0, 6.0))],
+    };
+    let source = Launch {
+        map_id: 43,
+        position: Vec3::ZERO,
+        orientation: 0.0,
+        spawn: &spawn,
+        walking: false,
+        flying: true,
+    };
+    assert_eq!(
+        query_path_controls(&path, 0, &source, None).unwrap(),
+        vec![Vec3::ZERO, path.nodes[0].1]
+    );
+    path.flags = FLAG_EXACT_SPLINE;
+    assert_eq!(
+        query_path_controls(&path, 0, &source, None).unwrap(),
+        vec![Vec3::ZERO, path.nodes[0].1, path.nodes[1].1]
+    );
+    let source = Launch {
+        flying: false,
+        ..source
+    };
+    assert_eq!(
+        query_path_controls(&path, 0, &source, None).unwrap(),
+        vec![Vec3::ZERO, path.nodes[0].1, path.nodes[1].1]
+    );
 }
 
 #[derive(Resource, Default)]
