@@ -1,3 +1,7 @@
+## 2026-10-13 — Generic item receipt counters
+
+[Item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) route90/91 from existing committed Retail queues, one event rather than stack quantity. ItemId19 and canonical quality14/15 preserve all conditions and complete alternatives. Native paid33999 RED reproduced missing epic counter6142; targeted/final proof pending. Ordinary91 completion contradictions remain excluded.
+
 ## 2026-10-13 — Native survived falling
 
 [Fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) preserves source Alive16/Area17, rejects unknown world-state and uses TC PROGRESS_SET distance×100. Native real-ground damage and Pandaren racial survival prove progress/grant/reopen; native/catalog6/6 also prove knockback, safe/feather/fly/lethal/immunity/safe-fall rejection and retained area predicates; full four-thread workspace filter159/0/1ignored and server/engine/three-repo checks pass. Puddle8354 actual map1105 completion/grant is not certified. Existing quadratic damage and complete environmental absorption parity remain separate gaps.
