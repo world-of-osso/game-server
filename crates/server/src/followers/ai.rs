@@ -26,24 +26,91 @@ pub(super) fn update(world: &mut World) {
 }
 
 fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
-    if world.get::<CastState>(unit).is_some() {
+    escape_pet_hazard(world, unit);
+    if super::hazards::escape(world, unit) {
         return;
     }
     let party = party_units(world, follower.owner);
-    if follower.profile.heal_spell != 0 {
-        if let Some(patient) = lowest_health(world, &party, unit) {
-            if !pursue(world, unit, patient, follower.profile.heal_spell, false) {
-                regroup(world, unit, follower.owner);
-                return;
-            }
-            cast(world, unit, patient, follower.profile.heal_spell);
-            return;
-        }
+    let enemy = select_enemy(world, follower, unit, &party);
+    if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
+        return;
     }
-    let Some(enemy) = select_enemy(world, follower, unit, &party) else {
+    if enemy.is_some_and(|enemy| defend_follower(world, unit, enemy, follower.profile.class_id)) {
+        return;
+    }
+    if world.get::<CastState>(unit).is_some() {
+        return;
+    }
+    if prepare_pet(world, unit, follower) {
+        return;
+    }
+    if heal_party_member(world, unit, follower, &party) {
+        return;
+    }
+    let Some(enemy) = enemy else {
         regroup(world, unit, follower.owner);
         return;
     };
+    attack_enemy(world, unit, follower, enemy);
+}
+
+fn escape_pet_hazard(world: &mut World, unit: Entity) {
+    let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) else {
+        return;
+    };
+    if super::hazards::escape(world, pet) {
+        crate::pet_control::order_companion_pet(world, unit, None);
+    }
+}
+
+fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
+    let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) else {
+        return;
+    };
+    let inside_field = super::hazards::target_is_hazardous(world, pet, pet);
+    let unsafe_approach = super::hazards::target_is_hazardous(world, pet, enemy)
+        || super::hazards::path_crosses_hostile_field(world, pet, enemy);
+    let hold = inside_field || unsafe_approach;
+    let target = (!hold).then_some(enemy);
+    crate::pet_control::order_companion_pet(world, unit, target);
+}
+
+fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
+    // The approved player-spec bridge's Demonology summon names its own creature
+    // in SpellEffect; Hunter's empty stable never receives a guessed pet.
+    if follower.profile.spec_id != 266 || crate::hunter_pet::summoned_pet(world, unit).is_some() {
+        return false;
+    }
+    match crate::spell_cast::creature_cast(world, unit, 30146, Some(unit), false) {
+        Ok(()) => true,
+        Err(failure) => {
+            warn!("Follower {unit} cannot prepare authored Felguard: {failure:?}");
+            true
+        }
+    }
+}
+
+fn heal_party_member(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+) -> bool {
+    if follower.profile.heal_spell == 0 {
+        return false;
+    }
+    let Some(patient) = lowest_health(world, party, unit) else {
+        return false;
+    };
+    if pursue(world, unit, patient, follower.profile.heal_spell, false) {
+        cast(world, unit, patient, follower.profile.heal_spell);
+    } else {
+        regroup(world, unit, follower.owner);
+    }
+    true
+}
+
+fn attack_enemy(world: &mut World, unit: Entity, follower: &Follower, enemy: Entity) {
     if !pursue(
         world,
         unit,
@@ -54,10 +121,11 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         regroup(world, unit, follower.owner);
         return;
     }
-    if needs_taunt(world, unit, enemy, follower) {
-        if cast(world, unit, enemy, follower.profile.taunt_spell) {
-            return;
-        }
+    order_pet_attack(world, unit, enemy);
+    if needs_taunt(world, unit, enemy, follower)
+        && cast(world, unit, enemy, follower.profile.taunt_spell)
+    {
+        return;
     }
     if follower.profile.cooldown_spell != 0
         && cast(world, unit, enemy, follower.profile.cooldown_spell)
@@ -132,6 +200,97 @@ fn select_enemy(
     enemies.first().map(|(enemy, _)| *enemy)
 }
 
+/// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
+/// are verified in local SpellName/SpellEffect12.1.0.69933 (Skull Bash's
+/// effect68 child93985 is referenced by its source description). Holy/Restoration
+/// have no selected kick; Demonology's pet interrupt is not a player cast.
+fn interrupt_spell(spec: u32) -> Option<u32> {
+    match spec {
+        66 => Some(96231),    // Protection Paladin: Rebuke.
+        73 => Some(6552),     // Protection Warrior: Pummel.
+        63 => Some(2139),     // Fire Mage: Counterspell.
+        262 => Some(57994),   // Elemental Shaman: Wind Shear.
+        253 => Some(147362),  // Beast Mastery Hunter: Counter Shot.
+        1467 => Some(351338), // Devastation Evoker: Quell.
+        269 => Some(116705),  // Windwalker Monk: Spear Hand Strike.
+        103 => Some(106839),  // Feral Druid: Skull Bash.
+        _ => None,
+    }
+}
+
+fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
+    let interruptible = world
+        .get::<CastState>(enemy)
+        .is_some_and(|cast| cast.interruptible);
+    if !interruptible {
+        return false;
+    }
+    let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
+        return false;
+    };
+    if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
+        return false;
+    }
+    match crate::spell_cast::creature_cast_interrupting_self(world, caster, spell, Some(enemy)) {
+        Ok(()) => true,
+        Err(failure) => {
+            debug!("Follower {unit} interrupt {spell} at {enemy}: {failure:?}");
+            false
+        }
+    }
+}
+
+/// CreatureFamily29/SkillLine761 teaches Felguard Axe Toss89766 at17; source
+/// SpellEffect64 triggers the real347008 effect68. Never cast an unlearned pet spell.
+fn interrupt_source(world: &World, unit: Entity, spec: u32) -> Option<(Entity, u32)> {
+    if spec != 266 {
+        return interrupt_spell(spec).map(|spell| (unit, spell));
+    }
+    let pet = crate::hunter_pet::summoned_pet(world, unit)?;
+    let charm = world.get::<crate::pet_control::PetCharm>(pet)?;
+    charm.spell_slot(89766).map(|_| (pet, 89766))
+}
+
+/// Approved bridge policy: defend a wounded companion being actively attacked.
+/// No invented health-percentage threshold or NPC-kit parity claim.
+fn defend_follower(world: &mut World, unit: Entity, enemy: Entity, class: u8) -> bool {
+    let wounded = world
+        .get::<Health>(unit)
+        .is_some_and(|health| health.current < health.max);
+    let attacked = world
+        .get::<CombatTarget>(enemy)
+        .is_some_and(|target| target.0 == Some(unit));
+    if !wounded || !attacked {
+        return false;
+    }
+    let Some(spell) = defensive_spell(class) else {
+        return false;
+    };
+    match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(unit)) {
+        Ok(()) => true,
+        Err(failure) => {
+            debug!("Follower {unit} defensive {spell}: {failure:?}");
+            false
+        }
+    }
+}
+
+fn defensive_spell(class: u8) -> Option<u32> {
+    Some(match class {
+        1 => 871,     // Shield Wall.
+        2 => 498,     // Divine Protection.
+        3 => 186265,  // Aspect of the Turtle.
+        5 => 19236,   // Desperate Prayer.
+        7 => 108271,  // Astral Shift.
+        8 => 45438,   // Ice Block.
+        9 => 104773,  // Unending Resolve.
+        10 => 115203, // Fortifying Brew.
+        11 => 22812,  // Barkskin.
+        13 => 363916, // Obsidian Scales.
+        _ => return None,
+    })
+}
+
 fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) -> bool {
     follower.profile.taunt_spell != 0
         && world
@@ -150,10 +309,17 @@ fn pursue(world: &mut World, unit: Entity, target: Entity, spell_id: u32, melee:
         warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
         return false;
     };
-    world.entity_mut(unit).remove::<FollowOwner>().insert((
+    let unsafe_approach = super::hazards::target_is_hazardous(world, unit, target)
+        || super::hazards::path_crosses_hostile_field(world, unit, target);
+    let state = if unsafe_approach {
+        CreatureState::Idle
+    } else {
         CreatureState::Pursuing {
             target: target.to_bits(),
-        },
+        }
+    };
+    world.entity_mut(unit).remove::<FollowOwner>().insert((
+        state,
         FollowerReach(reach),
         CombatTarget(Some(target)),
     ));
@@ -187,11 +353,24 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 
 fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
-    world.entity_mut(unit).insert((
-        CreatureState::Idle,
-        CombatTarget(None),
-        FollowOwner::new(owner),
-    ));
+    let unsafe_approach = super::hazards::target_is_hazardous(world, unit, owner)
+        || super::hazards::path_crosses_hostile_field(world, unit, owner);
+    if unsafe_approach {
+        world
+            .entity_mut(unit)
+            .remove::<FollowOwner>()
+            .insert((CreatureState::Idle, CombatTarget(None)));
+        return;
+    }
+    let following_owner = world
+        .get::<FollowOwner>(unit)
+        .is_some_and(|follow| follow.owner == owner);
+    world
+        .entity_mut(unit)
+        .insert((CreatureState::Idle, CombatTarget(None)));
+    if !following_owner {
+        world.entity_mut(unit).insert(FollowOwner::new(owner));
+    }
     if let Some(position) = world.get::<Position>(unit).copied() {
         if let Some(mut home) = world.get_mut::<crate::creature_ai::SpawnPoint>(unit) {
             home.x = position.x;

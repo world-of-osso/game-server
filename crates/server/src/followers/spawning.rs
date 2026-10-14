@@ -55,6 +55,7 @@ pub(super) fn initialize(
             mana,
             health,
             UnitLevel(level),
+            Level(level),
             faction,
             flags,
             UnitSummonedBy(owner.to_bits()),
