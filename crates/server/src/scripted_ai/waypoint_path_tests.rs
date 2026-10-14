@@ -207,6 +207,54 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
     );
 }
 
+#[test]
+#[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
+fn waypoint_wailing_single_chase_snap_samples_both_real_floors() {
+    let root = std::path::PathBuf::from(std::env::var_os("WAILING_NAV_ROOT").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
+    );
+    let navigation = crate::navigation::Navigation::new(&root);
+    // Recorded tick2137 after the source handoff removes the second driver.
+    let endpoints = [
+        Vec3::new(-55.3435, -95.25101, -205.98676),
+        Vec3::new(-54.952423, -95.577065, -206.07079),
+    ];
+    let floors: Vec<_> = endpoints
+        .iter()
+        .map(|&feet| {
+            let crate::ground::GroundProbe::Supported(floor) = ground.creature_ground_at(43, feet)
+            else {
+                panic!("recorded endpoint has no collision support: {feet:?}");
+            };
+            // Existing nearest-poly policy admits only WALK_FLAG polygons, baked
+            // under AGENT_SLOPE/AGENT_CLIMB; no new looser search or slope policy.
+            let support = navigation.query_path(43, feet, feet).unwrap().unwrap();
+            println!("recorded feet={feet:?} actual_floor={floor} walkable_nav={support:?}");
+            floor
+        })
+        .collect();
+    assert!((endpoints[1].y - floors[1]).abs() < 0.05);
+    let horizontal = (endpoints[1].x - endpoints[0].x).hypot(endpoints[1].z - endpoints[0].z);
+    let slope = (floors[1] - floors[0]).abs().atan2(horizontal).to_degrees();
+    assert!(
+        slope <= navigation::AGENT_SLOPE,
+        "real floor segment slope={slope}, baked limit={}",
+        navigation::AGENT_SLOPE
+    );
+    println!(
+        "horizontal={horizontal} real_floor_slope={slope}deg; prior feet offset={}",
+        endpoints[0].y - floors[0]
+    );
+}
+
 fn motion_ownership_world() -> (World, Entity, Entity) {
     let mut world = World::new();
     world.insert_resource(Time::<()>::default());
@@ -302,13 +350,19 @@ fn waypoint_chase_owns_tick_then_path_resumes_from_real_position_without_replayi
         .entity_mut(actor)
         .insert(crate::creature_ai::CreatureState::Idle);
     let destination = Vec3::new(12.0, 0.0, 0.0);
-    for _ in 0..40 {
+    for resumed_tick in 0..40 {
         let before = *world.get::<Position>(actor).unwrap();
         let before = Vec3::new(before.x, before.y, before.z);
         tick_owned_motion(&mut world);
         let actual = *world.get::<Position>(actor).unwrap();
         let actual = Vec3::new(actual.x, actual.y, actual.z);
         let step = actual - before;
+        if resumed_tick < 2 {
+            assert_eq!(
+                actual, before,
+                "reset gets diff0, then source1ms wait launches without a position step"
+            );
+        }
         assert!(
             step.length() <= 0.126,
             "no replay/relocation on resume: {before:?}->{actual:?}"
