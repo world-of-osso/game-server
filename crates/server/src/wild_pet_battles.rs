@@ -575,6 +575,21 @@ struct WildPetClaim(Entity);
 #[derive(Resource, Default)]
 struct BattleIds(u64);
 
+/// Account journal choices cannot change through an alt connection during a queued/active battle.
+pub(crate) fn journal_locked(world: &mut World, owner: Entity) -> bool {
+    let Some(account) = world
+        .get::<AccountPetJournal>(owner)
+        .map(|state| state.account_id)
+    else {
+        return false;
+    };
+    let mut journals = world.query::<(Entity, &AccountPetJournal)>();
+    journals.iter(world).any(|(entity, journal)| {
+        journal.account_id == account
+            && (world.get::<ActiveEncounter>(entity).is_some() || pvp::busy(world, entity))
+    })
+}
+
 pub(crate) fn load_wild_catalog(mut commands: Commands) {
     let db = Connection::open_with_flags(
         crate::spell_info::WORLD_DB_PATH,
