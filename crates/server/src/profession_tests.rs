@@ -11,6 +11,124 @@
 mod crafting_order_tests;
 
 #[test]
+fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopens() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("known-marker.redb");
+    let db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
+    let mut h = harness_with(90, |app| {
+        app.add_plugins(AchievementPlugin);
+        app.insert_resource(GameDatabase { db });
+    })
+    .unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
+    let recipes = [
+        370465, 370460, 370438, 370463, 370453, 370462, 370456, 370504, 370457, 370476,
+    ];
+    let data = world_db().unwrap();
+    let spells = recipes
+        .into_iter()
+        .chain([406106, 432962])
+        .map(|id| data.store.get(id).unwrap().clone())
+        .collect();
+    h.app.insert_resource(SpellStore::fixture(spells));
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    h.app.update();
+    // Controlled starting profession knowledge uses the production learner and persistence,
+    // never writes criteria; no claim about acquiring these passive markers through traits.
+    with_learner(h.app.world_mut(), h.player, |learner, profs| {
+        for spell in recipes {
+            learner.learn_spell(profs, spell, 0);
+        }
+    })
+    .unwrap();
+    h.app.update();
+    assert!((61271..=61280).all(|id| {
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&id)
+    }));
+    with_learner(h.app.world_mut(), h.player, |learner, profs| {
+        learner.learn_spell(profs, 432962, 0)
+    })
+    .unwrap();
+    h.app.update();
+    assert!(
+        (61271..=61280).all(|id| !h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&id)),
+        "wrong marker cannot qualify Draconic recipes"
+    );
+    with_learner(h.app.world_mut(), h.player, |learner, profs| {
+        learner.learn_spell(profs, 406106, 0)
+    })
+    .unwrap();
+    h.app.update();
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.player)
+        .unwrap();
+    for id in 61271..=61280 {
+        assert_eq!(state.criteria_progress.get(&id), Some(&1));
+    }
+    assert!(
+        state
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&18805)
+    );
+    h.app.update();
+    let character = h.character_id;
+    drop(h.app.world_mut().remove_resource::<GameDatabase>().unwrap());
+    let reopened = redb::Database::open(&path).unwrap();
+    let profs = persistence::load_professions(&reopened, character);
+    assert!(profs.knows(406106));
+    let saved = persistence::load_achievements(&reopened, character);
+    for id in 61271..=61280 {
+        assert_eq!(saved.criteria_progress.get(&id), Some(&1));
+    }
+    h.app.insert_resource(GameDatabase { db: reopened });
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<InWorld>();
+    h.app.world_mut().entity_mut(h.connection).insert(InWorld {
+        character_id: character,
+    });
+    h.app.update();
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&18805)
+    );
+}
+
+#[test]
 fn achievements_criteria_native_goggle_casts_accept_empty_all_and_store_real_items() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
     let dir = tempfile::tempdir().unwrap();

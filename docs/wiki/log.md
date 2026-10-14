@@ -1,3 +1,7 @@
+## 2026-10-13 — Positive known-spell marker
+
+[Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) reads existing class/profession/owned-mount IDs, not global spell metadata. Native learner RED reproduces correct owned recipes/marker but no61271; compiler29/29 and three additional account roots are structural. Native/final gate pending; no trait/public-UI marker acquisition claim.
+
 ## 2026-10-13 — Generic item receipt counters
 
 [Item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) route90/91 from existing committed Retail queues, one event rather than stack quantity. ItemId19 and canonical quality14/15 preserve all conditions and complete alternatives. Native paid33999 RED reproduced missing epic counter6142; five targeted native/catalog scopes pass, including real stored quantities and one-event semantics, canonical/display-quality distinction and reopened receipt counters. Full four-thread workspace filter163/0/1ignored and server/engine/three-repo checks pass. Ordinary91 completion contradictions remain excluded.
