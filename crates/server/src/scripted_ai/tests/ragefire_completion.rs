@@ -179,14 +179,11 @@ fn ragefire_completion_four_real_deaths_persist_credit_and_repopulate_without_bo
     );
 }
 
-#[test]
-#[ignore = "requires RAGEFIRE_NAV_ROOT containing the authenticated map389 bake"]
-fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival_injection() {
-    let navigation = std::path::PathBuf::from(std::env::var_os("RAGEFIRE_NAV_ROOT").unwrap());
+fn trigger_adarogg_intro(navigation: &std::path::Path) -> (Harness, Entity) {
     let (mut h, _, _) =
         encounter_fixture(ADAROGG, 389, 0, 1, None, EncounterState::NotStarted, true);
     h.app
-        .insert_resource(crate::navigation::Navigation::new(&navigation));
+        .insert_resource(crate::navigation::Navigation::new(navigation));
     let boss = h.creatures_of(ADAROGG)[0];
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
@@ -203,6 +200,31 @@ fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival
         .world_mut()
         .entity_mut(player)
         .insert(Position { x, y, z });
+    (h, boss)
+}
+
+#[test]
+fn ragefire_completion_adarogg_intro_unbaked_navigation_cannot_fake_path_arrivals() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, boss) = trigger_adarogg_intro(directory.path());
+    h.advance(60.0);
+    assert_eq!(spell_gos(&h, boss, 120113).len(), 3);
+    assert!(
+        spell_gos(&h, boss, 120064).is_empty(),
+        "no baked route, no arrival eats"
+    );
+    let second_point = Vec3::new(-281.1894, -54.73433, -60.34256);
+    assert!(
+        h.wow_position(boss).distance(second_point) < 0.01,
+        "only the two source MovePoints ran; no direct MovePath shortcut"
+    );
+}
+
+#[test]
+#[ignore = "requires RAGEFIRE_NAV_ROOT containing the authenticated map389 bake"]
+fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival_injection() {
+    let navigation = std::path::PathBuf::from(std::env::var_os("RAGEFIRE_NAV_ROOT").unwrap());
+    let (mut h, boss) = trigger_adarogg_intro(&navigation);
     // Real trigger, scheduler, route movement and arrival callbacks. No point/path
     // completion hook is dispatched by the fixture, and the boss is never repositioned.
     let spawn = h.wow_position(boss);
