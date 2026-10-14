@@ -865,11 +865,7 @@ pub fn load_pvp(db: &Database, character_id: u64) -> crate::pvp::PlayerPvpProgre
     match table.get(character_id).expect("Failed to read pvp state") {
         Some(guard) => serde_json::from_slice::<crate::pvp::PlayerPvpProgress>(guard.value())
             .expect("decode pvp state"),
-        None => {
-            let state = crate::pvp::PlayerPvpProgress::default();
-            save_pvp(db, character_id, &state);
-            state
-        }
+        None => crate::pvp::PlayerPvpProgress::default(),
     }
 }
 
@@ -927,11 +923,7 @@ pub fn load_friends(db: &Database, character_id: u64) -> crate::friends::PlayerF
     match table.get(character_id).expect("Failed to read friends") {
         Some(guard) => serde_json::from_slice::<crate::friends::PlayerFriendsState>(guard.value())
             .expect("decode friends"),
-        None => {
-            let state = crate::friends::PlayerFriendsState::default();
-            save_friends(db, character_id, &state);
-            state
-        }
+        None => crate::friends::PlayerFriendsState::default(),
     }
 }
 
@@ -962,11 +954,7 @@ pub fn load_ignore_list(
             serde_json::from_slice::<crate::ignore_list::PlayerIgnoreListState>(guard.value())
                 .expect("decode ignore list")
         }
-        None => {
-            let state = crate::ignore_list::PlayerIgnoreListState::default();
-            save_ignore_list(db, character_id, &state);
-            state
-        }
+        None => crate::ignore_list::PlayerIgnoreListState::default(),
     }
 }
 
@@ -1001,11 +989,7 @@ pub fn load_collections(
             serde_json::from_slice::<crate::collection::PlayerCollectionState>(guard.value())
                 .expect("decode collections")
         }
-        None => {
-            let collections = crate::collection::default_collection_state();
-            save_collections(db, character_id, &collections);
-            collections
-        }
+        None => crate::collection::default_collection_state(),
     }
 }
 

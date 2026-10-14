@@ -8,6 +8,52 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
 #[test]
+fn default_gameplay_readers_never_wait_for_a_writer_or_create_rows() {
+    use std::time::{Duration, Instant};
+    let cases: [(&str, TableDefinition<u64, &[u8]>, fn(&Database) -> bool); 4] = [
+        ("pvp", PVP_STATES, |db| {
+            load_pvp(db, 42) == crate::pvp::PlayerPvpProgress::default()
+        }),
+        ("friends", FRIENDS, |db| {
+            load_friends(db, 42) == crate::friends::PlayerFriendsState::default()
+        }),
+        ("ignore", IGNORE_LISTS, |db| {
+            load_ignore_list(db, 42) == crate::ignore_list::PlayerIgnoreListState::default()
+        }),
+        ("collections", COLLECTIONS, |db| {
+            load_collections(db, 42) == crate::collection::default_collection_state()
+        }),
+    ];
+    for (name, table, load_default) in cases {
+        let db = temp_database();
+        let held = db.begin_write().unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            held.abort().unwrap();
+        });
+        let started = Instant::now();
+        let is_default = load_default(&db);
+        let elapsed = started.elapsed();
+        release.join().unwrap();
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "{name} reader waited: {elapsed:?}"
+        );
+        assert!(is_default, "{name} reader changed default values");
+        assert!(
+            db.begin_read()
+                .unwrap()
+                .open_table(table)
+                .unwrap()
+                .get(42)
+                .unwrap()
+                .is_none(),
+            "{name} read persisted an unrequested default row"
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_reputation_migrates_known_delta_once_and_retains_earned_ids() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = Database::create(file.path()).unwrap();
