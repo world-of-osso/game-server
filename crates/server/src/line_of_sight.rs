@@ -258,9 +258,20 @@ pub(crate) fn witness_holds(
         return false;
     };
     let (start, end) = (Vec3::from(witness.start), Vec3::from(witness.end));
-    start.distance(caster.eyes) <= WITNESS_START_TOLERANCE
+    let held = start.distance(caster.eyes) <= WITNESS_START_TOLERANCE
         && target.contains(end, WITNESS_END_TOLERANCE)
-        && los.clear(map, start, end)
+        && los.clear(map, start, end);
+    debug!(
+        ?map,
+        caster_eye = ?caster.eyes,
+        target_eye = ?target.eyes,
+        start_distance = start.distance(caster.eyes),
+        end_in_body = target.contains(end, WITNESS_END_TOLERANCE),
+        ?witness,
+        held,
+        "Cast witness checked"
+    );
+    held
 }
 
 pub struct LineOfSightPlugin;
