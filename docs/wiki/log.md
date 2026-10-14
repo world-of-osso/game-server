@@ -21,6 +21,15 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-14 — Disciple second escort camp
+
+[Second camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) ports events8–11 without a cast-state guard or replacement buff. RED→GREEN proves real30s6270, three source Adders appearing at18s while casting, combat pause and12s resumed speech. Exact birth positions are observed before chase; physical onward path/native clear remain open.
+
+## 2026-10-14 — Disciple first escort camp
+
+[First camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) ports path367800-end events4–7. Controlled arrival RED→GREEN proves authored speech/two Ravagers, actual combat pause and source-facing callback; existing Sleep/Potion remains passing. Physical traversal, activation data and native clear remain open.
+
+## 2026-10-14 — Silverlaine primary identity
 ## 2026-10-14 — Derived factions survive DB2 replacement
 
 [DB2 refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) restores six Zephras factions from existing authored receipts atomically; preserves124 build receipts. Private import changes only faction_template+6/db2_row_source+6, integrity OK; native reaction test and9 importer/Skyborne tests pass. Old-source audit118/120; AreaTable/OverrideSpellData explicitly unavailable. Canonical untouched.
@@ -1214,8 +1223,16 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13 — [Signed summon titles](systems/toys.md#signed-summon-title-source-boundary-2026-10-13): current source3001/-1 exposed unsigned loader failure; preserve TC int32 without aborting unrelated toys.
 - 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
 
+- 2026-10-14: Document pinned Warrior per-effect stun dispatch and conditional Storm Bolts selector; native RED3 retained, GREEN pending. Installed70391 slot data follows published canonical snapshot.
+
+- 2026-10-14: Warrior native stun controls12/12 and adjacent61/61 pass; installed70391 census3185/4459/183 over7827 memberships. New1319011 CSV→published-SQLite gap retained; no whole-talent/Dummy promotion.
+
+- 2026-10-14: Add source-distinct melee/ranged AP model and166/167 percentage consumers; native Battle Shout33→33 and Aimed Shot316 versus408..428 genuine RED retained; GREEN pending.
+
+- 2026-10-14: Native melee/RAP166/167 controls13/13 pass across two scoped receipts; all13 class AP coefficients equal active source. Frontend RAP propagation and NPC/weapon/base budgets remain explicit next layers.
 - 2026-10-14 — [Quest fixture refresh](../../quest-objectives-coverage.md#fixture-refresh--2026-10-14): reproduced missing SpellTargetConditions in real Tear item cast and stale empty-loot Netherwing Egg fixture; load authored conditions and use real9548/181746/23830 chest data. Both tests GREEN with unchanged gameplay/data; original open/autoloot ordering retained.
 
+- 2026-10-14: [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14): eight controlled deaths persist bits0–7; fresh owner isolation and eight staged corpse reward commits. Not natural/native clear.
 - 2026-10-14: [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation): regenerate same supported predicate families,5479 ordinary/1821 statistics, reconcile243 inventory rows; coherent-source delta+23/+5, no removals versus69933. Runtime gate pending.
 
 - 2026-10-14: Installed70391 runtime acceptance at a4de9864:173/0/1ignored plus site-export1/1, compiler/policy38/38, server/engine checks and three-repo fmt pass; sibling quest schema aligned before gate. Whole audit continues.
@@ -1228,3 +1245,6 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Wild summon count boundary
 
 [Wild counts](systems/toys.md#wild-variable-count-summons-2026-10-14): Flute count RED1→source-variable count, native6122 primary scatter RED→GREEN. Retail follow description remains an explicit gap; no stationary/full-Flute certificate. Body/CASС bytes and current NPC DB2 input provenance remain separate from cached metadata.
+- 2026-10-14: Distinct native melee/RAP percentages, owner wire and DefenseType-selected tooltip powers; bounded9 leaves5partial. See [[systems/character-stats]] and docs/class-completeness6.md.
+
+- 2026-10-14: Native player autoattack/weapon-spell critical block and launch/impact hit-state proof; NPC/probability/638 boundaries remain open. See [[systems/player-damage]] and docs/class-completeness6.md.
