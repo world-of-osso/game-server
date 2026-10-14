@@ -30,7 +30,13 @@ fn achievements_criteria_fall_alive_and_area_leaves_remain_required() {
             state.criteria_progress.get(&2072).copied(),
             (alive == Some(true)).then_some(3000)
         );
-        assert_eq!(state.earned_ids.contains(&8354), puddle);
+        assert_eq!(
+            state.criteria_progress.get(&23423).copied(),
+            puddle.then_some(3000)
+        );
+        // Definition8354 also names completed map1105; this isolates the authored
+        // fall predicates, not a live battleground-completion grant.
+        assert!(!state.earned_ids.contains(&8354));
         assert!(
             !state.criteria_progress.contains_key(&3881),
             "world-state predicate cannot be silently dropped"

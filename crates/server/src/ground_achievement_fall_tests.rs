@@ -49,6 +49,7 @@ fn create_fall_app(file: &tempfile::NamedTempFile, ground: GroundMap) -> (App, u
     app.add_plugins(bevy::MinimalPlugins)
         .add_message::<crate::death::PlayerDeathTransition>();
     app.init_resource::<crate::maps::ServerClock>();
+    app.init_resource::<crate::auras::UnhandledAuras>();
     app.insert_resource(
         crate::spell_cast::test_harness::world_db()
             .unwrap()

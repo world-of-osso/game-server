@@ -560,24 +560,27 @@ pub(crate) fn record_survived_fall(world: &mut World, player: Entity, distance: 
 }
 
 fn survived_fall_qualifies(world: &World, player: Entity, distance: f32) -> bool {
-    if !distance.is_finite()
-        || distance < 14.57
-        || player_conditions(world, player)
-            .player
-            .is_none_or(|player| player.alive != Some(true))
-        || crate::auras::is_immune(world, player, 1)
-    {
+    const MIN_FALL_YARDS: f32 = 14.57;
+    const PHYSICAL_SCHOOL: u32 = 1;
+    const HOVER_AURA: u32 = 106;
+    const SAFE_FALL_AURA: u32 = 144;
+    let distance_valid = distance.is_finite() && distance >= MIN_FALL_YARDS;
+    let alive = player_conditions(world, player)
+        .player
+        .is_some_and(|player| player.alive == Some(true));
+    let immune = crate::auras::is_immune(world, player, PHYSICAL_SCHOOL);
+    if !distance_valid || !alive || immune {
         return false;
     }
     let auras = world.get::<crate::auras::ActiveAuras>(player);
     if auras.is_some_and(|auras| {
         auras.has_type(crate::auras::handlers::FEATHER_FALL)
             || auras.has_type(crate::auras::handlers::FLY)
-            || auras.has_type(106) // TC SPELL_AURA_HOVER.
+            || auras.has_type(HOVER_AURA)
     }) {
         return false;
     }
-    let safe_fall = auras.map_or(0.0, |auras| auras.modifier(144)); // TC SPELL_AURA_SAFE_FALL.
+    let safe_fall = auras.map_or(0.0, |auras| auras.modifier(SAFE_FALL_AURA));
     0.018 * (distance - safe_fall) - 0.2426 > 0.0
 }
 
