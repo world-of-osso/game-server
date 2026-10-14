@@ -159,6 +159,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         elif kind == 32 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
             # TC PlayerMap1922–1925: map0 is a real map, not missing authority.
             facts.append((kind, 0))
+        elif kind == 16 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
+            # TC PlayerIsAlive1838–1841; preserve the actual life-state predicate.
+            facts.append((kind, 0))
         elif kind == 35 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
             facts.append((kind, 0))
         elif kind == 122 and operator == SINGLE_TRUE and 0 <= int(node['Asset']) <= 127:
@@ -209,7 +212,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// TC CriteriaHandler.cpp1723-1751 operators over difficulty (20/68) and',
         '// player-only (2/8/17/25/26/29/32/41/69/71; exact39 lowers to69+71), emote-only TargetCreatureId4,',
         '// including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerIsInArea17 or PlayerHasAura8 alternatives,',
-        '// known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
+        '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
         f'// Difficulty SHA256 {hashlib.sha256(difficulty_path.read_bytes()).hexdigest()}.',

@@ -135,6 +135,7 @@ impl BannerRuntime {
     /// world states; the spawned banners accept the normal Opening.
     pub fn synchronize(&self, world: &mut World, map: InMap, states: &[(u32, i32)]) {
         crate::spawn_groups::synchronize(world, map, states, defender_tier);
+        super::isle_siege::initialize_gates(world, map);
         let mut objects =
             world.query_filtered::<(Entity, &GameObjectInfo, &InMap), Without<AlteracBanner>>();
         let unmarked: Vec<_> = objects

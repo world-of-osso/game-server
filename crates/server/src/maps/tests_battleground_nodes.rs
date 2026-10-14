@@ -381,6 +381,108 @@ fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
 /// (groups 1238/1239, world states 4320-4325), so with intact gates the Horde loses by
 /// running out of its 400 reinforcements.
 #[test]
+fn isle_channel_source_demolition_breaches_gate_and_releases_keep_banner() {
+    let template = shared::battleground::isle_of_conquest();
+    let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
+        let data = crate::spell_cast::test_harness::world_db().unwrap();
+        app.insert_resource(crate::spell_info::SpellStore::fixture(
+            [21651, 66672]
+                .into_iter()
+                .map(|id| data.store.get(id).unwrap().clone())
+                .collect(),
+        ));
+    });
+    let actor = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .find(|(_, team)| **team == BgTeam::A)
+        .unwrap()
+        .0;
+    use_second_frames(&mut entered.h);
+    let gate = objects_in(&mut entered.h, entered.copy, 195494)[0].0;
+    let position = *entered.h.app.world().get::<Position>(gate).unwrap();
+    // The normal bomb callback is a triggered cast from its physical GO position.
+    // This test covers that landing -> destruction boundary, not item activation.
+    let bomb = entered
+        .h
+        .app
+        .world_mut()
+        .spawn((
+            position,
+            entered.copy,
+            shared::protocol::GameObjectInfo {
+                entry: 195331,
+                go_type: 6,
+                display_id: 9061,
+                name: "Huge Seaforium Bomb".into(),
+                scale: 1.0,
+            },
+        ))
+        .id();
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(entered.h.app.world_mut(), bomb, 66672, None, 0);
+    }
+    assert!(
+        entered
+            .h
+            .app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(gate)
+            .unwrap()
+            .0
+    );
+    assert!(
+        battleground(&entered.h, actor)
+            .world_states
+            .contains(&(4317, 1))
+    );
+    crate::spell_cast::cast_triggered(entered.h.app.world_mut(), bomb, 66672, None, 0);
+    entered.h.receive_pvp_updates(5);
+    assert!(
+        !entered
+            .h
+            .app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(gate)
+            .unwrap()
+            .0
+    );
+    assert!(
+        battleground(&entered.h, actor)
+            .world_states
+            .contains(&(4317, 0))
+    );
+    assert!(
+        battleground(&entered.h, actor)
+            .world_states
+            .contains(&(4322, 1))
+    );
+    assert_eq!(battleground(&entered.h, actor).score_a, 400);
+    assert_eq!(battleground(&entered.h, actor).score_b, 400);
+    let door = objects_in(&mut entered.h, entered.copy, 195223)[0].0;
+    assert!(
+        !entered
+            .h
+            .app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door)
+            .unwrap()
+            .0
+    );
+    let (banner, at) = objects_in(&mut entered.h, entered.copy, 195393)[0];
+    entered.h.walk_to(actor, at);
+    use_object(&mut entered.h, actor, banner);
+    entered.h.advance(8);
+    entered.h.receive_pvp_updates(5);
+    assert!(
+        battleground(&entered.h, actor)
+            .world_states
+            .contains(&(4347, 1))
+    );
+}
+
+#[test]
 fn isle_channel_quarry_capture_tick_gated_bosses_reinforcement_victory_and_origin_return() {
     let template = shared::battleground::isle_of_conquest();
     let mut entered = enter_source_match(&template, [1299, 1245]);
@@ -970,6 +1072,14 @@ fn enter_source_match_with(
         }
         if matches!(template.map_id, 30 | 628) {
             app.insert_resource(promoted_source_world(template.map_id));
+            if template.map_id == 628 {
+                app.insert_resource(
+                    crate::pvp::isle_siege::Catalog::load(
+                        &crate::pvp::isle_siege::tests::source_catalog(),
+                    )
+                    .unwrap(),
+                );
+            }
             let data = crate::spell_cast::test_harness::world_db().unwrap();
             app.insert_resource(crate::spell_info::SpellStore::fixture(vec![
                 data.store.get(21651).unwrap().clone(),

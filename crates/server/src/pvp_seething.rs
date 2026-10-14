@@ -204,6 +204,7 @@ pub(super) fn begin_gathering(
 }
 
 pub(crate) fn capture_azerite(world: &mut World, player: Entity, object: Entity) {
+    debug!(player = ?player, object = ?object, "Azerite capture mutation entered");
     if let Err(error) = check_azerite_target(world, player, object) {
         error!("Azerite completion refused: {error:?}");
         return;
@@ -215,6 +216,7 @@ pub(crate) fn capture_azerite(world: &mut World, player: Entity, object: Entity)
     let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
         apply_azerite_capture(world, &mut state, player, object, generation)
     });
+    debug!(player = ?player, object = ?object, result = ?result, "Azerite capture mutation result");
     match result {
         Ok(match_id) => {
             world
@@ -249,6 +251,7 @@ fn apply_azerite_capture(
         AZERITE_COLLECTED_STAT,
         1,
     );
+    debug!(character, team = ?team, score_a = ?matched.instance.score_a, score_b = ?matched.instance.score_b, "Azerite authoritative scores after capture");
     Ok(world
         .get::<PlayerPvpState>(player)
         .expect("validated participant")
