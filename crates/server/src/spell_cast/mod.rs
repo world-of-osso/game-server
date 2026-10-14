@@ -122,6 +122,7 @@ mod guardian_tests;
 mod hit;
 #[cfg(test)]
 mod warrior_stun_tests;
+mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
 mod linked_aura_tests;
@@ -2145,6 +2146,9 @@ fn plan_targets(
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
         }
+        warrior_stuns::filter_storm_bolt_targets(
+            world, caster, spell, effect, explicit, &mut units,
+        );
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {
                 Some(multiplier * effect.chain_amplitude)
@@ -2272,6 +2276,7 @@ fn resolve_effects(
                     chain_multiplier: planned.chain_multiplier(unit),
                     ..ctx
                 };
+                warrior_stuns::cast_hit_stun(world, &ctx, effect, unit);
                 handler(world, &ctx, effect, unit);
             }
             if let Some(hook) = hook
