@@ -808,6 +808,7 @@ pub fn load_achievements(
     }
 }
 
+#[cfg(test)]
 pub fn save_achievements(
     db: &Database,
     character_id: u64,
