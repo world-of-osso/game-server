@@ -58,7 +58,7 @@ fn create_fall_app(file: &tempfile::NamedTempFile, ground: GroundMap) -> (App, u
     );
     app.insert_resource(ground);
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     (app, character)
 }
 

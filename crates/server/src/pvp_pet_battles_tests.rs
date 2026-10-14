@@ -200,9 +200,7 @@ fn petbattle_pvp_owned_injuries_choices_survive_forfeit_requeue_and_database_reo
     let mut app = app();
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("pvp-owned.redb");
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(redb::Database::create(&path).unwrap()));
     let a = player(&mut app, 41).0;
     let b = player(&mut app, 42).0;
     let mut journal = app

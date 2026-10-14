@@ -59,7 +59,7 @@ fn pet_journal_request_checks_authenticated_account_ownership_and_keeps_injuries
     crate::battle_pets::save_journal(&db, 42, &owned);
     crate::battle_pets::save_journal(&db, 43, &other);
     let mut world = World::new();
-    world.insert_resource(crate::persistence::GameDatabase { db });
+    world.insert_resource(crate::persistence::GameDatabase::new(db));
     world.insert_resource(crate::battle_pets::load_test_catalog());
     let mut owners = Vec::new();
     for account in [42, 43] {
