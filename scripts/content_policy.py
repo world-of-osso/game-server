@@ -166,7 +166,7 @@ def create_map_table(conn, name, mapping):
 
 
 def build_items(conn, item_map, item_reasons, retail_ids, report):
-    """content_item: mapped AzerothCore items plus the Retail items TrinityCore content references (no SourceEntry)."""
+    """content_item: installed Retail definitions, retaining mapped AzerothCore SourceEntry."""
     for source_id, reason in sorted(item_reasons.items()):
         report.drop("item_template", f"entry={source_id}", source_id, reason)
     conn.execute(
@@ -178,9 +178,18 @@ def build_items(conn, item_map, item_reasons, retail_ids, report):
     )
     conn.execute("DROP TABLE IF EXISTS content_item")
     conn.execute(f"""CREATE TABLE content_item AS SELECT {ITEM_COLUMNS}, im.source_id AS SourceEntry
-        FROM temp.item_source im JOIN item_sparse s ON s.ID = im.retail_id LEFT JOIN item i ON i.ID = s.ID""")
+        FROM temp.item_source im JOIN item_sparse s ON s.ID = im.retail_id JOIN item i ON i.ID = s.ID""")
     conn.execute("CREATE UNIQUE INDEX content_item_id ON content_item(ID)")
     db2.skyborne_data.project_items(conn)
+
+
+def refresh_items(conn):
+    """Reproject installed definitions only, retaining reviewed SourceEntry mappings."""
+    item_map = dict(conn.execute(
+        "SELECT SourceEntry, ID FROM content_item WHERE SourceEntry IS NOT NULL"))
+    create_map_table(conn, "item_map", item_map)
+    build_items(conn, item_map, {}, retail_content.retail_item_ids(conn), Report())
+    conn.execute("DROP TABLE temp.item_source")
 
 
 def build_vendors(conn, report):
@@ -413,7 +422,7 @@ def apply_policy(
         conn,
         item_map,
         item_reasons,
-        retail_content.tdb_item_ids(conn) | crafting_items | merchant_items,
+        retail_content.retail_item_ids(conn) | crafting_items | merchant_items,
         report,
     )
     build_vendors(conn, report)
@@ -457,7 +466,7 @@ def main():
     )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
-    parser.add_argument("--mode", choices=("rebuild", "world-promote", "world-census"), default="rebuild")
+    parser.add_argument("--mode", choices=("rebuild", "items-refresh", "world-promote", "world-census"), default="rebuild")
     parser.add_argument("--maps", help="comma-separated explicit open-world map IDs; world-promote only")
     args = parser.parse_args()
     if args.mode == "world-census":
@@ -491,6 +500,13 @@ def main():
         return
     if args.maps:
         parser.error("--maps is only valid with --mode world-promote")
+    if args.mode == "items-refresh":
+        with sqlite3.connect(f"file:{args.db}?mode=rw", uri=True) as conn:
+            if not args.check:
+                conn.execute("BEGIN")
+                refresh_items(conn)
+            print(f"content_item: {conn.execute('SELECT count(*) FROM content_item').fetchone()[0]}")
+        return
     wrath_path = args.csv_root / WRATH_BUILD / "SpellName.csv"
     missing = [str(p) for p in (wrath_path, args.overrides) if not p.is_file()]
     if missing:
