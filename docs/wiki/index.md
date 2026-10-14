@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Wailing second escort camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) — actual30s cleansing cast, three authored Adders and combat-paused progression; controlled arrival.
+
 - [Wailing first escort camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) — source path-end/timed speech, two real Ravagers and combat-paused clock; controlled arrival only.
 
 - [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14) — eight controlled deaths, redb reopen, fresh-copy isolation and eight staged corpse commits; no natural/native clear.
