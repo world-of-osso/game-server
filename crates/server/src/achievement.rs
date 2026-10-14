@@ -747,11 +747,22 @@ pub(crate) fn record_targeted_spell_hit(
     spell: u32,
 ) {
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
-    let target_race = world.get::<Player>(target).map(|player| player.race);
+    let target_player = world
+        .get::<Player>(target)
+        .map(|player| catalog::SpellHitPlayer {
+            race: player.race,
+            class: player.class,
+        });
+    // TC CriteriaHandler1998–2001 reads the hit unit before spell effects.
+    let target_health_percent = world
+        .get::<shared::components::Health>(target)
+        .filter(|health| health.max.is_finite() && health.max > 0.0)
+        .map(|health| health.current / health.max * 100.0)
+        .filter(|percent| percent.is_finite() && *percent >= 0.0);
     record_criteria_event(
         world,
         caster,
-        CriteriaEvent::LandTargetedSpell(spell, target_race),
+        CriteriaEvent::LandTargetedSpell(spell, target_player, target_health_percent),
     );
 }
 

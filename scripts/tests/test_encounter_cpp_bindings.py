@@ -66,6 +66,29 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'creature AI identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_silverlaine_smartai_primary_is_idempotent_and_does_not_admit_unported_bosses(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('silverlaine')
+        self.assertIsNotNone(profile, 'pinned Shadowfang primary is missing')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(1070,33,1);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (3887,'','SmartAI'),(46962,'',''),(4278,'',''),(46963,'',''),(46964,'','');
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=33').fetchall(),
+            [(3887,1070,1,97,367,37288)])
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(), [(12118,)])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=3887")
+        with self.assertRaisesRegex(ValueError, 'creature AI identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_wailing_primaries_keep_all_eight_authored_normal_bits(self):
         import encounter_cpp_bindings as bindings
         names = ['anacondra', 'cobrahn', 'kresh', 'pythas', 'skum', 'serpentis', 'verdan', 'mutanus']

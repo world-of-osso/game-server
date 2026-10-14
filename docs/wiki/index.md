@@ -1,5 +1,15 @@
 # Wiki Index
 
+- [DB2 derived-faction refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) — atomic Zephras reconstruction and other importers' build-receipt preservation; source audit and private-copy proof.
+- [Pre-effect spell-hit target health](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health) — inclusive46, actual unit health before effects; missing authority rejects.
+
+- [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation) — coherent predicates/census5479+1821, build delta and retained auxiliary-source boundary.
+
+- [Active installed achievement import](systems/dungeon-achievements.md#active-installed-achievement-import) — active Retail build agreement, actual layout guards and atomic four-table replacement.
+
+- [Player-anchored spell-hit target class](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) — actual Player identity, preserving target/race companions; unanchored NPC class predicates excluded.
+
+- [Silverlaine source primary](systems/boss-scripts.md#silverlaine-source-primary) — pinned map33/3887→1070/bit1, source SmartAI identity and copy-only SQL; combat/native/full-instance proof remains open.
 - [Actual spell-hit target race](systems/dungeon-achievements.md#actual-spell-hit-target-race) — per-hit Player race, not caster race; NPC/missing snapshots rejected.
 
 - [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.
@@ -312,3 +322,5 @@ Debug logs and root cause analyses.
 
 - [Ruby authored support and search](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13) — sourced metalplate normals, creature/player map-height separation and TC nominalY5; query/native fixture proof is not full-dungeon completion.
 - [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
+
+- [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
