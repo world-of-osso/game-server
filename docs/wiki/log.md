@@ -1,3 +1,7 @@
+## 2026-10-13 — Wailing native summon groups
+
+[Authored group spawning](systems/boss-scripts.md#wailing-native-summon-groups) now serves both C++ ports and SmartAI. Source Disciple targeting and real Mutanus group4 placement/credit/corpse lifetime are covered beside Wizzle storage/expiry preservation; this does not certify escort activation or scheduling.
+
 ## 2026-10-13 — Native damage shields
 
 [Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.

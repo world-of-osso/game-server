@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Wailing native summon groups](systems/boss-scripts.md#wailing-native-summon-groups) — authored Mutanus group/copy/target/credit/corpse lifetime, shared SmartAI implementation; activation/escort/native acceptance remain separate.
+
 - [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
 
 - [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; prepared follower73/player-pet persistence10 plus checks/fmt pass; full-instance/authored-kit/stat-budget acceptance remains open.
