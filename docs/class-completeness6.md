@@ -296,3 +296,5 @@ Source receipt: `data/class-completeness6-2026-10-12/master70391-source-receipt.
 - `SpellEffect.csv`: `cfeb5b99be323da7e3c23f7d6b956247eafeb255d41135e57aac6b3abe16a115`
 - `SpellPower.csv`: `651b3b5d3fdd80365fc6765cf174e5f3f44d3b6e2b94e1ca87a6e0c14a622c1a`
 - `Spell.csv`: `2d3bdfef700fc8e762a20a5430bdb6402cdeada48a4f0ccd2b92c431cf61f772`
+
+Proof ledger: `cc9c7dd3` first GREEN102/103, remaining Wildfire failed because its application snapshot uses fixture AP100, not later recalculated AP22; `803170f0` failure output proves six25 ticks. `c08a9362` focused Wildfire GREEN1/1 exit0/79.263s. Master union `fd9edfb7` (origin/master b404aae8): `master70391-merged-green`63/63 exit0/242.919s; workspace/all-target check exit0/176.780s; fmt exit0/2.990s. Changed Rust manually audited: no suppression, new production branch, fallback, or widened variance. These are fixture/index contracts, not whole ability coverage; full13/40 remains OPEN.
