@@ -8,6 +8,7 @@ Retail PerksActivity/PerksVendorItem rows from local CASC69933 and Mainline Bliz
 - [x] Calendar rollover is 00:00 UTC on the first, independent of the daily-reset hour; the existing injectable ServerClock controls it.
 - [x] Sourced default PerksActivityThreshold group1 awards once per account/month. Balance persists across month/relog; cap resets, not earned currency. Lead-approved October12 policy replaces the earlier daily-reset-hour rule.
 - [x] Atomic paid collection grants, receipt-bounded refunds, one frozen item and source-backed capital interaction.
+- [ ] Retail cart checkout commits the complete selected offer list, Tender charge and per-item receipts atomically; any rejected offer leaves every charge/grant unchanged. Each receipt retains the existing individual refund policy and survives reopen.
 - [x] Trading Post requests settle current monthly gameplay credit without publishing an unsolicited full Adventure Guide snapshot ahead of the vendor reply.
 - [x] Zero-duration refund default leaves refund unavailable until an explicit policy is approved; no duration guessed.
 - [x] Vendor replies evaluate existing item class/race/level restrictions for the querying player, carrying optional `usable` state for the source filter. Missing item/player facts remain unknown; usability is not a new purchase restriction.
