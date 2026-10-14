@@ -4482,8 +4482,6 @@ dependencies = [
 [[package]]
 name = "lightyear_udp"
 version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5de693f3e82a67aeed2bdec3f29dad9394aaa5b8a63c6268131824e4d312a71"
 dependencies = [
  "aeronet_io",
  "bevy_app",
@@ -4492,6 +4490,7 @@ dependencies = [
  "bytes",
  "lightyear_core",
  "lightyear_link",
+ "socket2 0.6.2",
  "thiserror 2.0.18",
  "tracing",
 ]
