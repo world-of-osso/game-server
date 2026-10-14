@@ -106,6 +106,19 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
             break;
         }
     }
+    if !arrived {
+        let (x, y, z): (f32, f32, f32) = conn.query_row(
+            "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=367801 AND NodeId=2",
+            [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).unwrap();
+        let from = Vec3::new(previous.x, previous.z, -previous.y);
+        let target = Vec3::new(x, z, -y);
+        let navigation = h.app.world().resource::<crate::navigation::Navigation>();
+        println!(
+            "stopped source route {from:?} -> {target:?}: {:?}",
+            navigation.query_path(43, from, target)
+        );
+    }
     assert!(
         arrived,
         "source three-path walk did not reach final endpoint: start={start:?} last={previous:?} end={endpoint:?} waves={camp_counts:?} cleansing={saw_cleansing}"
