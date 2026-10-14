@@ -73,7 +73,7 @@ fn receive_requests(world: &mut World) {
         .collect();
     for (connection, account, player, request) in requests {
         info!(?connection, account, ?request, "TP_DELIVERY_SERVER_RECV");
-        crate::adventure_guide::refresh_for_connection(world, connection);
+        crate::adventure_guide::settle_month_for_connection(world, connection);
         let result = execute(world, connection, account, player, &request);
         info!(?connection, ?result, "TP_DELIVERY_SERVER_EXECUTE");
         if let Ok(Some((_, grant))) = &result {
