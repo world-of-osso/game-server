@@ -1245,6 +1245,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Wild summon count boundary
 
 [Wild counts](systems/toys.md#wild-variable-count-summons-2026-10-14): Flute count RED1→source-variable count, native6122 primary scatter RED→GREEN. Retail follow description remains an explicit gap; no stationary/full-Flute certificate. Body/CASС bytes and current NPC DB2 input provenance remain separate from cached metadata.
+- 2026-10-14: C++ ground waypoint generation ports pinned TC smooth-surface controls and collision normalization; real Wailing node2 RED retained, GREEN pending. Generic navigation/exact/flying unchanged.
+
+- 2026-10-14: Smooth-source gate05062d71 passes15/15,49 Wailing nodes collision-clear/node2 RED-GREEN, actual Ragefire+Golden controls and strict rejection preserved; check/format/independent artifact verification PASS. Full escort remains RED in unchanged generic movement after path1 arrival.
 - 2026-10-14: Distinct native melee/RAP percentages, owner wire and DefenseType-selected tooltip powers; bounded9 leaves5partial. See [[systems/character-stats]] and docs/class-completeness6.md.
 
 - 2026-10-14: Native player autoattack/weapon-spell critical block and launch/impact hit-state proof; NPC/probability/638 boundaries remain open. See [[systems/player-damage]] and docs/class-completeness6.md.
