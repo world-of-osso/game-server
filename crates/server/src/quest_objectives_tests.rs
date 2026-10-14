@@ -451,10 +451,19 @@ fn add_object_plugins(app: &mut App) {
 fn object_app() -> App {
     let mut app = setup_app_with(add_object_plugins).expect("authentic quest data required");
     let data = crate::spell_cast::test_harness::world_db().unwrap();
-    // Nerub'ar Egg Sac187655 casts its authored goober spell45490 after credit.
+    // Egg187655 casts45490: native SummonProperties64 creates creature25295.
     app.insert_resource(crate::spell_info::SpellStore::fixture(vec![
         data.store.get(45490).unwrap().clone(),
     ]));
+    let source = rusqlite::Connection::open_with_flags(
+        &data.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    app.insert_resource(crate::spell_cast::summon::load_summon_properties(&source).unwrap());
+    app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+        &[25295],
+    ));
     app
 }
 
