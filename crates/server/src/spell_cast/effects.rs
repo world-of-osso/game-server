@@ -924,7 +924,7 @@ pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Ent
     deal_damage_and_report(world, ctx, target, damage);
 }
 
-/// TC Unit.cpp:6922–6929/6962; SharedDefines.h:540/648.
+/// TC Unit.cpp:6922–6929/6962; SharedDefines.h:576/687.
 fn creature_type_damage_multiplier(
     world: &World,
     caster: Entity,
