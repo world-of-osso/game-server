@@ -77,6 +77,53 @@ fn guild_lifecycle_leave_and_remove_enforce_hierarchy_and_survive_restart() {
 }
 
 #[test]
+fn guild_ranks_officer_chat_toggle_does_not_grant_or_revoke_other_permissions() {
+    let db = temp_database();
+    let (master, officer, _) = members(&db);
+    let independent = GUILD_RIGHT_EDIT_MOTD
+        | GUILD_RIGHT_EDIT_INFO
+        | GUILD_RIGHT_VIEW_OFFICER_NOTE
+        | GUILD_RIGHT_EDIT_OFFICER_NOTE;
+    let chat = GUILD_RIGHT_OFFICER_LISTEN | GUILD_RIGHT_OFFICER_SPEAK;
+    for rights in [
+        independent | GUILD_RIGHT_OFFICER_LISTEN,
+        independent | chat,
+        independent,
+    ] {
+        apply_rank_request(
+            &db,
+            7,
+            master,
+            GuildRankRequest::SetPermissions {
+                rank: 1,
+                rights,
+                gold_per_day: 123_456,
+            },
+        )
+        .unwrap();
+        let state = snapshot(&db, officer, None);
+        assert_eq!(state.ranks[1].rights, rights);
+        assert_eq!(state.ranks[1].gold_per_day, 123_456);
+        for right in [
+            GUILD_RIGHT_EDIT_MOTD,
+            GUILD_RIGHT_EDIT_INFO,
+            GUILD_RIGHT_VIEW_OFFICER_NOTE,
+            GUILD_RIGHT_EDIT_OFFICER_NOTE,
+        ] {
+            assert!(character_has_right(&db, officer, 7, right));
+        }
+        assert_eq!(
+            character_has_right(&db, officer, 7, GUILD_RIGHT_OFFICER_LISTEN),
+            rights & GUILD_RIGHT_OFFICER_LISTEN != 0
+        );
+        assert_eq!(
+            character_has_right(&db, officer, 7, GUILD_RIGHT_OFFICER_SPEAK),
+            rights & GUILD_RIGHT_OFFICER_SPEAK != 0
+        );
+    }
+}
+
+#[test]
 fn guild_ranks_master_creates_and_configures_persisted_rank() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("guild.redb");
