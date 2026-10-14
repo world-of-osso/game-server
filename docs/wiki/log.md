@@ -2,6 +2,13 @@
 
 [Personal-rating39](systems/dungeon-achievements.md#current-personal-arena-ratings) maps current authored0/1 to native2v2/3v3, uses actual durable after-results and highest counters. Native full-party/accepted/prepared lethal matches prove1550 crossing, losers, second-loss maxima, replay and reopen. Raw Statistics replies retain the rating; Criteria replies retain bounded target progress. Ten character definitions and two statistics are structurally enabled; other brackets and proprietary Retail MMR remain unclaimed.
 
+## 2026-10-13 — Wailing native summon groups
+
+[Authored group spawning](systems/boss-scripts.md#wailing-native-summon-groups) now serves both C++ ports and SmartAI. Source Disciple targeting and real Mutanus group4 placement/credit/corpse lifetime are covered beside Wizzle storage/expiry preservation; this does not certify escort activation or scheduling.
+
+## 2026-10-13 — Native damage shields
+
+[Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.
 ## 2026-10-13 — Exact map0 criterion
 
 [Known zero map](systems/dungeon-achievements.md#exact-zero-map) preserves actual map0 versus missing authority. Native killing-blow5512 and redb reopen add existing World Killing Blows statistic1488, not an ordinary grant, world honor or relinked tree. Saved source root592/leaf593 remains authoritative until the coordinated DB2 re-export; no extraction performed.
@@ -1107,3 +1114,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 [Profile/navigation proof](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13): eleven actual labelled basic-role casts/resource publications; Cobra Shot193455 missile-resolution Level panic RED→11GREEN. Real Stockade follow crossed wall at tick19 and lost moving-state progress4.8527yd; native route/progress fix GREEN3. Strict follower missing-bake standing, ordinary behavior retained. Private Ruby12LOS+12NAV/authored zero-gap geometry package staged; advanced AI and new whole-route live proof open.
 - 2026-10-13: [Category charge rates](systems/auras.md#category-charge-recovery-rates): native148 through existing category clocks, authentic Trueshot/Aimed Shot RED/GREEN, negative native Fiery Brand and bounded refresh API proof.
+
+- 2026-10-13: Charred Warblades native3%/1000ms delayed self-heal producer; real-damage RED at eb9fbf29 (500HP stays500 instead of504); GREEN verification pending.
+
+- 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.

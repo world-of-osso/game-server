@@ -300,6 +300,9 @@ fn proc_matches(
     if aura.spell_id == crate::spell_cast::scripts::CENARION_WARD && event.damage <= 0.0 {
         return false;
     }
+    if !scripts::check_proc(world, aura, event) {
+        return false;
+    }
     let proc_mask = proc_mask(world, aura);
     if proc_mask[0] & mask[0] == 0 && proc_mask[1] & mask[1] == 0 {
         return false;
@@ -412,7 +415,7 @@ fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, eve
     if break_crowd_control(world, unit, &aura, event) {
         return;
     }
-    scripts::run_proc(world, unit, &aura, other);
+    scripts::run_proc(world, unit, &aura, other, event);
     if aura.charges > 0 {
         super::spend_charge(world, unit, id);
     }

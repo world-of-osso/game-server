@@ -197,7 +197,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
-            || (map_id == 43 && [3678, 3679].contains(id))
+            || (map_id == 43 && [3654, 3678, 3679].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
@@ -2105,6 +2105,106 @@ fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
     assert!(
         repeated_sleep,
         "20–30s Sleep repeat starts another actual cast"
+    );
+}
+
+/// Source EVENT_PROGRESS_20 summons3678/group4 (Mutanus), not a fabricated
+/// fixed placement. Stage the source pre-wave endpoint/faction; no escort-route proof.
+#[test]
+fn encounter_coverage_wailing_mutanus_authored_group_target_credit_and_corpse_lifetime() {
+    let (mut h, unrelated, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    h.app
+        .world_mut()
+        .entity_mut(unrelated)
+        .insert(ReactState::Passive);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
+    let endpoint: (f32, f32, f32) = conn.query_row(
+        "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=367803 ORDER BY NodeId DESC LIMIT 1",
+        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    ).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(endpoint.0, endpoint.1, endpoint.2);
+    h.app.world_mut().entity_mut(disciple).insert((
+        Position { x, y, z },
+        UnitFactionTemplate(250),
+        ReactState::Passive,
+        Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        },
+    ));
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(Position { x: x + 1.0, y, z });
+    h.advance(0.1);
+    let summons = Ctx {
+        world: h.app.world_mut(),
+        me: disciple,
+    }
+    .summon_creature_group(4)
+    .expect("authored Disciple group4");
+    assert_eq!(summons.len(), 1);
+    let mutanus = summons[0];
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Npc>(mutanus)
+            .unwrap()
+            .template_id,
+        3654
+    );
+    assert_eq!(h.app.world().get::<InMap>(mutanus), Some(&map));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::zones::TempSummon>(mutanus)
+            .unwrap()
+            .summoner,
+        disciple
+    );
+    let position = h.wow_position(mutanus);
+    assert!((position.x - 150.943).abs() < 0.001);
+    assert!((position.y - 262.797).abs() < 0.001);
+    assert!((position.z + 103.904).abs() < 0.001);
+    h.advance(0.1);
+    assert!(
+        matches!(h.app.world().get::<crate::creature_ai::CreatureState>(mutanus),
+        Some(crate::creature_ai::CreatureState::Pursuing { target }) if *target == disciple.to_bits())
+    );
+    h.advance(301.0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(mutanus)
+            .is_none(),
+        "corpse timer does not expire a living summon"
+    );
+    let slot = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 592).unwrap();
+    h.hit_pct(mutanus, 1_000.0);
+    h.advance(0.1);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, slot),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 592 && end.success)
+    );
+    assert!(h.inbox(1).ends.iter().all(|end| end.encounter_id != 592));
+    h.advance(298.0);
+    assert!(
+        h.app.world().get_entity(mutanus).is_ok(),
+        "authored300s corpse lifetime"
+    );
+    h.advance(3.0);
+    assert!(
+        h.app.world().get_entity(mutanus).is_err(),
+        "corpse timer unsummons instead of respawning"
     );
 }
 
