@@ -775,6 +775,7 @@ fn normalize_pvp_currency_ids(wallet: &mut shared::currency::CurrencyWallet) {
     }
 }
 
+#[cfg(test)]
 pub fn save_currencies(
     db: &Database,
     character_id: u64,

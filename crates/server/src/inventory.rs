@@ -10,7 +10,9 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::Database;
-use shared::components::{EquipmentAppearance, Player};
+use shared::components::EquipmentAppearance;
+#[cfg(test)]
+use shared::components::Player;
 use shared::protocol::{
     DestroyItem, EquipItem, EquipmentSnapshot, InventoryChannel, InventoryDelta, InventoryError,
     InventoryErrorReason, InventorySlotChange, InventorySnapshot, ItemLocation, SortBags,

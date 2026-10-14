@@ -106,6 +106,7 @@ impl GoldUpdateQueue {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn record_persisted_gold(
     db: &redb::Database,
     character_id: u64,
