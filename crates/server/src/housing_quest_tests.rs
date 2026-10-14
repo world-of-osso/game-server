@@ -2,6 +2,25 @@ use crate::persistence::housing_store::BUILD_KEY;
 use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
 use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
 
+#[test]
+fn db2_follow_install_housing_quests_read_the_declared_next_build_key() {
+    let (source, mut quests) = fixture();
+    let key = "334a36cf5f3c32a5f7a167405487fa14";
+    source
+        .execute(
+            "UPDATE housing_catalog_build SET build_key=?, build='12.1.5.70391'",
+            [key],
+        )
+        .unwrap();
+    source
+        .execute("UPDATE housing_catalog_record SET build_key=?", [key])
+        .unwrap();
+    crate::housing_quests::load(&source, &mut quests).unwrap();
+    let quest = &quests.quests[&92572];
+    assert!(!quest.completion_blocked);
+    assert_eq!(quest.objectives[0].object_id, 216882);
+}
+
 fn fixture() -> (rusqlite::Connection, QuestDb) {
     let source = crate::housing_catalog::tests::catalog_fixture();
     source
