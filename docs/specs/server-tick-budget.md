@@ -19,7 +19,7 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 
 ## Persistence (approved 2026-10-13)
 
-- [ ] One serial FIFO writer persists owned snapshots off the tick thread, preserving enqueue/commit order across accounts and monthly contributions.
+- [ ] One serial FIFO writer persists owned snapshots off the tick thread, preserving enqueue/commit order across accounts and monthly contributions. Actor polling order must not regress an already committed runtime snapshot.
 - [ ] Tick systems enqueue and poll completions without waiting. Logout completion, character deletion, trade, mail/AH money transfers and purchases acknowledge only after their required commit succeeds.
 - [ ] Writer errors log and increment an observable failure metric; shutdown drains queued work.
 - [ ] Process-crash proof loses only work not acknowledged as durable.

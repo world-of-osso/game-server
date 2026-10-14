@@ -5,8 +5,7 @@ use crate::economy::{
     store,
 };
 
-#[test]
-fn economic_merchant_purchase_uses_finite_stock_and_atomic_player_payment() {
+fn economic_shop() -> (Harness, persistence::InventoryData) {
     let mut h = harness().expect("real world.db required for economic vendor test");
     let mut state = EconomyState::default();
     state.merchants.insert(
@@ -50,6 +49,57 @@ fn economic_merchant_purchase_uses_finite_stock_and_atomic_player_payment() {
     h.app
         .insert_resource(config)
         .insert_resource(Economy::from_state(state));
+    (h, before)
+}
+
+#[test]
+fn older_economy_receipt_cannot_overwrite_a_later_committed_merchant_purchase() {
+    let (mut h, _) = economic_shop();
+    h.app
+        .init_resource::<crate::auction_house::AuctionHouseState>();
+    h.app
+        .init_resource::<crate::auction_house::PendingMarketCommits>();
+    let state = h.app.world().resource::<Economy>().state.clone();
+    h.app.world_mut().resource_scope(
+        |world, mut pending: bevy::prelude::Mut<crate::auction_house::PendingMarketCommits>| {
+            crate::auction_house::enqueue_market_commit(
+                world.resource::<GameDatabase>(),
+                &mut pending,
+                None,
+                "preceding economy publication",
+                move |db| {
+                    store::commit_market(db, Some(&state), &store::MarketChanges::default())?;
+                    let mut publication = crate::auction_house::MarketPublication::from_auctions(
+                        crate::auction_house::load_auction_state(db),
+                    );
+                    publication.economy = Some(state);
+                    Ok(publication)
+                },
+            );
+        },
+    );
+    let npc = h.open(GODRIC_ROTHGAR);
+    h.buy(npc, 7, 2302, 1);
+    assert!(h.failures().is_empty());
+    assert_eq!(
+        store::load_state(&h.app.world().resource::<GameDatabase>().db)
+            .unwrap()
+            .unwrap()
+            .merchants[&GODRIC_ROTHGAR]
+            .stock[0]
+            .count,
+        1
+    );
+    crate::auction_house::tests::publish_market_once(&mut h.app);
+    assert_eq!(
+        h.app.world().resource::<Economy>().state.merchants[&GODRIC_ROTHGAR].stock[0].count,
+        1
+    );
+}
+
+#[test]
+fn economic_merchant_purchase_uses_finite_stock_and_atomic_player_payment() {
+    let (mut h, before) = economic_shop();
     let npc = h.open(GODRIC_ROTHGAR);
     let list = h
         .app

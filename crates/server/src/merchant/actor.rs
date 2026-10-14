@@ -40,7 +40,16 @@ pub(super) fn drive_merchant_commits(
     {
         let commit = pending.commit.take().expect("completed merchant commit");
         match result {
-            Ok(publication) => publish(&mut shop, &mut sessions, &commit.request, publication),
+            Ok(publication) => publish(
+                &mut shop,
+                &mut sessions,
+                &commit.request,
+                commit
+                    .receipt
+                    .sequence()
+                    .expect("completed merchant receipt"),
+                publication,
+            ),
             Err(error) => {
                 error!(
                     "merchant commit character={}: {error}",
@@ -129,6 +138,7 @@ fn publish(
     shop: &mut Shop,
     sessions: &mut Query<(&InWorld, &mut BuybackSlots)>,
     request: &Request,
+    sequence: u64,
     publication: Publication,
 ) {
     if let Some(value) = publication.gold {
@@ -145,7 +155,7 @@ fn publish(
     }
     if let Some(state) = publication.economy {
         if let Some(economy) = shop.economy.as_deref_mut() {
-            *economy = crate::economy::Economy::from_state(state);
+            economy.publish_committed(sequence, state);
         }
     }
     if let Some(guild) = publication.guild {

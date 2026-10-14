@@ -43,6 +43,13 @@ fn finish_expiry_work(app: &mut App) {
     }
 }
 
+pub(crate) fn publish_market_once(app: &mut App) {
+    use bevy::ecs::system::RunSystemOnce;
+    app.world_mut()
+        .run_system_once(super::handlers::publish_market_commits)
+        .unwrap();
+}
+
 pub(crate) fn finish_market_work(app: &mut App) {
     let deadline = std::time::Instant::now() + Duration::from_secs(3);
     while !app

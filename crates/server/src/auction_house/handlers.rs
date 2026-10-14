@@ -398,7 +398,10 @@ pub(super) fn publish_market_commits(
                 }
                 if let (Some(state), Some(economy)) = (publication.economy, economy.as_deref_mut())
                 {
-                    *economy = crate::economy::Economy::from_state(state);
+                    economy.publish_committed(
+                        commit.receipt.sequence().expect("completed market receipt"),
+                        state,
+                    );
                 }
                 publication.response
             }

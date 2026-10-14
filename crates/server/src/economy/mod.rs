@@ -189,6 +189,7 @@ impl Config {
 pub struct Economy {
     pub state: EconomyState,
     initialized: bool,
+    published_commit: u64,
 }
 
 /// Snapshot only: do not initialize, cycle, persist or read the clock.
@@ -236,6 +237,15 @@ impl Economy {
         Self {
             state,
             initialized: true,
+            published_commit: 0,
+        }
+    }
+
+    pub(crate) fn publish_committed(&mut self, commit: u64, state: EconomyState) {
+        if commit > self.published_commit {
+            self.state = state;
+            self.initialized = true;
+            self.published_commit = commit;
         }
     }
 }

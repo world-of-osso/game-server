@@ -9,14 +9,36 @@ use std::thread::JoinHandle;
 #[path = "persistence_writer_tests.rs"]
 mod tests;
 
-type WriteOperation = Box<dyn FnOnce(&Database, &WriterMetrics) + Send>;
+type WriteOperation = Box<dyn FnOnce(&Database, &WriterMetrics, u64) + Send>;
 
 #[derive(Clone)]
-pub(crate) struct CommitReceipt<T = ()>(Arc<Mutex<Option<Result<T, String>>>>);
+struct Completion<T> {
+    sequence: u64,
+    result: Result<T, String>,
+}
+
+#[derive(Clone)]
+pub(crate) struct CommitReceipt<T = ()>(Arc<Mutex<Option<Completion<T>>>>);
 
 impl<T: Clone> CommitReceipt<T> {
     pub(crate) fn result(&self) -> Option<Result<T, String>> {
-        self.0.lock().expect("persistence receipt lock").clone()
+        self.0
+            .lock()
+            .expect("persistence receipt lock")
+            .as_ref()
+            .map(|completion| completion.result.clone())
+    }
+
+    pub(crate) fn sequence(&self) -> Option<u64> {
+        self.0
+            .lock()
+            .expect("persistence receipt lock")
+            .as_ref()
+            .map(|completion| completion.sequence)
+    }
+
+    fn complete(&self, sequence: u64, result: Result<T, String>) {
+        *self.0.lock().expect("persistence receipt lock") = Some(Completion { sequence, result });
     }
 }
 
@@ -45,8 +67,10 @@ impl PersistenceWriter {
         let worker = std::thread::Builder::new()
             .name("persistence-writer".into())
             .spawn(move || {
+                let mut sequence = 0;
                 for job in receiver {
-                    (job.operation)(&db, &worker_metrics);
+                    sequence += 1;
+                    (job.operation)(&db, &worker_metrics, sequence);
                 }
             })
             .expect("start FIFO persistence writer");
@@ -65,8 +89,9 @@ impl PersistenceWriter {
         let receipt = CommitReceipt(Arc::new(Mutex::new(None)));
         let completion = receipt.clone();
         let job = Job {
-            operation: Box::new(move |db, metrics| {
-                execute_job(db, name, operation, completion, metrics);
+            operation: Box::new(move |db, metrics, sequence| {
+                let result = execute_job(db, name, operation, metrics);
+                completion.complete(sequence, result);
             }),
         };
         self.metrics.submitted.fetch_add(1, Ordering::Relaxed);
@@ -79,8 +104,7 @@ impl PersistenceWriter {
         {
             self.metrics.failed.fetch_add(1, Ordering::Relaxed);
             bevy::log::error!(name, "Persistence writer disconnected");
-            *receipt.0.lock().expect("persistence receipt lock") =
-                Some(Err("persistence writer disconnected".into()));
+            receipt.complete(0, Err("persistence writer disconnected".into()));
         }
         receipt
     }
@@ -90,9 +114,8 @@ fn execute_job<T>(
     db: &Database,
     name: &'static str,
     operation: impl FnOnce(&Database) -> Result<T, String>,
-    receipt: CommitReceipt<T>,
     metrics: &WriterMetrics,
-) {
+) -> Result<T, String> {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| operation(db)))
         .unwrap_or_else(|panic| {
             let message = panic
@@ -115,7 +138,7 @@ fn execute_job<T>(
             bevy::log::error!(operation = name, %error, "Persistence commit failed");
         }
     }
-    *receipt.0.lock().expect("persistence receipt lock") = Some(result);
+    result
 }
 
 impl Drop for PersistenceWriter {
