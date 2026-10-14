@@ -83,6 +83,29 @@ pub(crate) fn prepare_class_world() -> PreparedClassWorld {
     prepared
 }
 
+/// Explicit native template authority for fixtures whose spells restrict creature type.
+pub(crate) fn native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
+    let conn = Connection::open_with_flags(
+        world_db().unwrap().powers_db.clone(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let expected = crate::world_data::load_expected_stats(&conn);
+    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    templates.retain(|entry, _| entries.contains(entry));
+    for entry in entries {
+        assert!(
+            templates.contains_key(entry),
+            "missing source fixture creature template{entry}"
+        );
+    }
+    crate::world_data::load_template_models(&conn, &mut templates);
+    crate::world_data::WorldData {
+        templates,
+        ..Default::default()
+    }
+}
+
 pub(crate) fn power_table(data: &WorldData) -> PowerTypeTable {
     let conn =
         Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
