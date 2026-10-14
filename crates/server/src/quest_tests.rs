@@ -569,6 +569,7 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
     add_message_pair::<AchievementCatalogPage>(&mut app, client.connection);
     let mut wallet = CurrencyWallet::default();
     wallet.add(4, 990, currency_by_id(4).unwrap()).unwrap();
+    persistence::save_currencies(db(&app), client.character_id, &wallet);
     app.world_mut()
         .entity_mut(client.player)
         .insert((PlayerCurrencies(wallet), PlayerAchievementState::default()));
@@ -581,7 +582,7 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
             .contains_key(&41095)
     );
     // Valor's authored weekly cap is1000. Only10 of requested100 are granted.
-    request(
+    request_committed_currency(
         &mut app,
         &client,
         EarnCurrency {
@@ -608,7 +609,7 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
             .get(&41095),
         Some(&10)
     );
-    request(
+    request_committed_currency(
         &mut app,
         &client,
         SpendCurrency {
@@ -616,7 +617,7 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
             amount: 25,
         },
     );
-    request(
+    request_committed_currency(
         &mut app,
         &client,
         EarnCurrency {
@@ -633,7 +634,7 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
         Some(&10)
     );
     // Failed grants never become achievement progress; request-only PvP gains remain forbidden.
-    request(
+    request_committed_currency(
         &mut app,
         &client,
         EarnCurrency {
@@ -654,6 +655,32 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
         client.character_id,
     );
     assert_eq!(saved.criteria_progress.get(&41095), Some(&10));
+}
+
+fn request_committed_currency<M: Message>(app: &mut App, client: &Client, message: M) {
+    use shared::protocol::{CurrencyChannel, CurrencyStateUpdate};
+    received::<CurrencyStateUpdate>(app, client);
+    app.world_mut()
+        .get_mut::<MessageSender<M>>(client.connection)
+        .unwrap()
+        .send::<CurrencyChannel>(message);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    loop {
+        app.update();
+        let replied = received::<CurrencyStateUpdate>(app, client)
+            .iter()
+            .any(|reply| reply.message.as_deref() != Some("currencies loaded"));
+        if replied {
+            app.update();
+            app.update();
+            return;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "no committed currency reply"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
 }
 
 fn for_currency_messages(app: &mut App) {
