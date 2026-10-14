@@ -111,13 +111,9 @@ fn encounter_coverage_wailing_first_camp_waits_for_authored_ravagers() {
             .iter()
             .any(|message| message.content.contains("Come. We must continue"))
     );
-    h.advance(1.1);
-    assert!(
-        h.inbox(0)
-            .chat
-            .iter()
-            .any(|message| message.content.contains("Come. We must continue"))
-    );
+    // Observe SetFacingTo at its callback boundary; subsequent generic chase
+    // ticks replace this transient rotation in the fixture.
+    dispatch(h.app.world_mut(), disciple, Hook::UpdateAi(1_000));
     let facing = h.app.world().get::<Rotation>(disciple).unwrap().y;
     let source_facing = 5.742133 + std::f32::consts::FRAC_PI_2;
     assert!(
@@ -126,5 +122,12 @@ fn encounter_coverage_wailing_first_camp_waits_for_authored_ravagers() {
         h.app
             .world()
             .get::<crate::creature_ai::CreatureState>(disciple)
+    );
+    h.advance(0.1);
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|message| message.content.contains("Come. We must continue"))
     );
 }
