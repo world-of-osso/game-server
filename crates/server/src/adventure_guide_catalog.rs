@@ -136,16 +136,7 @@ impl CatalogData {
         conn: &Connection,
         criteria: &crate::achievement::AchievementCatalog,
     ) -> Result<Self, String> {
-        let bad: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM adventure_guide_source WHERE build != '12.1.0.69933'",
-                [],
-                |r| r.get(0),
-            )
-            .map_err(|e| e.to_string())?;
-        if bad != 0 {
-            return Err("Adventure Guide source build differs from pinned 12.1.0.69933".into());
-        }
+        crate::db2_source_build::read_source_build(conn, "adventure_guide_source")?;
         let activities = read_rows::<Activity>(conn, "perks_activity")?;
         let thresholds = load_thresholds(conn)?;
         let supported_roots: BTreeSet<_> = activities
