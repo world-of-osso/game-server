@@ -178,6 +178,9 @@ pub const ADV_FLYING: u32 = 446;
 pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
 /// Flat percentage points, outside combat-rating diminishing returns.
 pub const MOD_VERSATILITY: u32 = 471;
+/// TC a352b1fa independent melee/ranged AP percent modifiers.
+pub const MOD_ATTACK_POWER_PCT: u32 = 166;
+pub const MOD_RANGED_ATTACK_POWER_PCT: u32 = 167;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
@@ -337,6 +340,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT
         | MOD_VERSATILITY
+        | MOD_ATTACK_POWER_PCT
+        | MOD_RANGED_ATTACK_POWER_PCT
         | MOD_DAMAGE_DONE_VERSUS => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
