@@ -231,6 +231,8 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(test)]
+        app.insert_resource(toy_requirements::fixture());
         app.add_plugins(crate::knockback::KnockbackPlugin);
         app.init_resource::<crate::group::GroupRegistry>()
             .init_resource::<disenchant::DisenchantData>()
@@ -1113,6 +1115,7 @@ pub(crate) fn cast_item_spell(
 /// the per-item recovery omitted by the older consumable-item path.
 pub(crate) mod toy_area;
 mod toy_facing;
+pub(crate) mod toy_requirements;
 
 pub(crate) fn cast_toy_spell(
     world: &mut World,

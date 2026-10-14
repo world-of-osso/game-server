@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate pinned69933 Toy root area limits from maintained local-CASC CSV exports.
+"""Generate Toy root area limits from the current canonical local-CASC CSV exports.
 
 Source world.db is read-only. Root selection matches toy_catalog::load; hashes retain
 CSV identity. This producer handles RequiredAreasID only, not facing/procedural effects.
@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 import sqlite3
 
-BUILD = "12.1.0.69933"
 ROOTS_SQL = """
     SELECT t.ItemID,e.SpellID FROM toy t LEFT JOIN (
         SELECT x.ItemID,e.SpellID,ROW_NUMBER() OVER (
@@ -54,11 +53,13 @@ def read_group_members(path, needed):
     return {group: sorted(members) for group, members in groups.items()}
 
 
-def assemble_manifest(spells, groups, sources):
-    return {"build": BUILD, "sources": sources, "spells": spells, "groups": groups}
+def assemble_manifest(spells, groups, sources, build):
+    if not build.strip():
+        raise ValueError("source CSV export build is empty")
+    return {"build": build, "sources": sources, "spells": spells, "groups": groups}
 
 
-def write_toy_area_manifest(database, requirements, members, output):
+def write_toy_area_manifest(database, requirements, members, output, build):
     roots = read_toy_roots(database)
     spells = read_cast_area_groups(requirements, roots)
     groups = read_group_members(members, set(spells.values()))
@@ -66,7 +67,7 @@ def write_toy_area_manifest(database, requirements, members, output):
         "SpellCastingRequirements": hashlib.sha256(requirements.read_bytes()).hexdigest(),
         "AreaGroupMember": hashlib.sha256(members.read_bytes()).hexdigest(),
     }
-    manifest = assemble_manifest(spells, groups, sources)
+    manifest = assemble_manifest(spells, groups, sources, build)
     output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return {"spells": len(spells), "groups": len(groups)}
 
@@ -77,9 +78,10 @@ def main():
     parser.add_argument("--casting-requirements", type=Path, required=True)
     parser.add_argument("--area-group-members", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--build", required=True, help="Build of the current canonical CSV export, supplied by its apply step")
     args = parser.parse_args()
     print(json.dumps(write_toy_area_manifest(
-        args.db, args.casting_requirements, args.area_group_members, args.output,
+        args.db, args.casting_requirements, args.area_group_members, args.output, args.build,
     )))
 
 

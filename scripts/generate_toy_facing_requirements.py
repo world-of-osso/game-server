@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pin Toy facing flags (local69933) and target bounding radii (TDB1210).
+"""Generate Toy facing flags from current canonical CSVs and source TDB model radii.
 
 TC a352b1fa Spell::CheckRange, Unit::IsWithinBoundaryRadius and
 Position::IsInDist: 180 degrees, strict exact3D radius, never CombatReach.
@@ -11,7 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from generate_toy_area_requirements import BUILD, read_toy_roots
+from generate_toy_area_requirements import read_toy_roots
 from encounter_model_geometry import COLUMNS
 import mysql_dump
 
@@ -40,10 +40,12 @@ def read_model_radii(path):
     return radii
 
 
-def write_manifest(database, requirements, dump, output):
+def write_manifest(database, requirements, dump, output, build):
     flags = read_facing_flags(requirements, read_toy_roots(database))
     radii = read_model_radii(dump)
-    manifest = {"build": BUILD, "source": "TCa352b1fa/TDB1210.26091",
+    if not build.strip():
+        raise ValueError("source CSV export build is empty")
+    manifest = {"build": build, "source": "TCa352b1fa/" + dump.name,
                 "requirements_sha256": hashlib.sha256(requirements.read_bytes()).hexdigest(),
                 "spells": flags, "model_radii": radii}
     output.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n")
@@ -54,8 +56,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("database", "requirements", "dump", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
+    parser.add_argument("--build", required=True, help="Build of the current canonical CSV export, supplied by its apply step")
     args = parser.parse_args()
-    print(write_manifest(args.database, args.requirements, args.dump, args.output))
+    print(write_manifest(args.database, args.requirements, args.dump, args.output, args.build))
 
 
 if __name__ == "__main__":

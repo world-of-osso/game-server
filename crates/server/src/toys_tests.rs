@@ -3953,7 +3953,7 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
     let (mut h, _) = setup(&directory.path().join("all-root-areas.redb"));
     place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let manifest: serde_json::Value =
-        serde_json::from_str(include_str!("spell_cast/toy_required_areas.json")).unwrap();
+        serde_json::from_str(include_str!("../tests/fixtures/toy_required_areas.json")).unwrap();
     let spells = manifest["spells"].as_object().unwrap();
     assert_eq!(spells.len(), 69);
     h.app
