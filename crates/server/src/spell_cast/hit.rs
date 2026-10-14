@@ -157,25 +157,22 @@ fn roll_defense(
         return Some(MissKind::Deflect);
     }
     if matches!(defense, DEFENSE_MELEE | DEFENSE_RANGED)
-        && roll_player_spell_block(world, caster, spell, unit, auras)
+        && roll_spell_block(world, caster, spell, unit, auras)
     {
         return Some(MissKind::Block);
     }
     None
 }
 
-/// Player shields, Unit::MeleeSpellHitResult2610–2741. NPC block remains a
-/// separate unproved boundary; do not certify the generic aura253 handler here.
-fn roll_player_spell_block(
+/// Unit::MeleeSpellHitResult2610–2741: shared active-defense gates precede
+/// player shield or native creature block chance. Full hit-table ordering is separate.
+fn roll_spell_block(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     unit: Entity,
     auras: Option<&ActiveAuras>,
 ) -> bool {
-    if world.get::<shared::components::Player>(unit).is_none() {
-        return false;
-    }
     let disabled = attributes(spell, 0) & ATTR0_NO_ACTIVE_DEFENSE != 0
         || attributes(spell, 8) & ATTR8_NO_ATTACK_BLOCK != 0;
     if disabled || caster_ignores_spell_block(world, caster, spell) {
@@ -190,9 +187,46 @@ fn roll_player_spell_block(
     if !can_deflect_from(world, caster, unit, auras) {
         return false;
     }
-    world
-        .get::<crate::stats::CharacterStats>(unit)
-        .is_some_and(|stats| stats.defense.shield_block > 0.0 && roll_percent(stats.defense.block))
+    if world.get::<shared::components::Player>(unit).is_some() {
+        return world
+            .get::<crate::stats::CharacterStats>(unit)
+            .is_some_and(|stats| {
+                stats.defense.shield_block > 0.0 && roll_percent(stats.defense.block)
+            });
+    }
+    roll_percent(creature_spell_block_chance(world, caster, unit, auras))
+}
+
+/// Unit::GetUnitBlockChance2832–2861. Specialized Totem/Lightwell summons
+/// remain unsupported by the summon runtime; template creature type is not IsTotem.
+fn creature_spell_block_chance(
+    world: &World,
+    caster: Entity,
+    unit: Entity,
+    auras: Option<&ActiveAuras>,
+) -> f32 {
+    const CREATURE_FLAG_EXTRA_NO_BLOCK: u32 = 0x40;
+    const CREATURE_BLOCK_CHANCE: f32 = 3.0;
+    const BLOCK_CHANCE_PER_LEVEL: f32 = 1.5;
+    let Some(npc) = world.get::<shared::components::Npc>(unit) else {
+        return 0.0;
+    };
+    let template = world
+        .resource::<crate::world_data::WorldData>()
+        .templates
+        .get(&npc.template_id)
+        .unwrap_or_else(|| panic!("missing sourced block flags for NPC{}", npc.template_id));
+    if template.flags_extra & CREATURE_FLAG_EXTRA_NO_BLOCK != 0 {
+        return 0.0;
+    }
+    let attacker = crate::level_scaling::UnitScaling::of(world, caster);
+    let victim = crate::level_scaling::UnitScaling::of(world, unit);
+    let level_difference = victim
+        .level_against(&attacker)
+        .saturating_sub(attacker.level_against(&victim));
+    let modifier = auras.map_or(0.0, |auras| auras.modifier(handlers::MOD_BLOCK_PERCENT));
+    (CREATURE_BLOCK_CHANCE + modifier + BLOCK_CHANCE_PER_LEVEL * f32::from(level_difference))
+        .max(0.0)
 }
 
 fn caster_ignores_spell_block(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
