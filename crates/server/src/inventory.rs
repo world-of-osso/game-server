@@ -90,10 +90,6 @@ struct InventoryStore<'w, 's> {
 }
 
 impl InventoryStore<'_, '_> {
-    fn get(&self) -> Option<(&Database, &ItemTemplates)> {
-        Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
-    }
-
     /// SPELL_EFFECT_DUAL_WIELD sets `CanDualWield` (TC Spell::EffectDualWield).
     fn can_dual_wield(&self, connection: Entity) -> bool {
         let known = self
