@@ -23,6 +23,8 @@ recastnavigation-sys = { path = "vendor/recastnavigation-sys" }
 bevy_replicon = { path = "vendor/bevy_replicon" }
 # Per-client server disconnect; see ../shared-protocol/vendor/lightyear_netcode/UPSTREAM.md.
 lightyear_netcode = { path = "../shared-protocol/vendor/lightyear_netcode" }
+# Same UDP client queue provisioning as the native client; server listener unchanged.
+lightyear_udp = { path = "../shared-protocol/vendor/lightyear_udp" }
 lightyear_replication = { path = "vendor/lightyear_replication" }
 
 # The bake parses every model of a tile and the real-geometry tests bake tiles;
