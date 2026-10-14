@@ -359,6 +359,7 @@ pub(crate) fn handle_set_position(
         &mut shared::components::MovementControl,
     )>,
     interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
+    replication_dirty: Option<&lightyear::prelude::ReplicationDirtyQueue>,
     name: &str,
     x: f32,
     y: f32,
@@ -383,8 +384,14 @@ pub(crate) fn handle_set_position(
     };
     for (entity, mut pos, cid, mut control) in players.iter_mut() {
         if cid.0 == char_id && *pos != next_position {
+            let old_position = *pos;
+            let old_epoch = control.epoch;
             *pos = next_position;
             crate::teleport::teleported(interest_dirty, entity, &mut control);
+            if let Some(dirty) = replication_dirty {
+                dirty.mark(entity);
+            }
+            debug!(player = ?entity, character = char_id, old_position = ?old_position, new_position = ?next_position, old_epoch, new_epoch = control.epoch, "BG_TRAVEL_ADMIN_WRITE");
         }
     }
 
