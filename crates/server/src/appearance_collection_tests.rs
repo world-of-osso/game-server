@@ -157,9 +157,7 @@ fn enter_world(app: &mut App, client: &Client) {
 }
 
 fn settle(app: &mut App) {
-    for _ in 0..3 {
-        app.update();
-    }
+    crate::inventory::finish_inventory_fixture_work(app);
 }
 
 fn send<M: Message, C: Channel>(app: &mut App, client: &Client, message: M) {

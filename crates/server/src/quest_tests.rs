@@ -2121,6 +2121,7 @@ fn source_requirements_quest_progress_turn_in_and_abandon_ignore_forever() {
         mark_rewarded(&app, &client, WESTBROOK_GARRISON_NEEDS_HELP);
         enter_world(&mut app, &client);
         accept(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY);
+        crate::inventory::finish_inventory_fixture_work(&mut app);
         let mut record = load_inventory_record(db(&app), client.character_id).unwrap();
         let provided = record
             .inventory
@@ -2136,7 +2137,7 @@ fn source_requirements_quest_progress_turn_in_and_abandon_ignore_forever() {
         app.world_mut()
             .resource_mut::<GoldUpdateQueue>()
             .record_items(client.character_id);
-        app.update();
+        crate::inventory::finish_inventory_fixture_work(&mut app);
         request(
             &mut app,
             &client,
@@ -2175,7 +2176,7 @@ fn source_requirements_quest_progress_turn_in_and_abandon_ignore_forever() {
         app.world_mut()
             .resource_mut::<GoldUpdateQueue>()
             .record_items(client.character_id);
-        app.update();
+        crate::inventory::finish_inventory_fixture_work(&mut app);
         turn_in(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY, Some(1));
         assert_eq!(
             received::<QuestGiverQuestComplete>(&mut app, &client).len(),

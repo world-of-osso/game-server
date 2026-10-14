@@ -1651,6 +1651,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
         MessageSender::<SwapItem>::default(),
         MessageReceiver::<SwapItem>::default(),
     ));
+    crate::inventory::finish_inventory_fixture_work(&mut app);
     invite_and_accept(&mut app, &alice, &bob, "Bob");
     invite_and_accept(&mut app, &alice, &cid, "Cid");
     rosters(&mut app, &alice);
@@ -1661,9 +1662,9 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             from: ItemLocation::Bag { bag: 0, slot: 0 },
             to: ItemLocation::Equipment(EquipmentSlot::Head),
         });
-    // Request delivery, inventory PostUpdate, group Update, then roster receipt.
+    // Wait for the durable equip, then its group roster wire delivery.
+    crate::inventory::finish_inventory_fixture_work(&mut app);
     pump(&mut app);
-    app.update();
     assert!(
         inbox(&mut app, &bob).inventory_errors.is_empty(),
         "equip request rejected: {:?}",

@@ -571,6 +571,26 @@ fn changes_bag_slot(change: &InventorySlotChange) -> bool {
 #[path = "item_use_tests.rs"]
 mod item_use_tests;
 
+/// Complete queued inventory receipts and subsequent wire delivery before fixture transitions.
+#[cfg(test)]
+pub(crate) fn finish_inventory_fixture_work(app: &mut App) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    let mut delivered_frames = 0;
+    while delivered_frames < 3 {
+        app.update();
+        if app.world().resource::<PendingInventoryCommits>().is_idle() {
+            delivered_frames += 1;
+        } else {
+            delivered_frames = 0;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "inventory fixture receipts did not complete"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+}
+
 #[cfg(test)]
 #[path = "inventory_tests.rs"]
 mod tests;
