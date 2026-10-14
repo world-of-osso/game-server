@@ -489,7 +489,9 @@ pub(crate) fn broadcast_registered_tabard(
         OnlinePlayers,
         GuildSenders,
     )> = bevy::ecs::system::SystemState::new(world);
-    let (db, connections, guilds, players, mut senders) = state.get_mut(world);
+    let (db, connections, guilds, players, mut senders) = state
+        .get_mut(world)
+        .expect("load guild tabard broadcast system parameters");
     broadcast_guild_update(
         &db.db,
         &connections,
