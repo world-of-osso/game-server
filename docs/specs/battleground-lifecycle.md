@@ -12,6 +12,8 @@ Queue 699/map 998 uses TDB starts 4059/4060, source minimum four-player roster a
 
 Lead-owned `python3 scripts/promote_battlegrounds.py --db <database> --maps <explicit-map-IDs>` replaces the full `content_policy.py` rebuild for battleground publication (supersedes older commands below). Only Map.db2 InstanceType 3/4 with authored difficulty 0 are accepted, atomically. Source TDB base/always-visible placements use GUID +20000000 and retain coordinates and movement data. Other maps, shared templates, preexisting overlays, pools, loot, quests, SmartAI, crafting and items remain unchanged. No Wowhead/Zephras input or full policy rebuild is permitted. Follow with `import-battleground-orbs.py`, then `add_battleground_summon_templates.py` to add scripted runtime dependencies. Canonical execution belongs exclusively to the lead; branch proof uses a reflink diagnostic copy.
 
+Gate health metadata publication is independent of map promotion: `python3 scripts/import-battlegrounds.py --dump <local-TDB-world-dump> --db <database> --table destructible_hitpoint` imports only verbatim `tdb_destructible_hitpoint` rows. Existing WorldStates, placements and other metadata are not reapplied. Publish this table before a server build requiring sourced Isle gate HealthRec28/32; intact+damaged counts are600001, not an invented health override.
+
 ## Coverage expansion — active 2026-10-12
 
 - [ ] Extend the complete lifecycle to random/epic Arathi Basin, Battle for Gilneas, Twin Peaks, Eye of the Storm, Temple of Kotmogu, Silvershard Mines, Seething Shore, Deephaul Ravine, Alterac Valley and Isle of Conquest. Source-backed objectives, WorldState IDs, victory rules, map-specific scoreboard columns and end/leave are required per map.
