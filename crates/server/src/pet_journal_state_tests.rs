@@ -44,6 +44,82 @@ fn pet_journal_state_preserves_real_injury_and_chosen_ability_after_database_reo
 }
 
 #[test]
+fn pet_journal_request_checks_authenticated_account_ownership_and_keeps_injuries() {
+    use bevy::prelude::*;
+    use shared::protocol::SetBattlePetAbility;
+    let directory = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(directory.path().join("ownership.redb")).unwrap();
+    let owned = journal(25);
+    let owned_id = owned.pets[0].id;
+    let foreign_id = owned_id + 1;
+    let mut other = PetJournal::default();
+    other
+        .add_with_guid(39, 25, PetQuality::Rare, 3, foreign_id)
+        .unwrap();
+    crate::battle_pets::save_journal(&db, 42, &owned);
+    crate::battle_pets::save_journal(&db, 43, &other);
+    let mut world = World::new();
+    world.insert_resource(crate::persistence::GameDatabase { db });
+    world.insert_resource(crate::battle_pets::load_test_catalog());
+    let mut owners = Vec::new();
+    for account in [42, 43] {
+        let owner = world
+            .spawn(crate::collection::default_collection_state())
+            .id();
+        world.spawn((
+            crate::auth::Authenticated {
+                account_id: account,
+            },
+            crate::auth::InWorld {
+                character_id: account,
+            },
+            crate::networking::PlayerLink(owner),
+        ));
+        owners.push(owner);
+    }
+    crate::battle_pets::load_account_journals(&mut world);
+    let mut injured =
+        load_states(&world.resource::<crate::persistence::GameDatabase>().db, 42).unwrap();
+    injured.get_mut(&owned_id).unwrap().health = 73;
+    save_states(
+        &world.resource::<crate::persistence::GameDatabase>().db,
+        42,
+        &injured,
+    )
+    .unwrap();
+    let before = load_states(&world.resource::<crate::persistence::GameDatabase>().db, 43).unwrap();
+    assert!(
+        crate::battle_pets::choose_ability(
+            &mut world,
+            owners[0],
+            SetBattlePetAbility {
+                pet_id: foreign_id,
+                slot: 1,
+                ability_id: 202
+            }
+        )
+        .is_err()
+    );
+    assert_eq!(
+        load_states(&world.resource::<crate::persistence::GameDatabase>().db, 43).unwrap(),
+        before
+    );
+    crate::battle_pets::choose_ability(
+        &mut world,
+        owners[0],
+        SetBattlePetAbility {
+            pet_id: owned_id,
+            slot: 1,
+            ability_id: 202,
+        },
+    )
+    .unwrap();
+    let saved = load_states(&world.resource::<crate::persistence::GameDatabase>().db, 42).unwrap();
+    assert_eq!(saved[&owned_id].health, 73);
+    assert_eq!(saved[&owned_id].selected_abilities[0], 202);
+}
+
+#[test]
 fn pet_journal_state_rejects_locked_foreign_and_invalid_ability_slots_without_mutation() {
     let catalog = catalog();
     let journal = journal(1);

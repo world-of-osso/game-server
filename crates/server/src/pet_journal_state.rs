@@ -2,7 +2,7 @@
 use redb::{Database, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 use server::pet_battle::{Catalog, calculate_stats};
-use shared::pet_battle::OwnedPet;
+use shared::pet_battle::{OwnedPet, PetJournal};
 use std::collections::BTreeMap;
 
 const ACCOUNT_PET_BATTLE_STATES: TableDefinition<u64, &[u8]> =
@@ -106,6 +106,34 @@ pub(crate) fn load_states(db: &Database, account: u64) -> Result<OwnedBattleStat
         .map_err(|e| format!("Commit pet state initialization: {e}"))?;
     Ok(states)
 }
+/// Commit the same accepted transition's journal progression and combat fields together.
+pub(crate) fn save_journal_and_states(
+    db: &Database,
+    account: u64,
+    journal: &PetJournal,
+    states: &OwnedBattleStates,
+) -> Result<(), String> {
+    let journal_bytes =
+        serde_json::to_vec(journal).map_err(|e| format!("Encode pet journal: {e}"))?;
+    let state_bytes = serde_json::to_vec(states).map_err(|e| format!("Encode pet state: {e}"))?;
+    let transaction = db
+        .begin_write()
+        .map_err(|e| format!("Begin battle progress save: {e}"))?;
+    transaction
+        .open_table(crate::battle_pets::ACCOUNT_PET_JOURNALS)
+        .map_err(|e| format!("Open pet journal table: {e}"))?
+        .insert(account, journal_bytes.as_slice())
+        .map_err(|e| format!("Save pet journal: {e}"))?;
+    transaction
+        .open_table(ACCOUNT_PET_BATTLE_STATES)
+        .map_err(|e| format!("Open pet state table: {e}"))?
+        .insert(account, state_bytes.as_slice())
+        .map_err(|e| format!("Save pet state: {e}"))?;
+    transaction
+        .commit()
+        .map_err(|e| format!("Commit battle progress for account {account}: {e}"))
+}
+
 pub(crate) fn save_states(
     db: &Database,
     account: u64,

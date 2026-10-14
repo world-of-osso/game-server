@@ -32,6 +32,34 @@ pub(crate) fn load_or_initialize_pet_states(
     Ok(states)
 }
 
+/// Persist a completed battle transition before its state is published to the owner.
+pub(crate) fn persist_battle_progress(
+    world: &mut World,
+    owner: Entity,
+    journal: &PetJournal,
+    health: &[(u64, i32)],
+) -> Result<(), String> {
+    let account = world
+        .get::<AccountPetJournal>(owner)
+        .ok_or("Account pet journal unavailable")?
+        .account_id;
+    let db = &world.resource::<GameDatabase>().db;
+    let mut states = load_states(db, account)?;
+    initialize_pet_states(world.resource::<PetCatalog>(), journal, &mut states)?;
+    for (id, health) in health {
+        states
+            .get_mut(id)
+            .ok_or_else(|| format!("Battle pet {id} has no owned combat state"))?
+            .health = *health;
+    }
+    crate::pet_journal_state::save_journal_and_states(db, account, journal, &states)?;
+    world
+        .get_mut::<AccountPetJournal>(owner)
+        .expect("journal checked")
+        .journal = journal.clone();
+    Ok(())
+}
+
 pub(super) fn initialize_pet_states(
     catalog: &PetCatalog,
     journal: &PetJournal,
@@ -147,7 +175,7 @@ impl PetCatalog {
     }
 }
 
-pub(super) fn send_pet_details(
+pub(crate) fn send_pet_details(
     world: &mut World,
     connection: Entity,
     owner: Entity,
@@ -210,7 +238,7 @@ pub(super) fn receive_ability_requests(world: &mut World) {
         send_pet_details(world, connection, owner, error);
     }
 }
-pub(super) fn choose_ability(
+pub(crate) fn choose_ability(
     world: &mut World,
     owner: Entity,
     request: SetBattlePetAbility,
