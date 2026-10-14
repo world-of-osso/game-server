@@ -32,13 +32,11 @@ impl NavigationMap {
                 // BuildPointPath's same-polygon, one-point special case.
                 if points.len() == 1 && polygons.len() == 1 {
                     points.push(target);
-                    return Ok(points);
                 }
-                return Err(format!(
-                    "waypoint surface steering stopped before endpoint: at={at:?} target={target:?} points={} polygons={}",
-                    points.len(),
-                    polygons.len()
-                ));
+                // FindSmoothPath breaks here, then BuildPointPath validates point count.
+                // A final surface step may reach target XZ before its height test passes;
+                // NormalizePath subsequently corrects those feet to collision support.
+                break;
             };
             at = self.step_surface(at, &steering, &mut polygons)?;
             if steering.end && in_range(at, steering.point, SLOP, 1.0) {
@@ -50,7 +48,13 @@ impl NavigationMap {
             }
             points.push(at);
         }
-        Err("waypoint surface path exhausted source 74-point limit".into())
+        if points.len() >= SOURCE_PATH_LIMIT {
+            return Err("waypoint surface path exhausted source 74-point limit".into());
+        }
+        if points.len() < 2 {
+            return Err("waypoint surface path has fewer than two controls".into());
+        }
+        Ok(points)
     }
 
     fn boundary_point(
