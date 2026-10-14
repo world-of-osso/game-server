@@ -11,6 +11,68 @@
 mod crafting_order_tests;
 
 #[test]
+fn profession_snapshot_waits_for_fifo_without_blocking_updates() {
+    use std::time::Instant;
+    let mut h = harness(90).expect("authentic profession harness");
+    let fence = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("profession fixture setup", |_| Ok(()));
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while fence.result().is_none() {
+        assert!(Instant::now() < deadline, "setup fence did not complete");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    h.advance(3);
+    h.take::<ProfessionSnapshot>();
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<PlayerProfessions>(h.player)
+        .unwrap()
+        .spells
+        .push(3908);
+    let started = Instant::now();
+    h.advance(2);
+    let elapsed = started.elapsed();
+    let premature = h.take::<ProfessionSnapshot>();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "profession tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "profession snapshot precedes commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        h.advance(1);
+        if h.take::<ProfessionSnapshot>()
+            .iter()
+            .any(|snapshot| snapshot.spells.contains(&3908))
+        {
+            break;
+        }
+        assert!(Instant::now() < deadline, "no durable profession snapshot");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert!(
+        persistence::load_professions(&h.app.world().resource::<GameDatabase>().db, h.character_id)
+            .knows(3908)
+    );
+}
+
+#[test]
 fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopens() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
     let cases = [

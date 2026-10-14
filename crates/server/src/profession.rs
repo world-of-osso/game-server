@@ -13,6 +13,9 @@
 //! `CREATE_ITEM` (24) stores the item and rolls `Player::UpdateCraftSkill`.
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
+mod actor;
+use actor::PendingProfessionSnapshots;
+pub(crate) use actor::ProfessionPersistencePlugin;
 mod data;
 mod gathering;
 pub(crate) mod specializations;
@@ -288,13 +291,16 @@ pub struct ProfessionPlugin;
 
 impl Plugin for ProfessionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((TrainerPlugin, specializations::SpecializationsPlugin))
-            .add_systems(Update, receive_craft_requests)
-            .add_systems(
-                FixedUpdate,
-                continue_craft_queues.after(crate::spell_cast::advance_casts),
-            )
-            .add_systems(PostUpdate, save_and_send_professions);
+        app.add_plugins((
+            TrainerPlugin,
+            specializations::SpecializationsPlugin,
+            ProfessionPersistencePlugin,
+        ))
+        .add_systems(Update, receive_craft_requests)
+        .add_systems(
+            FixedUpdate,
+            continue_craft_queues.after(crate::spell_cast::advance_casts),
+        );
     }
 }
 
@@ -693,19 +699,15 @@ fn continue_craft_queues(world: &mut World) {
     }
 }
 
-/// Persist changed professions and send the owner its `ProfessionSnapshot`.
-pub(crate) fn save_and_send_professions(
+/// Queue changed owned skill/spell state; the actor publishes only committed snapshots.
+fn enqueue_profession_snapshots(
     changed: Query<(Entity, &ClientId, &PlayerProfessions), Changed<PlayerProfessions>>,
-    mut connections: Query<(&PlayerLink, &mut MessageSender<ProfessionSnapshot>)>,
     db: Option<Res<GameDatabase>>,
+    mut pending: ResMut<PendingProfessionSnapshots>,
 ) {
-    for (player, character_id, profs) in &changed {
-        if let Some(db) = db.as_deref() {
-            persistence::save_professions(&db.db, character_id.0, profs);
-        }
-        if let Some((_, mut sender)) = connections.iter_mut().find(|(link, _)| link.0 == player) {
-            sender.send::<ProfessionChannel>(profs.snapshot());
-        }
+    let Some(db) = db else { return };
+    for (player, character_id, professions) in &changed {
+        pending.enqueue(&db, player, character_id.0, professions.clone());
     }
 }
 
