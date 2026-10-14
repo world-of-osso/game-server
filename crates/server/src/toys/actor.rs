@@ -53,7 +53,11 @@ pub(super) struct ToyPersistencePlugin;
 impl ToyPersistencePlugin {
     pub(super) fn install(app: &mut App) {
         app.init_resource::<PendingToyFavourites>()
-            .add_systems(PostUpdate, publish_toy_favourites);
+            .init_resource::<PendingToyLearning>()
+            .add_systems(
+                PostUpdate,
+                (learning::publish_toy_learning, publish_toy_favourites).chain(),
+            );
     }
 }
 

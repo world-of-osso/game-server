@@ -258,7 +258,8 @@ fn pump(h: &mut Harness) -> (Vec<ToyResult>, Vec<ToyCollectionUpdate>) {
         frames += 1;
         results.extend(drain::<ToyResult>(&mut h.app, h.connection));
         snapshots.extend(drain::<ToyCollectionUpdate>(&mut h.app, h.connection));
-        let pending = !h.app.world().resource::<PendingToyFavourites>().is_empty();
+        let pending = !h.app.world().resource::<PendingToyFavourites>().is_empty()
+            || !h.app.world().resource::<PendingToyLearning>().is_empty();
         if frames >= 7 && !pending {
             break;
         }
@@ -309,6 +310,93 @@ fn activate_witnessed(
             witness,
         });
     pump(h).0
+}
+
+#[test]
+fn toy_learning_and_following_favourite_wait_for_fifo_without_blocking_updates() {
+    use std::time::{Duration, Instant};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("learning-fifo.redb");
+    let (mut h, character) = setup(&path);
+    pump(&mut h);
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(h.connection)
+        .unwrap()
+        .send::<InventoryChannel>(UseItem {
+            location: ItemLocation::Bag { bag: 0, slot: 0 },
+            target: None,
+        });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SetToyFavourite>>(h.connection)
+        .unwrap()
+        .send::<CollectionChannel>(SetToyFavourite {
+            item_id: FIGURINE,
+            favourite: true,
+        });
+    let started = Instant::now();
+    h.advance(3);
+    let elapsed = started.elapsed();
+    let premature_results = drain::<ToyResult>(&mut h.app, h.connection);
+    let premature_snapshots = drain::<ToyCollectionUpdate>(&mut h.app, h.connection);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "toy learning tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature_results.is_empty(),
+        "toy learning result precedes commit"
+    );
+    assert!(
+        premature_snapshots.is_empty(),
+        "toy learning snapshot precedes commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let mut replies = Vec::new();
+    while replies.len() < 2 {
+        replies.extend(pump(&mut h).0);
+        assert!(
+            Instant::now() < deadline,
+            "no committed toy learning replies"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(replies.len(), 2);
+    assert!(
+        replies.iter().all(|reply| reply.error.is_none()),
+        "{replies:?}"
+    );
+    assert!(
+        replies
+            .iter()
+            .any(|reply| reply.operation == ToyOperation::Learn)
+    );
+    assert!(
+        replies
+            .iter()
+            .any(|reply| reply.operation == ToyOperation::Favourite)
+    );
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(toy_store::load(db, 1).get(&FIGURINE), Some(&true));
+    assert!(
+        !persistence::load_inventory(db, character)
+            .items
+            .iter()
+            .any(|item| item.item_id == FIGURINE)
+    );
 }
 
 #[test]

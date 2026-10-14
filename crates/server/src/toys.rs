@@ -11,7 +11,9 @@ use shared::protocol::{
 };
 
 mod actor;
+mod learning;
 use actor::{PendingToyFavourites, ToyPersistencePlugin};
+use learning::{LearningRequest, PendingToyLearning, enqueue_toy_learning};
 
 pub struct ToysPlugin;
 impl Plugin for ToysPlugin {
@@ -271,7 +273,7 @@ pub(crate) fn learn_item(
     let templates = world.resource::<crate::item_templates::ItemTemplates>();
     let record = crate::persistence::inventory_store::load_inventory_record(db, character_id)
         .ok_or_else(|| fail("character inventory missing".into()))?;
-    let mut model = crate::inventory::inventory_model::InventoryModel::from_record(
+    let model = crate::inventory::inventory_model::InventoryModel::from_record(
         record,
         templates,
         &mut || crate::persistence::next_id(db, "item_instance"),
@@ -283,6 +285,7 @@ pub(crate) fn learn_item(
         return Ok(false);
     }
     let item_id = item.item_id;
+    let guid = item.item_guid;
     check_item_requirements(world, player, item_id).map_err(fail)?;
     let mut query = world.query::<(Entity, &Authenticated, &PlayerLink, &InWorld)>();
     let (connection, account) = query
@@ -290,23 +293,18 @@ pub(crate) fn learn_item(
         .find(|(_, _, link, in_world)| link.0 == player && in_world.character_id == character_id)
         .map(|(entity, auth, _, _)| (entity, auth.account_id))
         .ok_or_else(|| fail("toy learner not authenticated".into()))?;
-    let db = &world.resource::<GameDatabase>().db;
-    model.destroy(location, 1)?;
-    let outcome = toy_store::learn(db, account, character_id, item_id, &model.into_record());
-    result(
+    enqueue_toy_learning(
         world,
-        connection,
-        item_id,
-        ToyOperation::Learn,
-        None,
-        outcome.clone(),
+        LearningRequest {
+            connection,
+            player,
+            account,
+            character: character_id,
+            location,
+            item: item_id,
+            guid,
+        },
     );
-    outcome.map_err(fail)?;
-    world
-        .resource_mut::<crate::gold::GoldUpdateQueue>()
-        .record_items(character_id);
-    crate::achievement::record_toy_ownership(world, player, account);
-    broadcast(world, account);
     Ok(true)
 }
 
