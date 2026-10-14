@@ -1156,3 +1156,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: Charred Warblades native3%/1000ms delayed self-heal producer; real-damage RED at eb9fbf29 (500HP stays500 instead of504); GREEN verification pending.
 
 - 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.
+
+- 2026-10-13 — [Group-private runtime](systems/toys.md#source-group-private-runtime-2026-10-13): captured group identity, dynamic membership interest and inherited privacy; behavioral/capture gates tracked separately.
