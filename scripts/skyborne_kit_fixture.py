@@ -20,6 +20,12 @@ def fixture_database():
     db = sqlite3.connect(":memory:")
     db.executescript((SCRIPTS / "db2_schema.sql").read_text())
     db.executescript((SCRIPTS / "tdb_schema.sql").read_text())
+    # Empty currency schema from the existing native fixture; merchant loading queries it.
+    db.execute("""CREATE TABLE currency_types (
+        ID INTEGER PRIMARY KEY, Name_lang TEXT NOT NULL, Description_lang TEXT NOT NULL,
+        InventoryIconFileID INTEGER NOT NULL, MaxQty INTEGER NOT NULL,
+        MaxEarnablePerWeek INTEGER NOT NULL, AwardConditionID INTEGER NOT NULL,
+        MaxQtyWorldStateID INTEGER NOT NULL, Flags_0 INTEGER NOT NULL, Flags_1 INTEGER NOT NULL)""")
     spec = importlib.util.spec_from_file_location("player_starts", SCRIPTS / "import-player-starts.py")
     starts = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(starts)

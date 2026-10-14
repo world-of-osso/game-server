@@ -165,6 +165,11 @@ INSERT INTO "content_item" VALUES(187760,'Mage''s Sash',1,1,0,12,2,1,1,0,4,1,6,2
 INSERT INTO "content_item" VALUES(187761,'Mage''s Robes',1,1,0,12,2,1,1,0,4,1,5,2,0,0.0,-1,-1,-1,0,0,0,0,0,8192,8388608,0,0,191556,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,NULL);
 INSERT INTO "content_item" VALUES(187762,'Mage''s Mitts',1,1,0,12,2,1,1,0,4,1,10,2,0,0.0,-1,-1,-1,0,0,0,0,0,8192,8388608,0,0,191561,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,NULL);
 CREATE TABLE content_npc_vendor (entry INTEGER,slot INTEGER,item INTEGER,maxcount INTEGER,incrtime INTEGER,ExtendedCost INTEGER);
+CREATE TABLE currency_types (
+        ID INTEGER PRIMARY KEY, Name_lang TEXT NOT NULL, Description_lang TEXT NOT NULL,
+        InventoryIconFileID INTEGER NOT NULL, MaxQty INTEGER NOT NULL,
+        MaxEarnablePerWeek INTEGER NOT NULL, AwardConditionID INTEGER NOT NULL,
+        MaxQtyWorldStateID INTEGER NOT NULL, Flags_0 INTEGER NOT NULL, Flags_1 INTEGER NOT NULL);
 CREATE TABLE db2_row_source (
     table_name TEXT NOT NULL, row_id INTEGER NOT NULL, build TEXT NOT NULL,
     file_data_id INTEGER NOT NULL, layout_hash TEXT NOT NULL, sha256 TEXT NOT NULL,
