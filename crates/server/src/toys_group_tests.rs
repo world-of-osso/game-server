@@ -69,6 +69,15 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
     assert_eq!(actors.len(), count, "item {item}");
     for actor in &actors {
         assert!(world.get::<ModelDisplay>(*actor).unwrap().display_id > 0);
+        if item == 163745 {
+            assert_eq!(
+                world
+                    .get::<shared::components::UnitScale>(*actor)
+                    .unwrap()
+                    .0,
+                0.75
+            );
+        }
         assert_eq!(
             world.get::<UnitSummonedBy>(*actor).unwrap().0,
             h.caster.to_bits()
