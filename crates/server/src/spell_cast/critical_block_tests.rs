@@ -455,7 +455,7 @@ fn creature_block_duel(entry: u32) -> Harness {
             template_id: entry,
             name,
         },
-        shared::components::UnitFactionTemplate(faction),
+        shared::components::UnitFactionTemplate(u32::from(faction)),
         UnitLevel(level),
         Rotation {
             x: 0.0,
