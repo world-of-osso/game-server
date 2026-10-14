@@ -679,7 +679,16 @@ fn class_completeness_native_ranged_deflection_and_block_share_one_hit_table() {
 }
 
 fn evasion_duel(class: u8) -> (Harness, Entity) {
-    let mut h = harness(Vec::new(), &[5277, 1464, 7384, 19434], class).unwrap();
+    let mut h = harness_with_plugins(
+        Vec::new(),
+        &[5277, 1464, 7384, 19434],
+        class,
+        false,
+        |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        },
+    )
+    .unwrap();
     let defender = spawn_player(&mut h.app, 4, 3.0);
     h.app
         .world_mut()
@@ -694,6 +703,13 @@ fn evasion_duel(class: u8) -> (Harness, Entity) {
             z: 0.0,
         },
         crate::class_progression::KnownSpells::fixture(vec![5277]),
+        // Native stat-producer inputs; only the receiver is recomputed.
+        shared::components::UnitStats {
+            stamina: 100.0,
+            ..default()
+        },
+        shared::components::CombatRatings::default(),
+        shared::components::DerivedStats::default(),
     ));
     // Actual Rogue self-cast, not a synthetic dodge amount or fake NPC profile.
     let spell = world_db().unwrap().store.get(5277).unwrap();
