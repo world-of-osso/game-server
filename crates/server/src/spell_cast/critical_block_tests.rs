@@ -568,7 +568,12 @@ fn class_completeness_native_creature_no_xp_flag_does_not_disable_block() {
 fn class_completeness_native_weapon_spell_miss_and_block_share_one_hit_table() {
     let mut h = creature_block_duel(6);
     let target = h.npc;
-    crate::auras::remove_aura(h.app.world_mut(), target, 10021, None);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 10021,
+    );
     // Native3650 reduces caster hit by50;3248 adds55 to NPC block's3.
     // Their cumulative table fills100%: no random draw can be an unblocked hit.
     for attempt in 0..60 {
