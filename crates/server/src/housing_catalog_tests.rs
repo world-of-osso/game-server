@@ -3,6 +3,22 @@ use crate::persistence::housing_store::BUILD_KEY;
 use bevy::prelude::Vec3;
 use rusqlite::{Connection, params};
 
+#[test]
+fn db2_follow_install_housing_catalog_reads_the_declared_next_build_key() {
+    let db = catalog_fixture();
+    let key = "334a36cf5f3c32a5f7a167405487fa14";
+    db.execute(
+        "UPDATE housing_catalog_build SET build_key=?, build='12.1.5.70391'",
+        [key],
+    )
+    .unwrap();
+    db.execute("UPDATE housing_catalog_record SET build_key=?", [key])
+        .unwrap();
+    let catalog = HousingCatalog::read(&db).unwrap();
+    assert_eq!(catalog.plot(417).unwrap().cost, 10_000_000);
+    assert_eq!(catalog.cornerstone_plot(527268), Some(417));
+}
+
 fn import_fixture() -> Connection {
     let db = Connection::open_in_memory().unwrap();
     db.execute_batch("CREATE TABLE housing_catalog_build (build_key TEXT PRIMARY KEY, build TEXT); CREATE TABLE housing_catalog_record (build_key TEXT, table_name TEXT, record_id INTEGER, fields_json TEXT);").unwrap();
@@ -106,6 +122,6 @@ fn housing_catalog_reads_authored_neighborhood_and_cornerstone_without_default_g
     assert!(
         HousingCatalog::read(&db)
             .unwrap_err()
-            .contains("12.1.0.69933")
+            .contains("Invalid DB2 source build")
     );
 }

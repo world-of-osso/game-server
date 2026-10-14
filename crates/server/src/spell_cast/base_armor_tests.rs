@@ -195,6 +195,7 @@ fn class_completeness_native_base_armor_player_factors_multiply_before_stat_armo
         mastery_coefficient: 0.0,
         attack_power_per_strength: 0.0,
         attack_power_per_agility: 0.0,
+        ranged_attack_power_per_agility: 0.0,
         gear_primary: default(),
         gear_ratings: shared::components::CombatRatings {
             armor: ARMOR,

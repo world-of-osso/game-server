@@ -189,7 +189,7 @@ fn dummy20_barbed_refresh_resnapshots_new_power_without_rescaling_unpaid_old_dam
         .world_mut()
         .get_mut::<crate::stats::CharacterStats>(caster)
         .unwrap()
-        .attack_power = 200.0;
+        .ranged_attack_power = 200.0;
     h.inbox.log.clear();
     apply(&mut h, caster, npc, 217200);
     h.advance(250);

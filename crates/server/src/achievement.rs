@@ -747,11 +747,22 @@ pub(crate) fn record_targeted_spell_hit(
     spell: u32,
 ) {
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
-    let target_race = world.get::<Player>(target).map(|player| player.race);
+    let target_player = world
+        .get::<Player>(target)
+        .map(|player| catalog::SpellHitPlayer {
+            race: player.race,
+            class: player.class,
+        });
+    // TC CriteriaHandler1998–2001 reads the hit unit before spell effects.
+    let target_health_percent = world
+        .get::<shared::components::Health>(target)
+        .filter(|health| health.max.is_finite() && health.max > 0.0)
+        .map(|health| health.current / health.max * 100.0)
+        .filter(|percent| percent.is_finite() && *percent >= 0.0);
     record_criteria_event(
         world,
         caster,
-        CriteriaEvent::LandTargetedSpell(spell, target_race),
+        CriteriaEvent::LandTargetedSpell(spell, target_player, target_health_percent, Some(target)),
     );
 }
 
@@ -990,6 +1001,36 @@ pub(crate) fn player_conditions(world: &World, player: Entity) -> PlayerConditio
     PlayerConditions {
         difficulty: map_difficulty(world, map),
         player: reference_player(world, player, map),
+        ..Default::default()
+    }
+}
+
+/// Read actual hit-unit aura authority while live events are consumed before effects.
+/// Hit identities never enter persisted counters or login reconstruction.
+pub(crate) fn event_conditions(
+    world: &World,
+    player: Entity,
+    events: &[CriteriaEvent],
+) -> PlayerConditions {
+    let mut conditions = player_conditions(world, player);
+    for event in events {
+        if let CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) = event {
+            conditions
+                .hit_units
+                .insert(*target, read_spell_hit_unit(world, *target));
+        }
+    }
+    conditions
+}
+
+fn read_spell_hit_unit(world: &World, target: Entity) -> catalog::SpellHitUnit {
+    catalog::SpellHitUnit {
+        creature_entry: world
+            .get::<shared::components::Npc>(target)
+            .map(|npc| npc.template_id),
+        auras: world
+            .get::<crate::auras::ActiveAuras>(target)
+            .map(|auras| auras.iter().map(|aura| aura.spell_id).collect()),
     }
 }
 
@@ -1065,6 +1106,7 @@ pub(crate) fn map_conditions(world: &World, map: InMap) -> PlayerConditions {
     PlayerConditions {
         difficulty: map_difficulty(world, Some(map)),
         player: None,
+        ..Default::default()
     }
 }
 
@@ -1078,7 +1120,7 @@ fn update_player_events(
         return None;
     }
     let race = world.get::<Player>(player)?.race;
-    let conditions = player_conditions(world, player);
+    let conditions = event_conditions(world, player, events);
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let owner = world
         .query::<(&Authenticated, &PlayerLink, &InWorld)>()

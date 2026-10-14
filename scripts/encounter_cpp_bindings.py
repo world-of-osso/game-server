@@ -2,7 +2,7 @@
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
 Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
-Adarogg, Slagmaw, Gordoth and Wailing Caverns primaries.
+Adarogg, Slagmaw, Gordoth, Wailing Caverns and Silverlaine primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
@@ -125,7 +125,23 @@ COBRAHN_PRIMARY = dict(
     actor_id=1046,
     display_id=4213,
 )
+SHADOWFANG_SOURCES = {
+    "EasternKingdoms/ShadowfangKeep/instance_shadowfang_keep.cpp": "996e91b82bba4dd2f5003fe03f4db6802bd384ddb1b3772df48f359777d8a418",
+    "EasternKingdoms/ShadowfangKeep/shadowfang_keep.h": "8f7db01cd0ed1e89d180d6cc3b4f6c4507b22a3fea66b7f9d24ebd78a9331a39",
+}
+SILVERLAINE_PRIMARY = dict(
+    map_id=33,
+    entry=3887,
+    encounter_id=1070,
+    bit=1,
+    script="",
+    ai="SmartAI",
+    journal_id=97,
+    actor_id=367,
+    display_id=37288,
+)
 PROFILES = {
+    "silverlaine": (SILVERLAINE_PRIMARY, SHADOWFANG_SOURCES),
     "kystia": (PRIMARY, SOURCES),
     "golden-serpent": (GOLDEN_PRIMARY, GOLDEN_SOURCES),
     "koranthal": (KORANTHAL_PRIMARY, KORANTHAL_SOURCES),
