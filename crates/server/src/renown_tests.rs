@@ -114,6 +114,61 @@ fn renown_watch_query_reads_live_reputation_and_zero_clears_persistently() {
 }
 
 #[test]
+fn renown_watch_published_ungated_faction_acknowledges_bar_and_survives_reopen() {
+    use shared::reputation::CharacterReputation;
+    let faction = catalog()
+        .iter()
+        .find(|faction| faction.id == 55)
+        .expect("published Labyrinth faction");
+    assert_eq!(
+        unlock(faction),
+        RenownUnlock::Ungated,
+        "eligibility must come from the published source, not a fixture override"
+    );
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Nativewatch").unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(CharacterReputation::default());
+    let (reply, updates) = request_with_updates(
+        &mut h,
+        RenownRequest::SetWatchedFaction {
+            faction_id: faction.faction_id,
+        },
+    );
+    assert_eq!(reply.watched_faction, Some(faction.faction_id));
+    assert_eq!(reply.watch_error, None);
+    let watched = updates
+        .into_iter()
+        .find_map(|update| update.snapshot.and_then(|snapshot| snapshot.watched))
+        .expect("accepted watch must publish its main-screen bar");
+    assert_eq!(
+        (
+            watched.faction_id,
+            watched.name.as_str(),
+            watched.value,
+            watched.maximum,
+            watched.is_major_faction
+        ),
+        (
+            faction.faction_id,
+            faction.name.as_str(),
+            0,
+            faction.level_threshold,
+            true
+        )
+    );
+    let character = h.character_id;
+    drop(h);
+    let reopened = Database::open(file.path()).unwrap();
+    let stored = crate::persistence::load_reputation(&reopened, character, || {
+        panic!("accepted watch must persist")
+    });
+    assert_eq!(stored.watched_faction(), Some(faction.faction_id));
+}
+
+#[test]
 fn renown_watch_evaluated_eligibility_replaces_the_single_watched_faction() {
     use shared::reputation::CharacterReputation;
     let mut reputation = CharacterReputation::default();
