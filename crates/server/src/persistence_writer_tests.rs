@@ -60,6 +60,46 @@ fn fifo_writer_withholds_durability_receipts_and_drains_owned_snapshots() {
 }
 
 #[test]
+fn fifo_writer_crash_before_flush_loses_only_unacknowledged_work() {
+    const CHILD_PATH: &str = "SERVER_WRITER_CRASH_FIXTURE";
+    if let Ok(path) = std::env::var(CHILD_PATH) {
+        let db = Arc::new(Database::create(&path).unwrap());
+        let writer = PersistenceWriter::start(db);
+        let acknowledged = writer.enqueue("acknowledged transfer", |db| {
+            persist(db, 41, b"acknowledged")
+        });
+        wait(&acknowledged).unwrap();
+        let (entered, ready) = mpsc::channel();
+        let (_release, blocked) = mpsc::channel::<()>();
+        writer.enqueue("blocked snapshot", move |db| {
+            entered.send(()).unwrap();
+            blocked.recv().unwrap();
+            persist(db, 42, b"unacknowledged")
+        });
+        ready.recv_timeout(Duration::from_secs(3)).unwrap();
+        writer.enqueue("later snapshot", |db| persist(db, 43, b"unacknowledged"));
+        std::process::exit(77); // abrupt exit: no Rust destructors or shutdown drain.
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("crash.redb");
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "persistence_writer::tests::fifo_writer_crash_before_flush_loses_only_unacknowledged_work", "--nocapture"])
+        .env(CHILD_PATH, &path).output().unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(77),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let reopened = Database::open(&path).unwrap();
+    let txn = reopened.begin_read().unwrap();
+    let rows = txn.open_table(ROWS).unwrap();
+    assert_eq!(rows.get(41).unwrap().unwrap().value(), b"acknowledged");
+    assert!(rows.get(42).unwrap().is_none());
+    assert!(rows.get(43).unwrap().is_none());
+}
+
+#[test]
 fn fifo_writer_reports_failed_commit_and_continues_later_jobs() {
     let dir = tempfile::tempdir().unwrap();
     let db = Arc::new(Database::create(dir.path().join("failure.redb")).unwrap());

@@ -760,8 +760,12 @@ fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
     for _ in 0..300 {
         app.world_mut().run_schedule(FixedUpdate);
     }
-    let db = &app.world().resource::<GameDatabase>().db;
-    assert_eq!(stored_position(db, character_id).0, 25.0);
+    let saved_db = app
+        .world_mut()
+        .remove_resource::<GameDatabase>()
+        .unwrap()
+        .into_database();
+    assert_eq!(stored_position(&saved_db, character_id).0, 25.0);
 }
 
 fn spawn_saved_player(app: &mut App, name: &str, map_id: u32, x: f32) -> u64 {
@@ -783,6 +787,42 @@ fn spawn_saved_player(app: &mut App, name: &str, map_id: u32, x: f32) -> u64 {
         },
     ));
     character_id
+}
+
+#[test]
+fn periodic_save_enqueues_without_waiting_for_busy_writer() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
+    app.insert_resource(GameDatabase::new(temp_database()));
+    let character = spawn_saved_player(&mut app, "Queued", 0, 25.0);
+    for _ in 0..299 {
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = std::time::Instant::now();
+    app.world_mut().run_schedule(FixedUpdate);
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    let saved = app
+        .world_mut()
+        .remove_resource::<GameDatabase>()
+        .unwrap()
+        .into_database();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "save tick waited: {elapsed:?}"
+    );
+    assert_eq!(stored_position(&saved, character).0, 25.0);
 }
 
 #[test]
@@ -818,7 +858,12 @@ fn periodic_save_writes_every_changed_player_with_map_and_corpse() {
     for _ in 0..300 {
         app.world_mut().run_schedule(FixedUpdate);
     }
-    let db = &app.world().resource::<GameDatabase>().db;
+    let saved_db = app
+        .world_mut()
+        .remove_resource::<GameDatabase>()
+        .unwrap()
+        .into_database();
+    let db = &saved_db;
     assert_eq!(stored_position(db, walker).0, 25.0);
     assert_eq!(stored_position(db, ghost).0, -40.0);
     assert_eq!(crate::maps::persistence::load_character_map(db, walker), 0);

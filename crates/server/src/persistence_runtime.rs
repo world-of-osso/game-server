@@ -68,8 +68,8 @@ pub(super) fn save_dirty_characters(
     if characters.is_empty() {
         return;
     }
-    save_live_characters(&db.db, &characters);
-    info!("Periodic save: {} characters written", characters.len());
+    enqueue_live_characters(&db, characters);
+    info!("Periodic character save queued");
 }
 
 pub(super) fn flush_all_characters_on_exit(
@@ -87,29 +87,29 @@ pub(super) fn flush_all_characters_on_exit(
     if characters.is_empty() {
         return;
     }
-    save_live_characters(&db.db, &characters);
-    info!("Shutdown save: {} characters written", characters.len());
+    enqueue_live_characters(&db, characters);
+    info!("Shutdown character save queued for drain");
 }
 
 /// What `save_live_character` writes for one player.
-struct LiveCharacter<'a> {
+struct LiveCharacter {
     character_id: u64,
-    player: &'a Player,
-    position: &'a Position,
-    health: &'a Health,
-    death: Option<&'a PlayerDeathState>,
+    player: Player,
+    position: Position,
+    health: Health,
+    death: Option<PlayerDeathState>,
     map_id: u32,
 }
 
 fn live_character<'a>(
     (position, health, player, client_id, death, map, transfer): <DirtyPlayerData as bevy::ecs::query::QueryData>::Item<'a, '_>,
-) -> LiveCharacter<'a> {
+) -> LiveCharacter {
     LiveCharacter {
         character_id: client_id.0,
-        player,
-        position,
-        health,
-        death,
+        player: player.clone(),
+        position: *position,
+        health: *health,
+        death: death.cloned(),
         map_id: crate::maps::saved_map_id(map, transfer),
     }
 }
@@ -128,13 +128,23 @@ pub fn save_live_character(
         db,
         &[LiveCharacter {
             character_id,
-            player,
-            position,
-            health,
-            death,
+            player: player.clone(),
+            position: *position,
+            health: *health,
+            death: death.cloned(),
             map_id,
         }],
     );
+}
+
+fn enqueue_live_characters(
+    db: &GameDatabase,
+    characters: Vec<LiveCharacter>,
+) -> crate::persistence_writer::CommitReceipt {
+    db.writer.enqueue("live character snapshots", move |db| {
+        save_live_characters(db, &characters);
+        Ok(())
+    })
 }
 
 /// All characters in one write transaction: one commit (and disk sync) per save,
@@ -164,22 +174,23 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
                 })
                 .unwrap_or_else(|| {
                     CharacterData::from_components(
-                        character.player,
-                        character.position,
-                        character.health,
+                        &character.player,
+                        &character.position,
+                        &character.health,
                     )
                 });
-            data.sync_live_components(character.player, character.position, character.health);
+            data.sync_live_components(&character.player, &character.position, &character.health);
             if character
                 .death
+                .as_ref()
                 .is_some_and(|death| death.state != shared::death::DeathState::Alive)
             {
                 data.health = 0.0;
             }
-            save_death_state(&txn, id, character.death);
+            save_death_state(&txn, id, character.death.as_ref());
             rows.insert(id, data.encode_stored().as_slice())
                 .expect("Failed to insert character");
-            match ghost_corpse(character.death) {
+            match ghost_corpse(character.death.as_ref()) {
                 Some(corpse) => corpses
                     .insert(id, bitcode::encode(&corpse).as_slice())
                     .map(drop)
