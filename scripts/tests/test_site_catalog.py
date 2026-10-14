@@ -8,6 +8,17 @@ from pathlib import Path
 
 
 class SiteCatalogTests(unittest.TestCase):
+    def test_native_creature_types_are_not_dropped_from_the_selected_source(self):
+        path = Path(__file__).resolve().parents[1] / "prepare_site_catalog.py"
+        spec = importlib.util.spec_from_file_location("site_catalog", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            csv_path = Path(directory) / "races.csv"
+            csv_path.write_text("ID,Name_lang,FactionID,CreatureType\n1,Human,1,7\n12,Fel Orc,1701,2\n95,Skyborne,3629,9\n")
+            self.assertEqual(module.read_races(csv_path, False), [(1,"Human",1,7),(12,"Fel Orc",1701,2)])
+            self.assertEqual(module.read_races(csv_path, True), [(95,"Skyborne",3629,9)])
+
     def test_authored_races_preserve_source_and_choose_forever_for_skyborne(self):
         path = Path(__file__).resolve().parents[1] / "prepare_site_catalog.py"
         spec = importlib.util.spec_from_file_location("site_catalog", path)
