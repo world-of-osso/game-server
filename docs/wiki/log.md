@@ -1168,3 +1168,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-14: Document pinned Warrior per-effect stun dispatch and conditional Storm Bolts selector; native RED3 retained, GREEN pending. Installed70391 slot data follows published canonical snapshot.
 
 - 2026-10-14: Warrior native stun controls12/12 and adjacent61/61 pass; installed70391 census3185/4459/183 over7827 memberships. New1319011 CSV→published-SQLite gap retained; no whole-talent/Dummy promotion.
+
+- 2026-10-14: Add source-distinct melee/ranged AP model and166/167 percentage consumers; native Battle Shout33→33 and Aimed Shot316 versus408..428 genuine RED retained; GREEN pending.

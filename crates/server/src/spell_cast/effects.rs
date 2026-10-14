@@ -274,14 +274,14 @@ fn takes_healing_power(effect: &SpellEffect) -> bool {
 }
 
 /// `Guardian::UpdateAttackPowerAndDamage` for a hunter pet (StatSystem.cpp:1336-1345): its
-/// owner's attack power × 0.22. The pet's own `2 × Strength - 20` needs `pet_levelstats`,
+/// owner's ranged attack power × 0.22. The pet's own `2 × Strength - 20` needs `pet_levelstats`,
 /// which is not imported.
 const HUNTER_PET_OWNER_AP: f32 = 0.22;
 
 fn hunter_pet_attack_power(world: &World, owner: Entity) -> f32 {
     world
         .get::<CharacterStats>(owner)
-        .map_or(0.0, |stats| stats.attack_power * HUNTER_PET_OWNER_AP)
+        .map_or(0.0, |stats| stats.ranged_attack_power * HUNTER_PET_OWNER_AP)
 }
 
 const SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL: u32 = 0x0008_0000;
@@ -509,7 +509,15 @@ pub(crate) fn effect_power_bonus(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let (spell_power, attack_power) = power_stats(world, caster, takes_healing_power(effect));
+    let (spell_power, melee_attack_power) = power_stats(world, caster, takes_healing_power(effect));
+    // Unit.cpp6880–6890 chooses RAP for non-melee ranged weapon spells only.
+    let attack_power = if is_ranged_weapon_spell(spell)
+        && spell.categories.as_ref().is_none_or(|categories| categories.damage_class != DEFENSE_MELEE)
+    {
+        world.get::<CharacterStats>(caster).map_or(0.0, |stats| stats.ranged_attack_power)
+    } else {
+        melee_attack_power
+    }
     let modify = |op, value| spell_mods::modify(world, caster, spell, op, value);
     let coefficient = modify(SpellModOp::BonusCoefficient, effect.bonus_coefficient);
     let ap_coefficient = modify(
