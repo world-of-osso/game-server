@@ -993,6 +993,7 @@ pub fn load_collections(
     }
 }
 
+#[cfg(test)]
 pub fn save_collections(
     db: &Database,
     character_id: u64,
