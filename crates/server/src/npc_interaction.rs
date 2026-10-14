@@ -467,6 +467,7 @@ fn process_game_object_uses(
     for (connection, link, current, mut receiver) in &mut receivers {
         let mut current = current.map(|interaction| interaction.npc);
         for request in receiver.receive() {
+            debug!(player = ?link.0, object = request.object, "UseGameObject received");
             if let Some(target) = Entity::try_from_bits(request.object)
                 && gatherables.contains(target)
             {
@@ -564,6 +565,7 @@ fn process_game_object_uses(
                     continue;
                 }
                 Err(error) => {
+                    debug!(player = ?link.0, object = request.object, error = ?error, "UseGameObject rejected before cast");
                     senders.failed(connection, request.object, error);
                     continue;
                 }
