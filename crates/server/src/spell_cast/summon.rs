@@ -184,7 +184,10 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
     };
     let entry = effect.misc_values[0] as u32;
     if properties.control == CONTROL_WILD && properties.title == 0 {
-        spawn_wild_summon(world, ctx, properties_id, properties, entry, dest);
+        let count = roll_wild_summon_count(world, ctx, effect, properties_id);
+        for _ in 0..count {
+            spawn_wild_summon(world, ctx, properties_id, properties, entry, dest);
+        }
         return;
     }
     let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
@@ -194,6 +197,24 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
     };
     replace_slotted_summon(world, ctx.caster, properties);
     spawn_summon(world, ctx, properties_id, properties, &template, dest);
+}
+
+/// TC EffectSummonType's explicit MiscValueB list, not all positive values.
+fn roll_wild_summon_count(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    properties_id: u32,
+) -> usize {
+    let uses_effect_count = matches!(
+        properties_id,
+        64 | 61 | 1101 | 66 | 648 | 2301 | 1061 | 1261 | 629 | 181 | 715 | 1562 | 833 | 1161 | 713
+    );
+    if !uses_effect_count {
+        return 1;
+    }
+    let value = super::effects::roll_base_points(world, ctx.caster, ctx.spell, effect);
+    (value as i32).max(1) as usize
 }
 
 /// TC EffectSummonType's wild/default branch uses Map::SummonCreature,
