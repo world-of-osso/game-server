@@ -1,3 +1,7 @@
+## 2026-10-14 — Pressure-controlled login and FIFO kill reputation
+
+[Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): release login960.7ms, six online windows below50ms p99/zero tick commits with PSI fullavg60≤0.93%. NPC-kill reputation preserves fresh durable state and gates owner replies; held-writer RED251.289ms→GREEN4/4. Full gameplay acceptance remains open.
+
 ## 2026-10-14 — Complete tick-commit trace and residual login writers
 
 [Residual login writes](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): source-attributed commit counters exposed profession and pet-state read commits in release0af36f35; pet readers and profession snapshots now have held-writer proof. Five frame tests cover worker exclusion and late-Last attribution. Seething system attribution, pressure-controlled post-fix release and complete gameplay script remain open; PSI/swap were absent from earlier timing runs.
