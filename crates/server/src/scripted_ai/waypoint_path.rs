@@ -233,10 +233,7 @@ fn catmull_rom(p: &[Vec3], t: f32) -> Vec3 {
 fn launch(controls: Vec<Vec3>, smooth: bool, orientation: f32, velocity: f32) -> Option<Spline> {
     // TC _checkPathLengths exempts the first crossing from the actual owner
     // position. Two-point paths are permitted, including an already-reached node.
-    let short = controls
-        .windows(2)
-        .skip(1)
-        .any(|pair| pair[0].distance(pair[1]) < MIN_SEGMENT_LENGTH);
+    let short = find_short_interior_segment(&controls).is_some();
     if controls.len() < 2 || short {
         return None;
     }
@@ -324,8 +321,10 @@ fn start_move(
         launch_from.walking,
         launch_from.flying,
     );
+    let short_segment = find_short_interior_segment(&controls);
+    let node_id = path.nodes[movement.node].0;
     let mut spline = launch(controls, smooth, launch_from.orientation, velocity)
-        .ok_or("spline controls rejected")?;
+        .ok_or_else(|| format!("spline controls rejected at authored node {node_id}: short segment {short_segment:?}"))?;
     spline.last_node = if exact {
         movement.node + spline.last_node - 1
     } else {
@@ -341,6 +340,17 @@ fn start_move(
     }
     movement.spline = Some(spline);
     Ok(None)
+}
+
+fn find_short_interior_segment(controls: &[Vec3]) -> Option<(usize, f32)> {
+    controls
+        .windows(2)
+        .enumerate()
+        .skip(1)
+        .find_map(|(index, pair)| {
+            let distance = pair[0].distance(pair[1]);
+            (distance < MIN_SEGMENT_LENGTH).then_some((index, distance))
+        })
 }
 
 /// TC CreateSingularPointPath: owner position, then calculated path after its first
