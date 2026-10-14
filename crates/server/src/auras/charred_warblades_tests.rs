@@ -1,7 +1,9 @@
 //! TC a352b1fa spell_dh.cpp480-519: actual Fire damage accumulates a
 //! native effect0 percentage for the next PERIODIC_DUMMY heal, then resets.
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness, spawn_player};
+use crate::spell_cast::test_harness::{
+    Harness, drain, harness, spawn_peer_connection, spawn_player,
+};
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
@@ -108,6 +110,7 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
     let expected_owner = expected_heal(&h, owner_damage);
     assert!(expected_owner > 0);
     let other = spawn_player(&mut h.app, 12, 2.0);
+    let other_connection = spawn_peer_connection(&mut h.app, other, 2);
     h.app.world_mut().get_mut::<Health>(other).unwrap().current = 400.0;
     apply_aura(
         h.app.world_mut(),
@@ -126,7 +129,14 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
     assert!(other_damage > 0);
     let expected_other = expected_heal(&h, other_damage);
     assert!(expected_other > 0);
-    h.advance(22);
+    let mut other_logs = Vec::new();
+    for _ in 0..22 {
+        h.advance(1);
+        other_logs.extend(drain::<shared::protocol::CombatLogEvent>(
+            &mut h.app,
+            other_connection,
+        ));
+    }
     assert_eq!(h.health(h.caster), 500.0 + expected_owner as f32);
     assert_eq!(h.health(other), 400.0 + expected_other as f32);
     let heals: Vec<_> = h
@@ -135,8 +145,16 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
         .iter()
         .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(HEAL))
         .collect();
-    assert_eq!(heals.len(), 2);
-    assert!(heals.iter().all(|event| event.source == event.target));
+    assert_eq!(heals.len(), 1);
+    assert_eq!(heals[0].source, Some(h.caster.to_bits()));
+    assert_eq!(heals[0].target, Some(h.caster.to_bits()));
+    let other_heals: Vec<_> = other_logs
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(HEAL))
+        .collect();
+    assert_eq!(other_heals.len(), 1);
+    assert_eq!(other_heals[0].source, Some(other.to_bits()));
+    assert_eq!(other_heals[0].target, Some(other.to_bits()));
 }
 
 #[test]
