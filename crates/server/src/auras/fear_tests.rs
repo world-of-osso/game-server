@@ -27,15 +27,23 @@ fn fleeing_harness() -> (Harness, tempfile::TempDir) {
     let tile = navigation::bake::bake_tile(&[[a, b, c], [a, c, d]], (32, 31)).unwrap();
     assert!(!tile.is_empty());
     std::fs::write(map.join("32_31.nav"), tile).unwrap();
-    let mut h = harness_with_plugins(Vec::new(), &[INTIMIDATING_SHOUT], WARRIOR, false, |app| {
-        app.insert_resource(crate::navigation::Navigation::new(dir.path()));
-        let conn = Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .unwrap();
-        app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
-    })
+    let mut h = harness_with_plugins(
+        Vec::new(),
+        &[INTIMIDATING_SHOUT, 122, TURN_EVIL],
+        WARRIOR,
+        false,
+        |app| {
+            app.insert_resource(crate::navigation::Navigation::new(dir.path()));
+            let conn = Connection::open_with_flags(
+                crate::test_data::world_db_path(),
+                OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )
+            .unwrap();
+            app.insert_resource(
+                crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap(),
+            );
+        },
+    )
     .unwrap();
     h.app.world_mut().entity_mut(h.caster).insert((
         Position {
