@@ -4,6 +4,8 @@
 
 - [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
 - [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
+- [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
+- [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
 
 - [Current personal arena ratings](systems/dungeon-achievements.md#current-personal-arena-ratings) — current asset0/1, durable post-result highest values; native rated fixture, other brackets unclaimed.
 - [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
