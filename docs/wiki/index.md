@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Shared weapon-spell defense roll](systems/player-damage.md#shared-weapon-spell-defense-roll) — native cumulative miss/deflect/block and quantization,19 bounded controls; other hit-system outcomes remain gaps.
+
 - [Ordinary NPC weapon-spell blocks](systems/player-damage.md#native-player-criticalblock-hit-state) — authenticated NO_BLOCK16 versus NO_XP64, native30%/critical60% damage and facing/stun; four NPC plus eleven player controls pass, Totem runtime/full probability order remain gaps.
 
 - [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; native13 controls pass, frontend RAP propagation and whole-AP limits remain open.
