@@ -340,6 +340,12 @@ Bounded9 installed memberships (`ap70391-bounded9`,exit0/242.450s) clear12 aura1
 Adjacent broad-name filter captured unrelated achievement test requiring MYTHIC_PLUS_WORLD_COPY (`ap70391-merged-adjacency`:232passed/1failed,649.173s). Engine character_frame substring also captured unrelated Forever skin byte snapshot (`rap-tooltip-controls`:25passed/1failed/1ignored); changed character sheet/AP tests passed. Neither production fix nor weakened snapshot added. Full13/40 goal OPEN; continuing authentic remaining consumers.
 
 
+## Ordinary NPC spell-block boundary — batch58 in progress
+
+Genuine `6feedac3` RED: source Slam1464 hits Kobold6 for300 with blocked0 rather than90, exit101/130.995s (`npc-spell-block-red`). Native10021 effect0 aura51 supplies100 chance points; native203524 effect2 supplies100 critical-block chance. Source `Unit.cpp2832–2861` uses3% plus aura51 and1.5% per positive effective-level difference, except template NO_BLOCK64. `Unit.h1000` supplies30% stopped damage; weapon-spell critical blocks double that integer percentage before truncation. Fixture now loads authentic template authority (`7853287c`), and `d898a3eb` adds unchanged native1511 NO_BLOCK64 plus facing/stun controls. Updated tests and implementation acceptance await capacity ADD; no GREEN claim.
+
+Totem semantics authenticated from pinned `Object.cpp1191–1260` and `SpellEffects.cpp1943–2041`: wild/ally title4 Totem or11 Lightwell creates UNIT_MASK_TOTEM, whereas Pet control creates Guardian regardless of title; JoinSummonerSpawnGroup0x200 routes to Guardian before title dispatch. Existing `summon.rs` rejects specialized wild/ally titles4/11, so actual Totem spawning/exclusion remains unsupported, not certified through a fabricated component or inferred creature type. Native SummonProperties81/1141/3211 retain this distinction. Ordinary NPC changes do not clear generic253/186, global probability ordering, rendered coverage or aura638 ownership conflict.
+
 ## Critical-block source boundary — batch57 in progress
 
 TC a352b1fa Unit.cpp2564–2570 rolls integer defender aura253 amounts; melee1469–1473 doubles already-truncated blocked damage. Weapon-spell1243–1257 instead doubles percentage before truncation/full-block cap. Current weapon-spell block state is absent; generic253 handler/census certificate remains deliberately absent. Aura638 source ownership conflicts with native MartialExpert429638 description (CPP attacker multiplier versus own critical blocks); no policy guessed.
