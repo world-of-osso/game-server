@@ -17,7 +17,8 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 - [x] Normal ground `MotionMaster::MovePath` uses TC a352b1fa default `PathGenerator::FindSmoothPath` surface stepping (4yd step, 0.3yd steering slop, 74-point/polygon limit), then exact creature collision-height normalization. Generic chase/home/follow/hazard queries retain their existing portal-crossing output.
 - [x] Preserve spline's 0.1yd interior-segment rejection, actual owner start, exact/flying controls and failed-route no-arrival behavior. Missing bake/collision support, incomplete routes, exhausted buffers and unsupported off-mesh links fail explicitly; no direct fallback or corner deletion.
-- [ ] Authored Wailing path367801/node2 must launch from the production-observed boundary and reach its exact collision floor; paths367800–367802 must traverse both real camps without injected arrivals/escort relocation and without crossing collision. Controlled wave deaths prove script traversal, not natural activation or native clears.
+- [x] Authored Wailing path367801/node2 launches from the production-observed boundary and reaches its exact collision floor; generated controls for all49 nodes of paths367800–367802 remain collision-clear under the existing LOS query.
+- [ ] Whole live escort/camp traversal remains open: the physical probe reaches path1 arrival/cleansing, then unchanged generic movement crosses collision with no script path active. Controlled wave deaths and control-generation tests do not certify natural activation or native clears.
 
 Source and implementation: [smooth script waypoints](../wiki/systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14).
 

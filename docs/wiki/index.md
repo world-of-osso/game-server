@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; strict node2 regression and physical traversal proof pending.
+- [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
 
 - [Wailing second escort camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) — actual30s cleansing cast, three authored Adders and combat-paused progression; controlled arrival.
 
