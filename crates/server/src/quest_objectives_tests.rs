@@ -449,7 +449,13 @@ fn add_object_plugins(app: &mut App) {
 }
 
 fn object_app() -> App {
-    setup_app_with(add_object_plugins).expect("authentic quest data required")
+    let mut app = setup_app_with(add_object_plugins).expect("authentic quest data required");
+    let data = crate::spell_cast::test_harness::world_db().unwrap();
+    // Nerub'ar Egg Sac187655 casts its authored goober spell45490 after credit.
+    app.insert_resource(crate::spell_info::SpellStore::fixture(vec![
+        data.store.get(45490).unwrap().clone(),
+    ]));
+    app
 }
 
 fn object_client(app: &mut App) -> Client {
