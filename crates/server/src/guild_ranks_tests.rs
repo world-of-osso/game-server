@@ -101,7 +101,7 @@ fn guild_ranks_officer_chat_toggle_does_not_grant_or_revoke_other_permissions() 
             },
         )
         .unwrap();
-        let state = snapshot(&db, officer, None);
+        let state = crate::guild::guild_rank_snapshot(&db, officer, None);
         assert_eq!(state.ranks[1].rights, rights);
         assert_eq!(state.ranks[1].gold_per_day, 123_456);
         for right in [
