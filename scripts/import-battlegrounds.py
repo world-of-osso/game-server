@@ -18,7 +18,7 @@ TABLES = frozenset({
     'world_state', 'areatrigger', 'areatrigger_template', 'areatrigger_create_properties',
     'areatrigger_create_properties_orbit',
     'areatrigger_template_actions', 'areatrigger_scripts', 'areatrigger_teleport',
-    'npc_spellclick_spells', 'transports',
+    'npc_spellclick_spells', 'transports', 'destructible_hitpoint',
 })
 COLUMN = re.compile(r'^\s+`(\w+)`\s+(\w+)')
 
@@ -33,14 +33,14 @@ def sqlite_type(mysql_type):
     raise ValueError(f'unsupported TDB column type {mysql_type}')
 
 
-def read_catalogs(source):
+def read_catalogs(source, tables=TABLES):
     catalogs = {}
     active = None
     with source.open(encoding='utf-8') as stream:
         for line in stream:
             match = re.match(r'^CREATE TABLE `(\w+)`', line)
             if match:
-                active = match[1] if match[1] in TABLES else None
+                active = match[1] if match[1] in tables else None
                 if active:
                     catalogs[active] = {'columns': [], 'keys': [], 'rows': []}
             if active:
@@ -52,7 +52,7 @@ def read_catalogs(source):
                 if line.startswith(') ENGINE'):
                     active = None
             insert = INSERT_RE.match(line)
-            if insert and insert[1] in TABLES:
+            if insert and insert[1] in tables:
                 table = insert[1]
                 catalog = catalogs[table]
                 columns = [name for name, _ in catalog['columns']]
@@ -83,8 +83,8 @@ def write_catalog(conn, table, catalog):
     conn.executemany(f'INSERT INTO {target} VALUES ({placeholders})', catalog['rows'])
 
 
-def import_catalogs(source, database):
-    catalogs = read_catalogs(source)
+def import_catalogs(source, database, tables=TABLES):
+    catalogs = read_catalogs(source, tables)
     with closing(sqlite3.connect(database.resolve().as_uri() + '?mode=rw', uri=True)) as conn:
         with conn:
             # Explicit BEGIN includes DDL in the rollback boundary.
@@ -92,15 +92,18 @@ def import_catalogs(source, database):
             for table, catalog in sorted(catalogs.items()):
                 write_catalog(conn, table, catalog)
     return {'source': str(source), 'rows': {table: len(data['rows']) for table, data in catalogs.items()},
-            'missing_tables': sorted(TABLES - catalogs.keys())}
+            'missing_tables': sorted(tables - catalogs.keys())}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dump', type=Path, required=True)
     parser.add_argument('--db', type=Path, required=True)
+    parser.add_argument('--table', action='append', choices=sorted(TABLES),
+                        help='Publish only named source tables; repeat for multiple tables')
     args = parser.parse_args()
-    print(json.dumps(import_catalogs(args.dump, args.db), sort_keys=True))
+    tables = frozenset(args.table) if args.table else TABLES
+    print(json.dumps(import_catalogs(args.dump, args.db, tables), sort_keys=True))
 
 
 if __name__ == '__main__':

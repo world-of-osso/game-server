@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Current personal arena ratings
+
+Current imported criteria451/asset0 and447/asset1 back Highest2v2/3v3 statistics370/595 and JustTwo/ThreeCompany thresholds;452/asset2 is retired5v5. Retail Constants.lua503–511 maps personal-rating UI indices1/2 to2v2/3v3, with3deprecated5v5. These are not old TC ArenaTeam.h raw types2/3/5. TC CriteriaHandler758–785/ArenaTeam.cpp448 establishes post-personal-rating mutation and highest-value semantics. Native `arena_rated_results::apply_result` supplies actual after-rating only after durable player progress and the applied-once marker; authenticated accepted-copy conditions select asset0/1. Existing win37 retains pre-rating semantics. Controlled starting ratings are inputs, never credits; native party validation, invitation, preparation, lethal elimination, settlement, replay and reopen are fixture boundaries. No proprietary Retail MMR or other-bracket claim. [Contract](../../specs/dungeon-achievements.md).
+
 ## Exact zero map
 
 TC a352b1fa CriteriaHandler1922–1925 compares the reference player's actual map ID, so0 is valid when Map contains0. Saved source root592 is plain All4 with one SingleTrue32/asset0 leaf593; native loader already validates map existence and rejects absent reference-map authority. Compiler admits the zero leaf without changing runtime defaults. Native Unit::Kill11449–11453 killing-blow56 is independent of honor35/113: 5512 fixture exercises known0 versus1/missing map, existing statistic1488 numeric criteria replies and reopen. Statistic1488 becomes structurally trackable; no ordinary gain or tree relinking. [Contract](../../specs/dungeon-achievements.md).
@@ -148,7 +152,7 @@ Earned player levels are published at the native XP persistence boundary, not fr
 
 ## Rated arena win criteria (verified 2026-10-13)
 
-`pvp_arena_rated_results::apply_result` collects online winners while persisting their ratings, sets the match result’s once-only `applied` marker, then publishes Type37 credit through the authenticated achievement boundary. Pre-result rating follows TC Arena.cpp249 (minimum1); the criterion increments by one, not the rating amount. Native-channel 2v2/3v3 tests cover winner/loser isolation, skirmishes, no queue/preparation credit, idle replay and redb reopen. Type39 remains disabled: pinned TC uses team sizes2/3/5 while current Retail assets are slot-like0/1/2; mapping is unresolved. [Producer inventory](../../achievement-criteria-producer-inventory.md) owns the current census and remaining gaps.
+`pvp_arena_rated_results::apply_result` collects online winners while persisting their ratings, sets the match result’s once-only `applied` marker, then publishes Type37 credit through the authenticated achievement boundary. Pre-result rating follows TC Arena.cpp249 (minimum1); the criterion increments by one, not the rating amount. Native-channel 2v2/3v3 tests cover winner/loser isolation, skirmishes, no queue/preparation credit, idle replay and redb reopen. [Personal-rating39](#current-personal-arena-ratings) now uses current authored0/1 after-results separately, rather than reusing old TC team-size numbers; other brackets stay disabled. [Producer inventory](../../achievement-criteria-producer-inventory.md) owns the current census and remaining gaps.
 
 ## Current-head live sample (verified 2026-10-13)
 
@@ -183,6 +187,10 @@ Native effect/death tests prove untimed **orphan** counter26004 with actual heal
 ## Map instance type (verified 2026-10-13)
 
 Modifier122 uses authenticated Map.InstanceType rows to load a set of map IDs per requested raw type; runtime checks the reference player's actual map. World0 is valid. Missing maps/type memberships and out-of-range assets remain disabled. Source: pinned TC CriteriaHandler2394–2397. Native real-channel rated/skirmish arena2/3 plus BG effect→queued death-system tests prove arena50456/50457 versus BG50458/50460, cross-type rejection, idle/reopened counters. Fixture now runs `process_player_death_transitions` with its real required resources; test-only counter visibility changed, production death logic did not. Raid-death18 remains a separate missing producer. [Inventory](../../achievement-criteria-producer-inventory.md) owns the +4-statistics census; no rendered-runtime claim.
+
+## Survived fall producer (2026-10-13)
+
+Terrain gravity captures the fall peak before landing resets FallTracker, then queues type24 only after damage with positive remaining health and no void transition. Knockback's own landing supplies its observed distance after damage. Both use the same reference-player boundary. Alive16 reads positive Health plus nondead native life state; missing health is unknown, not alive. TC Player::HandleFall27461–27509 supplies distance×100, truncated; CriteriaHandler681–683 and header290 use PROGRESS_SET despite the maximum-sounding name. Shorter later falls replace the counter, while earned achievements persist. Feather/fly/hover/immunity and safe-fall eligibility remain explicit. Authored roots547/11944 retain Alive16 and Area17/6665; root785's world-state67/4546 remains disabled. The existing quadratic realm damage formula differs from TC's linear formula: normal66-yard landings are lethal here, but native Pandaren107076 aura374/-50 permits authentic survival. Full environmental absorption parity is not claimed. [Inventory](../../achievement-criteria-producer-inventory.md) owns census/proof state.
 
 ## Sources
 

@@ -16,6 +16,7 @@
 
 pub(crate) mod area_avoidance;
 pub(crate) mod base_armor;
+mod charred_warblades;
 pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
@@ -1963,6 +1964,8 @@ mod toy_effects_tests;
 
 #[cfg(test)]
 mod bloodsurge_tests;
+#[cfg(test)]
+mod charred_warblades_tests;
 #[cfg(test)]
 mod crit_damage_bonus_tests;
 #[cfg(test)]

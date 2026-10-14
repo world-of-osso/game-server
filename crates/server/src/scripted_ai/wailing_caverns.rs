@@ -80,6 +80,11 @@ impl CreatureAi for Disciple {
         }
     }
 
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        // Source JustSummoned: summoned->AI()->AttackStart(me), not the player.
+        crate::creature_aggro::add_threat(ctx.world, summon, ctx.me, 0.0);
+    }
+
     fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
         if action == ACTION_ALL_DONE {
             ctx.talk(SAY_ALL_DONE);

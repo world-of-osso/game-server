@@ -452,6 +452,7 @@ fn settle_after_set_position(start_y: f32, wow_z: f32) -> (f32, f32) {
         &game_db,
         &mut query,
         None,
+        None,
         "Mover",
         AUCTION_HOUSE_WOW.0,
         AUCTION_HOUSE_WOW.1,
