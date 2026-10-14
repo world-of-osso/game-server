@@ -1,4 +1,5 @@
 //! Wild PvE decisions wrap the deterministic turn library; transport owns no rules.
+use crate::pet_journal_state::{OwnedBattleStates, default_abilities};
 use ::server::pet_battle::{
     Action, Battle, BattleRng, Catalog, Event, Outcome, Pet, States, Team, calculate_stats,
     validate_ability,
@@ -77,7 +78,7 @@ impl WildCatalog {
             trap_increment,
         })
     }
-    fn create_pet(&self, identity: &Identity) -> Result<Pet, String> {
+    fn create_pet(&self, identity: &Identity, states: &OwnedBattleStates) -> Result<Pet, String> {
         let species = self
             .species
             .get(&identity.species)
@@ -89,20 +90,18 @@ impl WildCatalog {
             identity.quality as u32,
             identity.level,
         )?;
-        let mut abilities = [0; 3];
-        for slot in 0..3 {
-            abilities[slot] = self
-                .turns
-                .species_abilities
-                .iter()
-                .filter(|a| {
-                    a.species == identity.species
-                        && a.slot == slot as i32
-                        && a.level <= identity.level
-                })
-                .min_by_key(|a| (a.level, a.ability))
-                .map_or(0, |a| a.ability);
-        }
+        let (abilities, health) = match identity.guid {
+            Some(id) => {
+                let state = states
+                    .get(&id)
+                    .ok_or_else(|| format!("Owned battle state missing for pet {id}"))?;
+                (state.selected_abilities, state.health)
+            }
+            None => (
+                default_abilities(&self.turns, identity.species, identity.level),
+                stats.health,
+            ),
+        };
         if !abilities
             .iter()
             .any(|id| *id != 0 && validate_ability(&self.turns, *id).is_ok())
@@ -112,13 +111,15 @@ impl WildCatalog {
                 identity.species, identity.level
             ));
         }
-        Pet::new(
+        let mut pet = Pet::new(
             &self.turns,
             stats,
             species.family.into(),
             abilities,
             States::new(),
-        )
+        )?;
+        pet.health = health;
+        Ok(pet)
     }
 }
 #[derive(Clone)]
@@ -152,26 +153,36 @@ struct Encounter {
     forfeited: bool,
     feedback: Vec<BattleCombatFeedback>,
 }
-fn build_team(catalog: &WildCatalog, pets: &[Identity]) -> Result<Team, String> {
+fn build_team(
+    catalog: &WildCatalog,
+    pets: &[Identity],
+    states: &OwnedBattleStates,
+) -> Result<Team, String> {
     let first = pets.first().ok_or("equip a battle pet in the journal")?;
-    let first_pet = catalog.create_pet(first)?;
+    let first_pet = catalog.create_pet(first, states)?;
     let mut team = Team {
         pets: std::array::from_fn(|_| first_pet.clone()),
         active: 0,
     };
     for (index, pet) in team.pets.iter_mut().enumerate() {
         if let Some(identity) = pets.get(index) {
-            *pet = catalog.create_pet(identity)?;
+            *pet = catalog.create_pet(identity, states)?;
         } else {
             pet.health = 0;
         }
     }
+    team.active = team
+        .pets
+        .iter()
+        .position(|pet| pet.health > 0)
+        .ok_or("No living battle pet in the loadout")?;
     Ok(team)
 }
 impl Encounter {
     fn start(
         catalog: &WildCatalog,
         journal: &PetJournal,
+        states: &OwnedBattleStates,
         species: u32,
         level: u8,
         creature: u64,
@@ -199,8 +210,8 @@ impl Encounter {
             quality: PetQuality::Common,
         }];
         let teams = [
-            build_team(catalog, &allies)?,
-            build_team(catalog, &enemies)?,
+            build_team(catalog, &allies, states)?,
+            build_team(catalog, &enemies, states)?,
         ];
         Ok(Self {
             id,
@@ -214,6 +225,19 @@ impl Encounter {
             feedback: vec![],
         })
     }
+    /// Temporary maximum-health aura capacity does not survive leaving the battle.
+    fn owned_health(&self, team: usize) -> Vec<(u64, i32)> {
+        self.identities[team]
+            .iter()
+            .zip(&self.battle.teams[team].pets)
+            .filter_map(|(identity, pet)| {
+                identity
+                    .guid
+                    .map(|id| (id, pet.health.min(pet.base_health)))
+            })
+            .collect()
+    }
+
     fn can_trap(&self, journal: &PetJournal) -> bool {
         let target = &self.battle.teams[1].pets[self.battle.teams[1].active];
         let identity = &self.identities[1][self.battle.teams[1].active];
@@ -549,7 +573,8 @@ fn format_combat_event(event: &Event, catalog: &WildCatalog) -> Option<String> {
 
 use crate::auth::{Authenticated, InWorld};
 use crate::battle_pets::{
-    AccountPetJournal, refresh_catalog_snapshot, save_journal, send_pet_update,
+    AccountPetJournal, load_or_initialize_pet_states, persist_battle_progress,
+    refresh_catalog_snapshot, save_journal, send_pet_details, send_pet_update,
 };
 use crate::networking::PlayerLink;
 use crate::persistence::GameDatabase;
@@ -639,7 +664,7 @@ fn receive_loadouts(world: &mut World) {
     }
 }
 fn set_loadout(world: &mut World, owner: Entity, slots: [Option<u64>; 3]) -> Result<(), String> {
-    if world.get::<ActiveEncounter>(owner).is_some() || pvp::busy(world, owner) {
+    if journal_locked(world, owner) {
         return Err("cannot change loadout while queued or during a battle".into());
     }
     let mut state = world
@@ -738,8 +763,9 @@ fn start_encounter(
     let level = world
         .get::<UnitLevel>(creature)
         .map_or(1, |level| level.0.clamp(1, 25) as u8);
+    let states = load_or_initialize_pet_states(world, owner)?;
     let catalog = world.resource::<WildCatalog>();
-    let encounter = Encounter::start(catalog, &journal, species, level, bits, id)?;
+    let encounter = Encounter::start(catalog, &journal, &states, species, level, bits, id)?;
     let snapshot = encounter.snapshot(catalog, &journal);
     info!(
         "Wild pet battle {id} started: account {account}, species {species}, creature {bits}, level {level}"
@@ -751,6 +777,7 @@ fn start_encounter(
     });
     world.entity_mut(creature).insert(WildPetClaim(owner));
     send_update(world, connection, WildPetBattleUpdate::Start(snapshot));
+    send_pet_details(world, connection, owner, None);
     Ok(())
 }
 fn receive_actions(world: &mut World) {
@@ -802,6 +829,7 @@ fn advance_encounter(
         &mut rng,
     )?;
     if encounter.battle.outcome.is_none() {
+        persist_battle_progress(world, owner, &journal, &encounter.owned_health(0))?;
         let snapshot = encounter.snapshot(world.resource::<WildCatalog>(), &journal);
         world.entity_mut(owner).insert(ActiveEncounter {
             encounter,
@@ -819,24 +847,23 @@ fn advance_encounter(
         return Ok(());
     }
     let terminal_state = encounter.snapshot(world.resource::<WildCatalog>(), &journal);
-    send_update(
-        world,
-        active.connection,
-        WildPetBattleUpdate::State(terminal_state),
-    );
     let guid = encounter.captured.as_ref().map(|_| {
         crate::persistence::next_id(&world.resource::<GameDatabase>().db, "battle_pet_instance")
     });
     let before = journal.clone();
     let rewards = encounter.apply_rewards(world.resource::<WildCatalog>(), &mut journal, guid)?;
-    save_journal(&world.resource::<GameDatabase>().db, account, &journal);
+    let mut health = encounter.owned_health(0);
+    if let Some(guid) = guid {
+        let captured = &encounter.battle.teams[1].pets[encounter.battle.teams[1].active];
+        health.push((guid, captured.health.min(captured.base_health)));
+    }
+    persist_battle_progress(world, owner, &journal, &health)?;
+    send_update(
+        world,
+        active.connection,
+        WildPetBattleUpdate::State(terminal_state),
+    );
     crate::achievement::record_pet_level_changes(world, owner, &before, &journal);
-    world
-        .get_mut::<AccountPetJournal>(owner)
-        .expect("journal checked")
-        .journal = journal;
-    refresh_catalog_snapshot(world, owner);
-    send_pet_update(world, active.connection, owner, None);
     let outcome = if encounter.forfeited {
         WildPetBattleOutcome::Forfeited
     } else {
@@ -858,6 +885,8 @@ fn advance_encounter(
         encounter.id, account, outcome, guid, rewards
     );
     world.entity_mut(owner).remove::<ActiveEncounter>();
+    refresh_catalog_snapshot(world, owner);
+    send_pet_update(world, active.connection, owner, None);
     release_wild_pet(world, &encounter, outcome == WildPetBattleOutcome::Won);
     send_update(
         world,

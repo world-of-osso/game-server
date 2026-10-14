@@ -18,8 +18,12 @@ use shared::protocol::{CollectionChannel, CollectionStateUpdate, DismissPet, Sum
 use std::collections::HashMap;
 #[path = "pet_journal_details.rs"]
 mod journal_details;
-pub(crate) use journal_details::load_or_initialize_pet_states;
-use journal_details::{receive_ability_requests, send_pet_details};
+#[cfg(test)]
+pub(crate) use journal_details::choose_ability;
+use journal_details::receive_ability_requests;
+pub(crate) use journal_details::{
+    load_or_initialize_pet_states, persist_battle_progress, send_pet_details,
+};
 
 pub(crate) const ACCOUNT_PET_JOURNALS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("account_pet_journals");
