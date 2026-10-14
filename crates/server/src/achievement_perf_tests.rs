@@ -63,13 +63,13 @@ fn achievement_account_monthly_writer_snapshots_preserve_cross_owner_order() {
         );
     }
     first_state.criteria_progress.insert(1832, 3);
-    first_state.monthly = Some(crate::adventure_guide::MonthlyCriteriaState::new(0, 0));
-    first_state
-        .monthly
-        .as_mut()
-        .unwrap()
-        .counters
-        .insert(3209, 7);
+    first_state.monthly = Some(crate::adventure_guide::MonthlyCriteriaState {
+        interval_start: 0,
+        tracking_since: 0,
+        counters: BTreeMap::from([(3209, 7)]),
+        tracked: BTreeSet::new(),
+        ignored_login_achievements: BTreeSet::new(),
+    });
     save_monthly_contribution(&db, 41, first, &first_state);
     assert_eq!(monthly_contributions(&db, 41), vec![first_state.clone()]);
     assert_eq!(monthly_contributions(&db, 42), vec![other_state.clone()]);
