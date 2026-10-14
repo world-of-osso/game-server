@@ -79,7 +79,8 @@ fn achievements_criteria_known_spell_needs_player_knowledge_and_an_authored_spel
         .unwrap();
     assert!(!facts[0].holds(
         &ReferencePlayer::default(),
-        CriteriaEvent::LearnSpell(370465)
+        CriteriaEvent::LearnSpell(370465),
+        &BTreeMap::new()
     ));
 }
 
@@ -94,13 +95,25 @@ fn achievements_criteria_item_template_predicates_match_ids_and_quality_without_
     .unwrap();
     let player = ReferencePlayer::default();
     let epic = load_item_quality_fact(&conn, 15, 4).unwrap().unwrap();
-    assert!(epic.holds(&player, CriteriaEvent::ObtainAnyItem(33999)));
-    assert!(epic.holds(&player, CriteriaEvent::LootAnyItem(33999)));
-    assert!(!epic.holds(&player, CriteriaEvent::ObtainAnyItem(124101)));
-    assert!(!epic.holds(&player, CriteriaEvent::ObtainAnyItem(999999)));
+    assert!(epic.holds(
+        &player,
+        CriteriaEvent::ObtainAnyItem(33999),
+        &BTreeMap::new()
+    ));
+    assert!(epic.holds(&player, CriteriaEvent::LootAnyItem(33999), &BTreeMap::new()));
+    assert!(!epic.holds(
+        &player,
+        CriteriaEvent::ObtainAnyItem(124101),
+        &BTreeMap::new()
+    ));
+    assert!(!epic.holds(
+        &player,
+        CriteriaEvent::ObtainAnyItem(999999),
+        &BTreeMap::new()
+    ));
     let rare_or_better = load_item_quality_fact(&conn, 14, 3).unwrap().unwrap();
-    assert!(rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(33999)));
-    assert!(!rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(45199)));
+    assert!(rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(33999), &BTreeMap::new()));
+    assert!(!rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(45199), &BTreeMap::new()));
     assert!(
         load_event_item_alternatives(&conn, &[45199, 173032])
             .unwrap()
@@ -111,9 +124,17 @@ fn achievements_criteria_item_template_predicates_match_ids_and_quality_without_
     let alternatives = load_event_item_alternatives(&conn, &[45199, 173032])
         .unwrap()
         .unwrap();
-    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(45199)));
-    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(173032)));
-    assert!(!alternatives.holds(&player, CriteriaEvent::LootAnyItem(124101)));
+    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(45199), &BTreeMap::new()));
+    assert!(alternatives.holds(
+        &player,
+        CriteriaEvent::LootAnyItem(173032),
+        &BTreeMap::new()
+    ));
+    assert!(!alternatives.holds(
+        &player,
+        CriteriaEvent::LootAnyItem(124101),
+        &BTreeMap::new()
+    ));
 }
 
 #[test]
