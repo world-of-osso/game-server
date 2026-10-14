@@ -330,3 +330,5 @@ Debug logs and root cause analyses.
 
 - [Group-private summon runtime](systems/toys.md#source-group-private-runtime-2026-10-13) — source group identity and roster-driven interest transitions.
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
+
+- [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the unresolved Flute follow promise.

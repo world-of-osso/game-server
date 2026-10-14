@@ -1,4 +1,5 @@
 //! TC a352b1fa EffectSummonType/CalcValue: source Flute uses variable wild count.
+//! Bounded count/placement/expiry proof, NOT the Retail description's follow promise.
 use super::*;
 
 #[test]
@@ -96,11 +97,6 @@ fn toyfx32_flute_learn_use_summons_source_snakes_at_one_destination_and_expires(
             h.caster.to_bits()
         );
         assert!(!world.get::<UnitIsPet>(*actor).is_some_and(|pet| pet.0));
-        assert!(
-            world
-                .get::<crate::creature_ai::FollowOwner>(*actor)
-                .is_none()
-        );
         // CalcRadius(TargetA) has no entry: additional summons do not scatter
         // with TargetB's2yd destination radius.
         assert_eq!(world.get::<Position>(*actor), Some(&first_position));
@@ -110,11 +106,6 @@ fn toyfx32_flute_learn_use_summons_source_snakes_at_one_destination_and_expires(
         );
         let remaining = expires_at - world.resource::<Time>().elapsed_secs_f64();
         assert!((58.0..=60.0).contains(&remaining), "{remaining}");
-    }
-    world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
-    h.advance(100);
-    for (actor, _) in &actors {
-        assert_eq!(h.app.world().get::<Position>(*actor), Some(&first_position));
     }
     h.app
         .world_mut()
