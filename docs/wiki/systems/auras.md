@@ -145,6 +145,14 @@ Crits:
 
 Melee auto-attack (`combat.rs`) takes the attacker's physical `damage_done` × `autoattack_damage_mult` (344) and the target's physical `damage_taken`. It shares school immunity and absorb consumption with spell damage; query reads and target capacity mutations are separated by `ParamSet`. See [defensives audit](../../defensives-audit.md) for outcomes, Brew's health effect and verification limits.
 
+## Damage shields
+
+`damage_shield.rs` implements native aura15 at the damaging-melee boundary, not through ordinary aura proc flags. `combat::record_swing` queues it after health/death handling; lethal swings run shared death-aura removal first because the normal lifetime sweep is later. Passive/allow-while-dead exceptions remain native. Effects are copied before retaliation, since damage can mutate aura lists.
+
+The shield owner receives damage attribution; the original aura caster supplies SP/AP coefficients and damage bonuses at retaliation. Incoming hit defenses run even though the shield spell itself is beneficial. Damage uses normal school immunity, absorbs and health/death handling without a critical roll or recursive melee reaction. Aura15 damage does not extend a creature's last-damaged leash window (TC `Unit.cpp:1085–1089`).
+
+Source: pinned TC `a352b1fa`, `Unit.cpp:1607–1657`; [encounter requirements](../../specs/boss-scripts.md#wailing-caverns-source-slices). Tests cover real Anacondra8148 melee retaliation/dispel/lethal ordering, source7s/63s buff timing, original-caster percentage attribution, native20570 power coefficient after changing SP100→200 (3+200=203), immunity/absorbs and leash exclusion. Full Wailing fights, missing spell2, loot/lockout and native rendering remain separate gates.
+
 ## Procs
 
 Emitters push `AuraEvent{actor, target, actor_mask, target_mask, spell, can_proc, periodic, damage}` into `PendingAuraEvents`. `damage` is the damage the target took, after absorbs, in its own health units: a level-scaled creature's health loss (`level_scaling::health_loss`), not the attacker-frame amount. `process_aura_events` drains the queue in `FixedUpdate`. Masks use TrinityCore `ProcFlags`/`ProcFlags2`.
@@ -371,3 +379,11 @@ Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's pe
 - [[class-progression]] — `KnownSpells` passives
 - [[combat]] — melee swing events
 - [[character-stats]] — `StatModifiers` fold-in
+
+## Category charge-recovery rates
+
+Aura148 uses its native MiscValue charge category and rate100/(100+max(amount,−99)). `auras::charge_mods` multiplies category effects alongside native453/454/457; `SpellHistory::charges_mut` floors native recovery milliseconds and preserves remaining-progress fractions. Existing `sync_charge_recovery` publishes changed clocks/maxima, including refresh/removal/expiry, without an additional cast. No new polling or alternate recovery path.
+
+Pinned TC a352b1fa SpellHistory.cpp880–914 and1003–1005, SpellAuraEffects.cpp6285–6293 establish current/running semantics. Native Trueshot288613 effect1 uses40/category1715 for Aimed Shot19434. [Contract](../../specs/class-completeness.md#category-charge-recovery-rates). Type-mask/global-time/charm and complete ability/rendered proof remain open.
+
+Batch48 proof: native Aimed Shot15,000→10,714ms, running application/removal owner receipts, unchanged refresh, serial two-charge expiry/replenishment, foreign recipient/category exclusions, independent Quick Shot150 product4,285ms, native Demonic Resolve−25/Fiery Brand slower recovery. The per-cast amount-refresh API fixture uses native Quick Shot150 as an override; it proves clock refresh only, not a Retail Quick Shot→Trueshot binding. Native−99 clamp edge/global time/charm/rendered parity remain unproved.

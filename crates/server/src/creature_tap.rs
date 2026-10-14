@@ -75,7 +75,7 @@ impl CreatureTap {
 
 /// `Unit::DealDamage` on a creature victim: `attacker`'s damage that took `loss` of
 /// the `health_before` it had taps it for a player attacker or the authenticated
-/// owner of a dungeon follower, and lowers the player damage requirement.
+/// owner of a dungeon follower or controlled pet, and lowers the player damage requirement.
 pub(crate) fn record_damage(
     world: &mut World,
     victim: Entity,
@@ -86,9 +86,7 @@ pub(crate) fn record_damage(
     if world.get::<Npc>(victim).is_none() {
         return;
     }
-    let credit_source = world
-        .get::<crate::followers::Follower>(attacker)
-        .map_or(attacker, |follower| follower.owner);
+    let credit_source = crate::spell_cast::combat_event_owner(world, attacker);
     let Some(player) = world.get::<ClientId>(credit_source).map(|id| id.0) else {
         return;
     };
