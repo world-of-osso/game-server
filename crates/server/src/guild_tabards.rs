@@ -16,10 +16,17 @@ use shared::{
 #[derive(Resource)]
 struct Catalog(GuildTabardCatalog);
 
-pub struct GuildTabardPlugin;
+pub struct GuildTabardPlugin(GuildTabardCatalog);
+
+impl GuildTabardPlugin {
+    pub fn load(root: &std::path::Path) -> Result<Self, String> {
+        GuildTabardCatalog::load(root).map(Self)
+    }
+}
+
 impl Plugin for GuildTabardPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_catalog);
+        app.insert_resource(Catalog(self.0.clone()));
         app.add_systems(
             Update,
             (sync_membership_designs, process_requests)
@@ -27,12 +34,6 @@ impl Plugin for GuildTabardPlugin {
                 .after(crate::npc_interaction::NpcInteractionsProcessed),
         );
     }
-}
-
-fn load_catalog(mut commands: Commands) {
-    let catalog = GuildTabardCatalog::load(std::path::Path::new("data/db2/active"))
-        .expect("load installed guild tabard catalog");
-    commands.insert_resource(Catalog(catalog));
 }
 
 fn sync_membership_designs(

@@ -219,7 +219,10 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(friends::FriendsPlugin)
         .add_plugins(group::GroupPlugin)
         .add_plugins(guild::GuildPlugin)
-        .add_plugins(guild_tabards::GuildTabardPlugin)
+        .add_plugins(
+            guild_tabards::GuildTabardPlugin::load(std::path::Path::new("data/db2/active"))
+                .expect("load installed guild tabard catalog"),
+        )
         .add_plugins(who::WhoPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(lfg::LfgPlugin)
