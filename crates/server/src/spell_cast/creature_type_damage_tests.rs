@@ -275,6 +275,19 @@ fn class_completeness_native_creature_type_damage_combines_matching_auras_and_re
     );
 }
 
+fn start_duel(h: &mut Harness, player: bevy::prelude::Entity) {
+    // Player-vs-player requires the real accepted-duel state, not faction alone.
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::duel::DuelOpponent(player));
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::duel::DuelOpponent(caster));
+}
+
 fn taurendruid(h: &mut Harness) -> bevy::prelude::Entity {
     let player = spawn_player(&mut h.app, 11, 3.0);
     h.app
@@ -297,6 +310,7 @@ fn taurendruid(h: &mut Harness) -> bevy::prelude::Entity {
 fn class_completeness_native_creature_type_damage_tracks_actual_player_bear_and_removal() {
     let mut h = controls();
     let victim = taurendruid(&mut h);
+    start_duel(&mut h, victim);
     let caster = h.caster;
     apply_modifier(&mut h, 131283, caster);
     let loss = cast_fire_loss(&mut h, victim);
@@ -313,8 +327,8 @@ fn class_completeness_native_creature_type_damage_tracks_actual_player_bear_and_
     ));
     let loss = cast_fire_loss(&mut h, victim);
     assert!(
-        (454.0..=477.0).contains(&loss),
-        "native Bear CreatureType1: {loss}"
+        (440.0..=463.0).contains(&loss),
+        "native Bear CreatureType1, with its own3% Fire mitigation: {loss}"
     );
     crate::auras::remove_auras(
         h.app.world_mut(),
@@ -363,6 +377,7 @@ fn class_completeness_native_creature_type_metadata_preserves_non_humanoid_race_
 fn class_completeness_native_creature_type_damage_applies_to_offhand_against_player_form() {
     let mut h = controls();
     let victim = taurendruid(&mut h);
+    start_duel(&mut h, victim);
     assert!(super::try_cast_triggered(
         h.app.world_mut(),
         victim,
@@ -401,7 +416,11 @@ fn class_completeness_native_creature_type_damage_applies_to_offhand_against_pla
     h.app.world_mut().entity_mut(caster).insert(attack);
     let before = h.health(victim);
     h.advance(2);
-    assert_eq!(before - h.health(victim), 36.0, "offhand60×0.5×native20%");
+    assert_eq!(
+        before - h.health(victim),
+        35.0,
+        "offhand60×0.5×native20%×native Bear0.97"
+    );
 }
 
 #[test]
@@ -496,6 +515,7 @@ fn class_completeness_native_creature_type_target_admission_uses_actual_player_f
     })
     .unwrap();
     let victim = taurendruid(&mut h);
+    start_duel(&mut h, victim);
     h.cast_and_deliver(1513, Some(victim));
     h.advance(45);
     assert_eq!(
@@ -566,6 +586,14 @@ fn class_completeness_native_creature_type_damage_native_ignore_caster_flags_are
         let baseline = 1_000_000.0 - h.health(victim);
         assert!(baseline > 0.0);
         apply_modifier(&mut h, NEMESIS_UNDEAD, caster);
+        // Singed's first real cast also applies2% damage-taken to the victim.
+        // Restore the same target state for this caster-modifier comparison.
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            victim,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == id,
+        );
         h.app
             .world_mut()
             .get_mut::<shared::components::Health>(victim)
