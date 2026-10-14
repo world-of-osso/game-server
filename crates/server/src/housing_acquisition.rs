@@ -1,15 +1,11 @@
 //! Qualified Retail item/effect324/decor collection; acquisition remains inventory-owned.
-use crate::persistence::{
-    GameDatabase,
-    housing_store::{BUILD_KEY, RedemptionRule},
-};
+use crate::persistence::{GameDatabase, housing_store::RedemptionRule};
 use bevy::prelude::*;
 use rusqlite::Connection;
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::{InventoryError, InventoryErrorReason, ItemLocation};
 use std::collections::BTreeMap;
 
-const RETAIL_BUILD: &str = "12.1.0.69933";
 const COLLECT_DECOR_EFFECT: u32 = 324;
 
 #[derive(Resource)]
@@ -18,18 +14,7 @@ pub(crate) struct HousingCollectionRules(pub Result<BTreeMap<u32, RedemptionRule
 pub(crate) fn read_collection_rules(
     db: &Connection,
 ) -> Result<BTreeMap<u32, RedemptionRule>, String> {
-    let build: String = db
-        .query_row(
-            "SELECT build FROM housing_catalog_build WHERE build_key=?",
-            [BUILD_KEY],
-            |row| row.get(0),
-        )
-        .map_err(|error| format!("Read housing collection build: {error}"))?;
-    if build != RETAIL_BUILD {
-        return Err(format!(
-            "Housing collection requires build {RETAIL_BUILD}, found {build}."
-        ));
-    }
+    let build_key = crate::housing_catalog::read_build_key(db)?;
     let mut query = db.prepare("SELECT CAST(json_extract(h.fields_json,'$.ItemID') AS INTEGER),h.record_id
         FROM housing_catalog_record h JOIN item_x_item_effect x ON x.ItemID=CAST(json_extract(h.fields_json,'$.ItemID') AS INTEGER)
         JOIN item_effect i ON i.ID=x.ItemEffectID JOIN spell_effect e ON e.SpellID=i.SpellID
@@ -37,7 +22,7 @@ pub(crate) fn read_collection_rules(
         AND e.EffectIndex=0 AND e.Effect=?2 AND e.EffectMiscValue_0=h.record_id AND e.EffectBasePointsF=0")
         .map_err(|error| format!("Read authenticated decor collect chains: {error}"))?;
     let rows = query
-        .query_map(rusqlite::params![BUILD_KEY, COLLECT_DECOR_EFFECT], |row| {
+        .query_map(rusqlite::params![build_key, COLLECT_DECOR_EFFECT], |row| {
             Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?))
         })
         .map_err(|error| format!("Query decor collection: {error}"))?;
