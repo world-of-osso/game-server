@@ -1,6 +1,7 @@
 # Wiki Index
 
 - [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) — actual class/profession/owned-mount IDs versus global spell metadata; recipe-marker boundaries, no trait/UI acquisition claim.
+- [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
 
 - [Generic item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) — one loot/acquisition event versus stack quantity; canonical item predicates, current-root contradictions retained.
 
