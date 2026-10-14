@@ -1,6 +1,6 @@
 ## 2026-10-13 — Native survived falling
 
-[Fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) preserves source Alive16/Area17, rejects unknown world-state and uses TC PROGRESS_SET distance×100. Native real-ground damage and Pandaren racial survival prove progress/grant/reopen; remaining negative/final gate proofs pending. Existing quadratic damage and complete environmental absorption parity remain separate gaps.
+[Fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) preserves source Alive16/Area17, rejects unknown world-state and uses TC PROGRESS_SET distance×100. Native real-ground damage and Pandaren racial survival prove progress/grant/reopen; native/catalog6/6 also prove knockback, safe/feather/fly/lethal/immunity/safe-fall rejection and retained area predicates; final gate pending. Puddle8354 actual map1105 completion/grant is not certified. Existing quadratic damage and complete environmental absorption parity remain separate gaps.
 
 ## 2026-10-13 — Current personal arena ratings
 
