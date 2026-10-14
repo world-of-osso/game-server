@@ -677,3 +677,56 @@ fn class_completeness_native_ranged_deflection_and_block_share_one_hit_table() {
         }
     }
 }
+
+fn evasion_duel(class: u8) -> (Harness, Entity) {
+    let mut h = harness(Vec::new(), &[5277, 1464, 7384, 19434], class).unwrap();
+    let defender = spawn_player(&mut h.app, 4, 3.0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((crate::duel::DuelOpponent(defender), UnitLevel(10)));
+    h.app.world_mut().entity_mut(defender).insert((
+        crate::duel::DuelOpponent(h.caster),
+        UnitLevel(10),
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+        crate::class_progression::KnownSpells::fixture(vec![5277]),
+    ));
+    // Actual Rogue self-cast, not a synthetic dodge amount or fake NPC profile.
+    let spell = world_db().unwrap().store.get(5277).unwrap();
+    super::execute_cast(h.app.world_mut(), defender, spell, Some(defender)).unwrap();
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), defender, 5277));
+    assert!(
+        h.app
+            .world()
+            .get::<CharacterStats>(defender)
+            .unwrap()
+            .defense
+            .dodge
+            >= 100.0,
+        "native Evasion must supply guaranteed dodge before exercising its consumer"
+    );
+    (h, defender)
+}
+
+#[test]
+fn class_completeness_native_evasion_dodges_frontal_weapon_spell() {
+    let (mut h, defender) = evasion_duel(1);
+    let before = h.health(defender);
+    let hits = cast_damage_spell(&mut h, defender, 1464, 3);
+    assert!(hits.is_empty(), "native Evasion admitted damage: {hits:?}");
+    assert_eq!(h.health(defender), before);
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(1464)
+                && event.target == Some(defender.to_bits())
+                && event.kind == CombatLogKind::Miss(shared::protocol::MissKind::Dodge)
+        }),
+        "{:?}",
+        h.inbox.log
+    );
+}
