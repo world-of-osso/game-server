@@ -169,6 +169,10 @@ fn matched(app: &mut App) -> [Entity; 2] {
 fn proposed(app: &mut App) -> [Entity; 2] {
     let a = player(app, 41).0;
     let b = player(app, 42).0;
+    propose_owners(app, [a, b]);
+    [a, b]
+}
+fn propose_owners(app: &mut App, [a, b]: [Entity; 2]) {
     for owner in [a, b] {
         queue_request(app.world_mut(), owner, PetBattleQueueRequest::Join).unwrap();
     }
@@ -189,8 +193,133 @@ fn proposed(app: &mut App) -> [Entity; 2] {
         .unwrap();
     }
     receive_queue(app.world_mut());
-    [a, b]
 }
+#[test]
+fn petbattle_pvp_owned_injuries_choices_survive_forfeit_requeue_and_database_reopen() {
+    use crate::pet_journal_state::{load_states, save_states};
+    let mut app = app();
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("pvp-owned.redb");
+    app.insert_resource(GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    });
+    let a = player(&mut app, 41).0;
+    let b = player(&mut app, 42).0;
+    let mut journal = app
+        .world()
+        .get::<AccountPetJournal>(a)
+        .unwrap()
+        .journal
+        .clone();
+    journal.pets[0].level = 25;
+    save_journal(&app.world().resource::<GameDatabase>().db, 41, &journal);
+    app.world_mut()
+        .get_mut::<AccountPetJournal>(a)
+        .unwrap()
+        .journal = journal.clone();
+    let mut states = load_or_initialize_pet_states(app.world(), a).unwrap();
+    states.get_mut(&410).unwrap().health = 73;
+    save_states(&app.world().resource::<GameDatabase>().db, 41, &states).unwrap();
+    crate::battle_pets::choose_ability(
+        app.world_mut(),
+        a,
+        SetBattlePetAbility {
+            pet_id: 410,
+            slot: 1,
+            ability_id: 202,
+        },
+    )
+    .unwrap();
+    queue_request(app.world_mut(), a, PetBattleQueueRequest::Join).unwrap();
+    assert!(
+        crate::battle_pets::choose_ability(
+            app.world_mut(),
+            a,
+            SetBattlePetAbility {
+                pet_id: 410,
+                slot: 1,
+                ability_id: 384
+            }
+        )
+        .is_err()
+    );
+    queue_request(app.world_mut(), a, PetBattleQueueRequest::Leave).unwrap();
+    let mut opponent_journal = app
+        .world()
+        .get::<AccountPetJournal>(b)
+        .unwrap()
+        .journal
+        .clone();
+    opponent_journal.pets[0].level = 25;
+    save_journal(
+        &app.world().resource::<GameDatabase>().db,
+        42,
+        &opponent_journal,
+    );
+    app.world_mut()
+        .get_mut::<AccountPetJournal>(b)
+        .unwrap()
+        .journal = opponent_journal;
+    let mut states = load_or_initialize_pet_states(app.world(), b).unwrap();
+    states.get_mut(&420).unwrap().health = 59;
+    save_states(&app.world().resource::<GameDatabase>().db, 42, &states).unwrap();
+    propose_owners(&mut app, [a, b]);
+    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
+    let battle = &app.world().resource::<Matchmaker>().battles[&id];
+    assert_eq!(battle.encounter.battle.teams[0].pets[0].health, 73);
+    assert_eq!(battle.encounter.battle.teams[0].pets[0].abilities[0], 202);
+    assert_eq!(battle.encounter.battle.teams[1].pets[0].health, 59);
+    let round = battle.encounter.battle.round;
+    assert!(
+        crate::battle_pets::choose_ability(
+            app.world_mut(),
+            a,
+            SetBattlePetAbility {
+                pet_id: 410,
+                slot: 1,
+                ability_id: 384
+            }
+        )
+        .is_err()
+    );
+    advance(
+        app.world_mut(),
+        a,
+        WildPetBattleActionRequest {
+            battle_id: id,
+            round,
+            action: WildPetBattleAction::Forfeit,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        load_states(&app.world().resource::<GameDatabase>().db, 41).unwrap()[&410].health,
+        73
+    );
+    assert_eq!(
+        load_states(&app.world().resource::<GameDatabase>().db, 42).unwrap()[&420].health,
+        59
+    );
+    propose_owners(&mut app, [a, b]);
+    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
+    assert_eq!(
+        app.world().resource::<Matchmaker>().battles[&id]
+            .encounter
+            .battle
+            .teams[0]
+            .pets[0]
+            .health,
+        73
+    );
+    drop(app);
+    let db = redb::Database::open(path).unwrap();
+    assert_eq!(
+        load_states(&db, 41).unwrap()[&410].selected_abilities[0],
+        202
+    );
+    assert_eq!(load_states(&db, 42).unwrap()[&420].health, 59);
+}
+
 #[test]
 fn petbattle_pvp_two_players_wait_for_both_decisions_and_get_oriented_final_results() {
     let mut app = app();

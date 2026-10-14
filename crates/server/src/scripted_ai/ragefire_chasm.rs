@@ -465,7 +465,7 @@ impl Adarogg {
     }
 
     fn move_path(ctx: &mut Ctx, path: u32) {
-        // Ground non-exact paths need map389 navigation, which is not baked.
+        // Ground non-exact paths require the prepared map389 navigation bake.
         super::waypoint_path::move_path(ctx.world, ctx.me, path);
     }
 
