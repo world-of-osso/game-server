@@ -28,6 +28,17 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[entry]);
+    if let Some(mut data) = h
+        .app
+        .world_mut()
+        .get_resource_mut::<crate::world_data::WorldData>()
+    {
+        data.templates.extend(native.templates);
+        data.expected_stats = native.expected_stats;
+    } else {
+        h.app.insert_resource(native);
+    }
     let unit = spawn_npc(&mut h.app, 0.0);
     h.app.world_mut().entity_mut(unit).insert((
         Npc {

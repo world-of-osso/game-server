@@ -222,6 +222,10 @@ fn follower_combat_ownership_allows_ruby_faction_to_retaliate() {
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
     let kit = profile(209059, GroupRole::Dps, 133, 0);
+    h.app
+        .insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+            &[kit.entry],
+        ));
     let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
     super::spawning::initialize(h.app.world_mut(), h.caster, unit, kit).unwrap();
     h.app
@@ -250,6 +254,10 @@ fn follower_initialization_uses_native_stats_without_unassigned_follower_aura() 
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
     let kit = profile(209059, GroupRole::Dps, 133, 0);
+    h.app
+        .insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+            &[kit.entry],
+        ));
     let expected = super::spawning::class_stats(h.app.world(), &kit, 10)
         .unwrap()
         .0;

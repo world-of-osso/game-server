@@ -60,6 +60,7 @@ pub(super) fn initialize(
             | crate::faction::UNIT_FLAG_PLAYER_CONTROLLED,
     );
     let (stats, pools, passives) = class_stats(world, &profile, level)?;
+    let armor = derive_creature_armor(world, unit, profile.entry, level)?;
     let mana = Mana {
         current: stats.base_mana,
         max: stats.base_mana,
@@ -80,6 +81,7 @@ pub(super) fn initialize(
             health,
             UnitLevel(level),
             Level(level),
+            armor,
             faction,
             flags,
             UnitSummonedBy(owner.to_bits()),
@@ -91,6 +93,24 @@ pub(super) fn initialize(
             .map_err(|error| format!("follower preparation spell {form} failed: {error:?}"))?;
     }
     Ok(())
+}
+
+fn derive_creature_armor(
+    world: &World,
+    unit: Entity,
+    entry: u32,
+    level: u8,
+) -> Result<crate::level_scaling::CreatureArmor, String> {
+    let difficulty = world
+        .get::<crate::zones::CreatureDifficulty>(unit)
+        .map_or(0, |difficulty| difficulty.0);
+    world
+        .get_resource::<crate::world_data::WorldData>()
+        .and_then(|data| data.creature_armor_at(entry, difficulty, level))
+        .map(crate::level_scaling::CreatureArmor)
+        .ok_or_else(|| {
+            format!("follower {entry} level{level} difficulty{difficulty} lacks native armor data")
+        })
 }
 
 pub(super) fn class_stats(

@@ -101,7 +101,19 @@ impl ExpectedStats {
     /// Creature::GetBaseArmorForLevel (Creature.cpp:3208-3214) of an untuned
     /// template: ContentTuning 0, HealthScalingExpansion 0.
     pub fn untuned_armor(&self, level: u8, unit_class: u8, armor_modifier: f32) -> f32 {
-        self.evaluate(Stat::Armor, level, 0, 0, unit_class) * armor_modifier
+        self.untuned_armor_for_expansion(level, 0, unit_class, armor_modifier)
+    }
+
+    /// Creature::GetBaseArmorForLevel with the template's authored expansion.
+    pub fn untuned_armor_for_expansion(
+        &self,
+        level: u8,
+        health_scaling_expansion: i32,
+        unit_class: u8,
+        armor_modifier: f32,
+    ) -> f32 {
+        let expansion = resolve_health_expansion(health_scaling_expansion);
+        self.evaluate(Stat::Armor, level, expansion, 0, unit_class) * armor_modifier
     }
 
     /// The ArmorConstant a player attacker of every level 0..=MAX_LEVEL + 3
@@ -177,6 +189,13 @@ fn class_mod_id(unit_class: u8) -> Option<u32> {
     }
 }
 
+fn resolve_health_expansion(expansion: i32) -> i32 {
+    match expansion {
+        -1 => CURRENT_EXPANSION,
+        expansion => expansion,
+    }
+}
+
 /// `creature_template_difficulty` inputs of a tuned template.
 #[derive(Debug, Clone, Copy)]
 pub struct TuningInputs {
@@ -200,10 +219,7 @@ pub struct LevelStats {
 
 impl LevelStats {
     pub fn build(stats: &ExpectedStats, inputs: &TuningInputs) -> Self {
-        let expansion = match inputs.health_scaling_expansion {
-            -1 => CURRENT_EXPANSION,
-            expansion => expansion,
-        };
+        let expansion = resolve_health_expansion(inputs.health_scaling_expansion);
         let eval = |stat, level| {
             stats.evaluate(
                 stat,
