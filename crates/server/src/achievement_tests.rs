@@ -773,6 +773,148 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_target_race_uses_each_actual_spell_hit_unit() {
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[44212], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Racehitproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = 2;
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 3.0);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(target), u8::MAX);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), target, 44212),
+        "refused depth installs no aura"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5777)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(target), 0);
+    // Authored Speed10 and TC minimum5yd flight take500ms; the fixture advances50ms/frame.
+    h.advance(9);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), target, 44212),
+        "launch is not a landing"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5777)
+    );
+    h.advance(3);
+    assert!(
+        crate::auras::has_aura(h.app.world(), target, 44212),
+        "actual sourced pumpkin aura landed"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5777),
+        Some(&1),
+        "native Human target hit must credit its authored race leaf"
+    );
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert!(
+        !progress.contains_key(&5779),
+        "Orc caster cannot supply target race"
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(h.npc), 0);
+    h.advance(12);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 44212));
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert_eq!(progress.get(&5777), Some(&1));
+    assert!(
+        !progress.contains_key(&5779),
+        "NPC has no playable target race"
+    );
+    let missing = h.app.world_mut().spawn_empty().id();
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 44212);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5779)
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().race = 2;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 44212, Some(target), 0);
+    h.advance(12);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5779),
+        Some(&1)
+    );
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5777),
+        Some(&1)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5779),
+        Some(&1)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&5777), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&5779), Some(&1));
+}
+
+#[test]
 fn achievements_criteria_native_player_aura_some_requires_actual_jaguar_aura_at_loa_landing() {
     for buff in [136775, 136777, 136778] {
         let mut h = crate::spell_cast::test_harness::harness_with_plugins(

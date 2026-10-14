@@ -1,6 +1,10 @@
 ## 2026-10-13 — Login/catalog/admission budget investigation
 
 [Tick lag](investigations/server-tick-lag.md#logincatalogadmission-investigation-verified-2026-10-13): achievement fact/index/publication, aura watchers, worker geometry, replication bootstrap, async credentials and owner-shared Toy presentation fixes have targeted proof.22 auth/admission and32 interest tests plus2 LOS/2 navigation preparation tests pass. Private debug live50ms acceptance remains unmet; synchronous durable writes and economy stalls retained explicitly.
+## 2026-10-14 — Actual spell-hit target race
+
+[TargetRace27](systems/dungeon-achievements.md#actual-spell-hit-target-race) carries each hit player's race only for type110. Compiler31/31 and native1/1 at cc546863 prove delayed44212 Human/Orc hits, caster isolation, NPC/missing/depth/idle/reopen; census adds only account291 structurally. Required full four-thread workspace filter171/0/1ignored plus site-export1/1 passes at2e6a8661; server/engine checks and three-repo fmt pass. No full291/content/UI certificate.
+
 ## 2026-10-13 — Battle-pet team minimum level
 
 [BattlePetTeamLevel34](systems/dungeon-achievements.md#battle-pet-team-minimum-level) reads all three equipped owned journal slots. Compiler30/30; native level25-team win RED lacks23257. Native/catalog3/3 proves matched-team win/lower equipped slot, numeric8278, idle/reopen and missing journal/slot qualification. Statistic8278 only; required full170/0/1ignored plus site-export1/1, server/engine checks and three-repo fmt pass at4531ce2b code scope.
@@ -1167,3 +1171,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: native Druid/Fear master integration85 controls pass,17 actual unshifted BeforeCast receipts and current check/fmt; canonical model-info98,609 rows verified equal to source-prepared slot. Full class census/rendered acceptance remains open.
 
 - 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
+
+- 2026-10-14 — [Quest fixture refresh](../../quest-objectives-coverage.md#fixture-refresh--2026-10-14): reproduced missing SpellTargetConditions in real Tear item cast and stale empty-loot Netherwing Egg fixture; load authored conditions and use real9548/181746/23830 chest data. Both tests GREEN with unchanged gameplay/data; original open/autoloot ordering retained.

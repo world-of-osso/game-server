@@ -756,7 +756,12 @@ pub(crate) fn record_targeted_spell_hit(
     spell: u32,
 ) {
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
-    record_criteria_event(world, caster, CriteriaEvent::LandTargetedSpell(spell));
+    let target_race = world.get::<Player>(target).map(|player| player.race);
+    record_criteria_event(
+        world,
+        caster,
+        CriteriaEvent::LandTargetedSpell(spell, target_race),
+    );
 }
 
 /// Called only after durable M+ settlement; players must belong to the finished copy.

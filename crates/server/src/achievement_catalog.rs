@@ -146,7 +146,7 @@ pub(crate) enum CriteriaEvent {
     MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
-    LandTargetedSpell(u32),
+    LandTargetedSpell(u32, Option<u8>),
     LearnSpell(u32),
     DefeatEncounter(u32),
     /// One DONE while the character's active encounter loot-lock bit was unset.
@@ -255,7 +255,7 @@ impl CriteriaEvent {
             Self::MoneySpentOnTaxis(_) => 63,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
-            Self::LandTargetedSpell(_) => 110,
+            Self::LandTargetedSpell(_, _) => 110,
             Self::LearnSpell(_) => 34,
             Self::DefeatEncounter(_) => 165,
             Self::DefeatEncounterEligibleForLoot(_) => 97,
@@ -356,7 +356,7 @@ impl CriteriaEvent {
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
             | Self::BeSpellTarget(asset)
-            | Self::LandTargetedSpell(asset)
+            | Self::LandTargetedSpell(asset, _)
             | Self::LearnSpell(asset)
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
@@ -498,6 +498,8 @@ enum CriteriaFact {
     EventItems(BTreeSet<u32>),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
+    /// TargetRace27 from the actual hit unit, never the reference player.
+    TargetRace(u8),
     /// Some8 requiring one of these complete TargetCreatureId4 leaves.
     TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
@@ -537,6 +539,9 @@ impl CriteriaFact {
             },
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
+            }
+            Self::TargetRace(race) => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target)) if target == *race)
             }
             Self::TargetCreatures(entries) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
@@ -1416,6 +1421,9 @@ fn load_criteria_facts(
             26 => small
                 .filter(|class| (1..=13).contains(class))
                 .map(CriteriaFact::Class),
+            27 => small
+                .filter(|race| crate::race_class::race_bit(*race).is_some())
+                .map(CriteriaFact::TargetRace),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
             34 => small
@@ -1435,7 +1443,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/29/32/34/35/41/60/69/71/104/122"
+                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/27/29/32/34/35/41/60/69/71/104/122"
                 )
             }
         };
