@@ -1,5 +1,13 @@
 # Wiki Index
 
+- [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; prepared follower73/player-pet persistence10 plus checks/fmt pass; full-instance/authored-kit/stat-budget acceptance remains open.
+
+- [Follower class/native follow](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13) — eleven actual basic-role casts, Cobra Shot class-level crash fixed, real Stockade navmesh/collision/progress regression and authored private12-tile Ruby ground package; advanced AI/live completion open.
+- [Player-aura criterion alternatives](systems/dungeon-achievements.md#player-aura-alternatives) — authenticated current aura membership; native Jaguar/Mighty Loa fixture, no full boss lifecycle claim.
+- [Player-area criterion alternatives](systems/dungeon-achievements.md#player-area-alternatives) — complete recursive membership; native death fixture uses controlled cached authority, not terrain-travel certification.
+- [Player-map criterion alternatives](systems/dungeon-achievements.md#player-map-alternatives) — complete map membership; native Warsong killing-blow fixture, no legacy-map playability claim.
+- [Target-creature criterion alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) — complete one-of NPC selectors, per-request native negatives and Wave40624 grant; NPC content closure remains separate.
+
 - [Dungeon spawn-leash exemption](../specs/creature-aggro.md) — TC dungeon policy, unchanged open-world40yd test, and [superseded Stockade evidence](systems/navigation.md#stationary-arch-and-leash-acceptance); Slagmaw's authored East teleport stays engaged.
 
 - [Prepared follower Group Finder catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13) — authenticated source-backed sorted entries and explicit empty reply; native UI/full-dungeon proof remains separate.
@@ -265,3 +273,5 @@ Debug logs and root cause analyses.
 - [Reported motion fixture correction](systems/skyborne.md#reported-motion-fixture-correction-2026-10-07) — adjacent-cell fixture fix a7616cd, retained exact GREEN and independent scoped gate; unchanged production/protocol, remote consumer gates open.
 
 - [Auction subcategory/sort proof](systems/auction-house.md#subcategory--current-bid--available--2026-10-08) — class/subclass/inventory alternatives and stable Bid/Quantity paging.
+
+- [Category charge-recovery rates](systems/auras.md#category-charge-recovery-rates) — native148 real Aimed Shot charges, live clocks, serial expiry and source-bounded negative/per-cast controls; broader parity remains open.

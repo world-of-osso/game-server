@@ -30,6 +30,9 @@ mod paths;
 #[path = "smart_timed.rs"]
 mod timed;
 
+#[path = "smart_instance_data.rs"]
+mod instance_data;
+
 #[path = "smart_escort.rs"]
 mod escort;
 #[path = "smart_pose.rs"]
@@ -87,6 +90,7 @@ const ACTION_SUMMON_CREATURE_GROUP: u32 = 107;
 const ACTION_FOLLOW: u32 = 29;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
+const ACTION_SET_INST_DATA: u32 = 34;
 const ACTION_DIE: u32 = 37;
 const ACTION_FORCE_DESPAWN: u32 = 41;
 const ACTION_WP_START: u32 = 53;
@@ -257,6 +261,7 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_SET_ORIENTATION
             | ACTION_SET_EVENT_PHASE
             | ACTION_CALL_KILLEDMONSTER
+            | ACTION_SET_INST_DATA
             | ACTION_DIE
             | ACTION_FORCE_DESPAWN
             | ACTION_FAIL_QUEST
@@ -650,6 +655,7 @@ impl SmartAi {
                 return Self::cast_targets(ctx, event, targets);
             }
             ACTION_SET_EVENT_PHASE => self.phase = event.action_params[0],
+            ACTION_SET_INST_DATA => return instance_data::apply(ctx, event.action_params),
             ACTION_FAIL_QUEST | ACTION_COMPLETE_QUEST => {
                 for target in targets {
                     crate::quest::persist_scripted_quest_result(
