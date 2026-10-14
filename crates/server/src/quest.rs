@@ -157,19 +157,7 @@ fn send_initial_quest_log(
             QueriedQuestGivers::default(),
         ));
         if let Ok(mut sender) = senders.get_mut(connection) {
-            info!(
-                ?connection,
-                character_id = in_world.character_id,
-                entries = snapshot.entries.len(),
-                "QUEST_SNAPSHOT_SENT"
-            );
             sender.send::<QuestChannel>(snapshot);
-        } else {
-            error!(
-                ?connection,
-                character_id = in_world.character_id,
-                "QUEST_SNAPSHOT_NO_SENDER"
-            );
         }
     }
 }
