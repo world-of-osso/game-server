@@ -262,13 +262,17 @@ fn launch(controls: Vec<Vec3>, smooth: bool, orientation: f32, velocity: f32) ->
     Some(spline)
 }
 
-/// `MoveSplineInit::Launch` velocity selection and client speed limit.
-fn path_velocity(path: &ScriptPath, spawn: &SpawnPoint, walking: bool, flying: bool) -> f32 {
-    let walk = match path.move_type {
+fn path_walk_mode(path: &ScriptPath, walking: bool) -> bool {
+    match path.move_type {
         MoveType::Walk => true,
         MoveType::Run => false,
         MoveType::Land | MoveType::TakeOff => walking,
-    };
+    }
+}
+
+/// `MoveSplineInit::Launch` velocity selection and client speed limit.
+fn path_velocity(path: &ScriptPath, spawn: &SpawnPoint, walking: bool, flying: bool) -> f32 {
+    let walk = path_walk_mode(path, walking);
     let run = spawn.speed_run * BASE_RUN_SPEED;
     let velocity = path.velocity.unwrap_or(if walk {
         spawn.speed_walk * BASE_WALK_SPEED
@@ -305,7 +309,7 @@ fn start_move(
     }
     movement.started = true;
     let exact = path.exact_spline();
-    let controls = path_controls(&path, movement.node, launch_from, navigation)?;
+    let controls = query_path_controls(&path, movement.node, launch_from, navigation)?;
     let smooth = exact && controls.len() > 2 && launch_from.flying;
     let velocity = path_velocity(
         &path,
@@ -335,7 +339,7 @@ fn start_move(
 
 /// TC CreateSingularPointPath: owner position, then calculated path after its first
 /// point. Never reinterpret Detour corners as authored waypoint node indices.
-fn path_controls(
+fn query_path_controls(
     path: &ScriptPath,
     node: usize,
     launch_from: &Launch,
@@ -391,6 +395,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
     let mut failed = Vec::new();
     let mut moved = Vec::new();
     let mut changed = Vec::new();
+    let mut walking_modes = Vec::new();
     let mut movers = world.query_filtered::<(
         Entity,
         &mut Position,
@@ -448,7 +453,11 @@ pub(crate) fn path_movement_system(world: &mut World) {
                 Err(error) => failed.push((entity, movement.path.id, error)),
             }
         }
-        let gait = match (&movement.spline, walking) {
+        let path_walk = path_walk_mode(&movement.path, walking);
+        if movement.spline.is_some() && path_walk != walking {
+            walking_modes.push((entity, path_walk));
+        }
+        let gait = match (&movement.spline, path_walk) {
             (None, _) => CreatureMotion::Still,
             (Some(_), true) => CreatureMotion::Walk,
             (Some(_), false) => CreatureMotion::Run,
@@ -476,6 +485,9 @@ pub(crate) fn path_movement_system(world: &mut World) {
     }
     if let Some(navigation) = navigation {
         world.insert_resource(navigation);
+    }
+    for (entity, walking) in walking_modes {
+        super::movement::set_walk(world, entity, walking);
     }
     for (entity, path_id, error) in failed {
         error!("MovePath {path_id} for {entity:?}: {error}; stopped without arrival");
