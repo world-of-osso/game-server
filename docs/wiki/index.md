@@ -1,5 +1,6 @@
 # Wiki Index
 
+- [Current personal arena ratings](systems/dungeon-achievements.md#current-personal-arena-ratings) — current asset0/1, durable post-result highest values; native rated fixture, other brackets unclaimed.
 - [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [Player-aura criterion alternatives](systems/dungeon-achievements.md#player-aura-alternatives) — authenticated current aura membership; native Jaguar/Mighty Loa fixture, no full boss lifecycle claim.
 - [Player-area criterion alternatives](systems/dungeon-achievements.md#player-area-alternatives) — complete recursive membership; native death fixture uses controlled cached authority, not terrain-travel certification.
