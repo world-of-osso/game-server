@@ -82,7 +82,8 @@ fn receive_requests(world: &mut World, mut pending: Local<Vec<PendingTradingPost
         })
         .collect();
     for (connection, account, player, request) in requests {
-        crate::adventure_guide::refresh_for_connection(world, connection);
+        info!(?connection, account, ?request, "TP_DELIVERY_SERVER_RECV");
+        crate::adventure_guide::settle_month_for_connection(world, connection);
         match enqueue_request(world, connection, account, player, &request) {
             Ok(commit) => pending.push(PendingTradingPost {
                 connection,
@@ -100,6 +101,7 @@ fn publish_completed_requests(world: &mut World, pending: &mut Vec<PendingTradin
         let Some(result) = request.commit.result() else {
             return true;
         };
+        info!(connection=?request.connection, ?result, "TP_DELIVERY_SERVER_EXECUTE");
         let same_owner = world
             .get::<Authenticated>(request.connection)
             .is_some_and(|auth| auth.account_id == request.account);
@@ -332,9 +334,25 @@ fn send_snapshot(
         }
         Err(error) => snapshot.source_gaps.push(error.clone()),
     }
-    if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
-        sender.send::<InstanceChannel>(snapshot);
+    for row in &mut snapshot.items {
+        row.usable = item_usability(world, connection, row.item_id);
     }
+    if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
+        info!(?connection, full=snapshot.catalog_complete, rows=snapshot.items.len(), tender=snapshot.tender, frozen=?snapshot.frozen_item_id, error=?snapshot.error, "TP_DELIVERY_SERVER_SEND");
+        sender.send::<InstanceChannel>(snapshot);
+    } else {
+        error!(?connection, "TP_DELIVERY_SERVER_MISSING_SENDER");
+    }
+}
+
+/// Existing Player::CanUseItem class/race/level facts, also used by merchant lists.
+fn item_usability(world: &World, connection: Entity, item_id: u32) -> Option<bool> {
+    let player_id = world.get::<PlayerLink>(connection)?.0;
+    let player = world.get::<shared::components::Player>(player_id)?;
+    let level = u16::from(world.get::<shared::components::Level>(player_id)?.0);
+    let templates = world.get_resource::<crate::item_templates::ItemTemplates>()?;
+    let item = templates.get(shared::item_data::ItemDefinitionSource::Retail, item_id)?;
+    Some(item.allows(player.class, player.race) && item.required_level <= level)
 }
 
 fn refund_gap(window: u32) -> String {

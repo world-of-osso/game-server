@@ -109,6 +109,11 @@ fn run_attack_tick(app: &mut App) {
                 sight: &sight,
                 armor_constants: armor_constants.as_deref(),
                 spells: None,
+                creature_types: crate::unit_creature_type::CreatureTypes {
+                    races: None,
+                    forms: None,
+                    data: None,
+                },
             };
             let mut redirect_health = std::collections::HashMap::new();
             for (entity, mut aa, position, stats) in &mut attackers {

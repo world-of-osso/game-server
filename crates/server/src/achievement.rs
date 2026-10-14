@@ -928,14 +928,28 @@ fn process_inventory_acquisition_credits(world: &mut World) {
         .collect();
     for (character, item, count) in acquired {
         if let Some(&player) = owners.get(&character) {
-            record_criteria_event(world, player, CriteriaEvent::AcquireItem(item, count));
+            record_criteria_events(
+                world,
+                player,
+                &[
+                    CriteriaEvent::AcquireItem(item, count),
+                    CriteriaEvent::ObtainAnyItem(item),
+                ],
+            );
         }
     }
     for (character, item, count, kind) in looted {
         if let Some(&player) = owners.get(&character) {
             // TC Player::StoreLootItem (Player.cpp:27202-27203).
-            record_criteria_event(world, player, CriteriaEvent::LootItem(item, count));
-            record_criteria_event(world, player, CriteriaEvent::GetLootByType(kind, count));
+            record_criteria_events(
+                world,
+                player,
+                &[
+                    CriteriaEvent::LootItem(item, count),
+                    CriteriaEvent::GetLootByType(kind, count),
+                    CriteriaEvent::LootAnyItem(item),
+                ],
+            );
         }
     }
     for (character, copper) in money {
@@ -984,6 +998,23 @@ pub(crate) fn player_conditions(world: &World, player: Entity) -> PlayerConditio
     }
 }
 
+/// Same native learned spell sources used by type34, never SpellStore membership.
+fn known_player_spell_ids(world: &World, player: Entity) -> BTreeSet<u32> {
+    let class_spells = world
+        .get::<crate::class_progression::KnownSpells>(player)
+        .into_iter()
+        .flat_map(|known| known.iter());
+    let profession_spells = world
+        .get::<crate::profession::PlayerProfessions>(player)
+        .into_iter()
+        .flat_map(|known| known.spells.iter().copied());
+    let mounts = world.get::<crate::mount_journal::AccountMounts>(player);
+    class_spells
+        .chain(profession_spells)
+        .chain(crate::mount_journal::owned_spells(world, mounts))
+        .collect()
+}
+
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
     let identity = world.get::<Player>(player)?;
     let arena = crate::pvp::player_arena_conditions(world, player);
@@ -993,6 +1024,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .into_iter()
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
+        known_spells: known_player_spell_ids(world, player),
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),

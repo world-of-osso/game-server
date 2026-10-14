@@ -4,6 +4,9 @@ use super::*;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
 
+#[path = "ragefire_completion.rs"]
+mod ragefire_completion;
+
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
 }
