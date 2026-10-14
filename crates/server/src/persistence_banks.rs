@@ -301,8 +301,8 @@ struct GuildDataV0 {
 
 /// `SERVER_SETTINGS` key of the `GuildData` layout version.
 pub(crate) const GUILD_LAYOUT_KEY: &str = "guild_layout_version";
-/// 2: ranks carry social rights (layout 1 added `withdraw_repair`).
-pub(crate) const GUILD_LAYOUT_VERSION: u32 = 2;
+/// 3: TC right values; 2 added compact social rights, 1 added `withdraw_repair`.
+pub(crate) const GUILD_LAYOUT_VERSION: u32 = 3;
 
 fn default_social_rights(officer: bool) -> u32 {
     use shared::protocol::*;
@@ -392,7 +392,38 @@ impl From<GuildDataV0> for GuildData {
     }
 }
 
-/// Rewrite stored guilds from layout 0/1 to 2 in one transaction, once.
+/// Translate each layout-2 compact bit independently, including mixed officer masks.
+/// Monetary booleans/allowances and all other guild data are already authoritative.
+fn migrate_compact_rights(mut guild: GuildData) -> GuildData {
+    use shared::protocol::*;
+    let rights = [
+        GUILD_RIGHT_CHAT_LISTEN,
+        GUILD_RIGHT_CHAT_SPEAK,
+        GUILD_RIGHT_OFFICER_LISTEN,
+        GUILD_RIGHT_OFFICER_SPEAK,
+        GUILD_RIGHT_INVITE,
+        GUILD_RIGHT_REMOVE,
+        GUILD_RIGHT_PROMOTE,
+        GUILD_RIGHT_DEMOTE,
+        GUILD_RIGHT_EDIT_MOTD,
+        GUILD_RIGHT_EDIT_INFO,
+        GUILD_RIGHT_EDIT_OFFICER_NOTE,
+        GUILD_RIGHT_VIEW_OFFICER_NOTE,
+        GUILD_RIGHT_WITHDRAW_GOLD,
+        GUILD_RIGHT_WITHDRAW_REPAIR,
+    ];
+    for rank in &mut guild.ranks {
+        let old = rank.rights;
+        rank.rights = rights
+            .iter()
+            .enumerate()
+            .filter(|(bit, _)| old & (1 << bit) != 0)
+            .fold(0, |mask, (_, right)| mask | right);
+    }
+    guild
+}
+
+/// Rewrite stored guilds from layout 0/1/2 to 3 atomically, once.
 pub(crate) fn migrate_guild_ranks(db: &Database) {
     let txn = db
         .begin_write()
@@ -413,6 +444,7 @@ pub(crate) fn migrate_guild_ranks(db: &Database) {
                 let guild = match version {
                     0 => bitcode::decode::<GuildDataV0>(value.value()).map(GuildData::from),
                     1 => bitcode::decode::<GuildDataV1>(value.value()).map(GuildData::from),
+                    2 => bitcode::decode::<GuildData>(value.value()).map(migrate_compact_rights),
                     _ => unreachable!("unsupported guild layout {version}"),
                 }
                 .unwrap_or_else(|error| {

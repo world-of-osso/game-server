@@ -3,6 +3,9 @@ use super::*;
 use crate::persistence::create_tables;
 use redb::ReadableTable;
 
+#[path = "guild_rights_migration_tests.rs"]
+mod guild_rights_migration_tests;
+
 /// `GuildBankLogKindData` before `RepairMoney`.
 #[derive(bitcode::Encode)]
 enum GuildBankLogKindV0 {
