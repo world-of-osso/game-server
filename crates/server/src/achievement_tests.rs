@@ -796,7 +796,7 @@ fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing()
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Triagehit", 1, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .get_mut::<InWorld>(h.connection)
