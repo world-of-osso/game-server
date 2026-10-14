@@ -1,3 +1,10 @@
+## 2026-10-13 — Exact map0 criterion
+
+[Known zero map](systems/dungeon-achievements.md#exact-zero-map) preserves actual map0 versus missing authority. Native killing-blow5512 and redb reopen add existing World Killing Blows statistic1488, not an ordinary grant, world honor or relinked tree. Saved source root592/leaf593 remains authoritative until the coordinated DB2 re-export; no extraction performed.
+## 2026-10-13 — Native damage shields
+
+[Damage shields](systems/auras.md#damage-shields) add the source melee retaliation path missing from Anacondra's real8148 aura. Native percentage/power attribution, immunity/absorb and non-refreshing leash controls accompany real melee/dispel/death-ordering fixtures. Source spell2 is not substituted; final merged gate recorded separately in encounter evidence.
+
 ## 2026-10-13 — NPC Felguard learned interrupt
 
 [Follower data](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13): native level17 learned Axe Toss89766→347008 interrupts actual Fireball without canceling the owner's Shadow Bolt; below-level/cooldown/non-interruptible/stunned controls pass5/5 at72e754d5. Authenticated catalog is installed after generic fixture startup; native missile landing and existing persistence baseline are observed, not guessed. Ten pet motion/hazard/lifetime/credit cases additionally pass af677305, including real overlapping fields and movement CC. Current prepared follower73/73 and player-pet persistence10/10 pass; current server checks/fmt pass with later unrelated master changes. Full-dungeon/authored-kit/stat-budget acceptance remains open.
