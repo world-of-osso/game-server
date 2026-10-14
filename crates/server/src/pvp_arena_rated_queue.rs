@@ -10,6 +10,10 @@ use shared::components::Level;
 use shared::protocol::{ArenaQueueMode, PvpBracketSnapshot, QueueForRatedPvp};
 use std::collections::{BTreeMap, BTreeSet};
 
+#[cfg(test)]
+#[path = "pvp_personal_rating_tests.rs"]
+mod achievement_tests;
+
 pub(super) fn bracket(mode: ArenaQueueMode) -> PvpBracketSnapshot {
     match mode {
         ArenaQueueMode::Rated2v2 => PvpBracketSnapshot::Arena2v2,

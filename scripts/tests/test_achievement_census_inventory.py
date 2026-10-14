@@ -7,6 +7,18 @@ import achievement_census
 
 
 class RawTypeInventory(unittest.TestCase):
+    def test_personal_rating_accepts_only_authored_current_two_and_three_player_assets(self):
+        criteria = {index: {'Type': '39', 'Asset': str(asset), 'ModifierTreeId': '0',
+                            'StartEvent': '0', 'StartTimer': '0', 'FailEvent': '0',
+                            'EligibilityWorldStateID': '0'}
+                    for index, asset in enumerate((0, 1, 2, 3, 6, 8), 1)}
+        datasets = dict.fromkeys(('spells', 'skills', 'mythic_ids', 'overlay_assets',
+                                 'pet_creatures', 'pet_species', 'toy_items', 'scenarios',
+                                 'zones', 'taxi_nodes'), frozenset())
+        supported = achievement_census.supported_criteria(
+            criteria, {39}, **datasets, single_modifiers={}, condition_trees=set())
+        self.assertEqual(supported, {1, 2}, 'no retired5v5/RBG/Shuffle/Blitz mapping')
+
     def test_orphan_tree_reference_does_not_become_achievement_coverage(self):
         criteria = {
             162: {'Type': '13'},

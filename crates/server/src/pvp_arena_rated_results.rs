@@ -65,7 +65,7 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
                 .get_mut::<PlayerPvpState>(*entity)
                 .expect("arena player")
                 .progress = progress;
-            result_credits.push((*entity, before.rating, won));
+            result_credits.push((*entity, before.rating, rating_after, won));
         }
         changes.push(ArenaRatingChange {
             character_id: before.id,
@@ -87,7 +87,14 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
         arena.snapshot.rating_changes = changes;
         arena.rated.as_mut().expect("rated match").applied = true;
     }
-    for (player, before_rating, won) in result_credits {
-        crate::achievement::record_ranked_arena_result(world, player, before_rating, map, won);
+    for (player, before_rating, after_rating, won) in result_credits {
+        crate::achievement::record_ranked_arena_result(
+            world,
+            player,
+            before_rating,
+            after_rating,
+            map,
+            won,
+        );
     }
 }
