@@ -18,6 +18,9 @@ use crate::persistence::ClientId;
 #[path = "loot/group_tests.rs"]
 mod group_loot;
 
+#[path = "loot/encounter_tests.rs"]
+mod encounter_loot;
+
 const KOBOLD_VERMIN: u32 = 6;
 const MELTED_CANDLE: u32 = 755;
 const TARNISHED_CHAIN_VEST: u32 = 2379;
