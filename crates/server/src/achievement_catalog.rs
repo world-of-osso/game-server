@@ -462,7 +462,7 @@ pub(crate) struct PlayerConditions {
 }
 
 /// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct SpellHitPlayer {
     pub race: u8,
     pub class: u8,
