@@ -120,6 +120,8 @@ mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+#[cfg(test)]
+mod warrior_stun_tests;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
 mod linked_aura_tests;
