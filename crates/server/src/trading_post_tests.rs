@@ -56,6 +56,60 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
 }
 
 #[test]
+fn trading_post_writer_reply_waits_for_durable_settlement_without_blocking_tick() {
+    use std::time::{Duration, Instant};
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "AsyncTender").unwrap();
+    prepare(&mut h, 1790812900);
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
+        .unwrap()
+        .send::<InstanceChannel>(TradingPostRequest::Query);
+    let started = Instant::now();
+    h.app.update();
+    h.app.update();
+    let elapsed = started.elapsed();
+    let premature = h
+        .app
+        .world_mut()
+        .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+        .unwrap()
+        .receive()
+        .next();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "Trading Post tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_none(), "snapshot bypasses durable settlement");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let reply = loop {
+        h.app.update();
+        if let Some(reply) = h
+            .app
+            .world_mut()
+            .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+            .unwrap()
+            .receive()
+            .next()
+        {
+            break reply;
+        }
+        assert!(Instant::now() < deadline, "no durable Trading Post reply");
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert!(reply.error.is_none(), "{:?}", reply.error);
+    assert_eq!(reply.tender, 0);
+    assert_eq!(store::load(h.db(), ACCOUNT).month_start, 1790812800);
+}
+
+#[test]
 fn trading_post_real_gameplay_credit_awards_once_and_resets_at_midnight_not_daily_hour() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderhunter").unwrap();
