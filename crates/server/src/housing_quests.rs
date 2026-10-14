@@ -1,7 +1,6 @@
 //! Authored decor-reward quests. TDB objective14 stays CriteriaTree, not an item hand-in.
 //! TC a352b1fa: AcquireItem36 accumulates the actual acquired quantity; its item asset
 //! must match. CompleteAll4 with one unconditional leaf is the supported tree boundary.
-use crate::persistence::housing_store::BUILD_KEY;
 use crate::persistence::quest_store::QuestLogData;
 use crate::quest_data::{ObjectiveDef, ObjectiveKind, QuestDb};
 use rusqlite::Connection;
@@ -18,18 +17,13 @@ pub(crate) fn load(source: &Connection, quests: &mut QuestDb) -> rusqlite::Resul
     if !installed {
         return Ok(());
     }
-    let build: String = source.query_row(
-        "SELECT build FROM housing_catalog_build WHERE build_key=?",
-        [BUILD_KEY],
-        |row| row.get(0),
-    )?;
-    if build != "12.1.0.69933" {
-        bevy::log::warn!("Housing quest catalog requires Retail12.1.0.69933; found {build}");
-        return Err(rusqlite::Error::InvalidQuery);
-    }
+    let build_key = crate::housing_catalog::read_build_key(source).map_err(|error| {
+        bevy::log::error!("Housing quest catalog: {error}");
+        rusqlite::Error::InvalidQuery
+    })?;
     let mut query=source.prepare("SELECT CAST(json_extract(fields_json,'$.ItemID') AS INTEGER) FROM housing_catalog_record WHERE build_key=? AND table_name='HouseDecor'")?;
     let items: BTreeSet<u32> = query
-        .query_map([BUILD_KEY], |row| row.get(0))?
+        .query_map([build_key], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
     let candidates: Vec<_> = quests
         .quests

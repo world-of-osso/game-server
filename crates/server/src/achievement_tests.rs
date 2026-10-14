@@ -773,6 +773,148 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_target_class_uses_actual_player_hit_and_race() {
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        vec![],
+        &[27571, 61781],
+        1,
+        false,
+        |app| {
+            app.add_plugins(AchievementPlugin);
+        },
+    )
+    .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Classhit", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = 2;
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 6, 3.0);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), u8::MAX);
+    assert!(!crate::auras::has_aura(h.app.world(), target, 27571));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6313)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), 0);
+    h.advance(9);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), target, 27571),
+        "authored missile has not landed"
+    );
+    h.advance(3);
+    assert!(
+        crate::auras::has_aura(h.app.world(), target, 27571),
+        "actual sourced rose petals landed"
+    );
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert_eq!(
+        progress.get(&6313),
+        Some(&1),
+        "actual Human Death Knight target qualifies"
+    );
+    assert!(
+        !progress.contains_key(&6302),
+        "Orc caster race cannot substitute for Human target"
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().race = 2;
+    h.app.world_mut().get_mut::<Player>(target).unwrap().class = 1;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), 0);
+    h.advance(12);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6302),
+        "correct race cannot replace required target class"
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().class = 6;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(target), 0);
+    h.advance(12);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6302),
+        Some(&1)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 27571, Some(h.npc), 0);
+    h.advance(12);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 27571));
+    let missing = h.app.world_mut().spawn_empty().id();
+    record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 27571);
+    h.app.world_mut().get_mut::<Player>(target).unwrap().race = 1;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    h.advance(10);
+    assert!(crate::auras::has_aura(h.app.world(), target, 61781));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&11158),
+        "turkey hit on Death Knight cannot credit Rogue"
+    );
+    h.app.world_mut().get_mut::<Player>(target).unwrap().class = 4;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    h.advance(10);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&11158),
+        Some(&1),
+        "positive race-only authority anchors actual target class"
+    );
+    h.advance(20);
+    let progress = &h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .criteria_progress;
+    assert_eq!(progress.get(&6313), Some(&1));
+    assert_eq!(progress.get(&6302), Some(&1));
+    assert_eq!(progress.get(&11158), Some(&1));
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&6313), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&6302), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&11158), Some(&1));
+}
+
+#[test]
 fn achievements_criteria_native_target_race_uses_each_actual_spell_hit_unit() {
     let mut h =
         crate::spell_cast::test_harness::harness_with_plugins(vec![], &[44212], 1, false, |app| {
