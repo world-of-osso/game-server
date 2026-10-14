@@ -110,13 +110,7 @@ fn run_until_landing(fixture: &mut FallFixture) {
             .get::<Position>(fixture.player)
             .unwrap()
             .y;
-        let airborne = fixture
-            .app
-            .world()
-            .get::<FallTracker>(fixture.player)
-            .unwrap()
-            .airborne;
-        if !airborne && height <= fixture.floor + crate::terrain_height::GROUND_SNAP_THRESHOLD {
+        if height <= fixture.floor + crate::terrain_height::GROUND_SNAP_THRESHOLD {
             return;
         }
     }
