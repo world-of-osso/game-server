@@ -24,6 +24,17 @@ def snapshot_world(path):
 
 
 class EncounterModelGeometryTests(unittest.TestCase):
+    def test_native_kobold_fear_distance_has_source_combat_reach(self):
+        expected = geometry.read_model_info(DUMP, {10913})[0]
+        with closing(sqlite3.connect(':memory:')) as target:
+            target.execute('CREATE TABLE tdb_creature_template_model (CreatureID,CreatureDisplayID)')
+            target.executemany('INSERT INTO tdb_creature_template_model VALUES (?,?)',
+                               [(135322,84202),(135406,88651),(61463,42247)])
+            geometry.import_geometry(target, DUMP)
+            self.assertEqual(target.execute(
+                'SELECT * FROM encounter_creature_model_info WHERE DisplayID=10913'
+            ).fetchone(), tuple(expected))
+
     def test_authentic_rows_are_admitted_idempotently_without_template_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             copy = Path(directory) / 'geometry.sqlite'
