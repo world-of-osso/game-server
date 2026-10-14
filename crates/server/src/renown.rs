@@ -240,6 +240,25 @@ fn reply_to_request(
     reply
 }
 
+fn send_watched_bar_update(
+    db: &Database,
+    character: u64,
+    reputation: &shared::reputation::CharacterReputation,
+    sender: &mut MessageSender<shared::protocol::ReputationStateUpdate>,
+) {
+    let snapshot = crate::reputation::read_reputation_snapshot(
+        db,
+        character,
+        reputation,
+        &shared::reputation::default_faction_registry(),
+    );
+    sender.send::<shared::protocol::ReputationChannel>(shared::protocol::ReputationStateUpdate {
+        snapshot: Some(snapshot),
+        message: None,
+        error: None,
+    });
+}
+
 fn receive_requests(
     db: Res<GameDatabase>,
     mut reputations: Query<&mut shared::reputation::CharacterReputation>,
@@ -265,18 +284,11 @@ fn receive_requests(
                 request,
             );
             if updates_watch && let Some(reputation) = reputation.as_deref() {
-                let snapshot = crate::reputation::read_reputation_snapshot(
+                send_watched_bar_update(
                     &db.db,
                     owner.character_id,
                     reputation,
-                    &shared::reputation::default_faction_registry(),
-                );
-                reputation_sender.send::<shared::protocol::ReputationChannel>(
-                    shared::protocol::ReputationStateUpdate {
-                        snapshot: Some(snapshot),
-                        message: None,
-                        error: None,
-                    },
+                    &mut reputation_sender,
                 );
             }
             sender.send::<InstanceChannel>(reply);
