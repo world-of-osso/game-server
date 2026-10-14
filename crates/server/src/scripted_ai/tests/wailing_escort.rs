@@ -122,6 +122,9 @@ fn encounter_coverage_wailing_first_camp_waits_for_authored_ravagers() {
     let source_facing = 5.742133 + std::f32::consts::FRAC_PI_2;
     assert!(
         (facing - source_facing).abs() < 0.0001,
-        "source camp-facing angle"
+        "source camp-facing angle: actual={facing} expected={source_facing}; state={:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(disciple)
     );
 }
