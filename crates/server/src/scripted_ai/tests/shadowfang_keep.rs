@@ -124,8 +124,12 @@ fn encounter_coverage_silverlaine_normal_progress_reopens_and_filters_only_its_p
     let saved = persistence::load_instance_locks(&database);
     let normal = persistence::load_normal_instance_locks(&database);
     assert!(
-        saved.is_empty(),
+        saved.locks.is_empty(),
         "Normal progress is not a scheduled raid/Heroic lock"
+    );
+    assert!(
+        saved.shared.is_empty(),
+        "Normal progress has no scheduled shared lock state"
     );
     assert_eq!(normal.len(), 1);
     let mut instances =
