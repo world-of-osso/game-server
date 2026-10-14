@@ -1179,3 +1179,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: five native Druid BeforeCast form transformers and Berserk AfterCast reset;14 current controls, actual census post-cast form telemetry, no generic dummy certification. See [batch52](../class-completeness6.md#native-druid-beforecast-transformers--batch52).
 
 - 2026-10-13: native Druid/Fear master integration85 controls pass,17 actual unshifted BeforeCast receipts and current check/fmt; canonical model-info98,609 rows verified equal to source-prepared slot. Full class census/rendered acceptance remains open.
+
+- 2026-10-13 — [Signed summon titles](systems/toys.md#signed-summon-title-source-boundary-2026-10-13): current source3001/-1 exposed unsigned loader failure; preserve TC int32 without aborting unrelated toys.

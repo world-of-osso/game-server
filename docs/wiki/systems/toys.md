@@ -268,3 +268,7 @@ Exact187146 source cosmetic admission uses ordinary1097945 at attachment17 and o
 ## Source group-private runtime (2026-10-13)
 
 Pinned TC `SpellEffects.cpp`1890–1904 captures the private group GUID, and `Object.cpp`827–845 tests the viewer's current membership. Server stores the captured ID in `PrivateObjectGroup`, separately from caster-only `PrivateObjectOwner`; private descendants inherit either identity. The existing interest index caches group owners and observer membership, invalidating only observers whose group changes. Ordinary map, radius, stealth and death filters still apply. `retail_content.TOY_SCENERY_SUMMON_ENTRIES` imports the twelve direct source contracts' authentic TDB templates/models; no synthetic click/script payload is added. Seventeen census graphs contain this flag; source-only admission is not complete-effect certification. [Contract](../../specs/toys.md#group-private-summons).
+
+### Signed summon title source boundary (2026-10-13)
+
+The current canonical import publishes SummonProperties3001.Title=-1. The old u32 loader aborted the entire store at that row, preventing unrelated source toys from casting. Pinned TC `DB2Structure.h`4318–4325 declares Title as int32; `SummonProperties.title` and title constants now preserve that signed representation. Unknown titles remain explicitly unsupported; the loader neither wraps the sentinel nor substitutes old data. Concrete3001/4493 loader regression accompanies the actual ten toy loader failures.
