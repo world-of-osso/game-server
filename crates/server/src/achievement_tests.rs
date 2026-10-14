@@ -783,6 +783,15 @@ fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing()
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(load_achievement_catalog(&conn).unwrap());
+    // Authored Heavy Frostweave Bandage supplies the item-level scaling context.
+    let item_level: u16 = conn
+        .query_row(
+            "SELECT i.ItemLevel FROM content_item i JOIN item_x_item_effect x ON x.ItemID=i.ID \
+         JOIN item_effect e ON e.ID=x.ItemEffectID WHERE i.ID=34722 AND e.SpellID=45544",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
@@ -806,9 +815,23 @@ fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing()
         .get_mut::<Health>(h.caster)
         .unwrap()
         .current = 1.0;
-    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 45544, Some(target), u8::MAX);
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        u8::MAX,
+        Some(item_level),
+    );
     assert!(!crate::auras::has_aura(h.app.world(), target, 45544));
-    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 45544, Some(target), 0);
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        0,
+        Some(item_level),
+    );
     h.advance(2);
     assert!(crate::auras::has_aura(h.app.world(), target, 45544));
     assert!(
@@ -837,7 +860,14 @@ fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing()
         "unknown/invalid target health cannot qualify"
     );
     h.app.world_mut().get_mut::<Health>(target).unwrap().current = 5.0;
-    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 45544, Some(target), 0);
+    crate::spell_cast::cast_triggered_with_item_level(
+        h.app.world_mut(),
+        h.caster,
+        45544,
+        Some(target),
+        0,
+        Some(item_level),
+    );
     h.advance(2);
     assert!(
         crate::auras::has_aura(h.app.world(), target, 45544),
@@ -859,16 +889,7 @@ fn achievements_criteria_native_target_health_reads_bandage_hit_before_healing()
         "native target at exactly5percent must credit before healing"
     );
     assert!(state.earned_ids.contains(&141));
-    eprintln!(
-        "bandage applied: {:?}",
-        h.app.world().get::<crate::auras::ActiveAuras>(target)
-    );
     h.advance(24);
-    eprintln!(
-        "bandage after ticks: health={:?}, auras={:?}",
-        h.app.world().get::<Health>(target),
-        h.app.world().get::<crate::auras::ActiveAuras>(target)
-    );
     assert!(
         h.app.world().get::<Health>(target).unwrap().current > 5.0,
         "real periodic bandage heals after the qualifying hit"
