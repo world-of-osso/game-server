@@ -165,6 +165,18 @@ impl LineOfSight {
         self.live_clear(map, a, b) && self.with_map(map, |tiles| tiles.clear(a, b))
     }
 
+    /// First static or enabled dynamic collision along a movement segment.
+    pub(crate) fn first_hit(&self, map: InMap, a: Vec3, b: Vec3) -> Option<f32> {
+        let baked = self.with_map(map, |tiles| tiles.first_hit(a, b));
+        self.live_hulls
+            .get(&map)
+            .into_iter()
+            .flatten()
+            .filter_map(|hull| hull.first_hit(a, b))
+            .chain(baked)
+            .min_by(f32::total_cmp)
+    }
+
     fn with_map<T>(&self, map: InMap, query: impl FnOnce(&mut LosMap) -> Result<T, String>) -> T {
         let mut maps = self.maps.lock().unwrap();
         let tiles = maps
