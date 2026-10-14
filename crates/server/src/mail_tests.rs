@@ -13,6 +13,52 @@ use crate::persistence::mail_store::{MailData, MailItemData, MailSender, load_ma
 const DAY: u64 = 86_400;
 
 #[test]
+fn mail_send_ack_waits_for_fifo_commit_without_blocking_updates() {
+    use std::time::Instant;
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Fifomaila").unwrap();
+    let recipient = h.create_alt("Fifomailb");
+    let mailbox = h.open_mailbox();
+    let before = h.gold();
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SendMail>>(h.connection)
+        .unwrap()
+        .send::<MailChannel>(SendMail {
+            object: mailbox.to_bits(),
+            money: 100,
+            ..letter("Fifomailb")
+        });
+    let started = Instant::now();
+    h.app.update();
+    h.app.update();
+    let elapsed = started.elapsed();
+    let premature = h.take::<MailSent>();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "mail tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "MailSent precedes durable commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        h.app.update();
+        if !h.take::<MailSent>().is_empty() {
+            break;
+        }
+        assert!(Instant::now() < deadline, "no durable MailSent");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(h.gold(), before - 130);
+    assert_eq!(load_mailbox(h.db(), recipient)[0].money, 100);
+}
+
+#[test]
 fn achievements_criteria_postage_and_most_money_follow_committed_mail_not_requests() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState};
     let file = tempfile::NamedTempFile::new().unwrap();
@@ -85,6 +131,22 @@ fn send(h: &mut Harness, mailbox: Entity, mail: SendMail) {
         object: mailbox.to_bits(),
         ..mail
     });
+    finish_mail_work(h);
+}
+
+fn finish_mail_work(h: &mut Harness) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while !h.app.world().resource::<PendingMailCommits>().0.is_empty() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "mail operation did not complete"
+        );
+        h.app.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    // Let committed gold/criteria and inbox messages reach their consumers.
+    h.app.update();
+    h.app.update();
 }
 
 fn letter(recipient: &str) -> SendMail {
@@ -105,6 +167,7 @@ fn act(h: &mut Harness, mailbox: Entity, mail_id: u64, action: MailAction) {
         mail_id,
         action,
     });
+    finish_mail_work(h);
 }
 
 fn failures(h: &mut Harness) -> Vec<MailError> {

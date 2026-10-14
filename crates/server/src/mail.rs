@@ -50,17 +50,20 @@ pub struct MailPlugin;
 
 impl Plugin for MailPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ChangedMailboxes>().add_systems(
-            Update,
-            (
-                send_opened_mailboxes,
-                process_send_requests,
-                process_mail_requests,
-                tick_mail.run_if(mail_tick_due),
-                send_changed_mailboxes,
-            )
-                .chain(),
-        );
+        app.init_resource::<ChangedMailboxes>()
+            .init_resource::<PendingMailCommits>()
+            .add_systems(
+                Update,
+                (
+                    publish_mail_commits,
+                    send_opened_mailboxes,
+                    process_send_requests,
+                    process_mail_requests,
+                    tick_mail.run_if(mail_tick_due),
+                    send_changed_mailboxes,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -82,7 +85,7 @@ fn mail_tick_due(time: Res<Time>, mut elapsed: Local<Option<Duration>>) -> bool 
 pub(crate) struct ChangedMailboxes(pub(crate) HashSet<u64>);
 
 /// What a mail operation changed: bags and gold to replicate, mailboxes to resend.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub(crate) struct MailChanges {
     pub gold: Vec<(u64, u64)>,
     pub mailboxes: Vec<u64>,
@@ -573,10 +576,6 @@ struct MailDesk<'w, 's> {
 }
 
 impl MailDesk<'_, '_> {
-    fn stores(&self) -> Option<(&Database, &ItemTemplates)> {
-        Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
-    }
-
     fn apply(&mut self, changes: MailChanges) {
         for (character_id, gold) in changes.gold {
             self.gold.record(character_id, gold);
@@ -629,58 +628,116 @@ fn send_opened_mailboxes(
     }
 }
 
-fn process_send_requests(mut requests: Requests<SendMail>, mut desk: MailDesk) {
-    for (connection, in_world, interaction, mut receiver) in &mut requests {
-        let open = open_mailbox(interaction).map(Entity::to_bits);
-        for request in receiver.receive() {
-            let result = match desk.stores() {
-                None => Err(MailError::Internal),
-                Some(_) if open != Some(request.object) => Err(MailError::NotInteracting),
-                Some((db, templates)) => {
-                    send_mail(db, templates, in_world.character_id, &request, unix_now())
-                }
-            };
-            match result {
-                Ok(changes) => {
-                    desk.apply(changes);
-                    // TC a352b1fa MailHandler.cpp224: postage only, not attached money.
-                    let postage = shared::mail::postage(request.attachments.len());
+#[derive(Resource, Default)]
+struct PendingMailCommits(Vec<PendingMailCommit>);
+
+struct PendingMailCommit {
+    connection: Entity,
+    character: u64,
+    object: u64,
+    postage: Option<u64>,
+    receipt: crate::persistence_writer::CommitReceipt<MailResult>,
+}
+
+fn publish_mail_commits(mut pending: ResMut<PendingMailCommits>, mut desk: MailDesk) {
+    pending.0.retain(|commit| {
+        let Some(result) = commit.receipt.result() else {
+            return true;
+        };
+        match result {
+            Ok(Ok(changes)) => {
+                desk.apply(changes);
+                if let Some(postage) = commit.postage {
                     desk.gold.record_criteria(
-                        in_world.character_id,
+                        commit.character,
                         crate::achievement::CriteriaEvent::MoneySpentOnPostage(postage),
                     );
-                    if let Ok(mut sender) = desk.sent.get_mut(connection) {
+                    if let Ok(mut sender) = desk.sent.get_mut(commit.connection) {
                         sender.send::<MailChannel>(MailSent {
-                            object: request.object,
+                            object: commit.object,
                         });
                     }
                 }
-                Err(error) => desk.fail(connection, request.object, error),
             }
+            Ok(Err(error)) => desk.fail(commit.connection, commit.object, error),
+            Err(_) => desk.fail(commit.connection, commit.object, MailError::Internal),
+        }
+        false
+    });
+}
+
+fn process_send_requests(
+    mut requests: Requests<SendMail>,
+    mut desk: MailDesk,
+    mut pending: ResMut<PendingMailCommits>,
+) {
+    for (connection, in_world, interaction, mut receiver) in &mut requests {
+        let open = open_mailbox(interaction).map(Entity::to_bits);
+        for request in receiver.receive() {
+            if open != Some(request.object) {
+                desk.fail(connection, request.object, MailError::NotInteracting);
+                continue;
+            }
+            let (Some(db), Some(templates)) = (desk.db.as_ref(), desk.templates.as_ref()) else {
+                desk.fail(connection, request.object, MailError::Internal);
+                continue;
+            };
+            let character = in_world.character_id;
+            let object = request.object;
+            let postage = shared::mail::postage(request.attachments.len());
+            let templates = (**templates).clone();
+            let now = unix_now();
+            let receipt = db.writer.enqueue("send player mail", move |db| {
+                Ok(send_mail(db, &templates, character, &request, now))
+            });
+            pending.0.push(PendingMailCommit {
+                connection,
+                character,
+                object,
+                postage: Some(postage),
+                receipt,
+            });
         }
     }
 }
 
-fn process_mail_requests(mut requests: Requests<MailRequest>, mut desk: MailDesk) {
+fn process_mail_requests(
+    mut requests: Requests<MailRequest>,
+    mut desk: MailDesk,
+    mut pending: ResMut<PendingMailCommits>,
+) {
     for (connection, in_world, interaction, mut receiver) in &mut requests {
         let open = open_mailbox(interaction).map(Entity::to_bits);
         for request in receiver.receive() {
-            let result = match desk.stores() {
-                None => Err(MailError::Internal),
-                Some(_) if open != Some(request.object) => Err(MailError::NotInteracting),
-                Some((db, templates)) => act_on_mail(
+            if open != Some(request.object) {
+                desk.fail(connection, request.object, MailError::NotInteracting);
+                continue;
+            }
+            let (Some(db), Some(templates)) = (desk.db.as_ref(), desk.templates.as_ref()) else {
+                desk.fail(connection, request.object, MailError::Internal);
+                continue;
+            };
+            let character = in_world.character_id;
+            let object = request.object;
+            let templates = (**templates).clone();
+            let now = unix_now();
+            let receipt = db.writer.enqueue("player mailbox action", move |db| {
+                Ok(act_on_mail(
                     db,
-                    templates,
-                    in_world.character_id,
+                    &templates,
+                    character,
                     request.mail_id,
                     request.action,
-                    unix_now(),
-                ),
-            };
-            match result {
-                Ok(changes) => desk.apply(changes),
-                Err(error) => desk.fail(connection, request.object, error),
-            }
+                    now,
+                ))
+            });
+            pending.0.push(PendingMailCommit {
+                connection,
+                character,
+                object,
+                postage: None,
+                receipt,
+            });
         }
     }
 }
@@ -692,13 +749,27 @@ fn tick_mail(
     mut connections: Query<(Entity, &InWorld, Option<&mut SentPendingMail>)>,
     mut pending: Query<&mut MessageSender<PendingMail>>,
     mut desk: MailDesk,
+    mut expiry: Local<Option<crate::persistence_writer::CommitReceipt<Vec<u64>>>>,
 ) {
-    let Some(db) = desk.db.as_ref().map(|db| &db.db) else {
+    let Some(database) = desk.db.as_ref() else {
         return;
     };
+    let db = &database.db;
     let now = unix_now();
-    let expired = expire_mail(db, now);
-    let mut changed: Vec<u64> = expired;
+    let mut changed = Vec::new();
+    if let Some(result) = expiry.as_ref().and_then(|receipt| receipt.result()) {
+        if let Ok(expired) = result {
+            changed.extend(expired);
+        }
+        *expiry = None;
+    }
+    if expiry.is_none() {
+        *expiry = Some(
+            database
+                .writer
+                .enqueue("mail expiry", move |db| Ok(expire_mail(db, now))),
+        );
+    }
     for (connection, in_world, sent) in &mut connections {
         let mails = load_mailbox(db, in_world.character_id);
         let senders = pending_senders(&mails, now);
