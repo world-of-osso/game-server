@@ -12,12 +12,14 @@ use shared::components::{
 use shared::currency::currency_by_id;
 use shared::death::DeathState;
 use shared::protocol::{
-    AuthChannel, ChatMessage, ChatType, DeathStateUpdate, EnterWorldResponse, LoadTerrain,
-    SelectCharacter,
+    AuthChannel, ChatMessage, ChatType, DeathStateUpdate, DeleteCharacter, DeleteCharacterResponse,
+    EnterWorldResponse, LoadTerrain, SelectCharacter,
 };
 
 use crate::auth::Authenticated;
-use crate::auth_character::{load_selected_character_state, process_select_character};
+use crate::auth_character::{
+    load_selected_character_state, process_delete_character, process_select_character,
+};
 use crate::death::{DeathPlugin, PlayerDeathState};
 use crate::durability::{EquippedDurability, ItemDurability, ItemDurabilityInfo, apply_death_loss};
 use crate::gold::{GoldPlugin, GoldUpdateQueue};
@@ -55,10 +57,7 @@ fn character_delete_ack_waits_for_fifo_writer_without_blocking_updates() {
             Connected,
             RemoteId(PeerId::Local(41)),
             HostClient { buffer: Vec::new() },
-            Authenticated {
-                account_id: 41,
-                username: "fb_perf_delete".into(),
-            },
+            Authenticated { account_id: 41 },
             MessageSender::<DeleteCharacter>::default(),
             MessageReceiver::<DeleteCharacter>::default(),
             MessageSender::<DeleteCharacterResponse>::default(),
