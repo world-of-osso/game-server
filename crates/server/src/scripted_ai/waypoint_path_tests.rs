@@ -35,7 +35,9 @@ fn waypoint_collinear_portals_move_without_cutting_turns_or_height_changes() {
     ];
     let controls = coalesce_collinear_crossings(original.clone());
     let spline = launch(controls, false, 0.0, 2.0).expect("collinear tiny portals are not turns");
-    for elapsed in 0..=spline.end_ms {
+    // The actor stays at its actual start during launch. Evaluated movement uses
+    // the source spline domain beginning at its1ms minimal-duration timestamp.
+    for elapsed in MINIMAL_DURATION_MS..=spline.end_ms {
         let point = spline.position(elapsed);
         let distance = original
             .windows(2)
