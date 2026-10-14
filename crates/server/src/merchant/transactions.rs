@@ -74,6 +74,7 @@ struct Transaction<'a> {
     reset: DailyReset,
     now: f64,
     gold: Publication,
+    persistence_error: Option<String>,
 }
 
 pub(super) fn execute(
@@ -104,6 +105,7 @@ pub(super) fn execute(
         reset: inputs.reset,
         now: inputs.now,
         gold: Publication::default(),
+        persistence_error: None,
     };
     let mut customer = Customer {
         connection,
@@ -121,6 +123,9 @@ pub(super) fn execute(
         Operation::Repair(req) => repair(&mut shop, &mut customer, req),
     }
     .err();
+    if let Some(error) = shop.persistence_error {
+        return Err(error);
+    }
     if shop.durability != before_durability {
         shop.gold.durability = shop.durability;
     }
@@ -488,7 +493,6 @@ fn repair(shop: &mut Transaction, customer: &mut Customer, req: RepairItem) -> M
         gold -= u64::from(cost);
         entry.current = entry.max;
     }
-    drop(durability);
     if gold != model.gold() {
         model.set_gold(gold);
         shop.save(customer.character_id, model);

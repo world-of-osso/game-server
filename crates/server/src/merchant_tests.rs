@@ -397,6 +397,18 @@ impl Harness {
         for _ in 0..3 {
             self.app.update();
         }
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        while !self.app.world().resource::<PendingMerchant>().is_idle() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "merchant fixture receipt timeout"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+            self.app.update();
+        }
+        for _ in 0..3 {
+            self.app.update();
+        }
     }
 
     fn open(&mut self, entry: u32) -> Entity {

@@ -182,7 +182,7 @@ fn commit_and_publish_purchase(
         ..Default::default()
     };
     store::commit_market(shop.db(), Some(&state), &changes).map_err(|error| {
-        error!("economic vendor {entry} purchase aborted: {error}");
+        shop.persistence_error = Some(format!("economic vendor {entry} purchase aborted: {error}"));
         MerchantError::ItemNotFound
     })?;
     shop.gold.economy = Some(state);

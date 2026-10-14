@@ -21,6 +21,13 @@ pub(super) struct PendingMerchant {
     commit: Option<PendingCommit>,
 }
 
+#[cfg(test)]
+impl PendingMerchant {
+    pub(super) fn is_idle(&self) -> bool {
+        self.requests.is_empty() && self.commit.is_none()
+    }
+}
+
 pub(super) fn drive_merchant_commits(
     mut pending: ResMut<PendingMerchant>,
     mut shop: Shop,
