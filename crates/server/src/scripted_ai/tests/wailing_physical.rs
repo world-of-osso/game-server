@@ -4,7 +4,7 @@ use super::*;
 #[test]
 #[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
 fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injection() {
-    tracing_subscriber::fmt()
+    bevy::log::tracing_subscriber::fmt()
         .with_env_filter("game_server::scripted_ai::waypoint_path=debug")
         .with_test_writer()
         .try_init()
