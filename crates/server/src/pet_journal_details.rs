@@ -234,7 +234,9 @@ pub(super) fn receive_ability_requests(world: &mut World) {
         })
         .collect();
     for (connection, owner, request) in requests {
+        info!(?connection, ?owner, ?request, "PET_ABILITY_RECEIVE");
         let error = choose_ability(world, owner, request).err();
+        info!(?connection, ?error, "PET_ABILITY_REPLY");
         send_pet_details(world, connection, owner, error);
     }
 }
