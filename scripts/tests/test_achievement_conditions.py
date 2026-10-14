@@ -135,6 +135,17 @@ class Conditions(unittest.TestCase):
         modifiers[11] = node(10, 3, 39, 3)
         self.assertEqual(self.compile(modifiers), {}, 'negated level stays unsupported')
 
+    def test_alive_condition_preserves_zero_asset_and_other_required_leaves(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 16, 0), 12: node(10, 2, 17, 6665)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((16, 0), (17, 6665))]})
+        modifiers[11]['Asset'] = '1'
+        self.assertEqual(self.compile(modifiers), {}, 'alive has no asset selector')
+        modifiers[11] = node(10, 3, 16, 0)
+        self.assertEqual(self.compile(modifiers), {}, 'negated alive remains unsupported')
+        modifiers[11] = node(10, 2, 16, 0)
+        modifiers[13] = node(10, 2, 67, 4546)
+        self.assertEqual(self.compile(modifiers), {}, 'unknown world state rejects the whole tree')
+
     def test_known_solo_condition_admits_the_pinned_zero_asset(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 35, 0)}
         self.assertEqual(self.compile(modifiers), {1: [None, ((35, 0),)]})
