@@ -1,6 +1,7 @@
 //! TC a352b1fa spell_druid.cpp271–295 native BeforeCast form transformers.
 use super::test_harness::*;
 use shared::components::{CombatStatus, Player, PowerType};
+use shared::protocol::CombatLogKind;
 
 const CAT: u32 = 768;
 const BEAR: u32 = 5487;
@@ -39,6 +40,116 @@ fn form(h: &Harness) -> Option<i32> {
         .get::<crate::auras::ActiveAuras>(h.caster)
         .and_then(crate::auras::shapeshift::current_form)
         .map(|(_, form)| form)
+}
+
+fn cast_form(h: &mut Harness, id: u32) {
+    h.cast_and_deliver(id, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(35);
+    h.inbox = Inbox::default();
+}
+
+#[test]
+fn class_completeness_native_druid_other_transformers_cast_their_authored_form() {
+    for (id, expected) in [(99, 5), (50334, 5), (252216, 1)] {
+        let mut h = druid();
+        h.cast_and_deliver(id, None);
+        assert!(h.inbox.failed.is_empty(), "{id}: {:?}", h.inbox.failed);
+        assert_eq!(form(&h), Some(expected), "native root {id}");
+        assert!(h.inbox.log.iter().any(|event| event.spell_id == Some(id)
+            && event.kind == CombatLogKind::CastSuccess));
+    }
+}
+
+#[test]
+fn class_completeness_native_druid_triggered_tiger_dash_replaces_bear_with_cat() {
+    let mut h = druid();
+    cast_form(&mut h, BEAR);
+    assert_eq!(form(&h), Some(5));
+    let caster = h.caster;
+    assert!(super::try_cast_triggered(
+        h.app.world_mut(),
+        caster,
+        252216,
+        Some(caster),
+        1
+    ));
+    h.advance(3);
+    assert_eq!(form(&h), Some(1));
+    assert!(!crate::auras::has_aura(h.app.world(), caster, BEAR));
+    assert!(crate::auras::has_aura(h.app.world(), caster, CAT));
+    assert!(crate::auras::has_aura(h.app.world(), caster, 252216));
+}
+
+#[test]
+fn class_completeness_native_druid_same_form_does_not_recast_or_refresh_it() {
+    for (parent, child) in [(PROWL, CAT), (STAMPEDING_ROAR, BEAR)] {
+        let mut h = druid();
+        cast_form(&mut h, child);
+        h.cast_and_deliver(parent, Some(h.caster));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            !h.inbox.log.iter().any(|event| event.spell_id == Some(child)
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )),
+            "same-form parent {parent} recast child: {:?}",
+            h.inbox.log
+        );
+    }
+}
+
+#[test]
+fn class_completeness_native_druid_bear_transformer_replaces_cat_not_preserves_it() {
+    let mut h = druid();
+    cast_form(&mut h, CAT);
+    h.cast_and_deliver(STAMPEDING_ROAR, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(form(&h), Some(5));
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, CAT));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.npc)
+            .and_then(crate::auras::shapeshift::current_form)
+            .is_none(),
+        "automatic form belongs only to the caster"
+    );
+}
+
+#[test]
+fn class_completeness_native_druid_rejected_roar_does_not_transform_the_caster() {
+    let mut h = druid();
+    h.cast_and_deliver(CAT, Some(h.caster));
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(STAMPEDING_ROAR, Some(h.caster));
+    assert_eq!(h.inbox.failed.len(), 1, "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::OnGlobalCooldown
+    );
+    assert_eq!(form(&h), Some(1));
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, BEAR));
+    assert!(h.inbox.go.is_empty());
+}
+
+#[test]
+fn class_completeness_native_druid_missing_child_refuses_instead_of_fake_transform_success() {
+    let mut h = harness(Vec::new(), &[PROWL], 11).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(CombatStatus(false));
+    h.cast_and_deliver(PROWL, Some(h.caster));
+    assert_eq!(h.inbox.failed.len(), 1, "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::NotSupported
+    );
+    assert_eq!(form(&h), None);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, PROWL));
+    assert!(h.inbox.go.is_empty());
 }
 
 #[test]
