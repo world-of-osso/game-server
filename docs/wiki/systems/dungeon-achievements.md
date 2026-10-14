@@ -188,6 +188,10 @@ Native effect/death tests prove untimed **orphan** counter26004 with actual heal
 
 Modifier122 uses authenticated Map.InstanceType rows to load a set of map IDs per requested raw type; runtime checks the reference player's actual map. World0 is valid. Missing maps/type memberships and out-of-range assets remain disabled. Source: pinned TC CriteriaHandler2394–2397. Native real-channel rated/skirmish arena2/3 plus BG effect→queued death-system tests prove arena50456/50457 versus BG50458/50460, cross-type rejection, idle/reopened counters. Fixture now runs `process_player_death_transitions` with its real required resources; test-only counter visibility changed, production death logic did not. Raid-death18 remains a separate missing producer. [Inventory](../../achievement-criteria-producer-inventory.md) owns the +4-statistics census; no rendered-runtime claim.
 
+## Survived fall producer (2026-10-13)
+
+Terrain gravity captures the fall peak before landing resets FallTracker, then queues type24 only after damage with positive remaining health and no void transition. Knockback's own landing supplies its observed distance after damage. Both use the same reference-player boundary. Alive16 reads positive Health plus nondead native life state; missing health is unknown, not alive. TC Player::HandleFall27461–27509 supplies distance×100, truncated; CriteriaHandler681–683 and header290 use PROGRESS_SET despite the maximum-sounding name. Shorter later falls replace the counter, while earned achievements persist. Feather/fly/hover/immunity and safe-fall eligibility remain explicit. Authored roots547/11944 retain Alive16 and Area17/6665; root785's world-state67/4546 remains disabled. The existing quadratic realm damage formula differs from TC's linear formula: normal66-yard landings are lethal here, but native Pandaren107076 aura374/-50 permits authentic survival. Full environmental absorption parity is not claimed. [Inventory](../../achievement-criteria-producer-inventory.md) owns census/proof state.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
