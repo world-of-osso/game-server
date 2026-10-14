@@ -100,6 +100,115 @@ fn follower_follow_routes_around_actual_stockade_walls_without_crossing_collisio
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_RUBY_DATA and FOLLOWER_RUBY_GROUND authored private bakes"]
+fn follower_ruby_regroup_walks_from_entrance_across_metalplate_to_boss_floor() {
+    let data = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_DATA").unwrap());
+    let ground = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_GROUND").unwrap());
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    // Actual entrance and the collected supported boss column, not a spawn mutation.
+    let from = wow(1386.2, -169.719, 131.0);
+    let owner = wow(1551.33, -257.688, 126.01431);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((owner, InMap::continent(2521)));
+    h.app.world_mut().entity_mut(unit).insert((
+        from,
+        InMap::continent(2521),
+        crate::creature_ai::SpawnPoint {
+            x: from.x,
+            y: from.y,
+            z: from.z,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+            speed_run: 1.0,
+        },
+    ));
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let wdts = HashMap::from([(2521, maps.map(2521).unwrap().wdt_file_data_id)]);
+    h.app.insert_resource(GroundMap::new(&data, wdts.clone()));
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&ground.join("navmesh")));
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut support = GroundMap::new(&data, wdts);
+    let mut los = los::LosMap::new(&ground.join("los/2521"));
+    let mut previous = from;
+    for tick in 0..1500 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(unit).unwrap();
+        assert!(
+            los.clear(point(previous) + Vec3::Y * 2.0, point(at) + Vec3::Y * 2.0)
+                .unwrap(),
+            "Ruby follower tick{tick} crosses collision: {previous:?}->{at:?}"
+        );
+        let GroundProbe::Supported(floor) = support.creature_ground_at(2521, point(at)) else {
+            let samples = [0.0, 1.0, 2.0, 5.0, 10.0].map(|offset| {
+                (
+                    offset,
+                    support.creature_ground_at(2521, point(at) + Vec3::Y * offset),
+                )
+            });
+            panic!(
+                "unsupported Ruby follower tick{tick} feet {at:?}; previous{previous:?}; raised support samples{samples:?}"
+            )
+        };
+        assert!(
+            (at.y - floor).abs() < 0.05,
+            "Ruby follower tick{tick} must follow exact WMO/M2 support: {at:?} floor{floor}"
+        );
+        previous = at;
+    }
+    let gap = (owner.x - previous.x).hypot(owner.z - previous.z);
+    assert!(
+        (gap - 4.0).abs() < 0.1,
+        "Ruby follower must complete regroup across the metalplate: gap{gap} at{previous:?}"
+    );
+    eprintln!("Ruby actual grounded follower regroup: {from:?}->{previous:?} gap{gap}");
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_RUBY_DATA authored local WMO assets"]
+fn ruby_creature_height_supports_steep_step_without_changing_player_floor_policy() {
+    let data = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_DATA").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut ground = GroundMap::new(
+        &data,
+        HashMap::from([(2521, maps.map(2521).unwrap().wdt_file_data_id)]),
+    );
+    // Actual WMO4391460 face1016: world-up normal0.564409, collision height128.1038.
+    let feet = Vec3::new(1405.7883, 127.84611, 173.86066);
+    assert_eq!(ground.ground_at(2521, feet), GroundProbe::Unsupported);
+    let GroundProbe::Supported(height) = ground.creature_ground_at(2521, feet) else {
+        panic!("native creature map-height query must support the actual WMO step")
+    };
+    assert!(
+        (height - 128.1038).abs() < 0.01,
+        "actual WMO collision height: {height}"
+    );
+    assert_eq!(
+        ground.ground_at(2521, feet),
+        GroundProbe::Unsupported,
+        "creature sampling must not change the player slope filter"
+    );
+}
+
+#[test]
 fn follower_regroup_finishes_active_follow_instead_of_resetting_movement_each_tick() {
     let (mut h, unit, _) = stockade_fixture(wow(116.0, 76.0, -34.85623));
     for _ in 0..300 {

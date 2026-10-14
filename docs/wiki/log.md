@@ -1126,6 +1126,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 [Profile/navigation proof](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13): eleven actual labelled basic-role casts/resource publications; Cobra Shot193455 missile-resolution Level panic RED→11GREEN. Real Stockade follow crossed wall at tick19 and lost moving-state progress4.8527yd; native route/progress fix GREEN3. Strict follower missing-bake standing, ordinary behavior retained. Private Ruby12LOS+12NAV/authored zero-gap geometry package staged; advanced AI and new whole-route live proof open.
 - 2026-10-13: [Category charge rates](systems/auras.md#category-charge-recovery-rates): native148 through existing category clocks, authentic Trueshot/Aimed Shot RED/GREEN, negative native Fiery Brand and bounded refresh API proof.
 
+## 2026-10-13 — Ruby authored support/vertical search
+
+[Navigation source repair](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13): actual metalplate doorway RED→GREEN, creature/player steep-face distinction, native1500-tick regroup at4yd, nominalY5 source lookup with no larger fallback. Private12-tile NAV/M2 support rebake passes; full-instance/live acceptance remains open.
 - 2026-10-13: Charred Warblades native3%/1000ms delayed self-heal producer; real-damage RED at eb9fbf29 (500HP stays500 instead of504); GREEN verification pending.
 
 - 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.

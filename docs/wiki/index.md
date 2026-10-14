@@ -292,4 +292,5 @@ Debug logs and root cause analyses.
 
 - [Category charge-recovery rates](systems/auras.md#category-charge-recovery-rates) — native148 real Aimed Shot charges, live clocks, serial expiry and source-bounded negative/per-cast controls; broader parity remains open.
 
+- [Ruby authored support and search](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13) — sourced metalplate normals, creature/player map-height separation and TC nominalY5; query/native fixture proof is not full-dungeon completion.
 - [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
