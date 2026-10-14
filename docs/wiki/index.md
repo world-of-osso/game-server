@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Wailing first escort camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) — source path-end/timed speech, two real Ravagers and combat-paused clock; controlled arrival only.
+
 - [Wailing Normal run/rewards](systems/boss-scripts.md#wailing-normal-run-and-corpse-rewards-2026-10-14) — eight controlled deaths, redb reopen, fresh-copy isolation and eight staged corpse commits; no natural/native clear.
 
 - [Silverlaine source primary](systems/boss-scripts.md#silverlaine-source-primary) — pinned map33/3887→1070/bit1, source SmartAI identity and copy-only SQL; combat/native/full-instance proof remains open.

@@ -1,3 +1,7 @@
+## 2026-10-14 — Disciple first escort camp
+
+[First camp](systems/boss-scripts.md#wailing-first-escort-camp-2026-10-14) ports path367800-end events4–7. Controlled arrival RED→GREEN proves authored speech/two Ravagers, actual combat pause and source-facing callback; existing Sleep/Potion remains passing. Physical traversal, activation data and native clear remain open.
+
 ## 2026-10-14 — Silverlaine primary identity
 
 [Silverlaine](systems/boss-scripts.md#silverlaine-source-primary) adds pinned header/instance plus current canonical Journal/SmartAI validation to the copy-only producer. RED→GREEN and private120→121 application preserve unrelated/model data; no other Shadowfang boss is admitted. A real actor/spell fixture separately proves two victim casts/aura isolation and controlled-death1070/bit1 copy isolation; staged corpse→inventory once and Normal redb reopen/population/fresh-owner boundaries now have separate behavioral proof. Full fights and native acceptance remain open.
