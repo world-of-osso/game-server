@@ -340,6 +340,12 @@ Bounded9 installed memberships (`ap70391-bounded9`,exit0/242.450s) clear12 aura1
 Adjacent broad-name filter captured unrelated achievement test requiring MYTHIC_PLUS_WORLD_COPY (`ap70391-merged-adjacency`:232passed/1failed,649.173s). Engine character_frame substring also captured unrelated Forever skin byte snapshot (`rap-tooltip-controls`:25passed/1failed/1ignored); changed character sheet/AP tests passed. Neither production fix nor weakened snapshot added. Full13/40 goal OPEN; continuing authentic remaining consumers.
 
 
+## Wildfire primary variance master red — batch61
+
+Latest landed player slice b683b2cf/ce143 still failed `dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed` at the primary assertion, not the already-landed c08a9362 tick correction. At13175c8d, `wildfire-primary-native-red` reproduces native primary damage292 on attempt10 with actual AP/RAP100, exit101/100.852s (11.14s test). Current published source265157 coefficient1.9 and259495 effect2 bonus50% yield285 nominal with5% variance: integer278–292. The old1.5795×1.8 assertion yielded277–291 and rejected a legitimate upper draw. RAP-at-impact drift hypothesis was falsified by actual fixed100 stats.
+
+Fixture re-sources both constants and isolates256 real primary draws by cancelling prior bleeds/resetting target health, then retains six native ticks, ownership/lifecycle and no-guessed-splash assertions. Unequal meleeAP37/RAP100 proves the Hunter ranged field for primary/bleed. No data, coefficients or runtime math are changed; stale source percentage in a script comment is removed. Current merged GREEN/check/fmt acceptance pending; all13/40 goal remains open.
+
 ## Combat-result namespace audit — batch60
 
 Pinned `SpellAuraDefines.h273/289` authenticates incoming spell-hit chance186 versus IGNORE_COMBAT_RESULT202. The previous literal186 block exemption was wrong; correction to202 changes no current native inputs: owned published70391 snapshot has zero202 rows and zero186 rows with block-result misc3 (`ignore-combat-result-namespace-receipt.json`). Do not invent a202 aura fixture or claim source202 behavior from this numeric correction. Existing64 native consumer proofs retain their actual spell/aura scopes; source202 remains unauthenticated at the active behavioral boundary.
