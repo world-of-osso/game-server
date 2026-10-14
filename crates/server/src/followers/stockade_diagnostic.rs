@@ -320,8 +320,14 @@ mod tests {
         );
         assert!(h.app.world().get::<InMap>(h.caster).is_none());
         assert!(h.app.world().get::<DiagnosticParty>(h.caster).is_none());
-        h.advance(4);
-        let messages = crate::spell_cast::test_harness::drain::<NewWorld>(&mut h.app, h.connection);
+        let mut messages = Vec::new();
+        for _ in 0..4 {
+            h.advance(1);
+            messages.extend(crate::spell_cast::test_harness::drain::<NewWorld>(
+                &mut h.app,
+                h.connection,
+            ));
+        }
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].map_id, 34);
         let entrance = h.app.world().resource::<crate::maps::MapStore>().safe_locs[&3599];
@@ -337,8 +343,10 @@ mod tests {
             .get_mut::<MessageSender<WorldPortAck>>(h.connection)
             .unwrap()
             .send::<TransferChannel>(WorldPortAck);
-        h.advance(4);
-        crate::maps::transfer::receive_world_port_acks(h.app.world_mut());
+        for _ in 0..4 {
+            h.advance(1);
+            crate::maps::transfer::receive_world_port_acks(h.app.world_mut());
+        }
         advance(h.app.world_mut());
         assert_eq!(h.app.world().get::<InMap>(h.caster), Some(&copy));
         assert_eq!(h.app.world().get::<Position>(h.caster), Some(&expected));
