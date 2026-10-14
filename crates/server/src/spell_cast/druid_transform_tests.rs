@@ -239,3 +239,117 @@ fn class_completeness_native_druid_stampeding_roar_transforms_through_its_bear_c
         Some(&PowerType::Rage)
     );
 }
+
+#[test]
+fn class_completeness_native_berserk_triggered_reset_preserves_current_gcd() {
+    let mut h = druid();
+    cast_form(&mut h, BEAR);
+    h.cast_and_deliver(77758, Some(h.npc));
+    assert!(h.inbox.failed.is_empty());
+    let caster = h.caster;
+    assert!(super::try_cast_triggered(
+        h.app.world_mut(),
+        caster,
+        50334,
+        Some(caster),
+        1
+    ));
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(77758, Some(h.npc));
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::OnGlobalCooldown
+    );
+    h.advance(35);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(77758, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 77758));
+}
+
+#[test]
+fn class_completeness_native_berserk_does_not_restore_mangle_charges() {
+    let mut h = druid();
+    cast_form(&mut h, BEAR);
+    h.cast_and_deliver(33917, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(35);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(50334, Some(h.caster));
+    assert!(h.inbox.failed.is_empty());
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(33917, Some(h.npc));
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::NoCharges
+    );
+    h.advance(70);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(33917, Some(h.npc));
+    assert!(
+        h.inbox.failed.is_empty(),
+        "native charge recovery: {:?}",
+        h.inbox.failed
+    );
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 33917));
+}
+
+#[test]
+fn class_completeness_native_berserk_preserves_unrelated_roar_cooldown() {
+    let mut h = druid();
+    h.cast_and_deliver(STAMPEDING_ROAR, Some(h.caster));
+    assert!(h.inbox.failed.is_empty());
+    h.advance(35);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(50334, Some(h.caster));
+    assert!(h.inbox.failed.is_empty());
+    h.advance(35);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(STAMPEDING_ROAR, Some(h.caster));
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::OnCooldown
+    );
+}
+
+#[test]
+fn class_completeness_native_failed_berserk_does_not_reset_thrash() {
+    let mut h = druid();
+    cast_form(&mut h, BEAR);
+    h.cast_and_deliver(50334, Some(h.caster));
+    assert!(h.inbox.failed.is_empty());
+    h.cast_and_deliver(77758, Some(h.npc));
+    assert!(h.inbox.failed.is_empty());
+    h.advance(35);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(50334, Some(h.caster));
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::OnCooldown
+    );
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(77758, Some(h.npc));
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::OnCooldown
+    );
+}
+
+#[test]
+fn class_completeness_native_berserk_does_not_reset_another_druids_growl() {
+    let mut h = druid();
+    let other = spawn_player(&mut h.app, 11, 0.0);
+    h.advance(3);
+    assert!(super::cast_granted(h.app.world_mut(), other, BEAR, Some(other)).is_ok());
+    h.advance(35);
+    let npc = h.npc;
+    assert!(super::cast_granted(h.app.world_mut(), other, 6795, Some(npc)).is_ok());
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(50334, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(35);
+    assert!(matches!(
+        super::cast_granted(h.app.world_mut(), other, 6795, Some(npc)),
+        Err(super::CastFailure::OnCooldown)
+    ));
+}
