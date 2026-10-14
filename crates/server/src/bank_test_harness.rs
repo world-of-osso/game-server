@@ -269,6 +269,23 @@ impl Harness {
         for _ in 0..3 {
             self.app.update();
         }
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        while !self
+            .app
+            .world()
+            .resource::<crate::bank::PendingBankCommits>()
+            .is_idle()
+        {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "bank fixture commit timeout"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+            self.app.update();
+        }
+        for _ in 0..3 {
+            self.app.update();
+        }
         if self
             .app
             .world()

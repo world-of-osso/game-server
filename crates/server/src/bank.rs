@@ -98,10 +98,12 @@ impl Plugin for BankPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<BankTabPrices>()
             .init_resource::<ChangedCharacterBanks>()
+            .init_resource::<PendingBankCommits>()
             .add_systems(
                 Update,
                 (
                     send_bank_contents,
+                    publish_bank_commits,
                     process_deposits,
                     process_withdrawals,
                     process_tab_purchases,
@@ -118,6 +120,12 @@ impl Plugin for BankPlugin {
     }
 }
 
+mod actor;
+mod transactions;
+pub(crate) use actor::PendingBankCommits;
+use actor::publish_bank_commits;
+pub(crate) use transactions::criteria_bank_type;
+
 type BankResult = Result<(), BankError>;
 
 /// Everything a bank request reads and writes besides the connection.
@@ -129,10 +137,10 @@ struct Vault<'w, 's> {
     gold: ResMut<'w, GoldUpdateQueue>,
     contents: Query<'w, 's, &'static mut MessageSender<BankContents>>,
     failures: Query<'w, 's, &'static mut MessageSender<BankFailed>>,
-    commands: Commands<'w, 's>,
 }
 
 /// The requesting connection and its open banker.
+#[derive(Clone)]
 struct Patron {
     connection: Entity,
     character_id: u64,
@@ -171,43 +179,11 @@ impl Vault<'_, '_> {
         Ok((source, template))
     }
 
-    fn mint(&self) -> impl FnMut() -> u64 + '_ {
-        let db = self.db();
-        move || persistence::next_id(db, "item_instance")
-    }
-
-    fn load_model(&self, character_id: u64) -> Result<InventoryModel, BankError> {
-        let templates = self.templates.as_ref().expect("checked by ready");
-        load_model(self.db(), templates, character_id).map_err(|_| BankError::ItemNotFound)
-    }
-
     fn load_bank(&self, patron: &Patron, bank: BankType) -> BankData {
         match bank {
             BankType::Character => load_character_bank(self.db(), patron.character_id),
             BankType::Account => load_account_bank(self.db(), patron.account_id),
         }
-    }
-
-    /// Save the bank, plus the bags and money when `model` is given, then send the
-    /// new bank contents.
-    fn save(
-        &mut self,
-        patron: &Patron,
-        bank: BankType,
-        data: &BankData,
-        model: Option<InventoryModel>,
-    ) {
-        let owner = match bank {
-            BankType::Character => BankOwner::Character(patron.character_id, data),
-            BankType::Account => BankOwner::Account(patron.account_id, data),
-        };
-        let gold = model.as_ref().map(InventoryModel::gold);
-        let record = model.map(InventoryModel::into_record);
-        save_bank_move(self.db(), patron.character_id, owner, record.as_ref());
-        if let Some(gold) = gold {
-            self.gold.record(patron.character_id, gold);
-        }
-        self.send_contents(patron.connection, bank, data);
     }
 
     fn contents(&self, bank: BankType, data: &BankData) -> BankContents {
@@ -266,12 +242,13 @@ fn open_banker(interaction: Option<&ActiveInteraction>) -> Option<Entity> {
         .map(|interaction| interaction.npc)
 }
 
-/// Run `handle` for each request; a refusal answers `BankFailed` for its NPC.
+/// Validate the banker now; execute owned requests against fresh FIFO rows.
 fn process<M: lightyear::prelude::Message>(
     requests: &mut Requests<M>,
     vault: &mut Vault,
+    pending: &mut PendingBankCommits,
     npc_of: impl Fn(&M) -> u64,
-    handle: impl Fn(&mut Vault, &Patron, M) -> BankResult,
+    handle: impl Fn(&mut transactions::Transaction, &Patron, M) -> BankResult + Copy + Send + 'static,
 ) {
     if !vault.ready() {
         return;
@@ -285,9 +262,25 @@ fn process<M: lightyear::prelude::Message>(
         };
         for request in receiver.receive() {
             let npc = npc_of(&request);
-            if let Err(error) = handle(vault, &patron, request) {
+            if let Err(error) = patron.banker_for(npc) {
                 vault.fail(connection, npc, error);
+                continue;
             }
+            let templates = vault.templates.as_deref().expect("ready").clone();
+            let prices = vault.prices.clone();
+            let owner = patron.clone();
+            let receipt =
+                vault
+                    .db
+                    .as_ref()
+                    .expect("ready")
+                    .writer
+                    .enqueue("bank transaction", move |db| {
+                        Ok(transactions::execute(
+                            db, templates, prices, owner, request, handle,
+                        ))
+                    });
+            pending.push(patron.clone(), npc, receipt);
         }
     }
 }
@@ -343,277 +336,88 @@ fn send_changed_character_banks(
     }
 }
 
-fn process_deposits(mut requests: Requests<BankDeposit>, mut vault: Vault) {
-    process(&mut requests, &mut vault, |req| req.npc, deposit);
-}
-
-fn process_withdrawals(mut requests: Requests<BankWithdraw>, mut vault: Vault) {
-    process(&mut requests, &mut vault, |req| req.npc, withdraw);
-}
-
-fn process_tab_purchases(mut requests: Requests<BankPurchaseTab>, mut vault: Vault) {
-    process(&mut requests, &mut vault, |req| req.npc, purchase_tab);
-}
-
-fn process_money_transfers(mut requests: Requests<BankMoneyTransfer>, mut vault: Vault) {
-    process(&mut requests, &mut vault, |req| req.npc, transfer_money);
-}
-
-fn process_auto_deposits(mut requests: Requests<BankAutoDeposit>, mut vault: Vault) {
-    process(&mut requests, &mut vault, |req| req.npc, auto_deposit);
-}
-
-fn process_tab_settings(mut requests: Requests<BankUpdateTabSettings>, mut vault: Vault) {
+fn process_deposits(
+    mut requests: Requests<BankDeposit>,
+    mut pending: ResMut<PendingBankCommits>,
+    mut vault: Vault,
+) {
     process(
         &mut requests,
         &mut vault,
+        &mut pending,
         |req| req.npc,
-        update_tab_settings,
+        transactions::deposit,
     );
 }
 
-/// Move one bag stack into `data`, visiting tabs in `order`; nothing changes when
-/// it doesn't fit.
-fn move_into_bank(
-    vault: &Vault,
-    model: &mut InventoryModel,
-    data: &mut BankData,
-    bank: BankType,
-    order: &[usize],
-    item_guid: u64,
-) -> BankResult {
-    let item = model
-        .bag_item(item_guid)
-        .cloned()
-        .ok_or(BankError::ItemNotFound)?;
-    if bank == BankType::Account && model.is_soulbound(item_guid) {
-        return Err(BankError::SoulboundInAccountBank);
-    }
-    let source = model.definition_source(item_guid);
-    let template = vault
-        .templates
-        .as_ref()
-        .and_then(|templates| templates.get(source, item.item_id))
-        .ok_or(BankError::ItemNotFound)?;
-    let mut sources = bank_storage::load_tab_definition_sources(vault.db(), &data.tabs);
-    sources.insert(item_guid, source);
-    let mut mint = vault.mint();
-    bank_storage::deposit(
-        &mut data.tabs,
-        order,
-        item,
-        template.max_stack,
-        &mut sources,
-        &mut mint,
-    )
-    .map_err(|TabsFull| BankError::BankFull)?;
-    model.remember_definition_sources(sources);
-    model
-        .take_bag_item(item_guid, 0, &mut mint)
-        .map_err(|_| BankError::ItemNotFound)?;
-    Ok(())
-}
-
-fn deposit(vault: &mut Vault, patron: &Patron, req: BankDeposit) -> BankResult {
-    patron.banker_for(req.npc)?;
-    let mut data = vault.load_bank(patron, req.bank);
-    if usize::from(req.tab) >= data.tabs.len() {
-        return Err(BankError::TabLocked);
-    }
-    let mut model = vault.load_model(patron.character_id)?;
-    let order = bank_storage::tab_order(data.tabs.len(), usize::from(req.tab));
-    move_into_bank(
-        vault,
-        &mut model,
-        &mut data,
-        req.bank,
-        &order,
-        req.item_guid,
-    )?;
-    vault.save(patron, req.bank, &data, Some(model));
-    Ok(())
-}
-
-fn withdraw(vault: &mut Vault, patron: &Patron, req: BankWithdraw) -> BankResult {
-    patron.banker_for(req.npc)?;
-    let mut data = vault.load_bank(patron, req.bank);
-    let item =
-        bank_storage::take(&mut data.tabs, req.tab, req.slot).ok_or(BankError::ItemNotFound)?;
-    let mut model = vault.load_model(patron.character_id)?;
-    let (source, template) = vault.load_template(&item)?;
-    let mut mint = vault.mint();
-    model
-        .store_item(item, source, template, &mut mint)
-        .map_err(|_| BankError::InventoryFull)?;
-    drop(mint);
-    vault.save(patron, req.bank, &data, Some(model));
-    Ok(())
-}
-
-/// `C_Bank.PurchaseBankTab`: the player pays the next `BankTab` price.
-fn purchase_tab(vault: &mut Vault, patron: &Patron, req: BankPurchaseTab) -> BankResult {
-    patron.banker_for(req.npc)?;
-    let mut data = vault.load_bank(patron, req.bank);
-    let cost = vault
-        .prices
-        .of(req.bank)
-        .get(data.tabs.len())
-        .copied()
-        .ok_or(BankError::MaxTabs)?;
-    let mut model = vault.load_model(patron.character_id)?;
-    let gold = model.gold();
-    if gold < cost {
-        return Err(BankError::CantAfford);
-    }
-    model.set_gold(gold - cost);
-    data.tabs.push(new_tab(data.tabs.len() + 1));
-    vault.save(patron, req.bank, &data, Some(model));
-    let (character, event) = (
-        patron.character_id,
-        crate::achievement::CriteriaEvent::BankTabsOwned(
-            criteria_bank_type(req.bank),
-            data.tabs.len() as u32,
-        ),
+fn process_withdrawals(
+    mut requests: Requests<BankWithdraw>,
+    mut pending: ResMut<PendingBankCommits>,
+    mut vault: Vault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.npc,
+        transactions::withdraw,
     );
-    vault.commands.queue(move |world: &mut World| {
-        crate::achievement::record_character_event(world, character, event);
-    });
-    Ok(())
 }
 
-/// TC `BankType` numbering of achievement criteria (Character 0, Account 2).
-pub(crate) fn criteria_bank_type(bank: BankType) -> u32 {
-    match bank {
-        BankType::Character => 0,
-        BankType::Account => 2,
-    }
+fn process_tab_purchases(
+    mut requests: Requests<BankPurchaseTab>,
+    mut pending: ResMut<PendingBankCommits>,
+    mut vault: Vault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.npc,
+        transactions::purchase_tab,
+    );
 }
 
-/// Retail `C_Bank.DepositMoney` / `WithdrawMoney`; only the Warband bank holds money.
-fn transfer_money(vault: &mut Vault, patron: &Patron, req: BankMoneyTransfer) -> BankResult {
-    patron.banker_for(req.npc)?;
-    if req.bank != BankType::Account {
-        return Err(BankError::NoMoneyTransfer);
-    }
-    let mut data = vault.load_bank(patron, req.bank);
-    let mut model = vault.load_model(patron.character_id)?;
-    let gold = model.gold();
-    let (gold, money) = if req.deposit {
-        if gold < req.copper {
-            return Err(BankError::NotEnoughMoney);
-        }
-        if data.money + req.copper > MAX_MONEY {
-            return Err(BankError::TooMuchGold);
-        }
-        (gold - req.copper, data.money + req.copper)
-    } else {
-        if data.money < req.copper {
-            return Err(BankError::NotEnoughMoney);
-        }
-        if gold + req.copper > MAX_MONEY {
-            return Err(BankError::TooMuchGold);
-        }
-        (gold + req.copper, data.money - req.copper)
-    };
-    model.set_gold(gold);
-    data.money = money;
-    vault.save(patron, req.bank, &data, Some(model));
-    Ok(())
+fn process_money_transfers(
+    mut requests: Requests<BankMoneyTransfer>,
+    mut pending: ResMut<PendingBankCommits>,
+    mut vault: Vault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.npc,
+        transactions::transfer_money,
+    );
 }
 
-/// Retail `Enum.BagSlotFlags` assignments an item matches.
-fn item_flags(template: &ItemTemplate, quality: u8) -> u32 {
-    let class = match template.scaling.class_id {
-        ITEM_CLASS_CONSUMABLE => bank_tab_flags::CONSUMABLES,
-        ITEM_CLASS_WEAPON | ITEM_CLASS_ARMOR => bank_tab_flags::EQUIPMENT,
-        ITEM_CLASS_TRADEGOODS => bank_tab_flags::REAGENTS | bank_tab_flags::PROFESSION_GOODS,
-        _ => 0,
-    };
-    let junk = if quality == 0 {
-        bank_tab_flags::JUNK
-    } else {
-        0
-    };
-    class | junk
+fn process_auto_deposits(
+    mut requests: Requests<BankAutoDeposit>,
+    mut pending: ResMut<PendingBankCommits>,
+    mut vault: Vault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.npc,
+        transactions::auto_deposit,
+    );
 }
 
-/// Tabs assigned to any of `flags` first, then the others (Retail tab deposit settings).
-fn assigned_order(tabs: &[BankTabData], flags: u32) -> Vec<usize> {
-    let (assigned, rest): (Vec<usize>, Vec<usize>) =
-        (0..tabs.len()).partition(|&tab| tabs[tab].deposit_flags & flags != 0);
-    assigned.into_iter().chain(rest).collect()
-}
-
-/// Bag stacks `C_Bank.AutoDepositItemsIntoBank` moves: reagents for the character
-/// bank ("Deposit All Reagents"); Warbound items, plus tradeable reagents when asked,
-/// for the Warband bank ("Deposit All Warbound Items").
-fn auto_deposit_items(
-    vault: &Vault,
-    model: &InventoryModel,
-    bank: BankType,
-    include_reagents: bool,
-) -> Vec<(u64, u32)> {
-    model
-        .bag_items()
-        .filter_map(|item: &InventoryItemData| {
-            let (_, template) = vault
-                .load_template(item)
-                .expect("loaded owned item has a definition");
-            let reagent = template.scaling.class_id == ITEM_CLASS_TRADEGOODS;
-            let selected = match bank {
-                BankType::Character => reagent,
-                BankType::Account => {
-                    WARBOUND_BONDING.contains(&template.bonding)
-                        || (include_reagents && reagent && !model.is_soulbound(item.item_guid))
-                }
-            };
-            selected.then(|| (item.item_guid, item_flags(&template, item.quality)))
-        })
-        .collect()
-}
-
-fn auto_deposit(vault: &mut Vault, patron: &Patron, req: BankAutoDeposit) -> BankResult {
-    patron.banker_for(req.npc)?;
-    let mut data = vault.load_bank(patron, req.bank);
-    let mut model = vault.load_model(patron.character_id)?;
-    let items = auto_deposit_items(vault, &model, req.bank, req.include_reagents);
-    let mut full = false;
-    for (item_guid, flags) in items {
-        let order = assigned_order(&data.tabs, flags);
-        match move_into_bank(vault, &mut model, &mut data, req.bank, &order, item_guid) {
-            Ok(()) => {}
-            // The stack stays in the bags; later, smaller stacks may still fit.
-            Err(BankError::BankFull) => full = true,
-            Err(error) => return Err(error),
-        }
-    }
-    vault.save(patron, req.bank, &data, Some(model));
-    if full {
-        return Err(BankError::BankFull);
-    }
-    Ok(())
-}
-
-fn update_tab_settings(
-    vault: &mut Vault,
-    patron: &Patron,
-    req: BankUpdateTabSettings,
-) -> BankResult {
-    patron.banker_for(req.npc)?;
-    let name = req.name.trim();
-    if name.is_empty() || name.chars().count() > TAB_NAME_LETTERS {
-        return Err(BankError::InvalidTabName);
-    }
-    let mut data = vault.load_bank(patron, req.bank);
-    let tab = data
-        .tabs
-        .get_mut(usize::from(req.tab))
-        .ok_or(BankError::TabLocked)?;
-    tab.name = name.to_owned();
-    tab.icon = req.icon;
-    tab.deposit_flags = req.deposit_flags;
-    vault.save(patron, req.bank, &data, None);
-    Ok(())
+fn process_tab_settings(
+    mut requests: Requests<BankUpdateTabSettings>,
+    mut pending: ResMut<PendingBankCommits>,
+    mut vault: Vault,
+) {
+    process(
+        &mut requests,
+        &mut vault,
+        &mut pending,
+        |req| req.npc,
+        transactions::update_tab_settings,
+    );
 }
 
 #[cfg(test)]

@@ -3,6 +3,55 @@ use shared::protocol::*;
 
 use crate::bank_test_harness::{COPPER_ORE, Harness, LINEN, PEACEBLOOM, harness};
 
+#[test]
+fn bank_tab_ack_waits_for_fifo_commit_without_blocking_updates() {
+    use lightyear::prelude::MessageSender;
+    use std::time::{Duration, Instant};
+    let mut h = harness().expect("authentic bank database");
+    let npc = h.open_banker();
+    h.take::<BankContents>();
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<BankPurchaseTab>>(h.connection)
+        .unwrap()
+        .send::<BankChannel>(BankPurchaseTab {
+            npc: npc.to_bits(),
+            bank: BankType::Character,
+        });
+    let started = Instant::now();
+    h.app.update();
+    h.app.update();
+    let elapsed = started.elapsed();
+    let premature = h.take::<BankContents>();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "bank tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "bank tab reply precedes commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        h.app.update();
+        if !h.take::<BankContents>().is_empty() {
+            break;
+        }
+        assert!(Instant::now() < deadline, "no committed bank response");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(h.gold(), 90_000);
+    assert_eq!(
+        crate::persistence::banks::load_character_bank(h.db(), h.character_id)
+            .tabs
+            .len(),
+        1
+    );
+}
+
 fn last_contents(h: &mut Harness, bank: BankType) -> BankContents {
     h.take::<BankContents>()
         .into_iter()
