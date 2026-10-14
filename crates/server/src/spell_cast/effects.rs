@@ -924,6 +924,26 @@ pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Ent
     deal_damage_and_report(world, ctx, target, damage);
 }
 
+/// TC Unit.cpp:6922–6929/6962; SharedDefines.h:576/687.
+fn creature_type_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    const IGNORE_CASTER_MODIFIERS: u32 = 0x2000_0000;
+    if super::attributes(spell, 3) & IGNORE_CASTER_MODIFIERS != 0
+        || super::attributes(spell, 6) & IGNORE_CASTER_MODIFIERS != 0
+    {
+        return 1.0;
+    }
+    let Some(mods) = stat_mods(world, caster).filter(|mods| mods.has_damage_done_versus()) else {
+        return 1.0;
+    };
+    let kind = crate::unit_creature_type::get(world, target);
+    mods.damage_done_versus(crate::unit_creature_type::mask(kind))
+}
+
 fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
@@ -960,6 +980,7 @@ fn deal_damage_and_report(
         stat_mods(world, bonus_caster).map_or(1.0, |mods| mods.damage_done(school))
             * versatility_multiplier(world, bonus_caster)
             * crate::auras::summon_damage::multiplier(world, bonus_caster)
+            * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
     };
     let taken = crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell);
     let bonus_ctx = EffectCtx {

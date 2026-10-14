@@ -208,10 +208,12 @@ fn reconcile_confused(world: &mut World, unit: Entity, confused: bool) {
 fn reconcile_feared(world: &mut World, unit: Entity, fear_caster: Option<Entity>) {
     let Some(flee_from) = fear_caster else {
         world.entity_mut(unit).remove::<Feared>();
+        super::fleeing::stop(world, unit);
         return;
     };
     crate::spell_cast::cancel_cast(world, unit);
     world.entity_mut(unit).insert(Feared { flee_from });
+    super::fleeing::start(world, unit);
 }
 
 /// The transform aura whose display shows (`Unit::RestoreDisplayId`): the newest,

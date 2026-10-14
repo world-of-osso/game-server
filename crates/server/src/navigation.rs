@@ -42,14 +42,14 @@ struct Route {
     path: Result<Corners, String>,
 }
 
-struct Corners {
+pub(crate) struct Corners {
     points: Vec<Vec3>,
     next: usize,
     terminal_leg: usize,
 }
 
 impl Corners {
-    fn new(points: Vec<Vec3>) -> Self {
+    pub(crate) fn new(points: Vec<Vec3>) -> Self {
         let terminal_leg = terminal_leg(&points);
         Self {
             points,
@@ -112,6 +112,25 @@ impl Navigation {
             Some(map) => map.path(from, to).map(Some),
             None => Ok(None),
         }
+    }
+
+    pub(crate) fn first_collision(
+        &self,
+        map_id: u32,
+        from: Vec3,
+        to: Vec3,
+    ) -> Result<Option<Vec3>, String> {
+        // query_path initializes the same lazy map and never creates a direct route.
+        if self.query_path(map_id, from, from)?.is_none() {
+            return Ok(None);
+        }
+        let mut maps = self.maps.lock().unwrap();
+        maps.get_mut(&map_id)
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .first_collision(from, to)
+            .map(Some)
     }
 
     pub(crate) fn route_destination(&self, entity: Entity, goal: Goal) -> Option<Vec3> {
@@ -185,7 +204,13 @@ impl Route {
 }
 
 impl Corners {
-    fn advance(&mut self, mut at: Vec3, mut budget: f32, reach: f32, target: Vec3) -> (Vec3, bool) {
+    pub(crate) fn advance(
+        &mut self,
+        mut at: Vec3,
+        mut budget: f32,
+        reach: f32,
+        target: Vec3,
+    ) -> (Vec3, bool) {
         while let Some(&corner) = self.points.get(self.next) {
             let delta = corner - at;
             let distance = horizontal(delta);

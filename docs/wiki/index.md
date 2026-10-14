@@ -1,6 +1,16 @@
 # Wiki Index
 
 - [Silverlaine source primary](systems/boss-scripts.md#silverlaine-source-primary) — pinned map33/3887→1070/bit1, source SmartAI identity and copy-only SQL; combat/native/full-instance proof remains open.
+- [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) — actual class/profession/owned-mount IDs versus global spell metadata; recipe-marker boundaries, no trait/UI acquisition claim.
+- [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
+
+- [Generic item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) — one loot/acquisition event versus stack quantity; canonical item predicates, current-root contradictions retained.
+
+- [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
+- [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
+- [Druid automatic forms](systems/spell-casting.md#druid-automatic-forms) — five source BeforeCast native children, Berserk spell/category reset and actual form receipts; charges/GCD and whole-ability limits retained.
+
+- [Native fear fleeing](../class-completeness6.md#native-fear-navmesh-fleeing--batch53) — real player/creature Detour movement/control/lifecycle; source model geometry import and21 shared aura memberships, whole-ability limits retained.
 
 - [Slagmaw source primary](systems/boss-scripts.md#slagmaw-source-primary) — pinned NPC61463/BOSS2→1445/bit2 authenticates identity despite distinct Journal/live models; copy-only SQL preserves both appearances.
 - [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
