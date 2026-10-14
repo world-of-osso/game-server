@@ -51,6 +51,150 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
 }
 
 #[test]
+fn npc_kill_reputation_waits_for_fifo_and_preserves_fresh_durable_state() {
+    use lightyear::connection::host::HostClient;
+    use shared::components::{CharacterAppearance, Player};
+    use std::time::{Duration, Instant};
+
+    let db = persistence::temp_database();
+    let registry = default_faction_registry();
+    let mut durable = CharacterReputation::new_for_race(&registry, 1);
+    durable.set_rep(72, 100);
+    persistence::save_reputation(&db, 42, &durable);
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<ReputationStateUpdate>();
+    app.insert_resource(GameDatabase::new(db));
+    app.insert_resource(test_world_data(test_template(1001, 72, 5, 5)));
+    app.add_plugins(ReputationPlugin);
+    app.finish();
+    app.cleanup();
+    let position = Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let map = crate::maps::InMap::continent(0);
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "RepFixture".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            ClientId(42),
+            Level(5),
+            position,
+            map,
+            CharacterReputation::new_for_race(&registry, 1),
+        ))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((
+            Connected,
+            RemoteId(PeerId::Local(1)),
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            InWorld { character_id: 42 },
+            PlayerLink(player),
+            MessageSender::<ReputationStateUpdate>::default(),
+            MessageReceiver::<ReputationStateUpdate>::default(),
+        ))
+        .id();
+    for _ in 0..3 {
+        app.update();
+    }
+    app.world_mut()
+        .get_mut::<MessageReceiver<ReputationStateUpdate>>(connection)
+        .unwrap()
+        .receive()
+        .for_each(drop);
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = Instant::now();
+    for _ in 0..2 {
+        app.world_mut().spawn((
+            Npc {
+                template_id: 1001,
+                name: "Fixture wolf".into(),
+            },
+            CreatureTap::tapped_by(42),
+            position,
+            map,
+            DeathState {
+                respawn_timer: 10.0,
+            },
+        ));
+        app.update();
+    }
+    let elapsed = started.elapsed();
+    let premature: Vec<_> = app
+        .world_mut()
+        .get_mut::<MessageReceiver<ReputationStateUpdate>>(connection)
+        .unwrap()
+        .receive()
+        .collect();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "reputation tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "reputation snapshot precedes commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let mut committed_values = Vec::new();
+    while committed_values.len() < 2 {
+        app.update();
+        let responses: Vec<_> = app
+            .world_mut()
+            .get_mut::<MessageReceiver<ReputationStateUpdate>>(connection)
+            .unwrap()
+            .receive()
+            .collect();
+        for response in responses {
+            assert!(response.error.is_none());
+            let snapshot = response.snapshot.unwrap();
+            committed_values.push(
+                snapshot
+                    .entries
+                    .iter()
+                    .find(|entry| entry.faction_id == 72)
+                    .unwrap()
+                    .value,
+            );
+        }
+        assert!(Instant::now() < deadline, "no committed reputation replies");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(committed_values, vec![110, 120]);
+    assert_eq!(
+        app.world()
+            .get::<CharacterReputation>(player)
+            .unwrap()
+            .get_value(72),
+        120
+    );
+    let persisted =
+        persistence::load_reputation(&app.world().resource::<GameDatabase>().db, 42, || {
+            panic!("durable reputation missing")
+        });
+    assert_eq!(persisted.get_value(72), 120);
+}
+
+#[test]
 fn npc_kill_updates_primary_and_spillover_reputation() {
     let mut registry = default_faction_registry();
     // Explicit test policy: the authentic registry does not invent city spillover.

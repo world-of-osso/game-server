@@ -17,6 +17,9 @@ use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 use crate::world_data::WorldData;
 
+mod actor;
+use actor::{PendingReputationRewards, ReputationReward, publish_reputation_rewards};
+
 const BASE_MOB_KILL_REP: i32 = 10;
 
 #[derive(Resource, Clone)]
@@ -28,7 +31,11 @@ impl Plugin for ReputationPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ReputationRegistry(default_faction_registry()));
         app.add_systems(Update, send_initial_reputation_snapshot);
-        app.add_systems(PostUpdate, process_npc_kill_reputation);
+        app.init_resource::<PendingReputationRewards>();
+        app.add_systems(
+            PostUpdate,
+            (process_npc_kill_reputation, publish_reputation_rewards).chain(),
+        );
     }
 }
 
@@ -67,12 +74,12 @@ fn process_npc_kill_reputation(
     killed_npcs: Query<(&Npc, &CreatureTap, &Position, &crate::maps::InMap), Added<DeathState>>,
     reward_players: RewardPlayers,
     groups: Option<Res<GroupRegistry>>,
-    mut players: Query<(Entity, &ClientId, &Level, &mut CharacterReputation)>,
+    players: Query<(Entity, &ClientId, &Level, &CharacterReputation)>,
     connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     world_data: Res<WorldData>,
     registry: Res<ReputationRegistry>,
     db: Option<Res<GameDatabase>>,
-    mut senders: Query<&mut MessageSender<ReputationStateUpdate>>,
+    mut pending: ResMut<PendingReputationRewards>,
 ) {
     let Some(db) = db else { return };
     let rewarded = killed_npcs.iter().flat_map(|(npc, tap, position, map)| {
@@ -86,32 +93,26 @@ fn process_npc_kill_reputation(
         .map(|character| (npc.template_id, character))
     });
     for (template_id, character) in rewarded.collect::<Vec<_>>() {
-        let Some((player, _, level, mut reputation)) =
-            players.iter_mut().find(|(_, id, ..)| id.0 == character)
+        let Some((player, _, level, reputation)) =
+            players.iter().find(|(_, id, ..)| id.0 == character)
         else {
             continue;
         };
-        let Some(snapshot_message) = apply_npc_kill_reputation(
-            &mut reputation,
-            level.0,
-            template_id,
-            &world_data,
-            &registry.0,
-        ) else {
+        let Some((faction, amount)) =
+            npc_kill_reward(level.0, template_id, &world_data, &registry.0)
+        else {
             continue;
         };
-        let Some((conn_entity, character_id)) = connection_for_player(&connections, player) else {
+        let Some((_, character_id)) = connection_for_player(&connections, player) else {
             continue;
         };
-        persistence::save_reputation(&db.db, character_id, &reputation);
-        send_reputation_update(
-            conn_entity,
-            &reputation,
-            &registry.0,
-            Some(snapshot_message),
-            None,
-            &mut senders,
-        );
+        let reward = ReputationReward {
+            initial: reputation.clone(),
+            faction,
+            amount,
+            registry: registry.0.clone(),
+        };
+        pending.enqueue(&db, player, character_id, reward);
     }
 }
 
@@ -126,13 +127,12 @@ fn connection_for_player(
         })
 }
 
-fn apply_npc_kill_reputation(
-    reputation: &mut CharacterReputation,
+fn npc_kill_reward(
     player_level: u8,
     template_id: u32,
     world_data: &WorldData,
     registry: &FactionRegistry,
-) -> Option<String> {
+) -> Option<(u32, i32)> {
     let template = world_data.templates.get(&template_id)?;
     let faction_id = u32::from(template.faction);
     registry.get(faction_id)?;
@@ -141,6 +141,18 @@ fn apply_npc_kill_reputation(
     if amount <= 0 {
         return None;
     }
+    Some((faction_id, amount))
+}
+
+#[cfg(test)]
+fn apply_npc_kill_reputation(
+    reputation: &mut CharacterReputation,
+    player_level: u8,
+    template_id: u32,
+    world_data: &WorldData,
+    registry: &FactionRegistry,
+) -> Option<String> {
+    let (faction_id, amount) = npc_kill_reward(player_level, template_id, world_data, registry)?;
     let changes =
         reputation.gain_rep_with_spillover(faction_id, amount, RepGainSource::MobKill, registry);
     if changes.is_empty() {
