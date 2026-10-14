@@ -23,6 +23,7 @@ pub struct FrameStats {
     work_samples: Vec<Duration>,
     over_budget: u32,
     tick_commits: u64,
+    last_tick_commit_total: u64,
 }
 
 impl Default for FrameStats {
@@ -64,6 +65,7 @@ impl FrameStats {
             work_samples: Vec::new(),
             over_budget: 0,
             tick_commits: 0,
+            last_tick_commit_total: crate::persistence_commit::read_tick_commit_total(),
         }
     }
 
@@ -78,7 +80,9 @@ impl FrameStats {
 
     /// Closes the current frame; returns a report when the window has elapsed.
     pub fn end_frame(&mut self, now: Instant, budget: Duration) -> Option<FrameReport> {
-        self.tick_commits += crate::persistence_commit::finish_tick_frame();
+        let tick_commit_total = crate::persistence_commit::read_tick_commit_total();
+        self.tick_commits += tick_commit_total - self.last_tick_commit_total;
+        self.last_tick_commit_total = tick_commit_total;
         if let Some(start) = self.frame_start.take() {
             let work = now.saturating_duration_since(start);
             self.frames += 1;
@@ -180,9 +184,9 @@ mod tests {
     #[test]
     fn frame_reports_tick_commits_but_not_fifo_worker_commits() {
         use crate::persistence;
+        let db = persistence::GameDatabase::new(persistence::temp_database());
         let t0 = Instant::now();
         let mut stats = FrameStats::starting_at(t0);
-        let db = persistence::GameDatabase::new(persistence::temp_database());
         stats.begin_frame(t0);
         persistence::save_friends(&db.db, 42, &crate::friends::PlayerFriendsState::default());
         let receipt = db.writer.enqueue("frame fixture worker", |db| {
@@ -206,6 +210,31 @@ mod tests {
         stats.begin_frame(t0 + REPORT_WINDOW);
         let next = stats.end_frame(t0 + REPORT_WINDOW * 2, BUDGET).unwrap();
         assert_eq!(next.tick_commits, 0, "older window leaked tick commits");
+    }
+
+    #[test]
+    fn late_last_schedule_commit_is_counted_in_the_next_frame_window() {
+        let db = crate::persistence::temp_database();
+        let t0 = Instant::now();
+        let mut stats = FrameStats::starting_at(t0);
+        stats.begin_frame(t0);
+        assert_eq!(
+            stats
+                .end_frame(t0 + REPORT_WINDOW, BUDGET)
+                .unwrap()
+                .tick_commits,
+            0
+        );
+        // Last systems may execute after the frame-report system on this same tick thread.
+        crate::persistence::save_friends(&db, 42, &crate::friends::PlayerFriendsState::default());
+        stats.begin_frame(t0 + REPORT_WINDOW);
+        assert_eq!(
+            stats
+                .end_frame(t0 + REPORT_WINDOW * 2, BUDGET)
+                .unwrap()
+                .tick_commits,
+            1
+        );
     }
 
     #[test]

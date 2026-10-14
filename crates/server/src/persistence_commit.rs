@@ -1,5 +1,5 @@
-//! Count every redb commit executed inside a tick frame, regardless of duration.
-//! FIFO workers and startup code have no active tick accounting context.
+//! Count every redb commit on the tick thread after its first frame begins.
+//! FIFO workers and preceding startup code have no tick-thread accounting context.
 use std::cell::Cell;
 use std::panic::Location;
 use std::time::Instant;
@@ -9,11 +9,13 @@ thread_local! {
 }
 
 pub(crate) fn begin_tick_frame() {
-    TICK_COMMITS.set(Some(0));
+    if TICK_COMMITS.get().is_none() {
+        TICK_COMMITS.set(Some(0));
+    }
 }
 
-pub(crate) fn finish_tick_frame() -> u64 {
-    TICK_COMMITS.replace(None).unwrap_or(0)
+pub(crate) fn read_tick_commit_total() -> u64 {
+    TICK_COMMITS.get().unwrap_or(0)
 }
 
 #[track_caller]
