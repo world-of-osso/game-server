@@ -79,7 +79,16 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         let b = Vec3::new(point.x, point.z, -point.y);
         assert!(
             los.clear(a + Vec3::Y, b + Vec3::Y).unwrap(),
-            "physical escort crossed collision at tick{tick}: {previous:?}->{point:?}"
+            "physical escort crossed collision at tick{tick}: {previous:?}->{point:?}; path={} waves={camp_counts:?} cleansing={saw_cleansing} combat={:?} motion={:?} speed={:?}",
+            h.app
+                .world()
+                .get::<crate::scripted_ai::waypoint_path::PathMovement>(disciple)
+                .is_some(),
+            h.app.world().get::<CombatStatus>(disciple),
+            h.app.world().get::<CreatureMotion>(disciple),
+            h.app
+                .world()
+                .get::<shared::components::MovementSpeed>(disciple)
         );
         walked += step;
         previous = point;
