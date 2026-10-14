@@ -57,6 +57,8 @@ pub(crate) mod cosmetic;
 pub mod creature;
 #[cfg(test)]
 mod creature_type_damage_tests;
+#[cfg(test)]
+mod critical_block_tests;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
