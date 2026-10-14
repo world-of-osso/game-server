@@ -606,7 +606,7 @@ fn achievements_criteria_target_class_rejects_missing_target_even_when_caster_ma
         let mut state = PlayerAchievementState::default();
         catalog.update_at(
             &mut state,
-            CriteriaEvent::LandTargetedSpell(27571, target, None),
+            CriteriaEvent::LandTargetedSpell(27571, target, None, None),
             None,
             2,
             &conditions,
@@ -617,7 +617,7 @@ fn achievements_criteria_target_class_rejects_missing_target_even_when_caster_ma
     let target = Some(SpellHitPlayer { race: 2, class: 6 });
     catalog.update_at(
         &mut state,
-        CriteriaEvent::LandTargetedSpell(27571, target, None),
+        CriteriaEvent::LandTargetedSpell(27571, target, None, None),
         None,
         2,
         &PlayerConditions::default(),
@@ -651,7 +651,7 @@ fn achievements_criteria_target_health_percent_is_inclusive_and_not_player_only(
         let mut state = PlayerAchievementState::default();
         catalog.update_at(
             &mut state,
-            CriteriaEvent::LandTargetedSpell(45544, None, percent),
+            CriteriaEvent::LandTargetedSpell(45544, None, percent, None),
             None,
             1,
             &conditions,
@@ -666,7 +666,7 @@ fn achievements_criteria_target_health_percent_is_inclusive_and_not_player_only(
     let mut state = PlayerAchievementState::default();
     catalog.update_at(
         &mut state,
-        CriteriaEvent::LandTargetedSpell(27571, None, Some(1.0)),
+        CriteriaEvent::LandTargetedSpell(27571, None, Some(1.0), None),
         None,
         1,
         &conditions,
@@ -692,10 +692,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed 12.1.5.70391 census: 5479 + Ultimate Triage141 behind native46.
+    // Installed 12.1.5.70391 census: 5479 + Triage141/native46 + FoodFight3579/native10.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5480);
-    for achievement in [141, 291, 1699, 3559, 63640] {
+    assert_eq!(union.len(), 5481);
+    for achievement in [141, 291, 1699, 3559, 3579, 63640] {
         assert!(union.contains(&achievement));
     }
     for achievement in [

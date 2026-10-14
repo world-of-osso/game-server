@@ -146,8 +146,9 @@ pub(crate) enum CriteriaEvent {
     MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
-    /// Spell, actual hit Player identity, and pre-effect unit health percentage.
-    LandTargetedSpell(u32, Option<SpellHitPlayer>, Option<f32>),
+    /// Spell, actual hit Player identity, pre-effect health, and live hit entity.
+    /// Consumers read hit-unit auras synchronously before effect dispatch; never persisted.
+    LandTargetedSpell(u32, Option<SpellHitPlayer>, Option<f32>, Option<Entity>),
     LearnSpell(u32),
     DefeatEncounter(u32),
     /// One DONE while the character's active encounter loot-lock bit was unset.
@@ -256,7 +257,7 @@ impl CriteriaEvent {
             Self::MoneySpentOnTaxis(_) => 63,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
-            Self::LandTargetedSpell(_, _, _) => 110,
+            Self::LandTargetedSpell(_, _, _, _) => 110,
             Self::LearnSpell(_) => 34,
             Self::DefeatEncounter(_) => 165,
             Self::DefeatEncounterEligibleForLoot(_) => 97,
@@ -357,7 +358,7 @@ impl CriteriaEvent {
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
             | Self::BeSpellTarget(asset)
-            | Self::LandTargetedSpell(asset, _, _)
+            | Self::LandTargetedSpell(asset, _, _, _)
             | Self::LearnSpell(asset)
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
@@ -460,6 +461,8 @@ pub(crate) struct PlayerConditions {
     pub difficulty: u32,
     /// None for map-wide credit, which has no reference player.
     pub player: Option<ReferencePlayer>,
+    /// Live type110 hit entities and their pre-effect active-aura spell IDs.
+    pub target_auras: BTreeMap<Entity, BTreeSet<u32>>,
 }
 
 /// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
@@ -509,6 +512,8 @@ enum CriteriaFact {
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
     TargetIsPlayer,
+    /// TC TargetHasAura10 on the actual hit unit, independently of Player identity.
+    TargetAura(u32),
     /// Accepted only with positive player/race authority; NPC class predicates stay disabled.
     TargetClass(u8),
     /// Inclusive TC TargetHealthBelowPercent46 against the pre-effect hit unit.
@@ -535,7 +540,12 @@ enum CriteriaFact {
 }
 
 impl CriteriaFact {
-    fn holds(&self, player: &ReferencePlayer, event: CriteriaEvent) -> bool {
+    fn holds(
+        &self,
+        player: &ReferencePlayer,
+        event: CriteriaEvent,
+        target_auras: &BTreeMap<Entity, BTreeSet<u32>>,
+    ) -> bool {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
@@ -554,16 +564,20 @@ impl CriteriaFact {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
             Self::TargetRace(race) => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _) if target.race == *race)
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _, _) if target.race == *race)
             }
             Self::TargetIsPlayer => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(_), _))
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(_), _, _))
+            }
+            Self::TargetAura(spell) => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, _, _, Some(target))
+                    if target_auras.get(&target).is_some_and(|auras| auras.contains(spell)))
             }
             Self::TargetClass(class) => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _) if target.class == *class)
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _, _) if target.class == *class)
             }
             Self::TargetHealthBelowPercent(limit) => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, _, Some(percent)) if percent <= f32::from(*limit))
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, _, Some(percent), _) if percent <= f32::from(*limit))
             }
             Self::TargetCreatures(entries) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
@@ -607,10 +621,11 @@ impl Criteria {
         self.difficulty
             .is_none_or(|rule| rule.admits(conditions.difficulty))
             && (self.facts.is_empty()
-                || conditions
-                    .player
-                    .as_ref()
-                    .is_some_and(|player| self.facts.iter().all(|fact| fact.holds(player, event))))
+                || conditions.player.as_ref().is_some_and(|player| {
+                    self.facts
+                        .iter()
+                        .all(|fact| fact.holds(player, event, &conditions.target_auras))
+                }))
     }
 }
 
@@ -1344,6 +1359,7 @@ fn load_criteria_facts(
             4 => Some(CriteriaFact::TargetCreature(asset)),
             5 => Some(CriteriaFact::TargetIsPlayer),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
+            10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),

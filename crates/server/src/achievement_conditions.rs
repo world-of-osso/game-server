@@ -3,7 +3,7 @@
 // player-only (2/8/17/25/26/29/32/34/41/69/71/104; exact39 lowers to69+71), emote-only TargetCreatureId4,
 // including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerIsInArea17 or PlayerHasAura8 alternatives,
 // native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.
-// native type110 spell-hit TargetIsPlayer5/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.
+// native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.
 // alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.
 // Criteria SHA256 84f035906822bcb34048b1cfbbfc714fd1688b4742676c1ee7139c1280ace5b7.
 // ModifierTree SHA256 82e79d0f3f51759d5c220192e962bdc72bf0fe3f8a85fb75d7a5f7f7d8749062.
@@ -3031,6 +3031,26 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (11165, 996) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(27, 7), (28, 4)],
+        }),
+        (11168, 1546) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(10, 65403)],
+        }),
+        (11178, 1546) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(10, 65403)],
+        }),
+        (11179, 1546) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(10, 65403)],
+        }),
+        (11180, 1546) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(10, 65403)],
+        }),
+        (11181, 1546) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(10, 65403)],
         }),
         (11803, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
