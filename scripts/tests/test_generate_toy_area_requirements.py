@@ -10,6 +10,7 @@ import tempfile
 import unittest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "generate_toy_area_requirements.py"
+SOURCE_BUILD = "12.1.5.70391"
 REQUIREMENTS = """ID,SpellID,FacingCasterFlags,MinFactionID,MinReputation,RequiredAreasID,RequiredAuraVision,RequiresSpellFocus
 3910,61810,0,0,0,1103,0,0
 14922,171352,0,0,0,4031,0,0
@@ -59,11 +60,11 @@ class ToyAreaRequirements(unittest.TestCase):
         members.write_text(MEMBERS)
         return database, requirements, members
 
-    def generate(self, database, requirements, members, output):
+    def generate(self, database, requirements, members, output, build=SOURCE_BUILD):
         return subprocess.run([
             sys.executable, str(SCRIPT), "--db", str(database),
             "--casting-requirements", str(requirements),
-            "--area-group-members", str(members), "--output", str(output),
+            "--area-group-members", str(members), "--output", str(output), "--build", build,
         ], capture_output=True, text=True)
 
     def test_source_cast_group_identity_and_all_members_survive_generation(self):
@@ -76,7 +77,7 @@ class ToyAreaRequirements(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(database.read_bytes(), before, "source database must remain unchanged")
             self.assertEqual(json.loads(output.read_text()), {
-                "build": "12.1.0.69933",
+                "build": SOURCE_BUILD,
                 "sources": {
                     "SpellCastingRequirements": hashlib.sha256(requirements.read_bytes()).hexdigest(),
                     "AreaGroupMember": hashlib.sha256(members.read_bytes()).hexdigest(),
@@ -87,6 +88,15 @@ class ToyAreaRequirements(unittest.TestCase):
                     "4031": [6662, 6682, 6719, 6720, 6721, 6722, 6723, 6755, 7025, 7462, 7663],
                 },
             })
+
+    def test_another_source_export_build_is_recorded(self):
+        with tempfile.TemporaryDirectory() as name:
+            directory = Path(name)
+            database, requirements, members = self.write_inputs(directory)
+            output = directory / "requirements.json"
+            result = self.generate(database, requirements, members, output, "12.1.6.71000")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(output.read_text())["build"], "12.1.6.71000")
 
     def test_missing_source_group_refuses_without_replacing_existing_manifest(self):
         with tempfile.TemporaryDirectory() as name:

@@ -1,31 +1,14 @@
-//! Toy FacingCasterFlags from local69933; TC a352b1fa Spell::CheckRange,
+//! Runtime Toy FacingCasterFlags; TC a352b1fa Spell::CheckRange,
 //! Position::HasInArc/IsInDist and Unit::IsWithinBoundaryRadius.
-use std::{collections::HashMap, sync::OnceLock};
-
 use bevy::prelude::*;
-use serde::Deserialize;
 use shared::components::{ModelDisplay, Player, Rotation, UnitScale};
 
-use super::{CastFailure, targets};
+use super::{CastFailure, targets, toy_requirements::ToyCastingRequirements};
 
 const MIN_MELEE_REACH: f32 = 2.0;
 const PLAYER_BOUNDING_RADIUS: f32 = 0.389;
 const IN_FRONT: u32 = 1;
 const PET_BOUNDING_RADIUS: f32 = 1.0;
-
-#[derive(Deserialize)]
-struct Requirements {
-    spells: HashMap<u32, u32>,
-    model_radii: HashMap<u32, f32>,
-}
-
-fn requirements() -> &'static Requirements {
-    static DATA: OnceLock<Requirements> = OnceLock::new();
-    DATA.get_or_init(|| {
-        serde_json::from_str(include_str!("toy_facing_requirements.json"))
-            .expect("valid generated Toy facing and TDB model-radius manifest")
-    })
-}
 
 fn bounding_radius(world: &World, target: Entity) -> Result<f32, CastFailure> {
     let scale = world.get::<UnitScale>(target).map_or(1.0, |scale| scale.0);
@@ -38,7 +21,9 @@ fn bounding_radius(world: &World, target: Entity) -> Result<f32, CastFailure> {
     let display = world
         .get::<ModelDisplay>(target)
         .ok_or_else(|| CastFailure::Unsupported("facing target has no model display".into()))?;
-    let radius = requirements()
+    let radius = world
+        .resource::<ToyCastingRequirements>()
+        .facing
         .model_radii
         .get(&display.display_id)
         .ok_or_else(|| {
@@ -56,7 +41,9 @@ pub(super) fn check_cast(
     spell: u32,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    let required = requirements()
+    let required = world
+        .resource::<ToyCastingRequirements>()
+        .facing
         .spells
         .get(&spell)
         .is_some_and(|flags| flags & IN_FRONT != 0);

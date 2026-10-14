@@ -1,13 +1,22 @@
 # Toy Box server foundation
 
+## Runtime generated casting requirements
+
+- [x] Server startup loads `data/toy_required_areas.json` and `data/toy_facing_requirements.json`; neither is compiled into production code. Missing, malformed or incomplete required data fails startup loudly.
+- [x] Producers read the current canonical DB2 CSVs and read-only world.db. The apply step supplies the CSV export's build with mandatory `--build`; no installed-version guess or pinned default replaces that source provenance.
+- [x] Area/facing checks use the startup-owned resource, not a process-global cache. A fresh app reads changed data without rebuilding the binary.
+- [x] Tests use concrete area fixtures and one model-radius row, not the production two-megabyte radius map.
+
+Generator/apply and server data-sync commands: [runtime toy data guide](../toy-runtime-data.md).
+
 ## Source area-group closure — active2026-10-13
 
-- [x] Preserve the69 authored Toy root `RequiredAreasID` bindings and42 complete area groups from local69933 source exports; producer reads world.db without mutation and refuses missing groups before replacing its manifest.
+- [x] Preserve the authored Toy root `RequiredAreasID` bindings and complete area groups from the current canonical source exports (historical fixture:69 roots/42 groups); producer reads world.db without mutation and refuses missing groups before replacing its manifest.
 - [x] Cast start and completion require the player's actual area or an authored parent to match a source group member, before item cooldown/effect spending. Missing actual area fails explicitly, never through a guessed map/zone fallback.
 - [x] Player-owned restricted auras interrupt when a real area change leaves the source group, following TC a352b1fa `Player::UpdateAreaDependentAuras`; changing areas within the group preserves them.
 - [x] Preserve ordinary unrestricted casts and actual item/category cooldown history; no test reset.
 
-Runtime guards consume the committed source manifest at cast start and completion. Terrain-area ancestry uses AreaTable ParentAreaID; absent terrain or metadata rejects with typed `IncorrectArea` and the source group detail. Player-owned restricted auras use ordinary interrupted removal. Real ADT fixtures cover all69 refusals, Goldshire activation/category history, Draenor parent membership and natural five-second completion refusal. Both native skins prove actual Eagger Basket learning/use, Northshire refusal, Goldshire activation and exit removal while remaining category time decreases normally. Evidence: area21-proof-ledger.json in the toy-effects14 continuation evidence directory.
+Runtime guards consume the startup-loaded generated data at cast start and completion. Terrain-area ancestry uses AreaTable ParentAreaID; absent terrain or metadata rejects with typed `IncorrectArea` and the source group detail. Player-owned restricted auras use ordinary interrupted removal. Real ADT fixtures cover all69 refusals, Goldshire activation/category history, Draenor parent membership and natural five-second completion refusal. Both native skins prove actual Eagger Basket learning/use, Northshire refusal, Goldshire activation and exit removal while remaining category time decreases normally. Evidence: area21-proof-ledger.json in the toy-effects14 continuation evidence directory.
 
 Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player casts at an explicit non-self unit require the inclusive180° front arc unless exact3D distance is strictly below max(target bounding radius,2yd). Target radius uses source TDB model geometry and native scale; player radius is scaled0.389yd and pet radius scaled1yd. CombatReach never extends this exemption. Recheck noninstant completion before spending item/category recovery; the normal start GCD remains legitimate. Missing model geometry fails explicitly rather than guessing permission. No-target/self and non-player casters do not acquire an extra facing restriction. Procedural/positioner rendering and generic non-Toy redesign are separate. WMO-only actual-area identification remains an explicit capability gap. Producer: `scripts/generate_toy_area_requirements.py`; behavioral tests: `scripts/tests/test_generate_toy_area_requirements.py`. Pendant115503/171352 uses only its source zero-payload self cosmetic aura: natural5000ms cast,120000ms duration, ordinary ground model937030 and exact group4031. Cast completion must revalidate source geography; area rejection consumes no item/category recovery. Region exit interrupts its ordinary aura and native kit without clearing cooldown. Native acceptance is recorded per skin, not inferred from admission.
 
