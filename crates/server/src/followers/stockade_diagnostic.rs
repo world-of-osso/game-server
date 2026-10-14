@@ -5,10 +5,14 @@ use bevy::prelude::*;
 use shared::group::GroupRole;
 
 const STOCKADE_MAP: u32 = 34;
+const STOCKADE_ENTRANCE: u32 = 3599;
 const REQUEST_ENV: &str = "GAME_SERVER_STOCKADE_FOLLOWER_DIAGNOSTIC";
 
 #[derive(Resource)]
-struct DiagnosticRequest(String);
+struct DiagnosticRequest {
+    character: String,
+    admission_requested: bool,
+}
 
 #[derive(Component, Clone)]
 pub(super) struct DiagnosticParty {
@@ -19,7 +23,10 @@ pub(super) struct DiagnosticParty {
 pub(super) fn load_request(mut commands: Commands) {
     match std::env::var(REQUEST_ENV) {
         Ok(name) if !name.is_empty() => {
-            commands.insert_resource(DiagnosticRequest(name));
+            commands.insert_resource(DiagnosticRequest {
+                character: name,
+                admission_requested: false,
+            });
         }
         Ok(_) => panic!("{REQUEST_ENV} requires a character name"),
         Err(std::env::VarError::NotPresent) => {}
@@ -32,13 +39,79 @@ pub(super) fn advance(world: &mut World) {
     let Some(request) = world.get_resource::<DiagnosticRequest>() else {
         return;
     };
-    let name = request.0.clone();
+    let name = request.character.clone();
+    let admission_requested = request.admission_requested;
     let owner = world
-        .query::<(Entity, &shared::components::Player, &InMap, &ClientId)>()
+        .query::<(Entity, &shared::components::Player, &ClientId)>()
         .iter(world)
-        .find(|(_, player, map, _)| player.name == name && map.map_id == STOCKADE_MAP)
-        .map(|(entity, _, _, _)| entity);
+        .find(|(_, player, _)| player.name == name)
+        .map(|(entity, _, _)| entity);
     let Some(owner) = owner else { return };
+    advance_owner(world, owner, &name, admission_requested);
+}
+
+fn advance_owner(world: &mut World, owner: Entity, name: &str, admission_requested: bool) {
+    if world.get::<crate::maps::MapTransfer>(owner).is_some() {
+        return;
+    }
+    let Some(copy) = world.get::<InMap>(owner) else {
+        return;
+    };
+    if copy.map_id == STOCKADE_MAP {
+        finish_attachment(world, owner, name);
+        return;
+    }
+    let result = if admission_requested {
+        Err("Stockade diagnostic transfer did not arrive in its source destination".into())
+    } else {
+        request_admission(world, owner)
+    };
+    match result {
+        Ok(()) => {
+            world
+                .resource_mut::<DiagnosticRequest>()
+                .admission_requested = true;
+            info!(
+                "DIAGNOSTIC Stockade initial Normal admission for {name}; waiting for WorldPortAck"
+            );
+        }
+        Err(error) => {
+            world.remove_resource::<DiagnosticRequest>();
+            error!("DIAGNOSTIC Stockade admission for {name} refused: {error}");
+        }
+    }
+}
+
+fn request_admission(world: &mut World, owner: Entity) -> Result<(), String> {
+    require_solo_normal_owner(world, owner)?;
+    let copy = world
+        .get::<InMap>(owner)
+        .ok_or("diagnostic owner has no map")?;
+    if copy.instance_id != 0 {
+        return Err(
+            "diagnostic initial admission cannot reposition inside another instance".into(),
+        );
+    }
+    let entrance = *world
+        .resource::<crate::maps::MapStore>()
+        .safe_locs
+        .get(&STOCKADE_ENTRANCE)
+        .ok_or("authored Stockade WorldSafeLoc3599 is absent")?;
+    if entrance.map_id != STOCKADE_MAP {
+        return Err("authored WorldSafeLoc3599 is not the Stockade entrance".into());
+    }
+    if !crate::maps::teleport_to(
+        world,
+        owner,
+        entrance,
+        crate::maps::TeleportOptions::default(),
+    ) {
+        return Err("ordinary Normal Stockade admission refused".into());
+    }
+    Ok(())
+}
+
+fn finish_attachment(world: &mut World, owner: Entity, name: &str) {
     world.remove_resource::<DiagnosticRequest>();
     match spawn_party(world, owner, GroupRole::Dps) {
         Ok(members) => info!(
@@ -78,6 +151,16 @@ fn stockade_copy(world: &World, owner: Entity) -> Result<InMap, String> {
     {
         return Err("diagnostic requires the owner's admitted Normal Stockade copy".into());
     }
+    require_solo_normal_owner(world, owner)?;
+    Ok(copy)
+}
+
+fn require_solo_normal_owner(world: &World, owner: Entity) -> Result<(), String> {
+    if world.get::<DungeonDifficulty>(owner).map(|d| d.0)
+        != Some(crate::maps::store::DIFFICULTY_NORMAL)
+    {
+        return Err("diagnostic requires the owner's Normal difficulty selection".into());
+    }
     let id = world
         .get::<ClientId>(owner)
         .ok_or("diagnostic owner is not authenticated")?
@@ -89,7 +172,7 @@ fn stockade_copy(world: &World, owner: Entity) -> Result<InMap, String> {
     {
         return Err("diagnostic requires a solo owner".into());
     }
-    Ok(copy)
+    Ok(())
 }
 
 pub(super) fn spawn_party(
@@ -167,6 +250,109 @@ mod tests {
             crate::lfg::PlayerLfgState::default(),
         ));
         (h, copy)
+    }
+
+    #[test]
+    fn stockade_diagnostic_admission_waits_for_worldport_ack_before_attaching_party() {
+        use lightyear::prelude::*;
+        use shared::protocol::{NewWorld, TransferChannel, WorldPortAck};
+        let (mut h, copy) = fixture();
+        let source = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let start = source.query_row(
+            "SELECT map,position_x,position_y,position_z,orientation FROM tdb_playercreateinfo WHERE race=1 AND class=8",
+            [], |row| Ok(crate::maps::WorldLocation {
+                map_id: row.get(0)?, position: Vec3::new(row.get(1)?,row.get(2)?,row.get(3)?), orientation: row.get(4)?,
+            }),
+        ).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((InMap::continent(start.map_id), start.bevy_position()));
+        h.app.world_mut().entity_mut(h.connection).insert((
+            crate::auth::InWorld { character_id: 30 },
+            MessageSender::<NewWorld>::default(),
+            MessageReceiver::<NewWorld>::default(),
+            MessageSender::<WorldPortAck>::default(),
+            MessageReceiver::<WorldPortAck>::default(),
+        ));
+        let name = h
+            .app
+            .world()
+            .get::<shared::components::Player>(h.caster)
+            .unwrap()
+            .name
+            .clone();
+        h.app.insert_resource(DiagnosticRequest {
+            character: name,
+            admission_requested: false,
+        });
+        let before = *h.app.world().get::<Position>(h.caster).unwrap();
+        let health = *h
+            .app
+            .world()
+            .get::<shared::components::Health>(h.caster)
+            .unwrap();
+        advance(h.app.world_mut());
+        assert!(
+            h.app
+                .world()
+                .get::<crate::maps::MapTransfer>(h.caster)
+                .is_some(),
+            "diagnostic initial admission must request an ordinary transfer"
+        );
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&before));
+        assert!(h.app.world().get::<DiagnosticParty>(h.caster).is_none());
+        h.advance(4);
+        let messages = crate::spell_cast::test_harness::drain::<NewWorld>(&mut h.app, h.connection);
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].map_id, 34);
+        let entrance = h.app.world().resource::<crate::maps::MapStore>().safe_locs[&3599];
+        let expected = entrance.bevy_position();
+        assert_eq!(messages[0].position, [expected.x, expected.y, expected.z]);
+        advance(h.app.world_mut());
+        assert!(
+            h.app.world().get::<DiagnosticParty>(h.caster).is_none(),
+            "no party before real worldport ACK"
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<WorldPortAck>>(h.connection)
+            .unwrap()
+            .send::<TransferChannel>(WorldPortAck);
+        h.advance(4);
+        crate::maps::transfer::receive_world_port_acks(h.app.world_mut());
+        advance(h.app.world_mut());
+        assert_eq!(h.app.world().get::<InMap>(h.caster), Some(&copy));
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&expected));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<DiagnosticParty>(h.caster)
+                .unwrap()
+                .members
+                .len(),
+            4
+        );
+        assert_eq!(
+            h.app.world().get::<shared::components::Health>(h.caster),
+            Some(&health)
+        );
+        assert_eq!(
+            h.app.world().get::<DungeonDifficulty>(h.caster).unwrap().0,
+            1
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<crate::lfg::PlayerLfgState>(h.caster)
+                .unwrap()
+                .match_found
+                .is_none()
+        );
     }
 
     #[test]
