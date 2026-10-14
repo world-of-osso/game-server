@@ -408,6 +408,9 @@ fn spawn_summon(
     if properties.control == CONTROL_ALLY || properties.control == CONTROL_PET {
         entity.insert(UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED));
     }
+    if properties.is_pet() {
+        entity.insert(shared::components::UnitIsPet(true));
+    }
     if properties.follows_owner() {
         entity.insert(crate::creature_ai::FollowOwner::new(owner));
     }
