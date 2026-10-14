@@ -84,7 +84,7 @@ pub(crate) fn prepare_class_world() -> PreparedClassWorld {
 }
 
 /// Explicit native template authority for fixtures whose spells restrict creature type.
-pub(crate) fn native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
+pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
     let conn = Connection::open_with_flags(
         world_db().unwrap().powers_db.clone(),
         OpenFlags::SQLITE_OPEN_READ_ONLY,
