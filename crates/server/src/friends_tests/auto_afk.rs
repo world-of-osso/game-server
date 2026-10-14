@@ -393,7 +393,7 @@ fn initial_friends_presence_schedules_auto_afk_deadline() {
     app.world_mut()
         .resource_mut::<Time<Virtual>>()
         .set_max_delta(Duration::from_secs(1));
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.add_plugins(FriendsPlugin);
     app.update();
     let player = app

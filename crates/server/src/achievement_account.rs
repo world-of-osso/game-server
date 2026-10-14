@@ -1,7 +1,8 @@
-//! Lazy, atomic account migration. Character rows remain authoritative contributions;
-//! retained contributions keep earned account progress when a character is deleted.
+//! Live account contributions project queued owned snapshots, not stale durable rows.
+//! One FIFO writer persists each character/account pair atomically.
 use super::*;
 use redb::{ReadableDatabase, ReadableTable, TableDefinition};
+use std::sync::Mutex;
 
 const ACCOUNTS: TableDefinition<u64, &[u8]> = TableDefinition::new("account_achievements_v1");
 
@@ -10,6 +11,9 @@ struct AccountProgress {
     contributions: BTreeMap<u64, PlayerAchievementState>,
     state: PlayerAchievementState,
 }
+
+#[derive(Default)]
+pub(crate) struct AccountProgressCache(Mutex<BTreeMap<u64, AccountProgress>>);
 
 #[derive(Clone, Copy)]
 pub(super) struct AccountUpdate {
@@ -20,9 +24,8 @@ pub(super) struct AccountUpdate {
     pub now: i64,
 }
 
-/// Iterate cross-scope dependencies until neither scope gains another ID.
 pub(super) fn sync_account_progress(
-    db: &redb::Database,
+    db: &GameDatabase,
     state: &mut PlayerAchievementState,
     catalog: &AchievementCatalog,
     update: AccountUpdate,
@@ -45,137 +48,144 @@ pub(super) fn sync_account_progress(
 }
 
 pub(super) fn save_account_progress(
-    db: &redb::Database,
+    db: &GameDatabase,
     character_state: &PlayerAchievementState,
     catalog: &AchievementCatalog,
     update: AccountUpdate,
 ) -> (PlayerAchievementState, Vec<AchievementToastSnapshot>) {
-    let _span = bevy::log::info_span!("system", name = "tick_db::save_account_progress").entered();
-    let characters = persistence::load_account_char_ids(db, update.account);
-    let txn = db
-        .begin_write()
-        .expect("begin account achievement transaction");
-    let mut accounts = txn.open_table(ACCOUNTS).expect("open account achievements");
-    let mut saved: AccountProgress = accounts
-        .get(update.account)
-        .expect("read account achievements")
-        .map(|row| serde_json::from_slice(row.value()).expect("decode account achievements"))
-        .unwrap_or_default();
-    write_character_contributions(
-        &txn,
-        &mut saved,
-        characters,
-        update.character,
-        character_state,
-    );
-    let aggregate = load_account_aggregate(&txn, update.account, &saved, catalog);
-    let (aggregate, toasts) = evaluate_account_progress(catalog, &saved, &update, aggregate);
+    let mut accounts = db
+        .accounts
+        .0
+        .lock()
+        .expect("live account contributions lock");
+    let saved = accounts
+        .entry(update.account)
+        .or_insert_with(|| load_progress(&db.db, update.account));
+    let character_bytes = insert_contribution(saved, update.character, character_state);
+    let aggregate = load_account_aggregate(&db.db, update.account, saved, catalog);
+    let (aggregate, toasts) = evaluate_account_progress(catalog, saved, &update, aggregate);
     saved.state = aggregate.clone();
-    let bytes = serde_json::to_vec(&saved).expect("encode account achievements");
-    accounts
-        .insert(update.account, bytes.as_slice())
-        .expect("save account achievements");
-    drop(accounts);
-    commit_progress_transaction(txn, "tick_db::account_achievement_commit");
+    enqueue_progress(db, update.account, update.character, character_bytes, saved);
     (aggregate, toasts)
 }
 
 pub(super) fn save_monthly_contribution(
-    db: &redb::Database,
+    db: &GameDatabase,
     account: u64,
     character: u64,
     state: &PlayerAchievementState,
 ) {
-    let _span =
-        bevy::log::info_span!("system", name = "tick_db::save_monthly_contribution").entered();
-    let characters = persistence::load_account_char_ids(db, account);
-    let txn = db
-        .begin_write()
-        .expect("begin monthly contribution transaction");
-    let mut accounts = txn
-        .open_table(ACCOUNTS)
-        .expect("open account achievement contributions");
-    let mut saved: AccountProgress = match accounts.get(account).expect("read account contribution")
-    {
-        Some(row) => serde_json::from_slice(row.value()).expect("decode account contribution"),
-        None => AccountProgress::default(),
-    };
-    write_character_contributions(&txn, &mut saved, characters, character, state);
-    let bytes = serde_json::to_vec(&saved).expect("encode monthly contribution");
-    accounts
-        .insert(account, bytes.as_slice())
-        .expect("save monthly contribution");
-    drop(accounts);
-    commit_progress_transaction(txn, "tick_db::monthly_contribution_commit");
-}
-
-fn commit_progress_transaction(txn: redb::WriteTransaction, operation: &'static str) {
-    let _span = bevy::log::info_span!("system", name = operation).entered();
-    let started = std::time::Instant::now();
-    txn.commit().expect(operation);
-    bevy::log::debug!(
-        operation,
-        elapsed_ms = started.elapsed().as_secs_f64() * 1000.0,
-        "Achievement persistence commit completed"
-    );
+    let mut accounts = db
+        .accounts
+        .0
+        .lock()
+        .expect("live account contributions lock");
+    let saved = accounts
+        .entry(account)
+        .or_insert_with(|| load_progress(&db.db, account));
+    let character_bytes = insert_contribution(saved, character, state);
+    enqueue_progress(db, account, character, character_bytes, saved);
 }
 
 pub(super) fn monthly_contributions(
-    db: &redb::Database,
+    db: &GameDatabase,
     account: u64,
 ) -> Vec<PlayerAchievementState> {
-    let _span = bevy::log::info_span!("system", name = "tick_db::monthly_contributions").entered();
-    let txn = db.begin_read().expect("read monthly account contributions");
-    let table = txn
-        .open_table(ACCOUNTS)
-        .expect("account contributions initialized");
-    let row = table
-        .get(account)
-        .expect("read monthly contributions")
-        .expect("monthly contribution saved");
-    let saved: AccountProgress =
-        serde_json::from_slice(row.value()).expect("decode monthly contributions");
-    saved.contributions.into_values().collect()
+    let mut accounts = db
+        .accounts
+        .0
+        .lock()
+        .expect("live account contributions lock");
+    accounts
+        .entry(account)
+        .or_insert_with(|| load_progress(&db.db, account))
+        .contributions
+        .values()
+        .cloned()
+        .collect()
 }
 
-fn write_character_contributions(
-    txn: &redb::WriteTransaction,
+fn insert_contribution(
     saved: &mut AccountProgress,
-    characters: Vec<u64>,
     character: u64,
-    character_state: &PlayerAchievementState,
+    state: &PlayerAchievementState,
+) -> Vec<u8> {
+    let bytes = serde_json::to_vec(state).expect("encode character contribution");
+    saved
+        .contributions
+        .insert(character, decode_saved_achievement_state(&bytes).0);
+    bytes
+}
+
+fn enqueue_progress(
+    db: &GameDatabase,
+    account: u64,
+    character: u64,
+    character_bytes: Vec<u8>,
+    saved: &AccountProgress,
 ) {
-    let mut table = txn
+    let account_bytes = serde_json::to_vec(saved).expect("encode account contributions");
+    db.writer
+        .enqueue("account/monthly contributions", move |db| {
+            let txn = db.begin_write().map_err(|error| error.to_string())?;
+            {
+                let mut characters = txn
+                    .open_table(persistence::ACHIEVEMENTS)
+                    .map_err(|error| error.to_string())?;
+                characters
+                    .insert(character, character_bytes.as_slice())
+                    .map_err(|error| error.to_string())?;
+                let mut accounts = txn
+                    .open_table(ACCOUNTS)
+                    .map_err(|error| error.to_string())?;
+                accounts
+                    .insert(account, account_bytes.as_slice())
+                    .map_err(|error| error.to_string())?;
+            }
+            txn.commit().map_err(|error| error.to_string())
+        });
+}
+
+fn load_progress(db: &redb::Database, account: u64) -> AccountProgress {
+    let txn = db.begin_read().expect("read account contributions");
+    let mut saved = match txn.open_table(ACCOUNTS) {
+        Ok(table) => table
+            .get(account)
+            .expect("read account contributions")
+            .map(|row| serde_json::from_slice(row.value()).expect("decode account contributions"))
+            .unwrap_or_default(),
+        Err(redb::TableError::TableDoesNotExist(_)) => AccountProgress::default(),
+        Err(error) => panic!("open account contributions: {error}"),
+    };
+    let characters = txn
         .open_table(persistence::ACHIEVEMENTS)
-        .expect("open character achievements");
-    for id in characters {
-        if let Some(row) = table.get(id).expect("read achievement contribution") {
+        .expect("open character contributions");
+    for id in persistence::load_account_char_ids(db, account) {
+        if let Some(row) = characters.get(id).expect("read character contribution") {
             saved
                 .contributions
                 .insert(id, decode_saved_achievement_state(row.value()).0);
         }
     }
-    let bytes = serde_json::to_vec(character_state).expect("encode character achievements");
-    table
-        .insert(character, bytes.as_slice())
-        .expect("save character achievement contribution");
-    // Round trip deliberately strips the presentation-only account view.
     saved
-        .contributions
-        .insert(character, decode_saved_achievement_state(&bytes).0);
 }
 
 fn load_account_aggregate(
-    txn: &redb::WriteTransaction,
+    db: &redb::Database,
     account: u64,
     saved: &AccountProgress,
     catalog: &AchievementCatalog,
 ) -> PlayerAchievementState {
     let mut aggregate = catalog.aggregate(saved.contributions.values().cloned());
-    let pets = crate::battle_pets::unique_species_in_transaction(txn, account);
-    catalog.set_account_unique_pet_count(&mut aggregate, pets);
-    let toys = crate::persistence::toy_store::load_in_transaction(txn, account);
-    catalog.set_account_toy_ownership(&mut aggregate, &toys);
+    let pets = crate::battle_pets::load_journal(db, account);
+    catalog.set_account_unique_pet_count(
+        &mut aggregate,
+        u32::try_from(pets.unique_species()).expect("journal count fits u32"),
+    );
+    catalog.set_account_toy_ownership(
+        &mut aggregate,
+        &crate::persistence::toy_store::load(db, account),
+    );
     aggregate
 }
 

@@ -78,7 +78,7 @@ fn assert_clock_expiry(with_bid: bool, delete_buyer: bool) {
         assert!(persistence::load_character(&db, buyer).is_none());
     }
     let mut app = App::new();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(state);
     app.insert_resource(ServerClock {
         fixed_unix: Some(auction.expires_at_unix_secs as i64 - 1),

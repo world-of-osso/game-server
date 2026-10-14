@@ -232,7 +232,20 @@ impl Plugin for PersistencePlugin {
 
 #[derive(Resource)]
 pub struct GameDatabase {
-    pub db: Database,
+    pub db: std::sync::Arc<Database>,
+    pub(crate) writer: crate::persistence_writer::PersistenceWriter,
+    pub(crate) accounts: crate::achievement::AccountProgressCache,
+}
+
+impl GameDatabase {
+    pub(crate) fn new(db: Database) -> Self {
+        let db = std::sync::Arc::new(db);
+        Self {
+            writer: crate::persistence_writer::PersistenceWriter::start(std::sync::Arc::clone(&db)),
+            db,
+            accounts: Default::default(),
+        }
+    }
 }
 
 fn try_open_database_once(path: &Path) -> Result<Database, redb::DatabaseError> {
@@ -279,7 +292,7 @@ fn open_database(mut commands: Commands) {
     }
     commands.insert_resource(motd);
     info!("Database opened at {}", path.display());
-    commands.insert_resource(GameDatabase { db });
+    commands.insert_resource(GameDatabase::new(db));
 }
 
 fn game_database_path() -> PathBuf {

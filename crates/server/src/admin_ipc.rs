@@ -842,9 +842,7 @@ mod tests {
 
     #[test]
     fn create_character_adds_a_listed_character_to_the_named_account() {
-        let db = persistence::GameDatabase {
-            db: persistence::temp_database(),
-        };
+        let db = persistence::GameDatabase::new(persistence::temp_database());
         persistence_accounts::register_account(&db.db, "fb_probe", "pw").expect("account");
 
         let response = handle_create_character(
@@ -875,9 +873,7 @@ mod tests {
 
     #[test]
     fn create_character_reports_unknown_account_and_invalid_names() {
-        let db = persistence::GameDatabase {
-            db: persistence::temp_database(),
-        };
+        let db = persistence::GameDatabase::new(persistence::temp_database());
         assert!(matches!(
             handle_create_character(&db, &crate::player_create_info::OwnedKit::bare().kit(), "nobody", "Probeone", 1, 2),
             AdminResponse::Error(ref e) if e.contains("nobody")
@@ -898,9 +894,7 @@ mod tests {
 
     #[test]
     fn grant_item_puts_the_stack_in_the_bags_and_queues_a_delta() {
-        let db = persistence::GameDatabase {
-            db: persistence::temp_database(),
-        };
+        let db = persistence::GameDatabase::new(persistence::temp_database());
         let (character_id, _) =
             persistence::create_character(&db.db, 1, "Stitchwell", 1, 1).expect("character");
         let (templates, catalog) = linen_data();
@@ -934,9 +928,7 @@ mod tests {
         let Some(quests) = crate::quest_data::test_quest_db() else {
             return;
         };
-        let db = persistence::GameDatabase {
-            db: persistence::temp_database(),
-        };
+        let db = persistence::GameDatabase::new(persistence::temp_database());
         let (character_id, _) =
             persistence::create_character(&db.db, 1, "Quester", 1, 1).expect("character");
         let mut dirty = crate::quest::QuestDirty::default();
@@ -969,9 +961,7 @@ mod tests {
     #[test]
     fn mail_deliver_now_delivers_mail_in_transit_and_refreshes_the_mailbox() {
         use crate::persistence::mail_store::{self, MailData, MailSender};
-        let db = persistence::GameDatabase {
-            db: persistence::temp_database(),
-        };
+        let db = persistence::GameDatabase::new(persistence::temp_database());
         let (character_id, _) =
             persistence::create_character(&db.db, 1, "Tradeb", 1, 1).expect("character");
         let now = crate::mail::unix_now();
@@ -1016,9 +1006,7 @@ mod tests {
 
     #[test]
     fn grant_item_refuses_unknown_items_and_characters() {
-        let db = persistence::GameDatabase {
-            db: persistence::temp_database(),
-        };
+        let db = persistence::GameDatabase::new(persistence::temp_database());
         persistence::create_character(&db.db, 1, "Stitchwell", 1, 1).expect("character");
         let (templates, catalog) = linen_data();
         let mut updates = crate::gold::GoldUpdateQueue::default();
@@ -1039,9 +1027,7 @@ mod tests {
         let path = crate::test_data::world_db_path();
         let conn = rusqlite::Connection::open(&path).unwrap();
         let network = crate::taxi::load_taxi_network(&conn).unwrap();
-        let game_db = persistence::GameDatabase {
-            db: persistence::temp_database(),
-        };
+        let game_db = persistence::GameDatabase::new(persistence::temp_database());
         let (character_id, _) =
             persistence::create_character(&game_db.db, 1, "Scout", 1, 1).expect("create character");
 
@@ -1068,7 +1054,7 @@ mod tests {
         let db = persistence::temp_database();
         let (character_id, _) =
             persistence::create_character(&db, 1, "Striker", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.add_message::<crate::death::PlayerDeathTransition>();
@@ -1140,7 +1126,7 @@ mod tests {
         let db = persistence::temp_database();
         let (character_id, _) =
             persistence::create_character(&db, 1, "Fallen", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut app = App::new();
         let player = app
             .world_mut()
@@ -1207,7 +1193,7 @@ mod tests {
         let db = persistence::temp_database();
         let (character_id, _) =
             persistence::create_character(&db, 1, "Doomed", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let player = h.caster;
         h.app.world_mut().entity_mut(player).insert((
             persistence::ClientId(character_id),
@@ -1255,7 +1241,7 @@ mod tests {
         let db = persistence::temp_database();
         let (character_id, _) =
             persistence::create_character(&db, 1, "Voyager", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut app = App::new();
         let mut system_state = SystemState::<(
             Commands,
@@ -1299,7 +1285,7 @@ mod tests {
         let db = persistence::temp_database();
         let (character_id, _) =
             persistence::create_character(&db, 1, "Mover", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut app = App::new();
         let live_entity = app
             .world_mut()
@@ -1355,7 +1341,7 @@ mod tests {
         let db = persistence::temp_database();
         let (account_id, _token) =
             persistence_accounts::register_account(&db, "admin", "admin").expect("account");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
 
         let response = handle_check_account(&game_db, "admin");
 
@@ -1378,7 +1364,7 @@ mod tests {
         let db = persistence::temp_database();
         persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         persistence_accounts::register_account(&db, "alice", "secret").expect("alice");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
 
         let response = handle_list_accounts(&game_db);
 
@@ -1395,7 +1381,7 @@ mod tests {
     fn handle_check_password_reports_validity() {
         let db = persistence::temp_database();
         persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
 
         assert_eq!(
             handle_check_password(&game_db, "admin", "admin"),
@@ -1419,7 +1405,7 @@ mod tests {
         let (account_id, _token) =
             persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
 
         let response = handle_list_characters(&game_db, Some("admin"));
 
@@ -1440,7 +1426,7 @@ mod tests {
             persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         let (character_id, _data) =
             persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
 
         assert_eq!(
             handle_find_character(&game_db, "Theron"),
@@ -1467,7 +1453,7 @@ mod tests {
             persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         persistence::create_character(&db, from_account_id, "Theron", 1, 1).expect("character");
         persistence::create_character(&db, from_account_id, "Elara", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
 
         assert_eq!(
             handle_move_characters(&game_db, "alice", "admin"),
@@ -1492,7 +1478,7 @@ mod tests {
         let (account_id, _) =
             persistence_accounts::register_account(&db, "roster-owner", "test").unwrap();
         let (id, _) = persistence::create_character(&db, account_id, "Theron", 1, 1).unwrap();
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut app = App::new();
         app.add_plugins((
             MinimalPlugins,
@@ -1583,7 +1569,7 @@ mod tests {
         let (account_id, _) =
             persistence_accounts::register_account(&db, "gear-admin", "test").unwrap();
         let (id, data) = persistence::create_character(&db, account_id, "Theron", 1, 1).unwrap();
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut world = World::new();
         let player = world
             .spawn((data.equipment_appearance.clone(), persistence::ClientId(id)))
@@ -1674,7 +1660,7 @@ mod tests {
         let (account_id, _token) =
             persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut world = World::new();
         let mut state = bevy::ecs::system::SystemState::<(
             Commands,
@@ -1727,7 +1713,7 @@ mod tests {
             persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         let (character_id, _data) =
             persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let initial = EquipmentAppearance {
             entries: vec![shared::components::EquippedAppearanceEntry {
                 slot: shared::components::EquipmentVisualSlot::Chest,
@@ -1806,7 +1792,7 @@ mod tests {
             persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         let (character_id, _data) =
             persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let initial = EquipmentAppearance {
             entries: vec![shared::components::EquippedAppearanceEntry {
                 slot: shared::components::EquipmentVisualSlot::Chest,
@@ -1880,7 +1866,7 @@ mod tests {
         let (account_id, _token) =
             persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
         persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut world = World::new();
         let mut state = bevy::ecs::system::SystemState::<(
             Commands,

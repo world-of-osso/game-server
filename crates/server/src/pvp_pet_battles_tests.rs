@@ -17,9 +17,9 @@ fn build_app(track_achievements: bool) -> App {
     app.finish();
     app.cleanup();
     app.insert_resource(super::super::tests::catalog());
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(tempfile::NamedTempFile::new().unwrap().path()).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(
+        redb::Database::create(tempfile::NamedTempFile::new().unwrap().path()).unwrap(),
+    ));
     app.insert_resource(crate::battle_pets::load_test_catalog());
     app.add_systems(Update, crate::battle_pets::load_account_journals);
     app.init_resource::<Matchmaker>();
@@ -376,9 +376,7 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
     let mut app = build_app(true);
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("pet-zone-proof.redb");
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(&db_path).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(redb::Database::create(&db_path).unwrap()));
     crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
     let characters = [(41, "Petwinner"), (42, "Petloser")].map(|(account, name)| {
         crate::persistence::create_character(

@@ -24,7 +24,7 @@ fn setup(skill: u32) -> (Harness, tempfile::TempDir) {
     crate::persistence::create_tables(&db);
     let (id, _) = crate::persistence::create_character(&db, 1, "Gatherer", 1, 2).unwrap();
     h.app
-        .insert_resource(crate::persistence::GameDatabase { db });
+        .insert_resource(crate::persistence::GameDatabase::new(db));
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::persistence::ClientId(id),
         CombatStatus(false),

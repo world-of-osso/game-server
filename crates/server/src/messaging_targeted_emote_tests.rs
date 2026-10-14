@@ -94,7 +94,7 @@ fn achievements_criteria_native_some_target_accepts_either_request_unit_and_pers
         // Enter-world loads character contributions before the account aggregate.
         let restored = persistence::load_achievements(&reopened, character);
         assert_eq!(restored.criteria_progress.get(&20817), Some(&1));
-        app.insert_resource(GameDatabase { db: reopened });
+        app.insert_resource(GameDatabase::new(reopened));
         app.world_mut().entity_mut(player).insert(restored);
         app.world_mut().entity_mut(connection).remove::<InWorld>();
         app.world_mut().entity_mut(connection).insert(InWorld {

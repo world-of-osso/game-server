@@ -77,7 +77,7 @@ fn equipping_a_pouch_sends_the_client_a_six_slot_bag_one() {
     let (character_id, _) =
         persistence::create_character_with_test_bags(&db, 941, "Alice", 1, 1).unwrap();
     let pouch = grant_pouch(&db, character_id);
-    server.insert_resource(GameDatabase { db });
+    server.insert_resource(GameDatabase::new(db));
     let (mut client, connection) = network_client(address, 941);
     client.init_resource::<Received>();
     client.add_systems(Update, collect_inventory_messages);

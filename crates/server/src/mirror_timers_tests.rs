@@ -367,7 +367,7 @@ fn achievements_criteria_drowning_after_a_creature_wound_never_invents_a_creatur
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Woundeddiver", 1, 1).unwrap();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.world_mut()
         .entity_mut(player)
         .insert((ClientId(character), PlayerAchievementState::default()));

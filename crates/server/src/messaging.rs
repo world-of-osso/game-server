@@ -918,7 +918,7 @@ mod tests {
         persistence::set_character_guild_by_id(&db, master, 7, "Raid Team").unwrap();
         persistence::banks::save_guild_member_rank(&db, master, 0);
         let mut app = App::new();
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         let actor = app
             .world_mut()
             .spawn((
@@ -1008,7 +1008,7 @@ mod tests {
         persistence::set_character_guild_by_id(&db, id, 9, "Existing").unwrap();
         persistence::set_pending_guild_invite(&db, id, 7, "Raid Team", "Inviter");
         let mut app = App::new();
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         let player = app.world_mut().spawn(ClientId(id)).id();
         let response = apply_guild_accept(&mut app, player);
         assert!(!response.success);
@@ -1032,7 +1032,7 @@ mod tests {
         crate::persistence::set_pending_guild_invite(&db, character_id, 7, "Raid Team", "Inviter");
 
         let mut app = App::new();
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         let player = app
             .world_mut()
             .spawn((

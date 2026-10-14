@@ -8,7 +8,8 @@ fn achievement_monthly_snapshot_never_waits_for_a_busy_durable_writer() {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 41, "Asyncproof", 1, 1).unwrap();
-    let held = db.begin_write().unwrap();
+    let db = GameDatabase::new(db);
+    let held = db.db.begin_write().unwrap();
     let blocker = std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(250));
         held.abort().unwrap();
@@ -133,7 +134,7 @@ fn achievement_frame_publishes_one_final_snapshot_and_preserves_every_toast() {
     ));
     app.insert_resource(catalog);
     app.insert_resource(adventure);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.finish();
     app.cleanup();
     app.update();

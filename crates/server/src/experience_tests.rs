@@ -196,9 +196,7 @@ fn give_xp_carries_over_across_levels_and_stops_at_the_cap() {
 fn award_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
-    app.insert_resource(GameDatabase {
-        db: temp_database(),
-    });
+    app.insert_resource(GameDatabase::new(temp_database()));
     app.add_plugins(ExperiencePlugin);
     app
 }

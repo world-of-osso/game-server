@@ -33,7 +33,7 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
         .unwrap()
         .map;
     let mut world = World::new();
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     world.insert_resource(manager);
     world.insert_resource(maps);
     world.insert_resource(HousingAvailability(Ok(catalog.clone())));
@@ -137,7 +137,7 @@ fn housing_finder_relationships_use_persisted_friends_and_account_ownership() {
     )
     .unwrap();
     let mut world = World::new();
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     world.insert_resource(InstanceManager::default());
     world.insert_resource(HousingAvailability(Ok(source)));
     let player = world.spawn(InMap::continent(0)).id();

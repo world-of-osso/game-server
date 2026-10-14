@@ -64,7 +64,7 @@ fn request_app(bonding: u8, bound: bool) -> (App, Entity, u64, u64) {
         tick_duration: Duration::from_millis(50),
     });
     app.add_plugins(ProtocolPlugin);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(ItemTemplates {
         retail: HashMap::from([(
             6948,

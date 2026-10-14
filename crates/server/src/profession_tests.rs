@@ -19,7 +19,7 @@ fn achievements_criteria_native_goggle_casts_accept_empty_all_and_store_real_ite
     persistence::create_tables(&db);
     let mut h = harness_with(80, |app| {
         app.add_plugins(AchievementPlugin);
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
     })
     .unwrap();
     h.app
@@ -107,7 +107,7 @@ fn achievements_criteria_native_goggle_casts_accept_empty_all_and_store_real_ite
     for criterion in 61781..=61787 {
         assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
     }
-    h.app.insert_resource(GameDatabase { db: reopened });
+    h.app.insert_resource(GameDatabase::new(reopened));
     h.app
         .world_mut()
         .entity_mut(h.player)

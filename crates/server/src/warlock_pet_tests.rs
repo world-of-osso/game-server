@@ -68,7 +68,7 @@ impl ImpHarness {
         let mut h = harness_with_plugins(Vec::new(), known, class, true, |app| {
             app.insert_resource(data);
             app.insert_resource(spells);
-            app.insert_resource(GameDatabase { db });
+            app.insert_resource(GameDatabase::new(db));
             app.add_plugins((HunterPetPlugin, crate::creature_ai::CreatureAiPlugin));
             app.add_systems(PreUpdate, defer_initial_pet_login);
             app.add_systems(

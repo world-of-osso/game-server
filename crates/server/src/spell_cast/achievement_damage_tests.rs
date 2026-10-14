@@ -117,7 +117,7 @@ fn achievements_criteria_kill_any_creature_uses_real_taps_group_range_and_corpse
     };
     h.app
         .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
     let finisher = spawn_npc(&mut h.app, 3.0);
     // Player's real nonlethal wound creates the tap; an unowned creature lands the lethal hit.
@@ -221,7 +221,7 @@ fn achievements_criteria_native_fireball_and_melee_each_credit_the_actual_hit_on
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
     h.cast_and_deliver(133, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -323,7 +323,7 @@ fn achievements_criteria_native_damage_caps_totals_not_peaks_and_excludes_self_a
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
     h.app.add_message::<crate::death::PlayerDeathTransition>();
     *h.app.world_mut().get_mut::<Health>(victim).unwrap() = Health {

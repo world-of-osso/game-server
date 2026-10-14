@@ -69,7 +69,7 @@ fn password_login_waits_for_worker_before_authentication_and_roster_reply() {
     app.register_message::<LoginResponse>();
     app.register_message::<ForcedDisconnect>();
     app.init_resource::<ConnectedAccounts>();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.add_systems(Update, process_login_requests);
     app.finish();
     app.cleanup();

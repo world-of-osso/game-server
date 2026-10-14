@@ -21,7 +21,7 @@ fn admission_app(data: &std::path::Path) -> (tempfile::NamedTempFile, App, Entit
     app.register_message::<EnterWorldResponse>();
     app.register_message::<LoadTerrain>();
     app.add_message::<crate::death::PlayerDeathTransition>();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(crate::maps::MapStore::continents());
     app.init_resource::<crate::maps::InstanceManager>();
     app.insert_resource(crate::ground::GroundMap::new(

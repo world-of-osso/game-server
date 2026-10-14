@@ -1579,7 +1579,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
     );
     let loaded = persistence::load_character(&db, bob_id).unwrap();
     let mut app = setup_app_with(move |app| {
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.insert_resource(ItemTemplates {
             retail: [(

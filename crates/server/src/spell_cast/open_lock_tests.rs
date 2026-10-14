@@ -43,7 +43,7 @@ fn fixture(item_id: u32) -> (Harness, tempfile::TempDir, u64) {
         .find(|item| item.item_id == item_id)
         .unwrap()
         .item_guid;
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -89,9 +89,9 @@ fn class_completeness_native_pick_lock_accepts_owned_bag_item_without_consuming_
     // UNLOCKED is an item-instance flag, not transient caster state.
     let db = h.app.world_mut().remove_resource::<GameDatabase>().unwrap();
     drop(db);
-    h.app.insert_resource(GameDatabase {
-        db: redb::Database::open(directory.path().join("lockbox.redb")).unwrap(),
-    });
+    h.app.insert_resource(GameDatabase::new(
+        redb::Database::open(directory.path().join("lockbox.redb")).unwrap(),
+    ));
     h.inbox = Inbox::default();
     cast_item(&mut h, guid);
     assert!(

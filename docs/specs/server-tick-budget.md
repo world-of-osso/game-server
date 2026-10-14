@@ -17,6 +17,15 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [x] Toy presentation preflight is shared across owner snapshots and refreshed when source catalogs change; ownership/favourites remain account-specific.
 - [x] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
 
+## Persistence (approved 2026-10-13)
+
+- [ ] One serial FIFO writer persists owned snapshots off the tick thread, preserving enqueue/commit order across accounts and monthly contributions.
+- [ ] Tick systems enqueue and poll completions without waiting. Logout completion, character deletion, trade, mail/AH money transfers and purchases acknowledge only after their required commit succeeds.
+- [ ] Writer errors log and increment an observable failure metric; shutdown drains queued work.
+- [ ] Process-crash proof loses only work not acknowledged as durable.
+
+Reference: TrinityCore a352b1fa `src/server/database/Database/DatabaseWorkerPool.h`, `CommitTransaction`/`AsyncCommitTransaction` (lines151–156). Budget acceptance uses only private **release** server builds; debug timings are diagnostics, not acceptance. Dev profile remains unchanged.
+
 ## How it works
 
 - [Tick-lag investigation](../wiki/investigations/server-tick-lag.md)

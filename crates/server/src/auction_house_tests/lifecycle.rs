@@ -477,7 +477,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
         persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("seller");
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.add_plugins(AuctionHousePlugin);
 
     let mut first = test_auction(1, "First item", 1, 1);
@@ -697,7 +697,7 @@ fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
     persistence::save_auction(&db, &auction);
     super::settlement::corrupt_auction_mailbox(&db, 1);
     let mut app = App::new();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(AuctionHouseState {
         auctions: [(91, auction.clone())].into(),
         ..Default::default()
@@ -730,7 +730,7 @@ fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
     auction.expires_at_unix_secs = unix_now() - 1;
     persistence::save_auction(&db, &auction);
     let mut app = App::new();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(AuctionHouseState {
         auctions: [(91, auction.clone())].into(),
         ..Default::default()

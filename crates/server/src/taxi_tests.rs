@@ -89,9 +89,7 @@ fn harness() -> Option<Harness> {
     add_inbox::<TaxiFailed>(&mut app);
     app.insert_resource(world_db_faction_templates()?);
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
-    app.insert_resource(GameDatabase {
-        db: persistence::temp_database(),
-    });
+    app.insert_resource(GameDatabase::new(persistence::temp_database()));
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((NpcInteractionPlugin, TaxiPlugin));
     app.insert_resource(load_taxi_network(&conn).unwrap());

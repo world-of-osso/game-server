@@ -144,7 +144,7 @@ fn unchanged_frame_does_not_rebuild_offline_friend_snapshot() {
 
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.add_plugins(FriendsPlugin);
     let theron = spawn_friend_owner(&mut app, 1, theron_id, "Theron", "Alice");
     app.update();
@@ -173,7 +173,7 @@ fn presence_change_updates_only_owners_listing_that_player() {
 
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.add_plugins(FriendsPlugin);
     let theron = spawn_friend_owner(&mut app, 1, theron_id, "Theron", "Alice");
     let jaina = spawn_friend_owner(&mut app, 2, jaina_id, "Jaina", "Bob");
@@ -213,7 +213,7 @@ fn friend_login_and_logout_update_the_listed_owner() {
 
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.add_plugins(FriendsPlugin);
     let theron = spawn_friend_owner(&mut app, 1, theron_id, "Theron", "Alice");
     app.update();
@@ -254,7 +254,7 @@ fn friend_zone_and_level_changes_refresh_the_listed_owner() {
 
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.add_plugins(FriendsPlugin);
     let theron = spawn_friend_owner(&mut app, 1, theron_id, "Theron", "Alice");
     let alice = app

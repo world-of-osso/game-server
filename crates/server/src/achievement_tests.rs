@@ -36,7 +36,7 @@ fn achievements_criteria_top_level_area_uses_authentic_dragon_isles_terrain_and_
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
     app.insert_resource(ground);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     let player = app
         .world_mut()
         .spawn((
@@ -188,7 +188,7 @@ fn achievements_criteria_knowledge_pet_uses_the_owned_account_journal_not_cosmet
     app.add_systems(Update, crate::battle_pets::load_account_journals);
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.insert_resource(crate::battle_pets::load_test_catalog());
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     let player = app
         .world_mut()
         .spawn((
@@ -517,7 +517,7 @@ fn achievements_criteria_exploration_uses_real_terrain_and_survives_reopen() {
     app.add_plugins(AchievementPlugin);
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.insert_resource(ground);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     // Goldshire's real MCNK AreaID87 maps to WorldMapOverlay122/criterion1147.
     let (x, y, z) = crate::terrain_height::wow_to_bevy(-9460.0, 65.0, 60.0);
     let player = app
@@ -603,7 +603,7 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
     let mut app = App::new();
     app.add_plugins(AchievementPlugin);
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     let player = app
         .world_mut()
         .spawn((
@@ -696,7 +696,7 @@ fn achievements_criteria_native_player_aura_some_requires_actual_jaguar_aura_at_
         let db = redb::Database::create(&path).unwrap();
         persistence::create_tables(&db);
         let (character, _) = persistence::create_character(&db, 1, "Jaguarproof", 1, 1).unwrap();
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
         h.app
             .world_mut()
             .get_mut::<InWorld>(h.connection)
@@ -802,7 +802,7 @@ fn achievements_criteria_native_death_player_area_some_uses_cached_authority_and
         let db = redb::Database::create(&path).unwrap();
         persistence::create_tables(&db);
         let (character, _) = persistence::create_character(&db, 1, "Areadeath", 1, 1).unwrap();
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
         h.app
             .world_mut()
             .get_mut::<InWorld>(h.connection)
@@ -881,7 +881,7 @@ fn achievements_criteria_native_death_exact_level_rejects_lower_and_higher_level
         let db = redb::Database::create(&path).unwrap();
         persistence::create_tables(&db);
         let (character, _) = persistence::create_character(&db, 1, "Leveldeath", 1, 1).unwrap();
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
         h.app
             .world_mut()
             .get_mut::<InWorld>(h.connection)
@@ -946,7 +946,7 @@ fn achievements_criteria_native_instance_death_uses_allocated_capacity_and_persi
         let db = redb::Database::create(&path).unwrap();
         persistence::create_tables(&db);
         let (character, _) = persistence::create_character(&db, 1, "Copydeath", 1, 1).unwrap();
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
         h.app
             .world_mut()
             .get_mut::<InWorld>(h.connection)
@@ -1048,7 +1048,7 @@ fn prove_death_criteria(player_killer: bool) {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Deathproof", 1, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .get_mut::<InWorld>(h.connection)
@@ -1160,7 +1160,7 @@ fn achievements_criteria_native_spy_marker_requires_known_solo_group_authority()
     let db = redb::Database::create(&path).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Spyproof", 1, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .get_mut::<InWorld>(h.connection)
@@ -1289,7 +1289,7 @@ fn achievements_criteria_targeted_spell_credits_caster_after_native_hit_only() {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Turkeyproof", 1, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .get_mut::<InWorld>(h.connection)
@@ -1482,7 +1482,7 @@ fn achievements_criteria_game_event_credits_authentic_send_event_caster_only() {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Eventproof", 1, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .get_mut::<InWorld>(h.connection)
@@ -1570,7 +1570,7 @@ fn achievements_criteria_known_spell_credits_real_learning_once_and_rejected_cas
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Learnproof", 1, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .get_mut::<InWorld>(h.connection)
@@ -1661,7 +1661,7 @@ fn achievements_criteria_rank_totals_follow_committed_authentic_quest_reputation
     let mut app = App::new();
     app.add_plugins(AchievementPlugin);
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     let player = app
         .world_mut()
         .spawn((
@@ -1752,7 +1752,7 @@ fn achievements_criteria_reputation_tracks_signed_changes_and_grants_real_timber
     let mut app = App::new();
     app.add_plugins(AchievementPlugin);
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     let reputation: CharacterReputation = serde_json::from_value(serde_json::json!({
         "values": {"576": 41999}, "tracked": [], "watched": null
     }))
@@ -1885,7 +1885,7 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
     persistence::save_achievements(&db, second, &contributions[1]);
     let mut world = World::new();
     world.insert_resource(catalog);
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     world.init_resource::<crate::maps::ServerClock>();
     let player = world
         .spawn((
@@ -1956,7 +1956,7 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
     let db = redb::Database::open(file.path()).unwrap();
     let mut world = World::new();
     world.insert_resource(load_achievement_catalog(&conn).unwrap());
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     world.init_resource::<crate::maps::ServerClock>();
     let player = world
         .spawn((

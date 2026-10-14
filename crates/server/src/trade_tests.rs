@@ -18,7 +18,7 @@ fn setup_trade_offer_app(db: redb::Database) -> App {
     app.register_message::<ClearTradeItem>();
     app.register_message::<SetTradeMoney>();
     app.register_message::<TradeStateUpdate>();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(ServerTradeState::default());
     app.add_systems(Update, process_clear_item_requests);
     app.add_systems(Update, process_set_money_requests);
