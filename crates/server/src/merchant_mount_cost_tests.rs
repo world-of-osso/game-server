@@ -70,6 +70,113 @@ fn balance(h: &Harness, id: u32) -> u32 {
 }
 
 #[test]
+fn currency_purchase_preserves_other_fifo_currency_changes_in_both_orders() {
+    use bevy::ecs::system::RunSystemOnce;
+    use std::time::{Duration, Instant};
+    for currency_first in [true, false] {
+        let mut h = shopper();
+        wallet(&mut h, 395, 2175);
+        let mut initial = h
+            .app
+            .world()
+            .get::<crate::currency::PlayerCurrencies>(h.player)
+            .unwrap()
+            .0
+            .clone();
+        initial.entries.push(CurrencyEntry {
+            id: 3,
+            amount: 5,
+            week_earned: 5,
+        });
+        persistence::save_currencies(
+            &h.app.world().resource::<GameDatabase>().db,
+            h.character_id,
+            &initial,
+        );
+        h.app
+            .world_mut()
+            .get_mut::<crate::currency::PlayerCurrencies>(h.player)
+            .unwrap()
+            .0 = initial;
+        let (npc, item) = offer(&mut h, 32216, 44230);
+        let character = h.character_id;
+        let enqueue_currency = |h: &Harness| {
+            h.app.world().resource::<GameDatabase>().writer.enqueue(
+                "adjacent currency actor",
+                move |db| {
+                    let mut wallet = persistence::load_currencies(db, character);
+                    crate::currency::earn_currency(&mut wallet, 3, 17)?;
+                    persistence::save_currencies(db, character, &wallet);
+                    Ok(())
+                },
+            )
+        };
+        if currency_first {
+            enqueue_currency(&h);
+        }
+        h.app
+            .world_mut()
+            .resource_mut::<PendingMerchant>()
+            .requests
+            .push_back(crate::merchant::actor::Request {
+                connection: h.connection,
+                character,
+                player: h.player,
+                vendor: npc,
+                operation: crate::merchant::transactions::Operation::Buy(BuyItem {
+                    npc: npc.to_bits(),
+                    slot: item.slot,
+                    item_id: item.item_id,
+                    count: 1,
+                    destination: None,
+                }),
+            });
+        h.app
+            .world_mut()
+            .run_system_once(crate::merchant::actor::drive_merchant_commits)
+            .unwrap();
+        if !currency_first {
+            enqueue_currency(&h);
+        }
+        let fence = h
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .enqueue("currency purchase fixture fence", |_| Ok(()));
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while fence.result().is_none() {
+            assert!(Instant::now() < deadline, "currency purchase fence timeout");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        fence.result().unwrap().unwrap();
+        let durable =
+            persistence::load_currencies(&h.app.world().resource::<GameDatabase>().db, character);
+        assert_eq!(
+            durable.get(3),
+            22,
+            "earlier currency actor lost; first={currency_first}"
+        );
+        assert_eq!(durable.get(395), 0);
+        h.app
+            .world_mut()
+            .get_mut::<crate::currency::PlayerCurrencies>(h.player)
+            .unwrap()
+            .0 = durable;
+        h.app
+            .world_mut()
+            .run_system_once(crate::merchant::actor::drive_merchant_commits)
+            .unwrap();
+        assert_eq!(
+            balance(&h, 3),
+            22,
+            "later currency publication lost; first={currency_first}"
+        );
+        assert_eq!(h.count_of(44230), vec![1]);
+    }
+}
+
+#[test]
 fn mount_costs_mark_of_honor_real_vendor_multiplies_and_delivers() {
     let mut h = shopper();
     h.grant(137642, 31);

@@ -51,7 +51,7 @@ pub(super) struct Inputs {
     pub reputation: Option<shared::reputation::CharacterReputation>,
     pub durability_rules: ItemDurability,
     pub durability: Option<EquippedDurability>,
-    pub wallet: Option<CurrencyWallet>,
+    pub has_wallet: bool,
     pub reset: DailyReset,
     pub now: f64,
 }
@@ -87,6 +87,9 @@ pub(super) fn execute(
     operation: Operation,
 ) -> Result<Publication, String> {
     let economy = crate::economy::store::load_state(db)?.map(crate::economy::Economy::from_state);
+    let wallet = inputs
+        .has_wallet
+        .then(|| persistence::load_currencies(db, character_id));
     let mut shop = Transaction {
         database: db,
         templates: inputs.templates,
@@ -101,7 +104,7 @@ pub(super) fn execute(
         reputation: inputs.reputation,
         durability_rules: inputs.durability_rules,
         durability: inputs.durability,
-        wallet: inputs.wallet,
+        wallet,
         reset: inputs.reset,
         now: inputs.now,
         gold: Publication::default(),

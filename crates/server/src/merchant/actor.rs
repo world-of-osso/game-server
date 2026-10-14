@@ -124,11 +124,7 @@ fn snapshot_inputs(shop: &Shop, request: &Request) -> Result<Inputs, MerchantErr
         reputation: shop.reputations.get(request.player).ok().cloned(),
         durability_rules: shop.durability_rules.clone(),
         durability: shop.durability.get(request.player).ok().cloned(),
-        wallet: shop
-            .currencies
-            .get(request.player)
-            .ok()
-            .map(|wallet| wallet.0.clone()),
+        has_wallet: shop.currencies.contains(request.player),
         reset: *shop.reset,
         now: shop.now(),
     })
@@ -172,7 +168,8 @@ fn publish(
             *live = durability;
         }
     }
-    if let Some(wallet) = publication.wallet {
+    if publication.wallet.is_some() {
+        let wallet = persistence::load_currencies(shop.db(), request.character);
         if let Ok(mut live) = shop.currencies.get_mut(request.player) {
             live.0 = wallet.clone();
         }
