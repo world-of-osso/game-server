@@ -1057,6 +1057,20 @@ CREATE TABLE spell_name (
   ID INTEGER PRIMARY KEY,
   Name_lang TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE tdb_npc_vendor (
+  entry INTEGER NOT NULL DEFAULT 0,
+  slot INTEGER NOT NULL DEFAULT 0,
+  item INTEGER NOT NULL DEFAULT 0,
+  maxcount INTEGER NOT NULL DEFAULT 0,
+  incrtime INTEGER NOT NULL DEFAULT 0,
+  ExtendedCost INTEGER NOT NULL DEFAULT 0,
+  type INTEGER NOT NULL DEFAULT 1,
+  BonusListIDs TEXT,
+  PlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  IgnoreFiltering INTEGER NOT NULL DEFAULT 0,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (entry, item, ExtendedCost, type)
+);
 CREATE TABLE tdb_playercreateinfo (
     race INTEGER NOT NULL, class INTEGER NOT NULL, map INTEGER NOT NULL,
     position_x REAL NOT NULL, position_y REAL NOT NULL, position_z REAL NOT NULL,

@@ -136,7 +136,7 @@ Reproduce with `scripts/content_mapping.py --db data/world.db` (CSV defaults: th
 
 After importing the installed DB2 tables, run `python3 scripts/content_policy.py --mode items-refresh --db <private-copy>`. It rebuilds only `content_item`, retaining reviewed `SourceEntry` mappings and leaving the isolated Skyborne projection and provenance unchanged. Lead owns canonical publication. Full policy regeneration uses the same installed catalog. The additive kit updater no longer depends on unrelated Toy/TDB/drop tables for definition membership.
 
-Tests: `scripts/tests/test_installed_content_items.py` exercises the nineteen reported gear definitions, source-exact attributes, idempotence and retained mappings. `skyborne_kit_fixture.py` regenerates the native fixture; stale currency/vendor table DDL was removed by regeneration, not by narrowing equality assertions. The historical counts below predate installed-build projection.
+Tests: `scripts/tests/test_installed_content_items.py` exercises the nineteen reported gear definitions, source-exact attributes, idempotence and retained mappings. `skyborne_kit_fixture.py` regenerates the native fixture; the producer now retains the currency/vendor schemas required by native merchant loading, matching the existing native fixture without narrowing equality assertions. The historical counts below predate installed-build projection.
 
 ### Items: `item_template.entry` vs Retail `ItemSparse.ID`
 
