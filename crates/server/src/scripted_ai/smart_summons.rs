@@ -67,6 +67,17 @@ pub(super) fn load_summon_groups(
 
 /// WorldObject::SummonCreatureGroup, shared by native C++ ports and SmartAI.
 pub(crate) fn summon_creature_group(ctx: &mut Ctx, group_id: u32) -> Option<Vec<Entity>> {
+    let members = read_group_members(ctx, group_id)?;
+    let mut summons = Vec::with_capacity(members.len());
+    for member in members {
+        if let Some(summon) = summon_group_member(ctx, member) {
+            summons.push(summon);
+        }
+    }
+    Some(summons)
+}
+
+fn read_group_members(ctx: &Ctx, group_id: u32) -> Option<Vec<GroupMember>> {
     let Some(entry) = ctx
         .world
         .get::<shared::components::Npc>(ctx.me)
@@ -81,20 +92,13 @@ pub(crate) fn summon_creature_group(ctx: &mut Ctx, group_id: u32) -> Option<Vec<
         .3
         .get(&(entry, group_id))
         .cloned();
-    let Some(members) = members else {
+    if members.is_none() {
         warn!(
             entry,
             group_id, "SummonCreatureGroup: authored group is absent"
         );
-        return None;
-    };
-    let mut summons = Vec::with_capacity(members.len());
-    for member in members {
-        if let Some(summon) = summon_group_member(ctx, member) {
-            summons.push(summon);
-        }
     }
-    Some(summons)
+    members
 }
 
 fn summon_group_member(ctx: &mut Ctx, member: GroupMember) -> Option<Entity> {
