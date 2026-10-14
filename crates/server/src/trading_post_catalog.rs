@@ -109,7 +109,16 @@ fn read_item(
     vendor: &Vendor,
     group: Option<&Group>,
 ) -> (TradingPostItem, Result<Grant, String>) {
-    let metadata = conn.query_row("SELECT s.Display_lang,s.Description_lang,i.IconFileDataID,s.OverallQualityID FROM item_sparse s JOIN item i ON i.ID=s.ID WHERE s.ID=?1", [vendor.item], |row| Ok((row.get::<_,String>(0)?,row.get::<_,String>(1)?,row.get::<_,u32>(2)?,row.get::<_,u8>(3)?))).optional();
+    let metadata = conn.query_row(r#"SELECT s.Display_lang, s.Description_lang,
+        CASE WHEN a.ID IS NULL THEN i.IconFileDataID ELSE a.DefaultIconFileDataID END,
+        s.OverallQualityID
+        FROM item_sparse s JOIN item i ON i.ID=s.ID
+        LEFT JOIN item_appearance a ON a.ID=(
+            SELECT ma.ItemAppearanceID
+            FROM item_modified_appearance ma JOIN item_appearance base ON base.ID=ma.ItemAppearanceID
+            WHERE ma.ItemID=s.ID AND base.DefaultIconFileDataID<>0
+            ORDER BY ma.OrderIndex, ma.ID LIMIT 1
+        ) WHERE s.ID=?1"#, [vendor.item], |row| Ok((row.get::<_,String>(0)?,row.get::<_,String>(1)?,row.get::<_,u32>(2)?,row.get::<_,u8>(3)?))).optional();
     let mut row = TradingPostItem {
         id: vendor.id,
         category_id: vendor.category,

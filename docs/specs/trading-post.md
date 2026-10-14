@@ -10,6 +10,7 @@ Retail PerksActivity/PerksVendorItem rows from local CASC69933 and Mainline Bliz
 - [x] Atomic paid collection grants, receipt-bounded refunds, one frozen item and source-backed capital interaction.
 - [x] Zero-duration refund default leaves refund unavailable until an explicit policy is approved; no duration guessed.
 - [x] Vendor replies evaluate existing item class/race/level restrictions for the querying player, carrying optional `usable` state for the source filter. Missing item/player facts remain unknown; usability is not a new purchase restriction.
+- [x] Item icons follow C_Item.GetItemIconByID: lowest-order authored ItemModifiedAppearance → ItemAppearance.DefaultIconFileDataID; items without an appearance icon use their authored Item.IconFileDataID. Empty direct item icons must not erase available base-appearance icons.
 
 ## Test/admin tools (lead decision 2026-10-12)
 

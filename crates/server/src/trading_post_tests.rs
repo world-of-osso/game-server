@@ -368,3 +368,22 @@ fn trading_post_item_usability_tracks_player_level_class_race_and_unknown_metada
         .remove(&189869);
     assert_eq!(usable(&request(&mut h, TradingPostRequest::Query)), None);
 }
+
+#[test]
+fn trading_post_catalog_uses_authored_base_appearance_icons_not_empty_item_icons() {
+    let path = std::env::var_os("TRADING_POST_WORLD_COPY").expect("private world fixture");
+    let conn =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let catalog = catalog::load(&conn).unwrap();
+    let cloak = &catalog.items[&729].0;
+    assert_eq!(cloak.item_id, 223185);
+    assert_eq!(
+        cloak.icon_fdid, 135411,
+        "ItemModifiedAppearance modifier0 → ItemAppearance.DefaultIconFileDataID"
+    );
+    assert_eq!(
+        catalog.items[&456].0.icon_fdid, 2957417,
+        "mounts without item appearances keep their direct authored icon"
+    );
+}
