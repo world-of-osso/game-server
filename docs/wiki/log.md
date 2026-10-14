@@ -1,3 +1,7 @@
+## 2026-10-14 — Complete tick-commit trace and residual login writers
+
+[Residual login writes](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): source-attributed commit counters exposed profession and pet-state read commits in release0af36f35; pet readers and profession snapshots now have held-writer proof. Five frame tests cover worker exclusion and late-Last attribution. Seething system attribution, pressure-controlled post-fix release and complete gameplay script remain open; PSI/swap were absent from earlier timing runs.
+
 ## 2026-10-14 — FIFO discovery/social slices and release p99
 
 [Tick lag](investigations/server-tick-lag.md#additional-writer-slices-and-release-smoke-verified-2026-10-14): world-map4/4, ignore4/4, friends19/19 and pure missing-state readers pass blocked-writer behavioral proof. Private release1e401adf/protocol26771bb8 online per-window p99=22.5/23.7/27.9/20.0/13.0ms; admission991.3ms. Full gameplay script, complete commit instrumentation and HOL remain open; one online frame exceeds50ms.
