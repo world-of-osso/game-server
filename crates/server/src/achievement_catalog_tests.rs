@@ -713,10 +713,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed 12.1.5.70391 census: 5479 + Triage141/native46 + FoodFight3579/native10.
+    // Installed70391: 5481 + BB King4436/4437 behind actual hit-NPC entry4.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5481);
-    for achievement in [141, 291, 1699, 3559, 3579, 63640] {
+    assert_eq!(union.len(), 5483);
+    for achievement in [141, 291, 1699, 3559, 3579, 4436, 4437, 63640] {
         assert!(union.contains(&achievement));
     }
     for achievement in [

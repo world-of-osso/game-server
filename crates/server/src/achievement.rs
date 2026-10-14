@@ -1014,15 +1014,24 @@ pub(crate) fn event_conditions(
 ) -> PlayerConditions {
     let mut conditions = player_conditions(world, player);
     for event in events {
-        if let CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) = event
-            && let Some(auras) = world.get::<crate::auras::ActiveAuras>(*target)
-        {
+        if let CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) = event {
             conditions
-                .target_auras
-                .insert(*target, auras.iter().map(|aura| aura.spell_id).collect());
+                .hit_units
+                .insert(*target, read_spell_hit_unit(world, *target));
         }
     }
     conditions
+}
+
+fn read_spell_hit_unit(world: &World, target: Entity) -> catalog::SpellHitUnit {
+    catalog::SpellHitUnit {
+        creature_entry: world
+            .get::<shared::components::Npc>(target)
+            .map(|npc| npc.template_id),
+        auras: world
+            .get::<crate::auras::ActiveAuras>(target)
+            .map(|auras| auras.iter().map(|aura| aura.spell_id).collect()),
+    }
 }
 
 /// Same native learned spell sources used by type34, never SpellStore membership.

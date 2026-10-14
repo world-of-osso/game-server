@@ -1202,3 +1202,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Maximum-health percent effect165
 
 [Effect165](systems/player-damage.md#maximum-health-percent-effect165) supplies the actual67531 hit producer needed by BB King. Native RED9e862790 accepts authentic cast but health50000 does not become49990. Implementation preserves integer max-health percentage and common mitigation while omitting direct caster/target bonuses; extended Enrage/Barkskin and sub-point fixture/native GREEN pending. TargetCreatureId4 compiler RED valid; no predicate support enabled yet.
+
+## 2026-10-14 — Pre-effect spell-hit target creature entries
+
+[TargetCreatureId4](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) and complete Some selectors use actual hit NPC.template_id for native110, retaining DoEmote54 and every companion. Source165 actualdamage/bonus-exclusion/zero-hit boundary passes before valid predicate RED12660Nonevs3. Generated5621/census5483+1821 adds account4436/4437 only. Full native grants/negatives/reopen GREEN and required acceptance pending.
