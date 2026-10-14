@@ -610,3 +610,76 @@ fn class_completeness_native_creature_type_damage_native_ignore_caster_flags_are
         );
     }
 }
+
+#[test]
+fn class_completeness_native_creature_type_damage_multiplies_actual_periodic_shadow_damage() {
+    let mut h = harness_with_plugins(Vec::new(), &[589, NEMESIS_UNDEAD], 8, false, |app| {
+        app.insert_resource(native_undead());
+    })
+    .unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    place_native_npc(&mut h, FLESH_EATER);
+    let (caster, victim) = (h.caster, h.npc);
+    apply_modifier(&mut h, NEMESIS_UNDEAD, caster);
+    h.cast_and_deliver(589, Some(victim));
+    h.advance(80);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let ticks: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(589)
+                && event.periodic
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .collect();
+    assert!(
+        ticks.len() >= 2,
+        "real native2000ms ticks: {:?}",
+        h.inbox.log
+    );
+    assert!(
+        ticks.iter().all(|event| event.amount == 15.0),
+        "native100SP×0.1246×1.2: {ticks:?}"
+    );
+}
+
+#[test]
+fn class_completeness_native_creature_type_damage_reapplication_reads_current_per_cast_amount() {
+    let mut h = controls();
+    place_native_npc(&mut h, FLESH_EATER);
+    let (caster, victim) = (h.caster, h.npc);
+    apply_modifier(&mut h, NEMESIS_UNDEAD, caster);
+    assert!((454.0..=477.0).contains(&cast_fire_loss(&mut h, victim)));
+    let mut spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(NEMESIS_UNDEAD)
+        .unwrap()
+        .clone();
+    // Controlled per-cast amount override exercises the real snapshot/reapply API;
+    // it is not a claim that native Nemesis's authored20% becomes30% by itself.
+    spell.effects[0].base_points = 30.0;
+    crate::auras::apply_aura_with_spell(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: NEMESIS_UNDEAD,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+        &spell,
+    );
+    let loss = cast_fire_loss(&mut h, victim);
+    assert!(
+        (492.0..=517.0).contains(&loss),
+        "updated per-cast30%, not stale20% or stacked56%: {loss}"
+    );
+}
