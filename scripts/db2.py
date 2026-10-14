@@ -34,8 +34,9 @@ import skyborne_data
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 SCHEMA_SQL = SCRIPT_DIR / "db2_schema.sql"
-DEFAULT_BUILD = "12.1.0.69933"
 DEFAULT_CSV_ROOT = PROJECT_DIR / "../game-engine/data/db2"
+# Follow the installed build: data/db2/active names the current export.
+DEFAULT_BUILD = (DEFAULT_CSV_ROOT / "active").resolve().name
 DEFAULT_DB = PROJECT_DIR / "data/world.db"
 WAGO_URL = "https://wago.tools/db2/{table}/csv?build={build}"
 MAX_ATTEMPTS = 6
