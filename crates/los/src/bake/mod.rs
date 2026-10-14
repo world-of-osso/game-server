@@ -30,8 +30,7 @@ pub const DEFAULT_THICKNESS_CUTOFF: f32 = 1.0;
 #[derive(Default)]
 pub struct CollectedGeometry {
     pub triangles: Vec<[Vec3; 3]>,
-    /// Navigation's M2 obstacle classification. The dedicated ground bake does not
-    /// change navigation's walkable-span policy.
+    /// M2 faces that cannot support grounded movement, classified by authored normals.
     pub obstacles: Vec<[Vec3; 3]>,
 }
 pub type GlobalGeometry = Vec<((u32, u32), CollectedGeometry)>;
@@ -43,8 +42,8 @@ pub struct ModelGeometry {
     pub max: Vec3,
     /// Triangles of alpha-tested or blended batches.
     pub dropped_triangles: usize,
-    /// Authored M2 face normals in model-local engine axes, populated only for
-    /// the dedicated floor bake. LOS and navigation retain their existing rules.
+    /// Authored M2 face normals in model-local engine axes, used by collision bakes.
+    /// LOS render-face selection remains independent.
     floor_normals: Vec<Vec3>,
 }
 
@@ -63,13 +62,12 @@ impl ModelGeometry {
         }
     }
 
-    fn walkable_m2_faces(&self, world: Affine3A) -> Vec<[Vec3; 3]> {
+    fn select_m2_faces(&self, world: Affine3A, walkable: bool) -> Vec<[Vec3; 3]> {
         self.triangles
             .iter()
             .zip(&self.floor_normals)
             .filter_map(|(&triangle, &normal)| {
-                let world_normal = world.matrix3.mul_vec3(normal.into()).normalize_or_zero();
-                (world_normal.y >= shared::ground::min_walkable_normal_y()).then_some(triangle)
+                (m2_face_is_walkable(normal, world) == walkable).then_some(triangle)
             })
             .collect()
     }
@@ -78,6 +76,11 @@ impl ModelGeometry {
     pub fn thickness(&self, scale: f32) -> f32 {
         ((self.max - self.min) * scale).min_element()
     }
+}
+
+fn m2_face_is_walkable(normal: Vec3, world: Affine3A) -> bool {
+    let world_normal = world.matrix3.mul_vec3(normal.into()).normalize_or_zero();
+    world_normal.y >= shared::ground::min_walkable_normal_y()
 }
 
 struct WmoModel {
@@ -504,17 +507,17 @@ impl Baker {
         let thickness = model.thickness(doodad.scale);
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
-            let before = build.triangles.len();
             let added = if self.m2_only {
-                build.add(&model.walkable_m2_faces(doodad.world), doodad.world)
+                build.add(&model.select_m2_faces(doodad.world, true), doodad.world)
             } else {
                 build.add(&model.triangles, doodad.world)
             };
             build.stats.doodad_triangles += added;
             if self.collision && !self.m2_only {
+                let obstacles = model.select_m2_faces(doodad.world, false);
                 build
                     .obstacles
-                    .extend_from_slice(&build.triangles[before..]);
+                    .extend(transformed(&obstacles, doodad.world));
             }
             return;
         }
@@ -556,9 +559,7 @@ impl Baker {
         let file = m2::M2File::parse(&data)?;
         if self.collision {
             let mut geometry = ModelGeometry::new(file.collision_triangles()?, 0);
-            if self.m2_only {
-                geometry.floor_normals = file.collision_normals()?;
-            }
+            geometry.floor_normals = file.collision_normals()?;
             return Ok(geometry);
         }
         let skin = primary_skin(&self.data.join("models"), fdid, file.skin_fdid)?;
