@@ -15,6 +15,8 @@ use crate::quest_data::QuestDb;
 pub(crate) struct QuestObject {
     quest: u32,
     loot: u32,
+    spell: u32,
+    player_cast: bool,
     lock: Vec<LockRequirement>,
     cooldown: f64,
     available_at: f64,
@@ -52,6 +54,13 @@ impl QuestObject {
             } else {
                 0
             },
+            // GameObjectData.h: goober Data10 spell and Data23 playerCast.
+            spell: if kind == GAMEOBJECT_TYPE_GOOBER {
+                row.get(26)?
+            } else {
+                0
+            },
+            player_cast: kind == GAMEOBJECT_TYPE_GOOBER && row.get::<_, u32>(27)? != 0,
             lock: locks.requirements(row.get(18)?)?,
             cooldown: object_cooldown(row, kind)?,
             available_at: 0.0,
@@ -116,6 +125,31 @@ fn validate_quest_and_lock(
     Ok(())
 }
 
+/// TC GameObject.cpp:2930-2932/3563-3567 selects user or GO from playerCast.
+fn cast_goober_spell(
+    world: &mut World,
+    player: Entity,
+    object: Entity,
+    state: &QuestObject,
+) -> Result<(), InteractionError> {
+    if state.spell == 0 {
+        return Ok(());
+    }
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(state.spell)
+        .ok_or(InteractionError::InvalidTarget)?
+        .clone();
+    if state.player_cast {
+        crate::spell_cast::execute_cast(world, player, &spell, Some(player))
+            .map_err(|_| InteractionError::InvalidTarget)
+    } else if crate::spell_cast::try_cast_triggered(world, object, spell.id, Some(player), 0) {
+        Ok(())
+    } else {
+        Err(InteractionError::InvalidTarget)
+    }
+}
+
 /// Revalidate queued uses: map, life, model-box reach, authored key, quest and reuse.
 pub(crate) fn use_object(
     world: &mut World,
@@ -150,5 +184,8 @@ pub(crate) fn use_object(
         .expect("validated quest object")
         .available_at = now + state.cooldown;
     crate::achievement::record_game_object_use(world, player, info.entry);
+    if info.go_type == GAMEOBJECT_TYPE_GOOBER {
+        cast_goober_spell(world, player, object, &state)?;
+    }
     Ok(())
 }

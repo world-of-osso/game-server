@@ -1,3 +1,7 @@
+## 2026-10-14 — Authored goober spell dispatch
+
+[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) retains Data10/23 and source caster selection after normal use validation. Persistent-owner/free-space source Workshop fixture RED6 reaches owned46847 count0 versus1; implementation committed before pending GREEN. Native render, timed traps and siege victory remain separate gates.
+
 ## 2026-10-14 — Derived factions survive DB2 replacement
 
 [DB2 refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) restores six Zephras factions from existing authored receipts atomically; preserves124 build receipts. Private import changes only faction_template+6/db2_row_source+6, integrity OK; native reaction test and9 importer/Skyborne tests pass. Old-source audit118/120; AreaTable/OverrideSpellData explicitly unavailable. Canonical untouched.
