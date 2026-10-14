@@ -16,7 +16,7 @@ fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
 fn shield_duel_for_class(mastery_points: f32, caster_class: u8) -> (Harness, Entity) {
     let mut h = harness(
         Vec::new(),
-        &[CRITICAL_BLOCK, 203524, 1464, 17, 853, 7384, 64382, 19434],
+        &[CRITICAL_BLOCK, 203524, 1464, 17, 853, 7384, 51723, 19434],
         caster_class,
     )
     .unwrap();
@@ -344,9 +344,10 @@ fn class_completeness_native_stunned_player_cannot_block_weapon_spell() {
 
 #[test]
 fn class_completeness_native_weapon_spell_no_active_defense_and_no_block_flags_are_honored() {
-    // Native Overpower7384 Attr0NoActiveDefense; ShatteringThrow64382 Attr8NoAttackBlock.
-    for (spell, frames) in [(7384, 3), (64382, 40)] {
-        let (mut h, defender) = shield_duel(100.0);
+    // Native Overpower7384 Attr0NoActiveDefense; FanOfKnives51723 Attr8NoAttackBlock.
+    // ShatteringThrow64382 is a dispel-only parent with a separate unbound damage child.
+    for (spell, frames, class) in [(7384, 3, 1), (51723, 20, 4)] {
+        let (mut h, defender) = shield_duel_for_class(100.0, class);
         apply_mastery(&mut h, defender);
         let hits = cast_damage_spell(&mut h, defender, spell, frames);
         assert_eq!(hits.len(), 1, "{spell}: {hits:?}");
