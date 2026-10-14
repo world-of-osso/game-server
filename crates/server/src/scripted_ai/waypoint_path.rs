@@ -552,6 +552,8 @@ pub(crate) fn path_movement_system(world: &mut World) {
             (Some(_), false) => CreatureMotion::Run,
         };
         if *position != before {
+            debug!(?entity, from=?before, to=?*position, ?state, path=movement.path.id, node=movement.node,
+                driver="cpp_waypoint", "scripted path movement");
             moved.push(entity);
         }
         let facing = crate::creature_ai::facing_along(position.x - before.x, position.z - before.z);

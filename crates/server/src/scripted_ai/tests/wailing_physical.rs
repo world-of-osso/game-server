@@ -5,7 +5,9 @@ use super::*;
 #[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
 fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injection() {
     bevy::log::tracing_subscriber::fmt()
-        .with_env_filter("game_server::scripted_ai::waypoint_path=debug")
+        .with_env_filter(
+            "game_server::scripted_ai::waypoint_path=debug,game_server::creature_ai=debug",
+        )
         .with_test_writer()
         .try_init()
         .expect("isolated physical fixture logger");
@@ -75,7 +77,19 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         let step = point.distance(previous);
         assert!(
             step < 0.5,
-            "no relocation/shortcut: tick={tick} step={step} from={previous:?} to={point:?}"
+            "no relocation/shortcut: tick={tick} step={step} from={previous:?} to={point:?}; delta={:?} state={:?} gait={:?} speed={:?} path={}",
+            h.app.world().resource::<Time>().delta(),
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(disciple),
+            h.app.world().get::<CreatureMotion>(disciple),
+            h.app
+                .world()
+                .get::<shared::components::MovementSpeed>(disciple),
+            h.app
+                .world()
+                .get::<crate::scripted_ai::waypoint_path::PathMovement>(disciple)
+                .is_some()
         );
         let a = Vec3::new(previous.x, previous.z, -previous.y);
         let b = Vec3::new(point.x, point.z, -point.y);
