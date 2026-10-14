@@ -53,6 +53,8 @@ pub(crate) mod control_dream;
 mod control_dream_tests;
 pub(crate) mod cosmetic;
 pub mod creature;
+#[cfg(test)]
+mod creature_type_damage_tests;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
