@@ -1214,8 +1214,6 @@ pub(crate) fn record_accepted_summon(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::AcceptSummon);
 }
 
-/// Successful scripted encounter boundary. A scripted defeat (Hogger's surrender
-/// included) credits its creature criteria even when no corpse is produced.
 /// TC InstanceScript435–441/Player21915–21925: read active loot locks before DONE saves them.
 pub(crate) fn record_encounter_loot_defeat(
     world: &mut World,
@@ -1239,7 +1237,7 @@ fn encounter_loot_eligible_players(
     encounter: u32,
     difficulty: u32,
 ) -> Vec<Entity> {
-    let mut players = world.query::<(&Authenticated, &InWorld, &PlayerLink)>();
+    let players = authenticated_encounter_players(world, map);
     let Some(instances) = world.get_resource::<crate::maps::InstanceManager>() else {
         return Vec::new();
     };
@@ -1257,16 +1255,8 @@ fn encounter_loot_eligible_players(
     };
     let now = crate::maps::difficulty::now(world).unix;
     players
-        .iter(world)
-        .filter_map(|(_, owner, link)| {
-            let player = link.0;
-            if world.get::<Player>(player).is_none() || world.get::<InMap>(player) != Some(&map) {
-                return None;
-            }
-            let character = world.get::<crate::persistence::ClientId>(player)?.0;
-            if character != owner.character_id {
-                return None;
-            }
+        .into_iter()
+        .filter_map(|(player, character)| {
             let locked = instances
                 .locks
                 .find_active_lock(character, copy, now)
@@ -1276,6 +1266,23 @@ fn encounter_loot_eligible_players(
         .collect()
 }
 
+fn authenticated_encounter_players(world: &mut World, map: InMap) -> Vec<(Entity, u64)> {
+    world
+        .query::<(&Authenticated, &InWorld, &PlayerLink)>()
+        .iter(world)
+        .filter_map(|(_, owner, link)| {
+            let player = link.0;
+            if world.get::<Player>(player).is_none() || world.get::<InMap>(player) != Some(&map) {
+                return None;
+            }
+            let character = world.get::<crate::persistence::ClientId>(player)?.0;
+            (character == owner.character_id).then_some((player, character))
+        })
+        .collect()
+}
+
+/// Successful scripted encounter boundary. A scripted defeat (Hogger's surrender
+/// included) credits its creature criteria even when no corpse is produced.
 pub(crate) fn record_encounter_defeat(
     world: &mut World,
     map: InMap,
