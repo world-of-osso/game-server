@@ -180,6 +180,7 @@ impl CharacterStats {
         DerivedStats {
             spell_power: self.spell_power,
             attack_power: self.attack_power,
+            ranged_attack_power: self.ranged_attack_power,
             crit_pct: self.crit_pct,
             haste_pct: self.haste_pct,
             mastery_pct: self.mastery_pct,

@@ -200,3 +200,7 @@ Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast s
 ## Charred Warblades
 
 - [x] Native213010 must collect eligible owner Fire-school damage using effect0's native percentage, truncate each event contribution, cast self213011 once at the1000ms tick and clear accumulated damage after ticking/removal. Non-Fire damage, other actors and already-spent contributions must not heal. Refresh of the same aura preserves pending contributions.
+
+### Distinct owner attack powers
+
+The replicated owner stats carry distinct melee and ranged attack power. Ranged-defense spell coefficient text uses ranged power, matching native damage selection; other spells and explicit `$AP` tokens retain melee power. Missing owner stats must not synthesize either value from the other.
