@@ -140,7 +140,9 @@ fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
         .collect();
     assert_eq!(ticks.len(), 6);
     assert!(
-        ticks.iter().all(|e| e.amount == 6), // Active Effect718207: 0.252 AP × fixture AP22, rounded.
+        // Active Effect718207 snapshots fixture AP100 at application, before
+        // the first stats update: 0.252 × 100, rounded to25 each native tick.
+        ticks.iter().all(|e| e.amount == 25),
         "{ticks:?}"
     );
     assert!(!crate::auras::has_aura(h.app.world(), target, 269747));
