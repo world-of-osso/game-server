@@ -1,8 +1,8 @@
 //! `MotionMaster::MovePath` for C++ scripts: TC a352b1fa WaypointMovementGenerator
 //! on MoveSplineInit/MoveSpline/Spline, for the path shapes scripts use today.
 //! Unported (rejected by `move_path`): node delays/orientations, backwards paths and
-//! repeating paths. Ground (gravity) units would pathfind non-exact nodes; only
-//! gravity-disabled units, whose PathGenerator builds a shortcut, are supported.
+//! repeating paths. Ground non-exact nodes use the existing baked navigation;
+//! gravity-disabled units retain the source PathGenerator shortcut.
 
 use bevy::prelude::*;
 use rusqlite::Connection;
@@ -134,8 +134,11 @@ pub(crate) fn move_path(world: &mut World, unit: Entity, path_id: u32) -> bool {
         error!("MovePath {path_id}: node delay/orientation or backwards path not ported");
         return false;
     }
-    if !flying && !path.exact_spline() {
-        error!("MovePath {path_id}: ground pathfinding between nodes not ported");
+    if !flying
+        && !path.exact_spline()
+        && !world.contains_resource::<crate::navigation::Navigation>()
+    {
+        error!("MovePath {path_id}: ground path requires baked navigation");
         return false;
     }
     world.entity_mut(unit).insert(PathMovement {
@@ -278,6 +281,7 @@ fn path_velocity(path: &ScriptPath, spawn: &SpawnPoint, walking: bool, flying: b
 }
 
 struct Launch<'a> {
+    map_id: u32,
     position: Vec3,
     orientation: f32,
     spawn: &'a SpawnPoint,
@@ -286,25 +290,22 @@ struct Launch<'a> {
 }
 
 /// `WaypointMovementGenerator::StartMove`: the next spline, or the path end.
-fn start_move(movement: &mut PathMovement, launch_from: &Launch) -> Option<u32> {
+fn start_move(
+    movement: &mut PathMovement,
+    launch_from: &Launch,
+    navigation: Option<&crate::navigation::Navigation>,
+) -> Result<Option<u32>, String> {
     let path = movement.path.clone();
     if movement.started {
         // `ComputeNextNode` after `OnArrived`.
         if movement.node + 1 == path.nodes.len() {
-            return Some(path.nodes[movement.node].0);
+            return Ok(Some(path.nodes[movement.node].0));
         }
         movement.node += 1;
     }
     movement.started = true;
     let exact = path.exact_spline();
-    let targets = if exact {
-        &path.nodes[movement.node..]
-    } else {
-        &path.nodes[movement.node..=movement.node]
-    };
-    let controls: Vec<Vec3> = std::iter::once(launch_from.position)
-        .chain(targets.iter().map(|(_, position)| *position))
-        .collect();
+    let controls = path_controls(&path, movement.node, launch_from, navigation)?;
     let smooth = exact && controls.len() > 2 && launch_from.flying;
     let velocity = path_velocity(
         &path,
@@ -314,7 +315,11 @@ fn start_move(movement: &mut PathMovement, launch_from: &Launch) -> Option<u32> 
     );
     let mut spline = launch(controls, smooth, launch_from.orientation, velocity);
     if let Some(spline) = &mut spline {
-        spline.last_node = movement.node + spline.last_node - 1;
+        spline.last_node = if exact {
+            movement.node + spline.last_node - 1
+        } else {
+            movement.node
+        };
         let interior = movement.node != 0 && movement.node != path.nodes.len() - 1;
         if !exact
             && spline.end_ms > 2 * SEND_NEXT_POINT_EARLY_DELTA_MS
@@ -325,7 +330,46 @@ fn start_move(movement: &mut PathMovement, launch_from: &Launch) -> Option<u32> 
         }
     }
     movement.spline = spline;
-    None
+    Ok(None)
+}
+
+/// TC CreateSingularPointPath: owner position, then calculated path after its first
+/// point. Never reinterpret Detour corners as authored waypoint node indices.
+fn path_controls(
+    path: &ScriptPath,
+    node: usize,
+    launch_from: &Launch,
+    navigation: Option<&crate::navigation::Navigation>,
+) -> Result<Vec<Vec3>, String> {
+    if path.exact_spline() || launch_from.flying {
+        let targets = if path.exact_spline() {
+            &path.nodes[node..]
+        } else {
+            &path.nodes[node..=node]
+        };
+        return Ok(std::iter::once(launch_from.position)
+            .chain(targets.iter().map(|(_, position)| *position))
+            .collect());
+    }
+    let navigation = navigation.ok_or("ground path has no navigation resource")?;
+    let target = bevy(path.nodes[node].1);
+    let from = bevy(launch_from.position);
+    let route = navigation
+        .query_path(
+            launch_from.map_id,
+            Vec3::new(from.x, from.y, from.z),
+            Vec3::new(target.x, target.y, target.z),
+        )?
+        .ok_or("ground path map has no navigation bake")?;
+    Ok(std::iter::once(launch_from.position)
+        .chain(route.into_iter().skip(1).map(|point| {
+            wow(&Position {
+                x: point.x,
+                y: point.y,
+                z: point.z,
+            })
+        }))
+        .collect())
 }
 
 fn wow(position: &Position) -> Vec3 {
@@ -341,7 +385,10 @@ fn bevy(position: Vec3) -> Position {
 /// Advance every script path; a finished path sets home and informs the AI.
 pub(crate) fn path_movement_system(world: &mut World) {
     let dt_ms = world.resource::<Time>().delta().as_millis() as i32;
+    // Exclusive system: keep the navigation cache out of World's mutable query borrow.
+    let navigation = world.remove_resource::<crate::navigation::Navigation>();
     let mut ended = Vec::new();
+    let mut failed = Vec::new();
     let mut moved = Vec::new();
     let mut changed = Vec::new();
     let mut movers = world.query_filtered::<(
@@ -349,6 +396,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         &mut Position,
         &mut PathMovement,
         &SpawnPoint,
+        &crate::maps::InMap,
         Has<Walking>,
         Has<GravityDisabled>,
         Option<&mut Rotation>,
@@ -358,8 +406,18 @@ pub(crate) fn path_movement_system(world: &mut World) {
         Without<DeathState>,
         Without<super::jump_movement::JumpMovement>,
     )>();
-    for (entity, mut position, mut movement, spawn, walking, flying, rotation, motion, speed) in
-        movers.iter_mut(world)
+    for (
+        entity,
+        mut position,
+        mut movement,
+        spawn,
+        map,
+        walking,
+        flying,
+        rotation,
+        motion,
+        speed,
+    ) in movers.iter_mut(world)
     {
         // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
         let before = *position;
@@ -375,6 +433,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         }
         if movement.spline.is_none() && movement.wait_ms <= 0 {
             let launch_from = Launch {
+                map_id: map.map_id,
                 position: wow(&position),
                 orientation: rotation
                     .as_ref()
@@ -383,8 +442,10 @@ pub(crate) fn path_movement_system(world: &mut World) {
                 walking,
                 flying,
             };
-            if let Some(node_id) = start_move(&mut movement, &launch_from) {
-                ended.push((entity, node_id, movement.path.id, *position));
+            match start_move(&mut movement, &launch_from, navigation.as_ref()) {
+                Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
+                Ok(None) => {}
+                Err(error) => failed.push((entity, movement.path.id, error)),
             }
         }
         let gait = match (&movement.spline, walking) {
@@ -412,6 +473,13 @@ pub(crate) fn path_movement_system(world: &mut World) {
         if dirty {
             changed.push(entity);
         }
+    }
+    if let Some(navigation) = navigation {
+        world.insert_resource(navigation);
+    }
+    for (entity, path_id, error) in failed {
+        error!("MovePath {path_id} for {entity:?}: {error}; stopped without arrival");
+        world.entity_mut(entity).remove::<PathMovement>();
     }
     if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
         for &entity in &changed {
