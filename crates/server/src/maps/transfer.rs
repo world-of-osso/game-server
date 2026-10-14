@@ -58,7 +58,7 @@ pub(crate) fn teleport_to(
     let Some(&current) = world.get::<InMap>(player) else {
         return false;
     };
-    if current.map_id == destination.map_id && remains_in_current_copy(world, player, current) {
+    if current.map_id == destination.map_id {
         near_teleport(world, player, &destination, options);
         return true;
     }
@@ -90,22 +90,6 @@ pub(crate) fn teleport_to(
     let origin = current_location(world, player, current.map_id);
     begin_transfer(world, player, destination, options, origin);
     true
-}
-
-/// A shared map ID is not a shared instance: follower admission can change the
-/// selected difficulty while the character is already in a Normal copy.
-fn remains_in_current_copy(world: &World, player: Entity, current: InMap) -> bool {
-    if current.instance_id == 0 {
-        return true;
-    }
-    let entrant = entrant_of(world, player);
-    let unix = super::difficulty::now(world).unix;
-    world.resource::<InstanceManager>().find_instance(
-        world.resource::<MapStore>(),
-        current.map_id,
-        entrant,
-        unix,
-    ) == Some(current)
 }
 
 fn near_teleport(

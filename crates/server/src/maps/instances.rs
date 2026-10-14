@@ -140,25 +140,6 @@ impl InstanceManager {
         manager
     }
 
-    /// A companion group formed after solo admission inherits that owned copy.
-    pub(crate) fn bind_group_instance(
-        &mut self,
-        group: GroupId,
-        owner: u64,
-        map: InMap,
-    ) -> Result<(), String> {
-        let copy = self
-            .copies
-            .get(&map)
-            .ok_or("admitted follower copy is absent")?;
-        if copy.owner != owner {
-            return Err("admitted follower copy belongs to another character".into());
-        }
-        self.recent_by_group
-            .insert((group, map.map_id), (owner, map.instance_id));
-        Ok(())
-    }
-
     /// The difficulty `entrant` enters `map_id` at, `None` when the map offers nothing
     /// it downscales to.
     fn entry_difficulty<'a>(

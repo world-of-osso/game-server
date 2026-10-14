@@ -162,85 +162,7 @@ fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
 }
 
 #[test]
-fn follower_combat_ownership_credits_real_spell_kills_to_the_character() {
-    let mut h = crate::spell_cast::test_harness::harness(vec![], &[133], 8).unwrap();
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(crate::persistence::ClientId(30));
-    let follower = spawn_follower(&mut h, profile(209059, GroupRole::Dps, 133, 0));
-    h.app.world_mut().entity_mut(h.npc).insert(Health {
-        current: 100.0,
-        max: 100.0,
-    });
-    h.app
-        .world_mut()
-        .get_mut::<crate::networking::CombatTarget>(h.caster)
-        .unwrap()
-        .0 = Some(h.npc);
-    for _ in 0..120 {
-        update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    assert_eq!(
-        h.health(h.npc),
-        0.0,
-        "the companion must execute a real lethal Fireball"
-    );
-    let tap = h
-        .app
-        .world()
-        .get::<crate::creature_tap::CreatureTap>(h.npc)
-        .expect("companion damage must tap its authenticated owner");
-    assert_eq!(tap.tappers, vec![30]);
-    assert_eq!(tap.xp_factor(100.0), 1.0);
-    assert_eq!(
-        h.app
-            .world()
-            .get::<shared::components::UnitTap>(h.npc)
-            .unwrap()
-            .0,
-        vec![30]
-    );
-    assert!(
-        h.app
-            .world()
-            .get::<crate::persistence::ClientId>(follower)
-            .is_none(),
-        "companions must not become persisted characters"
-    );
-}
-
-#[test]
-fn follower_combat_ownership_allows_ruby_faction_to_retaliate() {
-    let mut h = crate::spell_cast::test_harness::harness(vec![], &[458324], 8).unwrap();
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
-    let kit = profile(209059, GroupRole::Dps, 133, 0);
-    let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
-    super::spawning::initialize(h.app.world_mut(), h.caster, unit, kit).unwrap();
-    h.app
-        .world_mut()
-        .entity_mut(h.npc)
-        .insert(UnitFactionTemplate(16));
-    assert!(
-        crate::spell_cast::targets::relation_matches(
-            h.app.world(),
-            h.npc,
-            unit,
-            crate::spell_cast::targets::Relation::Enemy
-        ),
-        "Ruby faction16 must be able to fight an owned companion"
-    );
-}
-
-#[test]
-fn follower_initialization_uses_native_stats_without_unassigned_follower_aura() {
+fn follower_initialization_applies_authored_aura_and_native_class_level_stats() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[458324], 8).unwrap();
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -255,7 +177,7 @@ fn follower_initialization_uses_native_stats_without_unassigned_follower_aura() 
         .0;
     let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
     super::spawning::initialize(h.app.world_mut(), h.caster, unit, kit).unwrap();
-    assert!(!crate::auras::has_aura(h.app.world(), unit, 458324));
+    assert!(crate::auras::has_aura(h.app.world(), unit, 458324));
     assert_eq!(
         h.app
             .world()

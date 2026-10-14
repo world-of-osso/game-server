@@ -1,6 +1,6 @@
 # Retail follower data and approved spec bridge
 
-Verified: 2026-10-11. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
+Verified: 2026-10-11. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Dungeon entry and both-skin live completion still require proof.
 
 ## Source identity
 
@@ -26,7 +26,7 @@ These are eleven specs across ten classes. No Rogue/Death Knight/Demon Hunter fo
 
 ## Runtime bridge
 
-`followers/` loads verified profiles and populated difficulty205 destinations, fills the selected player role to1 tank/1 healer/3 damage, uses authenticated templates/models and native labelled-spec passives. Spell458324 is not assigned in the source/runtime addon rows; it must not be inferred from its name. Companion group identities occupy the high half of the runtime group-ID space; they are not persisted characters. Existing party rosters and health updates include the NPCs.
+`followers/` loads verified profiles and populated difficulty205 destinations, fills the selected player role to1 tank/1 healer/3 damage, uses authenticated templates/models and applies aura458324. Companion group identities occupy the high half of the runtime group-ID space; they are not persisted characters. Existing party rosters and health updates include the NPCs.
 
 Role AI uses ordinary `creature_cast`, native cooldowns/costs/passives, threat/taunt, chase and owner-follow systems. Tanks recover an ally's attacker with their real taunt and approach melee reach; healers pick the lowest living party-health fraction before damage; damage roles use bounded cooldown/filler priorities. Missing cast-range metadata stops combat instead of substituting melee. The bridge uses native class/spec/level stats and consistent health/mana; it does not infer NPC gear. Holy Priest137031 activates the sourced Flash Heal mana-cost row, so passives must be applied rather than allowing a free heal.
 
@@ -46,36 +46,6 @@ Local WorldSafeLocs1369425 extraction was attempted once; the current local CASC
 
 Private5750 admission now creates the1T/1H/3D Ruby party. Newly promoted companion display113757 (Crenna) lacks a runtime eye receipt: her real Regrowth fails `LineOfSight`, as required by the existing fail-closed LOS contract. Source/template SQL alone therefore does not prepare a playable companion. Native Ruby displays likewise expose incomplete appearance coverage. Refresh authenticated eye/appearance receipts privately, never bypass LOS or substitute models. The ignored `crates/los/tests/follower_bake.rs` fixture bakes every pose for the actual Ruby population plus eleven follower templates and reloads the produced table through the runtime reader; its explicit paths keep writes out of canonical caches. Admission is live evidence, not boss/loot or both-skin certification.
 
-Private authenticated data refresh now supplies142 displays/1,420 pose rows through existing M2 eye extraction; strict appearance merge adds138 displays while preserving13,218 existing records. Crenna casts real Regrowth and all four companions follow movement. Missing verified asset receipts still prevent some Ruby models from rendering; direct extracted bytes are not publication receipts.
-
-A second run reproduced wrong difficulty on a character saved inside Normal Ruby: `teleport_to` compared only map IDs, so the205 queue used a near teleport and stayed in copy1/difficulty1. Same-map near teleport now requires the destination's resolved instance to equal the current copy. A loopback transfer/WorldPortAck regression reproduces Normal→205 on the same authored entrance and asserts distinct copy IDs plus actual205 difficulty. This is a deliberate extension of the near-teleport rule for follower admission, not a change to source population tags.
-
-## Combat ownership and reward boundary
-
-A real difficulty205 Juggernaut kill exposed two ownership omissions. Followers copied the owner's faction but did not mark controlled ownership. Their inferred458324 bootstrap also gave type4 invisibility, which the old boolean visibility handling hid from every client and rejected as a hostile spell target. They also lacked `ClientId` (correctly: not persisted characters), and `CreatureTap::record_damage` only recognized direct player attackers, leaving companion-only kills untapped. Neither TDB nor runtime addon data assigns458324 to these templates. Lead explicitly approved removing the inferred application (not stripping an assigned aura or bypassing detection); native labelled-spec passives remain. No invis-detection merge or separate visibility model is part of this fix. Initialization marks controlled ownership; damage attribution resolves `Follower.owner` to the authenticated character before the existing subgroup reward logic. Ordinary unrelated NPCs still grant no player credit. Targeted tests exercise actual lethal Fireball/tap replication and Ruby's real faction16 retaliation boundary.
-
-Source loot remains separate: Melidrussa188252 has lootid0 in base and every imported difficulty, and neither source nor runtime creature loot table has entry188252. Owner attribution cannot create absent authored drops; no loot rows were invented. The native first-boss/loot/both-skin goal remains open.
-
-## Companion-group instance binding
-
-A private same-map reposition reproduced another admission lifecycle bug: the player enters a solo205 copy before the companions form a group. The new group had no recent-instance binding, so another same-map teleport allocated a second205 copy and left the NPCs behind. Group difficulty was already205; the missing state was the group's recent-instance pointer. `join_party` now binds the new group to the already-admitted copy after checking its owner. The active run stores the exact `InMap`, not just map ID, and ends/unsummons its companions if the owner enters a different copy of the same dungeon. Two behavioral regressions reproduce actual party formation→same-map teleport and cross-copy cleanup; no synthetic entrance or geometry change.
-
-## Both-skin first-boss proof — 2026-10-11
-
-Server runtime `ceec9a1b` (binding fix72f4f280), engine329132e3f, protocolb452322. Private UDP5750/redb/world.db; `fb_follower_ai3`, character30 Followproof, Human Mage12. Level12 uses authored scaling/native un-geared stats, not injected combat buffs. Ruby2436/map2521/difficulty205 uses the approved same-map Normal population and entrance100030.
-
-| Boundary | Observed proof | Limit |
-|---|---|---|
-| Queue/party | Independent Modern and Forever authoritative acceptance; Damage player + Garrick Tank + Crenna Healer + Shuja/Meredy Damage, five online | Other player roles have composition tests, not these rendered runs |
-| Follow/combat | Position/health snapshots, rendered companions, Garrick target-of-target and boss swings, Regrowth to NPC tank, Fireball/Fire Blast and Lightning Bolt/Lava Burst | Four companion specs; not full11-profile/rotation/defensive/hazard parity |
-| Trash/boss | Juggernaut235,651→0 and Melidrussa860,606→0 in each skin; real cast/damage/death events, five alive, owner kill XP | First boss only; no scripted encounter/full-instance certificate |
-| Loot | Both in-range interact/take attempts return no loot window; inventory unchanged (Hearthstone only) | Source/base/all-difficulty lootid0 and zero188252 loot rows; no fabricated drop |
-| Route/pixels | Eight inspected1280px PNGs in `/syncthing/AgentShared/2026-10-11/follower-ai/` | Native walk blocked near1434/-180; private admin boss-approach reposition; WMO material, random NPC receipt and shoulder-bone visual gaps remain |
-
-Durable evidence: engine `data/diagnostics/follower-ai3-2026-10-11/`: `{modern,forever}-boss-final-health.log`, `*-boss-death-{combat,roster}.log`, `*-boss-loot-{interact,take}.log`, before/after inventory, authoritative queue snapshots and final client/server logs. One private server/client at a time; both stopped after captures. No canonical database writes, UDP5000 operations, master merge or posed scene. Source-required screenshot output only (PNG) was shared.
-
-Private appearance cache strictly adds138 displays while preserving13,218; existing M2 baker produces142 displays/1,420 eye poses. Maintained frozen-root local-CASC importer publishes768 additive private asset receipts/422 aliases over six fragments. These restore the selected encounter/party render dependencies, not general asset closure. All cache/model/texture/product overlays remain private; no promotion to canonical data. The incomplete loot/walk gates keep the full requested goal open.
-
 ## Lead import instructions
 
 Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Lead confirmed canonical import of11 profiles,27 LFG rows,9,586 source spell rows and11 content templates. Agent writes remain private. Existing instance population is separate from follower profile/reference import.
@@ -92,12 +62,11 @@ Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-202
 ## Proof ledger
 
 - Profile SQL: initial RED; current2/2 behavioral tests pass, including repeated application, source display preservation and refusal to overwrite the source database; no ResourceWarnings.
-- Role/executor: current8/8 targeted tests pass atb798d74, retained atceec9a1b (later changes are copy binding/cleanup only). Normal catalog plus actual NPC/game-object spawning:3/3 at7fb41eb. Actual Fireball damage, Hand of Reckoning threat, lowest-health Flash Heal/native cost, native initialization, role composition, source-range refusal and admission-source gating are exercised. The old458324 assertion described an unsupported bootstrap and is superseded by a no-unassigned-aura regression.
+- Role/executor/catalog: current7/7 targeted tests pass. Actual Fireball damage, Hand of Reckoning threat, lowest-health Flash Heal/native cost, authored458324 initialization, role composition, source-range refusal and admission-source gating are exercised.
 - Party integration: loopback roster/health test passes; five members remain online and changed Garrick health reaches the player. This is not rendered party-frame proof.
 - Native host/transport:2/2 targeted tests pass, including ephemeral UDP request/refusal round trip and decoded native account state. Source protocol pinnedb452322 for that proof.
 - Server cargo check and cargo fmt --check pass. No full suites were run. Evidence logs live in the diagnostics directory, not only slot targets.
-- Copy/lifecycle: initial2/2 RED; actual party formation→same-map transfer and cross-copy cleanup2/2 GREEN atceec9a1b. Check/fmt exit0 on current Rust scope; no full suite. Eye-data fixture1/1 reloads all142/1,420 authored rows.
-- Live: both-skin first-boss slice above passes; loot source and walked-route gates remain open. All11 specs/full-instance behavior are not certified. UDP5000 and canonical database writes untouched.
+- **Missing:** UDP5750 dungeon queue→entry→trash/boss completion and inspected Modern/Forever PNGs. No rendered client/private game server was started; UDP5000 and canonical database writes were untouched by this agent.
 
 ## Sources
 

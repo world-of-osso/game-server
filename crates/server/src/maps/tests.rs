@@ -773,63 +773,6 @@ fn level_nine_is_refused_and_level_ten_enters_the_stockade() {
 }
 
 #[test]
-fn follower_admission_from_normal_ruby_transfers_to_a_distinct_205_copy() {
-    let mut h = harness().unwrap();
-    let player = h.spawn_at_level(30, 80, STORMWIND, STOCKADE_EXIT_TARGET);
-    let destination = WorldLocation {
-        map_id: 2521,
-        position: Vec3::new(1386.2, -169.719, 131.0),
-        orientation: 0.0,
-    };
-    assert!(teleport_to(
-        h.app.world_mut(),
-        player.player,
-        destination,
-        TeleportOptions::default()
-    ));
-    h.new_worlds(&player);
-    h.ack(&player);
-    let normal = h.map_of(&player).unwrap();
-    assert_eq!(
-        h.app
-            .world()
-            .resource::<InstanceManager>()
-            .copy_difficulty(normal)
-            .unwrap()
-            .difficulty_id,
-        1
-    );
-    // Follower begin_run sets205 before teleporting to the authored entrance.
-    h.app
-        .world_mut()
-        .entity_mut(player.player)
-        .insert(DungeonDifficulty(205));
-    assert!(teleport_to(
-        h.app.world_mut(),
-        player.player,
-        destination,
-        TeleportOptions::default()
-    ));
-    assert!(
-        h.app.world().get::<MapTransfer>(player.player).is_some(),
-        "Follower admission must not near-teleport within the Normal copy"
-    );
-    assert_eq!(h.new_worlds(&player).pop().unwrap().map_id, 2521);
-    h.ack(&player);
-    let follower = h.map_of(&player).unwrap();
-    assert_ne!(normal, follower);
-    assert_eq!(
-        h.app
-            .world()
-            .resource::<InstanceManager>()
-            .copy_difficulty(follower)
-            .unwrap()
-            .difficulty_id,
-        205
-    );
-}
-
-#[test]
 fn teleporting_across_continents_moves_the_player_to_kalimdor() {
     let Some(mut h) = harness() else { return };
     let player = h.spawn(1, STORMWIND, STOCKADE_EXIT_TARGET);

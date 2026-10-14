@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use shared::components::{Level, Mana, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy};
+use shared::components::{Level, Mana, UnitFactionTemplate, UnitLevel, UnitSummonedBy};
 
 use super::{Follower, Profile};
 use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
@@ -31,10 +31,6 @@ pub(super) fn initialize(
     let faction = *world
         .get::<UnitFactionTemplate>(owner)
         .ok_or("follower owner has no faction")?;
-    let flags = UnitFlags(
-        world.get::<UnitFlags>(unit).map_or(0, |flags| flags.0)
-            | crate::faction::UNIT_FLAG_PLAYER_CONTROLLED,
-    );
     let (stats, pools, passives) = class_stats(world, &profile, level)?;
     let mana = Mana {
         current: stats.base_mana,
@@ -56,11 +52,12 @@ pub(super) fn initialize(
             health,
             UnitLevel(level),
             faction,
-            flags,
             UnitSummonedBy(owner.to_bits()),
             crate::creature_ai::FollowOwner::new(owner),
         ));
     crate::auras::sync_passives(world, unit, crate::auras::AuraSource::KnownSpell, &passives);
+    crate::spell_cast::creature_cast(world, unit, 458324, Some(unit), true)
+        .map_err(|error| format!("authored Follower aura failed: {error:?}"))?;
     if form != 0 {
         crate::spell_cast::creature_cast(world, unit, form, Some(unit), true)
             .map_err(|error| format!("follower preparation spell {form} failed: {error:?}"))?;

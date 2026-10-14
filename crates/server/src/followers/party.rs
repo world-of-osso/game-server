@@ -17,7 +17,6 @@ pub(crate) struct FollowerRun {
     dungeon: Dungeon,
     profiles: Vec<Profile>,
     members: Vec<Entity>,
-    copy: Option<InMap>,
     previous_difficulty: u32,
     origin: WorldLocation,
     player_role: GroupRole,
@@ -108,7 +107,6 @@ fn begin_run(
         dungeon,
         profiles,
         members: Vec::new(),
-        copy: None,
         previous_difficulty,
         origin,
         player_role: role,
@@ -132,11 +130,10 @@ pub(super) fn advance_runs(world: &mut World) {
         if world.get::<MapTransfer>(player).is_some() {
             continue;
         }
-        let player_map = world.get::<InMap>(player).copied();
-        let at_destination =
-            player_map.is_some_and(|map| map.map_id == run.dungeon.entrance.map_id);
-        let in_run_copy = run.copy.is_none_or(|copy| player_map == Some(copy));
-        if !at_destination || !in_run_copy {
+        if world
+            .get::<InMap>(player)
+            .is_none_or(|map| map.map_id != run.dungeon.entrance.map_id)
+        {
             end_run(world, player, &run);
             continue;
         }
@@ -178,16 +175,10 @@ fn spawn_party(world: &mut World, owner: Entity, run: &FollowerRun) -> Result<()
         }
         return Err(error);
     }
-    let copy = *world
-        .get::<InMap>(owner)
-        .ok_or("follower owner left its admitted copy")?;
-    {
-        let mut state = world
-            .get_mut::<FollowerRun>(owner)
-            .expect("queued follower run");
-        state.members = members;
-        state.copy = Some(copy);
-    }
+    world
+        .get_mut::<FollowerRun>(owner)
+        .expect("queued follower run")
+        .members = members;
     send_update(
         world,
         owner,
@@ -236,12 +227,6 @@ fn join_party(
     let roster = registry
         .build_roster(group, &online)
         .expect("formed companion roster");
-    let copy = *world
-        .get::<InMap>(owner)
-        .ok_or("companion party owner has no admitted copy")?;
-    world
-        .resource_mut::<crate::maps::InstanceManager>()
-        .bind_group_instance(group, id, copy)?;
     if let Some(conn) = crate::spell_cast::owner_connection(world, owner) {
         if let Some(mut sender) =
             world.get_mut::<MessageSender<shared::protocol::GroupRosterSnapshot>>(conn)
@@ -328,163 +313,5 @@ fn snapshot(world: &World, player: Entity, run: &FollowerRun) -> LfgSnapshot {
                 })
                 .collect(),
         }),
-    }
-}
-
-#[cfg(test)]
-mod copy_tests {
-    use super::*;
-
-    fn fixture() -> (App, Entity, FollowerRun) {
-        let db = rusqlite::Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .unwrap();
-        let store = crate::maps::store::load_map_store(&db).unwrap();
-        let catalog = super::super::catalog::load_catalog(&db).unwrap();
-        let dungeon = catalog.dungeons.get(&2436).unwrap().clone();
-        let profiles = super::super::select_party(&catalog.profiles, GroupRole::Dps).unwrap();
-        let mut instances = crate::maps::InstanceManager::default();
-        let copy = instances
-            .create_map(
-                &store,
-                2521,
-                crate::maps::instances::InstanceEntrant {
-                    character_id: 30,
-                    group: None,
-                    leader: 30,
-                    difficulty_id: 205,
-                },
-                crate::maps::instances::Now {
-                    elapsed: 0.0,
-                    unix: 1_790_510_400,
-                },
-            )
-            .unwrap()
-            .map;
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .insert_resource(store)
-            .insert_resource(instances)
-            .init_resource::<GroupRegistry>();
-        let owner = app
-            .world_mut()
-            .spawn((
-                Player {
-                    name: "Followproof".into(),
-                    race: 1,
-                    class: 8,
-                    appearance: Default::default(),
-                },
-                ClientId(30),
-                shared::components::Level(12),
-                UnitLevel(12),
-                dungeon.entrance.bevy_position(),
-                shared::components::Rotation {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                copy,
-                DungeonDifficulty(205),
-            ))
-            .id();
-        let members = profiles
-            .iter()
-            .map(|profile| {
-                app.world_mut()
-                    .spawn((
-                        Follower {
-                            owner,
-                            profile: profile.clone(),
-                        },
-                        crate::zones::TempSummon { summoner: owner },
-                        shared::components::Npc {
-                            template_id: profile.entry,
-                            name: profile.name.clone(),
-                        },
-                        UnitLevel(12),
-                        shared::components::Health {
-                            current: 1000.0,
-                            max: 1000.0,
-                        },
-                        dungeon.entrance.bevy_position(),
-                        copy,
-                    ))
-                    .id()
-            })
-            .collect();
-        let run = FollowerRun {
-            dungeon,
-            profiles,
-            members,
-            copy: Some(copy),
-            previous_difficulty: 1,
-            origin: WorldLocation {
-                map_id: 0,
-                position: Vec3::ZERO,
-                orientation: 0.0,
-            },
-            player_role: GroupRole::Dps,
-        };
-        (app, owner, run)
-    }
-
-    #[test]
-    fn follower_copy_group_formation_keeps_same_map_teleport_in_the_admitted_copy() {
-        let (mut app, owner, run) = fixture();
-        let admitted = *app.world().get::<InMap>(owner).unwrap();
-        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
-        assert_eq!(
-            app.world()
-                .resource::<GroupRegistry>()
-                .dungeon_difficulty_of(30),
-            Some(205)
-        );
-        assert!(teleport_to(
-            app.world_mut(),
-            owner,
-            run.dungeon.entrance,
-            TeleportOptions::default()
-        ));
-        assert!(
-            app.world().get::<MapTransfer>(owner).is_none(),
-            "forming the follower party must not orphan its admitted solo copy"
-        );
-        assert_eq!(app.world().get::<InMap>(owner), Some(&admitted));
-        for unit in run.members {
-            assert_eq!(app.world().get::<InMap>(unit), Some(&admitted));
-        }
-    }
-
-    #[test]
-    fn follower_copy_run_ends_when_owner_enters_another_copy_of_the_same_map() {
-        let (mut app, owner, run) = fixture();
-        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
-        let members = run.members.clone();
-        app.world_mut().entity_mut(owner).insert((
-            run,
-            InMap {
-                map_id: 2521,
-                instance_id: 99,
-            },
-        ));
-        advance_runs(app.world_mut());
-        assert!(
-            app.world().get::<FollowerRun>(owner).is_none(),
-            "same map ID is not the same follower instance"
-        );
-        assert!(
-            app.world()
-                .resource::<GroupRegistry>()
-                .group_id_of(30)
-                .is_none()
-        );
-        assert!(
-            members
-                .iter()
-                .all(|&unit| app.world().get_entity(unit).is_err())
-        );
     }
 }
