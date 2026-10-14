@@ -10,20 +10,13 @@ const HEAL: u32 = 213_011;
 /// Native Chaos school includes Fire; native damage, coefficients and proc flags.
 const CHAOS_HIT: u32 = 201_428;
 const FIRE_HIT: u32 = 258_921;
-const PHYSICAL_HIT: u32 = 203_795;
-const ICE_BARRIER: u32 = 11_426;
+const PHYSICAL_HIT: u32 = 12_294;
+const SHIELD: u32 = 17;
 
 fn fixture() -> Harness {
     let mut h = harness(
         Vec::new(),
-        &[
-            CHARRED,
-            HEAL,
-            CHAOS_HIT,
-            FIRE_HIT,
-            PHYSICAL_HIT,
-            ICE_BARRIER,
-        ],
+        &[CHARRED, HEAL, CHAOS_HIT, FIRE_HIT, PHYSICAL_HIT, SHIELD],
         12,
     )
     .unwrap();
@@ -46,14 +39,10 @@ fn fixture() -> Harness {
 }
 
 fn hit(h: &mut Harness, spell: u32) -> u32 {
-    let start = h.inbox.log.len();
+    let before = h.health(h.npc);
     crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, spell, Some(h.npc), 1);
     h.advance(1);
-    h.inbox.log[start..]
-        .iter()
-        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(spell))
-        .map(|event| u32::try_from(event.amount).unwrap())
-        .sum()
+    (before - h.health(h.npc)) as u32
 }
 
 fn expected_heal(h: &Harness, damage: u32) -> u32 {
@@ -205,7 +194,7 @@ fn class_completeness_native_charred_warblades_fully_absorbed_fire_does_not_heal
         &AuraApplication {
             caster: source,
             target,
-            spell_id: ICE_BARRIER,
+            spell_id: SHIELD,
             effect_mask: 1,
             source: AuraSource::Cast,
         },
