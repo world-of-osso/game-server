@@ -546,6 +546,44 @@ pub(crate) fn record_environmental_death(world: &mut World, player: Entity, kind
     );
 }
 
+/// TC Player::HandleFall27461–27509. Called only after an actual damaging landing.
+/// Do not infer eligibility from the replicated Environmental(Falling) label.
+pub(crate) fn record_survived_fall(world: &mut World, player: Entity, distance: f32) {
+    if !survived_fall_qualifies(world, player, distance) {
+        return;
+    }
+    record_criteria_event(
+        world,
+        player,
+        CriteriaEvent::FallWithoutDying((distance * 100.0) as u32),
+    );
+}
+
+fn survived_fall_qualifies(world: &World, player: Entity, distance: f32) -> bool {
+    const MIN_FALL_YARDS: f32 = 14.57;
+    const PHYSICAL_SCHOOL: u32 = 1;
+    const HOVER_AURA: u32 = 106;
+    const SAFE_FALL_AURA: u32 = 144;
+    let distance_valid = distance.is_finite() && distance >= MIN_FALL_YARDS;
+    let alive = player_conditions(world, player)
+        .player
+        .is_some_and(|player| player.alive == Some(true));
+    let immune = crate::auras::is_immune(world, player, PHYSICAL_SCHOOL);
+    if !distance_valid || !alive || immune {
+        return false;
+    }
+    let auras = world.get::<crate::auras::ActiveAuras>(player);
+    if auras.is_some_and(|auras| {
+        auras.has_type(crate::auras::handlers::FEATHER_FALL)
+            || auras.has_type(crate::auras::handlers::FLY)
+            || auras.has_type(HOVER_AURA)
+    }) {
+        return false;
+    }
+    let safe_fall = auras.map_or(0.0, |auras| auras.modifier(SAFE_FALL_AURA));
+    0.018 * (distance - safe_fall) - 0.2426 > 0.0
+}
+
 /// TC Unit::Kill11453: direct player or genuine HunterPet owner, not all tap recipients.
 pub(crate) fn record_delivered_killing_blow(world: &mut World, killer: Entity) {
     let player = world
@@ -792,6 +830,7 @@ pub(crate) fn record_ranked_arena_result(
     world: &mut World,
     player: Entity,
     before_rating: u32,
+    after_rating: u32,
     map: u32,
     won: bool,
 ) {
@@ -801,6 +840,7 @@ pub(crate) fn record_ranked_arena_result(
         .find_map(|(connection, _, link, _)| (link.0 == player).then_some(connection));
     let Some(connection) = connection else { return };
     let mut events = vec![CriteriaEvent::ParticipateInArena(map)];
+    events.extend(personal_arena_rating_event(world, player, after_rating));
     if won {
         events.extend([
             CriteriaEvent::WinAnyRankedArena(before_rating.max(1)),
@@ -814,6 +854,20 @@ pub(crate) fn record_ranked_arena_result(
     if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map)) {
         send_updates(world, connection, snapshot, toasts);
     }
+}
+
+/// Current data's0/1 refer to2v2/3v3; read the actual accepted rated copy.
+fn personal_arena_rating_event(
+    world: &World,
+    player: Entity,
+    rating: u32,
+) -> Option<CriteriaEvent> {
+    let bracket = match crate::pvp::player_arena_conditions(world, player) {
+        Some((2, true)) => 0,
+        Some((3, true)) => 1,
+        _ => return None,
+    };
+    Some(CriteriaEvent::PersonalArenaRating { bracket, rating })
 }
 
 pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {
@@ -938,6 +992,14 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
         level: world.get::<Level>(player)?.0,
         arena_team_size: arena.map(|(size, _)| size),
         in_ranked_arena: arena.is_some_and(|(_, ranked)| ranked),
+        alive: world
+            .get::<shared::components::Health>(player)
+            .map(|health| {
+                health.current > 0.0
+                    && world
+                        .get::<crate::death::PlayerDeathState>(player)
+                        .is_none_or(|state| state.state == shared::death::DeathState::Alive)
+            }),
         group_size: world
             .get_resource::<crate::group::GroupRegistry>()
             .zip(world.get::<crate::persistence::ClientId>(player))

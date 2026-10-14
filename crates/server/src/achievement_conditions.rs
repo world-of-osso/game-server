@@ -2,7 +2,7 @@
 // TC CriteriaHandler.cpp1723-1751 operators over difficulty (20/68) and
 // player-only (2/8/17/25/26/29/32/41/69/71; exact39 lowers to69+71), emote-only TargetCreatureId4,
 // including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerIsInArea17 or PlayerHasAura8 alternatives,
-// known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.
+// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.
 // Criteria SHA256 3c999e807e146cec059b73f8e0d45a3f8e384a21b15596bb98645069832f63e0.
 // ModifierTree SHA256 fbb1c0859b58239412169546cc1d57b683cf872ceaa52d5c5c42ae11d2712db3.
 // Difficulty SHA256 e5ca0536f7488bd637bff55329ed94eb191ddbe19015929633d9594c1fb8468d.
@@ -20,6 +20,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[(29, 9)],
+        }),
+        (2072, 547) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(16, 0)],
         }),
         (3236, 306806) => Some(CompiledConditions::All {
             difficulty: None,
@@ -664,6 +668,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(2, 5703)],
         }),
+        (5492, 592) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(32, 0)],
+        }),
         (5493, 590) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 1)],
@@ -686,6 +694,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (5503, 151) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 607)],
+        }),
+        (5512, 592) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(32, 0)],
         }),
         (5530, 590) => Some(CompiledConditions::All {
             difficulty: None,
@@ -8484,6 +8496,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
+        (23423, 11944) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(16, 0), (17, 6665)],
+        }),
         (23437, 11910) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -8499,6 +8515,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             facts: &[],
         }),
         (23507, 12497) => Some(CompiledConditions::PlayerMaps(&[1105, 2245])),
+        (23508, 11944) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(16, 0), (17, 6665)],
+        }),
         (23517, 11988) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 1134)],

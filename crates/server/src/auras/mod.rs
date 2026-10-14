@@ -16,6 +16,10 @@
 
 pub(crate) mod area_avoidance;
 pub(crate) mod base_armor;
+mod charred_warblades;
+pub(crate) mod damage_shield;
+#[cfg(test)]
+mod damage_shield_tests;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 mod fear;
@@ -1808,7 +1812,8 @@ fn remove_casterless(world: &mut World, unit: Entity) {
     }
 }
 
-fn remove_on_death(world: &mut World, unit: Entity) {
+/// Unit::RemoveAllAurasOnDeath, also used before post-lethal melee reactions.
+pub(crate) fn remove_on_death(world: &mut World, unit: Entity) {
     let store = world.get_resource::<SpellStore>();
     let persistent: Vec<u32> = world
         .get::<ActiveAuras>(unit)
@@ -1959,6 +1964,8 @@ mod toy_effects_tests;
 
 #[cfg(test)]
 mod bloodsurge_tests;
+#[cfg(test)]
+mod charred_warblades_tests;
 #[cfg(test)]
 mod crit_damage_bonus_tests;
 #[cfg(test)]
