@@ -327,6 +327,82 @@ fn waypoint_chase_owns_tick_then_path_resumes_from_real_position_without_replayi
     assert_eq!(world.resource::<ArrivalReceipts>().0, vec![(1, 1)]);
 }
 
+#[test]
+fn waypoint_new_chase_initializes_without_second_position_step_in_handoff_tick() {
+    let (mut world, actor, target) = motion_ownership_world();
+    for _ in 0..80 {
+        tick_owned_motion(&mut world);
+    }
+    world
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(50));
+    path_movement_system(&mut world);
+    let after_waypoint = *world.get::<Position>(actor).unwrap();
+    // Same observed ordering as Wailing: sight/aggro activates chase after the
+    // default spline has already advanced, before the active mover updates.
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Pursuing {
+            target: target.to_bits(),
+        });
+    world
+        .run_system_once(crate::creature_ai::chase_system)
+        .unwrap();
+    assert_eq!(
+        *world.get::<Position>(actor).unwrap(),
+        after_waypoint,
+        "new active chase initializes; it cannot add a second movement step"
+    );
+    tick_owned_motion(&mut world);
+    let actual = *world.get::<Position>(actor).unwrap();
+    let distance = Vec3::new(
+        actual.x - after_waypoint.x,
+        actual.y - after_waypoint.y,
+        actual.z - after_waypoint.z,
+    )
+    .length();
+    assert!(
+        (distance - 0.35).abs() < 0.0001,
+        "next tick belongs to active chase: {distance}"
+    );
+}
+
+#[test]
+fn waypoint_new_home_initializes_without_second_position_step_in_handoff_tick() {
+    let (mut world, actor, _) = motion_ownership_world();
+    for _ in 0..80 {
+        tick_owned_motion(&mut world);
+    }
+    world
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(50));
+    path_movement_system(&mut world);
+    let after_waypoint = *world.get::<Position>(actor).unwrap();
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Returning);
+    world
+        .run_system_once(crate::creature_ai::return_to_spawn_system)
+        .unwrap();
+    assert_eq!(
+        *world.get::<Position>(actor).unwrap(),
+        after_waypoint,
+        "new active home initializes; it cannot add a second movement step"
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(50));
+    path_movement_system(&mut world);
+    world
+        .run_system_once(crate::creature_ai::return_to_spawn_system)
+        .unwrap();
+    let actual = *world.get::<Position>(actor).unwrap();
+    assert!(
+        (actual.x - (after_waypoint.x - 0.35)).abs() < 0.0001,
+        "next tick belongs to active home: {after_waypoint:?}->{actual:?}"
+    );
+}
+
 #[derive(Resource, Default)]
 struct ArrivalReceipts(Vec<(u32, u32)>);
 

@@ -1464,7 +1464,7 @@ fn leash_check_system(
 /// for a creature without `RegenHealth` ("otherwise it would immediately go back to
 /// full health anyway"): full, as `curHealthPct` is not loaded. A regenerating
 /// creature heals by `Creature::RegenerateHealth` once it is no longer evading.
-fn return_to_spawn_system(
+pub(crate) fn return_to_spawn_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
