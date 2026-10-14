@@ -65,7 +65,7 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 
 ## Shadowfang Keep source identity
 
-- [ ] Prepare only Silverlaine3887→1070/bit1 (map33, Journal97/actor367/display37288) from pinned TC header/instance and current canonical catalogs. Require the authored empty ScriptName/SmartAI, refuse identity drift, preserve unrelated rows and remain idempotent on independent copies. This admits no unported Shadowfang boss or guessed placement.
+- [x] Prepare only Silverlaine3887→1070/bit1 (map33, Journal97/actor367/display37288) from pinned TC header/instance and current canonical catalogs. Require the authored empty ScriptName/SmartAI, refuse identity drift, preserve unrelated rows and remain idempotent on independent copies. This admits no unported Shadowfang boss or guessed placement.
 - [ ] Silverlaine's existing source row casts7068 on its victim after1s, repeating22.3–35.1s. Actual combat/lifecycle/loot/Normal persistence and both-skin native acceptance remain unproved; primary binding is not full mechanics proof.
 
 ## Wailing Caverns source slices
