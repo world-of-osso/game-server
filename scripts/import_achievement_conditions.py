@@ -156,6 +156,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
             # TC PlayerLevelEqual1956–1959 is exactly the existing inclusive bounds.
             level = int(node['Asset'])
             facts.extend(((69, level), (71, level)))
+        elif kind == 32 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
+            # TC PlayerMap1922–1925: map0 is a real map, not missing authority.
+            facts.append((kind, 0))
         elif kind == 35 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
             facts.append((kind, 0))
         elif kind == 122 and operator == SINGLE_TRUE and 0 <= int(node['Asset']) <= 127:

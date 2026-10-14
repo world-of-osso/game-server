@@ -2,9 +2,11 @@
 
 verified: 2026-10-13
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5438 ordinary (3445 account/1993 character),1812 statistics; 99 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5438 ordinary (3445 account/1993 character),1813 statistics; 99 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Exact PlayerMap32/asset0 is a real authenticated map, not missing authority (TC1922–1925). Root592 All4→leaf593 SingleTrue32/0 admits native5512; known map0 qualifies, map1/missing map/dead/idle reject, redb reopen retains1 and no honor5492 is inferred. Current statistic1488 World Killing Blows gains numeric5512 support; no ordinary gain or relinking. Compiler5437→5439, focused native1/1 and compiler26/26. Multi-child Some zero-map alternatives remain excluded.
 
 - Plain Some8 Amount0/1 of complete PlayerHasAura8 leaves requires current reference-player aura membership. Every spell is authenticated at load; a missing spell disables the entire predicate. Source TC1738–1750/1798–1801. Native fixture casts real Jaguar136775/136777/136778 then Mighty Loa136749 for recipient22840, with absence/unrelated/refused/removal/idle/reopen assertions; focused native GREEN2/2 proves each Jaguar alternative independently with real installed Mighty Loa as the unrelated-aura control. Compiler25/25,5398→5437 predicates; structural +8111/9601/9838/13014 ordinary, not full boss/form acquisition or encounter completion. Aura-type9/mixed/nested/higher-amount trees stay disabled.
 
@@ -110,7 +112,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 53 | DeliverKillingBlowToRace | 0/149 | 0/148 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 54 | DoEmote | 233/398 | 218/254 | 15 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 55 | HealingDone | 1/16 | 0/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 56 | DeliveredKillingBlow | 41/80 | 26/63 | 15 | Native: authenticated in-world killer on actual lethal health commits, plus genuine HunterPet owner credit (TC Unit::Kill); dead replay/self raw KillUnit idle. See spec. |
+| 56 | DeliveredKillingBlow | 42/80 | 27/63 | 15 | Native: authenticated in-world killer on actual lethal health commits, plus genuine HunterPet owner credit (TC Unit::Kill); dead replay/self raw KillUnit idle. See spec. |
 | 57 | EquipItem | 162/163 | 11/11 | 151 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 58 | CompleteQuestsInSort | 0/3 | 0/0 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
 | 59 | MoneyEarnedFromSales | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
