@@ -682,7 +682,7 @@ pub(super) fn corrupt_auction_mailbox(db: &redb::Database, recipient: u64) {
         .unwrap()
         .insert(recipient, b"invalid".as_slice())
         .unwrap();
-    tx.commit().unwrap();
+    crate::persistence_commit::commit(tx).unwrap();
 }
 
 #[test]

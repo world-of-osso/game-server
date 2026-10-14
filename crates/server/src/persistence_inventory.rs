@@ -75,7 +75,7 @@ pub(crate) fn is_item_unlocked(db: &Database, guid: u64) -> bool {
 pub(crate) fn unlock_item(db: &Database, guid: u64) -> Result<(), Box<dyn std::error::Error>> {
     let txn = db.begin_write()?;
     txn.open_table(ITEM_UNLOCKED)?.insert(guid, 1)?;
-    txn.commit()?;
+    crate::persistence_commit::commit(txn)?;
     Ok(())
 }
 
@@ -269,7 +269,7 @@ pub(crate) fn read_row<T: bitcode::DecodeOwned + Default>(
 pub fn save_inventory_record(db: &Database, character_id: u64, record: &InventoryRecord) {
     let txn = db.begin_write().expect("Failed to begin inventory write");
     write_inventory_record(&txn, character_id, record);
-    txn.commit().expect("Failed to commit inventory write");
+    crate::persistence_commit::commit(txn).expect("Failed to commit inventory write");
 }
 
 /// Write all parts of the record inside `txn`.

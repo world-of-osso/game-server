@@ -55,7 +55,7 @@ fn item_sources_persist_across_reopen_and_two_owner_transaction_transfer() {
     let txn = db.begin_write().unwrap();
     write_inventory_record(&txn, 1, &retail);
     write_inventory_record(&txn, 2, &forever);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
 
     let db = Database::open(file.path()).unwrap();
@@ -69,7 +69,7 @@ fn item_sources_persist_across_reopen_and_two_owner_transaction_transfer() {
     let txn = db.begin_write().unwrap();
     write_inventory_record(&txn, 1, &retail);
     write_inventory_record(&txn, 2, &forever);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
 
     let db = Database::open(file.path()).unwrap();
@@ -154,7 +154,7 @@ fn item_sources_malformed_marker_fails_explicitly() {
         .unwrap()
         .insert(404, 255)
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     load_item_definition_source(&db, 404);
 }
 
@@ -165,7 +165,7 @@ fn item_sources_existing_marker_is_immutable() {
     let txn = db.begin_write().unwrap();
     write_item_definition_source(&txn, 505, Forever70205);
     write_item_definition_source(&txn, 505, Forever70205);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let txn = db.begin_write().unwrap();
     write_item_definition_source(&txn, 505, Retail);
 }

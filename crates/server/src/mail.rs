@@ -284,7 +284,7 @@ pub(crate) fn send_mail(
     let txn = db.begin_write().expect("Failed to begin mail send");
     write_inventory_record(&txn, sender_id, &model.into_record());
     push_mail(&txn, recipient_id, mail);
-    txn.commit().expect("Failed to commit mail send");
+    crate::persistence_commit::commit(txn).expect("Failed to commit mail send");
     Ok(MailChanges {
         gold: vec![(sender_id, gold)],
         mailboxes: vec![sender_id, recipient_id],
@@ -346,7 +346,7 @@ pub(crate) fn act_on_mail(
             mails[index].read = true;
             let txn = db.begin_write().expect("Failed to begin mail write");
             write_mailbox(&txn, character_id, &mails);
-            txn.commit().expect("Failed to commit mail write");
+            crate::persistence_commit::commit(txn).expect("Failed to commit mail write");
             Ok(MailChanges {
                 gold: Vec::new(),
                 mailboxes: vec![character_id],
@@ -364,7 +364,7 @@ pub(crate) fn act_on_mail(
             mails.remove(index);
             let txn = db.begin_write().expect("Failed to begin mail delete");
             write_mailbox(&txn, character_id, &mails);
-            txn.commit().expect("Failed to commit mail delete");
+            crate::persistence_commit::commit(txn).expect("Failed to commit mail delete");
             Ok(MailChanges {
                 gold: Vec::new(),
                 mailboxes: vec![character_id],
@@ -393,7 +393,7 @@ fn take_money(
     let txn = db.begin_write().expect("Failed to begin mail take money");
     write_inventory_record(&txn, character_id, &model.into_record());
     write_mailbox(&txn, character_id, &mails);
-    txn.commit().expect("Failed to commit mail take money");
+    crate::persistence_commit::commit(txn).expect("Failed to commit mail take money");
     Ok(MailChanges {
         gold: vec![(character_id, gold)],
         mailboxes: vec![character_id],
@@ -474,7 +474,7 @@ fn take_attachment(
         push_mail(&txn, to, payment);
         mailboxes.push(to);
     }
-    txn.commit().expect("Failed to commit mail take item");
+    crate::persistence_commit::commit(txn).expect("Failed to commit mail take item");
     Ok(MailChanges {
         gold: vec![(character_id, gold)],
         mailboxes,
@@ -503,7 +503,7 @@ fn return_mail(
     let txn = db.begin_write().expect("Failed to begin mail return");
     write_mailbox(&txn, character_id, &mails);
     push_mail(&txn, to, back);
-    txn.commit().expect("Failed to commit mail return");
+    crate::persistence_commit::commit(txn).expect("Failed to commit mail return");
     Ok(MailChanges {
         gold: Vec::new(),
         mailboxes: vec![character_id, to],
@@ -538,7 +538,7 @@ pub(crate) fn expire_mail(db: &Database, now: u64) -> Vec<u64> {
             push_mail(&txn, to, mail);
             changed.push(to);
         }
-        txn.commit().expect("Failed to commit mail expiry");
+        crate::persistence_commit::commit(txn).expect("Failed to commit mail expiry");
         changed.push(character_id);
     }
     changed
@@ -557,7 +557,7 @@ pub(crate) fn deliver_pending_mail(db: &Database, character_id: u64, now: u64) -
     if delivered > 0 {
         let txn = db.begin_write().expect("Failed to begin mail delivery");
         write_mailbox(&txn, character_id, &mails);
-        txn.commit().expect("Failed to commit mail delivery");
+        crate::persistence_commit::commit(txn).expect("Failed to commit mail delivery");
     }
     delivered
 }

@@ -57,9 +57,7 @@ pub(crate) fn save_journal(db: &Database, account_id: u64, journal: &PetJournal)
             .insert(account_id, bytes.as_slice())
             .expect("save account pet journal");
     }
-    transaction
-        .commit()
-        .expect("commit account pet journal save");
+    crate::persistence_commit::commit(transaction).expect("commit account pet journal save");
 }
 
 #[derive(Clone)]

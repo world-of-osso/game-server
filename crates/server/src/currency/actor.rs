@@ -94,7 +94,7 @@ fn persist_wallet_and_progress(
             .insert(character, bytes.as_slice())
             .map_err(|error| error.to_string())?;
     }
-    txn.commit()
+    crate::persistence_commit::commit(txn)
         .map_err(|error| format!("commit currency transaction: {error}"))
 }
 

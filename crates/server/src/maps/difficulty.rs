@@ -101,7 +101,7 @@ pub(crate) fn save_dungeon_difficulty(db: &Database, character_id: u64, difficul
             .insert(character_id, difficulty_id)
             .expect("Failed to save dungeon difficulty");
     }
-    txn.commit().expect("Failed to commit dungeon difficulty");
+    crate::persistence_commit::commit(txn).expect("Failed to commit dungeon difficulty");
 }
 
 /// The connection of `player` in the world.

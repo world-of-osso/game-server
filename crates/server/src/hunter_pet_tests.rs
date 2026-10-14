@@ -883,7 +883,7 @@ fn a_stable_saved_without_stances_loads_passive_pets() {
         .unwrap()
         .insert(CHARACTER_ID, bitcode::encode(&legacy).as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let mut expected = StoredPetStable {
         current: Some(0),
         ..Default::default()

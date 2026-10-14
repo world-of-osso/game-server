@@ -22,6 +22,7 @@ pub struct FrameStats {
     max_work: Duration,
     work_samples: Vec<Duration>,
     over_budget: u32,
+    tick_commits: u64,
 }
 
 impl Default for FrameStats {
@@ -41,6 +42,7 @@ pub struct FrameReport {
     /// Nearest-rank p99 over outer frames in this reporting window.
     pub p99_work: Duration,
     pub over_budget: u32,
+    pub tick_commits: u64,
 }
 
 impl FrameReport {
@@ -61,10 +63,12 @@ impl FrameStats {
             max_work: Duration::ZERO,
             work_samples: Vec::new(),
             over_budget: 0,
+            tick_commits: 0,
         }
     }
 
     pub fn begin_frame(&mut self, now: Instant) {
+        crate::persistence_commit::begin_tick_frame();
         self.frame_start = Some(now);
     }
 
@@ -74,6 +78,7 @@ impl FrameStats {
 
     /// Closes the current frame; returns a report when the window has elapsed.
     pub fn end_frame(&mut self, now: Instant, budget: Duration) -> Option<FrameReport> {
+        self.tick_commits += crate::persistence_commit::finish_tick_frame();
         if let Some(start) = self.frame_start.take() {
             let work = now.saturating_duration_since(start);
             self.frames += 1;
@@ -94,6 +99,7 @@ impl FrameStats {
             max_work: self.max_work,
             p99_work: nearest_rank_p99(&mut self.work_samples),
             over_budget: self.over_budget,
+            tick_commits: self.tick_commits,
         };
         *self = Self::starting_at(now);
         Some(report)
@@ -139,6 +145,7 @@ fn end_frame(mut stats: ResMut<FrameStats>, budget: Res<FrameBudget>) {
         return;
     };
     info!(
+        tick_redb_commits = report.tick_commits,
         "Frames: {:.1} ticks/s ({} steps, {} frames in {:.1}s), work mean {:.1} ms max {:.1} ms, {} over budget, p99 {:.1} ms",
         report.ticks_per_second(),
         report.fixed_steps,
@@ -168,6 +175,37 @@ mod tests {
             stats.record_fixed_step();
         }
         stats.end_frame(start + Duration::from_millis(work_ms), BUDGET)
+    }
+
+    #[test]
+    fn frame_reports_tick_commits_but_not_fifo_worker_commits() {
+        use crate::persistence;
+        let t0 = Instant::now();
+        let mut stats = FrameStats::starting_at(t0);
+        let db = persistence::GameDatabase::new(persistence::temp_database());
+        stats.begin_frame(t0);
+        persistence::save_friends(&db.db, 42, &crate::friends::PlayerFriendsState::default());
+        let receipt = db.writer.enqueue("frame fixture worker", |db| {
+            persistence::save_friends(db, 43, &crate::friends::PlayerFriendsState::default());
+            Ok(())
+        });
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while receipt.result().is_none() {
+            assert!(
+                Instant::now() < deadline,
+                "worker did not finish fixture commit"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        receipt.result().unwrap().unwrap();
+        let report = stats.end_frame(t0 + REPORT_WINDOW, BUDGET).unwrap();
+        assert_eq!(
+            report.tick_commits, 1,
+            "worker commits must not be classified as tick commits"
+        );
+        stats.begin_frame(t0 + REPORT_WINDOW);
+        let next = stats.end_frame(t0 + REPORT_WINDOW * 2, BUDGET).unwrap();
+        assert_eq!(next.tick_commits, 0, "older window leaked tick commits");
     }
 
     #[test]

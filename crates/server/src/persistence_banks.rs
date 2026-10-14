@@ -231,13 +231,13 @@ pub fn save_guild_member_rank(db: &Database, character_id: u64, rank: u8) {
         .expect("open ranks")
         .insert(character_id, rank)
         .expect("write rank");
-    txn.commit().expect("Failed to commit rank");
+    crate::persistence_commit::commit(txn).expect("Failed to commit rank");
 }
 
 pub fn save_guild(db: &Database, guild_id: u32, guild: &GuildData) {
     let txn = db.begin_write().expect("Failed to begin guild write");
     write(&txn, GUILDS, guild_id, guild);
-    txn.commit().expect("Failed to commit guild");
+    crate::persistence_commit::commit(txn).expect("Failed to commit guild");
 }
 
 /// Which bank a move writes.
@@ -280,7 +280,7 @@ pub fn save_bank_move(
     if let Some(record) = inventory {
         write_inventory_record(&txn, character_id, record);
     }
-    txn.commit().expect("Failed to commit bank write");
+    crate::persistence_commit::commit(txn).expect("Failed to commit bank write");
 }
 
 /// `GuildRankData` before `withdraw_repair` (guild rank layout version 0).
@@ -363,7 +363,7 @@ pub fn save_guild_ranks(db: &Database, guild_id: u32, guild: &GuildData, members
             table.insert(character, rank).expect("write member rank");
         }
     }
-    txn.commit().expect("Failed to commit guild ranks");
+    crate::persistence_commit::commit(txn).expect("Failed to commit guild ranks");
 }
 
 impl From<GuildDataV0> for GuildData {
@@ -461,8 +461,7 @@ pub(crate) fn migrate_guild_ranks(db: &Database) {
         rows.len()
     };
     super::set_layout_version(&txn, GUILD_LAYOUT_KEY, GUILD_LAYOUT_VERSION);
-    txn.commit()
-        .expect("Failed to commit guild layout migration");
+    crate::persistence_commit::commit(txn).expect("Failed to commit guild layout migration");
     bevy::log::info!("Migrated {migrated} guilds to layout version {GUILD_LAYOUT_VERSION}");
 }
 

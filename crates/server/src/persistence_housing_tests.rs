@@ -44,7 +44,7 @@ fn fixture(path: &std::path::Path) -> Database {
             .unwrap();
     }
     drop(inventories);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     db
 }
 
@@ -257,7 +257,7 @@ fn housing_access_migration_preserves_unknown_closed_open_and_decor() {
         .insert(STATE_ROW, serde_json::to_vec(&legacy).unwrap().as_slice())
         .unwrap();
     migration::migrate(&txn, &rusqlite::Connection::open_in_memory().unwrap()).unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
     let db = Database::open(&path).unwrap();
     assert_eq!(
@@ -294,7 +294,7 @@ fn housing_access_migration_preserves_unknown_closed_open_and_decor() {
     assert_eq!(layout.decor[0].transform.position, [1.25, 2.0, -3.0]);
     let txn = db.begin_write().unwrap();
     migration::migrate(&txn, &rusqlite::Connection::open_in_memory().unwrap()).unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     assert_eq!(
         snapshot(&db, actor(1, 30), Some(3), None).unwrap().layout,
         Some(layout)
@@ -351,7 +351,7 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
         .unwrap()
         .insert(30, bitcode::encode(&inventory).as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     redeem(
         &db,
         owner,
@@ -573,7 +573,7 @@ fn housing_precision_migration_is_atomic_sourced_and_survives_reopen() {
         .unwrap()
         .insert(STATE_ROW, bytes.as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     source
         .execute(
             "DELETE FROM housing_catalog_record WHERE table_name='HouseDecor'",
@@ -597,7 +597,7 @@ fn housing_precision_migration_is_atomic_sourced_and_survives_reopen() {
     source.execute("INSERT INTO housing_catalog_record VALUES (?, 'HouseDecor', 1693, ?)", rusqlite::params![BUILD_KEY, r#"{"InitialRotation_0":"0.0","InitialRotation_1":"0.0","InitialRotation_2":"0.0","InitialScale":"1.0"}"#]).unwrap();
     let txn = db.begin_write().unwrap();
     migration::migrate(&txn, &source).unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
     let db = Database::open(&path).unwrap();
     let owner = Actor {
@@ -693,7 +693,7 @@ fn housing_precision_migration_is_atomic_sourced_and_survives_reopen() {
     );
     let txn = db.begin_write().unwrap();
     migration::migrate(&txn, &source).unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     assert_eq!(
         snapshot(&db, owner, Some(1), None)
             .unwrap()

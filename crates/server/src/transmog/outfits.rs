@@ -80,7 +80,7 @@ fn migrate_outfits(db: &redb::Database) {
             .insert(0, OUTFIT_VERSION)
             .expect("write outfit schema version");
     }
-    txn.commit().expect("commit outfit migration");
+    crate::persistence_commit::commit(txn).expect("commit outfit migration");
 }
 
 const AUTO_AWARDED: u8 = 1;
@@ -118,7 +118,7 @@ fn persist_outfit(db: &redb::Database, account: u64, outfit: TransmogOutfit) {
             .insert(account, bytes.as_slice())
             .expect("save account outfits");
     }
-    txn.commit().expect("commit account outfits");
+    crate::persistence_commit::commit(txn).expect("commit account outfits");
 }
 
 fn validate_outfit(
@@ -214,7 +214,7 @@ mod tests {
             table.insert(1, legacy.as_slice()).unwrap();
             table.insert(2, legacy.as_slice()).unwrap();
         }
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         drop(db);
         let db = redb::Database::open(&path).unwrap();
         let migrated = load_outfits(&db, 1);
@@ -241,7 +241,7 @@ mod tests {
             .unwrap()
             .insert(0, 99)
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         load_outfits(&db, 1);
     }
 

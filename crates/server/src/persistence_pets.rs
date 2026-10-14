@@ -143,5 +143,5 @@ pub fn save_pet_stable(db: &Database, character_id: u64, stable: &StoredPetStabl
             .insert(character_id, bytes.as_slice())
             .expect("Failed to save pet stable");
     }
-    txn.commit().expect("Failed to commit pet stable");
+    crate::persistence_commit::commit(txn).expect("Failed to commit pet stable");
 }

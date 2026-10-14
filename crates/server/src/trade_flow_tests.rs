@@ -474,7 +474,7 @@ fn soulbound_items_stay_out_of_the_traded_slots() {
                 bitcode::encode(&ItemInstanceData { soulbound: true }).as_slice(),
             )
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
     h.open_trade();
 
@@ -744,7 +744,7 @@ fn ahserver_bound_item_after_offer_refuses_trade_without_moving_anything() {
                 bitcode::encode(&ItemInstanceData { soulbound: true }).as_slice(),
             )
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
     let before = (h.inventory(a_id), h.inventory(b_id));
     h.send(a, ConfirmTrade);

@@ -98,7 +98,7 @@ fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losse
         .unwrap();
     let txn = db.begin_write().unwrap();
     settlement.persist_in(&txn, 31);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let persisted =
         crate::persistence::load_reputation(&db, 31, || panic!("persisted reputation required"));
     assert_eq!(

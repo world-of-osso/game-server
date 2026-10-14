@@ -92,7 +92,7 @@ fn version_0_database() -> (tempfile::TempDir, std::path::PathBuf) {
     let txn = db.begin_write().unwrap();
     write(&txn, GUILDS, 7, &guild);
     write(&txn, GUILD_BANK_LOGS, 7, &logs);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     (dir, path)
 }
 
@@ -264,7 +264,7 @@ fn guild_ranks_layout_one_preserves_bank_allowances_on_upgrade() {
         };
         write(&txn, GUILDS, 7, &old);
         super::super::set_layout_version(&txn, GUILD_LAYOUT_KEY, 1);
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
     let db = Database::create(&path).unwrap();
     create_tables(&db);

@@ -44,7 +44,7 @@ fn password_login_completion_rechecks_bans_and_password_rotation() {
         .unwrap()
         .insert(account, hash.as_slice())
         .unwrap();
-    tx.commit().unwrap();
+    crate::persistence_commit::commit(tx).unwrap();
     assert!(
         persistence_accounts::complete_password_login(&db, verified)
             .unwrap_err()

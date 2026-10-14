@@ -177,7 +177,7 @@ pub(crate) fn migrate_legacy_mailboxes(db: &Database, now: u64) {
     }
     txn.delete_table(LEGACY_MAILBOXES)
         .expect("Failed to drop legacy mailboxes");
-    txn.commit().expect("Failed to commit mailbox migration");
+    crate::persistence_commit::commit(txn).expect("Failed to commit mailbox migration");
 }
 
 fn auction_mail_from_legacy(mail: LegacyAuctionMail, now: u64) -> MailData {

@@ -24,7 +24,7 @@ fn persist(db: &Database, key: u64, value: &'static [u8]) -> Result<(), String> 
         .map_err(|error| error.to_string())?
         .insert(key, value)
         .map_err(|error| error.to_string())?;
-    txn.commit().map_err(|error| error.to_string())
+    crate::persistence_commit::commit(txn).map_err(|error| error.to_string())
 }
 
 #[test]

@@ -255,7 +255,7 @@ fn set_account_credentials_links_username() {
         let mut accounts = txn.open_table(ACCOUNTS).unwrap();
         accounts.insert(token2.as_str(), account_id + 100).unwrap();
     }
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
 
     let result = set_account_credentials(&db, &token2, "newuser", "newpass");
     assert_eq!(result.unwrap(), account_id + 100);

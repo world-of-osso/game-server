@@ -383,7 +383,7 @@ impl Harness {
                 bitcode::encode(&ItemInstanceData { soulbound: true }).as_slice(),
             )
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
 
     /// Spawn Newton Burnside (Stormwind banker) 2 yd away and open his bank.

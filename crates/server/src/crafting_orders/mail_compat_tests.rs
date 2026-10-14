@@ -57,7 +57,7 @@ fn crafting_orders_old_mailboxes_survive_sender_extension_and_reopen() {
         .unwrap()
         .insert(9, bitcode::encode(&old).as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
     let db = redb::Database::open(&path).unwrap();
     crate::persistence::create_tables(&db);

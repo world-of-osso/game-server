@@ -171,7 +171,7 @@ mod tests {
         ));
         let txn = h.db().begin_write().unwrap();
         txn.open_table(KEYS).unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         put_key(&h, owner, 4242, 8);
         put_key(&h, outsider, 4243, 20);
         send_changed_party_keys(h.app.world_mut());
@@ -212,7 +212,7 @@ mod tests {
         });
         let txn = h.db().begin_write().unwrap();
         txn.open_table(KEYS).unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         let owner = h.character_id;
         put_key(&h, owner, 4242, 8);
         // Installed BossHelper MythicTeleport.lua's eight maps, plus existing Azure401.
@@ -296,7 +296,7 @@ mod tests {
             .collect();
         let txn = h.db().begin_write().unwrap();
         txn.open_table(KEYS).unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         h.app.init_resource::<GroupRegistry>();
         let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").unwrap();
         let conn =
@@ -335,7 +335,7 @@ mod tests {
         let outsider = h.create_alt("Outsider");
         let txn = h.db().begin_write().unwrap();
         txn.open_table(KEYS).unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").unwrap();
         let conn =
             rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)

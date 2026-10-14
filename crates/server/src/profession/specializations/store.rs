@@ -28,8 +28,7 @@ pub(super) fn save_commit(database: &Database, character: u64, commit: &Speciali
         .begin_write()
         .expect("begin profession specialization commit");
     write_commit_in(&transaction, character, commit);
-    transaction
-        .commit()
+    crate::persistence_commit::commit(transaction)
         .expect("commit specialization ranks, knowledge and recipe spells");
 }
 

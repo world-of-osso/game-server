@@ -21,7 +21,7 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 
 - [ ] A private release scripted session covering login, combat/loot/quests, trade/mail/AH, guild/currency/achievements and logout records zero synchronous redb commit spans on the tick thread and frame p99 below 50 ms.
 - [ ] Land converted writer families in slices with durability-gated acknowledgement proof and release measurements; a slice is not global completion.
-- Frame logs report nearest-rank p99 for each completed 10-second window, alongside mean, maximum, overruns and tick rate. Label per-window percentiles explicitly; do not average percentiles.
+- Frame logs report nearest-rank p99 and `tick_redb_commits` for each completed 10-second window, alongside mean, maximum, overruns and tick rate. Each tick-thread commit logs its source location and measured commit work, including commits below50ms. Worker/startup commits do not count. Label per-window percentiles explicitly; do not average percentiles.
 
 ## Persistence (approved 2026-10-13)
 

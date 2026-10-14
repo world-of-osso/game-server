@@ -56,7 +56,7 @@ fn grant_transaction(
         character,
         equipped.iter().map(describe_owned_item).collect(),
     );
-    txn.commit()?;
+    crate::persistence_commit::commit(txn)?;
     Ok(result)
 }
 

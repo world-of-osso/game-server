@@ -781,7 +781,7 @@ fn dungeonach_placeholder_ids_migrate_once_in_redb() {
             .insert(42, br#"{"earned_ids":[1,6]}"#.as_slice())
             .unwrap();
     }
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let first = crate::persistence::load_achievements(&db, 42);
     assert_eq!(first.earned_ids, BTreeSet::from([6, 19459]));
     let second = crate::persistence::load_achievements(&db, 42);

@@ -53,7 +53,7 @@ fn load_startup(world: &mut World) {
     let txn = db.begin_write().expect("begin challenge schema");
     txn.open_table(KEYS).expect("create keystone table");
     txn.open_table(HISTORY).expect("create run history");
-    txn.commit().expect("commit challenge schema");
+    crate::persistence_commit::commit(txn).expect("commit challenge schema");
     let path = std::path::Path::new(crate::spell_info::WORLD_DB_PATH);
     let conn =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -81,7 +81,7 @@ fn save_key(db: &redb::Database, key: &KeystoneInfo) {
         .expect("open keystones")
         .insert(key.item_guid, bitcode::encode(key).as_slice())
         .expect("write keystone");
-    txn.commit().expect("commit keystone");
+    crate::persistence_commit::commit(txn).expect("commit keystone");
 }
 fn owned_keys(db: &redb::Database, character: u64) -> Vec<KeystoneInfo> {
     let inventory = persistence::load_inventory(db, character);
@@ -405,7 +405,7 @@ fn persist_summary(world: &mut World, summary: &ChallengeRun) {
             )
             .expect("persist attributable completion");
     }
-    txn.commit().expect("commit challenge settlement");
+    crate::persistence_commit::commit(txn).expect("commit challenge settlement");
     crate::achievement::record_mythic_completion(world, summary);
 }
 fn completion_record(
@@ -574,7 +574,7 @@ mod tests {
         let txn = h.db().begin_write().unwrap();
         txn.open_table(KEYS).unwrap();
         txn.open_table(HISTORY).unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         let mut inventory = h.inventory();
         inventory.items.push(persistence::InventoryItemData {
             item_guid: 4242,

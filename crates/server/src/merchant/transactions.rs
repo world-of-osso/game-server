@@ -645,7 +645,7 @@ fn persist_purchase(
             .insert(customer.character_id, bytes.as_slice())
             .expect("write mount payment currencies");
     }
-    txn.commit().expect("commit mount payment and delivery");
+    crate::persistence_commit::commit(txn).expect("commit mount payment and delivery");
     shop.gold.record(customer.character_id, gold);
     if let Some(wallet) = wallet {
         shop.wallet = Some(wallet.clone());

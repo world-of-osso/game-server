@@ -88,6 +88,7 @@ mod owned_commerce_source_tests;
 mod persistence;
 mod persistence_accounts;
 mod persistence_character;
+mod persistence_commit;
 mod persistence_progression;
 mod persistence_types;
 mod persistence_writer;

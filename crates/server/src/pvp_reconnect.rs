@@ -92,7 +92,7 @@ pub(super) fn save(world: &World, character_id: u64, entry: &Entry) {
         .expect("open battleground entries")
         .insert(character_id, bytes.as_slice())
         .expect("save battleground entry");
-    transaction.commit().expect("commit battleground entry");
+    crate::persistence_commit::commit(transaction).expect("commit battleground entry");
 }
 
 pub(crate) fn remove(db: &redb::Database, character_id: u64) {
@@ -102,9 +102,7 @@ pub(crate) fn remove(db: &redb::Database, character_id: u64) {
         .expect("open battleground entries")
         .remove(character_id)
         .expect("remove battleground entry");
-    transaction
-        .commit()
-        .expect("commit battleground entry removal");
+    crate::persistence_commit::commit(transaction).expect("commit battleground entry removal");
 }
 
 pub(crate) fn matching_map(

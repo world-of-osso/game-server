@@ -35,7 +35,7 @@ pub fn init_state_table(db: &Database) -> Result<(), String> {
     let initialize = || -> StoreResult<()> {
         let txn = db.begin_write()?;
         txn.open_table(STATE)?;
-        txn.commit()?;
+        crate::persistence_commit::commit(txn)?;
         Ok(())
     };
     initialize().map_err(|error| format!("initialize economy state table: {error}"))
@@ -79,7 +79,7 @@ pub fn commit_market(
         write_auctions(&txn, changes)?;
         write_inventories(&txn, changes)?;
         write_mail_changes(&txn, changes)?;
-        txn.commit()?;
+        crate::persistence_commit::commit(txn)?;
         Ok(())
     };
     commit().map_err(|error| format!("commit market: {error}"))

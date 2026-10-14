@@ -69,7 +69,7 @@ fn achievements_criteria_reputation_migrates_known_delta_once_and_retains_earned
         .unwrap()
         .insert(character, bitcode::encode(&legacy).as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let mut earned = crate::achievement::PlayerAchievementState::default();
     earned.earned_ids.insert(944);
     save_achievements(&db, character, &earned);
@@ -222,7 +222,7 @@ fn insert_encoded_character(db: &redb::Database, character_id: u64, bytes: Vec<u
             .insert(character_id, bytes.as_slice())
             .expect("insert legacy");
     }
-    txn.commit().expect("commit");
+    crate::persistence_commit::commit(txn).expect("commit");
 }
 
 fn legacy_appearance_v1_record() -> LegacyCharacterDataV2AppearanceV1 {
@@ -288,7 +288,7 @@ fn account_lookup_handles_missing_empty_and_populated_tables() {
 
     let txn = db.begin_write().unwrap();
     txn.open_table(ACCOUNT_CHARACTERS).unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     assert_eq!(find_account_id_for_character(&db, 42), None);
 
     let txn = db.begin_write().unwrap();
@@ -301,7 +301,7 @@ fn account_lookup_handles_missing_empty_and_populated_tables() {
             .insert(8, bitcode::encode(&vec![44_u64]).as_slice())
             .unwrap();
     }
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
     let db = redb::Database::open(file.path()).unwrap();
     assert_eq!(find_account_id_for_character(&db, 42), Some(7));
@@ -349,7 +349,7 @@ fn legacy_inventories_move_to_u64_gold_during_startup() {
             table.insert(42, first.as_slice()).unwrap();
             table.insert(43, u32_gold.as_slice()).unwrap();
         }
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
 
     create_tables(&db);
@@ -383,7 +383,7 @@ fn legacy_database_migrates_missing_pvp_state_table() {
     {
         let txn = db.begin_write().unwrap();
         txn.open_table(CHARACTERS).unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
 
     create_tables(&db);
@@ -590,7 +590,7 @@ fn load_character_decodes_legacy_records_with_default_appearance() {
         let mut table = txn.open_table(CHARACTERS).expect("open characters");
         table.insert(99, bytes.as_slice()).expect("insert legacy");
     }
-    txn.commit().expect("commit");
+    crate::persistence_commit::commit(txn).expect("commit");
 
     let loaded = load_character(&db, 99).expect("legacy character should load");
     assert_eq!(loaded.name, "Legacy");
@@ -628,7 +628,7 @@ fn load_character_decodes_previous_appearance_records_without_equipment() {
         let mut table = txn.open_table(CHARACTERS).expect("open characters");
         table.insert(100, bytes.as_slice()).expect("insert legacy");
     }
-    txn.commit().expect("commit");
+    crate::persistence_commit::commit(txn).expect("commit");
 
     let loaded = load_character(&db, 100).expect("legacy v2 character should load");
     assert_eq!(loaded.name, "LegacyV2");
@@ -778,7 +778,7 @@ fn missing_and_legacy_character_reads_do_not_wait_for_writer() {
         .unwrap()
         .insert(42, br#"{"earned_ids":[1,2]}"#.as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let held = db.begin_write().unwrap();
     let release = std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(250));
@@ -1002,7 +1002,7 @@ fn legacy_u32_money_auctions_and_auction_mail_move_to_u64_tables() {
                 .insert(43, bitcode::encode(&mails).as_slice())
                 .unwrap();
         }
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
 
     create_tables(&db);

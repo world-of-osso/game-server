@@ -28,7 +28,7 @@ fn write_sets(db: &redb::Database, account: u64, sets: &[TransmogCustomSet]) {
             .insert(account, bytes.as_slice())
             .expect("save custom sets");
     }
-    txn.commit().expect("commit custom sets");
+    crate::persistence_commit::commit(txn).expect("commit custom sets");
 }
 
 fn save_set(

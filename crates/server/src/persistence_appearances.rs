@@ -30,7 +30,7 @@ pub(crate) fn save_account_appearances(
 ) {
     let txn = db.begin_write().expect("Failed to begin appearance write");
     learn_account_appearances_in(&txn, account_id, collection.all());
-    txn.commit().expect("Failed to commit appearance write");
+    crate::persistence_commit::commit(txn).expect("Failed to commit appearance write");
 }
 
 /// Merge grants inside the inventory/ownership transaction; one character cannot

@@ -148,7 +148,7 @@ fn reserve_fixture_ids(db: &Database) -> FixtureResult<()> {
         counters.insert("item_instance", OFFER_COUNT)?;
         counters.insert("character", SELLER_ID)?;
     }
-    txn.commit()?;
+    crate::persistence_commit::commit(txn)?;
     Ok(())
 }
 

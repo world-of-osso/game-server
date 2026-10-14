@@ -66,7 +66,7 @@ pub(crate) fn purchase(
         },
     );
     write_state(&txn, account, &state);
-    txn.commit().expect("commit atomic Trading Post purchase");
+    crate::persistence_commit::commit(txn).expect("commit atomic Trading Post purchase");
     Ok(state)
 }
 
@@ -87,7 +87,7 @@ pub(crate) fn refund(db: &Database, account: u64, vendor: u32, now: i64) -> Resu
         .ok_or("Tender refund overflow.")?;
     state.purchases.remove(&vendor);
     write_state(&txn, account, &state);
-    txn.commit().expect("commit atomic Trading Post refund");
+    crate::persistence_commit::commit(txn).expect("commit atomic Trading Post refund");
     Ok(state)
 }
 
@@ -100,7 +100,7 @@ pub(crate) fn grant_tender(db: &Database, account: u64, amount: u32) -> Result<S
         .checked_add(amount)
         .ok_or("Tender balance overflow.")?;
     write_state(&txn, account, &state);
-    txn.commit().expect("commit Trading Post Tender grant");
+    crate::persistence_commit::commit(txn).expect("commit Trading Post Tender grant");
     Ok(state)
 }
 
@@ -109,7 +109,7 @@ pub(crate) fn freeze(db: &Database, account: u64, vendor: Option<u32>) -> State 
     let mut state = read_state(&txn, account);
     state.frozen = vendor;
     write_state(&txn, account, &state);
-    txn.commit().expect("commit Trading Post freeze");
+    crate::persistence_commit::commit(txn).expect("commit Trading Post freeze");
     state
 }
 
@@ -316,7 +316,7 @@ pub(crate) fn settle(
         }
     }
     write_state(&txn, account, &state);
-    txn.commit().expect("commit Trading Post threshold awards");
+    crate::persistence_commit::commit(txn).expect("commit Trading Post threshold awards");
     state
 }
 

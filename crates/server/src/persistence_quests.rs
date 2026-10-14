@@ -150,17 +150,17 @@ mod tests {
             .unwrap()
             .insert(9, bitcode::encode(&old).as_slice())
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         let txn = db.begin_write().unwrap();
         migrate(&txn, 1000);
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         let migrated = load_quest_log(&db, 9);
         assert_eq!(migrated.active[0].counts, vec![3]);
         assert_eq!(migrated.watched, vec![62]);
         assert_eq!(migrated.completed_at[&28766], 1000);
         let txn = db.begin_write().unwrap();
         migrate(&txn, 2000);
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
         assert_eq!(load_quest_log(&db, 9), migrated);
     }
 }
@@ -176,5 +176,5 @@ pub fn save_quest_log(db: &Database, character_id: u64, log: &QuestLogData) {
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert quest log");
     }
-    txn.commit().expect("Failed to commit quest log save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit quest log save");
 }

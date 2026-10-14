@@ -121,7 +121,7 @@ fn character_disk_abi_v7_nonempty_equipment_survives_load_save_reopen() {
             .unwrap()
             .insert(41, original.as_slice())
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
     {
         let db = Database::open(&path).unwrap();
@@ -307,7 +307,7 @@ fn character_disk_abi_v6_nonempty_gear_migrates_once_and_reopens() {
             .unwrap()
             .insert(41, bitcode::encode(&old).as_slice())
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
     let migrated = {
         let db = Database::open(&path).unwrap();

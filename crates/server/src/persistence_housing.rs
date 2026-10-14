@@ -144,7 +144,7 @@ pub(crate) fn save_house_location(
         .map_err(|error| error.to_string())?
         .insert(actor.character_id, bytes.as_slice())
         .map_err(|error| error.to_string())?;
-    txn.commit()
+    crate::persistence_commit::commit(txn)
         .map_err(|error| format!("Persist visited house: {error}"))
 }
 
@@ -192,7 +192,7 @@ pub(crate) fn save_neighborhood_location(
         .map_err(|error| error.to_string())?
         .insert(character_id, bytes.as_slice())
         .map_err(|error| error.to_string())?;
-    txn.commit().map_err(|error| {
+    crate::persistence_commit::commit(txn).map_err(|error| {
         format!("Persist neighborhood admission for character {character_id}: {error}")
     })
 }
@@ -248,8 +248,7 @@ fn commit(txn: WriteTransaction, state: &State) -> Result<(), String> {
         .map_err(|error| error.to_string())?
         .insert(STATE_ROW, bytes.as_slice())
         .map_err(|error| error.to_string())?;
-    txn.commit()
-        .map_err(|error| format!("Commit housing state: {error}"))
+    crate::persistence_commit::commit(txn).map_err(|error| format!("Commit housing state: {error}"))
 }
 
 fn read_inventory(txn: &WriteTransaction, character_id: u64) -> Result<InventoryData, String> {

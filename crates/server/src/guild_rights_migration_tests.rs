@@ -52,7 +52,7 @@ fn guild_ranks_layout_two_preserves_each_capability_and_bank_data_across_restart
         write(&txn, GUILDS, 7 + index as u32, &guild);
     }
     crate::persistence::set_layout_version(&txn, GUILD_LAYOUT_KEY, 2);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
 
     let db = Database::create(&path).unwrap();

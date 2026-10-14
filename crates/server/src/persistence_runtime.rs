@@ -237,7 +237,7 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
             }
         }
     }
-    txn.commit().expect("Failed to commit live character save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit live character save");
 }
 
 fn save_death_state(

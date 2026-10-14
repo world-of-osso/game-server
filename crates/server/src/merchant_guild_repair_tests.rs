@@ -179,7 +179,7 @@ fn repairs_and_gold_withdrawals_share_one_daily_allowance() {
         .unwrap()
         .insert(h.character_id, bitcode::encode(&usage).as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     damage_gear(&mut h);
     h.open(GODRIC_ROTHGAR);
 

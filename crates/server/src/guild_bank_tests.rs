@@ -257,7 +257,7 @@ fn members_follow_their_rank_tab_rights_and_daily_stacks() {
         .unwrap()
         .insert(h.character_id, bitcode::encode(&usage).as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     withdraw_slot(&mut h, vault, 0);
     assert!(failures(&mut h).is_empty());
 }

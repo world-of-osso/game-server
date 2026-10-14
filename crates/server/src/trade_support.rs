@@ -294,7 +294,7 @@ pub(super) fn commit_completed_trade(
     let txn = db.begin_write().expect("Failed to begin trade write");
     write_inventory_record(&txn, trade.initiator, &initiator.into_record());
     write_inventory_record(&txn, trade.target, &target.into_record());
-    txn.commit().expect("Failed to commit trade");
+    crate::persistence_commit::commit(txn).expect("Failed to commit trade");
     Ok([
         (trade.initiator, initiator_gold),
         (trade.target, target_gold),

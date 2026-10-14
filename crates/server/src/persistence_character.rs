@@ -35,7 +35,7 @@ pub fn save_character(db: &Database, character_id: u64, data: &CharacterData) {
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert character");
     }
-    txn.commit().expect("Failed to commit character save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character save");
 }
 
 /// Load a character from the database, if one exists for this character_id.
@@ -169,7 +169,7 @@ pub fn set_character_guild_by_id(
             .expect("insert character guild");
     }
     crate::persistence::charters::join_guild_in(&write, character_id, guild_id, guild_name);
-    write.commit().expect("Failed to commit character guild");
+    crate::persistence_commit::commit(write).expect("Failed to commit character guild");
     Ok(())
 }
 
@@ -193,7 +193,7 @@ pub fn remove_character_guild(db: &Database, character_id: u64) {
         .expect("open invites")
         .remove(character_id)
         .expect("remove invite");
-    txn.commit().expect("commit guild member removal");
+    crate::persistence_commit::commit(txn).expect("commit guild member removal");
 }
 
 pub fn set_pending_guild_invite(
@@ -218,9 +218,7 @@ pub fn set_pending_guild_invite(
             .insert(character_id, encoded.as_slice())
             .expect("insert pending guild invite");
     }
-    write
-        .commit()
-        .expect("Failed to commit pending guild invite");
+    crate::persistence_commit::commit(write).expect("Failed to commit pending guild invite");
 }
 
 pub fn accept_pending_guild_invite(
@@ -262,7 +260,7 @@ pub fn accept_pending_guild_invite(
         invite.guild_id,
         &invite.guild_name,
     );
-    txn.commit().expect("commit guild invite acceptance");
+    crate::persistence_commit::commit(txn).expect("commit guild invite acceptance");
     Ok(invite)
 }
 
@@ -299,8 +297,7 @@ pub fn take_pending_guild_invite(
             .expect("remove pending guild invite");
         decoded
     };
-    write
-        .commit()
+    crate::persistence_commit::commit(write)
         .expect("Failed to commit pending guild invite removal");
     Some(invite)
 }
@@ -330,7 +327,7 @@ pub fn save_guild_profile(db: &Database, guild_id: u32, profile: &GuildProfileDa
             .insert(guild_id, encoded.as_slice())
             .expect("insert guild profile");
     }
-    write.commit().expect("Failed to commit guild profile");
+    crate::persistence_commit::commit(write).expect("Failed to commit guild profile");
 }
 
 pub fn load_guild_member_note(db: &Database, character_id: u64) -> GuildMemberNoteData {
@@ -358,7 +355,7 @@ pub fn save_guild_member_note(db: &Database, character_id: u64, note: &GuildMemb
             .insert(character_id, encoded.as_slice())
             .expect("insert guild member note");
     }
-    write.commit().expect("Failed to commit guild member note");
+    crate::persistence_commit::commit(write).expect("Failed to commit guild member note");
 }
 
 pub fn list_guild_members(db: &Database, guild_id: u32) -> Vec<GuildMemberRecord> {
@@ -486,7 +483,7 @@ pub fn move_characters_between_accounts(
         acct.insert(to_account_id, to_encoded.as_slice())
             .expect("update target acct chars");
     }
-    txn.commit()
+    crate::persistence_commit::commit(txn)
         .map_err(|e| format!("Failed to commit character move: {e}"))?;
     Ok(from_ids.len())
 }
@@ -647,7 +644,7 @@ pub(crate) fn save_new_character(
             orientation: location.orientation,
         },
     );
-    txn.commit().expect("Failed to commit new character");
+    crate::persistence_commit::commit(txn).expect("Failed to commit new character");
 }
 
 /// Test fixture: a new character whose bags are granted 20 Linen Cloth, 10
@@ -771,5 +768,5 @@ pub(crate) fn remove_character(
             .expect("open character maps");
         maps.remove(character_id).expect("remove character map");
     }
-    txn.commit().expect("Failed to commit character deletion");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character deletion");
 }

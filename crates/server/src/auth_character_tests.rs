@@ -1219,7 +1219,7 @@ fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
         .unwrap()
         .insert(character_id, bytes.as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
     let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);

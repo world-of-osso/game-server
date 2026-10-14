@@ -165,7 +165,7 @@ fn generate_token_for_account(db: &Database, account_id: u64) -> String {
             .insert(token.as_str(), account_id)
             .expect("Failed to insert token");
     }
-    txn.commit().expect("Failed to commit token");
+    crate::persistence_commit::commit(txn).expect("Failed to commit token");
     token
 }
 
@@ -212,7 +212,7 @@ pub fn request_registration(db: &Database, username: &str, password: &str) -> Re
             .insert(username, hash.as_bytes())
             .expect("insert pending registration");
     }
-    txn.commit().expect("Failed to commit pending registration");
+    crate::persistence_commit::commit(txn).expect("Failed to commit pending registration");
     Ok(())
 }
 
@@ -246,7 +246,7 @@ pub fn ban_account(db: &Database, username: &str, reason: &str) -> Result<u64, S
             .insert(account_id, reason.as_bytes())
             .expect("insert ban reason");
     }
-    txn.commit().expect("Failed to commit account ban");
+    crate::persistence_commit::commit(txn).expect("Failed to commit account ban");
     Ok(account_id)
 }
 
@@ -261,7 +261,7 @@ pub fn unban_account(db: &Database, username: &str) -> Result<u64, String> {
             .expect("open banned_accounts");
         table.remove(account_id).expect("remove ban reason");
     }
-    txn.commit().expect("Failed to commit account unban");
+    crate::persistence_commit::commit(txn).expect("Failed to commit account unban");
     Ok(account_id)
 }
 
@@ -302,7 +302,7 @@ fn write_approved_account(db: &Database, username: &str, account_id: u64, token:
             .remove(username)
             .expect("remove pending registration");
     }
-    txn.commit().expect("Failed to commit account approval");
+    crate::persistence_commit::commit(txn).expect("Failed to commit account approval");
 }
 
 /// Hash a password with argon2.
@@ -333,7 +333,7 @@ fn store_new_account(db: &Database, account_id: u64, username: &str, hash: &str,
             .insert(account_id, hash.as_bytes())
             .expect("insert password hash");
     }
-    txn.commit().expect("Failed to commit account creation");
+    crate::persistence_commit::commit(txn).expect("Failed to commit account creation");
 }
 
 /// Find an existing account by token.
@@ -459,7 +459,7 @@ pub fn set_account_credentials(
             .insert(account_id, hash.as_bytes())
             .expect("insert password");
     }
-    txn.commit().expect("Failed to commit credentials");
+    crate::persistence_commit::commit(txn).expect("Failed to commit credentials");
     Ok(account_id)
 }
 

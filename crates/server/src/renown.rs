@@ -98,7 +98,7 @@ fn write_progress(db: &Database, character: u64, progress: &BTreeMap<u32, Progre
             .insert(character, bytes.as_slice())
             .expect("write renown progress");
     }
-    txn.commit().expect("commit renown progress");
+    crate::persistence_commit::commit(txn).expect("commit renown progress");
 }
 
 /// Admin-socket test setup: add `amount` renown reputation for `character_name`.

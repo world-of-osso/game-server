@@ -130,7 +130,7 @@ pub(crate) fn initialize(db: &Database) {
             .max(guild.value().checked_add(1).expect("guild IDs exhausted"));
     }
     write_state(&txn, &state);
-    txn.commit().expect("commit charter initialization");
+    crate::persistence_commit::commit(txn).expect("commit charter initialization");
 }
 
 fn is_guilded(txn: &WriteTransaction, character: u64) -> bool {
@@ -193,7 +193,7 @@ pub(crate) fn purchase(
     state.charters.insert(guid, id);
     write_inventory_record(&txn, owner, &model.into_record());
     write_state(&txn, &state);
-    txn.commit().expect("commit charter purchase");
+    crate::persistence_commit::commit(txn).expect("commit charter purchase");
     Ok(guid)
 }
 
@@ -305,7 +305,7 @@ pub(crate) fn sign(db: &Database, guid: u64, signer: u64, account: u64) -> Resul
         .or_default()
         .insert(signer, account);
     write_state(&txn, &state);
-    txn.commit().expect("commit charter signature");
+    crate::persistence_commit::commit(txn).expect("commit charter signature");
     Ok(())
 }
 
@@ -318,7 +318,7 @@ pub(crate) fn rename(db: &Database, guid: u64, owner: u64, name: &str) -> Result
         .rename(id, owner, name.trim())
         .map_err(petition_error)?;
     write_state(&txn, &state);
-    txn.commit().expect("commit charter rename");
+    crate::persistence_commit::commit(txn).expect("commit charter rename");
     Ok(())
 }
 
@@ -364,8 +364,7 @@ pub(crate) fn turn_in(
     write_state(&txn, &state);
     write_inventory_record(&txn, owner, &model.into_record());
     write_created_guild(&txn, &created, now);
-    txn.commit()
-        .expect("commit guild creation and charter consumption");
+    crate::persistence_commit::commit(txn).expect("commit guild creation and charter consumption");
     Ok(created)
 }
 

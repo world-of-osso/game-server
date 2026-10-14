@@ -45,7 +45,7 @@ pub(crate) fn record_first_kill(world: &mut World, map: InMap, encounter: u32, d
         .expect("begin raid first-kill transaction");
     persist_first_kills(&txn, map.map_id, difficulty, encounter, unix, &party)
         .expect("persist raid first kills");
-    txn.commit().expect("commit raid first-kill transaction");
+    crate::persistence_commit::commit(txn).expect("commit raid first-kill transaction");
 }
 
 #[cfg(test)]

@@ -101,8 +101,7 @@ pub(crate) fn load_states(db: &Database, account: u64) -> Result<OwnedBattleStat
             None => BTreeMap::new(),
         }
     };
-    transaction
-        .commit()
+    crate::persistence_commit::commit(transaction)
         .map_err(|e| format!("Commit pet state initialization: {e}"))?;
     Ok(states)
 }
@@ -129,8 +128,7 @@ pub(crate) fn save_journal_and_states(
         .map_err(|e| format!("Open pet state table: {e}"))?
         .insert(account, state_bytes.as_slice())
         .map_err(|e| format!("Save pet state: {e}"))?;
-    transaction
-        .commit()
+    crate::persistence_commit::commit(transaction)
         .map_err(|e| format!("Commit battle progress for account {account}: {e}"))
 }
 
@@ -149,7 +147,6 @@ pub(crate) fn save_states(
         .map_err(|e| format!("Open pet state table: {e}"))?
         .insert(account, bytes.as_slice())
         .map_err(|e| format!("Save pet state for account {account}: {e}"))?;
-    transaction
-        .commit()
+    crate::persistence_commit::commit(transaction)
         .map_err(|e| format!("Commit pet state for account {account}: {e}"))
 }

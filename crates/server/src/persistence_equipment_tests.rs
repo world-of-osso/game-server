@@ -63,7 +63,7 @@ fn initialize(path: &std::path::Path) -> Database {
         .unwrap()
         .insert("item_instance", 50)
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     persistence::save_inventory(
         &db,
         6,
@@ -183,7 +183,7 @@ fn equipment_guid_exhaustion_rolls_back_the_complete_batch() {
         .unwrap()
         .insert("item_instance", u64::MAX - 1)
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let error = grant_equipment(&db, "Theron", &manifest()).unwrap_err();
     assert!(error.contains("exhausted"), "{error}");
     assert_eq!(counter(&db), u64::MAX - 1);

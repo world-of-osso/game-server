@@ -867,7 +867,7 @@ fn nonvisual_equipment_migration_preserves_old_character_and_visual_items() {
     transaction
         .delete_table(persistence::inventory_store::NONVISUAL_EQUIPMENT)
         .unwrap();
-    transaction.commit().unwrap();
+    crate::persistence_commit::commit(transaction).unwrap();
     persistence::create_tables(db(&app));
     let after =
         persistence::inventory_store::load_inventory_record(db(&app), client.character_id).unwrap();

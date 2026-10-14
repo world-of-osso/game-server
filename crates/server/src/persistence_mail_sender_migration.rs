@@ -72,5 +72,5 @@ pub(crate) fn migrate_sender_mailboxes(db: &Database) {
         }
     }
     txn.delete_table(V1).expect("drop v1 mailbox table");
-    txn.commit().expect("commit mailbox sender migration");
+    crate::persistence_commit::commit(txn).expect("commit mailbox sender migration");
 }

@@ -1075,7 +1075,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         if let Some(wallet) = knowledge {
             crate::profession::specializations::write_currency_wallet(&txn, character, wallet);
         }
-        txn.commit().expect("commit quest reward");
+        crate::persistence_commit::commit(txn).expect("commit quest reward");
         if let Some(settlement) = numeric {
             let connection = self.requester.connection;
             self.io

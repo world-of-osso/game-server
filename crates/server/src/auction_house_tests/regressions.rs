@@ -55,7 +55,7 @@ fn request_app(bonding: u8, bound: bool) -> (App, Entity, u64, u64) {
                 bitcode::encode(&ItemInstanceData { soulbound: true }).as_slice(),
             )
             .unwrap();
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);

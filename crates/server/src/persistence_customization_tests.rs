@@ -157,7 +157,7 @@ fn customization_migration_rejects_corrupt_records_without_rewriting_them() {
             .insert(55, bytes.as_slice())
             .unwrap();
     }
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| create_tables(&db)));
     assert!(result.is_err(), "unknown encoding must fail explicitly");
     let txn = db.begin_read().unwrap();
@@ -180,7 +180,7 @@ fn customization_migration_rewrites_old_bytes_once_across_reopen() {
                 .insert(41, bytes.as_slice())
                 .unwrap();
         }
-        txn.commit().unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
     }
     let migrated_bytes = {
         let db = Database::open(&path).unwrap();

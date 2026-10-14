@@ -27,7 +27,7 @@ pub(crate) fn save_character_map(db: &Database, character_id: u64, map_id: u32) 
             .insert(character_id, map_id)
             .expect("Failed to save character map");
     }
-    txn.commit().expect("Failed to commit character map");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character map");
 }
 
 /// Key of the one `instance_locks` row.
@@ -90,5 +90,5 @@ pub(crate) fn save_instance_locks(
             .insert(INSTANCE_LOCKS_KEY, normal_bytes.as_slice())
             .expect("Failed to save normal instance locks");
     }
-    txn.commit().expect("Failed to commit instance locks");
+    crate::persistence_commit::commit(txn).expect("Failed to commit instance locks");
 }

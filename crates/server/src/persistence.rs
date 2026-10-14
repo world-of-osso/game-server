@@ -413,7 +413,7 @@ pub(crate) fn create_tables(db: &Database) {
     toy_store::create_tables(&txn);
     housing_store::create_tables(&txn);
     mount_store::create_tables(&txn);
-    txn.commit().expect("Failed to commit initial tables");
+    crate::persistence_commit::commit(txn).expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);
     migrate_legacy_auctions(db);
@@ -482,7 +482,7 @@ fn migrate_legacy_auctions(db: &Database) {
     };
     txn.delete_table(LEGACY_AUCTIONS)
         .expect("Failed to drop legacy auctions");
-    txn.commit().expect("Failed to commit auction migration");
+    crate::persistence_commit::commit(txn).expect("Failed to commit auction migration");
     if migrated > 0 {
         info!("Migrated {migrated} legacy auctions to u64 money");
     }
@@ -506,7 +506,7 @@ fn migrate_legacy_characters(db: &Database) {
                 .expect("Failed to write migrated character");
         }
     }
-    txn.commit().expect("Failed to commit character migration");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character migration");
     info!("Migrated {} legacy character records", migrations.len());
 }
 
@@ -569,7 +569,7 @@ fn migrate_legacy_inventories(db: &Database) {
     };
     txn.delete_table(LEGACY_INVENTORIES)
         .expect("Failed to drop legacy inventories");
-    txn.commit().expect("Failed to commit inventory migration");
+    crate::persistence_commit::commit(txn).expect("Failed to commit inventory migration");
     if migrated > 0 {
         info!("Migrated {migrated} legacy inventory records to u64 gold");
     }
@@ -631,7 +631,7 @@ pub fn save_inventory(db: &Database, character_id: u64, inventory: &InventoryDat
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert inventory");
     }
-    txn.commit().expect("Failed to commit inventory save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit inventory save");
 }
 
 pub fn load_professions(db: &Database, character_id: u64) -> PlayerProfessions {
@@ -658,7 +658,7 @@ pub fn save_professions(db: &Database, character_id: u64, professions: &PlayerPr
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert professions");
     }
-    txn.commit().expect("Failed to commit professions save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit professions save");
 }
 
 pub fn load_reputation(
@@ -713,7 +713,7 @@ fn persist_reputation_migration(
         .expect("open legacy reputations")
         .remove(character_id)
         .expect("retire migrated reputation");
-    txn.commit().expect("commit signed reputation migration");
+    crate::persistence_commit::commit(txn).expect("commit signed reputation migration");
 }
 
 pub fn save_reputation(db: &Database, character_id: u64, reputation: &CharacterReputation) {
@@ -727,7 +727,7 @@ pub fn save_reputation(db: &Database, character_id: u64, reputation: &CharacterR
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert reputation");
     }
-    txn.commit().expect("Failed to commit reputation save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit reputation save");
 }
 
 pub fn load_currencies(db: &Database, character_id: u64) -> shared::currency::CurrencyWallet {
@@ -791,7 +791,7 @@ pub fn save_currencies(
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert currencies");
     }
-    txn.commit().expect("Failed to commit currencies save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit currencies save");
 }
 
 pub fn load_achievements(
@@ -827,7 +827,7 @@ pub fn save_achievements(
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert achievements");
     }
-    txn.commit().expect("Failed to commit achievements save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit achievements save");
 }
 
 pub fn load_player_death_state(
@@ -880,7 +880,7 @@ pub fn save_pvp(db: &Database, character_id: u64, state: &crate::pvp::PlayerPvpP
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert pvp state");
     }
-    txn.commit().expect("Failed to commit pvp save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit pvp save");
 }
 
 pub fn load_world_map(db: &Database, character_id: u64) -> crate::world_map::PlayerWorldMapState {
@@ -912,7 +912,7 @@ pub fn save_world_map(
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert world map");
     }
-    txn.commit().expect("Failed to commit world map save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit world map save");
 }
 
 pub fn load_friends(db: &Database, character_id: u64) -> crate::friends::PlayerFriendsState {
@@ -938,7 +938,7 @@ pub fn save_friends(db: &Database, character_id: u64, state: &crate::friends::Pl
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert friends");
     }
-    txn.commit().expect("Failed to commit friends save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit friends save");
 }
 
 pub fn load_ignore_list(
@@ -973,7 +973,7 @@ pub fn save_ignore_list(
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert ignore list");
     }
-    txn.commit().expect("Failed to commit ignore list save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit ignore list save");
 }
 
 pub fn load_collections(
@@ -1009,7 +1009,7 @@ pub fn save_collections(
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert collections");
     }
-    txn.commit().expect("Failed to commit collections save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit collections save");
 }
 
 pub fn load_auctions(db: &Database) -> Vec<AuctionData> {
@@ -1059,7 +1059,7 @@ pub fn next_id(db: &Database, key: &str) -> u64 {
         id = prev + 1;
         table.insert(key, id).expect("Failed to insert next_id");
     }
-    txn.commit().expect("Failed to commit next_id");
+    crate::persistence_commit::commit(txn).expect("Failed to commit next_id");
     id
 }
 
@@ -1098,7 +1098,7 @@ pub fn save_motd(db: &Database, motd: &shared::motd::Motd) {
             .insert("motd", bytes.as_slice())
             .expect("Failed to insert motd");
     }
-    txn.commit().expect("Failed to commit motd save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit motd save");
 }
 
 #[cfg(test)]

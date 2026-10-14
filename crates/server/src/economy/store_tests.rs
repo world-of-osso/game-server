@@ -277,7 +277,7 @@ fn corrupt_mailbox_aborts_prior_writes_in_same_transaction() {
         .unwrap()
         .insert(8, b"corrupt".as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let changes = MarketChanges {
         expected_auctions: vec![(1, auction(1))],
         deleted_auctions: vec![1],
@@ -330,7 +330,7 @@ fn corrupt_state_is_error_not_missing_state() {
         .unwrap()
         .insert(0, b"corrupt".as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     assert!(load_state(&db).unwrap_err().contains("economy state"));
 }
 
@@ -434,7 +434,7 @@ fn inventory_snapshot_guard_rejects_missing_changed_and_corrupt_rows_before_sett
                 }
             }
         }
-        tx.commit().unwrap();
+        crate::persistence_commit::commit(tx).unwrap();
         let result = commit_market(
             &db,
             Some(&state(2)),

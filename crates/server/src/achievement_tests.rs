@@ -1954,7 +1954,7 @@ fn achievements_criteria_rank_totals_follow_committed_authentic_quest_reputation
         .unwrap();
     let txn = db.begin_write().unwrap();
     settlement.persist_in(&txn, character);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     settlement.publish(app.world_mut(), connection);
     app.update();
     let state = app.world().get::<PlayerAchievementState>(player).unwrap();

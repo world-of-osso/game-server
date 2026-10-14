@@ -48,7 +48,7 @@ fn save(db: &Database, character: u64, difficulty: RaidDifficulty) {
             .insert(character, bitcode::encode(&difficulty).as_slice())
             .expect("save raid difficulty");
     }
-    txn.commit().expect("commit raid difficulty");
+    crate::persistence_commit::commit(txn).expect("commit raid difficulty");
 }
 
 #[derive(Resource, Default)]

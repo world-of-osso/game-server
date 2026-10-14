@@ -51,7 +51,7 @@ pub(crate) fn learn(
     toys.insert(item_id, false);
     write(&txn, account_id, &toys);
     write_inventory_record(&txn, character_id, consumed);
-    txn.commit().expect("commit toy learning");
+    crate::persistence_commit::commit(txn).expect("commit toy learning");
     Ok(())
 }
 
@@ -72,6 +72,6 @@ pub(crate) fn favourite(
     };
     *toys.get_mut(&item_id).ok_or("toy not learned")? = favourite;
     write(&txn, account_id, &toys);
-    txn.commit().expect("commit toy favourite");
+    crate::persistence_commit::commit(txn).expect("commit toy favourite");
     Ok(())
 }

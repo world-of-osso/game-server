@@ -46,7 +46,7 @@ pub(crate) fn learn_spells(db: &Database, account: u64, ids: &[u32]) {
         mounts.entry(*id).or_insert(false);
     }
     write(&txn, account, &mounts);
-    txn.commit().expect("commit mount spell learning");
+    crate::persistence_commit::commit(txn).expect("commit mount spell learning");
 }
 
 /// Learning and consuming the physical item share one durable transaction.
@@ -65,7 +65,7 @@ pub(crate) fn learn_item(
     mounts.insert(mount, false);
     write(&txn, account, &mounts);
     write_inventory_record(&txn, character, consumed);
-    txn.commit().expect("commit mount item learning");
+    crate::persistence_commit::commit(txn).expect("commit mount item learning");
     Ok(())
 }
 
@@ -81,7 +81,7 @@ pub(crate) fn favourite(
         .get_mut(&mount)
         .ok_or("You have not collected this mount.")? = favourite;
     write(&txn, account, &mounts);
-    txn.commit().expect("commit mount favourite");
+    crate::persistence_commit::commit(txn).expect("commit mount favourite");
     Ok(())
 }
 

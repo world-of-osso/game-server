@@ -33,5 +33,5 @@ pub fn save_known_taxi_nodes(db: &Database, character_id: u64, nodes: &BTreeSet<
             .insert(character_id, bytes.as_slice())
             .expect("Failed to save known taxi nodes");
     }
-    txn.commit().expect("Failed to commit known taxi nodes");
+    crate::persistence_commit::commit(txn).expect("Failed to commit known taxi nodes");
 }

@@ -102,7 +102,7 @@ fn housing_dye_preview_is_owner_local_and_commit_consumes_per_changed_slot_atomi
     crate::persistence::save_inventory(&db, 30, &inventory);
     let txn = db.begin_write().unwrap();
     inventory_store::write_item_definition_source(&txn, 702, ItemDefinitionSource::Forever70205);
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     let preview = preview_dyes(&db, owner, house_id, 1, &changes, &catalog).unwrap();
     assert_eq!(preview.changes, changes);
     assert_eq!(crate::persistence::load_inventory(&db, 30), inventory);
@@ -298,7 +298,7 @@ fn housing_dye_failure_after_first_item_rolls_back_real_bag_placements() {
         .unwrap()
         .insert(30, bitcode::encode(&placements).as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     // Green274470 is consumed first, including its bag placement; Red274473 then refuses its foreign definition.
     let changes = [
         shared::protocol::DecorDye {
@@ -386,7 +386,7 @@ fn housing_dye_schema2_migration_preserves_existing_undyed_counts_and_permission
         .insert(STATE_ROW, serde_json::to_vec(&value).unwrap().as_slice())
         .unwrap();
     migration::migrate(&txn, &rusqlite::Connection::open_in_memory().unwrap()).unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
     drop(db);
     let db = Database::open(&path).unwrap();
     assert_eq!(snapshot(&db, owner, Some(house_id), None).unwrap(), before);

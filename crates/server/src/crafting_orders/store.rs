@@ -84,6 +84,5 @@ pub(crate) fn commit(
         }
         push_mail(&txn, *id, mail.clone());
     }
-    txn.commit()
-        .map_err(|e| format!("commit crafting order: {e}"))
+    crate::persistence_commit::commit(txn).map_err(|e| format!("commit crafting order: {e}"))
 }

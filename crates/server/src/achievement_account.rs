@@ -142,7 +142,7 @@ fn enqueue_progress(
                     .insert(account, account_bytes.as_slice())
                     .map_err(|error| error.to_string())?;
             }
-            txn.commit().map_err(|error| error.to_string())
+            crate::persistence_commit::commit(txn).map_err(|error| error.to_string())
         });
 }
 

@@ -57,8 +57,7 @@ pub fn save_progression(db: &Database, character_id: u64, data: &ProgressionData
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert character progression");
     }
-    txn.commit()
-        .expect("Failed to commit character progression save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character progression save");
 }
 
 pub fn load_xp(db: &Database, character_id: u64) -> u32 {
@@ -82,7 +81,7 @@ pub fn save_xp(db: &Database, character_id: u64, xp: u32) {
             .insert(character_id, xp)
             .expect("Failed to insert character xp");
     }
-    txn.commit().expect("Failed to commit character xp save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character xp save");
 }
 
 /// The saved Flight Style aura spell; `None` before the character first switched.
@@ -105,8 +104,7 @@ pub fn save_flight_style(db: &Database, character_id: u64, aura_spell: u32) {
             .insert(character_id, aura_spell)
             .expect("Failed to insert character flight style");
     }
-    txn.commit()
-        .expect("Failed to commit character flight style save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character flight style save");
 }
 
 /// TrinityCore `characters.rest_bonus`, `logout_time` and `is_logout_resting`
@@ -139,7 +137,7 @@ pub fn save_rest(db: &Database, character_id: u64, data: &RestData) {
             .insert(character_id, bytes.as_slice())
             .expect("Failed to insert character rest");
     }
-    txn.commit().expect("Failed to commit character rest save");
+    crate::persistence_commit::commit(txn).expect("Failed to commit character rest save");
 }
 
 #[cfg(test)]
@@ -316,7 +314,7 @@ pub fn save_trait_configs(db: &Database, character_id: u64, data: &TraitConfigsD
         .expect("Open trait loadouts")
         .insert(character_id, bytes.as_slice())
         .expect("Insert trait loadouts");
-    txn.commit().expect("Commit trait loadouts");
+    crate::persistence_commit::commit(txn).expect("Commit trait loadouts");
 }
 
 /// Apply edits to the selected saved loadout, or the unnamed default.

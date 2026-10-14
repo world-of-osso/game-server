@@ -12,7 +12,7 @@ fn seed_legacy(db: &Database, specs: Vec<(u32, Vec<Purchase>)>) {
         .unwrap()
         .insert(42, bytes.as_slice())
         .unwrap();
-    txn.commit().unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
 }
 #[test]
 fn talent_loadouts_migration_preserves_both_specs_and_runs_once() {
