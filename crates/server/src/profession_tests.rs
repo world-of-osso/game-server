@@ -18,7 +18,10 @@ fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopen
     let db = redb::Database::create(&path).unwrap();
     persistence::create_tables(&db);
     let mut h = harness_with(90, |app| {
-        app.add_plugins(AchievementPlugin);
+        app.add_plugins((
+            AchievementPlugin,
+            crate::class_progression::ClassProgressionPlugin,
+        ));
         app.insert_resource(GameDatabase { db });
     })
     .unwrap();
@@ -47,7 +50,7 @@ fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopen
         }
     })
     .unwrap();
-    h.app.update();
+    h.advance(2);
     assert!((61271..=61280).all(|id| {
         !h.app
             .world()
@@ -60,7 +63,7 @@ fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopen
         learner.learn_spell(profs, 432962, 0)
     })
     .unwrap();
-    h.app.update();
+    h.advance(2);
     assert!(
         (61271..=61280).all(|id| !h
             .app
@@ -75,7 +78,15 @@ fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopen
         learner.learn_spell(profs, 406106, 0)
     })
     .unwrap();
-    h.app.update();
+    h.advance(2);
+    assert!(h.professions().knows(406106));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(h.player)
+            .unwrap()
+            .contains(406106)
+    );
     let state = h
         .app
         .world()
