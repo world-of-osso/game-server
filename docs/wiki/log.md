@@ -1,3 +1,7 @@
+## 2026-10-13 — Clean-master coin dispatch recheck
+
+[Coin ordering](../toy-effects14-coverage.md#coin-dispatch-regression-recheck-2026-10-13): reproduced missing emote on c732ab79, traced targetless dispatch to3ca41770, confirmed existing709082c0 fix after master merge (90839e14,1/1PASS). No duplicate runtime fix or native/transport completion claim.
+
 ## 2026-10-13 — Prismatic Bauble source and native gaps
 
 [Coverage](../toy-effects14-coverage.md#prismatic-bauble--source-admission-native-gaps-open-2026-10-13): exact20s/current120s admission, real-source ribbon parser failure/fix, stationary Modern state proof and explicit Forever delivery/native-rendering gaps.

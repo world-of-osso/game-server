@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Authored script dispatch regression (2026-10-13)
+
+[Coin ordering regression](../../toy-effects14-coverage.md#coin-dispatch-regression-recheck-2026-10-13) records the clean-master counterexample, introducing commit and retained source-specific fix.
+
 ## Prismatic Bauble source boundary (2026-10-13)
 
 Exact223143 cosmetic admission has authoritative lifetime/recovery proof, not native rainbow certification. Source ribbon parsing and actual native delivery/lifecycle gaps remain separate. [Claim-specific coverage](../../toy-effects14-coverage.md#prismatic-bauble--source-admission-native-gaps-open-2026-10-13).
