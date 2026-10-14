@@ -40,7 +40,7 @@ const ONLY_VISIBLE_TO_SUMMONER_GROUP: u32 = 0x10000;
 pub struct SummonProperties {
     pub control: u32,
     pub faction: u32,
-    /// DB2Structure.h4318: Title is signed int32;3001 legitimately carries -1.
+    /// TC a352b1fa DB2Structure.h SummonPropertiesEntry: `int32 Title` (12.1.5 authors -1).
     pub title: i32,
     pub slot: i32,
     /// The first authored SummonProperties flag word; other flag semantics are separate.

@@ -82,9 +82,11 @@ fn dummy13_execute_refunds_actual_optional_rage_only_with_rank_and_survivor() {
         (true, 900.0, 240.0),
         (true, 1.0, 200.0),
     ] {
-        let mut h = harness(Vec::new(), &[163201, 260798, 316405], 1).unwrap();
+        let mut h = harness(Vec::new(), &[163201, 260798, 316405, 137049], 1).unwrap();
         let caster = h.caster;
         let target = h.npc;
+        // Active SpellPower9491 requires the real Arms specialization aura.
+        apply(&mut h, caster, caster, 137049, u32::MAX);
         if rank {
             apply(&mut h, caster, caster, 316405, u32::MAX);
         }
@@ -102,9 +104,11 @@ fn dummy13_execute_refunds_actual_optional_rage_only_with_rank_and_survivor() {
 
 #[test]
 fn dummy13_execute_partial_optional_spend_refusal_and_trigger_do_not_invent_refunds() {
-    let mut h = harness(Vec::new(), &[163201, 260798, 316405], 1).unwrap();
+    let mut h = harness(Vec::new(), &[163201, 260798, 316405, 137049], 1).unwrap();
     let caster = h.caster;
     let target = h.npc;
+    // Active SpellPower9491 requires the real Arms specialization aura.
+    apply(&mut h, caster, caster, 137049, u32::MAX);
     apply(&mut h, caster, caster, 316405, u32::MAX);
     h.app.world_mut().get_mut::<Health>(target).unwrap().current = 900.0;
     h.set_power(PowerType::Rage, 300.0);
