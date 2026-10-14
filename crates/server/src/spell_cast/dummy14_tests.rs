@@ -124,7 +124,13 @@ fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
     let other = spawn_npc(&mut h.app, 4.0);
     execute(&mut h, 259495, Some(target));
     h.advance(3); // Native root35yd/sec missile must reach3yd target.
-    assert!(varied(157.95 * 1.8).contains(&(5000.0 - h.health(target))));
+    assert!(
+        varied(157.95 * 1.8).contains(&(5000.0 - h.health(target))),
+        "primary damage{}, caster stats{:?}, native log{:?}",
+        5000.0 - h.health(target),
+        h.app.world().get::<crate::stats::CharacterStats>(h.caster),
+        h.inbox.log,
+    );
     assert!(crate::auras::has_aura(h.app.world(), target, 269747));
     assert_eq!(
         h.health(other),
