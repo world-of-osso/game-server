@@ -56,7 +56,7 @@ fn waypoint_rejected_interior_segment_never_moves_or_reports_a_path_arrival() {
     )])));
     let actor = world
         .spawn((
-            Position::default(),
+            bevy(Vec3::ZERO),
             crate::maps::InMap::continent(0),
             SpawnPoint {
                 x: 0.0,
@@ -80,7 +80,7 @@ fn waypoint_rejected_interior_segment_never_moves_or_reports_a_path_arrival() {
             .advance_by(Duration::from_millis(50));
         path_movement_system(&mut world);
     }
-    assert_eq!(*world.get::<Position>(actor).unwrap(), Position::default());
+    assert_eq!(*world.get::<Position>(actor).unwrap(), bevy(Vec3::ZERO));
     assert!(
         world.resource::<ArrivalReceipts>().0.is_empty(),
         "no synthetic script arrival after rejected controls"
