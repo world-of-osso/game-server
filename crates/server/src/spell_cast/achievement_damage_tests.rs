@@ -8,6 +8,84 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn achievements_criteria_bbgun_real_effect_hits_authored_enemy_leader() {
+    use shared::components::Npc;
+    let mut h = harness_with_plugins(vec![], &[67531], 1, false, |app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .unwrap();
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    let name: String = conn
+        .query_row(
+            "SELECT name FROM content_creature_template WHERE entry=16802",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Npc {
+            template_id: 16802,
+            name,
+        },
+        Health {
+            current: 50_000.0,
+            max: 100_000.0,
+        },
+    ));
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Bbgunproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((ClientId(character), PlayerAchievementState::default()));
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.update();
+    assert!(
+        super::cast_triggered_with_item_level(
+            h.app.world_mut(),
+            h.caster,
+            67531,
+            Some(h.npc),
+            0,
+            None,
+        ),
+        "authored BB gun cast accepts its actual NPC target"
+    );
+    h.advance(2);
+    assert_eq!(
+        h.health(h.npc),
+        49_990.0,
+        "source165 deals 0.01percent of maximum, not current health or caster power"
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| event.spell_id == Some(67531)
+            && event.target == Some(h.npc.to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.amount == 10),
+        "real percent-health hit produces its damage receipt"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&12660),
+        Some(&1),
+        "actual leader hit must satisfy TargetCreatureId4"
+    );
+}
+
+#[test]
 fn achievements_criteria_kill_any_creature_uses_real_taps_group_range_and_corpse_eligibility() {
     use crate::group::{GroupRegistry, OnlineMember, OnlineView};
     use shared::components::{Npc, Position};
