@@ -151,6 +151,12 @@ Wailing Caverns Cobrahn3669: actual TDB SmartAI row casts Lightning Bolt20805 at
 
 The source pre-wave endpoint/faction is staged only as a fixture input. Actual group membership/coordinates, copy ownership, NPC target, living beyond301s, real death credit592 and300s corpse retirement are exercised; Wizzle's existing group storage/expiry fixture remains the regression control. This is not gossip activation, escort travel, scheduled EVENT_PROGRESS_20, ordinary balance or native/loot acceptance. [Contract](../../specs/boss-scripts.md#wailing-caverns-source-slices). Anacondra's aura15 implementation is documented once in [damage shields](auras.md#damage-shields).
 
+### Wailing first escort camp (2026-10-14)
+
+Pinned `wailing_caverns.cpp` path367800 completion schedules source events4–7 on an out-of-combat `EventMap`, separate from Sleep/Potion. After1s Disciple talks group2, then7s later summons the two authored3636 Ravagers from3678/group0. Their actual AttackStart targets Disciple and pauses the escort clock. After their real deaths,10 remaining out-of-combat seconds lead to source-facing5.742133 and group3 speech; another3s requests path367801 through the strict existing movement helper. Reset clears only combat events, as authored.
+
+`tests/wailing_escort.rs` controls the path-arrival input but exercises live source summons, combat pause, timing and copy-scoped speech. Facing is observed at the event callback boundary: later generic chase ticks overwrite that transient rotation in this fixture. No physical path arrival, next-path travel, gossip activation, full awakening or native clear is certified. Current source activation gaps remain in the [contract](../../specs/boss-scripts.md#wailing-caverns-source-slices).
+
 ### Wailing Normal run and corpse rewards (2026-10-14)
 
 `tests/wailing_progress.rs` proves all eight controlled primary deaths in one Normal copy, including Mutanus from actual Disciple group4. Every encounter585–592 completes once, other-copy messages stay empty, and bits0–7 persist across redb close/reopen. Restored population filters all defeated primaries while retaining Disciple/unrelated spawns; fresh owner starts at zero. No scheduled raid/Heroic lock is created. Populated fixtures load real gathering metadata because authored Wailing gameobjects include gathering nodes.
