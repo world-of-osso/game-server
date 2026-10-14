@@ -17,8 +17,53 @@ fn waypoint_source_short_initial_segment_still_moves_to_the_real_destination() {
         5.0,
     )
     .expect("source admits a short first crossing");
-    assert!((spline.position(501).x - 2.5).abs() < 0.001);
+    // Native cumulative millisecond truncation permits 5mm per segment here.
+    assert!((spline.position(501).x - 2.5).abs() < 0.01);
     assert_eq!(spline.position(spline.end_ms), Vec3::new(5.0, 0.0, 0.0));
+}
+
+#[test]
+fn waypoint_collinear_portals_move_without_cutting_turns_or_height_changes() {
+    let original = vec![
+        Vec3::ZERO,
+        Vec3::new(1.0, 0.0, 0.0),
+        Vec3::new(1.05, 0.0, 0.0),
+        Vec3::new(1.09, 0.0, 0.0),
+        Vec3::new(2.0, 0.0, 0.0),
+        Vec3::new(2.0, 0.0, 1.0),
+        Vec3::new(2.0, 1.0, 1.0),
+    ];
+    let controls = coalesce_collinear_crossings(original.clone());
+    let spline = launch(controls, false, 0.0, 2.0).expect("collinear tiny portals are not turns");
+    for elapsed in 0..=spline.end_ms {
+        let point = spline.position(elapsed);
+        let distance = original
+            .windows(2)
+            .map(|pair| segment_distance_squared(point, pair[0], pair[1]))
+            .min_by(f32::total_cmp)
+            .unwrap();
+        assert!(
+            distance <= PORTAL_COLLINEAR_EPSILON * PORTAL_COLLINEAR_EPSILON,
+            "movement never shortcuts a turn/height transition: {point:?}"
+        );
+    }
+    assert_eq!(spline.position(spline.end_ms), *original.last().unwrap());
+    let short_height_step = vec![
+        Vec3::ZERO,
+        Vec3::new(2.0, 0.0, 0.0),
+        Vec3::new(2.0, 0.05, 0.0),
+        Vec3::new(3.0, 0.05, 0.0),
+    ];
+    assert!(
+        launch(
+            coalesce_collinear_crossings(short_height_step),
+            false,
+            0.0,
+            2.0
+        )
+        .is_none(),
+        "a real short height corner remains rejected, never flattened"
+    );
 }
 
 #[derive(Resource, Default)]

@@ -31,6 +31,8 @@ const STEPS_PER_SEGMENT: u32 = 3;
 const MINIMAL_DURATION_MS: i32 = 1;
 /// `MoveSplineInitArgs::_checkPathLengths` minimum segment.
 const MIN_SEGMENT_LENGTH: f32 = 0.1;
+/// Float-rounded collinear Detour portals may be coalesced, never terrain/turn corners.
+const PORTAL_COLLINEAR_EPSILON: f32 = 0.0001;
 
 /// `WaypointMoveType`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -361,7 +363,52 @@ fn query_path_controls(
     }
     let navigation = navigation.ok_or("ground path has no navigation resource")?;
     let route = query_ground_waypoints(navigation, launch_from, path.nodes[node].1)?;
-    Ok(std::iter::once(launch_from.position).chain(route).collect())
+    let controls = std::iter::once(launch_from.position).chain(route).collect();
+    Ok(coalesce_collinear_crossings(controls))
+}
+
+/// Ramer-Douglas-Peucker at float rounding precision, not a route shortcut.
+/// Every original crossing stays on the resulting segments within that precision.
+fn coalesce_collinear_crossings(points: Vec<Vec3>) -> Vec<Vec3> {
+    if points.len() < 3 {
+        return points;
+    }
+    let last = points.len() - 1;
+    let mut keep = vec![false; points.len()];
+    keep[0] = true;
+    keep[last] = true;
+    let mut ranges = vec![(0, last)];
+    while let Some((start, end)) = ranges.pop() {
+        let farthest = (start + 1..end)
+            .map(|index| {
+                (
+                    index,
+                    segment_distance_squared(points[index], points[start], points[end]),
+                )
+            })
+            .max_by(|a, b| a.1.total_cmp(&b.1));
+        if let Some((index, distance)) = farthest
+            && distance > PORTAL_COLLINEAR_EPSILON * PORTAL_COLLINEAR_EPSILON
+        {
+            keep[index] = true;
+            ranges.extend([(start, index), (index, end)]);
+        }
+    }
+    points
+        .into_iter()
+        .zip(keep)
+        .filter_map(|(point, keep)| keep.then_some(point))
+        .collect()
+}
+
+fn segment_distance_squared(point: Vec3, start: Vec3, end: Vec3) -> f32 {
+    let delta = end - start;
+    let length_squared = delta.length_squared();
+    if length_squared == 0.0 {
+        return point.distance_squared(start);
+    }
+    let fraction = ((point - start).dot(delta) / length_squared).clamp(0.0, 1.0);
+    point.distance_squared(start + delta * fraction)
 }
 
 fn query_ground_waypoints(
