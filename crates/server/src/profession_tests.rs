@@ -74,7 +74,7 @@ fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopen
                 AchievementPlugin,
                 crate::class_progression::ClassProgressionPlugin,
             ));
-            app.insert_resource(GameDatabase { db });
+            app.insert_resource(GameDatabase::new(db));
         })
         .unwrap();
         h.app
@@ -163,7 +163,7 @@ fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopen
         for &id in &criteria {
             assert_eq!(saved.criteria_progress.get(&id), Some(&1));
         }
-        h.app.insert_resource(GameDatabase { db: reopened });
+        h.app.insert_resource(GameDatabase::new(reopened));
         h.app
             .world_mut()
             .entity_mut(h.player)
