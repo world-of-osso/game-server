@@ -127,7 +127,8 @@ pub(crate) struct PathMovement {
 
 impl PathMovement {
     /// An active chase/home generator preempts this default-slot waypoint.
-    fn deactivate(&mut self) {
+    pub(crate) fn deactivate(&mut self) -> bool {
+        let was_current = !self.deactivated;
         if let Some(spline) = self.spline.take() {
             if self.path.exact_spline() {
                 // Exact controls correspond one-for-one with authored nodes.
@@ -136,6 +137,7 @@ impl PathMovement {
             self.started = false;
         }
         self.deactivated = true;
+        was_current
     }
 
     /// WaypointMovementGenerator::DoReset: stop the old spline, then relaunch
