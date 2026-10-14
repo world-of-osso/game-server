@@ -12,6 +12,58 @@ use super::*;
 use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::persistence::ClientId;
 
+#[test]
+fn inventory_split_delta_waits_for_fifo_commit_without_blocking_updates() {
+    use std::time::Instant;
+    let mut app = setup_app(persistence::temp_database());
+    let client = spawn_client(&mut app, 1, "Fifobags");
+    enter_world(&mut app, &client);
+    received::<InventoryDelta>(&mut app, &client);
+    let held = db(&app).begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    send::<_, InventoryChannel>(
+        &mut app,
+        &client,
+        SplitItem {
+            from: bag(0),
+            to: bag(4),
+            count: 5,
+        },
+    );
+    let started = Instant::now();
+    app.update();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature = received::<InventoryDelta>(&mut app, &client);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "inventory tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "inventory delta precedes commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        app.update();
+        if !received::<InventoryDelta>(&mut app, &client).is_empty() {
+            break;
+        }
+        assert!(Instant::now() < deadline, "no committed inventory delta");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let inventory = persistence::load_inventory(db(&app), client.character_id);
+    let mut counts: Vec<_> = inventory
+        .items
+        .iter()
+        .filter(|item| item.item_id == LINEN)
+        .map(|item| item.stack_count)
+        .collect();
+    counts.sort_unstable();
+    assert_eq!(counts, vec![5, 15]);
+}
+
 const LINEN: u32 = 2589;
 const PEACEBLOOM: u32 = 2447;
 const COPPER_ORE: u32 = 2770;
@@ -207,6 +259,17 @@ fn send<M: Message, C: Channel>(app: &mut App, client: &Client, message: M) {
 
 fn request<M: Message>(app: &mut App, client: &Client, message: M) {
     send::<M, InventoryChannel>(app, client, message);
+    app.update();
+    app.update();
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while !app.world().resource::<PendingInventoryCommits>().is_idle() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "inventory fixture commit timeout"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+        app.update();
+    }
     app.update();
     app.update();
 }

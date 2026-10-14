@@ -44,6 +44,7 @@ pub struct InventoryPlugin;
 impl Plugin for InventoryPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::bank::ChangedCharacterBanks>()
+            .init_resource::<PendingInventoryCommits>()
             .add_systems(
                 Update,
                 (
@@ -54,6 +55,7 @@ impl Plugin for InventoryPlugin {
                     process_use_requests,
                     process_equip_requests,
                     process_sort_requests,
+                    publish_inventory_commits,
                 ),
             );
         app.add_systems(
@@ -68,6 +70,10 @@ impl Plugin for InventoryPlugin {
 type Requests<'w, 's, M> =
     Query<'w, 's, (Entity, &'static InWorld, &'static mut MessageReceiver<M>), With<Authenticated>>;
 type ErrorSenders<'w, 's> = Query<'w, 's, &'static mut MessageSender<InventoryError>>;
+mod actor;
+pub(crate) use actor::PendingInventoryCommits;
+use actor::publish_inventory_commits;
+
 type OpResult = Result<(), InventoryError>;
 
 /// Persistence plus item templates: everything `load_model` reads, and the
@@ -79,6 +85,7 @@ struct InventoryStore<'w, 's> {
     links: Query<'w, 's, &'static PlayerLink>,
     known: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
+    pending: ResMut<'w, PendingInventoryCommits>,
 }
 
 impl InventoryStore<'_, '_> {
@@ -224,31 +231,29 @@ fn send_initial_inventory(
     }
 }
 
-/// Apply each queued request to the sender's own inventory and persist on success.
+/// Execute requests against fresh durable rows; owner publication follows receipts.
 fn process_requests<M: lightyear::prelude::Message>(
     receivers: &mut Requests<M>,
-    store: InventoryStore,
-    updates: &mut GoldUpdateQueue,
-    errors: &mut ErrorSenders,
-    mut apply: impl FnMut(&mut InventoryModel, M, &Database) -> OpResult,
+    mut store: InventoryStore,
+    apply: impl Fn(&mut InventoryModel, M, &Database) -> OpResult + Copy + Send + 'static,
 ) {
-    let Some((db, templates)) = store.get() else {
+    let (Some(db), Some(templates)) = (store.db.as_deref(), store.templates.as_deref()) else {
         return;
     };
     for (connection, in_world, mut receiver) in receivers.iter_mut() {
-        let character_id = in_world.character_id;
+        let character = in_world.character_id;
         let can_dual_wield = store.can_dual_wield(connection);
         for request in receiver.receive() {
-            let result = load_model(db, templates, character_id).and_then(|mut model| {
-                model.set_can_dual_wield(can_dual_wield);
-                apply(&mut model, request, db)?;
-                save_inventory_record(db, character_id, &model.into_record());
-                Ok(())
+            let templates = templates.clone();
+            let receipt = db.writer.enqueue("inventory mutation", move |db| {
+                Ok(load_model(db, &templates, character).and_then(|mut model| {
+                    model.set_can_dual_wield(can_dual_wield);
+                    apply(&mut model, request, db)?;
+                    save_inventory_record(db, character, &model.into_record());
+                    Ok(())
+                }))
             });
-            match result {
-                Ok(()) => updates.record_items(character_id),
-                Err(error) => send_error(connection, errors, error),
-            }
+            store.pending.push(connection, character, false, receipt);
         }
     }
 }
@@ -268,24 +273,21 @@ type MoveRequests<'w, 's, M> = Query<
 #[derive(SystemParam)]
 struct MoveStore<'w, 's> {
     store: InventoryStore<'w, 's>,
-    updates: ResMut<'w, GoldUpdateQueue>,
-    errors: ErrorSenders<'w, 's>,
-    banks: ResMut<'w, crate::bank::ChangedCharacterBanks>,
 }
 
-/// TC a352b1fa ItemHandler.cpp `HandleSwapItem`: both bank positions require
-/// `CanUseBank`. Bank and inventory rows are saved together only on success.
+/// Bank and bag positions share one committed move and owner publication.
 fn process_item_moves<M: lightyear::prelude::Message>(
     receivers: &mut MoveRequests<M>,
     store: &mut MoveStore,
     locations: impl Fn(&M) -> (ItemLocation, ItemLocation),
-    apply: impl Fn(&mut InventoryModel, M, &Database) -> OpResult,
+    apply: impl Fn(&mut InventoryModel, M, &Database) -> OpResult + Copy + Send + 'static,
 ) {
-    let Some((db, templates)) = store.store.get() else {
+    let (Some(db), Some(templates)) = (store.store.db.as_deref(), store.store.templates.as_deref())
+    else {
         return;
     };
     for (connection, in_world, interaction, mut receiver) in receivers.iter_mut() {
-        let character_id = in_world.character_id;
+        let character = in_world.character_id;
         let can_dual_wield = store.store.can_dual_wield(connection);
         for request in receiver.receive() {
             let (from, to) = locations(&request);
@@ -293,26 +295,24 @@ fn process_item_moves<M: lightyear::prelude::Message>(
                 || matches!(to, ItemLocation::Bank { .. });
             let banker_open =
                 interaction.is_some_and(|i| i.role == Some(shared::protocol::NpcRole::Banker));
-            let result = apply_item_move(
-                db,
-                templates,
-                character_id,
-                bank_move,
-                banker_open,
-                |model| {
-                    model.set_can_dual_wield(can_dual_wield);
-                    apply(model, request, db)
-                },
-            );
-            match result {
-                Ok(()) => {
-                    store.updates.record_items(character_id);
-                    if bank_move {
-                        store.banks.0.insert(connection);
-                    }
-                }
-                Err(error) => send_error(connection, &mut store.errors, error),
-            }
+            let templates = templates.clone();
+            let receipt = db.writer.enqueue("inventory bank move", move |db| {
+                Ok(apply_item_move(
+                    db,
+                    &templates,
+                    character,
+                    bank_move,
+                    banker_open,
+                    |model| {
+                        model.set_can_dual_wield(can_dual_wield);
+                        apply(model, request, db)
+                    },
+                ))
+            });
+            store
+                .store
+                .pending
+                .push(connection, character, bank_move, receipt);
         }
     }
 }
@@ -375,19 +375,10 @@ fn process_split_requests(mut receivers: MoveRequests<SplitItem>, mut store: Mov
     );
 }
 
-fn process_destroy_requests(
-    mut receivers: Requests<DestroyItem>,
-    store: InventoryStore,
-    mut updates: ResMut<GoldUpdateQueue>,
-    mut errors: ErrorSenders,
-) {
-    process_requests(
-        &mut receivers,
-        store,
-        &mut updates,
-        &mut errors,
-        |model, req, _| model.destroy(req.location, req.count),
-    );
+fn process_destroy_requests(mut receivers: Requests<DestroyItem>, store: InventoryStore) {
+    process_requests(&mut receivers, store, |model, req, _| {
+        model.destroy(req.location, req.count)
+    });
 }
 
 /// `WorldSession::HandleUseItemOpcode` → `Player::ProcessItemCast` → `CastItemUseSpell`
@@ -538,34 +529,14 @@ pub(crate) fn use_store(world: &World) -> Result<(&Database, &ItemTemplates), In
     }
 }
 
-fn process_equip_requests(
-    mut receivers: Requests<EquipItem>,
-    store: InventoryStore,
-    mut updates: ResMut<GoldUpdateQueue>,
-    mut errors: ErrorSenders,
-) {
-    process_requests(
-        &mut receivers,
-        store,
-        &mut updates,
-        &mut errors,
-        |model, req, _| model.auto_equip(req.from),
-    );
+fn process_equip_requests(mut receivers: Requests<EquipItem>, store: InventoryStore) {
+    process_requests(&mut receivers, store, |model, req, _| {
+        model.auto_equip(req.from)
+    });
 }
 
-fn process_sort_requests(
-    mut receivers: Requests<SortBags>,
-    store: InventoryStore,
-    mut updates: ResMut<GoldUpdateQueue>,
-    mut errors: ErrorSenders,
-) {
-    process_requests(
-        &mut receivers,
-        store,
-        &mut updates,
-        &mut errors,
-        |model, _, _| model.sort_bags(),
-    );
+fn process_sort_requests(mut receivers: Requests<SortBags>, store: InventoryStore) {
+    process_requests(&mut receivers, store, |model, _, _| model.sort_bags());
 }
 
 type DeltaConnections<'w, 's> = Query<
