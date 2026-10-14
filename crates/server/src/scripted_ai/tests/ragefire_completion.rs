@@ -225,6 +225,11 @@ fn ragefire_completion_adarogg_intro_unbaked_navigation_cannot_fake_path_arrival
 fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival_injection() {
     let navigation = std::path::PathBuf::from(std::env::var_os("RAGEFIRE_NAV_ROOT").unwrap());
     let (mut h, boss) = trigger_adarogg_intro(&navigation);
+    let troggs: Vec<_> = h
+        .creatures_of(61659)
+        .into_iter()
+        .map(Entity::to_bits)
+        .collect();
     // Real trigger, scheduler, route movement and arrival callbacks. No point/path
     // completion hook is dispatched by the fixture, and the boss is never repositioned.
     let spawn = h.wow_position(boss);
@@ -244,9 +249,16 @@ fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival
         h.wow_position(boss).distance(spawn) > 5.0,
         "boss actually traversed its route"
     );
+    // PATH_INTRO/PATH_INTRO3 end away from the Slain Troggs. Source still casts
+    // Eat Trogg there, without a nearby entry; only PATH_INTRO2 has nearby meals.
+    let hits: Vec<_> = eats.iter().flat_map(|eat| &eat.hit_targets).collect();
     assert!(
-        eats.iter().all(|eat| hits_entry(&mut h, eat, 61659)),
-        "source Slain Trogg targets"
+        hits.len() >= 2,
+        "walked path reaches the actual Slain Trogg meals: {eats:?}"
+    );
+    assert!(
+        hits.iter().all(|target| troggs.contains(target)),
+        "every selected target is an authored Slain Trogg: {eats:?}"
     );
     assert_eq!(
         h.inbox(0)
