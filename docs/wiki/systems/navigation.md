@@ -96,7 +96,9 @@ Physical Wailing RED stopped MovePath367801 at authored node2. Its projected ter
 
 Surface steps use4yd/0.3yd steering, three steering corners, sixteen visited polygons and source74-point/polygon limits. Detour height gets the source0.5yd intermediate offset; `GroundMap::creature_ground_in` then normalizes returned controls to exact map-copy collision floors, following NormalizePath/UpdateAllowedPositionZ. Actual owner start is retained. Unsupported geometry, off-mesh links and exhausted/incomplete paths remain explicit errors, never synthetic arrivals. Exact/flying generation and spline validation are unchanged.
 
-Proof pending: named authored-node2 RED at aa334cf5 (`wailing-physical-20261014/node2-red.log`) rejects captured real launch coordinates without spawn edits. Physical source three-path/camp test adds per-tick LOS and projected-floor endpoint checks; GREEN not yet claimed. Activation, ordinary balance and both-skin native clears remain open.
+Proof: named authored-node2 RED at aa334cf5 (`wailing-physical-20261014/node2-red.log`) rejects captured real launch coordinates without spawn edits. At05062d71 the scoped integration passes15/15 in123.83s, zero ignored: node2 ends at exact collision Z-90.9431; all49 authored nodes generate strictly valid, LOS-clear movement to final Z-89.80934. Both controlled camps, actual Ragefire walk/meals, Golden flying intro, exact/flying controls and corrupt/missing/unbaked navigation rejection pass. Helper server all-target check passes without warnings; changed-file format/diff checks pass. Independent inline-artifact Codex verification finds no in-scope counterexample.
+
+Full physical source-camp probe stays RED (`physical-collision-owner.log`): after path1 ends and real6270 starts, tick2903 crosses collision with PathMovement absent, Run/speed8.00002 and combatfalse, waves[2,0]. No generic caller is modified by this patch. Per-node generation evidence is not uninterrupted camp traversal; activation, ordinary balance and both-skin native clears remain open.
 
 ### Pinned sources
 
