@@ -4,6 +4,12 @@
 - [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.
 
 - [Encounter loot eligibility](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) — existing active lock bit at native DONE before save, not bag-loot success; allocated-copy authority retained.
+- [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation) — coherent predicates/census5479+1821, build delta and retained auxiliary-source boundary.
+
+- [Active installed achievement import](systems/dungeon-achievements.md#active-installed-achievement-import) — active Retail build agreement, actual layout guards and atomic four-table replacement.
+
+- [Player-anchored spell-hit target class](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) — actual Player identity, preserving target/race companions; unanchored NPC class predicates excluded.
+
 - [Actual spell-hit target race](systems/dungeon-achievements.md#actual-spell-hit-target-race) — per-hit Player race, not caster race; NPC/missing snapshots rejected.
 
 - [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.

@@ -1,6 +1,25 @@
 use super::*;
 use crate::bank_test_harness::Harness;
 
+#[test]
+fn db2_follow_install_renown_reads_new_active_faction_without_recompiling() {
+    let path = std::env::temp_dir().join(format!("db2-follow-renown-{}.json", std::process::id()));
+    for (build, id) in [("12.1.0.69933", 12), ("12.1.5.70391", 55)] {
+        let fixture = serde_json::json!({"build": build, "major_factions": [{
+            "id": id, "faction_id": 2655, "name": "Source faction", "description": "Current input",
+            "expansion": 10, "max_level": 25, "level_threshold": 2500,
+            "player_condition_id": 0, "unlock_description": null, "rewards": []
+        }]});
+        std::fs::write(&path, fixture.to_string()).unwrap();
+        let current = read_catalog(&path).unwrap();
+        assert_eq!(current.build, build);
+        assert_eq!(current.major_factions.len(), 1);
+        assert_eq!(current.major_factions[0].id, id);
+        assert_eq!(current.major_factions[0].name, "Source faction");
+    }
+    std::fs::remove_file(path).unwrap();
+}
+
 const MARUUK: u32 = 12;
 
 fn maruuk() -> &'static MajorFaction {
@@ -81,7 +100,7 @@ fn admin_grant_persists_and_query_reports_sourced_catalog_and_progress() {
         }
     );
     let reply = query(&mut h);
-    assert_eq!(reply.factions.len(), 29);
+    assert_eq!(reply.factions.len(), super::catalog().len());
     let row = reply.factions.iter().find(|f| f.id == MARUUK).unwrap();
     assert_eq!(
         (
