@@ -747,11 +747,16 @@ pub(crate) fn record_targeted_spell_hit(
     spell: u32,
 ) {
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
-    let target_race = world.get::<Player>(target).map(|player| player.race);
+    let target_player = world
+        .get::<Player>(target)
+        .map(|player| catalog::SpellHitPlayer {
+            race: player.race,
+            class: player.class,
+        });
     record_criteria_event(
         world,
         caster,
-        CriteriaEvent::LandTargetedSpell(spell, target_race),
+        CriteriaEvent::LandTargetedSpell(spell, target_player),
     );
 }
 

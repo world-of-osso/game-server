@@ -43,8 +43,23 @@ pub(crate) struct HullCache {
     placed: HashMap<Entity, (Placement, Arc<LosTile>)>,
 }
 
+#[cfg(test)]
+#[test]
+fn db2_follow_install_collision_uses_the_active_display_csv() {
+    let directory = tempfile::tempdir().unwrap();
+    let active = directory.path().join("db2/active");
+    std::fs::create_dir_all(&active).unwrap();
+    std::fs::write(
+        active.join("GameObjectDisplayInfo.csv"),
+        "ID,FileDataID\n47198,196519\n",
+    )
+    .unwrap();
+    let displays = read_displays(directory.path()).unwrap();
+    assert_eq!(displays[&47198], 196519);
+}
+
 fn read_displays(data: &Path) -> Result<HashMap<u32, u32>, String> {
-    let file = data.join("db2/12.1.0.69933/GameObjectDisplayInfo.csv");
+    let file = data.join("db2/active/GameObjectDisplayInfo.csv");
     let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let mut lines = text.lines();
     let headers: Vec<_> = lines
