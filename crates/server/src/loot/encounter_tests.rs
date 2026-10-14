@@ -28,7 +28,7 @@ fn stage_ragefire_corpse(h: &mut Harness, entry: u32) -> Entity {
             },
             crate::zones::CreatureDifficulty(1),
             crate::creature_tap::CreatureTap::tapped_by(h.looter.character_id),
-            RespawnDelay::for_spawn(7200, 389),
+            RespawnDelay::for_spawn(7200, 1),
             CorpseDelay::for_rank(1),
         ))
         .id();
