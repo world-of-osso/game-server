@@ -68,12 +68,14 @@ pub(super) fn volley_plan(
             units: vec![primary],
             dest,
             chain_multipliers: Vec::new(),
+            blocked_units: Vec::new(),
         },
         PlannedEffect {
             index: 1,
             units: vec![caster],
             dest: None,
             chain_multipliers: Vec::new(),
+            blocked_units: Vec::new(),
         },
     ]
 }
@@ -127,6 +129,7 @@ fn launch_bolts(
             units: vec![unit],
             dest: None,
             chain_multipliers: Vec::new(),
+            blocked_units: Vec::new(),
         }];
         spell_cast::hit::remove_defended_targets(world, caster, bolt, &mut plan);
         spell_cast::missiles::launch(world, caster, bolt, plan, depth);
@@ -163,6 +166,7 @@ pub(super) fn hammer_wave(world: &mut World, caster: Entity, target: Entity, dep
             orientation: 0.0,
         }),
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }];
     spell_cast::hit::remove_defended_targets(world, caster, &wave, &mut plan);
     spell_cast::missiles::launch(world, caster, &wave, plan, depth + 1);

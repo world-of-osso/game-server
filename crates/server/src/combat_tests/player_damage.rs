@@ -183,6 +183,7 @@ fn a_level_10_warrior_with_the_starting_sword_kills_hogger_in_about_133_swings()
         mastery_coefficient: 0.0,
         attack_power_per_strength: 1.0,
         attack_power_per_agility: 0.0,
+        ranged_attack_power_per_agility: 0.0,
         gear_primary: default(),
         gear_ratings: default(),
     };
