@@ -2,7 +2,7 @@
 
 `StatsPlugin` (`crates/server/src/stats.rs`) computes player stats in the retail 12.x model. Players spawn with default `UnitStats` and the health persisted in redb. `update_character_stats` then computes their stats on the first frame, and again whenever `Level`, `ActiveSpec`, `EquippedItems` or `StatModifiers` changes. It writes:
 
-- the effective `UnitStats` and `CombatRatings`, and `DerivedStats` (`CharacterStats::derived`: spell power, attack power, the crit/haste/mastery/versatility percentages and leech/avoidance/speed);
+- the effective `UnitStats` and `CombatRatings`, and `DerivedStats` (`CharacterStats::derived`: spell power, distinct melee/ranged attack power, the crit/haste/mastery/versatility percentages and leech/avoidance/speed);
 - `Health.max` and `Mana.max`, keeping each current value at the same fraction of the new max;
 - the server-only `CharacterStats` component, read by the [[spell-casting]] effects and costs.
 
@@ -19,7 +19,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 | Rating per 1% (crit, haste, versatility) and per mastery point | CASC `gametables/combatratings.txt` (FDID 1391669): columns Crit - Spell, Haste - Spell, Mastery, Versatility - Damage Done | Melee, ranged and spell columns are equal. |
 | Spec main stat | `chr_specialization.PrimaryStatPriority`: 0–1 Int, 2–3 Agi, 4–5 Str | |
 | Mastery coefficient | Effect 0 `EffectBonusCoefficient` of the spec's `MasterySpellID_0`, for example Holy 183997 = 1.5 | |
-| AP conversion | `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility` | |
+| AP conversion | `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility` / `RangedAttackPowerPerAgility` | |
 | Gear stats, armor, weapon damage | world.db `content_item` + `item_sparse`, DB2 `rand_prop_points`, `item_armor_{quality,shield,total}`, `armor_location`, `item_damage_{one,two}_hand{,_caster}`, `item_squish_era`, `curve_point` (12.1.0.69933); CASC `gametables/{combatratingsmultbyilvl,staminamultbyilvl,itemsocketcostperlevel}.txt` (FDIDs 1391670, 1980632, 1391643) | See [Gear](#gear). |
 
 - SimC checkout: `simulationcraft/simc` commit `303610892fe2cd9c71a75eae89007c8d320788ff` (2026-04-05), client data 12.0.1.66709 (`client_data_version.inc`).
@@ -35,7 +35,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 2. **Max health** = floor(Sta) × hppersta(level) × (1 + `max_health_pct`/100) + `max_health_flat`, floored.
 3. **Mana:** max mana = base mana = basemp(class, level). Intellect does not add mana.
    - Only classes with a non-zero basemp column get a `Mana` component: Paladin, Priest, Shaman, Mage, Warlock, Monk, Druid and Evoker.
-4. **Spell power** = Int when the main stat is Intellect, else 0 (TrinityCore Unit::SpellBaseDamageBonusDone). **Healing power** (`CharacterStats.healing_power`, used by heals, periodic heals and absorbs) = Int for every mana class (Unit::SpellBaseHealingBonusDone). Aura 366 OVERRIDE_SPELL_POWER_BY_AP_PCT sets both to AP × pct (Retribution, Protection, Feral/Guardian, Enhancement, Windwalker/Brewmaster passives). The main stat is the active spec's, else `chr_classes.PrimaryStatPriority`. **Attack power** = Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility.
+4. **Spell power** = Int when the main stat is Intellect, else 0 (TrinityCore Unit::SpellBaseDamageBonusDone). **Healing power** (`CharacterStats.healing_power`, used by heals, periodic heals and absorbs) = Int for every mana class (Unit::SpellBaseHealingBonusDone). Aura 366 OVERRIDE_SPELL_POWER_BY_AP_PCT sets both to AP × pct (Retribution, Protection, Feral/Guardian, Enhancement, Windwalker/Brewmaster passives). The main stat is the active spec's, else `chr_classes.PrimaryStatPriority`. **Melee AP** = (Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility) × composed aura166 multiplier. **Ranged AP** = (level + max(Agi, 0)) × RangedAttackPowerPerAgility × composed aura167 multiplier (TC a352b1fa StatSystem.cpp354–414). Aura366 reads melee AP; native ranged-defense spell AP coefficients and hunter pet inheritance read RAP.
 5. **Crit %** = 5 + DR(crit rating / rating-per-1%) + `crit_pct`.
 6. **Haste %** = DR(haste rating / rating-per-1%) + `haste_pct`.
 7. **Versatility %** = DR(versatility rating / rating-per-1%) + `versatility_pct`.

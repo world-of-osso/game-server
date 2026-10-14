@@ -325,3 +325,16 @@ Source receipt: `data/class-completeness6-2026-10-12/master70391-source-receipt.
 - `Spell.csv`: `2d3bdfef700fc8e762a20a5430bdb6402cdeada48a4f0ccd2b92c431cf61f772`
 
 Proof ledger: `cc9c7dd3` first GREEN102/103, remaining Wildfire failed because its application snapshot uses fixture AP100, not later recalculated AP22; `803170f0` failure output proves six25 ticks. `c08a9362` focused Wildfire GREEN1/1 exit0/79.263s. Master union `fd9edfb7` (origin/master b404aae8): `master70391-merged-green`63/63 exit0/242.919s; workspace/all-target check exit0/176.780s; fmt exit0/2.990s. Changed Rust manually audited: no suppression, new production branch, fallback, or widened variance. These are fixture/index contracts, not whole ability coverage; full13/40 remains OPEN.
+
+
+### Batch56 integrated RAP owner/tooltip proof
+
+`faa1b0c3` genuine owner JSON RED (missing RAP versus native43), `1ac8237` protocol field and `2f6dd808` exporter GREEN14/14 (`rap-wire-green`,174.114s). Distinct56melee/789ranged bitcode round-trip GREEN1/1 (`rap-bitcode-green2`,151.496s; other test harnesses filtered). Initial attempt testing a dependency outside its workspace was a runner error, not RED.
+
+Engine `8b729ff0b` native tooltip RED: Aimed972 with melee100 versus required9720 with RAP1000. `1d6445aff` native DefenseType selector and catalog format11; `722b7bfc7` zero-RAP no-fallback control. Maintained native helper uses leased protocol and both lightyear vendors; temporary diagnostic netcode lock saved as `rap-engine-diagnostic-vendor.lock`, tracked master Cargo.lock restored unchanged after proof. Source Aimed/Slam receipts `rap-tooltip-source-receipt.json`.
+
+Integrated server e5dd30c5/master35fb1df4 and engine current master e45bbcfef: `rap-final-controls`38/38 exit0/461.151s (22.34s tests), `rap-final-server-check`0/41.215s,fmt0/3.406s; `rap-final-native-check`0/349.071s (68s compiler), `rap-final-tooltip`5/5 exit0/55.918s. Core9description controls remain valid,185.633s. Manual Rust audit clean; metrics unavailable. Independent verifier cannot authenticate (expired OAuth); rendered proof not claimed.
+
+Bounded9 installed memberships (`ap70391-bounded9`,exit0/242.450s) clear12 aura166/167 gap occurrences. Four now working only at recorded base-probe boundary: ProtectionMastery76671, Brewmaster117906, Guardian159195, Vengeance321299. Five remain partial: BattleShout6673 across71/72/73 (a4), Blood77513 (a4), ProtectionWarrior76857 (a4/a253/missing12880). No new full census: latest full3185working/4459partial/183broken unchanged as a historical snapshot.
+
+Adjacent broad-name filter captured unrelated achievement test requiring MYTHIC_PLUS_WORLD_COPY (`ap70391-merged-adjacency`:232passed/1failed,649.173s). Engine character_frame substring also captured unrelated Forever skin byte snapshot (`rap-tooltip-controls`:25passed/1failed/1ignored); changed character sheet/AP tests passed. Neither production fix nor weakened snapshot added. Full13/40 goal OPEN; continuing authentic remaining consumers.
