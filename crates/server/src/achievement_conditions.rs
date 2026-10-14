@@ -664,6 +664,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(2, 5703)],
         }),
+        (5492, 592) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(32, 0)],
+        }),
         (5493, 590) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 1)],
@@ -686,6 +690,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (5503, 151) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 607)],
+        }),
+        (5512, 592) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(32, 0)],
         }),
         (5530, 590) => Some(CompiledConditions::All {
             difficulty: None,

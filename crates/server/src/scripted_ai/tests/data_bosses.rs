@@ -1882,6 +1882,166 @@ fn encounter_coverage_verdan_real_vines_root_and_expire() {
     );
 }
 
+/// Actual Anacondra row7 casts8148 at7s and repeats every63s. This proves
+/// aura application/reapplication only, not DAMAGE_SHIELD15 retaliation or missingSpell2.
+#[test]
+fn encounter_coverage_anacondra_thorns_application_and_source_repeat() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(3671, 43, 0, 1, None);
+    h.engage(boss);
+    h.advance(6.6);
+    assert!(!h.has_aura(boss, 8148), "Thorns waits7s");
+    h.advance(0.7);
+    assert!(h.has_aura(boss, 8148), "actual self/party aura");
+    let removed = crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Dispelled,
+        |aura| aura.spell_id == 8148,
+    );
+    assert_eq!(removed.len(), 1);
+    h.advance(62.0);
+    assert!(!h.has_aura(boss, 8148), "no repeat before63s");
+    h.advance(1.5);
+    assert!(
+        h.has_aura(boss, 8148),
+        "source repeat reapplies removed buff"
+    );
+}
+
+/// Thorns must retaliate against damaging melee swings, not arbitrary spells.
+#[test]
+fn encounter_coverage_anacondra_thorns_retaliates_only_while_applied() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(3671, 43, 0, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(7.3);
+    assert!(h.has_aura(boss, 8148));
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(ReactState::Passive);
+    h.advance(0.1);
+    h.hit(boss, 1.0);
+    h.advance(0.1);
+    let retaliations = |h: &Harness| {
+        h.inbox(0)
+            .log
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(8148)
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+            })
+            .count()
+    };
+    assert_eq!(
+        retaliations(&h),
+        0,
+        "spell damage does not trigger melee shield"
+    );
+    let health = h.health(player).current;
+    let boss_health = h.health(boss).current;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::combat::AutoAttack::new(boss));
+    h.advance(8.5);
+    assert!(
+        h.health(boss).current < boss_health,
+        "real melee swings damaged shield owner"
+    );
+    assert!(
+        retaliations(&h) > 0,
+        "actual Thorns Nature damage reaches attacker"
+    );
+    assert!(h.health(player).current < health);
+    let before_removal = retaliations(&h);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Dispelled,
+        |aura| aura.spell_id == 8148,
+    );
+    h.advance(8.5);
+    assert_eq!(
+        retaliations(&h),
+        before_removal,
+        "removed Thorns cannot retaliate"
+    );
+    // Controlled native reapplication isolates Unit::Kill's death-aura boundary,
+    // not a new AI cast schedule. Existing auto-attacks deliver the lethal swing.
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 8148, Some(boss), true).unwrap();
+    assert!(h.has_aura(boss, 8148));
+    h.app.world_mut().get_mut::<Health>(boss).unwrap().current = 1.0;
+    h.advance(8.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_some()
+    );
+    assert_eq!(
+        retaliations(&h),
+        before_removal,
+        "death-removed Thorns cannot retaliate after lethal melee"
+    );
+}
+
+/// Real deaths/evades use each bound encounter, never another Wailing boss.
+/// Generic BossAi lifecycle is not proof of source action34. Mutanus has no
+/// content_creature placement and must instead use its source summon group.
+#[test]
+fn encounter_coverage_wailing_kresh_serpentis_generic_lifecycle() {
+    for (entry, bit, encounter) in [(3653, 2, 587), (3673, 5, 590)] {
+        for killed in [false, true] {
+            let (mut h, boss, map) = bound_boss_at_difficulty(entry, 43, bit, 1, None);
+            h.engage(boss);
+            h.advance(0.1);
+            let slot =
+                instance_script::boss_id_for_encounter(h.app.world_mut(), map, encounter).unwrap();
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, slot),
+                Some(EncounterState::InProgress)
+            );
+            if killed {
+                h.hit_pct(boss, 1_000.0);
+            } else {
+                crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+            }
+            h.advance(0.1);
+            // Generic BossAi::_Reset returns to NOT_STARTED; no invented FAIL state.
+            let expected = if killed {
+                EncounterState::Done
+            } else {
+                EncounterState::NotStarted
+            };
+            assert_eq!(get_boss_state(h.app.world_mut(), map, slot), Some(expected));
+            assert!(
+                h.inbox(0)
+                    .ends
+                    .iter()
+                    .any(|end| end.encounter_id == encounter && end.success == killed)
+            );
+            assert!(
+                h.inbox(0)
+                    .ends
+                    .iter()
+                    .all(|end| end.encounter_id == encounter)
+            );
+            assert!(
+                h.inbox(1).ends.is_empty(),
+                "other instance receives no completion"
+            );
+        }
+    }
+}
+
 /// The source Disciple combat clock is independent of the unavailable escort activation.
 /// First Sleep1090 is due5–10s; Druid's Potion8141 only below80% health.
 #[test]
