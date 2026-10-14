@@ -102,6 +102,66 @@ fn class_completeness_native_charred_warblades_accumulates_fire_damage_then_heal
 }
 
 #[test]
+fn class_completeness_native_charred_warblades_isolates_two_recipients() {
+    let mut h = fixture();
+    let owner_damage = hit(&mut h, FIRE_HIT);
+    let expected_owner = expected_heal(&h, owner_damage);
+    let other = spawn_player(&mut h.app, 12, 2.0);
+    h.app.world_mut().get_mut::<Health>(other).unwrap().current = 400.0;
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: other,
+            target: other,
+            spell_id: CHARRED,
+            effect_mask: 1,
+            source: AuraSource::KnownSpell,
+        },
+    );
+    let before = h.health(h.npc);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), other, FIRE_HIT, Some(h.npc), 1);
+    h.advance(1);
+    let other_damage = (before - h.health(h.npc)) as u32;
+    assert!(other_damage > 0);
+    let expected_other = expected_heal(&h, other_damage);
+    h.advance(22);
+    assert_eq!(h.health(h.caster), 500.0 + expected_owner as f32);
+    assert_eq!(h.health(other), 400.0 + expected_other as f32);
+    let heals: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(HEAL))
+        .collect();
+    assert_eq!(heals.len(), 2);
+    assert!(
+        heals
+            .iter()
+            .all(|event| event.actor == event.target.unwrap())
+    );
+}
+
+#[test]
+fn class_completeness_native_charred_warblades_unlearning_discards_pending_heals() {
+    let mut h = fixture();
+    assert!(hit(&mut h, FIRE_HIT) > 0);
+    let owner = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            HEAL,
+            FIRE_HIT,
+            CHAOS_HIT,
+            PHYSICAL_HIT,
+            SHIELD,
+        ]));
+    h.advance(22);
+    assert!(!has_aura(h.app.world(), owner, CHARRED));
+    assert_eq!(h.health(owner), 500.0);
+}
+
+#[test]
 fn class_completeness_native_charred_warblades_rejects_non_fire_and_foreign_actor_damage() {
     let mut h = fixture();
     assert!(hit(&mut h, PHYSICAL_HIT) > 0);
