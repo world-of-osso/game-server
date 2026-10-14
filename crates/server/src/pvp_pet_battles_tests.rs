@@ -27,10 +27,14 @@ fn build_app(track_achievements: bool) -> App {
     app
 }
 fn player(app: &mut App, account: u64) -> (Entity, Entity) {
+    player_with_levels(app, account, [1; 3])
+}
+
+fn player_with_levels(app: &mut App, account: u64, levels: [u8; 3]) -> (Entity, Entity) {
     let mut journal = PetJournal::default();
-    for guid in account * 10..account * 10 + 3 {
+    for (guid, level) in (account * 10..account * 10 + 3).zip(levels) {
         journal
-            .add_with_guid(39, 1, PetQuality::Rare, 3, guid)
+            .add_with_guid(39, level, PetQuality::Rare, 3, guid)
             .unwrap();
     }
     save_journal(
@@ -496,6 +500,222 @@ fn finish_battle_with_winner(app: &mut App, winner: Entity, loser: Entity) {
             .unwrap();
         }
     }
+}
+
+#[test]
+fn achievements_criteria_native_pet_team_level_reads_owned_slots_at_actual_win() {
+    for (levels, qualifies) in [([25; 3], true), ([25, 25, 24], false)] {
+        assert_native_pet_team_level_win(levels, qualifies);
+    }
+}
+
+fn assert_native_pet_team_level_win(levels: [u8; 3], qualifies: bool) {
+    use crate::achievement::{
+        AchievementCatalog, PlayerAchievementState, load_achievement_catalog,
+    };
+    use shared::components::{CharacterAppearance, Player};
+    let mut app = build_app(true);
+    let file = tempfile::NamedTempFile::new().unwrap();
+    app.insert_resource(GameDatabase {
+        db: redb::Database::create(file.path()).unwrap(),
+    });
+    crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
+    let character = crate::persistence::create_character(
+        &app.world().resource::<GameDatabase>().db,
+        41,
+        "Maxpetteam",
+        1,
+        1,
+    )
+    .unwrap()
+    .0;
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    let (winner, connection) = player_with_levels(&mut app, 41, levels);
+    let loser = player_with_levels(&mut app, 42, levels).0;
+    // A max-level unequipped pet must not hide the lower equipped third slot.
+    let mut journal = app
+        .world()
+        .get::<AccountPetJournal>(winner)
+        .unwrap()
+        .journal
+        .clone();
+    journal
+        .add_with_guid(40, 25, PetQuality::Rare, 3, 419)
+        .unwrap();
+    save_journal(&app.world().resource::<GameDatabase>().db, 41, &journal);
+    app.world_mut()
+        .get_mut::<AccountPetJournal>(winner)
+        .unwrap()
+        .journal = journal;
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    app.world_mut().entity_mut(winner).insert((
+        Player {
+            name: "Maxpetteam".into(),
+            race: 1,
+            class: 1,
+            appearance: CharacterAppearance::default(),
+        },
+        PlayerAchievementState::default(),
+        shared::components::Level(1),
+        crate::maps::InMap::continent(0),
+    ));
+    app.update();
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(winner)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&23257),
+        "owning a max-level team is not a victory"
+    );
+    propose_owners(&mut app, [winner, loser]);
+    let id = app.world().get::<PvpParticipant>(winner).unwrap().id;
+    let round = app.world().resource::<Matchmaker>().battles[&id]
+        .encounter
+        .battle
+        .round;
+    for owner in [winner, loser] {
+        advance(
+            app.world_mut(),
+            owner,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Swap(1),
+            },
+        )
+        .unwrap();
+    }
+    finish_battle_with_winner(&mut app, winner, loser);
+    assert!(app.world().resource::<Matchmaker>().battles.is_empty());
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(winner)
+            .unwrap()
+            .criteria_progress
+            .get(&23257),
+        qualifies.then_some(&1),
+        "actual journal slots decide max-level statistic8278"
+    );
+    let state = app.world().get::<PlayerAchievementState>(winner).unwrap();
+    assert!(
+        !state.earned_ids.contains(&8278),
+        "statistics are not earned grants"
+    );
+    let shared::protocol::AchievementCatalogPage::Statistics { achievements, .. } =
+        app.world().resource::<AchievementCatalog>().page(
+            state,
+            shared::protocol::QueryAchievementCatalog::Statistics {
+                category_id: 15219,
+                after_id: 8277,
+            },
+            1,
+        )
+    else {
+        panic!("expected numeric statistics page");
+    };
+    assert_eq!(
+        achievements
+            .iter()
+            .find(|row| row.achievement_id == 8278)
+            .unwrap()
+            .statistic_value,
+        Some(u64::from(qualifies))
+    );
+    app.update();
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(winner)
+            .unwrap()
+            .criteria_progress
+            .get(&23257),
+        qualifies.then_some(&1),
+        "idle terminal battle cannot replay credit"
+    );
+    drop(app);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::persistence::load_achievements(&reopened, character)
+            .criteria_progress
+            .get(&23257),
+        qualifies.then_some(&1)
+    );
+}
+
+#[test]
+fn achievements_criteria_pet_team_journal_authority_rejects_empty_or_missing_slots() {
+    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    let mut app = build_app(true);
+    crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    let owner = player_with_levels(&mut app, 41, [25; 3]).0;
+    app.world_mut().entity_mut(owner).insert((
+        shared::components::Player {
+            name: "Missingpet".into(),
+            race: 1,
+            class: 1,
+            appearance: Default::default(),
+        },
+        shared::components::Level(1),
+        crate::maps::InMap::continent(0),
+        PlayerAchievementState::default(),
+    ));
+    app.update();
+    let original = app
+        .world()
+        .get::<AccountPetJournal>(owner)
+        .unwrap()
+        .journal
+        .battle_slots;
+    for invalid in [None, Some(u64::MAX)] {
+        app.world_mut()
+            .get_mut::<AccountPetJournal>(owner)
+            .unwrap()
+            .journal
+            .battle_slots[2] = invalid;
+        crate::achievement::record_pet_battle_win(app.world_mut(), owner);
+        assert!(
+            !app.world()
+                .get::<PlayerAchievementState>(owner)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&23257),
+            "empty/dangling slot cannot become a max-level team"
+        );
+    }
+    let mut journal = app
+        .world_mut()
+        .entity_mut(owner)
+        .take::<AccountPetJournal>()
+        .unwrap();
+    crate::achievement::record_pet_battle_win(app.world_mut(), owner);
+    let state = app.world().get::<PlayerAchievementState>(owner).unwrap();
+    assert_eq!(
+        state.criteria_progress.get(&19724),
+        Some(&3),
+        "the event itself was accepted"
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&23257),
+        "missing journal is not known max-level"
+    );
+    journal.journal.battle_slots = original;
+    app.world_mut().entity_mut(owner).insert(journal);
+    crate::achievement::record_pet_battle_win(app.world_mut(), owner);
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(owner)
+            .unwrap()
+            .criteria_progress
+            .get(&23257),
+        Some(&1),
+        "restored owned slots qualify at the criteria boundary"
+    );
 }
 
 #[test]

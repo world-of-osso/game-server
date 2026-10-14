@@ -72,6 +72,10 @@ fn spell_credit_app() -> App {
         crate::item_stats::load_item_scaling_tables(&crate::test_data::world_db_path()).unwrap(),
     );
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+    app.insert_resource(
+        crate::conditions::load_spell_target_conditions(&crate::test_data::world_db_path())
+            .expect("authored implicit target conditions"),
+    );
     app
 }
 
@@ -643,24 +647,30 @@ fn quest_objectives_chest_loot_is_not_credit_until_the_quest_item_enters_bags() 
             corpse: crate_of_candles.to_bits(),
         },
     );
-    mark_rewarded(&app, &client, 11019);
-    let giver = spawn_npc(&mut app, 23141, 0.0);
-    accept(&mut app, &client, giver, 11049); // The Great Netherwing Egg Hunt
+    // Current Retail Netherwing Egg185915 has Data1=0: it no longer supplies loot.
+    // Pilfered Equipment9548 uses Clopper's Equipment181746 -> loot20018498,
+    // guaranteeing one Clopper's Equipment23830. Keep the open -> later autoloot boundary.
+    let giver = spawn_npc(&mut app, 17421, 0.0);
+    accept(&mut app, &client, giver, 9548);
     assert!(received::<QuestFailed>(&mut app, &client).is_empty());
-    let egg = real_object(&mut app, 185915);
+    let equipment = real_object(&mut app, 181746);
     request(
         &mut app,
         &client,
         UseGameObject {
-            object: egg.to_bits(),
+            object: equipment.to_bits(),
         },
     );
     let responses = received::<LootResponse>(&mut app, &client);
-    assert_eq!(responses.len(), 1, "using the egg opens its loot");
+    assert_eq!(
+        responses.len(),
+        1,
+        "using the equipment crate opens its loot"
+    );
     assert!(responses[0].slots.iter().any(|slot| matches!(
         slot.content,
         shared::protocol::LootContent::Item {
-            item_id: 32506,
+            item_id: 23830,
             count: 1,
             ..
         }
@@ -669,19 +679,19 @@ fn quest_objectives_chest_loot_is_not_credit_until_the_quest_item_enters_bags() 
         persistence::load_inventory(db(&app), client.character_id)
             .items
             .iter()
-            .all(|item| item.item_id != 32506)
+            .all(|item| item.item_id != 23830)
     );
     assert!(!crate::quest_rules::is_complete_in_log(
         app.world().resource::<QuestDb>(),
         &load_quest_log(db(&app), client.character_id),
-        11049,
+        9548,
         |_| 0
     ));
     request(
         &mut app,
         &client,
         LootUnit {
-            corpse: egg.to_bits(),
+            corpse: equipment.to_bits(),
             auto: true,
         },
     );
@@ -690,20 +700,20 @@ fn quest_objectives_chest_loot_is_not_credit_until_the_quest_item_enters_bags() 
         persistence::load_inventory(db(&app), client.character_id)
             .items
             .iter()
-            .find(|item| item.item_id == 32506)
+            .find(|item| item.item_id == 23830)
             .unwrap()
             .stack_count,
         1
     );
-    // Reopening a consumed source cannot reroll the egg.
+    // Reopening a consumed source cannot reroll the equipment.
     request(
         &mut app,
         &client,
         UseGameObject {
-            object: egg.to_bits(),
+            object: equipment.to_bits(),
         },
     );
     assert!(received::<LootResponse>(&mut app, &client).is_empty());
-    turn_in(&mut app, &client, giver, 11049, None);
-    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(11049));
+    turn_in(&mut app, &client, giver, 9548, None);
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(9548));
 }
