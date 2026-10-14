@@ -244,6 +244,22 @@ fn petbattle_pvp_owned_injuries_choices_survive_forfeit_requeue_and_database_reo
         .is_err()
     );
     queue_request(app.world_mut(), a, PetBattleQueueRequest::Leave).unwrap();
+    let mut opponent_journal = app
+        .world()
+        .get::<AccountPetJournal>(b)
+        .unwrap()
+        .journal
+        .clone();
+    opponent_journal.pets[0].level = 25;
+    save_journal(
+        &app.world().resource::<GameDatabase>().db,
+        42,
+        &opponent_journal,
+    );
+    app.world_mut()
+        .get_mut::<AccountPetJournal>(b)
+        .unwrap()
+        .journal = opponent_journal;
     let mut states = load_or_initialize_pet_states(app.world(), b).unwrap();
     states.get_mut(&420).unwrap().health = 59;
     save_states(&app.world().resource::<GameDatabase>().db, 42, &states).unwrap();
