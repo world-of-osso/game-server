@@ -1198,3 +1198,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Pre-effect spell-hit target auras
 
 [TargetHasAura10](systems/dungeon-achievements.md#pre-effect-spell-hit-target-auras) reads actual hit-unit active auras synchronously before effects. Complete positive type110 leaves retain companions; census5481/1821 adds only3579. Compiler RED→GREEN34/34; native RED1bf78023 reaches actual65403 then food cast but11168 absent; GREEN0a349a77 1/1 proves target authority, negatives and reopen. Full required four-thread filter176/0/1ignored plus site-export1/1, server workspace/all-target and fresh engine four-package checks, three-repo fmt pass without warnings; table acquisition/holiday/UI unclaimed.
+
+## 2026-10-14 — Maximum-health percent effect165
+
+[Effect165](systems/player-damage.md#maximum-health-percent-effect165) supplies the actual67531 hit producer needed by BB King. Native RED9e862790 accepts authentic cast but health50000 does not become49990. Implementation preserves integer max-health percentage and common mitigation while omitting direct caster/target bonuses; extended Enrage/Barkskin and sub-point fixture/native GREEN pending. TargetCreatureId4 compiler RED valid; no predicate support enabled yet.

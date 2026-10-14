@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Maximum-health percent effect165](systems/player-damage.md#maximum-health-percent-effect165) — actual target maximum, integer truncation and direct-bonus exclusion; authentic BB gun producer boundary.
+
 - [Pre-effect spell-hit target auras](systems/dungeon-achievements.md#pre-effect-spell-hit-target-auras) — positive10, synchronous actual hit-unit aura authority; table acquisition/holiday content unclaimed.
 
 - [DB2 derived-faction refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) — atomic Zephras reconstruction and other importers' build-receipt preservation; source audit and private-copy proof.

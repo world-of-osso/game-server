@@ -10,7 +10,7 @@ use shared::protocol::CombatLogKind;
 #[test]
 fn achievements_criteria_bbgun_real_effect_hits_authored_enemy_leader() {
     use shared::components::Npc;
-    let mut h = harness_with_plugins(vec![], &[67531], 1, false, |app| {
+    let mut h = harness_with_plugins(vec![], &[67531, 26662, 22812], 1, false, |app| {
         app.add_plugins(AchievementPlugin);
     })
     .unwrap();
@@ -73,6 +73,45 @@ fn achievements_criteria_bbgun_real_effect_hits_authored_enemy_leader() {
             && event.amount == 10),
         "real percent-health hit produces its damage receipt"
     );
+    super::cast_triggered(h.app.world_mut(), h.caster, 26662, Some(h.caster), 0);
+    super::cast_triggered(h.app.world_mut(), h.npc, 22812, Some(h.npc), 0);
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 26662));
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 22812));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(h.caster)
+            .unwrap()
+            .damage_done(1)
+            > 1.0
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(h.npc)
+            .unwrap()
+            .damage_taken(1)
+            < 1.0
+    );
+    super::cast_triggered(h.app.world_mut(), h.caster, 67531, Some(h.npc), 0);
+    h.advance(2);
+    assert_eq!(
+        h.health(h.npc),
+        49_980.0,
+        "source165 omits direct damage done/taken bonuses even with real Enrage/Barkskin"
+    );
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: 2500.0,
+        max: 5000.0,
+    });
+    super::cast_triggered(h.app.world_mut(), h.caster, 67531, Some(h.npc), 0);
+    h.advance(2);
+    assert_eq!(
+        h.health(h.npc),
+        2500.0,
+        "half a damage point truncates to zero, not one"
+    );
     assert_eq!(
         h.app
             .world()
@@ -80,8 +119,8 @@ fn achievements_criteria_bbgun_real_effect_hits_authored_enemy_leader() {
             .unwrap()
             .criteria_progress
             .get(&12660),
-        Some(&1),
-        "actual leader hit must satisfy TargetCreatureId4"
+        Some(&3),
+        "all actual leader hits, including zero damage, must satisfy TargetCreatureId4"
     );
 }
 
