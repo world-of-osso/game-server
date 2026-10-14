@@ -77,6 +77,24 @@ fn remove_immune_effect_targets(
     immune_units
 }
 
+/// Unit::SpellHitResult(canReflect=false, canHitPositive=true): a beneficial
+/// shield's retaliation still rolls incoming hostile defenses.
+pub(crate) fn damage_shield_hits(
+    world: &mut World,
+    owner: Entity,
+    spell: &SpellInfo,
+    attacker: Entity,
+) -> bool {
+    if let Some(kind) = roll_defense(world, owner, spell, attacker, u32::MAX) {
+        log_event(
+            world,
+            cast_event(owner, Some(attacker), spell, CombatLogKind::Miss(kind)),
+        );
+        return false;
+    }
+    true
+}
+
 fn roll_defense(
     world: &World,
     caster: Entity,
