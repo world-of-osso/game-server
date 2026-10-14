@@ -9,7 +9,7 @@ use shared::trade::{TradeItem, TradeManager};
 
 use self::trade_support::{
     ERR_NOT_ENOUGH_MONEY, ERR_TRADE_CANCELLED, ERR_TRADE_TOO_FAR, broadcast_trade_state,
-    execute_completed_trade, find_player_by_character_id, find_player_by_name, position_tuple,
+    commit_completed_trade, find_player_by_character_id, find_player_by_name, position_tuple,
     send_trade_completion, send_trade_error, send_trade_message, send_trade_message_to_other,
     send_trade_snapshot_for_player, trade_error_message, validate_offered_item,
 };
@@ -28,6 +28,22 @@ mod trade_support;
 #[derive(Resource, Default)]
 struct ServerTradeState {
     manager: TradeManager,
+    pending: Vec<PendingTrade>,
+}
+
+struct PendingTrade {
+    completed: shared::trade::CompletedTrade,
+    receipt: crate::persistence_writer::CommitReceipt<
+        Result<[(u64, u64); 2], trade_support::ExchangeRefusal>,
+    >,
+}
+
+impl ServerTradeState {
+    fn is_committing(&self, character: u64) -> bool {
+        self.pending.iter().any(|pending| {
+            pending.completed.initiator == character || pending.completed.target == character
+        })
+    }
 }
 
 pub struct TradePlugin;
@@ -229,6 +245,9 @@ fn process_accept_requests(
             continue;
         };
         for _ in receiver.receive() {
+            if trade.is_committing(client_id.0) {
+                continue;
+            }
             match trade.manager.accept_trade(client_id.0) {
                 Ok(_) => {
                     if let Some(session) = trade.manager.get_session(client_id.0) {
@@ -270,6 +289,9 @@ fn process_decline_requests(
             continue;
         };
         for _ in receiver.receive() {
+            if trade.is_committing(client_id.0) {
+                continue;
+            }
             if let Err(error) = handle_decline_request(
                 conn_entity,
                 client_id.0,
@@ -345,6 +367,9 @@ fn process_cancel_requests(
             continue;
         };
         for _ in receiver.receive() {
+            if trade.is_committing(client_id.0) {
+                continue;
+            }
             match trade.manager.cancel_trade(client_id.0) {
                 Ok(other_id) => {
                     send_trade_message(
@@ -395,6 +420,9 @@ fn process_set_item_requests(
             continue;
         };
         for req in receiver.receive() {
+            if trade.is_committing(client_id.0) {
+                continue;
+            }
             if let Err(error) = validate_offered_item(&db.db, &templates, client_id.0, &req) {
                 send_trade_error(conn_entity, &mut senders, &error);
                 continue;
@@ -444,7 +472,7 @@ fn process_clear_item_requests(
         &players,
         &connections,
         db.as_ref(),
-        &mut trade.manager,
+        &mut trade,
         &mut senders,
         |_, client_id, req, manager| {
             manager
@@ -471,7 +499,7 @@ fn process_set_money_requests(
         &players,
         &connections,
         db.as_ref(),
-        &mut trade.manager,
+        &mut trade,
         &mut senders,
         |db, client_id, req, manager| {
             let inventory = persistence::load_inventory(db, client_id);
@@ -490,7 +518,7 @@ fn process_trade_offer_updates<R, F>(
     players: &PlayerQuery,
     connections: &ConnectionQuery,
     db: &GameDatabase,
-    manager: &mut TradeManager,
+    trade: &mut ServerTradeState,
     senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
     mut apply: F,
 ) where
@@ -511,9 +539,12 @@ fn process_trade_offer_updates<R, F>(
             continue;
         };
         for req in receiver.receive() {
-            match apply(&db.db, client_id.0, &req, manager) {
+            if trade.is_committing(client_id.0) {
+                continue;
+            }
+            match apply(&db.db, client_id.0, &req, &mut trade.manager) {
                 Ok(()) => {
-                    if let Some(session) = manager.get_session(client_id.0) {
+                    if let Some(session) = trade.manager.get_session(client_id.0) {
                         broadcast_trade_state(&db.db, session, players, connections, senders, None);
                     }
                 }
@@ -539,13 +570,16 @@ fn process_confirm_requests(
     let (Some(db), Some(templates)) = (db, templates) else {
         return;
     };
+    let ServerTradeState { manager, pending } = &mut *trade;
     let mut exchange = Exchange {
-        db: &db.db,
+        db: &db,
         templates: &templates,
         gold_updates: &mut gold_updates,
         connections: &connections,
         players: &players,
+        pending,
     };
+    exchange.publish_completed(manager, &mut senders);
     for (conn_entity, link, mut receiver) in &mut receivers {
         let Ok((_, _, _, client_id)) = players.get(link.0) else {
             send_trade_error(
@@ -556,18 +590,19 @@ fn process_confirm_requests(
             continue;
         };
         for _ in receiver.receive() {
-            exchange.confirm(conn_entity, client_id.0, &mut trade.manager, &mut senders);
+            exchange.confirm(conn_entity, client_id.0, manager, &mut senders);
         }
     }
 }
 
 /// Everything an accepted trade needs to execute and report.
 struct Exchange<'a, 'w, 's> {
-    db: &'a redb::Database,
+    db: &'a GameDatabase,
     templates: &'a ItemTemplates,
     gold_updates: &'a mut GoldUpdateQueue,
     connections: &'a ConnectionQuery<'w, 's>,
     players: &'a PlayerQuery<'w, 's>,
+    pending: &'a mut Vec<PendingTrade>,
 }
 
 impl Exchange<'_, '_, '_> {
@@ -580,12 +615,17 @@ impl Exchange<'_, '_, '_> {
         manager: &mut TradeManager,
         senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
     ) {
+        if self.pending.iter().any(|pending| {
+            pending.completed.initiator == character_id || pending.completed.target == character_id
+        }) {
+            return;
+        }
         let completed = match manager.confirm_trade(character_id) {
             Ok(Some(completed)) => completed,
             Ok(None) => {
                 if let Some(session) = manager.get_session(character_id) {
                     broadcast_trade_state(
-                        self.db,
+                        &self.db.db,
                         session,
                         self.players,
                         self.connections,
@@ -600,32 +640,63 @@ impl Exchange<'_, '_, '_> {
                 return;
             }
         };
-        match execute_completed_trade(self.db, self.templates, &completed, self.gold_updates) {
-            Ok(()) => {
-                manager.finish_trade(character_id);
-                send_trade_completion(&completed, self.connections, self.players, senders);
-            }
-            Err(refusal) => {
-                manager.refuse_accepts(character_id);
-                let Some(session) = manager.get_session(character_id) else {
-                    return;
-                };
-                for viewer in [completed.initiator, completed.target] {
-                    let Some(viewer_connection) = trade_support::connection_for_character(
-                        self.players,
-                        self.connections,
-                        viewer,
-                    ) else {
+        let snapshot = completed.clone();
+        let templates = self.templates.clone();
+        let receipt = self.db.writer.enqueue("completed player trade", move |db| {
+            Ok(commit_completed_trade(db, &templates, &snapshot))
+        });
+        self.pending.push(PendingTrade { completed, receipt });
+    }
+
+    fn publish_completed(
+        &mut self,
+        manager: &mut TradeManager,
+        senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+    ) {
+        for pending in std::mem::take(self.pending) {
+            let Some(result) = pending.receipt.result() else {
+                self.pending.push(pending);
+                continue;
+            };
+            let completed = pending.completed;
+            match result {
+                Ok(Ok(gold)) => {
+                    for (character, value) in gold {
+                        self.gold_updates.record(character, value);
+                    }
+                    manager.finish_trade(completed.initiator);
+                    send_trade_completion(&completed, self.connections, self.players, senders);
+                }
+                failure => {
+                    manager.refuse_accepts(completed.initiator);
+                    let Some(session) = manager.get_session(completed.initiator) else {
                         continue;
                     };
-                    let snapshot =
-                        trade_support::build_trade_snapshot(self.db, viewer, session, self.players);
-                    if let Ok(mut sender) = senders.get_mut(viewer_connection) {
-                        sender.send::<shared::protocol::TradeChannel>(TradeStateUpdate {
-                            trade: Some(snapshot),
-                            message: None,
-                            error: Some(refusal.message_for(viewer).into()),
-                        });
+                    for viewer in [completed.initiator, completed.target] {
+                        let Some(connection) = trade_support::connection_for_character(
+                            self.players,
+                            self.connections,
+                            viewer,
+                        ) else {
+                            continue;
+                        };
+                        let error = match &failure {
+                            Ok(Err(refusal)) => refusal.message_for(viewer),
+                            _ => "Trade failed.",
+                        };
+                        let snapshot = trade_support::build_trade_snapshot(
+                            &self.db.db,
+                            viewer,
+                            session,
+                            self.players,
+                        );
+                        if let Ok(mut sender) = senders.get_mut(connection) {
+                            sender.send::<shared::protocol::TradeChannel>(TradeStateUpdate {
+                                trade: Some(snapshot),
+                                message: None,
+                                error: Some(error.into()),
+                            });
+                        }
                     }
                 }
             }
@@ -651,6 +722,9 @@ fn process_cancel_accept_requests(
             continue;
         };
         for _ in receiver.receive() {
+            if trade.is_committing(client_id.0) {
+                continue;
+            }
             match trade.manager.unconfirm_trade(client_id.0) {
                 Ok(()) => {
                     if let Some(session) = trade.manager.get_session(client_id.0) {
@@ -678,7 +752,15 @@ fn enforce_trade_range(
     mut trade: ResMut<ServerTradeState>,
     mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
+    let committing: std::collections::HashSet<_> = trade
+        .pending
+        .iter()
+        .flat_map(|pending| [pending.completed.initiator, pending.completed.target])
+        .collect();
     let cancelled = trade.manager.enforce_range(|character_id| {
+        if committing.contains(&character_id) {
+            return Some((0.0, 0.0, 0.0));
+        }
         find_player_by_character_id(&players, character_id)
             .map(|(_, _, position, _)| position_tuple(position))
     });

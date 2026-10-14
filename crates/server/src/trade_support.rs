@@ -9,7 +9,9 @@ use shared::trade::{
     CompletedTrade, TRADE_SLOT_COUNT, TRADE_SLOT_NONTRADED, TradeItem, TradeOffer,
 };
 
-use crate::gold::{GoldUpdateQueue, MAX_MONEY};
+#[cfg(test)]
+use crate::gold::GoldUpdateQueue;
+use crate::gold::MAX_MONEY;
 use crate::inventory::{inventory_model::InventoryModel, load_model};
 use crate::item_templates::ItemTemplates;
 use crate::persistence::inventory_store::write_inventory_record;
@@ -241,12 +243,24 @@ impl ExchangeRefusal {
 /// sides' items leave their bags, money moves, each side stores what it receives,
 /// and both inventories are written in one transaction. Nothing changes when
 /// anything is missing or does not fit.
+#[cfg(test)]
 pub(super) fn execute_completed_trade(
     db: &redb::Database,
     templates: &ItemTemplates,
     trade: &CompletedTrade,
     gold_updates: &mut GoldUpdateQueue,
 ) -> Result<(), ExchangeRefusal> {
+    for (character, gold) in commit_completed_trade(db, templates, trade)? {
+        gold_updates.record(character, gold);
+    }
+    Ok(())
+}
+
+pub(super) fn commit_completed_trade(
+    db: &redb::Database,
+    templates: &ItemTemplates,
+    trade: &CompletedTrade,
+) -> Result<[(u64, u64); 2], ExchangeRefusal> {
     let load = |id| load_model(db, templates, id).map_err(|_| ExchangeRefusal::OfferGone(id));
     let mut initiator = load(trade.initiator)?;
     let mut target = load(trade.target)?;
@@ -281,9 +295,10 @@ pub(super) fn execute_completed_trade(
     write_inventory_record(&txn, trade.initiator, &initiator.into_record());
     write_inventory_record(&txn, trade.target, &target.into_record());
     txn.commit().expect("Failed to commit trade");
-    gold_updates.record(trade.initiator, initiator_gold);
-    gold_updates.record(trade.target, target_gold);
-    Ok(())
+    Ok([
+        (trade.initiator, initiator_gold),
+        (trade.target, target_gold),
+    ])
 }
 
 /// Gold after giving `given` and receiving `received`.

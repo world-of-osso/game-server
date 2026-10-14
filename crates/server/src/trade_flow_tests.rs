@@ -130,6 +130,22 @@ impl TradeHarness {
         for _ in 0..3 {
             self.app.update();
         }
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        while !self
+            .app
+            .world()
+            .resource::<ServerTradeState>()
+            .pending
+            .is_empty()
+        {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "trade did not complete"
+            );
+            self.app.update();
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        self.app.update();
     }
 
     fn take(&mut self, connection: Entity) -> Vec<TradeStateUpdate> {
@@ -265,6 +281,60 @@ fn offer(slot: u8, item_guid: u64, stack_count: u16) -> SetTradeItem {
         item_guid,
         stack_count,
     }
+}
+
+#[test]
+fn trade_completion_waits_for_fifo_commit_without_blocking_updates() {
+    use std::time::Instant;
+    let Some(mut h) = trade_harness() else {
+        panic!("trade fixture unavailable");
+    };
+    let (a, b) = (h.a.connection, h.b.connection);
+    let (a_id, b_id) = (h.a.character_id, h.b.character_id);
+    let (a_gold, b_gold) = (h.inventory(a_id).gold, h.inventory(b_id).gold);
+    h.open_trade();
+    h.send(a, SetTradeMoney { copper: 100 });
+    h.send(a, ConfirmTrade);
+    h.take(a);
+    h.take(b);
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    send_on::<_, TradeChannel>(&mut h.app, b, ConfirmTrade);
+    let started = Instant::now();
+    h.app.update();
+    h.app.update();
+    let elapsed = started.elapsed();
+    let premature = h.messages(a);
+    // Final acceptance is immutable while its commit is pending: retries and
+    // later cancel/edit messages cannot duplicate or change the accepted exchange.
+    send_on::<_, TradeChannel>(&mut h.app, b, ConfirmTrade);
+    send_on::<_, TradeChannel>(&mut h.app, a, SetTradeMoney { copper: 200 });
+    send_on::<_, TradeChannel>(&mut h.app, a, CancelTrade);
+    h.app.update();
+    h.app.update();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "trade tick waited: {elapsed:?}"
+    );
+    assert!(!premature.iter().any(|message| message == "Trade complete."));
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        h.app.update();
+        if h.messages(a)
+            .iter()
+            .any(|message| message == "Trade complete.")
+        {
+            break;
+        }
+        assert!(Instant::now() < deadline, "no durable trade completion");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(h.inventory(a_id).gold, a_gold - 100);
+    assert_eq!(h.inventory(b_id).gold, b_gold + 100);
 }
 
 #[test]
