@@ -41,4 +41,4 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 ## Out of scope
 
-Dynamic doors/game objects, flying, transports, crowds, wander/follow/formation movement, per-display agent profiles and swim-capability policy. Lead owns shipping data and deploying to sakuin.
+Dynamic doors/game objects, flying, transports, crowds, ordinary pet/wander/formation movement, per-display agent profiles and swim-capability policy. Explicit dungeon-follower follow/chase requirements now live in [follower dungeons](follower-dungeons.md); they require baked routes without unbaked compatibility. Lead owns shipping data and deploying to sakuin.
