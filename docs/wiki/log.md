@@ -1,3 +1,7 @@
+## 2026-10-13 — Ground C++ waypoint arrivals
+
+[Ground paths](systems/boss-scripts.md#ground-c-waypoint-paths) now use sourced baked routes rather than reject all non-exact ground MovePath calls. Real AT7904/Adarogg reaches the three authored paths and both meal-condition branches; empty-bake rejection and Golden Serpent flying-path controls accompany the walking-gait RED→GREEN. Native clear and both-skin loot remain open.
+
 ## 2026-10-13 — Ragefire copy persistence and corpse rewards
 
 [Whole-copy boundaries](systems/boss-scripts.md#ragefire-whole-copy-proof) now exercise four real primary deaths, Normal redb reopen/dead-boss population and fresh-owner isolation; actual corpse loot requests persist each boss reward once. Native staged entry rendered but encountered missing source LOS eye receipts; no complete-fight or both-skin certificate follows.
