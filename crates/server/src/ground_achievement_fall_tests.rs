@@ -22,6 +22,25 @@ fn create_fall_fixture() -> FallFixture {
         panic!("missing Stormwind landing floor");
     };
     let file = tempfile::NamedTempFile::new().unwrap();
+    let (mut app, character) = create_fall_app(&file, ground);
+    let player = spawn_fall_actor(app.world_mut(), character, Position { x, y: floor, z });
+    app.world_mut().spawn((
+        Authenticated { account_id: 1 },
+        InWorld {
+            character_id: character,
+        },
+        PlayerLink(player),
+    ));
+    FallFixture {
+        app,
+        player,
+        character,
+        file,
+        floor,
+    }
+}
+
+fn create_fall_app(file: &tempfile::NamedTempFile, ground: GroundMap) -> (App, u64) {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Landingproof", 1, 1).unwrap();
@@ -39,8 +58,11 @@ fn create_fall_fixture() -> FallFixture {
     app.insert_resource(ground);
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.insert_resource(GameDatabase { db });
-    let player = app
-        .world_mut()
+    (app, character)
+}
+
+fn spawn_fall_actor(world: &mut World, character: u64, position: Position) -> Entity {
+    world
         .spawn((
             Player {
                 name: "Landingproof".into(),
@@ -51,31 +73,17 @@ fn create_fall_fixture() -> FallFixture {
             Level(1),
             ClientId(character),
             crate::maps::InMap::continent(0),
-            Position { x, y: floor, z },
+            position,
             Health {
                 current: 1000.0,
                 max: 1000.0,
             },
             MovementControl::default(),
             VerticalVelocity::default(),
-            FallTracker::grounded(floor),
+            FallTracker::grounded(position.y),
             PlayerAchievementState::default(),
         ))
-        .id();
-    app.world_mut().spawn((
-        Authenticated { account_id: 1 },
-        InWorld {
-            character_id: character,
-        },
-        PlayerLink(player),
-    ));
-    FallFixture {
-        app,
-        player,
-        character,
-        file,
-        floor,
-    }
+        .id()
 }
 
 fn start_fall(fixture: &mut FallFixture, distance: f32, health: f32) {
@@ -288,6 +296,9 @@ fn achievements_criteria_native_fall_safe_feather_flying_and_lethal_do_not_credi
         (66.0, None, false),
         (66.0, Some(130), false),
         (66.0, Some(262359), false),
+        // Native physical immunity and17yd Safe Fall still reject the source predicate.
+        (30.0, Some(1022), false),
+        (30.0, Some(1860), false),
         (66.0, None, true),
     ] {
         let mut fixture = create_fall_fixture();
@@ -321,10 +332,87 @@ fn achievements_criteria_native_fall_safe_feather_flying_and_lethal_do_not_credi
         if distance == 66.0 && aura.is_none() && !flying {
             assert_eq!(health, 0.0);
         }
-        if aura.is_some() || flying {
+        if matches!(aura, Some(130 | 262359)) || flying {
             assert_eq!(health, 1000.0);
         }
+        // The realm damage path does not implement immunity/safe-fall parity yet;
+        // this assertion proves only that the achievement cannot bypass either leaf.
     }
+}
+
+#[test]
+fn achievements_criteria_native_knockback_landing_credits_only_once() {
+    let mut fixture = create_fall_fixture();
+    let data = std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap();
+    fixture.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&std::path::Path::new(&data).join("los")).unwrap(),
+    );
+    start_fall(&mut fixture, 30.0, 1000.0);
+    let distance = landing_centiyards(&fixture);
+    let position = *fixture.app.world().get::<Position>(fixture.player).unwrap();
+    let origin = Vec3::new(position.x + 5.0, position.y, position.z);
+    crate::knockback::launch(fixture.app.world_mut(), fixture.player, origin, 0.0, 0.0).unwrap();
+    assert_eq!(
+        fall_progress(&fixture),
+        None,
+        "launch is not achievement credit"
+    );
+    for _ in 0..200 {
+        fixture
+            .app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        crate::knockback::update_knockbacks(fixture.app.world_mut());
+        if !fixture
+            .app
+            .world()
+            .get::<MovementControl>(fixture.player)
+            .unwrap()
+            .controlled
+        {
+            break;
+        }
+    }
+    assert!(
+        !fixture
+            .app
+            .world()
+            .get::<MovementControl>(fixture.player)
+            .unwrap()
+            .controlled
+    );
+    assert_eq!(fall_progress(&fixture), Some(distance));
+    let health = fixture
+        .app
+        .world()
+        .get::<Health>(fixture.player)
+        .unwrap()
+        .current;
+    assert!(health > 0.0 && health < 1000.0);
+    for _ in 0..3 {
+        crate::knockback::update_knockbacks(fixture.app.world_mut());
+        fixture
+            .app
+            .world_mut()
+            .run_system_once(crate::networking::apply_terrain_gravity)
+            .unwrap();
+    }
+    assert_eq!(fall_progress(&fixture), Some(distance));
+    let FallFixture {
+        app,
+        file,
+        character,
+        ..
+    } = fixture;
+    drop(app);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&2072),
+        Some(&distance)
+    );
 }
 
 #[test]
