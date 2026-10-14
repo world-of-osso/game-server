@@ -570,6 +570,7 @@ pub(crate) fn use_battleground_object(
     }
     if super::pvp_seething::is_azerite_object(world, object) {
         let result = super::pvp_seething::begin_gathering(world, player, object);
+        debug!(player = ?player, object = ?object, result = ?result, "Azerite use acceptance result");
         super::pvp_invites::send_response(world, connection, player, result);
         return;
     }
@@ -826,6 +827,9 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
             snapshot.team = unit.team;
         }
         snapshot.world_states = values.7.clone();
+        if snapshot.battleground_id == 894 {
+            debug!(player = ?player, match_id, score_a = snapshot.score_a, score_b = snapshot.score_b, "Seething snapshot sent");
+        }
         super::pvp_invites::send_response(
             world,
             connection,

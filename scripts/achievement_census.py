@@ -13,7 +13,7 @@ from import_achievement_single_modifiers import qualified_single_modifiers
 from import_achievement_conditions import load_identity_condition_ids, legacy_difficulties, qualified_conditions
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 26, 27, 28, 29, 30, 32, 33, 34, 36, 37, 39, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 70, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 24, 26, 27, 28, 29, 30, 32, 33, 34, 36, 37, 39, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 70, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 # shared battleground_columns.rs PvpStat columns credited by native objectives.
 MAX_LEVEL = 90  # crate::experience::MAX_LEVEL
@@ -81,7 +81,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue  # TDB1210 orphan aura66303 and holiday404 requirements.
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
-        if kind in (37, 9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56, 78) and asset != 0:
+        if kind in (24, 37, 9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56, 78) and asset != 0:
             continue
         if kind == 39 and asset not in (0, 1):
             continue  # Current authored2v2/3v3; retired5v5/RBG/Shuffle/Blitz are not native rating sources.
@@ -115,7 +115,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
 
 def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
-    return {2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+    return {16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 35: asset == 0, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
