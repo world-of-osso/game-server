@@ -557,12 +557,54 @@ fn trading_post_cart_wire_rejects_unknown_offer_without_partial_charge_then_publ
         .resource_mut::<AppearanceReplies>()
         .0
         .clear();
-    let paid = request(
-        &mut h,
-        TradingPostRequest::Checkout {
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
+        .unwrap()
+        .send::<InstanceChannel>(TradingPostRequest::Checkout {
             vendor_item_ids: vec![4, 5],
-        },
+        });
+    let started = std::time::Instant::now();
+    h.app.update();
+    h.app.update();
+    let elapsed = started.elapsed();
+    let premature: Vec<_> = h
+        .app
+        .world_mut()
+        .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+        .unwrap()
+        .receive()
+        .collect();
+    release.join().unwrap();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "cart tick waited: {elapsed:?}"
     );
+    assert!(premature.is_empty(), "cart acknowledgement precedes commit");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    let paid = loop {
+        h.app.update();
+        let replies: Vec<_> = h
+            .app
+            .world_mut()
+            .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+            .unwrap()
+            .receive()
+            .collect();
+        if let Some(reply) = replies.into_iter().last() {
+            break reply;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "no durable cart reply"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    };
     let updates = &h.app.world().resource::<AppearanceReplies>().0;
     assert_eq!(
         updates.len(),

@@ -208,6 +208,13 @@ fn catalog_offers<'a>(
         .collect()
 }
 
+struct OwnedCartOffer {
+    vendor: u32,
+    price: u32,
+    grant: store::Grant,
+    refund_duration: u32,
+}
+
 fn enqueue_cart(
     world: &World,
     account: u64,
@@ -218,36 +225,51 @@ fn enqueue_cart(
     let window = world
         .get_resource::<RefundWindow>()
         .map_or(0, |window| window.0);
-    let owned: Vec<_> = catalog_offers(catalog, vendors, window)?
-        .into_iter()
-        .map(|offer| {
-            (
-                offer.vendor,
-                offer.price,
-                offer.grant.clone(),
-                offer.refund_duration,
-            )
-        })
-        .collect();
+    let owned = own_cart_offers(catalog, vendors, window)?;
     Ok(world
         .resource::<GameDatabase>()
         .writer
         .enqueue("Trading Post checkout", move |db| {
-            let offers: Vec<_> = owned
-                .iter()
-                .map(|(vendor, price, grant, refund_duration)| store::Offer {
-                    vendor: *vendor,
-                    price: *price,
-                    grant,
-                    refund_duration: *refund_duration,
-                })
-                .collect();
-            let state = store::checkout(db, account, &offers, now)?;
-            Ok(offers
-                .iter()
-                .map(|offer| (offer.vendor, state.purchases[&offer.vendor].granted.clone()))
-                .collect())
+            commit_cart_offers(db, account, &owned, now)
         }))
+}
+
+fn own_cart_offers(
+    catalog: &catalog::CatalogData,
+    vendors: &[u32],
+    window: u32,
+) -> Result<Vec<OwnedCartOffer>, String> {
+    Ok(catalog_offers(catalog, vendors, window)?
+        .into_iter()
+        .map(|offer| OwnedCartOffer {
+            vendor: offer.vendor,
+            price: offer.price,
+            grant: offer.grant.clone(),
+            refund_duration: offer.refund_duration,
+        })
+        .collect())
+}
+
+fn commit_cart_offers(
+    db: &redb::Database,
+    account: u64,
+    owned: &[OwnedCartOffer],
+    now: i64,
+) -> Result<Vec<(u32, store::Grant)>, String> {
+    let offers: Vec<_> = owned
+        .iter()
+        .map(|offer| store::Offer {
+            vendor: offer.vendor,
+            price: offer.price,
+            grant: &offer.grant,
+            refund_duration: offer.refund_duration,
+        })
+        .collect();
+    let state = store::checkout(db, account, &offers, now)?;
+    Ok(offers
+        .iter()
+        .map(|offer| (offer.vendor, state.purchases[&offer.vendor].granted.clone()))
+        .collect())
 }
 
 fn active_vendor(world: &World, connection: Entity, player: Entity) -> Result<Entity, String> {
