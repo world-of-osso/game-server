@@ -57,6 +57,8 @@ mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
 #[cfg(test)]
+mod druid_transform_tests;
+#[cfg(test)]
 mod dummy10_tests;
 #[cfg(test)]
 mod dummy11_tests;
