@@ -197,37 +197,33 @@ fn send_error(connection: Entity, senders: &mut ErrorSenders, error: InventoryEr
 }
 
 fn send_initial_inventory(
-    mut commands: Commands,
     connections: Query<(Entity, &InWorld, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
-    store: InventoryStore,
-    mut inventory_senders: Query<&mut MessageSender<InventorySnapshot>>,
-    mut equipment_senders: Query<&mut MessageSender<EquipmentSnapshot>>,
-    mut errors: ErrorSenders,
+    mut store: InventoryStore,
 ) {
-    let Some((db, templates)) = store.get() else {
+    let (Some(db), Some(templates)) = (store.db.as_deref(), store.templates.as_deref()) else {
         return;
     };
-    for (connection, in_world, link) in &connections {
-        let model = match load_model(db, templates, in_world.character_id) {
-            Ok(model) => model,
-            Err(error) => {
-                send_error(connection, &mut errors, error);
-                continue;
-            }
-        };
-        if let Ok(mut sender) = inventory_senders.get_mut(connection) {
-            sender.send::<InventoryChannel>(model.inventory_snapshot());
-        }
-        if let Ok(mut sender) = equipment_senders.get_mut(connection) {
-            sender.send::<InventoryChannel>(model.equipment_snapshot());
-        }
-        commands.entity(connection).insert((
-            SentInventoryView(model.view()),
-            AppearanceSourceItems(model.appearance_sources()),
-        ));
-        commands.entity(link.0).insert(model.equipped_items());
-        // Persist placements chosen for previously unplaced items.
-        save_inventory_record(db, in_world.character_id, &model.into_record());
+    for (connection, session, link) in &connections {
+        let character = session.character_id;
+        let templates = templates.clone();
+        let receipt = db
+            .writer
+            .enqueue("initial inventory normalization", move |db| {
+                Ok(load_model(db, &templates, character).map(|model| {
+                    let initial = actor::InitialInventory {
+                        snapshot: model.inventory_snapshot(),
+                        equipment: model.equipment_snapshot(),
+                        view: model.view(),
+                        appearances: model.appearance_sources(),
+                        equipped: model.equipped_items(),
+                    };
+                    save_inventory_record(db, character, &model.into_record());
+                    initial
+                }))
+            });
+        store
+            .pending
+            .push_initial(connection, link.0, character, receipt);
     }
 }
 

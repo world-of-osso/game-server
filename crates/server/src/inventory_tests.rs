@@ -13,6 +13,50 @@ use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::persistence::ClientId;
 
 #[test]
+fn initial_inventory_snapshot_waits_for_fifo_normalization_without_blocking_updates() {
+    use std::time::Instant;
+    let mut app = setup_app(persistence::temp_database());
+    let client = spawn_client(&mut app, 1, "Fifostart");
+    let held = db(&app).begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    app.world_mut()
+        .entity_mut(client.connection)
+        .insert(InWorld {
+            character_id: client.character_id,
+        });
+    let started = Instant::now();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature = received::<InventorySnapshot>(&mut app, &client);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "initial inventory tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature.is_empty(),
+        "initial inventory snapshot precedes durable normalization"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        app.update();
+        if !received::<InventorySnapshot>(&mut app, &client).is_empty() {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "no committed initial inventory snapshot"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let record = load_inventory_record(db(&app), client.character_id).unwrap();
+    assert_eq!(record.placements.len(), 3);
+}
+
+#[test]
 fn inventory_split_delta_waits_for_fifo_commit_without_blocking_updates() {
     use std::time::Instant;
     let mut app = setup_app(persistence::temp_database());
@@ -250,6 +294,16 @@ fn enter_world(app: &mut App, client: &Client) {
         .insert(InWorld {
             character_id: client.character_id,
         });
+    app.update();
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while !app.world().resource::<PendingInventoryCommits>().is_idle() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "initial inventory fixture timeout"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+        app.update();
+    }
     app.update();
 }
 
