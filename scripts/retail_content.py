@@ -483,34 +483,17 @@ TDB_LOOT_OFFSET = 20_000_000
 # TrinityCore ItemVendorType and LootStoreItem::Type.
 VENDOR_ITEM, VENDOR_CURRENCY = 1, 2
 LOOT_ITEM, LOOT_REFERENCE, LOOT_CURRENCY = 0, 1, 2
-QUEST_ITEM_COLUMNS = ([f"RewardItem{n}" for n in range(1, 5)] + [f"ItemDrop{n}" for n in range(1, 5)]
-                      + [f"RewardChoiceItemID{n}" for n in range(1, 7)] + ["StartItem"])
 TDB_LOOT_TABLES = ("creature_loot_template", "gameobject_loot_template", "reference_loot_template", "item_loot_template")
 
 
-# CharacterLoadoutEntry::IsForNewCharacter (DB2Structure.h:664).
-NEW_CHARACTER_LOADOUT = 9
-# ACTION_BUTTON_ITEM (Player.h:374).
-ACTION_BUTTON_ITEM = 0x80
+def retail_item_ids(conn):
+    """Every installed Item/ItemSparse definition, independent of older TDB references.
 
-
-def tdb_item_ids(conn):
-    """Retail item ids TrinityCore's vendors, loot, quests and new-character kit and Wowhead's drops
-    reference that Retail ItemSparse has. The kit: CharacterLoadout Purpose 9 items
-    (CharacterLoadoutEntry::IsForNewCharacter), playercreateinfo_item and item action buttons."""
-    sources = [f"SELECT item FROM tdb_npc_vendor WHERE type = {VENDOR_ITEM}"]
-    sources += [f"""SELECT ItemID FROM character_loadout_item WHERE CharacterLoadoutID IN
-                    (SELECT ID FROM character_loadout WHERE Purpose = {NEW_CHARACTER_LOADOUT})""",
-                "SELECT itemid FROM tdb_playercreateinfo_item",
-                f"SELECT action FROM tdb_playercreateinfo_action WHERE type = {ACTION_BUTTON_ITEM}"]
-    sources += [f"SELECT Item FROM tdb_{table} WHERE ItemType = {LOOT_ITEM}" for table in TDB_LOOT_TABLES]
-    sources += ["SELECT t.ItemID FROM toy t JOIN item i ON i.ID=t.ItemID",
-                "SELECT item FROM wowhead_creature_drop",
-                "SELECT Entry FROM tdb_item_loot_template",
-                "SELECT ObjectID FROM tdb_quest_objectives WHERE Type = 1"]  # QUEST_OBJECTIVE_ITEM
-    sources += [f"SELECT {column} FROM tdb_quest_template" for column in QUEST_ITEM_COLUMNS]
+    TrinityCore a352b1fa ObjectMgr.cpp:2991-3000 walks the ItemSparse store and requires
+    its matching Item entry. Content references decide availability, not definitions.
+    """
     return {item for (item,) in conn.execute(
-        f"SELECT ID FROM item_sparse WHERE ID IN ({' UNION '.join(sources)})")}
+        "SELECT s.ID FROM item_sparse s JOIN item i ON i.ID = s.ID")}
 
 
 def build_vendors(conn, report):

@@ -5,7 +5,7 @@
 
 The import now loads the CharacterLoadout, CharacterLoadoutItem, ItemEffect and
 ItemXItemEffect DB2s and TrinityCore's playercreateinfo_action / playercreateinfo_item,
-and keeps the kit items in content_item (retail_content.tdb_item_ids); the action rows
+and keeps all installed Item/ItemSparse definitions in content_item; the action rows
 get retail_action_bars.py's main bar relocation. This applies
 that to an already-imported database without re-running the import: it (re)creates
 those six tables exactly as the import would and inserts the missing content_item rows;
@@ -70,7 +70,7 @@ def table_ddl(name):
 
 
 def add_player_create_info(conn, csv_dir):
-    """Replace the kit DB2 tables and add the missing kit items to content_item; return the added item ids."""
+    """Replace kit DB2 tables and add missing installed item definitions; return added IDs."""
     skyborne_rows = skyborne_data.load_rows(skyborne_data.DEFAULT_SOURCE)
     for db2_name in DB2_TABLES:
         name = db2.table_name(db2_name)
@@ -88,10 +88,10 @@ def add_player_create_info(conn, csv_dir):
     skyborne_data.import_rows(conn, skyborne_rows)
     skyborne_data.project_items(conn)
     present = {item for (item,) in conn.execute("SELECT ID FROM content_item")}
-    added = sorted(retail_content.tdb_item_ids(conn) - present)
+    added = sorted(retail_content.retail_item_ids(conn) - present)
     conn.executemany(
         f"""INSERT INTO content_item SELECT {content_policy.ITEM_COLUMNS}, NULL AS SourceEntry
-        FROM item_sparse s LEFT JOIN item i ON i.ID = s.ID WHERE s.ID = ?""",
+        FROM item_sparse s JOIN item i ON i.ID = s.ID WHERE s.ID = ?""",
         ((item,) for item in added),
     )
     return added

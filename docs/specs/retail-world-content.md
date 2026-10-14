@@ -52,6 +52,14 @@ Garrison directories are excluded from the DB2 expansion, not from the existing 
 
 Raid admission/lockout UX (rank 5), encounter scripting (rank 2), phase progression and unsupported gameobject interaction types remain separate gaps; importing their authentic rows is not proof those gameplay systems work.
 
+## Installed item definitions
+
+- [x] `content_item` contains every matching installed `Item` + `ItemSparse` ID, independent of older TDB vendor, loot, quest, toy or starting-kit references. All attributes and default appearance come from the installed DB2 tables; reviewed AzerothCore `SourceEntry` mappings survive refresh. Definitions do not grant availability.
+- [x] `content_policy.py --mode items-refresh --db <private-copy>` refreshes item projections transactionally without rebuilding world population or fetching external sources. Isolated Skyborne definitions remain separate.
+- [x] Source-exact regression covers all nineteen reported battleground gear IDs, repeated projection and refresh, and retained `SourceEntry`. Generated Skyborne SQLite fixture must match its producer exactly.
+
+Implementation and pinned TrinityCore rule: [content import](../wiki/systems/content-import.md#installed-item-projection).
+
 ## What it must do
 
 Spawn and id rules
