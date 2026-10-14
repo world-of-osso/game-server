@@ -140,11 +140,15 @@ pub(super) fn learn_group_toy(h: &mut Harness, character: u64, item_id: u32) {
         std::thread::sleep(std::time::Duration::from_millis(10));
         results.extend(pump(h).0);
     }
+    let owned = toy_store::load(&h.app.world().resource::<GameDatabase>().db, 1);
+    let inventory =
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character);
     assert!(
         results
             .iter()
             .any(|result| result.operation == ToyOperation::Learn && result.error.is_none()),
-        "physical toy {item_id} did not learn: {results:?}; errors: {:?}",
-        drain::<InventoryError>(&mut h.app, h.connection)
+        "physical toy {item_id} did not learn: {results:?}; owned: {owned:?}; inventory: {inventory:?}; errors: {:?}; spell failures: {:?}",
+        drain::<InventoryError>(&mut h.app, h.connection),
+        h.inbox.failed
     );
 }

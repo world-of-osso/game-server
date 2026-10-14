@@ -20,6 +20,10 @@ fn toyfx28_group_private_use_captures_group_and_child_inherits_it() {
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::persistence::ClientId(character));
     let online = OnlineView::from_iter(
         [(character, "Caster"), (character + 1, "Friend")]
             .into_iter()
