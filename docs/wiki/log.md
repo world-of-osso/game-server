@@ -13,6 +13,17 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-13 — Exact map0 criterion
+
+[Known zero map](systems/dungeon-achievements.md#exact-zero-map) preserves actual map0 versus missing authority. Native killing-blow5512 and redb reopen add existing World Killing Blows statistic1488, not an ordinary grant, world honor or relinked tree. Saved source root592/leaf593 remains authoritative until the coordinated DB2 re-export; no extraction performed.
+
+## 2026-10-13 — NPC Felguard learned interrupt
+
+[Follower data](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13): native level17 learned Axe Toss89766→347008 interrupts actual Fireball without canceling the owner's Shadow Bolt; below-level/cooldown/non-interruptible/stunned controls pass5/5 at72e754d5. Authenticated catalog is installed after generic fixture startup; native missile landing and existing persistence baseline are observed, not guessed. Ten pet motion/hazard/lifetime/credit cases additionally pass af677305, including real overlapping fields and movement CC. Current prepared follower73/73 and player-pet persistence10/10 pass; current server checks/fmt pass with later unrelated master changes. Full-dungeon/authored-kit/stat-budget acceptance remains open.
+
+## 2026-10-13 — Follower utilities and strict-nav boundaries
+
+[Follower data](investigations/follower-data.md#advanced-bridge-utilities-and-bound-fields--2026-10-13): real interrupts, casting-time readiness/cancellation, eleven-profile defensive mitigation/healing and real Stockade hostile-field escape; native Group Finder current-source Ruby admission does not close its disconnected authored route or full-dungeon acceptance. No source-coordinate changes, canonical writes or direct movement substitute.
 ## 2026-10-13 — PlayerHasAura Some alternatives
 
 [Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
@@ -1105,3 +1116,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: [Fountain of Knowledge](systems/toys.md#fountain-of-knowledge-2026-10-13) exact admission, authenticated ordinary model and both-skin natural removal; census expectations now retain source-backed Pendant/Fountain while preserving control refusals.
 
 - 2026-10-13: [Accursed Tome](systems/toys.md#accursed-tome-of-the-sargerei-2026-10-13) exact source admission and both-skin natural model removal; fresh-account learning delivers, while earlier profile ownership-update timeouts remain unexplained.
+## 2026-10-13 — Native follower class level and routed follow
+
+[Profile/navigation proof](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13): eleven actual labelled basic-role casts/resource publications; Cobra Shot193455 missile-resolution Level panic RED→11GREEN. Real Stockade follow crossed wall at tick19 and lost moving-state progress4.8527yd; native route/progress fix GREEN3. Strict follower missing-bake standing, ordinary behavior retained. Private Ruby12LOS+12NAV/authored zero-gap geometry package staged; advanced AI and new whole-route live proof open.
+- 2026-10-13: [Category charge rates](systems/auras.md#category-charge-recovery-rates): native148 through existing category clocks, authentic Trueshot/Aimed Shot RED/GREEN, negative native Fiery Brand and bounded refresh API proof.

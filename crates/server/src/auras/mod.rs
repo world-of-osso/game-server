@@ -1517,7 +1517,7 @@ pub struct ChargeMods {
     pub extra_charges: i32,
     /// CHARGE_RECOVERY_MOD 453, ms.
     pub recovery_flat_ms: f32,
-    /// CHARGE_RECOVERY_MULTIPLIER 454.
+    /// CHARGE_RECOVERY_MULTIPLIER 454, haste457 and category rate148.
     pub recovery_mult: f32,
 }
 
@@ -1553,6 +1553,9 @@ pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeM
                 handlers::MOD_MAX_CHARGES => mods.extra_charges += amount.round() as i32,
                 handlers::CHARGE_RECOVERY_MOD => mods.recovery_flat_ms += amount,
                 handlers::CHARGE_RECOVERY_MULTIPLIER => mods.recovery_mult *= 1.0 + amount / 100.0,
+                handlers::MOD_CHARGE_RECOVERY_RATE => {
+                    mods.recovery_mult *= 100.0 / (100.0 + amount.max(-99.0));
+                }
                 _ => {}
             }
         }
