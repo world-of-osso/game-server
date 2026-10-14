@@ -13,6 +13,15 @@ use shared::components::{
     Rotation,
 };
 
+const MIN_QUIET_DISTANCE: f32 = 28.0;
+const MAX_QUIET_DISTANCE: f32 = 43.0;
+const MAX_PATH_LENGTH: f32 = 30.0;
+const PATH_RETRY: f32 = 0.1;
+const LOS_RETRY: f32 = 0.2;
+const RUN_SPEED: f32 = 7.0;
+const MIN_PAUSE: f32 = 0.8;
+const MAX_PAUSE: f32 = 1.5;
+
 #[derive(Component)]
 pub(super) struct Fleeing {
     path: Option<Corners>,
@@ -93,6 +102,7 @@ fn advance(world: &mut World, unit: Entity, dt: f32) {
             .get::<MovementControl>(unit)
             .is_none_or(|control| control.epoch != epoch || !control.controlled)
     }) {
+        world.entity_mut(unit).insert(state);
         return;
     }
     let speed = run_speed(world, unit);
@@ -100,7 +110,9 @@ fn advance(world: &mut World, unit: Entity, dt: f32) {
         .get::<Health>(unit)
         .is_some_and(|hp| hp.current <= 0.0)
         || speed == 0.0
-        || world.get::<shared::casting::CastState>(unit).is_some();
+        || world
+            .get::<shared::casting::CastState>(unit)
+            .is_some_and(|cast| !cast.cast_while_moving);
     if blocked {
         state.path = None;
         stop_motion(world, unit);
@@ -109,24 +121,29 @@ fn advance(world: &mut World, unit: Entity, dt: f32) {
         if state.path.is_none() && state.wait <= 0.0 {
             choose_path(world, unit, &mut state);
         }
-        if let Some(path) = &mut state.path {
-            let before = point(*world.get::<Position>(unit).expect("fleeing position"));
-            let (after, reached) = path.advance(before, speed * dt, 0.0, state.destination);
-            move_unit(world, unit, before, after, speed);
-            if reached {
-                state.path = None;
-                state.wait = rand::thread_rng().gen_range(0.8..=1.5);
-                stop_motion(world, unit);
-            }
-        }
+        advance_path(world, unit, &mut state, speed, dt);
     }
     world.entity_mut(unit).insert(state);
+}
+
+fn advance_path(world: &mut World, unit: Entity, state: &mut Fleeing, speed: f32, dt: f32) {
+    let Some(path) = &mut state.path else {
+        return;
+    };
+    let before = point(*world.get::<Position>(unit).expect("fleeing position"));
+    let (after, reached) = path.advance(before, speed * dt, 0.0, state.destination);
+    move_unit(world, unit, before, after, speed);
+    if reached {
+        state.path = None;
+        state.wait = rand::thread_rng().gen_range(MIN_PAUSE..=MAX_PAUSE);
+        stop_motion(world, unit);
+    }
 }
 
 fn run_speed(world: &World, unit: Entity) -> f32 {
     let base = world
         .get::<crate::creature_ai::SpawnPoint>(unit)
-        .map_or(7.0, |spawn| 7.0 * spawn.speed_run);
+        .map_or(RUN_SPEED, |spawn| RUN_SPEED * spawn.speed_run);
     base * world
         .get::<AuraStatMods>(unit)
         .map_or(1.0, |mods| mods.movement_speed)
@@ -141,24 +158,27 @@ fn flee_point(from: Vec3, caster: Option<Vec3>, distance: f32, rng: &mut impl Rn
         Some(delta) if distance > 0.2 => delta.z.atan2(delta.x),
         _ => rng.gen_range(0.0..TAU),
     };
-    let (distance, angle) = if distance < 28.0 {
+    let (distance, angle) = if distance < MIN_QUIET_DISTANCE {
         (
-            rng.gen_range(0.4..=1.3) * (28.0 - distance),
+            rng.gen_range(0.4..=1.3) * (MIN_QUIET_DISTANCE - distance),
             angle + rng.gen_range(-PI / 8.0..=PI / 8.0),
         )
-    } else if distance > 43.0 {
+    } else if distance > MAX_QUIET_DISTANCE {
         (
-            rng.gen_range(0.4..=1.0) * 15.0,
+            rng.gen_range(0.4..=1.0) * (MAX_QUIET_DISTANCE - MIN_QUIET_DISTANCE),
             -angle + rng.gen_range(-PI / 4.0..=PI / 4.0),
         )
     } else {
-        (rng.gen_range(0.6..=1.2) * 15.0, rng.gen_range(0.0..TAU))
+        (
+            rng.gen_range(0.6..=1.2) * (MAX_QUIET_DISTANCE - MIN_QUIET_DISTANCE),
+            rng.gen_range(0.0..TAU),
+        )
     };
     from + Vec3::new(angle.cos() * distance, 0.0, angle.sin() * distance)
 }
 
 fn choose_path(world: &World, unit: Entity, state: &mut Fleeing) {
-    state.wait = 0.1;
+    state.wait = PATH_RETRY;
     let Some(nav) = world.get_resource::<Navigation>() else {
         return;
     };
@@ -166,20 +186,8 @@ fn choose_path(world: &World, unit: Entity, state: &mut Fleeing) {
         return;
     };
     let from = point(*world.get::<Position>(unit).expect("fleeing position"));
-    let caster = world
-        .get::<Feared>(unit)
-        .and_then(|fear| world.get::<Position>(fear.flee_from))
-        .copied()
-        .map(point);
-    let distance = if caster.is_some() {
-        let caster = world.get::<Feared>(unit).expect("feared owner").flee_from;
-        let Some(distance) = crate::scripted_ai::model_reach::distance(world, unit, caster) else {
-            debug!("Fear {unit}: missing source combat reach; no guessed flee distance");
-            return;
-        };
-        distance
-    } else {
-        0.0
+    let Some((caster, distance)) = caster_geometry(world, unit, map) else {
+        return;
     };
     let wanted = flee_point(from, caster, distance, &mut rand::thread_rng());
     let destination = match nav.first_collision(map.map_id, from, wanted) {
@@ -194,9 +202,35 @@ fn choose_path(world: &World, unit: Entity, state: &mut Fleeing) {
     if let Some(los) = world.get_resource::<crate::line_of_sight::LineOfSight>()
         && !los.clear(map, from + Vec3::Y, destination + Vec3::Y)
     {
-        state.wait = 0.2;
+        state.wait = LOS_RETRY;
         return;
     }
+    start_path(nav, unit, map, from, destination, state);
+}
+
+fn caster_geometry(world: &World, unit: Entity, map: InMap) -> Option<(Option<Vec3>, f32)> {
+    let caster = world.get::<Feared>(unit)?.flee_from;
+    let position = world
+        .get::<Position>(caster)
+        .filter(|_| world.get::<InMap>(caster) == Some(&map));
+    let Some(position) = position else {
+        return Some((None, 0.0));
+    };
+    let distance = crate::scripted_ai::model_reach::distance(world, unit, caster);
+    if distance.is_none() {
+        error!("Fear {unit}: missing source combat reach for {caster}; no guessed flee distance");
+    }
+    distance.map(|distance| (Some(point(*position)), distance))
+}
+
+fn start_path(
+    nav: &Navigation,
+    unit: Entity,
+    map: InMap,
+    from: Vec3,
+    destination: Vec3,
+    state: &mut Fleeing,
+) {
     let points = match nav.query_path(map.map_id, from, destination) {
         Ok(Some(points)) => points,
         Ok(None) => return,
@@ -206,7 +240,7 @@ fn choose_path(world: &World, unit: Entity, state: &mut Fleeing) {
         }
     };
     let length: f32 = points.windows(2).map(|p| p[0].distance(p[1])).sum();
-    if length > 30.0 {
+    if length > MAX_PATH_LENGTH {
         return;
     }
     state.destination = destination;
