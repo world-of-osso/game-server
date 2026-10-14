@@ -2,6 +2,103 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_encounter_loot_eligibility_reads_active_native_locks_and_authority() {
+    use crate::maps::instances::{InstanceEntrant, Now};
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let store = crate::maps::store::load_map_store(&conn).unwrap();
+    let now = Now {
+        elapsed: 0.0,
+        unix: 1791763200,
+    };
+    let mut manager = crate::maps::InstanceManager::default();
+    let map = manager
+        .create_map(
+            &store,
+            1530,
+            InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 14,
+                ..Default::default()
+            },
+            now,
+        )
+        .unwrap()
+        .map;
+    let mut world = World::new();
+    world.insert_resource(store);
+    world.insert_resource(manager);
+    world.init_resource::<Time>();
+    world.insert_resource(crate::maps::ServerClock {
+        offset_secs: 0,
+        fixed_unix: Some(now.unix),
+    });
+    let player = world
+        .spawn((
+            Player {
+                name: "Looteligible".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            map,
+            crate::persistence::ClientId(1),
+        ))
+        .id();
+    let connection = world
+        .spawn((
+            Authenticated { account_id: 1 },
+            InWorld { character_id: 1 },
+            PlayerLink(player),
+        ))
+        .id();
+    assert_eq!(
+        encounter_loot_eligible_players(&mut world, map, 1849, 14),
+        vec![player]
+    );
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 15).is_empty());
+    assert!(
+        encounter_loot_eligible_players(
+            &mut world,
+            InMap {
+                instance_id: map.instance_id + 900,
+                ..map
+            },
+            1849,
+            14
+        )
+        .is_empty()
+    );
+    assert!(encounter_loot_eligible_players(&mut world, map, u32::MAX, 14).is_empty());
+    world.entity_mut(connection).remove::<Authenticated>();
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty());
+    world
+        .entity_mut(connection)
+        .insert(Authenticated { account_id: 1 });
+    world
+        .entity_mut(connection)
+        .insert(InWorld { character_id: 2 });
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty());
+    world
+        .entity_mut(connection)
+        .insert(InWorld { character_id: 1 });
+    world
+        .entity_mut(player)
+        .remove::<crate::persistence::ClientId>();
+    assert!(encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty());
+    world
+        .entity_mut(player)
+        .insert(crate::persistence::ClientId(1));
+    world
+        .resource_mut::<crate::maps::InstanceManager>()
+        .update_instance_lock(map, &[(player, 1)], 2, Some(1), now.unix);
+    assert!(
+        encounter_loot_eligible_players(&mut world, map, 1849, 14).is_empty(),
+        "native saved encounter bit is already loot locked"
+    );
+}
+
+#[test]
 fn achievements_criteria_top_level_area_uses_authentic_dragon_isles_terrain_and_persists() {
     use shared::components::{CharacterAppearance, Position};
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();

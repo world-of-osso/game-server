@@ -1,6 +1,46 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_pet_team_threshold_rejects_unknown_and_preserves_other_qualifiers() {
+    let catalog = catalog();
+    for (minimum, qualifies) in [(None, false), (Some(24), false), (Some(25), true)] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                battle_pet_team_min_level: minimum,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::WinPetBattle,
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&23257), qualifies.then_some(&1));
+        assert!(
+            !state.criteria_progress.contains_key(&23306),
+            "NYI PvP90 remains required"
+        );
+        assert!(!state.earned_ids.contains(&8278));
+    }
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::WinPetBattle,
+        None,
+        1,
+        &PlayerConditions::default(),
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&23257),
+        "map-wide credit has no pet journal"
+    );
+}
+
+#[test]
 fn achievements_criteria_known_spell_needs_player_knowledge_and_an_authored_spell_row() {
     let catalog = catalog();
     for (spells, qualifies) in [(vec![], false), (vec![432962], false), (vec![406106], true)] {

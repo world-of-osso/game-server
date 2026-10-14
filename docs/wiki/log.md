@@ -1,6 +1,14 @@
 ## 2026-10-13 — Login/catalog/admission budget investigation
 
 [Tick lag](investigations/server-tick-lag.md#logincatalogadmission-investigation-verified-2026-10-13): achievement fact/index/publication, aura watchers, worker geometry, replication bootstrap, async credentials and owner-shared Toy presentation fixes have targeted proof.22 auth/admission and32 interest tests plus2 LOS/2 navigation preparation tests pass. Private debug live50ms acceptance remains unmet; synchronous durable writes and economy stalls retained explicitly.
+## 2026-10-13 — Battle-pet team minimum level
+
+[BattlePetTeamLevel34](systems/dungeon-achievements.md#battle-pet-team-minimum-level) reads all three equipped owned journal slots. Compiler30/30; native level25-team win RED lacks23257. Native/catalog3/3 proves matched-team win/lower equipped slot, numeric8278, idle/reopen and missing journal/slot qualification. Statistic8278 only; required full170/0/1ignored plus site-export1/1, server/engine checks and three-repo fmt pass at4531ce2b code scope.
+
+## 2026-10-13 — Encounter loot eligibility ordering
+
+[Type97](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) reads existing active lock bits before native DONE saves them. Actual Skorpyron Normal14 death RED commits bit1 but lacks35448; native2/2 and required full167/0/1ignored plus checks/fmt pass at fa181cea code scope. No new lock state or bag-loot substitute; current roots remain unchanged.
+
 ## 2026-10-13 — Positive known-spell marker
 
 [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) reads existing class/profession/owned-mount IDs, not global spell metadata. Compiler RED→GREEN29/29; native/catalog2/2 prove all26 learned recipe facts and three account grants, absent/wrong knowledge and reopened persistence. Fixture runs standard ClassProgression PostUpdate publication before the next Update credit. Full four-thread workspace filter165/0/1ignored and server/engine/three-repo checks pass; no trait/public-UI marker acquisition claim.
