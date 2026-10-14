@@ -100,7 +100,7 @@ fn admin_grant_persists_and_query_reports_sourced_catalog_and_progress() {
         }
     );
     let reply = query(&mut h);
-    assert_eq!(reply.factions.len(), 29);
+    assert_eq!(reply.factions.len(), super::catalog().len());
     let row = reply.factions.iter().find(|f| f.id == MARUUK).unwrap();
     assert_eq!(
         (

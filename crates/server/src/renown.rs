@@ -52,6 +52,17 @@ fn read_catalog(path: &std::path::Path) -> Result<Catalog, String> {
     Ok(catalog)
 }
 
+#[cfg(not(test))]
+fn default_catalog_path() -> std::path::PathBuf {
+    std::path::PathBuf::from("data/db2/active/renown.json")
+}
+
+/// Cargo runs unit tests from the crate directory, not the repo root.
+#[cfg(test)]
+fn default_catalog_path() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active/renown.json")
+}
+
 /// Installed-build export; refreshed data does not require recompiling the realm.
 pub(crate) fn catalog() -> &'static [MajorFaction] {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
@@ -59,7 +70,7 @@ pub(crate) fn catalog() -> &'static [MajorFaction] {
         .get_or_init(|| {
             let path = std::env::var_os("GAME_SERVER_RENOWN_CATALOG")
                 .map(std::path::PathBuf::from)
-                .unwrap_or_else(|| std::path::PathBuf::from("data/db2/active/renown.json"));
+                .unwrap_or_else(default_catalog_path);
             read_catalog(&path).unwrap_or_else(|error| panic!("{error}"))
         })
         .major_factions
