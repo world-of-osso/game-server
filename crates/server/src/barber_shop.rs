@@ -335,7 +335,8 @@ mod tests {
 
     #[test]
     fn barber_shop_persistence_updates_replicated_gold_after_save() {
-        let db = crate::persistence::temp_database();
+        let database = GameDatabase::new(crate::persistence::temp_database());
+        let db = std::sync::Arc::clone(&database.db);
         let (character_id, _) = crate::persistence::create_character(&db, 1, "Alice", 1, 1)
             .expect("character should be created");
         let inventory = InventoryData {
@@ -344,6 +345,7 @@ mod tests {
         };
 
         let mut app = App::new();
+        app.insert_resource(database);
         app.add_plugins(crate::gold::GoldPlugin);
         let player = app
             .world_mut()
