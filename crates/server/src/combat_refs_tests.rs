@@ -151,9 +151,9 @@ fn out_of_combat_harness(
         class,
         false,
         |app| {
-            app.insert_resource(crate::spell_cast::test_harness::native_creature_world(&[
-                6, 16372,
-            ]));
+            app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+                &[6, 16372],
+            ));
         },
     )?;
     h.app
