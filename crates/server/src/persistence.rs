@@ -226,8 +226,30 @@ impl Plugin for PersistencePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, open_database);
         app.add_systems(FixedUpdate, save_dirty_characters);
-        app.add_systems(Last, flush_all_characters_on_exit);
+        app.add_systems(Last, (flush_all_characters_on_exit, report_writer_metrics));
     }
+}
+
+fn report_writer_metrics(
+    db: Option<Res<GameDatabase>>,
+    mut last: Local<Option<std::time::Instant>>,
+) {
+    let Some(db) = db else { return };
+    if last.is_some_and(|reported| reported.elapsed() < std::time::Duration::from_secs(10)) {
+        return;
+    }
+    *last = Some(std::time::Instant::now());
+    let metrics = &db.writer.metrics;
+    let submitted = metrics.submitted.load(std::sync::atomic::Ordering::Relaxed);
+    let committed = metrics.committed.load(std::sync::atomic::Ordering::Relaxed);
+    let failed = metrics.failed.load(std::sync::atomic::Ordering::Relaxed);
+    info!(
+        submitted_jobs = submitted,
+        successful_jobs = committed,
+        failed_jobs = failed,
+        pending_jobs = submitted.saturating_sub(committed + failed),
+        "Persistence writer metrics"
+    );
 }
 
 #[derive(Resource)]

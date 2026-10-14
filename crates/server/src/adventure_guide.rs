@@ -204,13 +204,16 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, characte
             .get::<Authenticated>(connection)
             .expect("authenticated monthly award")
             .account_id;
-        crate::trading_post_store::settle(
-            &world.resource::<GameDatabase>().db,
-            account,
-            snapshot.month.start_unix,
-            snapshot.points,
-            &data.thresholds,
-        );
+        let month = snapshot.month.start_unix;
+        let points = snapshot.points;
+        let thresholds = data.thresholds.clone();
+        world
+            .resource::<GameDatabase>()
+            .writer
+            .enqueue("monthly Tender settlement", move |db| {
+                crate::trading_post_store::settle(db, account, month, points, &thresholds);
+                Ok(())
+            });
     }
     world.entity_mut(connection).insert(MonthlySummary {
         points: snapshot.points,

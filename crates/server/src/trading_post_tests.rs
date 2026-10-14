@@ -41,18 +41,25 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
         .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
         .unwrap()
         .send::<InstanceChannel>(command);
-    let mut replies = Vec::new();
-    for _ in 0..10 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    loop {
         h.app.update();
-        replies.extend(
-            h.app
-                .world_mut()
-                .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
-                .unwrap()
-                .receive(),
+        let replies: Vec<_> = h
+            .app
+            .world_mut()
+            .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+            .unwrap()
+            .receive()
+            .collect();
+        if let Some(reply) = replies.into_iter().last() {
+            return reply;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "Trading Post server reply"
         );
+        std::thread::sleep(std::time::Duration::from_millis(1));
     }
-    replies.pop().expect("Trading Post server reply")
 }
 
 #[test]

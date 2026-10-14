@@ -55,7 +55,17 @@ fn load_catalog(mut commands: Commands) {
     commands.insert_resource(catalog::Catalog(loaded));
 }
 
-fn receive_requests(world: &mut World) {
+type TradingPostCommit = crate::persistence_writer::CommitReceipt<Option<(u32, store::Grant)>>;
+
+struct PendingTradingPost {
+    connection: Entity,
+    account: u64,
+    catalog: bool,
+    commit: TradingPostCommit,
+}
+
+fn receive_requests(world: &mut World, mut pending: Local<Vec<PendingTradingPost>>) {
+    publish_completed_requests(world, &mut pending);
     let requests: Vec<_> = world
         .query_filtered::<(
             Entity,
@@ -73,17 +83,49 @@ fn receive_requests(world: &mut World) {
         .collect();
     for (connection, account, player, request) in requests {
         crate::adventure_guide::refresh_for_connection(world, connection);
-        let result = execute(world, connection, account, player, &request);
-        if let Ok(Some((_, grant))) = &result {
-            publish_collections(world, account, grant);
+        match enqueue_request(world, connection, account, player, &request) {
+            Ok(commit) => pending.push(PendingTradingPost {
+                connection,
+                account,
+                catalog: matches!(request, TradingPostRequest::Query),
+                commit,
+            }),
+            Err(error) => send_snapshot(world, connection, account, Some(error), Rows::None),
         }
-        let rows = match (&request, &result) {
-            (TradingPostRequest::Query, _) => Rows::Catalog,
-            (_, Ok(Some((vendor, _)))) => Rows::AffectedBy(*vendor),
-            _ => Rows::None,
-        };
-        send_snapshot(world, connection, account, result.err(), rows);
     }
+}
+
+fn publish_completed_requests(world: &mut World, pending: &mut Vec<PendingTradingPost>) {
+    pending.retain(|request| {
+        let Some(result) = request.commit.result() else {
+            return true;
+        };
+        let same_owner = world
+            .get::<Authenticated>(request.connection)
+            .is_some_and(|auth| auth.account_id == request.account);
+        if !same_owner || world.get::<InWorld>(request.connection).is_none() {
+            return false;
+        }
+        if let Ok(Some((_, grant))) = &result {
+            publish_collections(world, request.account, grant);
+        }
+        let rows = if request.catalog {
+            Rows::Catalog
+        } else {
+            match &result {
+                Ok(Some((vendor, _))) => Rows::AffectedBy(*vendor),
+                _ => Rows::None,
+            }
+        };
+        send_snapshot(
+            world,
+            request.connection,
+            request.account,
+            result.err(),
+            rows,
+        );
+        false
+    });
 }
 
 /// Which catalog rows a reply carries. The 1321-row catalog is ~0.5 MB, so only a
@@ -131,18 +173,19 @@ fn active_vendor(world: &World, connection: Entity, player: Entity) -> Result<En
 }
 
 /// A purchase or refund returns its vendor item and the grant to publish.
-fn execute(
+fn enqueue_request(
     world: &World,
     connection: Entity,
     account: u64,
     player: Entity,
     request: &TradingPostRequest,
-) -> Result<Option<(u32, store::Grant)>, String> {
+) -> Result<TradingPostCommit, String> {
+    let writer = &world.resource::<GameDatabase>().writer;
     if matches!(
         request,
         TradingPostRequest::Query | TradingPostRequest::Balance
     ) {
-        return Ok(None);
+        return Ok(writer.enqueue("Trading Post query after settlement", |_| Ok(None)));
     }
     active_vendor(world, connection, player)?;
     let catalog = world
@@ -151,39 +194,49 @@ fn execute(
         .as_ref()
         .map_err(Clone::clone)?;
     let now = world.resource::<crate::maps::ServerClock>().unix();
-    let db = &world.resource::<GameDatabase>().db;
     match request {
-        TradingPostRequest::Query | TradingPostRequest::Balance => Ok(None),
+        TradingPostRequest::Query | TradingPostRequest::Balance => {
+            unreachable!("queries queued before vendor validation")
+        }
         TradingPostRequest::Purchase { vendor_item_id } => {
             let (row, grant) = catalog
                 .items
                 .get(vendor_item_id)
                 .ok_or("Unknown Trading Post item.")?;
             let grant = grant.as_ref().map_err(Clone::clone)?;
-            store::purchase(
-                db,
-                account,
-                store::Offer {
-                    vendor: *vendor_item_id,
-                    price: row.price,
-                    grant,
-                    refund_duration: world
-                        .get_resource::<RefundWindow>()
-                        .map_or(0, |window| window.0),
-                },
-                now,
-            )?;
-            Ok(Some((*vendor_item_id, grant.clone())))
+            let vendor = *vendor_item_id;
+            let price = row.price;
+            let grant = grant.clone();
+            let refund_duration = world
+                .get_resource::<RefundWindow>()
+                .map_or(0, |window| window.0);
+            Ok(writer.enqueue("Trading Post purchase", move |db| {
+                store::purchase(
+                    db,
+                    account,
+                    store::Offer {
+                        vendor,
+                        price,
+                        grant: &grant,
+                        refund_duration,
+                    },
+                    now,
+                )?;
+                Ok(Some((vendor, grant)))
+            }))
         }
         TradingPostRequest::Refund { vendor_item_id } => {
-            let state = store::load(db, account);
-            let receipt = state
-                .purchases
-                .get(vendor_item_id)
-                .ok_or("Trading Post receipt unavailable.")?;
-            let grant = receipt.granted.clone();
-            store::refund(db, account, *vendor_item_id, now)?;
-            Ok(Some((*vendor_item_id, grant)))
+            let vendor = *vendor_item_id;
+            Ok(writer.enqueue("Trading Post refund", move |db| {
+                let state = store::load(db, account);
+                let receipt = state
+                    .purchases
+                    .get(&vendor)
+                    .ok_or("Trading Post receipt unavailable.")?;
+                let grant = receipt.granted.clone();
+                store::refund(db, account, vendor, now)?;
+                Ok(Some((vendor, grant)))
+            }))
         }
         TradingPostRequest::Freeze { vendor_item_id } => {
             if let Some(id) = vendor_item_id {
@@ -193,8 +246,11 @@ fn execute(
                     .ok_or("Unknown frozen Trading Post item.")?;
                 grant.as_ref().map_err(Clone::clone)?;
             }
-            store::freeze(db, account, *vendor_item_id);
-            Ok(None)
+            let vendor = *vendor_item_id;
+            Ok(writer.enqueue("Trading Post freeze", move |db| {
+                store::freeze(db, account, vendor);
+                Ok(None)
+            }))
         }
     }
 }
