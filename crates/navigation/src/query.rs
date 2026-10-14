@@ -396,6 +396,58 @@ mod tests {
     }
 
     #[test]
+    fn prepared_navigation_routes_after_disk_is_corrupted() {
+        let dir = tempfile::tempdir().unwrap();
+        let floor = [
+            [
+                Vec3::new(10.0, 0.0, 10.0),
+                Vec3::new(10.0, 0.0, 30.0),
+                Vec3::new(30.0, 0.0, 30.0),
+            ],
+            [
+                Vec3::new(10.0, 0.0, 10.0),
+                Vec3::new(30.0, 0.0, 30.0),
+                Vec3::new(30.0, 0.0, 10.0),
+            ],
+        ];
+        let path = dir.path().join("32_31.nav");
+        std::fs::write(&path, crate::bake::bake_tile(&floor, (32, 31)).unwrap()).unwrap();
+        let prepared = PreparedNavigationTile::read(dir.path(), (32, 31)).unwrap();
+        std::fs::write(&path, b"corrupt after preparation").unwrap();
+        let mut map = NavigationMap::open(dir.path()).unwrap();
+        map.install_prepared(prepared).unwrap();
+        let start = Vec3::new(15.0, 0.0, 15.0);
+        let end = Vec3::new(25.0, 0.0, 25.0);
+        let route = map.path(start, end).unwrap();
+        assert!(route.first().unwrap().distance(start) < 1.0);
+        assert!(route.last().unwrap().distance(end) < 1.0);
+    }
+
+    #[test]
+    fn prepared_navigation_distinguishes_absence_empty_bake_and_corruption() {
+        let dir = tempfile::tempdir().unwrap();
+        let absent = PreparedNavigationTile::read(dir.path(), (32, 31)).unwrap();
+        std::fs::write(dir.path().join("32_31.nav"), b"corrupt after absence").unwrap();
+        let mut map = NavigationMap::open(dir.path()).unwrap();
+        map.install_prepared(absent).unwrap();
+        let point = Vec3::new(15.0, 0.0, 15.0);
+        assert!(
+            map.path(point, point)
+                .unwrap_err()
+                .contains("artifact absent during preparation")
+        );
+        std::fs::write(dir.path().join("32_32.nav"), []).unwrap();
+        let empty = PreparedNavigationTile::read(dir.path(), (32, 32)).unwrap();
+        map.install_prepared(empty).unwrap();
+        assert!(
+            map.path(Vec3::ZERO, Vec3::ZERO)
+                .unwrap_err()
+                .contains("no walkable polygon")
+        );
+        assert!(PreparedNavigationTile::read(dir.path(), (32, 31)).is_err());
+    }
+
+    #[test]
     #[ignore = "requires nav-bake real map0 ocean tile23,39"]
     fn modern_ocean_artifact_marks_water_area() {
         let bytes = std::fs::read(ground_dir().join("navmesh/0/23_39.nav")).unwrap();
