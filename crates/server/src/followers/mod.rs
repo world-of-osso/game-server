@@ -1,6 +1,7 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 mod ai;
 mod catalog;
+mod hazards;
 mod party;
 mod spawning;
 
@@ -107,6 +108,18 @@ impl Plugin for FollowerPlugin {
 #[cfg(test)]
 mod catalog_tests;
 #[cfg(test)]
+mod defensive_tests;
+#[cfg(test)]
+mod hazard_tests;
+#[cfg(test)]
+mod navigation_tests;
+#[cfg(test)]
+mod pet_tests;
+#[cfg(test)]
+mod profile_behavior_tests;
+#[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod utility_tests;
 #[cfg(test)]
 mod wire_tests;
