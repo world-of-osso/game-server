@@ -225,15 +225,36 @@ fn ragefire_completion_adarogg_intro_unbaked_navigation_cannot_fake_path_arrival
 fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival_injection() {
     let navigation = std::path::PathBuf::from(std::env::var_os("RAGEFIRE_NAV_ROOT").unwrap());
     let (mut h, boss) = trigger_adarogg_intro(&navigation);
-    let troggs: Vec<_> = h
-        .creatures_of(61659)
+    let meals: Vec<Vec<_>> = [61659, 61669]
         .into_iter()
-        .map(Entity::to_bits)
+        .map(|entry| {
+            h.creatures_of(entry)
+                .into_iter()
+                .map(Entity::to_bits)
+                .collect()
+        })
         .collect();
     // Real trigger, scheduler, route movement and arrival callbacks. No point/path
     // completion hook is dispatched by the fixture, and the boss is never repositioned.
     let spawn = h.wow_position(boss);
-    h.advance(60.0);
+    h.advance(6.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CreatureMotion>(boss),
+        Some(&shared::components::CreatureMotion::Walk),
+        "TDB path MoveType0 walks"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::MovementSpeed>(boss)
+            .unwrap()
+            .0,
+        2.5,
+        "authored walk speed, not the actor's preceding run mode"
+    );
+    h.advance(54.0);
     assert_eq!(
         spell_gos(&h, boss, 120113).len(),
         3,
@@ -249,16 +270,23 @@ fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival
         h.wow_position(boss).distance(spawn) > 5.0,
         "boss actually traversed its route"
     );
-    // PATH_INTRO/PATH_INTRO3 end away from the Slain Troggs. Source still casts
-    // Eat Trogg there, without a nearby entry; only PATH_INTRO2 has nearby meals.
+    // TDB Source13/120064 has OR groups: Slain Trogg61659 or Oggleflint61669.
+    // PATH_INTRO/PATH_INTRO3 approach Oggleflint; PATH_INTRO2 approaches the troggs.
     let hits: Vec<_> = eats.iter().flat_map(|eat| &eat.hit_targets).collect();
     assert!(
         hits.len() >= 2,
         "walked path reaches the actual Slain Trogg meals: {eats:?}"
     );
     assert!(
-        hits.iter().all(|target| troggs.contains(target)),
-        "every selected target is an authored Slain Trogg: {eats:?}"
+        hits.iter()
+            .all(|target| meals.iter().any(|group| group.contains(target))),
+        "every selected target satisfies an authored meal condition: {eats:?}"
+    );
+    assert!(
+        meals
+            .iter()
+            .all(|group| hits.iter().any(|target| group.contains(target))),
+        "walked route reaches both Oggleflint and Slain Trogg meals: {eats:?}"
     );
     assert_eq!(
         h.inbox(0)
