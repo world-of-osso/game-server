@@ -39,7 +39,7 @@ pub(super) fn accumulate_heal(
     let amount = (damage as f64 * f64::from(effect.amount) / 100.0) as u32;
     let mut entity = world.entity_mut(unit);
     let mut pending = entity.entry::<PendingHeals>().or_default();
-    *pending.0.entry(aura.instance_id).or_default() += amount;
+    *pending.get_mut().0.entry(aura.instance_id).or_default() += amount;
 }
 
 pub(super) fn heal_on_tick(world: &mut World, unit: Entity, aura: &AuraInstance, index: u8) {
