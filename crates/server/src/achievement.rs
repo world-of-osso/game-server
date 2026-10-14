@@ -1005,6 +1005,20 @@ fn known_player_spell_ids(world: &World, player: Entity) -> BTreeSet<u32> {
         .collect()
 }
 
+/// TC BattlePetTeamLevel1935–1939 uses the equipped journal slots, not every owned pet.
+fn battle_pet_team_min_level(world: &World, player: Entity) -> Option<u8> {
+    let journal = &world
+        .get::<crate::battle_pets::AccountPetJournal>(player)?
+        .journal;
+    journal
+        .battle_slots
+        .iter()
+        .try_fold(shared::pet_battle::MAX_PET_LEVEL, |minimum, guid| {
+            let pet = journal.get((*guid)?)?;
+            Some(minimum.min(pet.level))
+        })
+}
+
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
     let identity = world.get::<Player>(player)?;
     let arena = crate::pvp::player_arena_conditions(world, player);
@@ -1015,6 +1029,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
         known_spells: known_player_spell_ids(world, player),
+        battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),
