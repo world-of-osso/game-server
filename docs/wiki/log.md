@@ -13,6 +13,10 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-13 — Native autoattack range
+
+[Attacker range153](systems/auras.md#autoattack-range) now affects real main/off-hand swings, preserving signed addition, inclusive boundaries and unchanged weapon-spell ranges. Native Cat/Astral zero fields are not converted into invented positive bindings; whole13/40 remains open.
+
 ## 2026-10-13 — Current personal arena ratings
 
 [Personal-rating39](systems/dungeon-achievements.md#current-personal-arena-ratings) maps current authored0/1 to native2v2/3v3, uses actual durable after-results and highest counters. Native full-party/accepted/prepared lethal matches prove1550 crossing, losers, second-loss maxima, replay and reopen. Raw Statistics replies retain the rating; Criteria replies retain bounded target progress. Ten character definitions and two statistics are structurally enabled; other brackets and proprietary Retail MMR remain unclaimed.

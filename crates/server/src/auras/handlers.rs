@@ -157,6 +157,8 @@ pub const MOD_MOUNTED_SPEED_ALWAYS: u32 = 130;
 pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
 pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
 pub const REDUCE_PUSHBACK: u32 = 149;
+/// TC Unit::IsWithinMeleeRangeAt adds the attacker's total native modifier.
+pub const MOD_AUTOATTACK_RANGE: u32 = 153;
 pub const MOD_WATER_BREATHING: u32 = 155;
 pub const MOD_HEALTH_REGEN_IN_COMBAT: u32 = 161;
 pub const MOD_TOTAL_STAT_PERCENTAGE: u32 = 137;
@@ -309,6 +311,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_MINIMUM_SPEED
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
+        | MOD_AUTOATTACK_RANGE
         | MOD_SUMMON_DAMAGE
         | MOD_RAGE_FROM_DAMAGE_DEALT
         | MOD_MANA_REGEN_PCT
