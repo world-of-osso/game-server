@@ -157,6 +157,12 @@ Pinned `wailing_caverns.cpp` path367800 completion schedules source events4–7 
 
 `tests/wailing_escort.rs` controls the path-arrival input but exercises live source summons, combat pause, timing and copy-scoped speech. Facing is observed at the event callback boundary: later generic chase ticks overwrite that transient rotation in this fixture. No physical path arrival, next-path travel, gossip activation, full awakening or native clear is certified. Current source activation gaps remain in the [contract](../../specs/boss-scripts.md#wailing-caverns-source-slices).
 
+### Wailing second escort camp (2026-10-14)
+
+Path367801 completion schedules source event8 immediately: real6270 Serpentine Cleansing and group4 speech. Current casting-time row9 is30,000ms; effect3 is a dummy, not an invented cleansing buff. The independent escort clock summons the exact three5048 Adders from3678/group1 after18s while that cast is still active. Their attacks pause progress; after real wave deaths,12 remaining out-of-combat seconds lead to group5 speech, then5s to the strict existing path367802 request.
+
+The real-data test observes each Adder's actual birth position before chase movement, checks all three source actors target Disciple, and proves cast admission/duration/completion plus combat-paused timing and copy-scoped speech. Controlled arrival does not prove physical onward travel or solve the source activation gaps. [Contract](../../specs/boss-scripts.md#wailing-caverns-source-slices).
+
 ### Wailing Normal run and corpse rewards (2026-10-14)
 
 `tests/wailing_progress.rs` proves all eight controlled primary deaths in one Normal copy, including Mutanus from actual Disciple group4. Every encounter585–592 completes once, other-copy messages stay empty, and bits0–7 persist across redb close/reopen. Restored population filters all defeated primaries while retaining Disciple/unrelated spawns; fresh owner starts at zero. No scheduled raid/Heroic lock is created. Populated fixtures load real gathering metadata because authored Wailing gameobjects include gathering nodes.
