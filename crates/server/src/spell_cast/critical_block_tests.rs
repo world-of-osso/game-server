@@ -544,7 +544,7 @@ fn class_completeness_native_creature_block_requires_facing_and_active_defense()
                     .is_stunned()
             );
         } else {
-            h.app.world_mut().get_mut::<Rotation>(target).unwrap().y = 0.0;
+            h.app.world_mut().get_mut::<Rotation>(target).unwrap().y = std::f32::consts::FRAC_PI_2;
         }
         let hits = cast_damage_spell(&mut h, target, 1464, 3);
         assert_eq!(hits.len(), 1);
