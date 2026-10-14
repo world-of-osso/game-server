@@ -63,6 +63,11 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [ ] Factory13965 opens after Glubtok, Mast16400 after Helix, Heavy17153 outside Helix combat and Foundry16399 after Foe Reaper per source. Source-authored door behavior is identified, not implemented or proved. Missing primaries47296/47739/49541 have no TDB placements; no invented spawn coordinates.
 - [ ] No Deadmines full-combat, loot/lockout or native acceptance claim. [Census](../encounter-coverage.md).
 
+## Shadowfang Keep source identity
+
+- [ ] Prepare only Silverlaine3887→1070/bit1 (map33, Journal97/actor367/display37288) from pinned TC header/instance and current canonical catalogs. Require the authored empty ScriptName/SmartAI, refuse identity drift, preserve unrelated rows and remain idempotent on independent copies. This admits no unported Shadowfang boss or guessed placement.
+- [ ] Silverlaine's existing source row casts7068 on its victim after1s, repeating22.3–35.1s. Actual combat/lifecycle/loot/Normal persistence and both-skin native acceptance remain unproved; primary binding is not full mechanics proof.
+
 ## Wailing Caverns source slices
 
 - [x] Anacondra's source Thorns8148 applies at7s, repeats63s, and retaliates after positive damaging melee swings through aura15; ordinary spell damage and dispelled/death-removed shields must not retaliate. Lethal melee must run the shared death-aura removal before post-damage retaliation, retaining native passive/allow-while-dead exceptions. Shield damage uses the aura caster's bonuses, the shield owner's damage attribution, native hit defenses, immunity/absorbs and no critical roll; it does not refresh creature last-damaged leash time. Missing Lightning spell2 is not replaced.
