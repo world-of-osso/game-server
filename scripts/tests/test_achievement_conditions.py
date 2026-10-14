@@ -31,6 +31,44 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_target_race_requires_a_native_spell_hit_target_and_keeps_companions(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[5777] = criteria.pop(1)
+        criteria[5777]['Type'] = '110'
+        modifiers = {10: node(0, 4), 11: node(10, 2, 27, 1)}
+        self.assertEqual(self.compile(modifiers, criteria), {5777: [None, ((27, 1),)]})
+        modifiers[10]['Operator'] = '8'
+        self.assertEqual(self.compile(modifiers, criteria), {5777: [None, ((27, 1),)]})
+        criteria[5777]['Type'] = '28'
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'recipient28 has no caster-race snapshot')
+        criteria[5777]['Type'] = '110'
+        modifiers[11]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers, criteria), {})
+        modifiers[11]['Operator'] = '2'
+        modifiers[11]['Asset'] = '0'
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'NPC RACE_NONE is not a playable race')
+        modifiers[11]['Asset'] = '1'
+        modifiers[12] = node(10, 2, 28, 1)
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'unknown target-class companion remains required')
+
+    def test_positive_battle_pet_team_level_preserves_every_companion(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[23257] = criteria.pop(1)
+        criteria[23257]['Type'] = '158'
+        modifiers = {10: node(0, 4), 11: node(10, 2, 34, 25)}
+        self.assertEqual(self.compile(modifiers, criteria), {23257: [None, ((34, 25),)]})
+        modifiers[10]['Operator'] = '8'
+        self.assertEqual(self.compile(modifiers, criteria), {23257: [None, ((34, 25),)]})
+        modifiers[11]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers, criteria), {})
+        modifiers[11]['Operator'] = '2'
+        modifiers[12] = node(10, 2, 90)
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'NYI PvP90 cannot be dropped')
+        del modifiers[12]
+        for asset in (0, 26):
+            modifiers[11]['Asset'] = str(asset)
+            self.assertEqual(self.compile(modifiers, criteria), {})
+
     def test_all_single_true_mythic_requires_that_difficulty(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 68, 23)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (23,)), ()]})

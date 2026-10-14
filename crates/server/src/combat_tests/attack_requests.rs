@@ -3,7 +3,9 @@
 //! (`HandleSetSelectionOpcode` only sets the selection, MiscHandler.cpp:396-399).
 
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_plugins, load_native_creature_world,
+};
 use shared::protocol::{AttackStart, AttackStopped, CombatLogEvent};
 
 /// Warrior caster out of combat, hostile kobold at 3 yd.
@@ -267,7 +269,9 @@ fn the_victims_death_stops_the_attack_and_announces_it() {
 #[test]
 fn a_cast_that_cancels_auto_attack_stops_it() {
     const POLYMORPH: u32 = 118;
-    let Some(mut h) = harness(Vec::new(), &[POLYMORPH], 8) else {
+    let Some(mut h) = harness_with_plugins(Vec::new(), &[POLYMORPH], 8, false, |app| {
+        app.insert_resource(load_native_creature_world(&[6, 16372]));
+    }) else {
         return;
     };
     let npc = h.npc;
