@@ -45,7 +45,7 @@ mod targets;
 pub(super) mod lifetimes;
 
 #[path = "smart_summons.rs"]
-mod summons;
+pub(super) mod summons;
 
 #[path = "smart_follow.rs"]
 mod follow;

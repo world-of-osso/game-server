@@ -50,6 +50,8 @@ pub(crate) enum CriteriaEvent {
     KilledByCreature(u32),
     KilledByPlayer,
     DieFromEnvironmentalDamage(u32),
+    /// TC HandleFall: current survived damaging fall distance in hundredths of a yard.
+    FallWithoutDying(u32),
     /// TC client loot type (`crate::loot::LootKind`) and looted item count.
     GetLootByType(u8, u32),
     LootMoney(u64),
@@ -102,6 +104,11 @@ pub(crate) enum CriteriaEvent {
     WinAnyBattleground,
     /// TC Arena.cpp249: winner's pre-result personal rating, minimum1.
     WinAnyRankedArena(u32),
+    /// Current authored arena asset0/1 and actual post-settlement personal rating.
+    PersonalArenaRating {
+        bracket: u32,
+        rating: u32,
+    },
     /// Native rated result: map of the completed arena.
     WinArena(u32),
     ParticipateInArena(u32),
@@ -146,6 +153,7 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::KillAnyCreature => 78,
             Self::WinAnyRankedArena(_) => 37,
+            Self::PersonalArenaRating { .. } => 39,
             Self::WinArena(_) => 32,
             Self::ParticipateInArena(_) => 33,
             Self::ReachLevel(_) => 5,
@@ -168,6 +176,7 @@ impl CriteriaEvent {
             Self::KilledByCreature(_) => 20,
             Self::KilledByPlayer => 23,
             Self::DieFromEnvironmentalDamage(_) => 26,
+            Self::FallWithoutDying(_) => 24,
             Self::GetLootByType(_, _) => 109,
             Self::LootMoney(_) => 67,
             Self::MoneySpentOnPostage(_) => 66,
@@ -250,8 +259,12 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::FallWithoutDying(distance) => distance > 0 && criteria.asset == 0,
             Self::WinArena(map) | Self::ParticipateInArena(map) => criteria.asset == map,
             Self::WinAnyRankedArena(rating) => rating > 0 && criteria.asset == 0,
+            Self::PersonalArenaRating { bracket, rating } => {
+                rating > 0 && criteria.asset == bracket
+            }
             Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
             Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
                 u32::from(level) == criteria.asset
@@ -451,6 +464,8 @@ pub(crate) struct ReferencePlayer {
     pub group_size: Option<usize>,
     pub arena_team_size: Option<u8>,
     pub in_ranked_arena: bool,
+    /// None when health authority is absent; positive health and native life state agree.
+    pub alive: Option<bool>,
 }
 
 /// A compiled ModifierTree leaf resolved at catalog load.
@@ -467,6 +482,7 @@ enum CriteriaFact {
     TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
     RankedArena,
+    Alive,
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
     LessThanGroupMembers(u32),
     NotInParty,
@@ -497,6 +513,7 @@ impl CriteriaFact {
             }
             Self::ArenaTeamSize(size) => player.arena_team_size == Some(*size),
             Self::RankedArena => player.in_ranked_arena,
+            Self::Alive => player.alive == Some(true),
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
             Self::Race(race) => player.race == *race,
             Self::Class(class) => player.class == *class,
@@ -888,6 +905,8 @@ impl AchievementCatalog {
         let counter = state.criteria_progress.entry(id).or_default();
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
+            CriteriaEvent::FallWithoutDying(distance) => u64::from(distance),
+            CriteriaEvent::PersonalArenaRating { rating, .. } => (*counter).max(u64::from(rating)),
             CriteriaEvent::MostMoneyOwned(amount)
             | CriteriaEvent::HighestAuctionBid(amount)
             | CriteriaEvent::HighestAuctionSale(amount)
@@ -1267,6 +1286,7 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
+            16 => Some(CriteriaFact::Alive),
             17 => exists("area_table")?
                 .then(|| CriteriaFact::Area(collect_area_descendants(asset, area_children))),
             24 => small
@@ -1295,7 +1315,9 @@ fn load_criteria_facts(
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
-                unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/35/41/60/69/71/122")
+                unreachable!(
+                    "generated facts use only 2/4/8/16/17/24/25/26/29/32/35/41/60/69/71/122"
+                )
             }
         };
         let Some(fact) = fact else {
@@ -1447,6 +1469,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel/Love.
                         // TDB1210 has no criteria_data overlay for these unconditional rows.
                         || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225))
+                        // Current criteria451/447 and authored370/595 map2v2/3v3 to0/1,
+                        // unlike old TC ArenaTeam numeric2/3/5; no retired/other bracket inference.
+                        || (kind == 39 && matches!(row.get::<_, i32>(2)?, 0 | 1))
                         // Native rated arena result has a real positive map ID, never an all-map alias0.
                         || (matches!(kind, 32 | 33) && row.get::<_, i32>(2)? > 0)
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))
@@ -1464,7 +1489,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 24 | 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
