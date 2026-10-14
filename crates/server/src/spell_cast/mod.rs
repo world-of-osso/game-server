@@ -56,6 +56,7 @@ pub mod creature;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
+mod druid_transform;
 #[cfg(test)]
 mod druid_transform_tests;
 #[cfg(test)]
@@ -1898,6 +1899,7 @@ pub(crate) fn execute_cast(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
+    druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
@@ -2550,6 +2552,10 @@ fn launch_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> bool {
+    if let Err(failure) = druid_transform::before_cast(world, caster, spell, depth) {
+        warn!("Triggered spell {} skipped: {failure:?}", spell.id);
+        return false;
+    }
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
     match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
