@@ -1,7 +1,7 @@
 //! Live account contributions project queued owned snapshots, not stale durable rows.
 //! One FIFO writer persists each character/account pair atomically.
 use super::*;
-use redb::{ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{ReadableDatabase, TableDefinition};
 use std::sync::Mutex;
 
 const ACCOUNTS: TableDefinition<u64, &[u8]> = TableDefinition::new("account_achievements_v1");

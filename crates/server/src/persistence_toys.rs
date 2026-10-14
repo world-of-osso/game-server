@@ -21,15 +21,6 @@ pub(crate) fn load(db: &Database, account_id: u64) -> AccountToys {
         .unwrap_or_default()
 }
 
-pub(crate) fn load_in_transaction(txn: &WriteTransaction, account_id: u64) -> AccountToys {
-    let table = txn.open_table(ACCOUNT_TOYS).expect("open account toys");
-    table
-        .get(account_id)
-        .expect("read account toys")
-        .map(|row| bitcode::decode(row.value()).expect("decode account toys"))
-        .unwrap_or_default()
-}
-
 fn write(txn: &WriteTransaction, account_id: u64, toys: &AccountToys) {
     txn.open_table(ACCOUNT_TOYS)
         .expect("open toys")

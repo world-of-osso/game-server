@@ -2167,6 +2167,7 @@ fn achievements2_account_migration_keeps_dates_and_distinct_counter_semantics_af
     b.earned_ids.insert(4899);
     b.earned_at.insert(4899, 100);
     persistence::save_achievements(&db, second, &b);
+    let db = GameDatabase::new(db);
     let (aggregate, toasts) = account_store::save_account_progress(
         &db,
         &a,
@@ -2184,11 +2185,12 @@ fn achievements2_account_migration_keeps_dates_and_distinct_counter_semantics_af
     assert_eq!(aggregate.criteria_progress[&38400], 1);
     assert_eq!(aggregate.earned_at[&4899], 100);
     assert!(!toasts.iter().any(|toast| toast.achievement_id == 4899));
+    let db = db.into_database();
     assert_eq!(persistence::load_achievements(&db, first), a);
     assert_eq!(persistence::load_achievements(&db, second), b);
     persistence::delete_character(&db, 17, second).unwrap();
     drop(db);
-    let db = redb::Database::open(file.path()).unwrap();
+    let db = GameDatabase::new(redb::Database::open(file.path()).unwrap());
     let (aggregate, _) = account_store::save_account_progress(
         &db,
         &a,

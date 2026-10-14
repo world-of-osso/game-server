@@ -121,7 +121,7 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
                     &online,
                     &q.groups,
                     &mut q.history,
-                    q.db.as_deref().map(|db| &db.db),
+                    q.db.as_deref().map(|db| db.db.as_ref()),
                 )
             })
             .collect::<Vec<_>>()

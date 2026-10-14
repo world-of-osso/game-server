@@ -238,6 +238,19 @@ pub struct GameDatabase {
 }
 
 impl GameDatabase {
+    #[cfg(test)]
+    pub(crate) fn into_database(self) -> Database {
+        let Self {
+            db,
+            writer,
+            accounts,
+        } = self;
+        drop(writer);
+        drop(accounts);
+        std::sync::Arc::try_unwrap(db)
+            .unwrap_or_else(|_| panic!("database remains shared after writer drain"))
+    }
+
     pub(crate) fn new(db: Database) -> Self {
         let db = std::sync::Arc::new(db);
         Self {

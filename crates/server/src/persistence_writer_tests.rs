@@ -1,5 +1,5 @@
 use super::*;
-use redb::{ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{ReadableDatabase, TableDefinition};
 use std::time::{Duration, Instant};
 
 const ROWS: TableDefinition<u64, &[u8]> = TableDefinition::new("writer_proof");

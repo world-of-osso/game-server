@@ -90,7 +90,7 @@ fn run_expiry(db: redb::Database) -> redb::Database {
     app.world_mut()
         .remove_resource::<GameDatabase>()
         .unwrap()
-        .db
+        .into_database()
 }
 
 fn create_actor_pair(

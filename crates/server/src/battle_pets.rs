@@ -7,7 +7,7 @@ use crate::networking::PlayerLink;
 use crate::persistence::GameDatabase;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, TableDefinition};
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, ModelDisplay, MovementSpeed, Npc, Position,
