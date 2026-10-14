@@ -464,6 +464,46 @@ fn broadcast_guild_update(
     }
 }
 
+/// Refresh every online member's replicated design and full authoritative guild snapshot.
+pub(crate) fn broadcast_registered_tabard(
+    world: &mut World,
+    guild_id: u32,
+    design: shared::guild_creation::GuildTabardDesign,
+) {
+    let mut query = world.query::<(Entity, &GuildMembership)>();
+    let members: Vec<_> = query
+        .iter(world)
+        .filter(|(_, guild)| guild.guild_id == guild_id)
+        .map(|(entity, guild)| (entity, guild.clone()))
+        .collect();
+    for (entity, _) in &members {
+        world.entity_mut(*entity).insert(design);
+    }
+    let Some((_, guild)) = members.first() else {
+        return;
+    };
+    let mut state: bevy::ecs::system::SystemState<(
+        Res<GameDatabase>,
+        ActiveConnections,
+        GuildMemberships,
+        OnlinePlayers,
+        GuildSenders,
+    )> = bevy::ecs::system::SystemState::new(world);
+    let (db, connections, guilds, players, mut senders) = state.get_mut(world);
+    broadcast_guild_update(
+        &db.db,
+        &connections,
+        &guilds,
+        &players,
+        guild,
+        GuildUpdateMeta {
+            message: Some("Guild Emblem saved.".into()),
+            error: None,
+        },
+        &mut senders,
+    );
+}
+
 fn visible_guild_snapshot(
     db: &redb::Database,
     guild: &GuildMembership,

@@ -17,10 +17,13 @@ Guild tabard registration follows TrinityCore a352b1fa `Guild.cpp:51,749–753,1
 ## Implementation inventory
 
 - `crates/server/src/persistence_guild_tabards.rs`: optional design storage and atomic payment. Additive table migration leaves all legacy GuildData layouts intact.
+- `crates/server/src/guild_tabards.rs`: authenticated vendor requests, source catalog validation, membership-design replication and replies.
+- `crates/server/src/guild.rs`: snapshot appearance and online member broadcasts.
 
 ## Tests asserting this spec
 
 - `crates/server/src/persistence_guild_tabards_tests.rs`: database reopen, legacy guild preservation, leader authority, exact/repeated payment and rejection state.
+- `crates/server/src/npc_interaction/guild_tabard_tests.rs`: real Jondor5130 gossip/service, host-client requests, catalog/auth/target/range rejection and successful replicated design/payment.
 
 ## Known gaps (current cycle)
 
