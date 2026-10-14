@@ -10,11 +10,16 @@
 
 [Pinned primary identity](systems/boss-scripts.md#slagmaw-source-primary) authenticates61463→1445/bit2 independently of Journal preview38391 versus live model42247. Producer/census RED→GREEN and actual idempotent private SQL preserve both models/unrelated bindings; publication and full-fight/native gates stay separate.
 ## 2026-10-13 — Native autoattack range
+## 2026-10-13 — Generic item receipt counters
 
-[Attacker range153](systems/auras.md#autoattack-range) now affects real main/off-hand swings, preserving signed addition, inclusive boundaries and unchanged weapon-spell ranges. Native Cat/Astral zero fields are not converted into invented positive bindings; whole13/40 remains open.
+[Item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) route90/91 from existing committed Retail queues, one event rather than stack quantity. ItemId19 and canonical quality14/15 preserve all conditions and complete alternatives. Native paid33999 RED reproduced missing epic counter6142; five targeted native/catalog scopes pass, including real stored quantities and one-event semantics, canonical/display-quality distinction and reopened receipt counters. Full four-thread workspace filter163/0/1ignored and server/engine/three-repo checks pass. Ordinary91 completion contradictions remain excluded.
+
 ## 2026-10-13 — Native survived falling
 
 [Fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) preserves source Alive16/Area17, rejects unknown world-state and uses TC PROGRESS_SET distance×100. Native real-ground damage and Pandaren racial survival prove progress/grant/reopen; native/catalog6/6 also prove knockback, safe/feather/fly/lethal/immunity/safe-fall rejection and retained area predicates; full four-thread workspace filter159/0/1ignored and server/engine/three-repo checks pass. Puddle8354 actual map1105 completion/grant is not certified. Existing quadratic damage and complete environmental absorption parity remain separate gaps.
+## 2026-10-13 — Native autoattack range
+
+[Attacker range153](systems/auras.md#autoattack-range) now affects real main/off-hand swings, preserving signed addition, inclusive boundaries and unchanged weapon-spell ranges. Native Cat/Astral zero fields are not converted into invented positive bindings; whole13/40 remains open.
 
 ## 2026-10-13 — Current personal arena ratings
 

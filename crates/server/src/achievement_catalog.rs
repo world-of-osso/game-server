@@ -17,7 +17,7 @@ use super::PlayerAchievementState;
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62,
     63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
-    157, 158, 160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -42,6 +42,9 @@ pub(crate) enum CriteriaEvent {
     TotalHonoredFactions(u32),
     AcquireItem(u32, u32),
     LootItem(u32, u32),
+    /// One committed Retail acquisition/loot receipt, not its stack quantity.
+    ObtainAnyItem(u32),
+    LootAnyItem(u32),
     ParticipateInBattleground(u32),
     DieOnMap(u32),
     /// Native dungeon/raid copy maximum, not the number of players currently inside.
@@ -177,6 +180,8 @@ impl CriteriaEvent {
             Self::KilledByPlayer => 23,
             Self::DieFromEnvironmentalDamage(_) => 26,
             Self::FallWithoutDying(_) => 24,
+            Self::ObtainAnyItem(_) => 91,
+            Self::LootAnyItem(_) => 90,
             Self::GetLootByType(_, _) => 109,
             Self::LootMoney(_) => 67,
             Self::MoneySpentOnPostage(_) => 66,
@@ -260,6 +265,7 @@ impl CriteriaEvent {
         match self {
             Self::ReachLevel(_) => true,
             Self::FallWithoutDying(distance) => distance > 0 && criteria.asset == 0,
+            Self::ObtainAnyItem(item) | Self::LootAnyItem(item) => item > 0 && criteria.asset == 0,
             Self::WinArena(map) | Self::ParticipateInArena(map) => criteria.asset == map,
             Self::WinAnyRankedArena(rating) => rating > 0 && criteria.asset == 0,
             Self::PersonalArenaRating { bracket, rating } => {
@@ -438,6 +444,7 @@ enum CompiledConditions {
     PlayerMaps(&'static [u32]),
     PlayerAreas(&'static [u32]),
     PlayerAuras(&'static [u32]),
+    EventItems(&'static [u32]),
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -476,6 +483,8 @@ enum CriteriaFact {
     Aura(u32),
     /// Some8 requiring one of these complete, authenticated PlayerHasAura8 spells.
     PlayerAuras(BTreeSet<u32>),
+    /// ItemId19 or item-template quality14/15 against this native receipt's itemID.
+    EventItems(BTreeSet<u32>),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
     /// Some8 requiring one of these complete TargetCreatureId4 leaves.
@@ -505,6 +514,12 @@ impl CriteriaFact {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::PlayerAuras(spells) => !player.auras.is_disjoint(spells),
+            Self::EventItems(items) => match event {
+                CriteriaEvent::ObtainAnyItem(item) | CriteriaEvent::LootAnyItem(item) => {
+                    items.contains(&item)
+                }
+                _ => false,
+            },
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
@@ -1286,7 +1301,10 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
+            14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
+            19 => exists("content_item")?
+                .then(|| CriteriaFact::EventItems([asset].into_iter().collect())),
             17 => exists("area_table")?
                 .then(|| CriteriaFact::Area(collect_area_descendants(asset, area_children))),
             24 => small
@@ -1316,7 +1334,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/8/16/17/24/25/26/29/32/35/41/60/69/71/122"
+                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/29/32/35/41/60/69/71/122"
                 )
             }
         };
@@ -1326,6 +1344,39 @@ fn load_criteria_facts(
         facts.push(fact);
     }
     Ok(Some(facts))
+}
+
+/// TC item quality14/15 reads the actual item's canonical template, not its slot.
+fn load_item_quality_fact(
+    conn: &Connection,
+    kind: u32,
+    quality: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let operator = if kind == 14 { ">=" } else { "=" };
+    let mut query = conn.prepare_cached(&format!(
+        "SELECT ID FROM content_item WHERE Quality {operator} ?1"
+    ))?;
+    let items = query
+        .query_map([quality], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!items.is_empty()).then_some(CriteriaFact::EventItems(items)))
+}
+
+/// Reject every alternative when any authored item is absent; never discard a child.
+fn load_event_item_alternatives(
+    conn: &Connection,
+    items: &[u32],
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let mut query =
+        conn.prepare_cached("SELECT EXISTS(SELECT 1 FROM content_item WHERE ID = ?1)")?;
+    for item in items {
+        if !query.query_row([item], |row| row.get::<_, bool>(0))? {
+            return Ok(None);
+        }
+    }
+    Ok(Some(CriteriaFact::EventItems(
+        items.iter().copied().collect(),
+    )))
 }
 
 /// Reject the entire Some when even one authored map is missing.
@@ -1436,6 +1487,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             Some(CompiledConditions::PlayerAuras(spells)) => {
                 load_player_aura_alternatives(conn, spells)?.map(|fact| (None, vec![fact]))
             }
+            Some(CompiledConditions::EventItems(items)) => load_event_item_alternatives(conn, items)?.map(|fact| (None, vec![fact])),
             None => None,
         };
         let condition_tree = resolved.is_some();
@@ -1464,6 +1516,10 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC completion1288-1293 makes type20 statistic-only; new ordinary61917
                         // criterion111356 has no sourced completion semantics in the pinned TC.
                         || (kind == 20 && criteria_id != 111356)
+                        // TC IsCompletedCriteria1300–1327 makes91 statistic-only;
+                        // pinned ordinary12927/13707 lack compatible completion semantics.
+                        || (kind == 91 && !matches!(criteria_id, 41244 | 45924) && row.get::<_, i32>(2)? == 0)
+                        || (kind == 90 && row.get::<_, i32>(2)? == 0)
                         // TC Player.h environmental0/1/2/6; no native lava/slime/fire source.
                         || (kind == 26 && matches!(row.get::<_, i32>(2)?, 0 | 1 | 2 | 6))
                         // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel/Love.
