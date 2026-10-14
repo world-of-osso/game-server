@@ -14,7 +14,7 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 - [x] `QuestGiverCompleteQuest` at the ender answers `QuestGiverOfferReward` when objectives are done, else `QuestGiverRequestItems{can_complete: false}`.
 - [x] `QuestGiverChooseReward` requires a valid choice when choice items exist, free bag cells for every granted item, and gold for negative `RewardMoney`; destroys required and provided items; grants money and items; marks the quest turned in; grants QuestXP experience ([experience](experience.md)); answers `QuestGiverQuestComplete` (with its `xp`); offers the chain's next quest (`QuestGiverQuestDetails`) when the same NPC starts it.
 - [x] `AbandonQuest` removes the quest and its provided start item; `SetQuestWatched` toggles tracking.
-- [x] Enter world sends `QuestLogSnapshot` (entries with objectives and counts, completion, level, sort id, texts, watched flag, POI polygons); later changes send `QuestLogUpdate{changed, removed, watched_quest_ids}`.
+- [x] Enter world sends `QuestLogSnapshot` (entries with objectives and counts, completion, level, sort id, texts, watched flag, POI polygons); later changes send `QuestLogUpdate{changed, removed, watched_quest_ids}`. Owned entries include full story, current player-scaled money/fixed/choice rewards and pushability (`Flags` shareable bit and not failed), including after database reopen without an NPC dialog. Client Share additionally requires current group membership.
 - [x] Quest log, progress, turned-in quests and watch list persist per character (redb `quest_logs`).
 - [x] Rejections answer `QuestFailed{quest_id, reason}`; NPCs must be alive and within 10 yards.
 
