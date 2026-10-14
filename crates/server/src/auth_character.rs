@@ -211,6 +211,7 @@ pub fn process_select_character(
 ) {
     geometry.poll();
     let Some(db) = db.as_ref() else { return };
+    let mut requests = Vec::new();
     for (entity, account, request) in collect_select_requests(&mut receivers) {
         if pending
             .requests
@@ -230,18 +231,19 @@ pub fn process_select_character(
             .expect("departing character receipts")
             .get(&request.character_id)
             .cloned();
-        let fence = db
-            .writer
-            .enqueue("character selection durability fence", move |_| {
-                departure.map_or(Ok(()), |receipt| {
-                    receipt
+        if let Some(departure) = departure {
+            let fence = db
+                .writer
+                .enqueue("character selection durability fence", move |_| {
+                    departure
                         .result()
                         .expect("earlier FIFO departure has completed")
-                })
-            });
-        pending.requests.push((entity, account, request, fence));
+                });
+            pending.requests.push((entity, account, request, fence));
+        } else {
+            requests.push((entity, account, request));
+        }
     }
-    let mut requests = Vec::new();
     pending
         .requests
         .retain(|(entity, account, request, fence)| {
