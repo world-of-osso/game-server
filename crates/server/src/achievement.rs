@@ -1216,6 +1216,66 @@ pub(crate) fn record_accepted_summon(world: &mut World, player: Entity) {
 
 /// Successful scripted encounter boundary. A scripted defeat (Hogger's surrender
 /// included) credits its creature criteria even when no corpse is produced.
+/// TC InstanceScript435–441/Player21915–21925: read active loot locks before DONE saves them.
+pub(crate) fn record_encounter_loot_defeat(
+    world: &mut World,
+    map: InMap,
+    encounter: u32,
+    difficulty: u32,
+) {
+    let eligible = encounter_loot_eligible_players(world, map, encounter, difficulty);
+    for player in eligible {
+        record_criteria_event(
+            world,
+            player,
+            CriteriaEvent::DefeatEncounterEligibleForLoot(encounter),
+        );
+    }
+}
+
+fn encounter_loot_eligible_players(
+    world: &mut World,
+    map: InMap,
+    encounter: u32,
+    difficulty: u32,
+) -> Vec<Entity> {
+    let mut players = world.query::<(&Authenticated, &InWorld, &PlayerLink)>();
+    let Some(instances) = world.get_resource::<crate::maps::InstanceManager>() else {
+        return Vec::new();
+    };
+    let Some(copy) = instances
+        .copy_difficulty(map)
+        .filter(|copy| copy.difficulty_id == difficulty)
+    else {
+        return Vec::new();
+    };
+    let Some(row) = world
+        .get_resource::<crate::maps::MapStore>()
+        .and_then(|store| store.dungeon_encounter(encounter, map.map_id, difficulty))
+    else {
+        return Vec::new();
+    };
+    let now = crate::maps::difficulty::now(world).unix;
+    players
+        .iter(world)
+        .filter_map(|(_, owner, link)| {
+            let player = link.0;
+            if world.get::<Player>(player).is_none() || world.get::<InMap>(player) != Some(&map) {
+                return None;
+            }
+            let character = world.get::<crate::persistence::ClientId>(player)?.0;
+            if character != owner.character_id {
+                return None;
+            }
+            let locked = instances
+                .locks
+                .find_active_lock(character, copy, now)
+                .is_some_and(|lock| lock.data.completed_encounters & (1 << row.bit) != 0);
+            (!locked).then_some(player)
+        })
+        .collect()
+}
+
 pub(crate) fn record_encounter_defeat(
     world: &mut World,
     map: InMap,

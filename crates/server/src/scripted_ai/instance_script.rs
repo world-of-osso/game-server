@@ -323,6 +323,13 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
                     success: true,
                 },
             );
+            // TC InstanceScript435–441 reads loot eligibility before saving the new lock.
+            crate::achievement::record_encounter_loot_defeat(
+                world,
+                map,
+                encounter_id,
+                difficulty_id,
+            );
             update_instance_lock(world, map, encounter_id, difficulty_id);
             crate::achievement::record_encounter_defeat(world, map, encounter_id, difficulty_id);
             crate::mythic_plus::record_boss(world, map, encounter_id);

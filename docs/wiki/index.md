@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Encounter loot eligibility](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) — existing active lock bit at native DONE before save, not bag-loot success; allocated-copy authority retained.
+
 - [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) — actual class/profession/owned-mount IDs versus global spell metadata; recipe-marker boundaries, no trait/UI acquisition claim.
 
 - [Generic item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) — one loot/acquisition event versus stack quantity; canonical item predicates, current-root contradictions retained.

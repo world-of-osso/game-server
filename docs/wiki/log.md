@@ -1,3 +1,7 @@
+## 2026-10-13 — Encounter loot eligibility ordering
+
+[Type97](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) reads existing active lock bits before native DONE saves them. Actual Skorpyron Normal14 death RED commits bit1 but lacks35448; targeted/final proof pending. No new lock state or bag-loot substitute; current roots remain unchanged.
+
 ## 2026-10-13 — Positive known-spell marker
 
 [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) reads existing class/profession/owned-mount IDs, not global spell metadata. Compiler RED→GREEN29/29; native/catalog2/2 prove all26 learned recipe facts and three account grants, absent/wrong knowledge and reopened persistence. Fixture runs standard ClassProgression PostUpdate publication before the next Update credit. Full four-thread workspace filter165/0/1ignored and server/engine/three-repo checks pass; no trait/public-UI marker acquisition claim.

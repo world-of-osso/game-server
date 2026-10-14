@@ -17,7 +17,8 @@ use super::PlayerAchievementState;
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62,
     63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
-    157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220, 221, 245, 246,
+    253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -148,6 +149,8 @@ pub(crate) enum CriteriaEvent {
     LandTargetedSpell(u32),
     LearnSpell(u32),
     DefeatEncounter(u32),
+    /// One DONE while the character's active encounter loot-lock bit was unset.
+    DefeatEncounterEligibleForLoot(u32),
 }
 
 impl CriteriaEvent {
@@ -255,6 +258,7 @@ impl CriteriaEvent {
             Self::LandTargetedSpell(_) => 110,
             Self::LearnSpell(_) => 34,
             Self::DefeatEncounter(_) => 165,
+            Self::DefeatEncounterEligibleForLoot(_) => 97,
         }
     }
 
@@ -375,7 +379,8 @@ impl CriteriaEvent {
             | Self::LearnTaxiNode(asset)
             | Self::RewardedQuestsInZone(asset, _)
             | Self::BankTabsOwned(asset, _)
-            | Self::DefeatEncounter(asset) => asset == criteria.asset,
+            | Self::DefeatEncounter(asset)
+            | Self::DefeatEncounterEligibleForLoot(asset) => asset == criteria.asset,
         }
     }
 }
@@ -1534,7 +1539,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // unlike old TC ArenaTeam numeric2/3/5; no retired/other bracket inference.
                         || (kind == 39 && matches!(row.get::<_, i32>(2)?, 0 | 1))
                         // Native rated arena result has a real positive map ID, never an all-map alias0.
-                        || (matches!(kind, 32 | 33) && row.get::<_, i32>(2)? > 0)
+                        || (matches!(kind, 32 | 33 | 97) && row.get::<_, i32>(2)? > 0)
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
