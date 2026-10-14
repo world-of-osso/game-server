@@ -16,6 +16,10 @@ use crate::combat::DeathState;
 use crate::creature_ai::SpawnPoint;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 
+#[cfg(test)]
+#[path = "waypoint_path_tests.rs"]
+mod tests;
+
 const BASE_WALK_SPEED: f32 = 2.5;
 const BASE_RUN_SPEED: f32 = 7.0;
 /// `DoInitialize`: `_nextMoveTime.Reset(1000)` before the first node.
