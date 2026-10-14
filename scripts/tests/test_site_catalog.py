@@ -32,20 +32,20 @@ class SiteCatalogTests(unittest.TestCase):
                 conn.execute("INSERT INTO retained VALUES('unchanged')")
             original = source.read_bytes()
             catalogs = [
-                ("retail", [(1, "Human", 1), (95, "TBD NPC Race 1", 1)]),
+                ("retail", [(1, "Human", 1, 7), (95, "TBD NPC Race 1", 1, 2)]),
                 (
                     "forever",
                     [
-                        (1, "FOREVER HUMAN", 1),
-                        (95, "High Order Skyborne", 3629),
-                        (96, "Windshaper Skyborne", 3628),
+                        (1, "FOREVER HUMAN", 1, 2),
+                        (95, "High Order Skyborne", 3629, 9),
+                        (96, "Windshaper Skyborne", 3628, 9),
                     ],
                 ),
             ]
             for name, rows in catalogs:
                 with (root / f"{name}.csv").open("w", newline="") as file:
                     writer = csv.writer(file)
-                    writer.writerow(["ID", "Name_lang", "FactionID"])
+                    writer.writerow(["ID", "Name_lang", "FactionID", "CreatureType"])
                     writer.writerows(rows)
             output = root / "site.db"
             module.prepare(
@@ -55,15 +55,15 @@ class SiteCatalogTests(unittest.TestCase):
             with sqlite3.connect(output) as conn:
                 self.assertEqual(
                     conn.execute(
-                        "SELECT Name_lang,FactionID FROM chr_races WHERE ID=1"
+                        "SELECT Name_lang,FactionID,CreatureType FROM chr_races WHERE ID=1"
                     ).fetchone(),
-                    ("Human", 1),
+                    ("Human", 1, 7),
                 )
                 self.assertEqual(
                     conn.execute(
-                        "SELECT Name_lang,FactionID FROM chr_races WHERE ID=95"
+                        "SELECT Name_lang,FactionID,CreatureType FROM chr_races WHERE ID=95"
                     ).fetchone(),
-                    ("High Order Skyborne", 3629),
+                    ("High Order Skyborne", 3629, 9),
                 )
                 self.assertEqual(
                     conn.execute("SELECT value FROM retained").fetchone(),
