@@ -1215,3 +1215,14 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-14: Distinct native melee/RAP percentages, owner wire and DefenseType-selected tooltip powers; bounded9 leaves5partial. See [[systems/character-stats]] and docs/class-completeness6.md.
 
 - 2026-10-14: Native player autoattack/weapon-spell critical block and launch/impact hit-state proof; NPC/probability/638 boundaries remain open. See [[systems/player-damage]] and docs/class-completeness6.md.
+## 2026-10-14 — Pre-effect spell-hit target auras
+
+[TargetHasAura10](systems/dungeon-achievements.md#pre-effect-spell-hit-target-auras) reads actual hit-unit active auras synchronously before effects. Complete positive type110 leaves retain companions; census5481/1821 adds only3579. Compiler RED→GREEN34/34; native RED1bf78023 reaches actual65403 then food cast but11168 absent; GREEN0a349a77 1/1 proves target authority, negatives and reopen. Full required four-thread filter176/0/1ignored plus site-export1/1, server workspace/all-target and fresh engine four-package checks, three-repo fmt pass without warnings; table acquisition/holiday/UI unclaimed.
+
+## 2026-10-14 — Maximum-health percent effect165
+
+[Effect165](systems/player-damage.md#maximum-health-percent-effect165) supplies the actual67531 hit producer needed by BB King. Native RED9e862790 accepts authentic cast but health50000 does not become49990. Implementation preserves integer max-health percentage and common mitigation while omitting direct caster/target bonuses; native GREEN4091b81b proves actual damage10, Enrage/Barkskin exclusions and zero truncation. TargetCreatureId4 compiler RED→GREEN35/35; required integrated filter178/0/1ignored +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b.
+
+## 2026-10-14 — Pre-effect spell-hit target creature entries
+
+[TargetCreatureId4](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) and complete Some selectors use actual hit NPC.template_id for native110, retaining DoEmote54 and every companion. Source165 actualdamage/bonus-exclusion/zero-hit boundary passes before valid predicate RED12660Nonevs3. Generated5621/census5483+1821 adds account4436/4437 only. Native GREEN4091b81b2/2(18.30s) proves both factions’ actual leader grants, wrong NPC/Player/missing/depth/idle rejection and durable counters/grant dates after reopen/re-entry. All243 matrix/pinned5483 and readability pass; required workspace filter178/0/1ignored(269.99s) +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b source scope. Independent verifier unavailable; no content/acquisition/UI certificate.
