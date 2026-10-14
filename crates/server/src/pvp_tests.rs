@@ -687,6 +687,13 @@ fn new_pvp_progress_does_not_invent_rated_or_season_cap_numbers() {
 fn native_flag_match(
     template: &shared::battleground::BgTemplate,
 ) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
+    native_flag_match_in_world(template, World::new())
+}
+
+fn native_flag_match_in_world(
+    template: &shared::battleground::BgTemplate,
+    mut world: World,
+) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
     use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
     use crate::auth::{Authenticated, InWorld};
     use crate::game_objects::{GameObjectBounds, GameObjectSpawn, GameObjectSpawns};
@@ -700,7 +707,6 @@ fn native_flag_match(
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
-    let mut world = World::new();
     world.insert_resource(load_achievement_catalog(&conn).unwrap());
     world.init_resource::<crate::maps::ServerClock>();
     world.init_resource::<Time<Fixed>>();
