@@ -10,8 +10,8 @@ import importlib.util
 import json
 from pathlib import Path
 import sqlite3
-
-BUILD = '12.1.0.69933'
+import struct
+import sys
 TABLES = {
     'AdventureJournal': ('adventure_journal', 1115949, 0x6DC6E4E8),
     'PerksActivity': ('perks_activity', 4519766, 0x5361589F),
@@ -25,6 +25,7 @@ TABLES = {
 
 
 def load_decoder(path):
+    sys.path.insert(0, str(path.parent))
     spec = importlib.util.spec_from_file_location('journal_decoder', path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -39,7 +40,9 @@ def quote_sql(value):
 def decode_sources(decoder, db2, definitions):
     sources = {}
     for name, (table, fdid, layout) in TABLES.items():
-        columns, rows, dropped = decoder.read_table(name, db2 / f'{fdid}.db2', definitions / f'{name}.dbd')
+        binary = db2 / f'{fdid}.db2'
+        columns, rows, dropped = decoder.read_table(name, binary, definitions / f'{name}.dbd')
+        layout = struct.unpack_from('<I', binary.read_bytes(), 156)[0]
         fields = [field for field, _ in columns]
         sources[table] = {
             'name': name, 'fdid': fdid, 'layout': f'{layout:08X}',
@@ -48,11 +51,11 @@ def decode_sources(decoder, db2, definitions):
     return sources
 
 
-def prepare_sql(sources, world):
+def prepare_sql(sources, world, build):
     with closing(sqlite3.connect(f'file:{world.resolve()}?mode=ro', uri=True)) as connection:
         tree_ids = {row[0] for row in connection.execute('SELECT ID FROM criteria_tree')}
         condition_ids = {row[0] for row in connection.execute('SELECT ID FROM player_condition')}
-    report = {'build': BUILD, 'sources': {}, 'missing_activity_trees': [], 'missing_player_conditions': []}
+    report = {'build': build, 'sources': {}, 'missing_activity_trees': [], 'missing_player_conditions': []}
     sql = ['BEGIN TRANSACTION;', 'CREATE TABLE IF NOT EXISTS adventure_guide_source (name TEXT PRIMARY KEY,build TEXT,fdid INTEGER,layout TEXT,readable INTEGER,unreadable INTEGER);', 'DELETE FROM adventure_guide_source;']
     for table, source in sources.items():
         records = source['records']
@@ -62,7 +65,7 @@ def prepare_sql(sources, world):
         for row in records:
             payload = quote_sql(json.dumps(row, ensure_ascii=False, separators=(',', ':')))
             sql.append(f'INSERT INTO {table} VALUES({row["ID"]},{payload});')
-        values = ','.join((quote_sql(source['name']), quote_sql(BUILD), str(source['fdid']), quote_sql(source['layout']), str(len(records)), str(source['unreadable'])))
+        values = ','.join((quote_sql(source['name']), quote_sql(build), str(source['fdid']), quote_sql(source['layout']), str(len(records)), str(source['unreadable'])))
         sql.append(f'INSERT INTO adventure_guide_source VALUES({values});')
     report['missing_activity_trees'] = [row['ID'] for row in sources['perks_activity']['records'] if row['CriteriaTreeID'] not in tree_ids]
     referenced = {row['PlayerConditionID'] for row in sources['adventure_journal']['records']}
@@ -81,7 +84,7 @@ def main():
     args = parser.parse_args()
     decoder = load_decoder(args.decoder)
     sources = decode_sources(decoder, args.db2, args.definitions)
-    sql, report = prepare_sql(sources, args.world)
+    sql, report = prepare_sql(sources, args.world, decoder.source_identity(args.db2)['build'])
     args.output_sql.parent.mkdir(parents=True, exist_ok=True)
     args.output_sql.write_text(sql)
     args.report.write_text(json.dumps(report, indent=2) + '\n')

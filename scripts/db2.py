@@ -18,14 +18,10 @@ same transaction (skyborne_data.py); mixed-source rows use `db2_row_source`.
 
 import argparse
 import csv
-import email.utils
-import random
+import json
 import re
 import sqlite3
 import sys
-import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 import db2_casc
@@ -38,8 +34,6 @@ DEFAULT_CSV_ROOT = PROJECT_DIR / "../game-engine/data/db2"
 # Follow the installed build: data/db2/active names the current export.
 DEFAULT_BUILD = (DEFAULT_CSV_ROOT / "active").resolve().name
 DEFAULT_DB = PROJECT_DIR / "data/world.db"
-WAGO_URL = "https://wago.tools/db2/{table}/csv?build={build}"
-MAX_ATTEMPTS = 6
 
 # wago.tools serves no SpellIcon table for Retail 12.x (icons are FileDataIDs in SpellMisc).
 TABLES = [
@@ -190,114 +184,12 @@ def table_name(db2_name):
     ).lower()
 
 
-def retry_delay(attempt, error):
-    retry_after = (
-        error.headers.get("Retry-After")
-        if isinstance(error, urllib.error.HTTPError)
-        else None
-    )
-    if retry_after:
-        if retry_after.isdigit():
-            return float(retry_after)
-        when = email.utils.parsedate_to_datetime(retry_after)
-        return max(0.0, when.timestamp() - time.time())
-    return min(60.0, 2**attempt) * random.uniform(0.5, 1.0)
-
-
-def is_transient(error):
-    if isinstance(error, urllib.error.HTTPError):
-        return error.code == 429 or error.code >= 500
-    return isinstance(error, (urllib.error.URLError, TimeoutError, ConnectionError))
-
-
-def download(url):
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        try:
-            # wago.tools answers 403 to urllib's default User-Agent.
-            request = urllib.request.Request(
-                url, headers={"User-Agent": "world-of-osso-db2/1"}
-            )
-            with urllib.request.urlopen(request, timeout=120) as response:
-                if not response.headers.get_content_type() == "text/csv":
-                    raise RuntimeError(
-                        f"{url}: expected text/csv, got {response.headers.get_content_type()}"
-                    )
-                return response.read()
-        except Exception as error:
-            if not is_transient(error) or attempt == MAX_ATTEMPTS:
-                raise
-            delay = retry_delay(attempt, error)
-            print(
-                f"  retry {attempt}/{MAX_ATTEMPTS - 1} in {delay:.1f}s: {error}",
-                file=sys.stderr,
-            )
-            time.sleep(delay)
-
-
-def fetch(build, csv_root):
-    out_dir = csv_root / build
-    out_dir.mkdir(parents=True, exist_ok=True)
-    missing = []
-    for db2 in TABLES:
-        target = out_dir / f"{db2}.csv"
-        if db2 in LOCAL_TABLES:
-            continue
-        if target.exists():
-            print(f"  have {target.name}")
-            continue
-        try:
-            body = download(WAGO_URL.format(table=db2, build=build))
-        except urllib.error.HTTPError as error:
-            if error.code == 404:
-                missing.append(db2)
-                continue
-            raise
-        partial = target.with_suffix(".csv.part")
-        partial.write_bytes(body)
-        partial.rename(target)
-        print(f"  fetched {target.name} ({len(body)} bytes)")
-    if missing:
-        raise SystemExit(f"wago.tools has no {build} export for: {', '.join(missing)}")
-
-
 def signed_disenchant_rows(rows):
     """WoWDBDefs5845A4AA: Subclass and ExpansionID are signed8, not uint32."""
     def signed8(value):
         return value - 256 if value >= 128 else value
 
     return [[row[0], signed8(row[1]), *row[2:6], signed8(row[6]), row[7]] for row in rows]
-
-
-def extract(build, csv_root):
-    """Write each LOCAL_TABLES CSV from local CASC, columns from db2_schema.sql."""
-    if build != DEFAULT_BUILD:
-        raise SystemExit(f"local CASC holds {DEFAULT_BUILD} only, not {build}")
-    out_dir = csv_root / build
-    out_dir.mkdir(parents=True, exist_ok=True)
-    schema = sqlite3.connect(":memory:")
-    schema.executescript(SCHEMA_SQL.read_text())
-    for db2, (fdid, layout_hash) in LOCAL_TABLES.items():
-        target = out_dir / f"{db2}.csv"
-        if target.exists():
-            print(f"  have {target.name}")
-            continue
-        columns = [
-            (row[1], row[2])
-            for row in schema.execute(f"PRAGMA table_info({table_name(db2)})")
-        ]
-        header, rows = db2_casc.extract_rows(
-            fdid, layout_hash, columns, localized=db2 in LOCALIZED_TABLES,
-            inline_arrays={0: 10} if db2 == "OverrideSpellData" else None
-        )
-        if db2 == "ItemDisenchantLoot":
-            rows = signed_disenchant_rows(rows)
-        partial = target.with_suffix(".csv.part")
-        with partial.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(header)
-            writer.writerows(rows)
-        partial.rename(target)
-        print(f"  extracted {target.name} ({len(rows)} rows, FDID {fdid})")
 
 
 def read_csv(path):
@@ -318,7 +210,7 @@ def check_csvs(csv_dir):
         with (csv_dir / f"{db2}.csv").open(newline="", encoding="utf-8") as handle:
             header = next(csv.reader(handle))
         columns = [row[1] for row in schema.execute(f"PRAGMA table_info({name})")]
-        if header != columns:
+        if not set(columns).issubset(header):
             raise SystemExit(
                 f"{db2}.csv header does not match {name} in {SCHEMA_SQL.name}:\n"
                 f"  csv:    {header}\n  schema: {columns}"
@@ -336,8 +228,11 @@ def import_tables(build, csv_root, db_path):
         for db2 in TABLES:
             name = table_name(db2)
             header, rows = read_csv(csv_dir / f"{db2}.csv")
-            placeholders = ",".join("?" * len(header))
-            conn.executemany(f"INSERT INTO {name} VALUES ({placeholders})", rows)
+            columns = [row[1] for row in conn.execute(f'PRAGMA table_info({name})')]
+            indexes = [header.index(column) for column in columns]
+            placeholders = ",".join("?" * len(columns))
+            conn.executemany(f"INSERT INTO {name} VALUES ({placeholders})",
+                             ([row[index] for index in indexes] for row in rows))
             conn.execute(
                 "INSERT INTO db2_build (table_name, build) VALUES (?, ?)", (name, build)
             )
@@ -358,16 +253,15 @@ def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("command", choices=["fetch", "extract", "check", "import"])
-    parser.add_argument("--build", default=DEFAULT_BUILD)
+    parser.add_argument("command", choices=["check", "import"])
+    parser.add_argument("--build")
     parser.add_argument("--csv-root", type=Path, default=DEFAULT_CSV_ROOT)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     args = parser.parse_args()
-    if args.command == "fetch":
-        fetch(args.build, args.csv_root)
-    elif args.command == "extract":
-        extract(args.build, args.csv_root)
-    elif args.command == "check":
+    if args.build is None:
+        receipt = json.loads((args.csv_root / 'active/receipt.json').read_text())
+        args.build = receipt['identity']['build']
+    if args.command == "check":
         check_csvs(args.csv_root / args.build)
     else:
         import_tables(args.build, args.csv_root, args.db)
