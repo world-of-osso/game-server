@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
+
 - [Druid automatic forms](systems/spell-casting.md#druid-automatic-forms) — five source BeforeCast native children, Berserk spell/category reset and actual form receipts; charges/GCD and whole-ability limits retained.
 
 - [Native fear fleeing](../class-completeness6.md#native-fear-navmesh-fleeing--batch53) — real player/creature Detour movement/control/lifecycle; source model geometry import and21 shared aura memberships, whole-ability limits retained.
