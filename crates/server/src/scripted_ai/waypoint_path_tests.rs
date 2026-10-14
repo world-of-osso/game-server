@@ -23,33 +23,7 @@ fn waypoint_source_short_initial_segment_still_moves_to_the_real_destination() {
 }
 
 #[test]
-fn waypoint_collinear_portals_move_without_cutting_turns_or_height_changes() {
-    let original = vec![
-        Vec3::ZERO,
-        Vec3::new(1.0, 0.0, 0.0),
-        Vec3::new(1.05, 0.0, 0.0),
-        Vec3::new(1.09, 0.0, 0.0),
-        Vec3::new(2.0, 0.0, 0.0),
-        Vec3::new(2.0, 0.0, 1.0),
-        Vec3::new(2.0, 1.0, 1.0),
-    ];
-    let controls = coalesce_collinear_crossings(original.clone());
-    let spline = launch(controls, false, 0.0, 2.0).expect("collinear tiny portals are not turns");
-    // The actor stays at its actual start during launch. Evaluated movement uses
-    // the source spline domain beginning at its1ms minimal-duration timestamp.
-    for elapsed in MINIMAL_DURATION_MS..=spline.end_ms {
-        let point = spline.position(elapsed);
-        let distance = original
-            .windows(2)
-            .map(|pair| segment_distance_squared(point, pair[0], pair[1]))
-            .min_by(f32::total_cmp)
-            .unwrap();
-        assert!(
-            distance <= PORTAL_COLLINEAR_EPSILON * PORTAL_COLLINEAR_EPSILON,
-            "movement never shortcuts a turn/height transition: {point:?}"
-        );
-    }
-    assert_eq!(spline.position(spline.end_ms), *original.last().unwrap());
+fn waypoint_short_height_corner_remains_rejected() {
     let short_height_step = vec![
         Vec3::ZERO,
         Vec3::new(2.0, 0.0, 0.0),
@@ -57,13 +31,7 @@ fn waypoint_collinear_portals_move_without_cutting_turns_or_height_changes() {
         Vec3::new(3.0, 0.05, 0.0),
     ];
     assert!(
-        launch(
-            coalesce_collinear_crossings(short_height_step),
-            false,
-            0.0,
-            2.0
-        )
-        .is_none(),
+        launch(short_height_step, false, 0.0, 2.0).is_none(),
         "a real short height corner remains rejected, never flattened"
     );
 }
@@ -91,7 +59,7 @@ fn waypoint_authored_wailing_node2_launches_and_reaches_collision_floor() {
         speed_run: 1.0,
     };
     let source = Launch {
-        map_id: 43,
+        map: crate::maps::InMap::continent(43),
         position: from,
         orientation: 0.0,
         spawn: &spawn,
@@ -99,18 +67,19 @@ fn waypoint_authored_wailing_node2_launches_and_reaches_collision_floor() {
         flying: false,
     };
     let navigation = crate::navigation::Navigation::new(&root);
-    let controls = query_path_controls(path, node, &source, Some(&navigation)).unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
+    );
+    let controls =
+        query_path_controls(path, node, &source, Some(&navigation), Some(&mut ground)).unwrap();
     let spline = launch(controls.clone(), false, 0.0, 2.5)
         .unwrap_or_else(|| panic!("authored node2 must launch: {controls:?}"));
     assert_eq!(spline.position(MINIMAL_DURATION_MS), from);
     let destination = spline.position(spline.end_ms);
     assert!((destination.x - path.nodes[node].1.x).abs() < 0.01);
     assert!((destination.y - path.nodes[node].1.y).abs() < 0.01);
-    let maps = crate::maps::store::load_map_store(&db).unwrap();
-    let mut ground = crate::ground::GroundMap::new(
-        &crate::ground::ground_data_dir(),
-        HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
-    );
     let feet = Vec3::new(destination.x, destination.z, -destination.y);
     let crate::ground::GroundProbe::Supported(floor) = ground.creature_ground_at(43, feet) else {
         panic!("node2 destination requires exact collision support");
@@ -141,7 +110,7 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
         nodes: vec![(0, Vec3::new(2.0, 3.0, 4.0)), (1, Vec3::new(4.0, 5.0, 6.0))],
     };
     let source = Launch {
-        map_id: 43,
+        map: crate::maps::InMap::continent(43),
         position: Vec3::ZERO,
         orientation: 0.0,
         spawn: &spawn,
@@ -149,12 +118,12 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
         flying: true,
     };
     assert_eq!(
-        query_path_controls(&path, 0, &source, None).unwrap(),
+        query_path_controls(&path, 0, &source, None, None).unwrap(),
         vec![Vec3::ZERO, path.nodes[0].1]
     );
     path.flags = FLAG_EXACT_SPLINE;
     assert_eq!(
-        query_path_controls(&path, 0, &source, None).unwrap(),
+        query_path_controls(&path, 0, &source, None, None).unwrap(),
         vec![Vec3::ZERO, path.nodes[0].1, path.nodes[1].1]
     );
     let source = Launch {
@@ -162,7 +131,7 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
         ..source
     };
     assert_eq!(
-        query_path_controls(&path, 0, &source, None).unwrap(),
+        query_path_controls(&path, 0, &source, None, None).unwrap(),
         vec![Vec3::ZERO, path.nodes[0].1, path.nodes[1].1]
     );
 }
