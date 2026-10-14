@@ -43,14 +43,14 @@ pub struct PlayerCreateInfo {
 }
 
 /// Kits of every playable race/class (`race_class::playable_pairs`).
-#[derive(Resource, Debug, Default)]
+#[derive(Resource, Debug, Default, Clone)]
 pub struct PlayerCreateInfos(
     pub HashMap<(u8, u8), PlayerCreateInfo>,
     SkyborneKitItems,
     HashMap<(u8, u8), crate::player_start::StartLocation>,
 );
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct SkyborneKitItems {
     templates: HashMap<u32, ItemTemplate>,
     goods: HashMap<u32, VendorGoods>,

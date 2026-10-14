@@ -39,17 +39,74 @@ pub fn process_create_character(
     templates: Res<ItemTemplates>,
     catalog: Res<VendorCatalog>,
     mut senders: Query<&mut MessageSender<CreateCharacterResponse>>,
+    mut pending: Local<Vec<PendingCreation>>,
 ) {
+    pending.retain(|creation| {
+        let Some(result) = creation.commit.result() else {
+            return true;
+        };
+        let same_owner = receivers
+            .get(creation.connection)
+            .is_ok_and(|(_, auth, _)| auth.account_id == creation.account);
+        if same_owner && let Ok(mut sender) = senders.get_mut(creation.connection) {
+            let response = match result {
+                Ok(character) => CreateCharacterResponse {
+                    success: true,
+                    character: Some(character),
+                    error: None,
+                },
+                Err(error) => CreateCharacterResponse {
+                    success: false,
+                    character: None,
+                    error: Some(error),
+                },
+            };
+            sender.send::<AuthChannel>(response);
+        }
+        false
+    });
     let Some(db) = db.as_ref() else { return };
-    let kit = NewCharacterKit {
-        create_info: &create_info,
-        templates: &templates,
-        catalog: &catalog,
-    };
-    let requests = collect_create_requests(&mut receivers);
-    for (entity, account_id, req) in requests {
-        handle_create(entity, account_id, &req, db, &kit, &mut senders);
+    for (connection, account, req) in collect_create_requests(&mut receivers) {
+        let info = create_info.clone();
+        let templates = templates.clone();
+        let catalog = catalog.clone();
+        let commit = db.writer.enqueue("character creation", move |db| {
+            let kit = NewCharacterKit {
+                create_info: &info,
+                templates: &templates,
+                catalog: &catalog,
+            };
+            let (cid, data) = persistence::create_character_with_appearance(
+                db,
+                account,
+                &req.name,
+                req.race,
+                req.class,
+                req.appearance,
+                &kit,
+            )?;
+            Ok(shared::protocol::CharacterListEntry {
+                character_id: cid,
+                name: data.name,
+                level: data.level,
+                race: data.race,
+                class: data.class,
+                appearance: data.appearance,
+                equipment_appearance: data.equipment_appearance,
+            })
+        });
+        pending.push(PendingCreation {
+            connection,
+            account,
+            commit,
+        });
     }
+}
+
+pub struct PendingCreation {
+    connection: Entity,
+    account: u64,
+    commit: crate::persistence_writer::CommitReceipt<shared::protocol::CharacterListEntry>,
 }
 
 pub(crate) fn collect_create_requests(
@@ -60,52 +117,6 @@ pub(crate) fn collect_create_requests(
     )>,
 ) -> Vec<(Entity, u64, CreateCharacter)> {
     collect_account_requests(receivers)
-}
-
-fn handle_create(
-    entity: Entity,
-    account_id: u64,
-    req: &CreateCharacter,
-    db: &GameDatabase,
-    kit: &NewCharacterKit,
-    senders: &mut Query<&mut MessageSender<CreateCharacterResponse>>,
-) {
-    let Ok(mut sender) = senders.get_mut(entity) else {
-        return;
-    };
-    match persistence::create_character_with_appearance(
-        &db.db,
-        account_id,
-        &req.name,
-        req.race,
-        req.class,
-        req.appearance.clone(),
-        kit,
-    ) {
-        Ok((cid, data)) => {
-            let entry = shared::protocol::CharacterListEntry {
-                character_id: cid,
-                name: data.name,
-                level: data.level,
-                race: data.race,
-                class: data.class,
-                appearance: data.appearance,
-                equipment_appearance: data.equipment_appearance,
-            };
-            sender.send::<AuthChannel>(CreateCharacterResponse {
-                success: true,
-                character: Some(entry),
-                error: None,
-            });
-        }
-        Err(e) => {
-            sender.send::<AuthChannel>(CreateCharacterResponse {
-                success: false,
-                character: None,
-                error: Some(e),
-            });
-        }
-    }
 }
 
 /// Process character deletion requests from authenticated connections.

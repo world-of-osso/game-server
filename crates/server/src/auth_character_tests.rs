@@ -125,6 +125,108 @@ fn character_delete_ack_waits_for_fifo_writer_without_blocking_updates() {
 }
 
 #[test]
+fn character_create_ack_waits_for_fifo_writer_without_blocking_updates() {
+    use lightyear::connection::host::HostClient;
+    use std::time::{Duration, Instant};
+    let db = test_db();
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<shared::protocol::CreateCharacter>();
+    app.register_message::<shared::protocol::CreateCharacterResponse>();
+    app.add_systems(Update, crate::auth_character::process_create_character);
+    let kit = crate::player_create_info::OwnedKit::bare();
+    app.insert_resource(kit.create_info)
+        .insert_resource(kit.templates)
+        .insert_resource(kit.catalog);
+    app.insert_resource(db);
+    app.finish();
+    app.cleanup();
+    let connection = app
+        .world_mut()
+        .spawn((
+            Connected,
+            RemoteId(PeerId::Local(41)),
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 41 },
+            MessageSender::<shared::protocol::CreateCharacter>::default(),
+            MessageReceiver::<shared::protocol::CreateCharacter>::default(),
+            MessageSender::<shared::protocol::CreateCharacterResponse>::default(),
+            MessageReceiver::<shared::protocol::CreateCharacterResponse>::default(),
+        ))
+        .id();
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    app.world_mut()
+        .get_mut::<MessageSender<shared::protocol::CreateCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(shared::protocol::CreateCharacter {
+            name: "Fifocreate".into(),
+            race: 1,
+            class: 1,
+            appearance: CharacterAppearance::default(),
+        });
+    let started = Instant::now();
+    app.update();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature = app
+        .world_mut()
+        .get_mut::<MessageReceiver<shared::protocol::CreateCharacterResponse>>(connection)
+        .unwrap()
+        .receive()
+        .next();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "create tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature.is_none(),
+        "create success precedes durable commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let reply = loop {
+        app.update();
+        if let Some(reply) = app
+            .world_mut()
+            .get_mut::<MessageReceiver<shared::protocol::CreateCharacterResponse>>(connection)
+            .unwrap()
+            .receive()
+            .next()
+        {
+            break reply;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "missing durability-gated creation reply"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert!(reply.success, "{:?}", reply.error);
+    let character = reply.character.unwrap();
+    assert_eq!(
+        persistence::load_character(
+            &app.world().resource::<GameDatabase>().db,
+            character.character_id
+        )
+        .unwrap()
+        .name,
+        "Fifocreate"
+    );
+}
+
+#[test]
 fn queued_gold_updates_coalesce_and_skip_equal_or_offline_players() {
     let mut app = App::new();
     app.add_plugins(GoldPlugin);
