@@ -54,10 +54,10 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 ## Stockade diagnostic completion (not Retail admission)
 
-- `GAME_SERVER_STOCKADE_FOLLOWER_DIAGNOSTIC=<character>` requests a one-shot diagnostic Damage-role party when that authenticated solo character enters an existing Normal Stockade copy. It does not move the player, alter difficulty, insert a catalog entry, send a follower match or change authored population. Empty/invalid configuration fails explicitly.
+- `GAME_SERVER_STOCKADE_FOLLOWER_DIAGNOSTIC=<character>` requests a one-shot diagnostic Damage-role party for an authenticated solo character with Normal difficulty selected. Outside an instance it performs only the approved initial Normal admission via ordinary `MapTransfer`/`WorldPortAck` to authored WorldSafeLoc3599; companions attach after the real ACK. An already admitted Normal Stockade owner attaches in place. No inside-dungeon repositioning, difficulty/catalog mutation, follower match or authored population change. Empty/invalid configuration or absent entrance fails explicitly.
 - The four companions use the same authenticated profiles, production summon/class initialization, group binding and ordinary follow/combat systems as follower admission. Group metadata retains the owner's real Normal difficulty. Leaving the exact copy retires the diagnostic companions and party without altering LFG state.
 - Acceptance requires physical navigation and ordinary combat through all three authored Stockade bosses, with real encounter completion and owner/group credit. A successful diagnostic does not certify Retail follower admission or Ruby/Azure completion; HP priming, damage buffs and admin reposition remain prohibited.
-- `followers/stockade_diagnostic.rs` tests native four-companion attachment, unchanged position/map/difficulty/catalog/LFG state, source class health, wrong-map refusal and exact-copy lifecycle. Full walked instance proof remains pending.
+- `followers/stockade_diagnostic.rs` tests real loopback initial admission and ACK gating, source destination, unchanged health/difficulty/LFG state, native four-companion attachment without further movement, unchanged catalog, source class health, wrong-map refusal and exact-copy lifecycle. Full walked instance proof remains pending.
 
 ## Out of scope
 - Agent writes to canonical world.db or UDP5000 operations: lead-only.
