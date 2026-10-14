@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Pre-effect spell-hit target creature entries](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) — actual NPC.template_id/complete4 selectors, authentic67531 source165 producer; world content unclaimed.
+
 - [Maximum-health percent effect165](systems/player-damage.md#maximum-health-percent-effect165) — actual target maximum, integer truncation and direct-bonus exclusion; authentic BB gun producer boundary.
 
 - [Pre-effect spell-hit target auras](systems/dungeon-achievements.md#pre-effect-spell-hit-target-auras) — positive10, synchronous actual hit-unit aura authority; table acquisition/holiday content unclaimed.

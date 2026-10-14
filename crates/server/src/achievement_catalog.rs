@@ -461,8 +461,15 @@ pub(crate) struct PlayerConditions {
     pub difficulty: u32,
     /// None for map-wide credit, which has no reference player.
     pub player: Option<ReferencePlayer>,
-    /// Live type110 hit entities and their pre-effect active-aura spell IDs.
-    pub target_auras: BTreeMap<Entity, BTreeSet<u32>>,
+    /// Live type110 hit entities and their pre-effect unit facts.
+    pub hit_units: BTreeMap<Entity, SpellHitUnit>,
+}
+
+/// Separate actual unit authority: neither NPC entry nor auras imply Player identity.
+#[derive(Debug, Default)]
+pub(crate) struct SpellHitUnit {
+    pub creature_entry: Option<u32>,
+    pub auras: Option<BTreeSet<u32>>,
 }
 
 /// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
@@ -507,7 +514,7 @@ enum CriteriaFact {
     PlayerAuras(BTreeSet<u32>),
     /// ItemId19 or item-template quality14/15 against this native receipt's itemID.
     EventItems(BTreeSet<u32>),
-    /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
+    /// TargetCreatureId4: actual text-emote target or pre-effect spell-hit NPC entry.
     TargetCreature(u32),
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
@@ -539,12 +546,25 @@ enum CriteriaFact {
     MaxLevel(u8),
 }
 
+fn event_creature_entry(
+    event: CriteriaEvent,
+    hit_units: &BTreeMap<Entity, SpellHitUnit>,
+) -> Option<u32> {
+    match event {
+        CriteriaEvent::DoEmote(_, entry) => entry,
+        CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) => {
+            hit_units.get(&target).and_then(|unit| unit.creature_entry)
+        }
+        _ => None,
+    }
+}
+
 impl CriteriaFact {
     fn holds(
         &self,
         player: &ReferencePlayer,
         event: CriteriaEvent,
-        target_auras: &BTreeMap<Entity, BTreeSet<u32>>,
+        hit_units: &BTreeMap<Entity, SpellHitUnit>,
     ) -> bool {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
@@ -560,9 +580,7 @@ impl CriteriaFact {
                 }
                 _ => false,
             },
-            Self::TargetCreature(entry) => {
-                matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
-            }
+            Self::TargetCreature(entry) => event_creature_entry(event, hit_units) == Some(*entry),
             Self::TargetRace(race) => {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _, _) if target.race == *race)
             }
@@ -571,7 +589,8 @@ impl CriteriaFact {
             }
             Self::TargetAura(spell) => {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, _, _, Some(target))
-                    if target_auras.get(&target).is_some_and(|auras| auras.contains(spell)))
+                    if hit_units.get(&target).and_then(|unit| unit.auras.as_ref())
+                        .is_some_and(|auras| auras.contains(spell)))
             }
             Self::TargetClass(class) => {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _, _) if target.class == *class)
@@ -580,7 +599,7 @@ impl CriteriaFact {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, _, Some(percent), _) if percent <= f32::from(*limit))
             }
             Self::TargetCreatures(entries) => {
-                matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
+                event_creature_entry(event, hit_units).is_some_and(|entry| entries.contains(&entry))
             }
             Self::ArenaTeamSize(size) => player.arena_team_size == Some(*size),
             Self::RankedArena => player.in_ranked_arena,
@@ -624,7 +643,7 @@ impl Criteria {
                 || conditions.player.as_ref().is_some_and(|player| {
                     self.facts
                         .iter()
-                        .all(|fact| fact.holds(player, event, &conditions.target_auras))
+                        .all(|fact| fact.holds(player, event, &conditions.hit_units))
                 }))
     }
 }
