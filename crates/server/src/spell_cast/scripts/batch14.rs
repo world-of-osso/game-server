@@ -153,6 +153,7 @@ pub(crate) fn cast_eye_beam_tick(world: &mut World, caster: Entity) {
         units: vec![target],
         dest: None,
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }];
     spell_cast::hit::remove_defended_targets(world, caster, &child, &mut plan);
     spell_cast::missiles::launch(world, caster, &child, plan, 1);
@@ -215,12 +216,14 @@ fn land_metamorphosis(
             units,
             dest: Some(center),
             chain_multipliers: Vec::new(),
+            blocked_units: Vec::new(),
         },
         PlannedEffect {
             index: stun_index,
             units: npc_units,
             dest: Some(center),
             chain_multipliers: Vec::new(),
+            blocked_units: Vec::new(),
         },
     ];
     spell_cast::missiles::launch(world, ctx.caster, &child, plan, ctx.depth + 1);
