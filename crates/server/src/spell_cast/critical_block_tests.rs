@@ -444,7 +444,10 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
 fn creature_block_duel(entry: u32) -> Harness {
     let mut h = harness(Vec::new(), &[1464, 10021, 203524, 853], 1).unwrap();
     let data = load_native_creature_world(&[entry]);
-    let name = data.templates[&entry].name.clone();
+    let template = &data.templates[&entry];
+    let name = template.name.clone();
+    let faction = template.faction;
+    let level = template.min_level;
     h.app.insert_resource(data);
     h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
     h.app.world_mut().entity_mut(h.npc).insert((
@@ -452,6 +455,8 @@ fn creature_block_duel(entry: u32) -> Harness {
             template_id: entry,
             name,
         },
+        shared::components::UnitFactionTemplate(faction),
+        UnitLevel(level),
         Rotation {
             x: 0.0,
             y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
