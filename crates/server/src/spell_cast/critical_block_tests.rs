@@ -278,8 +278,16 @@ fn cast_damage_spell(
         stats.attack_power = 100.0;
         stats.ranged_attack_power = 100.0;
     }
-    h.set_power(shared::components::PowerType::Rage, 1000.0);
-    h.set_power(shared::components::PowerType::Focus, 100.0);
+    let power = h
+        .app
+        .world()
+        .get::<super::powers::PowerPools>(caster)
+        .unwrap()
+        .order[0];
+    let maximum = super::powers::power_value(h.app.world(), caster, power)
+        .unwrap()
+        .1;
+    h.set_power(power, maximum);
     h.inbox = Inbox::default();
     h.cast_and_deliver(spell, Some(defender));
     h.advance(frames);
