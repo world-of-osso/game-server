@@ -1,6 +1,44 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_fall_alive_and_area_leaves_remain_required() {
+    let catalog = catalog();
+    for (alive, area, puddle) in [
+        (Some(true), Some(6665), true),
+        (Some(true), Some(1519), false),
+        (Some(true), None, false),
+        (Some(false), Some(6665), false),
+        (None, Some(6665), false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                alive,
+                area,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::FallWithoutDying(3000),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&2072).copied(),
+            (alive == Some(true)).then_some(3000)
+        );
+        assert_eq!(state.earned_ids.contains(&8354), puddle);
+        assert!(
+            !state.criteria_progress.contains_key(&3881),
+            "world-state predicate cannot be silently dropped"
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_player_aura_some_rejects_a_missing_spell_alternative_at_load() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("aura-some.db");
