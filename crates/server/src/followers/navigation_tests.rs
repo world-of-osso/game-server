@@ -153,7 +153,15 @@ fn follower_ruby_regroup_walks_from_entrance_across_metalplate_to_boss_floor() {
             "Ruby follower tick{tick} crosses collision: {previous:?}->{at:?}"
         );
         let GroundProbe::Supported(floor) = support.ground_at(2521, point(at)) else {
-            panic!("unsupported Ruby follower feet {at:?}")
+            let samples = [0.0, 1.0, 2.0, 5.0, 10.0].map(|offset| {
+                (
+                    offset,
+                    support.ground_at(2521, point(at) + Vec3::Y * offset),
+                )
+            });
+            panic!(
+                "unsupported Ruby follower tick{tick} feet {at:?}; previous{previous:?}; raised support samples{samples:?}"
+            )
         };
         assert!(
             (at.y - floor).abs() < 0.05,
