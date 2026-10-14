@@ -14,6 +14,8 @@ use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
 use crate::quest_rules::{QuestPlayer, objective_counts, objectives_done, quest_money};
 
+const QUEST_FLAGS_SHARABLE: u32 = 0x8;
+
 /// Quest log entries by quest id, as last sent to a client.
 pub(crate) type QuestLogView = BTreeMap<u32, QuestEntrySnapshot>;
 
@@ -124,7 +126,7 @@ fn quest_entry(
         objectives_text: quest.objectives_text.clone(),
         description: quest.description.clone(),
         rewards: quest_rewards(quests, quest, player),
-        pushable: quest.flags & 0x8 != 0 && !active.failed,
+        pushable: quest.flags & QUEST_FLAGS_SHARABLE != 0 && !active.failed,
         completion_text: quest.completion_log.clone(),
         watched,
         pois: quests.pois.get(&quest.id).cloned().unwrap_or_default(),
