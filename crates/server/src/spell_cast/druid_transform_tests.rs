@@ -1,6 +1,6 @@
 //! TC a352b1fa spell_druid.cpp271–295 native BeforeCast form transformers.
 use super::test_harness::*;
-use shared::components::{CombatStatus, Player, PowerType};
+use shared::components::{CombatStatus, Health, Player, PowerType};
 use shared::protocol::CombatLogKind;
 
 const CAT: u32 = 768;
@@ -150,6 +150,42 @@ fn class_completeness_native_druid_missing_child_refuses_instead_of_fake_transfo
     assert_eq!(form(&h), None);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, PROWL));
     assert!(h.inbox.go.is_empty());
+}
+
+#[test]
+fn class_completeness_native_berserk_resets_real_thrash_and_growl_cast_cooldowns() {
+    for id in [77758, 6795] {
+        let mut h = druid();
+        h.app.world_mut().entity_mut(h.npc).insert(Health {
+            current: 1_000_000.0,
+            max: 1_000_000.0,
+        });
+        cast_form(&mut h, BEAR);
+        h.cast_and_deliver(id, Some(h.npc));
+        assert!(
+            h.inbox.failed.is_empty(),
+            "initial {id}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == id));
+        h.advance(35);
+        h.inbox = Inbox::default();
+        h.cast_and_deliver(50334, Some(h.caster));
+        assert!(
+            h.inbox.failed.is_empty(),
+            "Berserk {id}: {:?}",
+            h.inbox.failed
+        );
+        h.advance(35);
+        h.inbox = Inbox::default();
+        h.cast_and_deliver(id, Some(h.npc));
+        assert!(
+            h.inbox.failed.is_empty(),
+            "native Berserk must reset {id}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == id));
+    }
 }
 
 #[test]
