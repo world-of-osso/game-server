@@ -15,6 +15,11 @@ pub fn load_design(db: &Database, guild_id: u32) -> Option<GuildTabardDesign> {
         .map(|row| serde_json::from_slice(row.value()).expect("decode guild tabard design"))
 }
 
+pub fn load_character_design(db: &Database, character: u64) -> Option<GuildTabardDesign> {
+    let guild = super::load_character_guild(db, character)?;
+    load_design(db, guild.guild_id)
+}
+
 /// Vendor and catalog validation precede this durable operation on the exclusive server World.
 /// Gold and design share one commit: failed authority/funds never changes either record.
 pub fn register(db: &Database, character: u64, design: GuildTabardDesign) -> Result<u32, String> {

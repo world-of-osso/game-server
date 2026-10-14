@@ -8,7 +8,7 @@ Guild tabard registration follows TrinityCore a352b1fa `Guild.cpp:51,749–753,1
 - [ ] An authenticated living player must retain a valid interaction with a guild tabard vendor. Only the guild leader may register a design.
 - [ ] Each successful registration charges100000c from personal gold. Insufficient funds and rejected registration change neither gold nor design. Charge and design persist atomically.
 - [ ] Colors are validated against installed GuildColorBackground/Border/Emblem rows; selectable designs use installed GuildEmblem and GuildTabard texture data.
-- [ ] Guild snapshots and equipped guild tabards expose the authoritative appearance, including subsequent design changes.
+- [ ] Guild snapshots, character-selection roster entries and equipped guild tabards expose the authoritative appearance, including subsequent design changes. Registration never rewrites character customization or owned equipment.
 
 ## How it works
 
@@ -19,6 +19,7 @@ Guild tabard registration follows TrinityCore a352b1fa `Guild.cpp:51,749–753,1
 - `crates/server/src/persistence_guild_tabards.rs`: optional design storage and atomic payment. Additive table migration leaves all legacy GuildData layouts intact.
 - `crates/server/src/guild_tabards.rs`: authenticated vendor requests, source catalog validation, membership-design replication and replies.
 - `crates/server/src/guild.rs`: snapshot appearance and online member broadcasts.
+- `crates/server/src/auth.rs`, `admin_handlers.rs`: persisted guild design in character-selection roster entries.
 
 ## Tests asserting this spec
 
