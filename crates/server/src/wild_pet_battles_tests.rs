@@ -24,6 +24,46 @@ fn journal() -> PetJournal {
     }
     journal
 }
+fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleStates {
+    journal
+        .pets
+        .iter()
+        .map(|pet| {
+            (
+                pet.id,
+                crate::pet_journal_state::OwnedPetBattleState::initial(&catalog.turns, pet)
+                    .unwrap(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn owned_battle_team_uses_chosen_abilities_injuries_and_living_front_pet() {
+    let catalog = catalog();
+    let mut journal = journal();
+    journal.pets[0].level = 25;
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 1, 202)
+        .unwrap();
+    states.get_mut(&41).unwrap().health = 0;
+    states.get_mut(&42).unwrap().health = 80;
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let team = build_team(&catalog, &identities, &states).unwrap();
+    assert_eq!(team.active, 1);
+    assert_eq!(team.pets[0].health, 0);
+    assert_eq!(team.pets[0].abilities[0], 202);
+    assert_eq!(team.pets[1].health, 80);
+    states.remove(&41);
+    assert!(
+        build_team(&catalog, &identities, &states).is_err(),
+        "missing owned state never restores full health"
+    );
+}
+
 #[test]
 fn wild_pet_battle_production_start_round_capture_and_account_persistence_boundary() {
     let directory = tempfile::tempdir().unwrap();
@@ -153,6 +193,14 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
         .unwrap()
         .encounter
         .battle
+        .teams[0]
+        .pets[0]
+        .health = 73;
+    app.world_mut()
+        .get_mut::<ActiveEncounter>(owner)
+        .unwrap()
+        .encounter
+        .battle
         .teams[1]
         .pets[0]
         .health = 1;
@@ -254,8 +302,58 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
             .get(&20980),
         Some(&1)
     );
+    let saved =
+        crate::pet_journal_state::load_states(&app.world().resource::<GameDatabase>().db, 42)
+            .unwrap();
+    assert_eq!(
+        saved[&41].health, 73,
+        "level-up must not manufacture a heal"
+    );
+    let captured_id = captured
+        .pets
+        .iter()
+        .find(|pet| pet.species_id == 378)
+        .unwrap()
+        .id;
+    assert_eq!(
+        saved[&captured_id].health, 1,
+        "capture preserves actual terminal HP"
+    );
+    let next = app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 61080,
+                name: "Rabbit".into(),
+            },
+            position,
+            crate::maps::InMap::continent(0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitLevel(1),
+        ))
+        .id();
+    start_encounter(app.world_mut(), connection, owner, next.to_bits()).unwrap();
+    assert_eq!(
+        app.world()
+            .get::<ActiveEncounter>(owner)
+            .unwrap()
+            .encounter
+            .battle
+            .teams[0]
+            .pets[0]
+            .health,
+        73,
+        "later encounter consumes persisted injury instead of full-health initialization"
+    );
     drop(app);
     let database = redb::Database::open(&path).unwrap();
+    assert_eq!(
+        crate::pet_journal_state::load_states(&database, 42).unwrap()[&41].health,
+        73
+    );
     assert_eq!(crate::battle_pets::load_journal(&database, 42), captured);
     assert_eq!(crate::battle_pets::load_journal(&database, 43).count(), 0);
     assert_eq!(
@@ -277,7 +375,16 @@ fn wild_pet_battle_current_wild_xp_supports_carry_pets_without_a_legacy_level_ca
 fn wild_pet_battle_trap_requires_a_living_active_ally() {
     let catalog = catalog();
     let journal = journal();
-    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    let mut encounter = Encounter::start(
+        &catalog,
+        &journal,
+        &owned_states(&catalog, &journal),
+        378,
+        1,
+        99,
+        100,
+    )
+    .unwrap();
     encounter.battle.teams[1].pets[0].health = 1;
     encounter.battle.teams[0].pets[0].health = 0;
     assert!(!encounter.can_trap(&journal));
@@ -287,7 +394,16 @@ fn wild_pet_battle_trap_requires_a_living_active_ally() {
 fn wild_pet_battle_real_rabbit_ability_round_is_replayable_and_swap_is_ordered() {
     let catalog = catalog();
     let journal = journal();
-    let encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    let encounter = Encounter::start(
+        &catalog,
+        &journal,
+        &owned_states(&catalog, &journal),
+        378,
+        1,
+        99,
+        100,
+    )
+    .unwrap();
     assert_eq!(
         encounter.snapshot(&catalog, &journal).teams[1][0].species_id,
         378
@@ -343,7 +459,16 @@ fn wild_pet_battle_real_rabbit_ability_round_is_replayable_and_swap_is_ordered()
 fn wild_pet_battle_trap_is_strictly_below_35_and_capture_respects_species_limit() {
     let catalog = catalog();
     let mut journal = journal();
-    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    let mut encounter = Encounter::start(
+        &catalog,
+        &journal,
+        &owned_states(&catalog, &journal),
+        378,
+        1,
+        99,
+        100,
+    )
+    .unwrap();
     let enemy = &mut encounter.battle.teams[1].pets[0];
     enemy.health = (enemy.stats.health * 35 + 99) / 100;
     assert!(
@@ -381,7 +506,16 @@ fn wild_pet_battle_trap_is_strictly_below_35_and_capture_respects_species_limit(
 fn wild_pet_battle_forfeit_has_no_rewards_and_win_xp_survives_reopen() {
     let catalog = catalog();
     let mut journal = journal();
-    let encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    let encounter = Encounter::start(
+        &catalog,
+        &journal,
+        &owned_states(&catalog, &journal),
+        378,
+        1,
+        99,
+        100,
+    )
+    .unwrap();
     let (forfeited, _) = encounter
         .step(
             &catalog,
@@ -428,7 +562,16 @@ fn wild_pet_battle_forfeit_has_no_rewards_and_win_xp_survives_reopen() {
 fn petbattle_effect_hud_turn_lock_disables_abilities_without_guessed_lockdown() {
     let catalog = catalog();
     let journal = journal();
-    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    let mut encounter = Encounter::start(
+        &catalog,
+        &journal,
+        &owned_states(&catalog, &journal),
+        378,
+        1,
+        99,
+        100,
+    )
+    .unwrap();
     assert!(encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0].usable);
     let turn_lock = catalog.turns.state_id("turnLock").unwrap();
     encounter.battle.teams[0].pets[0]
@@ -451,7 +594,16 @@ fn petbattle_effect_hud_turn_lock_disables_abilities_without_guessed_lockdown() 
 fn petbattle_effect_hud_reports_real_mind_games_slot_lockdowns() {
     let catalog = catalog();
     let journal = journal();
-    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    let mut encounter = Encounter::start(
+        &catalog,
+        &journal,
+        &owned_states(&catalog, &journal),
+        378,
+        1,
+        99,
+        100,
+    )
+    .unwrap();
     encounter.battle.teams[0].pets[0].abilities = [110, 123, 2390];
     encounter.battle = encounter
         .battle
@@ -480,7 +632,16 @@ fn petbattle_effect_hud_reports_real_mind_games_slot_lockdowns() {
 fn petbattle_effect_hud_routes_weather_and_team_hazard_separately_across_swap() {
     let catalog = catalog();
     let journal = journal();
-    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    let mut encounter = Encounter::start(
+        &catalog,
+        &journal,
+        &owned_states(&catalog, &journal),
+        378,
+        1,
+        99,
+        100,
+    )
+    .unwrap();
     encounter.battle.teams[0].pets[0].abilities = [404, 190, 527];
     encounter.battle.teams[0].pets[1].abilities = [254, 110, 123];
     for team in &mut encounter.battle.teams {
