@@ -4,13 +4,25 @@ use super::*;
 #[test]
 fn toyfx29_shrine_learn_use_cursor_stationary_and_source_expiry() {
     use crate::spell_cast::summon::SummonedCreature;
-    use shared::components::{Health, ModelDisplay, Npc, UnitIsPet, UnitSummonedBy};
+    use shared::components::{Health, ModelDisplay, Npc, UnitIsPet, UnitLevel, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
     let path = import_toyfx8_world(directory.path());
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
+    let native_level: u8 = conn
+        .query_row(
+            "SELECT minlevel FROM content_creature_template WHERE entry=246037",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(native_level, 1);
     let (mut h, character) = setup(&directory.path().join("shrine.redb"));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((Level(80), UnitLevel(80)));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app
         .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
@@ -42,6 +54,8 @@ fn toyfx29_shrine_learn_use_cursor_stationary_and_source_expiry() {
     assert_eq!(actors.len(), 1);
     let (actor, expires_at) = actors[0];
     assert_eq!(world.get::<ModelDisplay>(actor).unwrap().display_id, 129958);
+    // Source2910 UseCreatureLevel: preserve the native creature level, not owner80.
+    assert_eq!(world.get::<UnitLevel>(actor).unwrap().0, native_level);
     assert_eq!(
         world.get::<UnitSummonedBy>(actor).unwrap().0,
         h.caster.to_bits()
