@@ -26,7 +26,9 @@ mod browse;
 use crate::persistence::mail_store;
 
 mod handlers;
-pub(crate) use handlers::PendingMarketCommits;
+pub(crate) use handlers::{
+    MarketPublication, PendingMarketCommits, enqueue_market_commit, load_auction_state,
+};
 mod operations;
 mod queries;
 

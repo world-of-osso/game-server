@@ -243,6 +243,7 @@ impl Economy {
 impl Plugin for EconomyPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Economy>()
+            .init_resource::<crate::auction_house::PendingMarketCommits>()
             .add_systems(Startup, load_config)
             .add_systems(Update, initialize_economy)
             .add_systems(FixedUpdate, update_economy);
@@ -270,62 +271,95 @@ fn load_config(mut commands: Commands) {
 fn initialize_economy(
     db: Option<Res<GameDatabase>>,
     config: Res<Config>,
-    mut economy: ResMut<Economy>,
+    economy: Res<Economy>,
+    mut pending: ResMut<crate::auction_house::PendingMarketCommits>,
+    mut initialization: Local<bool>,
 ) {
-    let Some(db) = db else { return };
-    if economy.initialized {
+    let Some(db) = db else {
+        return;
+    };
+    if economy.initialized || *initialization {
         return;
     }
-    store::init_state_table(&db.db).expect("initialize economy persistence");
-    economy.state = store::load_state(&db.db)
-        .expect("load economy state")
-        .unwrap_or_default();
-    for merchant in &config.merchants {
-        economy
-            .state
-            .merchants
-            .entry(merchant.entry)
-            .or_insert_with(|| MerchantState {
-                gold: merchant.capital_limit,
-                ..Default::default()
-            });
-    }
-    store::commit_market(
-        &db.db,
-        Some(&economy.state),
-        &store::MarketChanges::default(),
-    )
-    .expect("persist initialized economy");
-    *economy = Economy::from_state(std::mem::take(&mut economy.state));
+    let config = config.clone();
+    crate::auction_house::enqueue_market_commit(
+        &db,
+        &mut pending,
+        None,
+        "initialize economy",
+        move |db| {
+            store::init_state_table(db)?;
+            let mut state = store::load_state(db)?.unwrap_or_default();
+            for merchant in &config.merchants {
+                state
+                    .merchants
+                    .entry(merchant.entry)
+                    .or_insert_with(|| MerchantState {
+                        gold: merchant.capital_limit,
+                        ..Default::default()
+                    });
+            }
+            store::commit_market(db, Some(&state), &store::MarketChanges::default())?;
+            let mut publication = crate::auction_house::MarketPublication::from_auctions(
+                crate::auction_house::load_auction_state(db),
+            );
+            publication.economy = Some(state);
+            Ok(publication)
+        },
+    );
+    *initialization = true;
 }
 
 fn update_economy(
     db: Option<Res<GameDatabase>>,
     config: Res<Config>,
-    mut economy: ResMut<Economy>,
-    mut auctions: ResMut<AuctionHouseState>,
-    mut gold: ResMut<crate::gold::GoldUpdateQueue>,
+    economy: Res<Economy>,
+    auctions: Res<AuctionHouseState>,
+    mut pending: ResMut<crate::auction_house::PendingMarketCommits>,
+    mut cycle: Local<
+        Option<crate::persistence_writer::CommitReceipt<crate::auction_house::MarketPublication>>,
+    >,
 ) {
-    let Some(db) = db else { return };
+    let Some(db) = db else {
+        return;
+    };
     if !economy.initialized || !auctions.initialized {
         return;
     }
-    let mut draw = || rand::random::<u64>();
-    match run_cycle(
-        &db.db,
-        &mut auctions,
-        &mut economy.state,
-        &config,
-        unix_now(),
-        &mut draw,
-    ) {
-        Ok(changed) => {
-            for id in changed {
-                crate::gold::record_persisted_gold(&db.db, id, &mut gold);
-            }
-        }
-        Err(error) => error!("economy cycle aborted: {error}"),
+    if cycle
+        .as_ref()
+        .is_some_and(|receipt| receipt.result().is_none())
+    {
+        return;
     }
+    *cycle = None;
+    let now = unix_now();
+    if economy.state.last_cycle != 0
+        && now.saturating_sub(economy.state.last_cycle) < config.cycle_secs
+    {
+        return;
+    }
+    let config = config.clone();
+    *cycle = Some(crate::auction_house::enqueue_market_commit(
+        &db,
+        &mut pending,
+        None,
+        "economy cycle",
+        move |db| {
+            let mut auctions = crate::auction_house::load_auction_state(db);
+            let mut economy = store::load_state(db)?.ok_or("economy is not initialized")?;
+            let changed = run_cycle(db, &mut auctions, &mut economy, &config, now, &mut || {
+                rand::random::<u64>()
+            })?;
+            let mut publication = crate::auction_house::MarketPublication::from_auctions(auctions);
+            publication.gold = changed
+                .into_iter()
+                .map(|id| (id, crate::persistence::load_inventory(db, id).gold))
+                .collect();
+            publication.economy = Some(economy);
+            Ok(publication)
+        },
+    ));
 }
 
 #[cfg(test)]

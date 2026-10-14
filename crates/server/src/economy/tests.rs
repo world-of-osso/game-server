@@ -1,4 +1,51 @@
 use super::*;
+
+#[test]
+fn economy_cycle_enqueues_without_waiting_for_fifo_writer() {
+    use std::time::{Duration, Instant};
+    let db = crate::persistence::temp_database();
+    let (config, state) = fixture();
+    store::commit_market(&db, Some(&state), &store::MarketChanges::default()).unwrap();
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.insert_resource(GameDatabase::new(db));
+    app.insert_resource(config);
+    app.insert_resource(Economy::from_state(state));
+    app.insert_resource(AuctionHouseState {
+        initialized: true,
+        ..Default::default()
+    });
+    app.init_resource::<crate::gold::GoldUpdateQueue>();
+    app.init_resource::<crate::auction_house::PendingMarketCommits>();
+    app.add_systems(FixedUpdate, update_economy);
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = Instant::now();
+    app.world_mut().run_schedule(FixedUpdate);
+    let elapsed = started.elapsed();
+    let premature = app.world().resource::<Economy>().state.last_cycle;
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "economy tick waited: {elapsed:?}"
+    );
+    assert_eq!(premature, 0, "economy publishes before durable commit");
+    let durable = app
+        .world_mut()
+        .remove_resource::<GameDatabase>()
+        .unwrap()
+        .into_database();
+    assert!(store::load_state(&durable).unwrap().unwrap().last_cycle > 0);
+}
+
 use crate::persistence;
 use model::{MerchantState, Recipe, StockBatch};
 
