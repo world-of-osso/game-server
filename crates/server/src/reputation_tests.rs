@@ -89,12 +89,68 @@ fn grey_kill_grants_no_reputation() {
 }
 
 #[test]
+fn watched_bar_reads_real_renown_progress_and_standard_tier_values_without_catalog_delivery() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let h = crate::bank_test_harness::harness_at(file.path(), "Barseeker").unwrap();
+    let registry = default_faction_registry();
+    let mut reputation = CharacterReputation::default();
+    assert_eq!(
+        read_watched_reputation(h.db(), h.character_id, &reputation, &registry),
+        None
+    );
+    reputation.set_rep(72, 3800);
+    reputation.watch(72);
+    let watched = read_watched_reputation(h.db(), h.character_id, &reputation, &registry).unwrap();
+    assert_eq!(
+        (
+            watched.name.as_str(),
+            watched.value,
+            watched.maximum,
+            watched.capped,
+            watched.is_major_faction,
+            watched.reaction
+        ),
+        ("Stormwind", 800, 6000, false, false, Standing::Friendly)
+    );
+    reputation.set_rep(72, 42_000);
+    let capped = read_watched_reputation(h.db(), h.character_id, &reputation, &registry).unwrap();
+    assert_eq!((capped.value, capped.maximum, capped.capped), (1, 1, true));
+    crate::renown::admin_grant(h.db(), "Barseeker", 12, 6000).unwrap();
+    // Persisted-watch fixture does not assert that the realm evaluated Maruuk eligibility.
+    reputation.watch(2503);
+    let renown = read_watched_reputation(h.db(), h.character_id, &reputation, &registry).unwrap();
+    assert_eq!(
+        (
+            renown.faction_id,
+            renown.name.as_str(),
+            renown.value,
+            renown.maximum,
+            renown.capped,
+            renown.is_major_faction
+        ),
+        (2503, "Maruuk Centaur", 1000, 2500, false, true)
+    );
+    crate::renown::admin_grant(h.db(), "Barseeker", 12, 1_000_000).unwrap();
+    let capped = read_watched_reputation(h.db(), h.character_id, &reputation, &registry).unwrap();
+    assert_eq!(
+        (capped.value, capped.maximum, capped.capped),
+        (0, 2500, true)
+    );
+    reputation.unwatch();
+    assert_eq!(
+        read_watched_reputation(h.db(), h.character_id, &reputation, &registry),
+        None
+    );
+}
+
+#[test]
 fn snapshot_lists_known_factions_with_standing_text() {
     let registry = default_faction_registry();
     let mut reputation = CharacterReputation::new_for_race(&registry, 1);
     reputation.set_rep(72, 30_000);
 
-    let snapshot = build_reputation_snapshot(&reputation, &registry);
+    let h = crate::bank_test_harness::harness().unwrap();
+    let snapshot = read_reputation_snapshot(h.db(), h.character_id, &reputation, &registry);
 
     assert_eq!(snapshot.entries.len(), registry.iter().count());
     let stormwind = snapshot

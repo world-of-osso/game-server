@@ -11,7 +11,7 @@ Authoritative Suggested Content and Traveler's Log snapshots for the [client con
 
 ## Journeys watched faction
 
-Renown requests use Faction IDs, not Covenant IDs, for Retail`C_Reputation.SetWatchedFactionByID`. Zero clears the existing character reputation watch. Queries read live`CharacterReputation`; accepted writes persist through the existing reputation store. Refusals retain both the previous watch and catalog, with an explicit watch error. Unevaluated unlock gates never establish eligibility; all29 current source factions remain gated. This is backing, not certification of native hover controls or the main-screen reputation bar.
+Renown requests use Faction IDs, not Covenant IDs, for Retail`C_Reputation.SetWatchedFactionByID`. Zero clears the existing character reputation watch. Queries read live`CharacterReputation`; accepted writes persist through the existing reputation store. Refusals retain both the previous watch and catalog, with an explicit watch error. Unevaluated unlock gates never establish eligibility; all29 current source factions remain gated. The existing owner-only ReputationStateUpdate carries a small normalized watched-bar payload on login, watch/clear acknowledgements and existing reputation updates. It reads persisted renown standing/threshold separately from the reward catalog, or standard reputation tier progress, and clears explicitly with None. This is backing, not certification of native hover controls or the [main-screen reputation bar](../../../game-engine/docs/specs/reputation-status-bar.md).
 
 ## How it works
 
