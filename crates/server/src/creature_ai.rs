@@ -255,7 +255,12 @@ fn wander_system(
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
-        let mut probe = |feet: Vec3| probe_ground(ground.as_deref_mut(), map, feet);
+        // RandomMovementGenerator rejects non-walkable paths. Unlike a routed
+        // chase, this direct wander step must check walkable support itself.
+        let mut probe = |feet: Vec3| match (ground.as_deref_mut(), map) {
+            (Some(ground), Some(map)) => ground.ground_in(*map, feet),
+            _ => GroundProbe::Unloaded,
+        };
         let next_position = match state.phase {
             WanderPhase::Idle => {
                 tick_idle(&mut state, dt, spawn, *pos, &mut probe);
