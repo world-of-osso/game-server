@@ -92,6 +92,76 @@ fn waypoint_authored_wailing_node2_launches_and_reaches_collision_floor() {
 }
 
 #[test]
+#[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
+fn waypoint_authored_wailing_all_nodes_preserve_collision() {
+    let root = std::path::PathBuf::from(std::env::var_os("WAILING_NAV_ROOT").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let paths = load_script_paths(&db).unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
+    );
+    let navigation = crate::navigation::Navigation::new(&root);
+    let mut los = los::LosMap::new(&root.parent().unwrap().parent().unwrap().join("los/43"));
+    let mut at = Vec3::new(-134.965, 125.402, -78.0945);
+    let mut nodes = 0;
+    for id in [367800, 367801, 367802] {
+        let path = &paths.0[&id];
+        for node in 0..path.nodes.len() {
+            let spawn = SpawnPoint {
+                x: at.x,
+                y: at.z,
+                z: -at.y,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 1.0,
+            };
+            let source = Launch {
+                map: crate::maps::InMap::continent(43),
+                position: at,
+                orientation: 0.0,
+                spawn: &spawn,
+                walking: true,
+                flying: false,
+            };
+            let controls =
+                query_path_controls(path, node, &source, Some(&navigation), Some(&mut ground))
+                    .unwrap_or_else(|error| {
+                        panic!("path{id}/node{} generation: {error}", path.nodes[node].0)
+                    });
+            let spline =
+                launch(controls, false, 0.0, 2.5).expect("strict source spline validation");
+            let mut previous = at;
+            for time in (MINIMAL_DURATION_MS..spline.end_ms)
+                .step_by(50)
+                .chain(std::iter::once(spline.end_ms))
+            {
+                let point = spline.position(time);
+                let a = Vec3::new(previous.x, previous.z, -previous.y);
+                let b = Vec3::new(point.x, point.z, -point.y);
+                assert!(
+                    los.clear(a + Vec3::Y, b + Vec3::Y).unwrap(),
+                    "script controls cross collision path{id}/node{}: {previous:?}->{point:?}",
+                    path.nodes[node].0
+                );
+                previous = point;
+            }
+            at = spline.position(spline.end_ms);
+            nodes += 1;
+        }
+    }
+    assert_eq!(nodes, 49);
+    println!(
+        "all {nodes} authored ground-waypoint nodes validated and collision-clear; end={at:?}"
+    );
+}
+
+#[test]
 fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
     let spawn = SpawnPoint {
         x: 0.0,
