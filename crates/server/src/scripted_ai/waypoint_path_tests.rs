@@ -1,6 +1,7 @@
 //! Generic movement-validation regressions, not invented encounter path data.
 use super::*;
 use crate::scripted_ai::{CreatureAi, CreatureAiState, Ctx};
+use bevy::ecs::system::RunSystemOnce;
 use std::time::Duration;
 
 #[test]
@@ -204,6 +205,126 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
         query_path_controls(&path, 0, &source, None, None).unwrap(),
         vec![Vec3::ZERO, path.nodes[0].1, path.nodes[1].1]
     );
+}
+
+fn motion_ownership_world() -> (World, Entity, Entity) {
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    world.init_resource::<ArrivalReceipts>();
+    world.insert_resource(ScriptPaths(HashMap::from([(
+        1,
+        Arc::new(ScriptPath {
+            id: 1,
+            move_type: MoveType::Walk,
+            flags: FLAG_EXACT_SPLINE,
+            velocity: None,
+            has_node_timing: false,
+            nodes: vec![
+                (0, Vec3::new(6.0, 0.0, 0.0)),
+                (1, Vec3::new(12.0, 0.0, 0.0)),
+            ],
+        }),
+    )])));
+    let actor = world
+        .spawn((
+            bevy(Vec3::ZERO),
+            crate::maps::InMap::continent(0),
+            SpawnPoint {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 1.0,
+            },
+            crate::creature_ai::CreatureState::Idle,
+            CreatureMotion::Still,
+            MovementSpeed(2.5),
+            CreatureAiState {
+                ai: Some(Box::new(ArrivalConsumer)),
+                pending: Default::default(),
+            },
+        ))
+        .id();
+    let target = world
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 10.0,
+        })
+        .id();
+    assert!(move_path(&mut world, actor, 1));
+    (world, actor, target)
+}
+
+fn tick_owned_motion(world: &mut World) {
+    world
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(50));
+    path_movement_system(world);
+    world
+        .run_system_once(crate::creature_ai::chase_system)
+        .unwrap();
+}
+
+#[test]
+fn waypoint_chase_owns_tick_then_path_resumes_from_real_position_without_replaying_nodes() {
+    let (mut world, actor, target) = motion_ownership_world();
+    for _ in 0..80 {
+        tick_owned_motion(&mut world);
+    }
+    let at = *world.get::<Position>(actor).unwrap();
+    assert!(
+        at.x > 6.0 && at.x < 12.0,
+        "past first authored node before preemption: {at:?}"
+    );
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Pursuing {
+            target: target.to_bits(),
+        });
+    let target = *world.get::<Position>(target).unwrap();
+    let target = Vec3::new(target.x, target.y, target.z);
+    for _ in 0..20 {
+        let before = *world.get::<Position>(actor).unwrap();
+        let before = Vec3::new(before.x, before.y, before.z);
+        let expected = before + (target - before).normalize() * (7.0 * 0.05);
+        tick_owned_motion(&mut world);
+        let actual = *world.get::<Position>(actor).unwrap();
+        let actual = Vec3::new(actual.x, actual.y, actual.z);
+        assert!(
+            actual.distance(expected) < 0.0001,
+            "only Chase may drive while active; before={before:?} actual={actual:?} expected={expected:?}"
+        );
+    }
+    assert!(world.resource::<ArrivalReceipts>().0.is_empty());
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Idle);
+    let destination = Vec3::new(12.0, 0.0, 0.0);
+    for _ in 0..40 {
+        let before = *world.get::<Position>(actor).unwrap();
+        let before = Vec3::new(before.x, before.y, before.z);
+        tick_owned_motion(&mut world);
+        let actual = *world.get::<Position>(actor).unwrap();
+        let actual = Vec3::new(actual.x, actual.y, actual.z);
+        let step = actual - before;
+        assert!(
+            step.length() <= 0.126,
+            "no replay/relocation on resume: {before:?}->{actual:?}"
+        );
+        if step.length() > 0.001 {
+            assert!(
+                step.normalize().dot((destination - before).normalize()) > 0.9999,
+                "resume the remaining node, not the already-visited first node: {before:?}->{actual:?}"
+            );
+        }
+    }
+    for _ in 0..200 {
+        tick_owned_motion(&mut world);
+    }
+    assert_eq!(*world.get::<Position>(actor).unwrap(), bevy(destination));
+    assert_eq!(world.resource::<ArrivalReceipts>().0, vec![(1, 1)]);
 }
 
 #[derive(Resource, Default)]
