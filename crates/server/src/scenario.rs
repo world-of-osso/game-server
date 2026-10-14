@@ -234,7 +234,7 @@ fn send_snapshot(world: &mut World, connection: Entity, map: InMap) {
 
 pub(super) fn record(world: &mut World, player: Entity, event: CriteriaEvent) {
     if let Some(map) = world.get::<InMap>(player).copied() {
-        let conditions = player_conditions(world, player);
+        let conditions = event_conditions(world, player, &[event]);
         record_map(world, map, event, &conditions);
     }
 }
