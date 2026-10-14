@@ -1170,3 +1170,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-14: Warrior native stun controls12/12 and adjacent61/61 pass; installed70391 census3185/4459/183 over7827 memberships. New1319011 CSV→published-SQLite gap retained; no whole-talent/Dummy promotion.
 
 - 2026-10-14: Add source-distinct melee/ranged AP model and166/167 percentage consumers; native Battle Shout33→33 and Aimed Shot316 versus408..428 genuine RED retained; GREEN pending.
+
+- 2026-10-14: Native melee/RAP166/167 controls13/13 pass across two scoped receipts; all13 class AP coefficients equal active source. Frontend RAP propagation and NPC/weapon/base budgets remain explicit next layers.
