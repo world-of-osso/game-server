@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Druid automatic forms](systems/spell-casting.md#druid-automatic-forms) — five source BeforeCast native children, Berserk spell/category reset and actual form receipts; charges/GCD and whole-ability limits retained.
+
 - [Native fear fleeing](../class-completeness6.md#native-fear-navmesh-fleeing--batch53) — real player/creature Detour movement/control/lifecycle; source model geometry import and21 shared aura memberships, whole-ability limits retained.
 
 - [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
