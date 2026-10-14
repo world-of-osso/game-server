@@ -33,6 +33,15 @@ impl PendingToyFavourites {
         });
     }
 
+    fn drain_completed(&mut self) -> Vec<(PendingFavourite, Result<(), String>)> {
+        let mut completed = Vec::new();
+        while let Some(result) = self.0.front().and_then(|job| job.receipt.result()) {
+            let job = self.0.pop_front().expect("completed toy favourite receipt");
+            completed.push((job, result));
+        }
+        completed
+    }
+
     #[cfg(test)]
     pub(super) fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -49,36 +58,26 @@ impl ToyPersistencePlugin {
 }
 
 fn publish_toy_favourites(world: &mut World) {
-    let completed = {
-        let mut pending = world.resource_mut::<PendingToyFavourites>();
-        let mut completed = Vec::new();
-        while let Some(result) = pending.0.front().and_then(|job| job.receipt.result()) {
-            completed.push((
-                pending
-                    .0
-                    .pop_front()
-                    .expect("completed toy favourite receipt"),
-                result,
-            ));
-        }
-        completed
-    };
+    let completed = world
+        .resource_mut::<PendingToyFavourites>()
+        .drain_completed();
     for (job, outcome) in completed {
         let authenticated = world
             .get::<Authenticated>(job.connection)
             .is_some_and(|auth| auth.account_id == job.account);
-        if authenticated && world.get::<InWorld>(job.connection).is_some() {
-            if outcome.is_ok() {
-                broadcast(world, job.account);
-            }
-            result(
-                world,
-                job.connection,
-                job.item,
-                ToyOperation::Favourite,
-                None,
-                outcome,
-            );
+        if !authenticated || world.get::<InWorld>(job.connection).is_none() {
+            continue;
         }
+        if outcome.is_ok() {
+            broadcast(world, job.account);
+        }
+        result(
+            world,
+            job.connection,
+            job.item,
+            ToyOperation::Favourite,
+            None,
+            outcome,
+        );
     }
 }

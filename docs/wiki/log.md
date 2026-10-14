@@ -1,3 +1,7 @@
+## 2026-10-14 — FIFO Toy Box favourites
+
+[Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): favourite ownership mutations and owner/account publications now use commit receipts; held-writer, ownership, broadcast and reopen cases pass. Toy learning/item consumption remain separate writers.
+
 ## 2026-10-14 — Pure catalog-derived pet-state reads
 
 [Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): derived pet defaults no longer write while reading; held-writer regression and ownership/injury/ability/reopen behavior pass. Actual pet mutation FIFO conversion remains open.

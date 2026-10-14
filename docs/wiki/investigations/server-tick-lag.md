@@ -132,6 +132,8 @@ NPC-kill reputation `1f9fce4f` now queues the faction/amount policy and reads th
 
 Catalog-derived owned pet combat defaults likewise no longer save from `load_or_initialize_pet_states`. Initialized health/ability values remain in memory; actual ability and battle mutations still persist them. A real held-writer read regressed251.261ms→GREEN5/5 (`derived-pet-reader-{red,green}.log`); default health1563/abilities384,389,459 and unchanged durable empty state are asserted. Injury73/ability202 ownership/reopen cases and the actual PvP forfeit/requeue/reopen scenario pass. Ability/battle mutation FIFO conversion remains open.
 
+Toy favourites enqueue `toy_store::favourite` on FIFO, preserving its fresh durable ownership validation and request order. Successful owner results and account broadcasts wait for receipts; disconnected/rebound owners do not receive stale replies. The real HostClient held-writer RED257.502ms became GREEN4/4, including two queued changes, same-account broadcasts, unlearned refusal and another-character reopen (`toy-favourite-fifo-{red,green}.log`). Toy learning/item consumption remain separate synchronous writers.
+
 Contract: [server tick budget](../../specs/server-tick-budget.md). Existing [persistence](../systems/persistence.md) boundaries remain authoritative.
 
 ## Sources
