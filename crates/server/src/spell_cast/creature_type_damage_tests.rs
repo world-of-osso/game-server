@@ -87,3 +87,48 @@ fn class_completeness_native_creature_type_damage_adds_twenty_percent_against_un
         "native aura168 mask32 must affect actual Fire damage: {enhanced}"
     );
 }
+
+#[test]
+fn class_completeness_native_creature_type_damage_adds_twenty_percent_to_real_autoattack() {
+    let mut h = harness_with_plugins(Vec::new(), &[NEMESIS_UNDEAD], 8, false, |app| {
+        app.insert_resource(native_undead());
+    })
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<crate::stats::CharacterStats>();
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Npc {
+            template_id: FLESH_EATER,
+            name: "Flesh Eater".into(),
+        },
+        Position {
+            x: 3.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    let (caster, target) = (h.caster, h.caster);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target,
+            spell_id: NEMESIS_UNDEAD,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::combat::AutoAttack::new(h.npc));
+    let before = h.health(h.npc);
+    h.advance(2);
+    assert_eq!(
+        before - h.health(h.npc),
+        12.0,
+        "native unarmed10 × aura168 +20% must hit actual health"
+    );
+}
