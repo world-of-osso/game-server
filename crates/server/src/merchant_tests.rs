@@ -108,6 +108,25 @@ fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
             .get(&1874),
         Some(&1)
     );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .get(&6142),
+        Some(&1),
+        "native committed epic purchase must credit ObtainAnyItem91 behind ItemQualityExactly15/4"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6140),
+        "a purchase is not LootAnyItem90"
+    );
     // Tree5192 is MeetsAtLeast8 amount1 (TC IsCompletedCriteriaTree): acquiring 33999
     // or knowing 43927 completes Cenarion War Hippogryph893.
     assert!(
