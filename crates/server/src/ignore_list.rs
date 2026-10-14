@@ -1,3 +1,5 @@
+mod actor;
+use actor::{Mutation, PendingMutations, publish_mutations};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -20,13 +22,14 @@ pub struct IgnoreListPlugin;
 
 impl Plugin for IgnoreListPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.init_resource::<PendingMutations>().add_systems(
             Update,
             (
                 send_initial_ignore_list,
                 process_query_requests,
                 process_add_requests,
                 process_remove_requests,
+                publish_mutations,
             )
                 .chain(),
         );
@@ -109,22 +112,27 @@ fn process_add_requests(
         ),
         With<Authenticated>,
     >,
-    mut ignore_q: Query<&mut PlayerIgnoreListState>,
+    ignore_q: Query<&PlayerIgnoreListState>,
     players: Query<&Player>,
     db: Option<Res<GameDatabase>>,
+    mut pending: ResMut<PendingMutations>,
     mut senders: Query<&mut MessageSender<IgnoreListStateUpdate>>,
 ) {
     let Some(db) = db else { return };
     process_mutation_requests(
         &mut receivers,
-        &mut ignore_q,
+        &ignore_q,
         &db,
+        &mut pending,
         &mut senders,
-        |link, request, ignore_list| {
+        |link, request| {
             let player = players
                 .get(link.0)
                 .map_err(|_| "ignore list unavailable for player".to_string())?;
-            add_ignore(&db.db, ignore_list, &player.name, request.name.trim())
+            Ok(Mutation::Add {
+                self_name: player.name.clone(),
+                target: request.name.trim().to_string(),
+            })
         },
     );
 }
@@ -139,17 +147,23 @@ fn process_remove_requests(
         ),
         With<Authenticated>,
     >,
-    mut ignore_q: Query<&mut PlayerIgnoreListState>,
+    ignore_q: Query<&PlayerIgnoreListState>,
     db: Option<Res<GameDatabase>>,
+    mut pending: ResMut<PendingMutations>,
     mut senders: Query<&mut MessageSender<IgnoreListStateUpdate>>,
 ) {
     let Some(db) = db else { return };
     process_mutation_requests(
         &mut receivers,
-        &mut ignore_q,
+        &ignore_q,
         &db,
+        &mut pending,
         &mut senders,
-        |_, request, ignore_list| remove_ignore(ignore_list, request.name.trim()),
+        |_, request| {
+            Ok(Mutation::Remove {
+                target: request.name.trim().to_string(),
+            })
+        },
     );
 }
 
@@ -158,53 +172,31 @@ fn process_mutation_requests<R, F>(
         (Entity, &PlayerLink, &InWorld, &mut MessageReceiver<R>),
         With<Authenticated>,
     >,
-    ignore_q: &mut Query<&mut PlayerIgnoreListState>,
+    ignore_q: &Query<&PlayerIgnoreListState>,
     db: &GameDatabase,
+    pending: &mut PendingMutations,
     senders: &mut Query<&mut MessageSender<IgnoreListStateUpdate>>,
     mut mutate: F,
 ) where
     R: lightyear::prelude::Message,
-    F: FnMut(&PlayerLink, &R, &mut PlayerIgnoreListState) -> Result<String, String>,
+    F: FnMut(&PlayerLink, &R) -> Result<Mutation, String>,
 {
     for (conn_entity, link, in_world, mut receiver) in receivers.iter_mut() {
         let requests: Vec<_> = receiver.receive().collect();
         if requests.is_empty() {
             continue;
         }
-        let Ok(mut ignore_list) = ignore_q.get_mut(link.0) else {
+        let Ok(_) = ignore_q.get(link.0) else {
             send_error(conn_entity, senders, "ignore list unavailable for player");
             continue;
         };
         for request in requests {
-            let result = mutate(link, &request, &mut ignore_list);
-            handle_mutation_result(
-                conn_entity,
-                in_world.character_id,
-                db,
-                &ignore_list,
-                result,
-                senders,
-            );
-        }
-    }
-}
-
-fn handle_mutation_result(
-    conn_entity: Entity,
-    character_id: u64,
-    db: &GameDatabase,
-    ignore_list: &PlayerIgnoreListState,
-    result: Result<String, String>,
-    senders: &mut Query<&mut MessageSender<IgnoreListStateUpdate>>,
-) {
-    let snapshot = snapshot_from_state(ignore_list);
-    match result {
-        Ok(message) => {
-            persistence::save_ignore_list(&db.db, character_id, ignore_list);
-            send_update(conn_entity, snapshot, Some(message), None, senders);
-        }
-        Err(error) => {
-            send_update(conn_entity, snapshot, None, Some(error), senders);
+            match mutate(link, &request) {
+                Ok(mutation) => {
+                    pending.enqueue(db, conn_entity, link.0, in_world.character_id, mutation)
+                }
+                Err(error) => send_error(conn_entity, senders, &error),
+            }
         }
     }
 }
@@ -314,6 +306,122 @@ fn send_error(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ignore_mutation_waits_for_fifo_without_blocking_updates() {
+        use lightyear::connection::host::HostClient;
+        use std::time::{Duration, Instant};
+        let db = persistence::temp_database();
+        persistence::create_character(&db, 2, "Alice", 1, 8).unwrap();
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: Duration::from_millis(50),
+        });
+        app.register_message::<QueryIgnoreList>();
+        app.register_message::<AddIgnore>();
+        app.register_message::<RemoveIgnore>();
+        app.register_message::<IgnoreListStateUpdate>();
+        app.insert_resource(GameDatabase::new(db))
+            .add_plugins(IgnoreListPlugin);
+        app.finish();
+        app.cleanup();
+        let player = app
+            .world_mut()
+            .spawn((
+                Player {
+                    name: "Fifoignore".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                PlayerIgnoreListState::default(),
+            ))
+            .id();
+        let connection = app
+            .world_mut()
+            .spawn((
+                Connected,
+                RemoteId(PeerId::Local(1)),
+                HostClient { buffer: Vec::new() },
+                Authenticated { account_id: 1 },
+                InWorld { character_id: 42 },
+                PlayerLink(player),
+                MessageSender::<AddIgnore>::default(),
+                MessageReceiver::<AddIgnore>::default(),
+                MessageSender::<RemoveIgnore>::default(),
+                MessageReceiver::<RemoveIgnore>::default(),
+                MessageSender::<IgnoreListStateUpdate>::default(),
+                MessageReceiver::<IgnoreListStateUpdate>::default(),
+            ))
+            .id();
+        app.update();
+        app.world_mut()
+            .get_mut::<MessageReceiver<IgnoreListStateUpdate>>(connection)
+            .unwrap()
+            .receive()
+            .for_each(drop);
+        let held = app
+            .world()
+            .resource::<GameDatabase>()
+            .db
+            .begin_write()
+            .unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            held.abort().unwrap();
+        });
+        app.world_mut()
+            .get_mut::<MessageSender<AddIgnore>>(connection)
+            .unwrap()
+            .send::<IgnoreChannel>(AddIgnore {
+                name: "Alice".into(),
+            });
+        let started = Instant::now();
+        app.update();
+        app.update();
+        let elapsed = started.elapsed();
+        let premature = app
+            .world_mut()
+            .get_mut::<MessageReceiver<IgnoreListStateUpdate>>(connection)
+            .unwrap()
+            .receive()
+            .next();
+        release.join().unwrap();
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "ignore tick waited: {elapsed:?}"
+        );
+        assert!(premature.is_none(), "ignore reply precedes commit");
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            app.update();
+            if let Some(response) = app
+                .world_mut()
+                .get_mut::<MessageReceiver<IgnoreListStateUpdate>>(connection)
+                .unwrap()
+                .receive()
+                .next()
+            {
+                assert!(response.error.is_none());
+                assert_eq!(response.snapshot.unwrap().names, vec!["Alice"]);
+                break;
+            }
+            assert!(Instant::now() < deadline, "no durable ignore reply");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(
+            persistence::load_ignore_list(&app.world().resource::<GameDatabase>().db, 42).names,
+            vec!["Alice"]
+        );
+        assert_eq!(
+            app.world()
+                .get::<PlayerIgnoreListState>(player)
+                .unwrap()
+                .names,
+            vec!["Alice"]
+        );
+    }
 
     #[test]
     fn add_ignore_rejects_self_and_duplicates() {
