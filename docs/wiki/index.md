@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Wildfire primary variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) — reproduced valid upper draw292, source-aligned interval and distinct AP/RAP; merged76 controls/check/fmt pass, no runtime coefficient change.
+
 - [Shared weapon-spell defense roll](systems/player-damage.md#shared-weapon-spell-defense-roll) — native cumulative miss/deflect/block and quantization,19 bounded controls; other hit-system outcomes remain gaps.
 
 - [Ordinary NPC weapon-spell blocks](systems/player-damage.md#native-player-criticalblock-hit-state) — authenticated NO_BLOCK16 versus NO_XP64, native30%/critical60% damage and facing/stun; four NPC plus eleven player controls pass, Totem runtime/full probability order remain gaps.

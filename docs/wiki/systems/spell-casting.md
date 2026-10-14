@@ -90,6 +90,10 @@ Sigil uses the existing destination-owned ground pulse lifecycle with period0: w
 
 Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood's last remaining Dummy root closes. Native238-row equivalence and exact previous40-spec ID sets checked. Targeted11/11 warning-free; single post-origin/master spell_cast gate360/360, fmt/check pass at6a56656. Detailed corrected RED and proof boundaries live in the coverage ledger. Guardian inheritance/melee and Eye Beam11-vs-tooltip10 discrepancy unchanged.
 
+## Wildfire primary variance fixture
+
+Current native source values replace stale golden constants, not runtime coefficients or variance tolerance. A legitimate upper primary draw reproduced the master red; bounded real casts now cover the full source interval while distinct AP/RAP preserve owned bleed and splash limits. [Source, exact failure and merged proof](../../class-completeness6.md#wildfire-primary-variance-master-red--batch61).
+
 ## Fourteenth batch: owned hits and native clocks
 
 [Contract](../../specs/spell-dummy-scripts.md#fourteenth-batch-local-hit-actor-and-periodic-consumers), [capabilities/proof/all40](../../spell-dummy14-coverage.md). `scripts/batch14.rs` binds Frozen Orb/Blizzard's distinct named hit slows, Survival Kill Command's actual persistent-pet caster, Wildfire's named primary hit/bleed, Deathmark's80 total Energy on its existing bleed clock, Eye Beam's named primary/ranked crit, Metamorphosis's8yd destination hit and player daze, and Consume's named Fury. These are eight bounded entries, not full class/talent parity. Frost child-hit tests are not root-cast A proofs; cone179/129 actors remain separate gaps.

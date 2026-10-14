@@ -1,3 +1,7 @@
+## 2026-10-14 — Wildfire primary variance master red
+
+[Native variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) re-sources coefficient/primary bonus without widening tolerance or changing runtime math. Actual292 upper draw reproduces the stale interval;256 primary draws plus owned six-tick/expiry and AP37/RAP100 controls pass within merged76 tests/check/fmt. Cone/secondary and whole-class certification remain gaps.
+
 ## 2026-10-14 — Shared weapon-spell defense roll
 
 [Implemented physical defenses](systems/player-damage.md#shared-weapon-spell-defense-roll) share one quantized cumulative roll. Native Sling Mud/Improved Blocking produces genuine unblocked-hit RED;60 Slam and60 Aimed Shot/Veil trials now pass with retained controls (19 total). 45 adjacent controls/check/fmt also pass. Missing dodge/parry, mechanic resistance, player baseline and independent acceptance remain explicit.
