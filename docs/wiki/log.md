@@ -1225,7 +1225,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 ## 2026-10-14 — Earned-player prerequisite qualifiers
 
-[Positive87](systems/dungeon-achievements.md#earned-player-prerequisite-qualifiers) requires authored prerequisite IDs. Valid native REDb5ab795c uses the existing full App: actual220737 self-hit grants10460, then accepted Warsong player kill leaves32961Nonevs1. Initial NPC fixture used wrong event and bare World lacked cast resources; those failures are not credit proof. Actor-scope REDf94bd699 reproduces another character's10460 leaking through raw account aggregates into32961. The reader now shares the snapshot's scoped earned-ID iterator; account contribution storage is unchanged. Compiler RED valid; GREEN/integration pending. No artifact acquisition/challenge/full1000-kill/UI certification.
+[Positive87](systems/dungeon-achievements.md#earned-player-prerequisite-qualifiers) requires authored prerequisite IDs. Valid native REDb5ab795c uses the existing full App: actual220737 self-hit grants10460, then accepted Warsong player kill leaves32961Nonevs1. Initial NPC fixture used wrong event and bare World lacked cast resources; those failures are not credit proof. Actor-scope REDf94bd699 reproduces another character's10460 leaking through raw account aggregates into32961. The reader now shares the snapshot's scoped earned-ID iterator; account contribution storage is unchanged. Compiler36/36; native/catalog GREEN35ef2818 passes2/2(25.17s), same-account isolation and reopened counter2. Generated5693/census5490+1821/all243/pinned membership reconciled; integration pending. No artifact acquisition/challenge/full1000-kill/UI certification.
 
 ## 2026-10-14 — Pre-effect spell-hit target creature entries
 
