@@ -60,7 +60,27 @@ fn assert_wailing_rewards(entry: u32, copper: u64, rewards: &[(u32, u32)]) {
         ),
         _ => panic!("not a Wailing primary: {entry}"),
     };
-    assert!(coins.contains(&copper), "{entry} authored coin bounds");
+    // Project contract auto-sells poor-quality drops (docs/specs/loot.md).
+    // Exact current70391 SellPrice sums; each authored poor drop has count1.
+    let (sale_bonuses, grey_items): (&[u64], &[u32]) = match entry {
+        3653 => (&[0, 155, 903, 1058], &[4555, 4556]),
+        3674 => (&[0, 155, 202, 357], &[5125, 5128]),
+        3654 => (&[0, 7, 16, 23], &[730, 17057]),
+        _ => (&[0], &[]),
+    };
+    let authored_coins_with_sales = sale_bonuses.iter().any(|bonus| {
+        copper
+            .checked_sub(*bonus)
+            .is_some_and(|base_coins| coins.contains(&base_coins))
+    });
+    assert!(
+        authored_coins_with_sales,
+        "{entry} copper{copper} outside authored coins plus grey sales"
+    );
+    assert!(
+        rewards.iter().all(|(item, _)| !grey_items.contains(item)),
+        "poor drops converted to coins, not inventory items"
+    );
     assert!(
         rewards.iter().all(|(item, _)| pool.contains(item)),
         "{entry} authored item pool"
