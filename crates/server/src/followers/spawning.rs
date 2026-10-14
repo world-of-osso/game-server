@@ -95,6 +95,7 @@ pub(super) fn class_stats(
         mastery_coefficient: 0.0,
         attack_power_per_strength: class.attack_power_per_strength,
         attack_power_per_agility: class.attack_power_per_agility,
+        ranged_attack_power_per_agility: class.ranged_attack_power_per_agility,
         gear_primary: Default::default(),
         gear_ratings: Default::default(),
     };
