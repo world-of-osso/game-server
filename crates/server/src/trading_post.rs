@@ -72,8 +72,10 @@ fn receive_requests(world: &mut World) {
         })
         .collect();
     for (connection, account, player, request) in requests {
+        info!(?connection, account, ?request, "TP_DELIVERY_SERVER_RECV");
         crate::adventure_guide::refresh_for_connection(world, connection);
         let result = execute(world, connection, account, player, &request);
+        info!(?connection, ?result, "TP_DELIVERY_SERVER_EXECUTE");
         if let Ok(Some((_, grant))) = &result {
             publish_collections(world, account, grant);
         }
@@ -280,7 +282,10 @@ fn send_snapshot(
         row.usable = item_usability(world, connection, row.item_id);
     }
     if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
+        info!(?connection, full=snapshot.catalog_complete, rows=snapshot.items.len(), tender=snapshot.tender, frozen=?snapshot.frozen_item_id, error=?snapshot.error, "TP_DELIVERY_SERVER_SEND");
         sender.send::<InstanceChannel>(snapshot);
+    } else {
+        error!(?connection, "TP_DELIVERY_SERVER_MISSING_SENDER");
     }
 }
 
