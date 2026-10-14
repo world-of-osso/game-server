@@ -150,7 +150,7 @@ fn class_completeness_native_charred_warblades_removal_discards_pending_heals() 
     let mut h = fixture();
     assert!(hit(&mut h, FIRE_HIT) > 0);
     let unit = h.caster;
-    remove_auras(h.app.world_mut(), unit, RemoveReason::Cancel, |aura| {
+    remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {
         aura.spell_id == CHARRED
     });
     apply_aura(
