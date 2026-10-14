@@ -445,6 +445,7 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
 fn class_completeness_native_creature_spell_block_uses_creature_percent_not_player_shield() {
     for critical in [false, true] {
         let mut h = harness(Vec::new(), &[1464, 10021, 203524], 1).unwrap();
+        h.app.insert_resource(load_native_creature_world(&[6]));
         let target = h.npc;
         h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
         h.app.world_mut().entity_mut(target).insert(Rotation {
