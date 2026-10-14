@@ -38,6 +38,11 @@ fn toyfx29_shrine_learn_use_cursor_stationary_and_source_expiry() {
     let destination = [origin.x + 3.0, origin.y, origin.z];
     learn_effect_toy(&mut h, character, 245942);
     assert_eq!(
+        h.app.world().get::<Level>(h.caster).unwrap().0,
+        80,
+        "fixture caster level changed during learning"
+    );
+    assert_eq!(
         activate_at(&mut h, 245942, Some(destination))[0].error,
         None
     );
