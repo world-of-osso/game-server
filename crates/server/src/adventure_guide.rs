@@ -48,7 +48,6 @@ pub(crate) fn load_catalog(
 #[derive(Component, Clone, Copy, Default)]
 pub(crate) struct MonthlySummary {
     pub points: u32,
-    pub start_unix: i64,
     pub end_unix: i64,
 }
 
@@ -229,7 +228,6 @@ fn settle_and_project_month(
     }
     world.entity_mut(connection).insert(MonthlySummary {
         points: snapshot.points,
-        start_unix: snapshot.month.start_unix,
         end_unix: snapshot.month.end_unix,
     });
     snapshot

@@ -271,7 +271,6 @@ fn send_snapshot(
         .copied()
         .unwrap_or(crate::adventure_guide::MonthlySummary {
             points: 0,
-            start_unix: calendar.start_unix,
             end_unix: calendar.end_unix,
         });
     let state = store::load(&world.resource::<GameDatabase>().db, account);
