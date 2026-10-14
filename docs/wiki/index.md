@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Pre-effect spell-hit target health](systems/dungeon-achievements.md#pre-effect-spell-hit-target-health) — inclusive46, actual unit health before effects; missing authority rejects.
+
 - [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation) — coherent predicates/census5479+1821, build delta and retained auxiliary-source boundary.
 
 - [Active installed achievement import](systems/dungeon-achievements.md#active-installed-achievement-import) — active Retail build agreement, actual layout guards and atomic four-table replacement.
