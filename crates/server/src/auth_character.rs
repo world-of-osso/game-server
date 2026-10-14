@@ -117,12 +117,44 @@ pub fn process_delete_character(
     )>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<DeleteCharacterResponse>>,
+    mut pending: Local<Vec<PendingDeletion>>,
 ) {
+    pending.retain(|deletion| {
+        let Some(result) = deletion.commit.result() else {
+            return true;
+        };
+        let same_owner = receivers
+            .get(deletion.connection)
+            .is_ok_and(|(_, auth, _)| auth.account_id == deletion.account);
+        if same_owner && let Ok(mut sender) = senders.get_mut(deletion.connection) {
+            sender.send::<AuthChannel>(DeleteCharacterResponse {
+                success: result.is_ok(),
+                character_id: deletion.character,
+                error: result.err(),
+            });
+        }
+        false
+    });
     let Some(db) = db.as_ref() else { return };
-    let requests = collect_delete_requests(&mut receivers);
-    for (entity, account_id, req) in requests {
-        handle_delete(entity, account_id, &req, db, &mut senders);
+    for (entity, account_id, req) in collect_delete_requests(&mut receivers) {
+        let character = req.character_id;
+        let commit = db.writer.enqueue("character deletion", move |db| {
+            persistence::delete_character(db, account_id, character)
+        });
+        pending.push(PendingDeletion {
+            connection: entity,
+            account: account_id,
+            character,
+            commit,
+        });
     }
+}
+
+pub struct PendingDeletion {
+    connection: Entity,
+    account: u64,
+    character: u64,
+    commit: crate::persistence_writer::CommitReceipt,
 }
 
 pub(crate) fn collect_delete_requests(
@@ -145,34 +177,6 @@ fn collect_account_requests<M: lightyear::prelude::Message>(
         }
     }
     out
-}
-
-fn handle_delete(
-    entity: Entity,
-    account_id: u64,
-    req: &DeleteCharacter,
-    db: &GameDatabase,
-    senders: &mut Query<&mut MessageSender<DeleteCharacterResponse>>,
-) {
-    let Ok(mut sender) = senders.get_mut(entity) else {
-        return;
-    };
-    match persistence::delete_character(&db.db, account_id, req.character_id) {
-        Ok(()) => {
-            sender.send::<AuthChannel>(DeleteCharacterResponse {
-                success: true,
-                character_id: req.character_id,
-                error: None,
-            });
-        }
-        Err(e) => {
-            sender.send::<AuthChannel>(DeleteCharacterResponse {
-                success: false,
-                character_id: req.character_id,
-                error: Some(e),
-            });
-        }
-    }
 }
 
 /// Process character selection and world entry.

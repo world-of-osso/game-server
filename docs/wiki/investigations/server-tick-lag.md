@@ -100,6 +100,12 @@ Budget remains **unmet**. Initial debug baseline `11988b33`: admission5.9ticks/s
 
 Latest tick-thread maxima: `save_account_progress`223ms, `save_monthly_contribution`120ms, achievement flush376ms, initial Toy publication252ms, periodic character save204ms and economy update967ms. Source-only caching does not remove those durable transactions. Neither reduced durability, a larger tick budget nor altered admission timeouts is implemented. Durable evidence: `game-engine/data/diagnostics/server-tick-perf-2026-10-13/`; `toy-cache-server.log`, `toy-cache-client.log`, `auth-admission-regressions.log`, `interest-final-tests-corrected.log`, `protocol-preparation-tests-corrected.log`, `prepared-navigation-tests.log`. Earlier zero-test filters are not evidence.
 
+### Release confirmation and FIFO work (verified 2026-10-13)
+
+Lead requires private release builds for acceptance; debug timings above are diagnostics only. Bookworm release `a43247f6` private5831: entry13.136s;69-cell worker10.621s; cold entry max1176.1ms. Last four online windows20Hz, mean15.1–17.0ms/max38.9ms. Dedicated commit spans confirm actual tick-thread account commit212.926ms and monthly313.132ms. Logs: `release-current-build.log`, `release-current-server.log`, `release-current-client.log`. Host load is not controlled; no paired release improvement claim yet.
+
+Approved persistence follows pinned TrinityCore `DatabaseWorkerPool::AsyncCommitTransaction` (`src/server/database/Database/DatabaseWorkerPool.h:151–156`, a352b1fa). `GameDatabase::new` now owns an Arc database and one FIFO writer. Account/monthly working contributions are cached per database so later tick reads see enqueued state; owned character/account byte snapshots commit atomically on the worker. Failures log and increment counters; writer drop drains. Pet journal reads no longer create/commit a table during a read.3 targeted tests pass: actual blocked-redb monthly enqueue (RED250.629ms), FIFO withholding/drain and failed-job metrics. Periodic owned character snapshots, subprocess abrupt-exit proof and character-delete receipt gating are implemented but pending verification. Other synchronous writers and gameplay reply paths still require conversion; the goal is not complete.
+
 Contract: [server tick budget](../../specs/server-tick-budget.md). Existing [persistence](../systems/persistence.md) boundaries remain authoritative.
 
 ## Sources
