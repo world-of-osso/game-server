@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Alterac captain combat](investigations/alterac-captain-combat.md) — AV25 source stat budget and incomplete normal combat driver; missing script is not a proven wipe cause.
+
 - [Authored goober spell dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) — native persistent-owner Workshop pickup RED6→GREEN1/1 with leased dependency provenance; timed siege activation remains separate.
 - [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; native13 controls pass, frontend RAP propagation and whole-AP limits remain open.
 
