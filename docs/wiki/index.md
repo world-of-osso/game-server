@@ -1,8 +1,14 @@
 # Wiki Index
 
+- [Current personal arena ratings](systems/dungeon-achievements.md#current-personal-arena-ratings) — current asset0/1, durable post-result highest values; native rated fixture, other brackets unclaimed.
 - [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
 
+- [Wailing native summon groups](systems/boss-scripts.md#wailing-native-summon-groups) — authored Mutanus group/copy/target/credit/corpse lifetime, shared SmartAI implementation; activation/escort/native acceptance remain separate.
+
+- [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
+
+- [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; prepared follower73/player-pet persistence10 plus checks/fmt pass; full-instance/authored-kit/stat-budget acceptance remains open.
 
 - [Follower class/native follow](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13) — eleven actual basic-role casts, Cobra Shot class-level crash fixed, real Stockade navmesh/collision/progress regression and authored private12-tile Ruby ground package; advanced AI/live completion open.
@@ -21,7 +27,7 @@
 - [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
 - [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13) — native evaluator reused; actual faction-isolated XP-cap Double Agent and reopened account persistence.
 
-- [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
+- [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; [current Type39](systems/dungeon-achievements.md#current-personal-arena-ratings) maps authored0/1 separately; other bracket sources remain disabled.
 
 - [Recovery rates](systems/auras.md#cooldown-recovery-rates) — native286 future/running spell/category timers, real Rapid Fire/Sprint/Hot Hand boundaries and owner updates; full ability/rendered limits retained.
 

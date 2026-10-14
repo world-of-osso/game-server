@@ -733,6 +733,11 @@ impl Ctx<'_> {
         crate::zones::summon_creature(self.world, self.me, entry, position)
     }
 
+    /// `WorldObject::SummonCreatureGroup`: authored membership, positions and lifetimes.
+    pub fn summon_creature_group(&mut self, group_id: u32) -> Option<Vec<Entity>> {
+        smart_ai::summons::summon_creature_group(self, group_id)
+    }
+
     /// `MotionMaster::MovePoint(id, pos)` of `unit`, walking when it walks.
     pub fn move_point(&mut self, unit: Entity, id: u32, target: shared::components::Position) {
         movement::move_point(self.world, unit, id, target);

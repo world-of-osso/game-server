@@ -792,6 +792,7 @@ pub(crate) fn record_ranked_arena_result(
     world: &mut World,
     player: Entity,
     before_rating: u32,
+    after_rating: u32,
     map: u32,
     won: bool,
 ) {
@@ -801,6 +802,7 @@ pub(crate) fn record_ranked_arena_result(
         .find_map(|(connection, _, link, _)| (link.0 == player).then_some(connection));
     let Some(connection) = connection else { return };
     let mut events = vec![CriteriaEvent::ParticipateInArena(map)];
+    events.extend(personal_arena_rating_event(world, player, after_rating));
     if won {
         events.extend([
             CriteriaEvent::WinAnyRankedArena(before_rating.max(1)),
@@ -814,6 +816,20 @@ pub(crate) fn record_ranked_arena_result(
     if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map)) {
         send_updates(world, connection, snapshot, toasts);
     }
+}
+
+/// Current data's0/1 refer to2v2/3v3; read the actual accepted rated copy.
+fn personal_arena_rating_event(
+    world: &World,
+    player: Entity,
+    rating: u32,
+) -> Option<CriteriaEvent> {
+    let bracket = match crate::pvp::player_arena_conditions(world, player) {
+        Some((2, true)) => 0,
+        Some((3, true)) => 1,
+        _ => return None,
+    };
+    Some(CriteriaEvent::PersonalArenaRating { bracket, rating })
 }
 
 pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {
