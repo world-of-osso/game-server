@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Sea-Blessed Shrine245942/1240082 uses authentic TDB246037/display129958. Require the explicit source destination87; preserve owner/map identity, stationary placement and180000ms natural expiry. No AI, interaction or pet-control payload is inferred. Native source-model acceptance remains a separate per-skin gate.
+
 - Prismatic Bauble140309/223143 uses only its source complete-zero self cosmetic aura: instant cast,20000ms duration and current authored120000ms ItemEffect recovery. Ordinary cast model982939 and aura model1417024 attach at34; preserve source aura pitchpi/2, scale1 and natural aura-end removal without changing body/health/position or clearing recovery. No inferred event-specific cooldown override; description's Darkspear Dash alternative remains untraced, not silently implemented.
 
 - Accursed Tome of the Sargerei127670/187146 uses only the source zero-payload self aura: instant cast,300000ms duration,3600000ms item recovery. Native ordinary model1097945 uses attachment17 and source offsets(-.3,0,.3), scale1; preserve original body, health and position. Aura removal must retain item recovery. No generic dummy-aura or inferred gameplay effect.
