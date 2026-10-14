@@ -107,3 +107,5 @@ All references use TrinityCore **a352b1fa**:
 - `src/server/game/Entities/Object/Object.cpp:709–746`: non-flying ground height normalization. Existing collision sampler and player slope policy stay unchanged.
 
 See [navigation contract](../../specs/navigation.md#cpp-script-ground-waypoints) and [escort camps](boss-scripts.md#wailing-second-escort-camp-2026-10-14).
+
+Physical follow-up RED at989ee7de reached a terminal surface-step XZ exactly: `(-108.064,-227.872)`; provisional Detour+0.5 height -88.98659 vs authored -89.9264. The initial port wrongly rejected GetSteerTarget exhaustion despite valid generated controls. Pinned FindSmoothPath instead breaks, BuildPointPath checks count, then NormalizePath corrects support. Adopt that exact stop/count ordering; no segment filtering or validation relaxation.
