@@ -205,7 +205,8 @@ fn creature_spell_block_chance(
     unit: Entity,
     auras: Option<&ActiveAuras>,
 ) -> f32 {
-    const CREATURE_FLAG_EXTRA_NO_BLOCK: u32 = 0x40;
+    // TC a352b1fa CreatureData.h348; 0x40 is NO_XP, not NO_BLOCK.
+    const CREATURE_FLAG_EXTRA_NO_BLOCK: u32 = 0x10;
     const CREATURE_BLOCK_CHANCE: f32 = 3.0;
     const BLOCK_CHANCE_PER_LEVEL: f32 = 1.5;
     let Some(npc) = world.get::<shared::components::Npc>(unit) else {
