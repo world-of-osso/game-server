@@ -268,10 +268,15 @@ mod tests {
                 map_id: row.get(0)?, position: Vec3::new(row.get(1)?,row.get(2)?,row.get(3)?), orientation: row.get(4)?,
             }),
         ).unwrap();
-        h.app
-            .world_mut()
-            .entity_mut(h.caster)
-            .insert((InMap::continent(start.map_id), start.bevy_position()));
+        h.app.world_mut().entity_mut(h.caster).insert((
+            InMap::continent(start.map_id),
+            start.bevy_position(),
+            shared::components::Rotation {
+                x: 0.0,
+                y: start.orientation + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+        ));
         h.app.world_mut().entity_mut(h.connection).insert((
             crate::auth::InWorld { character_id: 30 },
             MessageSender::<NewWorld>::default(),
