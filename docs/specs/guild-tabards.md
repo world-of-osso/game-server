@@ -19,17 +19,16 @@ Guild tabard registration follows TrinityCore a352b1fa `Guild.cpp:51,749–753,1
 - `crates/server/src/persistence_guild_tabards.rs`: optional design storage and atomic payment. Additive table migration leaves all legacy GuildData layouts intact.
 - `crates/server/src/guild_tabards.rs`: authenticated vendor requests, source catalog validation, membership-design replication and replies.
 - `crates/server/src/guild.rs`: snapshot appearance and online member broadcasts.
-- `crates/server/src/auth.rs`, `admin_handlers.rs`: persisted guild design in character-selection roster entries.
+- `crates/server/src/auth_character.rs`: shared persisted roster projection; `auth.rs`, `admin_handlers.rs` consume it.
 
 ## Tests asserting this spec
 
 - `crates/server/src/persistence_guild_tabards_tests.rs`: database reopen, legacy guild preservation, leader authority, exact/repeated payment and rejection state.
 - `crates/server/src/npc_interaction/guild_tabard_tests.rs`: real Jondor5130 gossip/service, host-client requests, catalog/auth/target/range rejection and successful replicated design/payment.
 
-## Known gaps (current cycle)
+## Proof boundaries (2026-10-14)
 
-- [ ] Vendor request routing and source catalog validation.
-- [ ] Appearance snapshots/replication and native TabardFrame/character rendering.
+Four focused server tests cover durable design/payment, persisted roster projection and authenticated live-NPC service validation. Client rendering uses separate offline native fixtures, not a connected client/server acceptance run. Final merged checks and lead protocol gate remain pending.
 
 ## Out of scope
 
