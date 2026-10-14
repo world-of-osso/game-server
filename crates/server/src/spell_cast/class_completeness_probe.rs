@@ -302,8 +302,14 @@ fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
         .copied()
         .collect();
     let applied = crate::auras::has_aura(h.app.world(), h.caster, row.id);
+    let form_after = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .and_then(crate::auras::shapeshift::current_form)
+        .map(|(_, form)| form);
     json!({"spec": spec.id, "spell": row.id, "passive": row.passive,
-        "passive_applied": applied, "form_prerequisite": form_prerequisite,
+        "passive_applied": applied, "form_prerequisite": form_prerequisite, "form_after": form_after,
         "failed": h.inbox.failed, "go": h.inbox.go,
         "baseline_aura_warnings": baseline_warnings, "aura_warnings": warnings,
         "effect_warnings": effects, "resources_before": before, "resources_after": after,
