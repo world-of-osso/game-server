@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Slagmaw source primary](systems/boss-scripts.md#slagmaw-source-primary) — pinned NPC61463/BOSS2→1445/bit2 authenticates identity despite distinct Journal/live models; copy-only SQL preserves both appearances.
+
 - [Wailing native summon groups](systems/boss-scripts.md#wailing-native-summon-groups) — authored Mutanus group/copy/target/credit/corpse lifetime, shared SmartAI implementation; activation/escort/native acceptance remain separate.
 
 - [Damage shields](systems/auras.md#damage-shields) — source aura15 after positive melee damage, original-caster bonuses, death-aura ordering and scoped Anacondra controls; full encounters remain open.
