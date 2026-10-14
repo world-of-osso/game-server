@@ -1,3 +1,7 @@
+## 2026-10-14 — FIFO discovery/social slices and release p99
+
+[Tick lag](investigations/server-tick-lag.md#additional-writer-slices-and-release-smoke-verified-2026-10-14): world-map4/4, ignore4/4, friends19/19 and pure missing-state readers pass blocked-writer behavioral proof. Private release1e401adf/protocol26771bb8 online per-window p99=22.5/23.7/27.9/20.0/13.0ms; admission991.3ms. Full gameplay script, complete commit instrumentation and HOL remain open; one online frame exceeds50ms.
+
 ## 2026-10-13 — Login/catalog/admission budget investigation
 
 [Tick lag](investigations/server-tick-lag.md#logincatalogadmission-investigation-verified-2026-10-13): achievement fact/index/publication, aura watchers, worker geometry, replication bootstrap, async credentials and owner-shared Toy presentation fixes have targeted proof.22 auth/admission and32 interest tests plus2 LOS/2 navigation preparation tests pass. Private debug live50ms acceptance remains unmet; synchronous durable writes and economy stalls retained explicitly.
