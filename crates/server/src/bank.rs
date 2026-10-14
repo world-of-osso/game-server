@@ -136,6 +136,7 @@ struct Vault<'w, 's> {
     gold: ResMut<'w, GoldUpdateQueue>,
     contents: Query<'w, 's, &'static mut MessageSender<BankContents>>,
     failures: Query<'w, 's, &'static mut MessageSender<BankFailed>>,
+    commands: Commands<'w, 's>,
 }
 
 /// The requesting connection and its open banker.

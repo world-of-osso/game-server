@@ -44,7 +44,9 @@ pub(super) fn publish_bank_commits(
             vault.gold.record(patron.character_id, gold);
         }
         for (character, event) in publication.criteria {
-            vault.gold.record_criteria(character, event);
+            vault.commands.queue(move |world: &mut World| {
+                crate::achievement::record_character_event(world, character, event);
+            });
         }
         let same_owner = sessions.get(patron.connection).is_ok_and(|(world, auth)| {
             world.character_id == patron.character_id && auth.account_id == patron.account_id
