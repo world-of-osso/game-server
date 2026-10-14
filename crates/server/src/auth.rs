@@ -107,12 +107,14 @@ pub fn deliver_forced_disconnects(
 }
 
 #[derive(Default)]
-pub(crate) struct PasswordLogins(
-    std::collections::HashMap<
+pub(crate) struct PasswordLogins {
+    verifications: std::collections::HashMap<
         Entity,
         bevy::tasks::Task<Result<persistence_accounts::PreparedPasswordLogin, String>>,
     >,
-);
+    commits:
+        std::collections::HashMap<Entity, crate::persistence_writer::CommitReceipt<(u64, String)>>,
+}
 
 /// Process login requests from pending-auth connections.
 pub fn process_login_requests(
@@ -124,18 +126,19 @@ pub fn process_login_requests(
     mut pending: Local<PasswordLogins>,
 ) {
     let Some(db) = db.as_ref() else { return };
-    pending.0.retain(|entity, _| receivers.contains(*entity));
-    let completed: Vec<_> = pending
-        .0
-        .iter_mut()
-        .filter_map(|(entity, task)| {
-            bevy::tasks::block_on(bevy::tasks::poll_once(task)).map(|result| (*entity, result))
-        })
+    pending
+        .verifications
+        .retain(|entity, _| receivers.contains(*entity));
+    pending
+        .commits
+        .retain(|entity, _| receivers.contains(*entity));
+    let committed: Vec<_> = pending
+        .commits
+        .iter()
+        .filter_map(|(entity, receipt)| receipt.result().map(|result| (*entity, result)))
         .collect();
-    for (entity, result) in completed {
-        pending.0.remove(&entity);
-        let result = result
-            .and_then(|prepared| persistence_accounts::complete_password_login(&db.db, prepared));
+    for (entity, result) in committed {
+        pending.commits.remove(&entity);
         finish_login(
             entity,
             result,
@@ -145,9 +148,28 @@ pub fn process_login_requests(
             &mut commands,
         );
     }
+    let completed: Vec<_> = pending
+        .verifications
+        .iter_mut()
+        .filter_map(|(entity, task)| {
+            bevy::tasks::block_on(bevy::tasks::poll_once(task)).map(|result| (*entity, result))
+        })
+        .collect();
+    for (entity, result) in completed {
+        pending.verifications.remove(&entity);
+        match result {
+            Ok(prepared) => {
+                let receipt = db.writer.enqueue("verified login token", move |db| {
+                    persistence_accounts::complete_password_login(db, prepared)
+                });
+                pending.commits.insert(entity, receipt);
+            }
+            Err(error) => send_login_error(entity, &mut senders, &error),
+        }
+    }
     let logins = collect_pending_auth_requests(&mut receivers);
     for (entity, req) in logins {
-        if pending.0.contains_key(&entity) {
+        if pending.verifications.contains_key(&entity) || pending.commits.contains_key(&entity) {
             send_login_error(entity, &mut senders, "Login request already in progress");
             continue;
         }
@@ -155,7 +177,7 @@ pub fn process_login_requests(
             Ok(persistence_accounts::PreparedLogin::Password(prepared)) => {
                 let pool =
                     bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
-                pending.0.insert(
+                pending.verifications.insert(
                     entity,
                     pool.spawn(async move { prepared.verify(&req.password) }),
                 );

@@ -25,6 +25,74 @@ fn achievement_monthly_snapshot_never_waits_for_a_busy_durable_writer() {
 }
 
 #[test]
+fn achievement_account_monthly_writer_snapshots_preserve_cross_owner_order() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (first, _) = persistence::create_character(&db, 41, "Firstqueue", 1, 1).unwrap();
+    let (second, _) = persistence::create_character(&db, 42, "Otherqueue", 1, 1).unwrap();
+    let db = GameDatabase::new(db);
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let (release, blocked) = std::sync::mpsc::channel();
+    let (entered, ready) = std::sync::mpsc::channel();
+    db.writer.enqueue("blocked earlier commit", move |_| {
+        entered.send(()).unwrap();
+        blocked.recv().map_err(|error| error.to_string())?;
+        Ok(())
+    });
+    ready
+        .recv_timeout(std::time::Duration::from_secs(3))
+        .unwrap();
+    let mut first_state = PlayerAchievementState::default();
+    first_state.criteria_progress.insert(1832, 2);
+    let mut other_state = PlayerAchievementState::default();
+    other_state.criteria_progress.insert(1832, 9);
+    for (account, character, state) in [(41, first, &first_state), (42, second, &other_state)] {
+        account_store::save_account_progress(
+            &db,
+            state,
+            &catalog,
+            account_store::AccountUpdate {
+                account,
+                character,
+                completed_map: None,
+                race: 1,
+                now: 999,
+            },
+        );
+    }
+    first_state.criteria_progress.insert(1832, 3);
+    first_state.monthly = Some(crate::adventure_guide::MonthlyCriteriaState::new(0, 0));
+    first_state
+        .monthly
+        .as_mut()
+        .unwrap()
+        .counters
+        .insert(3209, 7);
+    save_monthly_contribution(&db, 41, first, &first_state);
+    assert_eq!(monthly_contributions(&db, 41), vec![first_state.clone()]);
+    assert_eq!(monthly_contributions(&db, 42), vec![other_state.clone()]);
+    assert!(
+        persistence::load_achievements(&db.db, first)
+            .criteria_progress
+            .is_empty()
+    );
+    release.send(()).unwrap();
+    let drained = db.into_database();
+    drop(drained);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&reopened, first),
+        first_state
+    );
+    assert_eq!(
+        persistence::load_achievements(&reopened, second),
+        other_state
+    );
+}
+
+#[test]
 fn achievement_login_known_spell_facts_fit_one_tick_budget() {
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     let catalog = load_achievement_catalog(&conn).unwrap();

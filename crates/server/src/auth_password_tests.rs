@@ -86,6 +86,17 @@ fn password_login_waits_for_worker_before_authentication_and_roster_reply() {
             MessageReceiver::<LoginResponse>::default(),
         ))
         .id();
+    let (release, blocked) = std::sync::mpsc::channel();
+    let (entered, ready) = std::sync::mpsc::channel();
+    app.world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("earlier durable work", move |_| {
+            entered.send(()).unwrap();
+            blocked.recv().map_err(|error| error.to_string())?;
+            Ok(())
+        });
+    ready.recv_timeout(Duration::from_secs(3)).unwrap();
     app.world_mut()
         .get_mut::<MessageSender<LoginRequest>>(connection)
         .unwrap()
@@ -100,6 +111,29 @@ fn password_login_waits_for_worker_before_authentication_and_roster_reply() {
         app.world().get::<Authenticated>(connection).is_none(),
         "password verification cannot authenticate inline on the tick thread"
     );
+    let busy_until = Instant::now() + Duration::from_millis(800);
+    while Instant::now() < busy_until {
+        let tick = Instant::now();
+        app.update();
+        assert!(
+            tick.elapsed() < Duration::from_millis(50),
+            "login waited for FIFO writer"
+        );
+        assert!(
+            app.world().get::<Authenticated>(connection).is_none(),
+            "authentication bypassed pending durable work"
+        );
+        assert!(
+            app.world_mut()
+                .get_mut::<MessageReceiver<LoginResponse>>(connection)
+                .unwrap()
+                .receive()
+                .next()
+                .is_none()
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    release.send(()).unwrap();
     let start = Instant::now();
     let reply = loop {
         assert!(

@@ -104,7 +104,9 @@ fn fifo_writer_reports_failed_commit_and_continues_later_jobs() {
     let dir = tempfile::tempdir().unwrap();
     let db = Arc::new(Database::create(dir.path().join("failure.redb")).unwrap());
     let writer = PersistenceWriter::start(Arc::clone(&db));
-    let failed = writer.enqueue("rejected purchase", |_| Err("purchase refused".into()));
+    let failed = writer.enqueue("rejected purchase", |_| {
+        Err::<(), _>("purchase refused".into())
+    });
     let later = writer.enqueue("next owner", |db| persist(db, 42, b"durable"));
     assert_eq!(wait(&failed), Err("purchase refused".into()));
     wait(&later).unwrap();
