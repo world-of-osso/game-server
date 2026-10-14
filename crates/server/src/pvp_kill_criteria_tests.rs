@@ -6,6 +6,93 @@ use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Health, Position};
 
 #[test]
+fn achievements_criteria_earned_player_requires_native_prerequisite_before_player_kill() {
+    let (mut world, players, file) = kill_match();
+    let killer = players[0].1;
+    let first_victim = players[1].1;
+    damage(&mut world, killer, first_victim, 1000.0);
+    assert_eq!(world.get::<Health>(first_victim).unwrap().current, 0.0);
+    assert_eq!(player_kills(&world, killer), Some(1));
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&32961),
+        "native player kill before Hidden Potential cannot qualify"
+    );
+    assert!(!crate::spell_cast::try_cast_triggered(
+        &mut world,
+        killer,
+        220737,
+        Some(killer),
+        u8::MAX
+    ));
+    assert!(crate::spell_cast::try_cast_triggered(
+        &mut world,
+        killer,
+        220737,
+        Some(killer),
+        0
+    ));
+    assert!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .earned_ids
+            .contains(&10460),
+        "authentic self-hit earns Hidden Potential; no seeded ID"
+    );
+    let victim = players[3].1;
+    damage(&mut world, killer, victim, 1.0);
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&32961),
+        "a nonlethal hit is not a player kill"
+    );
+    damage(&mut world, killer, victim, 1000.0);
+    assert_eq!(world.get::<Health>(victim).unwrap().current, 0.0);
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&32961),
+        Some(&1),
+        "accepted Warsong player kill after earned10460 must satisfy87"
+    );
+    let teammate = players[2].1;
+    assert_eq!(player_kills(&world, teammate), Some(2));
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(teammate)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&32961),
+        "eligible teammate cannot borrow the killer's character-only achievement"
+    );
+    damage(&mut world, killer, victim, 1000.0);
+    pvp_objective::update_battleground_objectives(&mut world);
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&32961),
+        Some(&1),
+        "dead/idle replay cannot credit again"
+    );
+    drop(world);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = crate::persistence::load_achievements(&db, players[0].0);
+    assert!(saved.earned_ids.contains(&10460));
+    assert_eq!(saved.criteria_progress.get(&32961), Some(&1));
+}
+
+#[test]
 fn achievements_criteria_native_player_map_some_credits_only_actual_warsong_killing_blow() {
     let (mut world, players, file) = kill_match();
     let killer = players[0].1;

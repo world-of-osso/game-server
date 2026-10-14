@@ -1065,22 +1065,6 @@ fn battle_pet_team_min_level(world: &World, player: Entity) -> Option<u8> {
         })
 }
 
-fn earned_player_achievement_ids(world: &World, player: Entity) -> BTreeSet<u32> {
-    let Some(state) = world.get::<PlayerAchievementState>(player) else {
-        return BTreeSet::new();
-    };
-    let account_ids = state
-        .account
-        .iter()
-        .flat_map(|account| account.earned_ids.iter());
-    state
-        .earned_ids
-        .iter()
-        .chain(account_ids)
-        .copied()
-        .collect()
-}
-
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
     let identity = world.get::<Player>(player)?;
     let arena = crate::pvp::player_arena_conditions(world, player);
@@ -1091,7 +1075,6 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
         known_spells: known_player_spell_ids(world, player),
-        earned_achievements: earned_player_achievement_ids(world, player),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         area: world
             .get::<AchievementTracker>(player)
