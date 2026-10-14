@@ -25,7 +25,7 @@ const SUMMED_ACCOUNT_KINDS: &[u32] = &[
 // 0x00010000 is SHOW_CRITERIA_MEMBERS, not account scope.
 const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     KillAnyCreature,
@@ -146,7 +146,8 @@ pub(crate) enum CriteriaEvent {
     MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
-    LandTargetedSpell(u32, Option<u8>),
+    /// Spell, actual hit Player identity, and pre-effect unit health percentage.
+    LandTargetedSpell(u32, Option<SpellHitPlayer>, Option<f32>),
     LearnSpell(u32),
     DefeatEncounter(u32),
     /// One DONE while the character's active encounter loot-lock bit was unset.
@@ -255,7 +256,7 @@ impl CriteriaEvent {
             Self::MoneySpentOnTaxis(_) => 63,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
-            Self::LandTargetedSpell(_, _) => 110,
+            Self::LandTargetedSpell(_, _, _) => 110,
             Self::LearnSpell(_) => 34,
             Self::DefeatEncounter(_) => 165,
             Self::DefeatEncounterEligibleForLoot(_) => 97,
@@ -356,7 +357,7 @@ impl CriteriaEvent {
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
             | Self::BeSpellTarget(asset)
-            | Self::LandTargetedSpell(asset, _)
+            | Self::LandTargetedSpell(asset, _, _)
             | Self::LearnSpell(asset)
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
@@ -461,6 +462,13 @@ pub(crate) struct PlayerConditions {
     pub player: Option<ReferencePlayer>,
 }
 
+/// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SpellHitPlayer {
+    pub race: u8,
+    pub class: u8,
+}
+
 /// The reference player's own state read by TC player-only ModifierTree leaves.
 #[derive(Debug, Default)]
 pub(crate) struct ReferencePlayer {
@@ -500,6 +508,11 @@ enum CriteriaFact {
     TargetCreature(u32),
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
+    TargetIsPlayer,
+    /// Accepted only with positive player/race authority; NPC class predicates stay disabled.
+    TargetClass(u8),
+    /// Inclusive TC TargetHealthBelowPercent46 against the pre-effect hit unit.
+    TargetHealthBelowPercent(u8),
     /// Some8 requiring one of these complete TargetCreatureId4 leaves.
     TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
@@ -541,7 +554,16 @@ impl CriteriaFact {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
             Self::TargetRace(race) => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target)) if target == *race)
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _) if target.race == *race)
+            }
+            Self::TargetIsPlayer => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(_), _))
+            }
+            Self::TargetClass(class) => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _) if target.class == *class)
+            }
+            Self::TargetHealthBelowPercent(limit) => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, _, Some(percent)) if percent <= f32::from(*limit))
             }
             Self::TargetCreatures(entries) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
@@ -1320,6 +1342,7 @@ fn load_criteria_facts(
                 .ok()
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
+            5 => Some(CriteriaFact::TargetIsPlayer),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
@@ -1342,12 +1365,18 @@ fn load_criteria_facts(
             27 => small
                 .filter(|race| crate::race_class::race_bit(*race).is_some())
                 .map(CriteriaFact::TargetRace),
+            28 => small
+                .filter(|class| (1..=13).contains(class))
+                .map(CriteriaFact::TargetClass),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
             34 => small
                 .filter(|level| (1..=shared::pet_battle::MAX_PET_LEVEL).contains(level))
                 .map(CriteriaFact::BattlePetTeamLevel),
             35 => Some(CriteriaFact::NotInParty),
+            46 => small
+                .filter(|percent| (1..=100).contains(percent))
+                .map(CriteriaFact::TargetHealthBelowPercent),
             41 => {
                 if !exists("area_table")? {
                     return Ok(None);
@@ -1361,7 +1390,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/27/29/32/34/35/41/60/69/71/104/122"
+                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/46/60/69/71/104/122"
                 )
             }
         };

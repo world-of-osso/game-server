@@ -31,6 +31,27 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_target_health_percent_requires_native_hit_and_complete_companions(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[1]['Type'] = '110'
+        mods = {10: node(0, 4), 11: node(10, 2, 46, 5)}
+        self.assertEqual(self.compile(mods, criteria), {1: [None, ((46, 5),)]})
+        for boundary in (1, 100):
+            mods[11]['Asset'] = str(boundary)
+            self.assertEqual(self.compile(mods, criteria), {1: [None, ((46, boundary),)]})
+        for invalid in (0, 101):
+            mods[11]['Asset'] = str(invalid)
+            self.assertEqual(self.compile(mods, criteria), {})
+        mods[11] = node(10, 2, 46, 5)
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 25, 1)}, criteria),
+                         {1: [None, ((25, 1), (46, 5))]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 999, 1)}, criteria), {})
+        mods[11]['Operator'] = '3'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[11]['Operator'] = '2'
+        criteria[1]['Type'] = '29'
+        self.assertEqual(self.compile(mods, criteria), {})
+
     def test_target_race_requires_a_native_spell_hit_target_and_keeps_companions(self):
         criteria = copy.deepcopy(self.criteria)
         criteria[5777] = criteria.pop(1)
@@ -48,8 +69,31 @@ class Conditions(unittest.TestCase):
         modifiers[11]['Asset'] = '0'
         self.assertEqual(self.compile(modifiers, criteria), {}, 'NPC RACE_NONE is not a playable race')
         modifiers[11]['Asset'] = '1'
-        modifiers[12] = node(10, 2, 28, 1)
-        self.assertEqual(self.compile(modifiers, criteria), {}, 'unknown target-class companion remains required')
+        modifiers[12] = node(10, 2, 30, 1)
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'unknown creature-type companion remains required')
+
+    def test_target_class_requires_actual_player_target_and_retains_companions(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[1]['Type'] = '110'
+        modifiers = {10: node(0, 4), 11: node(10, 2, 5, 0), 12: node(10, 2, 28, 6)}
+        self.assertEqual(self.compile(modifiers, criteria), {1: [None, ((5, 0), (28, 6))]})
+        modifiers[11] = node(10, 2, 27, 1)
+        self.assertEqual(self.compile(modifiers, criteria), {1: [None, ((27, 1), (28, 6))]})
+        del modifiers[11]
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'NPC class authority is not sourced')
+        modifiers[11] = node(10, 2, 5, 0)
+        criteria[1]['Type'] = '28'
+        self.assertEqual(self.compile(modifiers, criteria), {})
+        criteria[1]['Type'] = '110'
+        modifiers[12]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers, criteria), {})
+        modifiers[12]['Operator'] = '2'
+        for asset in (0, 14):
+            modifiers[12]['Asset'] = str(asset)
+            self.assertEqual(self.compile(modifiers, criteria), {})
+        modifiers[12]['Asset'] = '6'
+        modifiers[13] = node(10, 2, 67, 1368)
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'world-state companion cannot be removed')
 
     def test_positive_battle_pet_team_level_preserves_every_companion(self):
         criteria = copy.deepcopy(self.criteria)
