@@ -62,22 +62,12 @@ impl ModelGeometry {
         }
     }
 
-    fn walkable_m2_faces(&self, world: Affine3A) -> Vec<[Vec3; 3]> {
+    fn select_m2_faces(&self, world: Affine3A, walkable: bool) -> Vec<[Vec3; 3]> {
         self.triangles
             .iter()
             .zip(&self.floor_normals)
             .filter_map(|(&triangle, &normal)| {
-                m2_face_is_walkable(normal, world).then_some(triangle)
-            })
-            .collect()
-    }
-
-    fn nonwalkable_m2_faces(&self, world: Affine3A) -> Vec<[Vec3; 3]> {
-        self.triangles
-            .iter()
-            .zip(&self.floor_normals)
-            .filter_map(|(&triangle, &normal)| {
-                (!m2_face_is_walkable(normal, world)).then_some(triangle)
+                (m2_face_is_walkable(normal, world) == walkable).then_some(triangle)
             })
             .collect()
     }
@@ -518,13 +508,13 @@ impl Baker {
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
             let added = if self.m2_only {
-                build.add(&model.walkable_m2_faces(doodad.world), doodad.world)
+                build.add(&model.select_m2_faces(doodad.world, true), doodad.world)
             } else {
                 build.add(&model.triangles, doodad.world)
             };
             build.stats.doodad_triangles += added;
             if self.collision && !self.m2_only {
-                let obstacles = model.nonwalkable_m2_faces(doodad.world);
+                let obstacles = model.select_m2_faces(doodad.world, false);
                 build
                     .obstacles
                     .extend(transformed(&obstacles, doodad.world));

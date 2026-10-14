@@ -401,6 +401,11 @@ mod tests {
             wow(1551.33, -257.688, 129.782),
         )
         .expect("TC nominal vertical search must resolve the unchanged authored boss height");
+        assert!(
+            nav.path(wow(1386.2, -169.719, 131.0), wow(1551.33, -257.688, 133.0))
+                .is_err(),
+            "a boss-column point beyond the nominal vertical extent must not use the TC larger-search fallback"
+        );
     }
 
     #[test]
