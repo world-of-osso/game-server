@@ -5106,6 +5106,11 @@ fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
             .criteria_progress
             .contains_key(&35448)
     );
+    let slot = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 1849).unwrap();
+    assert!(
+        !instance_script::set_boss_state(h.app.world_mut(), map, slot, EncounterState::Done),
+        "an already-DONE native transition cannot replay credit"
+    );
     h.advance(0.05);
     assert_eq!(
         h.app
