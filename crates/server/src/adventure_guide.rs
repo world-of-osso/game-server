@@ -148,6 +148,18 @@ fn persist_month_state(world: &World, connection: Entity, player: Entity, charac
 }
 
 fn send_snapshot(world: &mut World, connection: Entity, player: Entity, character: u64) {
+    let snapshot = settle_and_project_month(world, connection, player, character);
+    if let Some(mut sender) = world.get_mut::<MessageSender<AdventureGuideSnapshot>>(connection) {
+        sender.send::<InstanceChannel>(snapshot);
+    }
+}
+
+fn settle_and_project_month(
+    world: &mut World,
+    connection: Entity,
+    player: Entity,
+    character: u64,
+) -> AdventureGuideSnapshot {
     persist_month_state(world, connection, player, character);
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let state = world
@@ -217,9 +229,7 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, characte
         start_unix: snapshot.month.start_unix,
         end_unix: snapshot.month.end_unix,
     });
-    if let Some(mut sender) = world.get_mut::<MessageSender<AdventureGuideSnapshot>>(connection) {
-        sender.send::<InstanceChannel>(snapshot);
-    }
+    snapshot
 }
 
 fn activity_snapshot(
@@ -390,21 +400,36 @@ pub(crate) fn record(world: &mut World, player: Entity, event: CriteriaEvent) {
 }
 
 pub(crate) fn refresh_for_connection(world: &mut World, connection: Entity) {
+    let Some(snapshot) = settle_month_for_connection(world, connection) else {
+        return;
+    };
+    if let Some(mut sender) = world.get_mut::<MessageSender<AdventureGuideSnapshot>>(connection) {
+        sender.send::<InstanceChannel>(snapshot);
+    }
+}
+
+/// Settle gameplay credit without publishing the full Guide ahead of vendor replies.
+pub(crate) fn settle_month_for_connection(
+    world: &mut World,
+    connection: Entity,
+) -> Option<AdventureGuideSnapshot> {
     if !matches!(
         world.get_resource::<AdventureCatalog>(),
         Some(AdventureCatalog::Ready(_))
     ) {
-        return;
+        return None;
     }
     let Some((player, character)) = world
         .get::<PlayerLink>(connection)
         .zip(world.get::<InWorld>(connection))
         .map(|(link, owner)| (link.0, owner.character_id))
     else {
-        return;
+        return None;
     };
     ensure_month_state(world, player, character);
-    send_snapshot(world, connection, player, character);
+    Some(settle_and_project_month(
+        world, connection, player, character,
+    ))
 }
 
 pub(crate) fn ignore_login_achievements(
