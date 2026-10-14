@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
+
 - [Current personal arena ratings](systems/dungeon-achievements.md#current-personal-arena-ratings) — current asset0/1, durable post-result highest values; native rated fixture, other brackets unclaimed.
 - [Exact zero-map criterion](systems/dungeon-achievements.md#exact-zero-map) — authenticated map0 versus missing authority; native World Killing Blows statistic fixture, no honor/relinking claim.
 - [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; prepared follower73/player-pet persistence10 plus checks/fmt pass; full-instance/authored-kit/stat-budget acceptance remains open.

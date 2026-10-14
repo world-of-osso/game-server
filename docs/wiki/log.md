@@ -1,3 +1,7 @@
+## 2026-10-13 — Native survived falling
+
+[Fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) preserves source Alive16/Area17, rejects unknown world-state and uses TC PROGRESS_SET distance×100. Native real-ground damage and Pandaren racial survival prove progress/grant/reopen; remaining negative/final gate proofs pending. Existing quadratic damage and complete environmental absorption parity remain separate gaps.
+
 ## 2026-10-13 — Current personal arena ratings
 
 [Personal-rating39](systems/dungeon-achievements.md#current-personal-arena-ratings) maps current authored0/1 to native2v2/3v3, uses actual durable after-results and highest counters. Native full-party/accepted/prepared lethal matches prove1550 crossing, losers, second-loss maxima, replay and reopen. Raw Statistics replies retain the rating; Criteria replies retain bounded target progress. Ten character definitions and two statistics are structurally enabled; other brackets and proprietary Retail MMR remain unclaimed.
