@@ -287,21 +287,25 @@ fn achievements_criteria_native_personal_rating_uses_after_settlement_and_preser
                 index < size,
                 "real1550 crossing"
             );
-            let shared::protocol::AchievementCatalogPage::Criteria { criteria, .. } =
+            let shared::protocol::AchievementCatalogPage::Statistics { achievements, .. } =
                 world.resource::<AchievementCatalog>().page(
                     state,
-                    shared::protocol::QueryAchievementCatalog::Criteria {
-                        achievement_id: statistic,
-                        after_id: 0,
+                    shared::protocol::QueryAchievementCatalog::Statistics {
+                        category_id: 152,
+                        after_id: statistic - 1,
                     },
                     1,
                 )
             else {
                 panic!("rating statistic reply")
             };
+            let row = achievements
+                .iter()
+                .find(|row| row.achievement_id == statistic)
+                .unwrap();
             assert_eq!(
-                criteria[0].current,
-                u64::from(after),
+                row.statistic_value,
+                Some(u64::from(after)),
                 "unclamped numeric rating statistic"
             );
         }
