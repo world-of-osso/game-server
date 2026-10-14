@@ -131,6 +131,7 @@ pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
                 power_types: class.power_types.clone(),
                 attack_power_per_strength: class.attack_power_per_strength,
                 attack_power_per_agility: class.attack_power_per_agility,
+                ranged_attack_power_per_agility: class.ranged_attack_power_per_agility,
                 primary_stat_priority: class.primary_stat_priority,
                 learnable: Vec::new(),
                 specs: Vec::new(),
@@ -190,6 +191,7 @@ pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
                 spell_power: 100.0,
                 healing_power: 100.0,
                 attack_power: 100.0,
+                ranged_attack_power: 100.0,
                 base_mana: 10_000.0,
                 ..default()
             },

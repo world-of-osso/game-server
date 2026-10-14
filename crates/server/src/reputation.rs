@@ -16,6 +16,8 @@ use crate::group::GroupRegistry;
 use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 use crate::world_data::WorldData;
+use shared::protocol_snapshots::WatchedReputationSnapshot;
+use shared::reputation::{Standing, tier_progress};
 
 const BASE_MOB_KILL_REP: i32 = 10;
 
@@ -32,16 +34,21 @@ impl Plugin for ReputationPlugin {
     }
 }
 
-type NewInWorldLink<'w, 's> =
-    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
+type NewInWorldLink<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static PlayerLink, &'static InWorld),
+    (With<Authenticated>, Added<InWorld>),
+>;
 
 fn send_initial_reputation_snapshot(
     connections: NewInWorldLink,
     reputations: Query<&CharacterReputation>,
     registry: Res<ReputationRegistry>,
+    db: Res<GameDatabase>,
     mut senders: Query<&mut MessageSender<ReputationStateUpdate>>,
 ) {
-    for (conn_entity, link) in &connections {
+    for (conn_entity, link, owner) in &connections {
         let Ok(reputation) = reputations.get(link.0) else {
             send_reputation_error(
                 conn_entity,
@@ -52,8 +59,7 @@ fn send_initial_reputation_snapshot(
         };
         send_reputation_update(
             conn_entity,
-            reputation,
-            &registry.0,
+            read_reputation_snapshot(&db.db, owner.character_id, reputation, &registry.0),
             Some("reputation loaded".into()),
             None,
             &mut senders,
@@ -106,8 +112,7 @@ fn process_npc_kill_reputation(
         persistence::save_reputation(&db.db, character_id, &reputation);
         send_reputation_update(
             conn_entity,
-            &reputation,
-            &registry.0,
+            read_reputation_snapshot(&db.db, character_id, &reputation, &registry.0),
             Some(snapshot_message),
             None,
             &mut senders,
@@ -203,8 +208,7 @@ fn rep_direction(change: i32) -> &'static str {
 
 fn send_reputation_update(
     conn_entity: Entity,
-    reputation: &CharacterReputation,
-    registry: &FactionRegistry,
+    snapshot: ReputationSnapshot,
     message: Option<String>,
     error: Option<String>,
     senders: &mut Query<&mut MessageSender<ReputationStateUpdate>>,
@@ -213,7 +217,7 @@ fn send_reputation_update(
         return;
     };
     sender.send::<ReputationChannel>(ReputationStateUpdate {
-        snapshot: Some(build_reputation_snapshot(reputation, registry)),
+        snapshot: Some(snapshot),
         message,
         error,
     });
@@ -234,7 +238,9 @@ fn send_reputation_error(
     });
 }
 
-pub(crate) fn build_reputation_snapshot(
+pub(crate) fn read_reputation_snapshot(
+    db: &redb::Database,
+    character: u64,
     reputation: &CharacterReputation,
     registry: &FactionRegistry,
 ) -> ReputationSnapshot {
@@ -252,7 +258,40 @@ pub(crate) fn build_reputation_snapshot(
         })
         .collect::<Vec<_>>();
     entries.sort_by(|a, b| a.faction_name.cmp(&b.faction_name));
-    ReputationSnapshot { entries }
+    ReputationSnapshot {
+        entries,
+        watched: read_watched_reputation(db, character, reputation, registry),
+    }
+}
+
+/// Small owner-only watched state: no reward catalog or fabricated condition evaluation.
+fn read_watched_reputation(
+    db: &redb::Database,
+    character: u64,
+    reputation: &CharacterReputation,
+    registry: &FactionRegistry,
+) -> Option<WatchedReputationSnapshot> {
+    let faction_id = reputation.watched_faction()?;
+    if let Some(renown) = crate::renown::read_watched_renown(db, character, faction_id) {
+        return Some(renown);
+    }
+    let faction = registry.get(faction_id)?;
+    let reaction = reputation.get_standing(faction_id);
+    let capped = reaction == Standing::Exalted;
+    let (value, maximum) = if capped {
+        (1, 1)
+    } else {
+        tier_progress(reputation.get_value(faction_id))
+    };
+    Some(WatchedReputationSnapshot {
+        faction_id,
+        name: faction.name.clone(),
+        value: value as u32,
+        maximum: maximum as u32,
+        capped,
+        is_major_faction: false,
+        reaction,
+    })
 }
 
 #[cfg(test)]
