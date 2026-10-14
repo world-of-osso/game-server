@@ -21,20 +21,25 @@ use crate::persistence::appearance_store::{load_account_appearances, save_accoun
 #[derive(Component, Debug, Clone, PartialEq, Default)]
 pub(crate) struct AppearanceSourceItems(pub Vec<(shared::item_data::ItemDefinitionSource, u32)>);
 
-/// The connection's account collection, loaded on first world entry.
+/// None marks a requested first load; Some contains only a committed collection.
 #[derive(Component, Debug, Clone, PartialEq, Default)]
-struct AccountAppearances(AppearanceCollection);
+struct AccountAppearances(Option<AppearanceCollection>);
+
+mod actor;
+use actor::{PendingAppearanceRefreshes, RefreshRequest, publish_appearance_refreshes};
 
 pub struct AppearanceCollectionPlugin;
 
 impl Plugin for AppearanceCollectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            PostUpdate,
-            learn_appearances
-                .after(InventoryDeltas)
-                .before(ReplicationSystems::Send),
-        );
+        app.init_resource::<PendingAppearanceRefreshes>()
+            .add_systems(
+                PostUpdate,
+                (enqueue_appearance_refreshes, publish_appearance_refreshes)
+                    .chain()
+                    .after(InventoryDeltas)
+                    .before(ReplicationSystems::Send),
+            );
     }
 }
 
@@ -46,65 +51,44 @@ type Connections<'w, 's> = Query<
         &'static Authenticated,
         Ref<'static, InWorld>,
         Ref<'static, AppearanceSourceItems>,
-        Option<&'static mut AccountAppearances>,
+        Option<&'static AccountAppearances>,
     ),
 >;
 
-/// Learn `items`' appearances; the number newly learned.
-fn learn_items(
-    collection: &mut AppearanceCollection,
-    items: &[(shared::item_data::ItemDefinitionSource, u32)],
-    templates: &ItemTemplates,
-) -> usize {
-    collection.learn_many(
-        items
-            .iter()
-            .filter_map(|&(source, item_id)| templates.get(source, item_id)?.appearance_id),
-    )
-}
-
-fn learn_appearances(
-    mut connections: Connections,
+fn enqueue_appearance_refreshes(
+    connections: Connections,
     db: Option<Res<GameDatabase>>,
     templates: Option<Res<ItemTemplates>>,
-    mut senders: Query<&mut MessageSender<AppearanceCollectionUpdate>>,
+    mut pending: ResMut<PendingAppearanceRefreshes>,
     mut commands: Commands,
 ) {
     let (Some(db), Some(templates)) = (db, templates) else {
         return;
     };
-    for (connection, account, in_world, sources, loaded) in &mut connections {
+    for (connection, account, in_world, sources, loaded) in &connections {
         let account_id = account.account_id;
         let first = loaded.is_none();
         if !first && !sources.is_changed() && !in_world.is_added() {
             continue;
         }
-        // Successful mutations already saved their grants, even when no item
-        // survives in the final inventory. Reload instead of trusting the cache.
-        let mut collection = load_account_appearances(&db.db, account_id);
-        if learn_items(&mut collection, &sources.0, &templates) > 0 {
-            save_account_appearances(&db.db, account_id, &collection);
+        if first {
+            commands.entity(connection).insert(AccountAppearances(None));
         }
-        let changed = match loaded {
-            Some(mut loaded) => {
-                let changed = loaded.0 != collection;
-                loaded.0 = collection.clone();
-                changed
-            }
-            None => {
-                commands
-                    .entity(connection)
-                    .insert(AccountAppearances(collection.clone()));
-                true
-            }
-        };
-        if (changed || first || in_world.is_added())
-            && let Ok(mut sender) = senders.get_mut(connection)
-        {
-            sender.send::<TooltipChannel>(AppearanceCollectionUpdate {
-                appearances: collection.all().collect(),
-            });
-        }
+        let appearances = sources
+            .0
+            .iter()
+            .filter_map(|&(source, item)| templates.get(source, item)?.appearance_id)
+            .collect();
+        pending.enqueue(
+            &db,
+            RefreshRequest {
+                connection,
+                account: account_id,
+                character: in_world.character_id,
+                force_send: in_world.is_added(),
+                appearances,
+            },
+        );
     }
 }
 

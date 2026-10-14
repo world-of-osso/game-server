@@ -158,6 +158,22 @@ fn enter_world(app: &mut App, client: &Client) {
 
 fn settle(app: &mut App) {
     crate::inventory::finish_inventory_fixture_work(app);
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while !app
+        .world()
+        .resource::<PendingAppearanceRefreshes>()
+        .is_empty()
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "appearance receipts did not complete"
+        );
+        app.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    for _ in 0..3 {
+        app.update();
+    }
 }
 
 fn send<M: Message, C: Channel>(app: &mut App, client: &Client, message: M) {
@@ -215,6 +231,62 @@ fn backpack_slot_of(app: &App, character_id: u64, item_id: u32) -> ItemLocation 
         bag: placement.bag,
         slot: placement.slot,
     }
+}
+
+#[test]
+fn appearance_refreshes_wait_for_fifo_and_preserve_account_union() {
+    use shared::item_data::ItemDefinitionSource::Retail;
+    use std::time::Instant;
+    let mut app = setup_app().expect("authentic appearance fixture");
+    let first = spawn_client(&mut app, 1, "First", WORN_SHORTSWORD);
+    let second = spawn_client(&mut app, 2, "Second", WORN_SHORTSWORD);
+    enter_world(&mut app, &first);
+    enter_world(&mut app, &second);
+    updates(&mut app, &first);
+    updates(&mut app, &second);
+    let held = db(&app).begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    app.world_mut()
+        .entity_mut(first.connection)
+        .insert(AppearanceSourceItems(vec![(Retail, WORN_SHORTSWORD)]));
+    app.world_mut()
+        .entity_mut(second.connection)
+        .insert(AppearanceSourceItems(vec![(Retail, VERIGANS_FIST)]));
+    let started = Instant::now();
+    app.update();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature_first = updates(&mut app, &first);
+    let premature_second = updates(&mut app, &second);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "appearance tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature_first.is_empty() && premature_second.is_empty(),
+        "appearance publication precedes commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let mut first_received = false;
+    let mut second_received = false;
+    while !first_received || !second_received {
+        app.update();
+        first_received |= updates(&mut app, &first)
+            .iter()
+            .any(|appearances| appearances.contains(&SHORTSWORD_APPEARANCE));
+        second_received |= updates(&mut app, &second)
+            .iter()
+            .any(|appearances| appearances.contains(&FIST_APPEARANCE));
+        assert!(Instant::now() < deadline, "no committed appearance refresh");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let collection = load_account_appearances(db(&app), ACCOUNT);
+    assert!(collection.has(SHORTSWORD_APPEARANCE));
+    assert!(collection.has(FIST_APPEARANCE));
 }
 
 #[test]

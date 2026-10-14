@@ -15,7 +15,7 @@ Account-wide appearance state uses shared-protocol `transmog::AppearanceCollecti
 - A successful ownership/equipment write collects equipped and soulbound visuals. BoP and quest-bonded items bind on receipt; BoE items remain uncollected in bags until equipped or disposed of.
 - Successful vendor sale and explicit destroy collect even an unbound BoE. Failed operations collect nothing. Generic transfer helpers do not collect an unbound item: mail, AH sales, player trade and bank transfers are not disposal.
 - Collection grants merge into the account's redb row in the same transaction as inventory/equipment changes. A quest reward merges all non-cosmetic reward-option visuals with the awarded inventory and completed quest log. Unchosen cosmetics are excluded; a selected BoP cosmetic is learned through its ownership.
-- Owner gets a sorted complete snapshot at world entry and after an inventory change changes collection state. Refresh from persisted state, not a stale per-connection copy.
+- Owner gets a sorted complete snapshot at world entry and after an inventory change changes collection state. Refresh from persisted state, not a stale per-connection copy. Source-derived refresh grants run on the serial FIFO writer and merge fresh durable account state; owner cache and snapshots follow successful receipts without blocking ticks.
 
 ## Scope gaps (not parity claims)
 
