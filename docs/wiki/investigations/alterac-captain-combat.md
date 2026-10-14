@@ -14,7 +14,7 @@ The private runtime `content_creature_template`11947 has ContentTuning663, Healt
 
 At level90 the selected ExpectedStat row475 (ExpansionID-2, used because11 has no level90 row) supplies CreatureHealth141482.016 and CreatureAutoAttackDps6855.70312. There are no tuning663 ExpectedStat modifiers; warrior class modifier4 is1 for these stats. Existing server f32 arithmetic produces24,759,352 HP, matching the receipt. Its ordinary two-second swing range is approximately479,899–719,849 **before** armor, avoidance, absorbs and active reductions. Allies' observed maximum HP spans482,140–699,120. Thus the template can threaten these actors with ordinary melee alone; that comparison is not per-hit attribution.
 
-Pinned TC `Creature.cpp`1497–1536/2925–2954 derives health and base DPS from ExpectedStat and a1.5 maximum weapon roll. `StatSystem.cpp`1012–1055 applies the template damage modifier and attack-speed multiplier. Current server `level_scaling.rs` and `combat.rs::creature_weapon_damage` implement that baseline; creature attack power is explicitly not modeled, so this is not a complete TC damage-equivalence certificate.
+Pinned TC `Creature.cpp`3173–3196 derives health and base DPS from ExpectedStat;1650–1651 sets the maximum weapon roll to1.5 times the minimum. `StatSystem.cpp`1138–1147 applies the template damage modifier and attack-speed multiplier. Current server `level_scaling.rs` and `combat.rs::creature_weapon_damage` implement that baseline; creature attack power is explicitly not modeled, so this is not a complete TC damage-equivalence certificate.
 
 ## Script gap and causal limits
 
