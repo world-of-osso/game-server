@@ -89,3 +89,25 @@ No deploy or server restart authorized/performed. Native/release proof is not fu
 - shared-protocol `src/los/body.rs`, `src/ground.rs`, `src/movement.rs` and `src/ground/wmo.rs`.
 - [TrinityCore a352b1fa Creature.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Creature/Creature.cpp#L917-L923): non-raid no-path evade; `SetCannotReachTarget` at3503 resets elapsed time on reachability changes.
 - [CreatureData.h](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Creature/CreatureData.h#L424): `CREATURE_NOPATH_EVADE_TIME = 5 * IN_MILLISECONDS`.
+
+## C++ script smooth-surface controls — 2026-10-14
+
+Physical Wailing RED stopped MovePath367801 at authored node2. Its projected terminal portal pair was0.07339971yd apart; the non-collinear height transition correctly failed unchanged0.1yd spline validation. Portal-crossing output is not TC default waypoint generation. `NavigationMap::smooth_waypoint_path` now uses surface steering/stepping and corridor fixup; `Navigation::query_waypoint_path` is selected only by normal ground C++ script paths. Generic route/collision APIs retain their output. The obsolete waypoint portal-coalescing path is removed, not retained as a fallback.
+
+Surface steps use4yd/0.3yd steering, three steering corners, sixteen visited polygons and source74-point/polygon limits. Detour height gets the source0.5yd intermediate offset; `GroundMap::creature_ground_in` then normalizes returned controls to exact map-copy collision floors, following NormalizePath/UpdateAllowedPositionZ. Actual owner start is retained. Unsupported geometry, off-mesh links and exhausted/incomplete paths remain explicit errors, never synthetic arrivals. Exact/flying generation and spline validation are unchanged.
+
+Proof: named authored-node2 RED at aa334cf5 (`wailing-physical-20261014/node2-red.log`) rejects captured real launch coordinates without spawn edits. At05062d71 the scoped integration passes15/15 in123.83s, zero ignored: node2 ends at exact collision Z-90.9431; all49 authored nodes generate strictly valid, LOS-clear movement to final Z-89.80934. Both controlled camps, actual Ragefire walk/meals, Golden flying intro, exact/flying controls and corrupt/missing/unbaked navigation rejection pass. Helper server all-target check passes without warnings; changed-file format/diff checks pass. Independent inline-artifact Codex verification finds no in-scope counterexample.
+
+Full physical source-camp probe stays RED (`physical-collision-owner.log`): after path1 ends and real6270 starts, tick2903 crosses collision with PathMovement absent, Run/speed8.00002 and combatfalse, waves[2,0]. No generic caller is modified by this patch. Per-node generation evidence is not uninterrupted camp traversal; activation, ordinary balance and both-skin native clears remain open.
+
+### Pinned sources
+
+All references use TrinityCore **a352b1fa**:
+- `src/server/game/Movement/MotionMaster.cpp:1107–1129`: MovePath defaults generatePath=true and creates WaypointMovementGenerator.
+- `src/server/game/Movement/MovementGenerators/WaypointMovementGenerator.cpp:368–385`: CreateSingularPointPath keeps owner start, appends default PathGenerator controls after the first point. Its direct failure fallback is intentionally not adopted under our strict contract.
+- `src/server/game/Movement/PathGenerator.cpp:30–38,535–601,628–632,737–961`: default useStraight=false, FindSmoothPath/GetSteerTarget/FixupCorridor and NormalizePath. `PathGenerator.h:30–37` supplies limits/step/slop. Local pinned cpp SHA256 aa3c82769e2a5a5107b55d8167094355ea7ef84e386870b40ba681f0e0166dae.
+- `src/server/game/Entities/Object/Object.cpp:709–746`: non-flying ground height normalization. Existing collision sampler and player slope policy stay unchanged.
+
+See [navigation contract](../../specs/navigation.md#cpp-script-ground-waypoints) and [escort camps](boss-scripts.md#wailing-second-escort-camp-2026-10-14).
+
+Physical follow-up RED at989ee7de reached a terminal surface-step XZ exactly: `(-108.064,-227.872)`; provisional Detour+0.5 height -88.98659 vs authored -89.9264. The initial port wrongly rejected GetSteerTarget exhaustion despite valid generated controls. Pinned FindSmoothPath instead breaks, BuildPointPath checks count, then NormalizePath corrects support. Adopt that exact stop/count ordering; no segment filtering or validation relaxation.
