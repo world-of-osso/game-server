@@ -132,9 +132,26 @@ fn encounter_coverage_wailing_first_camp_waits_for_authored_ravagers() {
     );
 }
 
+#[derive(Resource, Default)]
+struct AdderBirthPositions(Vec<(Entity, Position)>);
+
+fn record_adder_birth_position(
+    trigger: On<Add, crate::zones::TempSummon>,
+    units: Query<(&shared::components::Npc, &Position)>,
+    mut births: ResMut<AdderBirthPositions>,
+) {
+    if let Ok((npc, position)) = units.get(trigger.entity)
+        && npc.template_id == 5048
+    {
+        births.0.push((trigger.entity, *position));
+    }
+}
+
 #[test]
 fn encounter_coverage_wailing_second_camp_casts_and_waits_for_three_adders() {
     let (mut h, unrelated, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    h.app.init_resource::<AdderBirthPositions>();
+    h.app.add_observer(record_adder_birth_position);
     h.app
         .world_mut()
         .entity_mut(unrelated)
@@ -231,14 +248,22 @@ fn encounter_coverage_wailing_second_camp_casts_and_waits_for_three_adders() {
             matches!(h.app.world().get::<crate::creature_ai::CreatureState>(*actor),
             Some(crate::creature_ai::CreatureState::Pursuing { target }) if *target == disciple.to_bits())
         );
-        let position = h.wow_position(*actor);
+        // Observe actual birth before AttackStart's movement can change it.
+        let position = h
+            .app
+            .world()
+            .resource::<AdderBirthPositions>()
+            .0
+            .iter()
+            .find_map(|(id, position)| (*id == *actor).then_some(*position))
+            .expect("actual Adder birth position");
         assert!(
             positions.iter().any(|&(sx, sy, sz)| {
-                (position.x - sx).abs() < 0.5
-                    && (position.y - sy).abs() < 0.5
-                    && (position.z - sz).abs() < 0.5
+                (position.x - sx).abs() < 0.001
+                    && (position.z + sy).abs() < 0.001
+                    && (position.y - sz).abs() < 0.001
             }),
-            "wave actors start at authored group coordinates"
+            "wave actors start at exact authored group coordinates"
         );
     }
     assert!(h.app.world().get::<CombatStatus>(disciple).unwrap().0);
