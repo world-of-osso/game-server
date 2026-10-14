@@ -734,8 +734,8 @@ impl Ctx<'_> {
     }
 
     /// `WorldObject::SummonCreatureGroup`: authored membership, positions and lifetimes.
-    pub fn summon_creature_group(&mut self, _group_id: u32) -> Vec<Entity> {
-        todo!("native C++ creature summon groups")
+    pub fn summon_creature_group(&mut self, group_id: u32) -> Option<Vec<Entity>> {
+        smart_ai::summons::summon_creature_group(self, group_id)
     }
 
     /// `MotionMaster::MovePoint(id, pos)` of `unit`, walking when it walks.

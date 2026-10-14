@@ -2144,7 +2144,8 @@ fn encounter_coverage_wailing_mutanus_authored_group_target_credit_and_corpse_li
         world: h.app.world_mut(),
         me: disciple,
     }
-    .summon_creature_group(4);
+    .summon_creature_group(4)
+    .expect("authored Disciple group4");
     assert_eq!(summons.len(), 1);
     let mutanus = summons[0];
     assert_eq!(
