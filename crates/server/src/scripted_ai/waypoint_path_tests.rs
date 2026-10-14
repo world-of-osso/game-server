@@ -68,6 +68,47 @@ fn waypoint_collinear_portals_move_without_cutting_turns_or_height_changes() {
     );
 }
 
+#[test]
+#[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
+fn waypoint_authored_wailing_node2_launches_and_reaches_collision_floor() {
+    let root = std::path::PathBuf::from(std::env::var_os("WAILING_NAV_ROOT").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let paths = load_script_paths(&db).unwrap();
+    let path = &paths.0[&367801];
+    let node = path.nodes.iter().position(|(id, _)| *id == 2).unwrap();
+    // Captured real launch boundary after walking path0 and killing its two Ravagers.
+    let from = Vec3::new(-100.10522, 231.44879, -90.95079);
+    let spawn = SpawnPoint {
+        x: from.x,
+        y: from.z,
+        z: -from.y,
+        wander_distance: 0.0,
+        speed_walk: 1.0,
+        speed_run: 1.0,
+    };
+    let source = Launch {
+        map_id: 43,
+        position: from,
+        orientation: 0.0,
+        spawn: &spawn,
+        walking: true,
+        flying: false,
+    };
+    let navigation = crate::navigation::Navigation::new(&root);
+    let controls = query_path_controls(path, node, &source, Some(&navigation)).unwrap();
+    let spline = launch(controls.clone(), false, 0.0, 2.5)
+        .unwrap_or_else(|| panic!("authored node2 must launch: {controls:?}"));
+    assert_eq!(spline.position(MINIMAL_DURATION_MS), from);
+    let destination = spline.position(spline.end_ms);
+    assert!((destination.x - path.nodes[node].1.x).abs() < 0.01);
+    assert!((destination.y - path.nodes[node].1.y).abs() < 0.01);
+    println!("authored node2 reached {destination:?}: {controls:?}");
+}
+
 #[derive(Resource, Default)]
 struct ArrivalReceipts(Vec<(u32, u32)>);
 
