@@ -53,6 +53,45 @@ impl NavigationMap {
         Ok(map)
     }
 
+    /// Native MovePositionToFirstCollision's Detour walkable-surface ray.
+    pub fn first_collision(&mut self, start: Vec3, end: Vec3) -> Result<Vec3, String> {
+        self.load_around(start, end)?;
+        let filter = filter();
+        let (reference, start_pos) = self.nearest(start, &filter)?;
+        let mut t = 0.0;
+        let mut normal = [0.0; 3];
+        let mut corridor = [0; MAX_PATH];
+        let mut count = 0;
+        // SAFETY: initialized query, loaded polygon and bounded output arrays.
+        let result = unsafe {
+            (*self.query).raycast(
+                reference,
+                start_pos.as_ptr(),
+                end.to_array().as_ptr(),
+                &filter,
+                &mut t,
+                normal.as_mut_ptr(),
+                corridor.as_mut_ptr(),
+                &mut count,
+                MAX_PATH as i32,
+            )
+        };
+        status(result, "surface raycast")?;
+        if result & DT_BUFFER_TOO_SMALL != 0 || count == 0 {
+            return Err("incomplete surface raycast".into());
+        }
+        let start = Vec3::from_array(start_pos);
+        let distance = Vec3::new(end.x - start.x, 0.0, end.z - start.z).length();
+        let fraction = if t > 1.0 {
+            1.0
+        } else {
+            (t - 0.5 / distance.max(0.5)).max(0.0)
+        };
+        let endpoint = start.lerp(end, fraction);
+        let (_, projected) = self.nearest(endpoint, &filter)?;
+        Ok(Vec3::from_array(projected))
+    }
+
     pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
         if !start.is_finite() || !end.is_finite() {
             return Err("non-finite path endpoint".into());
