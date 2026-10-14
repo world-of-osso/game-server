@@ -777,6 +777,8 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         models: Vec::new(),
         tuning: None,
         armor: 0.0,
+        armor_modifier: 1.0,
+        health_scaling_expansion: 0,
         mana_modifier: 1.0,
         regenerates_power: false,
         regenerates_health: true,
