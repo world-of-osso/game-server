@@ -1,6 +1,49 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_earned_prerequisite_requires_known_id_and_scoped_player_awards() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE achievement (ID INTEGER PRIMARY KEY);")
+        .unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(87, 10460)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    conn.execute("INSERT INTO achievement VALUES (10460)", [])
+        .unwrap();
+    let facts = load_criteria_facts(&conn, &[(87, 10460)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    let catalog = catalog();
+    for (own, qualifies) in [(BTreeSet::new(), false), (BTreeSet::from([10460]), true)] {
+        let state = PlayerAchievementState {
+            earned_ids: own,
+            account: Some(Box::new(PlayerAchievementState {
+                earned_ids: BTreeSet::from([10460, 291]),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        let player = ReferencePlayer {
+            earned_achievements: catalog.iter_earned_achievement_ids(&state).collect(),
+            ..Default::default()
+        };
+        assert!(player.earned_achievements.contains(&291));
+        assert_eq!(
+            facts[0].holds(&player, CriteriaEvent::KillPlayer, &BTreeMap::new()),
+            qualifies,
+            "account-wide291 is known, but only this character can supply10460"
+        );
+    }
+    assert!(!facts[0].holds(
+        &ReferencePlayer::default(),
+        CriteriaEvent::KillPlayer,
+        &BTreeMap::new()
+    ));
+}
+
+#[test]
 fn achievements_criteria_pet_team_threshold_rejects_unknown_and_preserves_other_qualifiers() {
     let catalog = catalog();
     for (minimum, qualifies) in [(None, false), (Some(24), false), (Some(25), true)] {

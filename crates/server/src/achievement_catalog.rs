@@ -862,21 +862,26 @@ impl AchievementCatalog {
             .collect()
     }
 
+    pub(crate) fn iter_earned_achievement_ids<'a>(
+        &'a self,
+        state: &'a PlayerAchievementState,
+    ) -> impl Iterator<Item = u32> + 'a {
+        let character = state
+            .earned_ids
+            .iter()
+            .filter(|id| !self.window.has_account_flag(**id))
+            .copied();
+        let account = state
+            .account
+            .iter()
+            .flat_map(|account| account.earned_ids.iter().copied())
+            .filter(|id| self.window.has_account_flag(*id));
+        character.chain(account)
+    }
+
     pub fn snapshot(&self, state: &PlayerAchievementState, race: u8) -> AchievementSnapshot {
         AchievementSnapshot {
-            earned_ids: state
-                .earned_ids
-                .iter()
-                .filter(|id| !self.window.has_account_flag(**id))
-                .copied()
-                .chain(
-                    state
-                        .account
-                        .iter()
-                        .flat_map(|account| account.earned_ids.iter().copied())
-                        .filter(|id| self.window.has_account_flag(*id)),
-                )
-                .collect(),
+            earned_ids: self.iter_earned_achievement_ids(state).collect(),
             progress: self.progress_snapshot(state, race),
         }
     }
