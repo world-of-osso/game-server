@@ -61,7 +61,8 @@ fn place_across_wall(h: &mut Harness) {
     let world = h.app.world();
     assert!(in_melee_range(
         world.get::<Position>(h.caster).unwrap(),
-        world.get::<Position>(h.npc).unwrap()
+        world.get::<Position>(h.npc).unwrap(),
+        0.0
     ));
     assert!(!sees_in_world(world, h.caster, h.npc));
     assert!(!sees_in_world(world, h.npc, h.caster));
