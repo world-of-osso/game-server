@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Warrior effect-hit stuns](systems/spell-casting.md#warrior-effect-hit-stuns) — native Shockwave/Storm Bolt children and caster-owned Storm Bolts selector; proof pending, other Dummy/talent fields remain gaps.
+
 - [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) — actual class/profession/owned-mount IDs versus global spell metadata; recipe-marker boundaries, no trait/UI acquisition claim.
 - [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
 

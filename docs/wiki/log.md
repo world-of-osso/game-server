@@ -1156,3 +1156,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: native Druid/Fear master integration85 controls pass,17 actual unshifted BeforeCast receipts and current check/fmt; canonical model-info98,609 rows verified equal to source-prepared slot. Full class census/rendered acceptance remains open.
 
 - 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
+
+- 2026-10-14: Document pinned Warrior per-effect stun dispatch and conditional Storm Bolts selector; native RED3 retained, GREEN pending. Installed70391 slot data follows published canonical snapshot.
