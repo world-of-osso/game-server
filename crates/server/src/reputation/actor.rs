@@ -13,6 +13,7 @@ pub(super) struct ReputationReward {
 #[derive(Clone)]
 struct CommittedReward {
     reputation: CharacterReputation,
+    snapshot: ReputationSnapshot,
     message: String,
 }
 
@@ -46,8 +47,10 @@ impl PendingReputationRewards {
             }
             let message = format_change_message(&changes, &reward.registry);
             persistence::save_reputation(db, character, &reputation);
+            let snapshot = read_reputation_snapshot(db, character, &reputation, &reward.registry);
             Ok(Some(CommittedReward {
                 reputation,
+                snapshot,
                 message,
             }))
         });
@@ -66,7 +69,6 @@ pub(super) fn publish_reputation_rewards(
     mut pending: ResMut<PendingReputationRewards>,
     owners: ReputationOwners,
     mut players: Query<&mut CharacterReputation>,
-    registry: Res<ReputationRegistry>,
     mut senders: Query<&mut MessageSender<ReputationStateUpdate>>,
 ) {
     while let Some(result) = pending.0.front().and_then(|job| job.receipt.result()) {
@@ -77,14 +79,7 @@ pub(super) fn publish_reputation_rewards(
         let Some((connection, _, _)) = owner else {
             continue;
         };
-        publish_reward_result(
-            result,
-            job.player,
-            connection,
-            &mut players,
-            &registry.0,
-            &mut senders,
-        );
+        publish_reward_result(result, job.player, connection, &mut players, &mut senders);
     }
 }
 
@@ -93,7 +88,6 @@ fn publish_reward_result(
     player: Entity,
     connection: Entity,
     players: &mut Query<&mut CharacterReputation>,
-    registry: &FactionRegistry,
     senders: &mut Query<&mut MessageSender<ReputationStateUpdate>>,
 ) {
     match result {
@@ -104,8 +98,7 @@ fn publish_reward_result(
             *reputation = reward.reputation;
             send_reputation_update(
                 connection,
-                &reputation,
-                registry,
+                reward.snapshot,
                 Some(reward.message),
                 None,
                 senders,

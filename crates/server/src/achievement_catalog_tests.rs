@@ -79,7 +79,8 @@ fn achievements_criteria_known_spell_needs_player_knowledge_and_an_authored_spel
         .unwrap();
     assert!(!facts[0].holds(
         &ReferencePlayer::default(),
-        CriteriaEvent::LearnSpell(370465)
+        CriteriaEvent::LearnSpell(370465),
+        &BTreeMap::new()
     ));
 }
 
@@ -94,13 +95,25 @@ fn achievements_criteria_item_template_predicates_match_ids_and_quality_without_
     .unwrap();
     let player = ReferencePlayer::default();
     let epic = load_item_quality_fact(&conn, 15, 4).unwrap().unwrap();
-    assert!(epic.holds(&player, CriteriaEvent::ObtainAnyItem(33999)));
-    assert!(epic.holds(&player, CriteriaEvent::LootAnyItem(33999)));
-    assert!(!epic.holds(&player, CriteriaEvent::ObtainAnyItem(124101)));
-    assert!(!epic.holds(&player, CriteriaEvent::ObtainAnyItem(999999)));
+    assert!(epic.holds(
+        &player,
+        CriteriaEvent::ObtainAnyItem(33999),
+        &BTreeMap::new()
+    ));
+    assert!(epic.holds(&player, CriteriaEvent::LootAnyItem(33999), &BTreeMap::new()));
+    assert!(!epic.holds(
+        &player,
+        CriteriaEvent::ObtainAnyItem(124101),
+        &BTreeMap::new()
+    ));
+    assert!(!epic.holds(
+        &player,
+        CriteriaEvent::ObtainAnyItem(999999),
+        &BTreeMap::new()
+    ));
     let rare_or_better = load_item_quality_fact(&conn, 14, 3).unwrap().unwrap();
-    assert!(rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(33999)));
-    assert!(!rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(45199)));
+    assert!(rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(33999), &BTreeMap::new()));
+    assert!(!rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(45199), &BTreeMap::new()));
     assert!(
         load_event_item_alternatives(&conn, &[45199, 173032])
             .unwrap()
@@ -111,9 +124,17 @@ fn achievements_criteria_item_template_predicates_match_ids_and_quality_without_
     let alternatives = load_event_item_alternatives(&conn, &[45199, 173032])
         .unwrap()
         .unwrap();
-    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(45199)));
-    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(173032)));
-    assert!(!alternatives.holds(&player, CriteriaEvent::LootAnyItem(124101)));
+    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(45199), &BTreeMap::new()));
+    assert!(alternatives.holds(
+        &player,
+        CriteriaEvent::LootAnyItem(173032),
+        &BTreeMap::new()
+    ));
+    assert!(!alternatives.holds(
+        &player,
+        CriteriaEvent::LootAnyItem(124101),
+        &BTreeMap::new()
+    ));
 }
 
 #[test]
@@ -606,7 +627,7 @@ fn achievements_criteria_target_class_rejects_missing_target_even_when_caster_ma
         let mut state = PlayerAchievementState::default();
         catalog.update_at(
             &mut state,
-            CriteriaEvent::LandTargetedSpell(27571, target, None),
+            CriteriaEvent::LandTargetedSpell(27571, target, None, None),
             None,
             2,
             &conditions,
@@ -617,7 +638,7 @@ fn achievements_criteria_target_class_rejects_missing_target_even_when_caster_ma
     let target = Some(SpellHitPlayer { race: 2, class: 6 });
     catalog.update_at(
         &mut state,
-        CriteriaEvent::LandTargetedSpell(27571, target, None),
+        CriteriaEvent::LandTargetedSpell(27571, target, None, None),
         None,
         2,
         &PlayerConditions::default(),
@@ -651,7 +672,7 @@ fn achievements_criteria_target_health_percent_is_inclusive_and_not_player_only(
         let mut state = PlayerAchievementState::default();
         catalog.update_at(
             &mut state,
-            CriteriaEvent::LandTargetedSpell(45544, None, percent),
+            CriteriaEvent::LandTargetedSpell(45544, None, percent, None),
             None,
             1,
             &conditions,
@@ -666,7 +687,7 @@ fn achievements_criteria_target_health_percent_is_inclusive_and_not_player_only(
     let mut state = PlayerAchievementState::default();
     catalog.update_at(
         &mut state,
-        CriteriaEvent::LandTargetedSpell(27571, None, Some(1.0)),
+        CriteriaEvent::LandTargetedSpell(27571, None, Some(1.0), None),
         None,
         1,
         &conditions,
@@ -692,10 +713,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed 12.1.5.70391 census: 5479 + Ultimate Triage141 behind native46.
+    // Installed70391: 5481 + BB King4436/4437 behind actual hit-NPC entry4.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5480);
-    for achievement in [141, 291, 1699, 3559, 63640] {
+    assert_eq!(union.len(), 5483);
+    for achievement in [141, 291, 1699, 3559, 3579, 4436, 4437, 63640] {
         assert!(union.contains(&achievement));
     }
     for achievement in [

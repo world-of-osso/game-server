@@ -90,6 +90,7 @@ pub(super) fn radiance_plan(
             spell.cast_destination,
         ),
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }]
 }
 
@@ -193,6 +194,7 @@ fn cast_whirlwind_energize(world: &mut World, caster: Entity, amount: f32, depth
         units: vec![caster],
         dest: None,
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }];
     spell_cast::missiles::launch(world, caster, &child, plan, depth + 1);
 }

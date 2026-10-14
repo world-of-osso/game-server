@@ -117,6 +117,65 @@ fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losse
     );
 }
 
+#[cfg(test)]
+#[test]
+fn world_quest_publication_keeps_watched_bar_in_step_with_committed_reputation() {
+    use lightyear::prelude::{MessageReceiver, MessageSender};
+    use shared::protocol::{CurrencyStateUpdate, ReputationStateUpdate};
+    let mut h = crate::bank_test_harness::harness().unwrap();
+    let registry = shared::reputation::default_faction_registry();
+    let mut reputation = shared::reputation::CharacterReputation::new_for_race(&registry, 1);
+    reputation.set_rep(1090, 3800);
+    reputation.watch(1090);
+    crate::persistence::save_reputation(h.db(), h.character_id, &reputation);
+    let rewards = Rewards {
+        reputation: vec![WorldQuestNumericReward {
+            id: 1090,
+            amount: 75,
+        }],
+        ..Default::default()
+    };
+    let settlement = load_settlement(h.db(), h.character_id, 1, Some(&rewards))
+        .unwrap()
+        .unwrap();
+    let txn = h.db().begin_write().unwrap();
+    settlement.persist_in(&txn, h.character_id);
+    txn.commit().unwrap();
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<ReputationStateUpdate>::default(),
+        MessageReceiver::<ReputationStateUpdate>::default(),
+        MessageSender::<CurrencyStateUpdate>::default(),
+    ));
+    settlement.publish(h.app.world_mut(), h.connection);
+    let mut updates = Vec::new();
+    for _ in 0..10 {
+        h.app.update();
+        updates.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<ReputationStateUpdate>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    let watched = updates
+        .into_iter()
+        .find_map(|update| update.snapshot.and_then(|snapshot| snapshot.watched))
+        .expect("committed quest reputation must publish watched progress");
+    assert_eq!(
+        (watched.faction_id, watched.value, watched.maximum),
+        (1090, 875, 6000)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::reputation::CharacterReputation>(h.player)
+            .unwrap()
+            .get_value(1090),
+        3875
+    );
+}
+
 pub(crate) struct Settlement {
     pub(crate) wallet: shared::currency::CurrencyWallet,
     reputation: shared::reputation::CharacterReputation,
@@ -192,7 +251,13 @@ impl Settlement {
             return;
         };
         let currency = crate::currency::build_currency_snapshot(&self.wallet);
-        let reputation = crate::reputation::build_reputation_snapshot(
+        let character = world
+            .get::<crate::auth::InWorld>(connection)
+            .expect("world-quest reward owner must be in world")
+            .character_id;
+        let reputation = crate::reputation::read_reputation_snapshot(
+            &world.resource::<crate::persistence::GameDatabase>().db,
+            character,
             &self.reputation,
             &shared::reputation::default_faction_registry(),
         );

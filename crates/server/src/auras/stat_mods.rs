@@ -377,6 +377,13 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 }
             }
             MOD_CRIT_PCT => stats.crit_pct += amount,
+            MOD_ATTACK_POWER_PCT => {
+                stats.attack_power_pct += amount * (1.0 + stats.attack_power_pct / 100.0);
+            }
+            MOD_RANGED_ATTACK_POWER_PCT => {
+                stats.ranged_attack_power_pct +=
+                    amount * (1.0 + stats.ranged_attack_power_pct / 100.0);
+            }
             MOD_VERSATILITY => stats.versatility_pct += effect.amount.trunc() * stacks,
             // HandleModRating truncates each effect before ApplyRatingMod. Do not
             // triple-count the same rating for damage/healing/damage-taken bits.

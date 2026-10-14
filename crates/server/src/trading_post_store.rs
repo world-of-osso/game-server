@@ -41,8 +41,16 @@ pub(crate) fn purchase(
     offer: Offer<'_>,
     now: i64,
 ) -> Result<State, String> {
-    let txn = db.begin_write().expect("begin Trading Post purchase");
-    let mut state = read_state(&txn, account);
+    checkout(db, account, &[offer], now)
+}
+
+fn apply_offer(
+    txn: &WriteTransaction,
+    state: &mut State,
+    account: u64,
+    offer: &Offer<'_>,
+    now: i64,
+) -> Result<(), String> {
     if state.purchases.contains_key(&offer.vendor) {
         return Err("This Trading Post item was already purchased.".into());
     }
@@ -50,7 +58,7 @@ pub(crate) fn purchase(
         .tender
         .checked_sub(offer.price)
         .ok_or("Not enough Trader's Tender.")?;
-    let granted = grant_collection(&txn, account, offer.grant)?;
+    let granted = grant_collection(txn, account, offer.grant)?;
     let refund_until = if offer.refund_duration == 0 {
         now
     } else {
@@ -65,8 +73,25 @@ pub(crate) fn purchase(
             granted,
         },
     );
+    Ok(())
+}
+
+pub(crate) fn checkout(
+    db: &Database,
+    account: u64,
+    offers: &[Offer<'_>],
+    now: i64,
+) -> Result<State, String> {
+    if offers.is_empty() {
+        return Err("The Trading Post cart is empty.".into());
+    }
+    let txn = db.begin_write().expect("begin Trading Post checkout");
+    let mut state = read_state(&txn, account);
+    for offer in offers {
+        apply_offer(&txn, &mut state, account, offer, now)?;
+    }
     write_state(&txn, account, &state);
-    crate::persistence_commit::commit(txn).expect("commit atomic Trading Post purchase");
+    crate::persistence_commit::commit(txn).expect("commit atomic Trading Post checkout");
     Ok(state)
 }
 
@@ -419,6 +444,91 @@ mod tests {
         assert!(crate::persistence::mount_store::load(&db, 8).is_empty());
         refund(&db, 7, 473, now + 1).unwrap();
         assert!(!crate::persistence::toy_store::load(&db, 7).contains_key(&206268));
+    }
+
+    #[test]
+    fn trading_post_checkout_commits_all_receipts_and_refunds_each_after_reopen() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("checkout.redb");
+        let now = 1790812900;
+        {
+            let db = Database::create(&path).unwrap();
+            crate::persistence::create_tables(&db);
+            grant_tender(&db, 7, 1000).unwrap();
+            let offers = [
+                Offer {
+                    vendor: 4,
+                    price: 100,
+                    grant: &Grant::Appearances(vec![37866]),
+                    refund_duration: 60,
+                },
+                Offer {
+                    vendor: 473,
+                    price: 500,
+                    grant: &Grant::Toy(206268),
+                    refund_duration: 60,
+                },
+            ];
+            let paid = checkout(&db, 7, &offers, now).unwrap();
+            assert_eq!(paid.tender, 400);
+            assert_eq!(paid.purchases.len(), 2);
+            assert!(
+                crate::persistence::appearance_store::load_account_appearances(&db, 7).has(37866)
+            );
+            assert!(crate::persistence::toy_store::load(&db, 7).contains_key(&206268));
+        }
+        let db = Database::open(&path).unwrap();
+        assert_eq!(load(&db, 7).tender, 400);
+        assert_eq!(refund(&db, 7, 4, now + 1).unwrap().tender, 500);
+        assert!(!crate::persistence::appearance_store::load_account_appearances(&db, 7).has(37866));
+        assert!(crate::persistence::toy_store::load(&db, 7).contains_key(&206268));
+        assert_eq!(refund(&db, 7, 473, now + 1).unwrap().tender, 1000);
+        assert!(!crate::persistence::toy_store::load(&db, 7).contains_key(&206268));
+    }
+
+    #[test]
+    fn trading_post_checkout_failure_after_first_offer_cannot_commit_charge_or_collection() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let db = Database::create(file.path()).unwrap();
+        crate::persistence::create_tables(&db);
+        let now = 1790812900;
+        grant_tender(&db, 7, 2000).unwrap();
+        buy(&db, 7, 73, 700, &Grant::Mount(1574), now, 60).unwrap();
+        let before = load(&db, 7);
+        let cloak = Offer {
+            vendor: 4,
+            price: 100,
+            grant: &Grant::Appearances(vec![37866]),
+            refund_duration: 60,
+        };
+        let owned = Offer {
+            vendor: 73,
+            price: 700,
+            grant: &Grant::Mount(1574),
+            refund_duration: 60,
+        };
+        assert!(checkout(&db, 7, &[cloak, owned], now).is_err());
+        assert_eq!(load(&db, 7), before);
+        assert!(!crate::persistence::appearance_store::load_account_appearances(&db, 7).has(37866));
+        assert!(crate::persistence::mount_store::load(&db, 7).contains_key(&1574));
+        let duplicate = [
+            Offer {
+                vendor: 4,
+                price: 100,
+                grant: &Grant::Appearances(vec![37866]),
+                refund_duration: 60,
+            },
+            Offer {
+                vendor: 4,
+                price: 100,
+                grant: &Grant::Appearances(vec![37866]),
+                refund_duration: 60,
+            },
+        ];
+        assert!(checkout(&db, 7, &duplicate, now).is_err());
+        assert_eq!(load(&db, 7), before);
+        assert!(!crate::persistence::appearance_store::load_account_appearances(&db, 7).has(37866));
+        assert!(checkout(&db, 7, &[], now).is_err());
     }
 
     #[test]

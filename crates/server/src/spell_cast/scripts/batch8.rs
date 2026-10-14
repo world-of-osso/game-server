@@ -107,6 +107,7 @@ pub(super) fn provoke_plan(
                 units,
                 dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
                 chain_multipliers: Vec::new(),
+                blocked_units: Vec::new(),
             }
         })
         .collect()
@@ -197,6 +198,7 @@ pub(super) fn sanctify_plan(
         units,
         dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
         chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
     }]
 }
 ///44425 consumes charges after launch.321526 refunds its authored hundredths

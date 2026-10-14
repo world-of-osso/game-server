@@ -2,7 +2,11 @@
 
 verified: 2026-10-14
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5480 ordinary (3473 account/2007 character),1821 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras before effect dispatch, with authored spells and complete companions. Native65403/61925 RED→GREEN1/1 proves target-not-caster, refused-depth/launch/missing/idle/NPC-hook/reopen boundaries and3579; compiler34/34. Full required four-thread filter176/0/1ignored plus site-export1/1, server/engine checks and3repofmt pass. No table acquisition/holiday/full vehicle/UI certificate.
+
+Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
+
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5483 ordinary (3475 account/2008 character),1821 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -163,7 +167,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 88 | TotalHonoredFactions | 1/1 | 0/0 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 89 | TotalFactionsEncountered | 0/1 | 0/0 | 0 | State gap: CharacterReputation.tracked is player selection, not Retail Visible flags; initialized435 rows are not encountered435. |
 | 90 | LootAnyItem | 3/5 | 0/2 | 3 | Native committed loot-slot receipt; one increment per receipt, not quantity. Canonical item-quality15 and complete ItemId19 alternatives retained; unknownskill96 remains disabled. No new current player roots. Targeted native/catalog and full four-thread163/0/1ignored gate pass. |
-| 91 | ObtainAnyItem | 5/25 | 0/3 | 5 | Native committed Retail acquisition receipt; one increment, not quantity. ItemId19/quality14/15 with all required aura leaves retained; missing/unknown predicates disabled. Ordinary12927/13707 contradict pinned statistic-only completion and remain excluded. No new current roots; targeted native/catalog and full four-thread163/0/1ignored gate pass. |
+| 91 | ObtainAnyItem | 10/25 | 0/3 | 10 | Native committed Retail acquisition receipt; one increment, not quantity. ItemId19/quality14/15 with all required aura leaves retained; missing/unknown predicates disabled. Ordinary12927/13707 contradict pinned statistic-only completion and remain excluded. No new current roots; targeted native/catalog and full four-thread163/0/1ignored gate pass. |
 | 92 | AnyoneTriggerGameEventScenario | 0/3745 | 0/17 | 0 | Admission gap (rechecked2026-10-13): TC GameEventSender65–66 requires MAP_SCENARIO5. Native SendEvent140856/35961 and authored scenario219/root32524/map1131 exist, but InstanceManager::create_map rejects Scenario and no other native allocation path exists. Party-map ScenarioRuns cannot substitute. |
 | 93 | RollAnyNeed | 0/1 | 0/0 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 94 | RollAnyGreed | 0/1 | 0/0 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
@@ -179,7 +183,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 107 | AbandonAnyQuest | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 108 | BuyTaxi | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 109 | GetLootByType | 1/78 | 1/7 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 110 | LandTargetedSpellOnTarget | 63/159 | 62/121 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 110 | LandTargetedSpellOnTarget | 81/159 | 74/121 | 7 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 112 | LearnTradeskillSkillLine | 19/20 | 18/19 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 113 | HonorableKills | 0/4 | 0/1 | 0 | Producer/state gap: required honor eligibility, team/rated-BG rating or honor/prestige/solo-shuffle progression is unwired; native rated-arena results do not supply those facts. |
 | 114 | AcceptSummon | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |

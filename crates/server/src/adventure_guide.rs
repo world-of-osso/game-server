@@ -363,7 +363,7 @@ pub(crate) fn record(world: &mut World, player: Entity, event: CriteriaEvent) {
     }
     ensure_month_state(world, player, character);
     let level = world.get::<Level>(player).expect("realm player Level").0;
-    let conditions = crate::achievement::player_conditions(world, player);
+    let conditions = crate::achievement::event_conditions(world, player, &[event]);
     let state = world
         .get::<PlayerAchievementState>(player)
         .expect("monthly player state");

@@ -51,6 +51,12 @@ Level 10: CreatureArmor 90, ArmorConstant 210 (30%). Level 30: 155 and 361.
 
 Spell power is Intellect only for an Intellect main stat (`stats.rs`); warriors, rogues and other Strength or Agility specs have 0.
 
+## Maximum-health percent effect165
+
+TC a352b1fa SpellEffects5165–5173 adds `CountPctFromMaxHealth(effectValue)` directly to spell damage; Unit.h809 returns an integer. Native effect165 now selects real hit units and truncates authored percent of their maximum health before common damage resolution. It does not use current health or add SP/AP, direct damage-done or SpellDamageBonusTaken modifiers. Final crit, armor, resilience, absorbs and existing death/hit boundaries remain shared. `damage_resilience_multiplier` extracts the existing final versatility factor without changing ordinary damage-taken semantics.
+
+Real BB gun67531 carries0.01percent and only effect165. Native RED9e862790 accepts its cast on authored16802 but leaves50000/100000 health unchanged instead of49990. Native GREEN4091b81b passes2/2(18.30s), including actual damage10, native Enrage26662/Barkskin22812 bonus exclusion and5000max sub-point truncation; zero damage still produces an actual hit and TargetCreatureId4 credit. Both-faction leader grants and durable re-entry are proved separately in [achievements](dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries). Required workspace achievement/criteria/statistic/instance filter178/0/1ignored plus site-export1/1 and server/engine checks/three-repo fmt pass at source4091b81b; later docs-only commits preserve proof. Acquisition/equipping, holiday availability and world-leader content are not certified.
+
 ## Numbers
 
 | Case | Working | Result |
@@ -77,3 +83,10 @@ Live proof: `game-engine/data/diagnostics/playerdamage-20260926/` (server and cl
 - [[level-scaling]] — damage and health multipliers after armor
 - [[spell-casting]] — effect handlers
 - [[auras]] — `AuraStatMods` (MOD_AUTOATTACK_DAMAGE, damage done/taken)
+
+
+### Native player critical/block hit state
+
+Autoswings consume integer aura253 chance on the defender and double the already-truncated blocked amount. Player weapon-spell hit plans retain sparse per-unit block results through flight; the existing innermost matching `ResolvingHits` frame supplies that result before absorption. Critical spell blocks double the integer shield percentage before truncation/full-block cap, not the amount after truncation. Chance is read at impact; facing/block hit result belongs to launch. Source: TC a352b1fa Unit.cpp2564–2570,1469–1473,2610–2741,1243–1257.
+
+This player slice does not certify NPC block flags/baseline/totems or full hit-table ordering. Aura638 ownership conflicts between pinnedCPP and MartialExpert description; generic253/186 certificates remain absent. Exact source and proof ledger: [class completeness](../../class-completeness6.md).

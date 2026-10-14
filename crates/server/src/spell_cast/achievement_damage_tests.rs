@@ -8,6 +8,299 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn achievements_criteria_bbking_both_factions_hit_actual_leaders_and_reopen() {
+    prove_bbking_faction(1, 4436, &[(16802, 12660), (10181, 12661), (3144, 35832)]);
+    prove_bbking_faction(2, 4437, &[(42928, 12664), (7999, 12666), (17468, 12667)]);
+}
+
+fn new_bbking_harness(race: u8) -> Harness {
+    let mut h = harness_with_plugins(vec![], &[67531], 1, false, |app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .unwrap();
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Player>(h.caster)
+        .unwrap()
+        .race = race;
+    h
+}
+
+fn assert_bbking_counters(h: &Harness, leaders: &[(u32, u32)], count: Option<u64>) {
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    for &(_, criterion) in leaders {
+        assert_eq!(
+            state.criteria_progress.get(&criterion).copied(),
+            count,
+            "criterion{criterion}"
+        );
+    }
+}
+
+fn prove_bbking_faction(race: u8, achievement: u32, leaders: &[(u32, u32)]) {
+    use shared::components::Npc;
+    let mut h = new_bbking_harness(race);
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Bbkingproof", race, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((ClientId(character), PlayerAchievementState::default()));
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.update();
+    super::cast_triggered(h.app.world_mut(), h.caster, 67531, Some(h.npc), 0);
+    h.advance(2);
+    assert_bbking_counters(&h, leaders, None);
+    let player = spawn_player(&mut h.app, 1, 3.0);
+    crate::achievement::record_targeted_spell_hit(h.app.world_mut(), h.caster, player, 67531);
+    let missing = h.app.world_mut().spawn_empty().id();
+    crate::achievement::record_targeted_spell_hit(h.app.world_mut(), h.caster, missing, 67531);
+    assert_bbking_counters(&h, leaders, None);
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    for &(entry, criterion) in leaders {
+        let target = spawn_npc(&mut h.app, 3.0);
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM content_creature_template WHERE entry=?1",
+                [entry],
+                |row| row.get(0),
+            )
+            .unwrap();
+        h.app.world_mut().entity_mut(target).insert(Npc {
+            template_id: entry,
+            name,
+        });
+        assert!(!super::cast_triggered_with_item_level(
+            h.app.world_mut(),
+            h.caster,
+            67531,
+            Some(target),
+            u8::MAX,
+            None
+        ));
+        assert!(
+            !h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&criterion)
+        );
+        assert!(super::cast_triggered_with_item_level(
+            h.app.world_mut(),
+            h.caster,
+            67531,
+            Some(target),
+            0,
+            None
+        ));
+        h.advance(2);
+        assert_eq!(
+            h.health(target),
+            5000.0,
+            "zero damage still constitutes a real hit"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .get(&criterion),
+            Some(&1)
+        );
+    }
+    assert_bbking_counters(&h, leaders, Some(1));
+    let account = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .account
+        .as_ref()
+        .unwrap();
+    assert!(account.earned_ids.contains(&achievement));
+    let completed_at = account.earned_at[&achievement];
+    let other = if achievement == 4436 { 4437 } else { 4436 };
+    assert!(
+        !account.earned_ids.contains(&other),
+        "opposite-faction root must not grant"
+    );
+    super::cast_triggered(h.app.world_mut(), h.caster, 67531, Some(h.npc), 0);
+    h.advance(20);
+    assert_bbking_counters(&h, leaders, Some(1));
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    for &(_, criterion) in leaders {
+        assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
+    }
+    let mut rejoined = new_bbking_harness(race);
+    rejoined.app.insert_resource(GameDatabase { db });
+    rejoined
+        .app
+        .world_mut()
+        .entity_mut(rejoined.caster)
+        .insert((ClientId(character), saved));
+    rejoined
+        .app
+        .world_mut()
+        .entity_mut(rejoined.connection)
+        .remove::<InWorld>();
+    rejoined.app.update();
+    rejoined
+        .app
+        .world_mut()
+        .entity_mut(rejoined.connection)
+        .insert(InWorld {
+            character_id: character,
+        });
+    rejoined.app.update();
+    assert_bbking_counters(&rejoined, leaders, Some(1));
+    let account = rejoined
+        .app
+        .world()
+        .get::<PlayerAchievementState>(rejoined.caster)
+        .unwrap()
+        .account
+        .as_ref()
+        .unwrap();
+    assert!(account.earned_ids.contains(&achievement));
+    assert_eq!(account.earned_at.get(&achievement), Some(&completed_at));
+}
+
+#[test]
+fn achievements_criteria_bbgun_real_effect_hits_authored_enemy_leader() {
+    use shared::components::Npc;
+    let mut h = harness_with_plugins(vec![], &[67531, 26662, 22812], 1, false, |app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .unwrap();
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    let name: String = conn
+        .query_row(
+            "SELECT name FROM content_creature_template WHERE entry=16802",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Npc {
+            template_id: 16802,
+            name,
+        },
+        Health {
+            current: 50_000.0,
+            max: 100_000.0,
+        },
+    ));
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Bbgunproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((ClientId(character), PlayerAchievementState::default()));
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.update();
+    assert!(
+        super::cast_triggered_with_item_level(
+            h.app.world_mut(),
+            h.caster,
+            67531,
+            Some(h.npc),
+            0,
+            None,
+        ),
+        "authored BB gun cast accepts its actual NPC target"
+    );
+    h.advance(2);
+    assert_eq!(
+        h.health(h.npc),
+        49_990.0,
+        "source165 deals 0.01percent of maximum, not current health or caster power"
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| event.spell_id == Some(67531)
+            && event.target == Some(h.npc.to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.amount == 10),
+        "real percent-health hit produces its damage receipt"
+    );
+    super::cast_triggered(h.app.world_mut(), h.caster, 26662, Some(h.caster), 0);
+    super::cast_triggered(h.app.world_mut(), h.npc, 22812, Some(h.npc), 0);
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 26662));
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 22812));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(h.caster)
+            .unwrap()
+            .damage_done(1)
+            > 1.0
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(h.npc)
+            .unwrap()
+            .damage_taken(1)
+            < 1.0
+    );
+    super::cast_triggered(h.app.world_mut(), h.caster, 67531, Some(h.npc), 0);
+    h.advance(2);
+    assert_eq!(
+        h.health(h.npc),
+        49_980.0,
+        "source165 omits direct damage done/taken bonuses even with real Enrage/Barkskin"
+    );
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: 2500.0,
+        max: 5000.0,
+    });
+    super::cast_triggered(h.app.world_mut(), h.caster, 67531, Some(h.npc), 0);
+    h.advance(2);
+    assert_eq!(
+        h.health(h.npc),
+        2500.0,
+        "half a damage point truncates to zero, not one"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&12660),
+        Some(&3),
+        "all actual leader hits, including zero damage, must satisfy TargetCreatureId4"
+    );
+}
+
+#[test]
 fn achievements_criteria_kill_any_creature_uses_real_taps_group_range_and_corpse_eligibility() {
     use crate::group::{GroupRegistry, OnlineMember, OnlineView};
     use shared::components::{Npc, Position};
