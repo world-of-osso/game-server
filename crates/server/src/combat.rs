@@ -540,6 +540,9 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
     stealth: crate::auras::stealth::DetectionUnits<'w, 's>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
+    race_types: Option<Res<'w, crate::unit_creature_type::RaceCreatureTypes>>,
+    forms: Option<Res<'w, crate::auras::shapeshift::ShapeshiftForms>>,
+    world_data: Option<Res<'w, crate::world_data::WorldData>>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
     combat_log: ResMut<'w, CombatLog>,
@@ -605,6 +608,11 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
                     sight: &params.sight,
                     armor_constants: params.armor_constants.as_deref(),
                     spells: params.spells.as_deref(),
+                    creature_types: crate::unit_creature_type::CreatureTypes {
+                        races: params.race_types.as_deref(),
+                        forms: params.forms.as_deref(),
+                        data: params.world_data.as_deref(),
+                    },
                 },
                 target_entity,
                 &mut snapshot.auto_attack,
@@ -784,6 +792,7 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
     pub armor_constants: Option<&'a ArmorConstants>,
     spells: Option<&'a crate::spell_info::SpellStore>,
     sight: &'a SwingSight<'w, 's>,
+    creature_types: crate::unit_creature_type::CreatureTypes<'a>,
 }
 
 /// Swing damage before armor and outcome: a player's weapon roll
@@ -796,7 +805,7 @@ fn swing_damage(
     hand: Hand,
     scaling: &UnitScaling,
     target_mods: Option<&AuraStatMods>,
-    summon_damage_mult: f32,
+    additional_done_mult: f32,
 ) -> f32 {
     const PHYSICAL: u32 = 1;
     let mut rng = rand::thread_rng();
@@ -811,7 +820,28 @@ fn swing_damage(
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
-    (base * done * summon_damage_mult * taken).max(0.0).round()
+    (base * done * additional_done_mult * taken)
+        .max(0.0)
+        .round()
+}
+
+/// TC Unit.cpp:8110, the victim type is shared with spell damage/target admission.
+fn creature_type_damage_multiplier(
+    mods: Option<&AuraStatMods>,
+    victim: Entity,
+    auras: Option<&crate::auras::ActiveAuras>,
+    context: &SwingContext,
+) -> f32 {
+    let Some(mods) = mods.filter(|mods| mods.has_damage_done_versus()) else {
+        return 1.0;
+    };
+    let (_, npc, _, _, _, _, player, _) =
+        context.sight.bodies.get(victim).expect("swing target body");
+    let kind = context
+        .creature_types
+        .resolve(player, npc, auras)
+        .unwrap_or_else(|err| panic!("swing victim{victim}: {err}"));
+    mods.damage_done_versus(crate::unit_creature_type::mask(kind))
 }
 
 /// A creature's main-hand weapon damage roll (Unit::CalculateDamage): its
@@ -1080,6 +1110,12 @@ fn try_swing(
     let (attacker_scaling, target) = (unit(attacker.entity), unit(target_entity));
     let level_difference = i32::from(target.level_against(&attacker_scaling))
         - i32::from(attacker_scaling.level_against(&target));
+    let versus = creature_type_damage_multiplier(
+        attacker.mods,
+        target_entity,
+        avoidance.1.as_deref(),
+        context,
+    );
     let armored = armor_mitigated(
         swing_damage(
             attacker,
@@ -1087,7 +1123,7 @@ fn try_swing(
             hand,
             &attacker_scaling,
             target_mods,
-            context.summon_modifiers.multiplier(attacker.entity),
+            context.summon_modifiers.multiplier(attacker.entity) * versus,
         ) * armor
             .1
             .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier),

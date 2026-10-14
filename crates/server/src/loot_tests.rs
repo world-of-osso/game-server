@@ -18,6 +18,9 @@ use crate::persistence::ClientId;
 #[path = "loot/group_tests.rs"]
 mod group_loot;
 
+#[path = "loot/encounter_tests.rs"]
+mod encounter_loot;
+
 const KOBOLD_VERMIN: u32 = 6;
 const MELTED_CANDLE: u32 = 755;
 const TARNISHED_CHAIN_VEST: u32 = 2379;
@@ -60,6 +63,110 @@ struct Looter {
     character_id: u64,
     player: Entity,
     connection: Entity,
+}
+
+#[test]
+fn achievements_criteria_native_any_item_receipts_use_canonical_quality_and_count_once() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let mut h = harness_with_plugins(false, |app| {
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.insert_resource(GameDatabase { db });
+        app.add_plugins(AchievementPlugin);
+    })
+    .unwrap();
+    let player = h.looter.player;
+    let character = h.looter.character_id;
+    h.app
+        .world_mut()
+        .entity_mut(h.looter.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    h.app.world_mut().entity_mut(player).insert((
+        shared::components::Level(1),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    // Controlled receipt input uses authentic item templates, not an authored Kobold drop claim.
+    // The wire slot quality deliberately disagrees; only canonical template quality may gate.
+    for (item_id, count, shown_quality, name) in
+        [(124101, 5, 4, "Aethril"), (17203, 3, 0, "Sulfuron Ingot")]
+    {
+        let corpse = h.kill_kobold();
+        let loot = CorpseLoot {
+            looters: [(
+                character,
+                vec![Some(LootContent::Item {
+                    item_id,
+                    count,
+                    quality: shown_quality,
+                    name: name.into(),
+                })],
+            )]
+            .into(),
+        };
+        h.app.world_mut().entity_mut(corpse).insert(loot);
+        h.take_slot(corpse, 0);
+        assert_eq!(
+            h.count_of(item_id),
+            0,
+            "refused slot request cannot acquire anything"
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&6140)
+                .is_none()
+        );
+        h.open(corpse, false);
+        h.take_slot(corpse, 0);
+        assert_eq!(
+            h.count_of(item_id),
+            count,
+            "native settlement stores actual stack quantity"
+        );
+        let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
+        if item_id == 124101 {
+            assert_eq!(
+                state.criteria_progress.get(&105347),
+                Some(&1),
+                "ItemId19, one receipt despite five items"
+            );
+            assert!(
+                !state.criteria_progress.contains_key(&6140),
+                "display quality cannot turn Aethril epic"
+            );
+            assert!(!state.criteria_progress.contains_key(&6142));
+        } else {
+            assert_eq!(
+                state.criteria_progress.get(&6140),
+                Some(&1),
+                "one loot receipt despite three items"
+            );
+            assert_eq!(
+                state.criteria_progress.get(&6142),
+                Some(&1),
+                "looting also acquires once"
+            );
+        }
+        h.take_slot(corpse, 0);
+        h.settle();
+    }
+    let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(state.criteria_progress.get(&6140), Some(&1));
+    assert_eq!(state.criteria_progress.get(&6142), Some(&1));
+    assert_eq!(state.criteria_progress.get(&105347), Some(&1));
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&6140), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&6142), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&105347), Some(&1));
 }
 
 #[test]

@@ -1,6 +1,120 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_known_spell_needs_player_knowledge_and_an_authored_spell_row() {
+    let catalog = catalog();
+    for (spells, qualifies) in [(vec![], false), (vec![432962], false), (vec![406106], true)] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                known_spells: spells.into_iter().collect(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::LearnSpell(370465),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&61271).copied(),
+            qualifies.then_some(1)
+        );
+    }
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE spell (ID INTEGER PRIMARY KEY);")
+        .unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(104, 406106)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    conn.execute("INSERT INTO spell VALUES (406106)", [])
+        .unwrap();
+    let facts = load_criteria_facts(&conn, &[(104, 406106)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    assert!(!facts[0].holds(
+        &ReferencePlayer::default(),
+        CriteriaEvent::LearnSpell(370465)
+    ));
+}
+
+#[test]
+fn achievements_criteria_item_template_predicates_match_ids_and_quality_without_dropping_missing_items()
+ {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "CREATE TABLE content_item (ID INTEGER PRIMARY KEY, Quality INTEGER);
+        INSERT INTO content_item VALUES (33999,4),(124101,1),(45199,0);",
+    )
+    .unwrap();
+    let player = ReferencePlayer::default();
+    let epic = load_item_quality_fact(&conn, 15, 4).unwrap().unwrap();
+    assert!(epic.holds(&player, CriteriaEvent::ObtainAnyItem(33999)));
+    assert!(epic.holds(&player, CriteriaEvent::LootAnyItem(33999)));
+    assert!(!epic.holds(&player, CriteriaEvent::ObtainAnyItem(124101)));
+    assert!(!epic.holds(&player, CriteriaEvent::ObtainAnyItem(999999)));
+    let rare_or_better = load_item_quality_fact(&conn, 14, 3).unwrap().unwrap();
+    assert!(rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(33999)));
+    assert!(!rare_or_better.holds(&player, CriteriaEvent::LootAnyItem(45199)));
+    assert!(
+        load_event_item_alternatives(&conn, &[45199, 173032])
+            .unwrap()
+            .is_none()
+    );
+    conn.execute("INSERT INTO content_item VALUES (173032,1)", [])
+        .unwrap();
+    let alternatives = load_event_item_alternatives(&conn, &[45199, 173032])
+        .unwrap()
+        .unwrap();
+    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(45199)));
+    assert!(alternatives.holds(&player, CriteriaEvent::LootAnyItem(173032)));
+    assert!(!alternatives.holds(&player, CriteriaEvent::LootAnyItem(124101)));
+}
+
+#[test]
+fn achievements_criteria_item_receipts_sum_distinct_character_contributions() {
+    let catalog = catalog();
+    let contributions = [2, 3].map(|count| {
+        let mut state = PlayerAchievementState::default();
+        state.criteria_progress.insert(6140, count);
+        state.criteria_progress.insert(6142, count);
+        state
+    });
+    let aggregate = catalog.aggregate(contributions.into_iter());
+    assert_eq!(aggregate.criteria_progress.get(&6140), Some(&5));
+    assert_eq!(aggregate.criteria_progress.get(&6142), Some(&5));
+}
+
+#[test]
+fn achievements_criteria_obtain_item_keeps_pinned_statistic_only_completion_contradictions_disabled()
+ {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer::default()),
+        ..Default::default()
+    };
+    for item in [163036, 169202] {
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::ObtainAnyItem(item),
+            None,
+            1,
+            &conditions,
+        );
+    }
+    assert!(!state.criteria_progress.contains_key(&41244));
+    assert!(!state.criteria_progress.contains_key(&45924));
+    assert!(!state.earned_ids.contains(&12927));
+    assert!(!state.earned_ids.contains(&13707));
+}
+
+#[test]
 fn achievements_criteria_fall_alive_and_area_leaves_remain_required() {
     let catalog = catalog();
     for (alive, area, puddle) in [
@@ -447,9 +561,9 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Pinned census:5448 +964/8354 from fall24 behind retained Alive16/Area17.
+    // Pinned census:5450 +18805/19704/19716 behind known-spell104 markers.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5450);
+    assert_eq!(union.len(), 5453);
     for achievement in [
         578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
         6030, 6031, 6350, 6584, 6621, 6973, 13025, 13026, 13623, 14728, 14729, 14730, 14731, 16729,
@@ -462,6 +576,8 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
         399, 400, 401, 402, 403, 405, 1159, 1160, 5266, 5267,
         // Fall24; Alive16 retained, and8354 additionally requires area6665.
         964, 8354,
+        // Positive PlayerKnowsSpell104; actual learned recipes plus marker ownership.
+        18805, 19704, 19716,
     ] {
         assert!(
             union.contains(&achievement),
