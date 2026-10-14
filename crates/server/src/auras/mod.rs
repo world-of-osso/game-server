@@ -107,7 +107,6 @@ impl Plugin for AuraPlugin {
                 Startup,
                 (
                     shapeshift::load_shapeshift_forms_startup,
-                    crate::unit_creature_type::load_startup,
                     mount::load_mount_store_startup,
                     override_spell_data::load_startup,
                 ),
