@@ -133,6 +133,7 @@ fn renown_watch_unknown_or_unevaluated_faction_does_not_replace_watch() {
     let mut reputation = CharacterReputation::default();
     reputation.watch(72);
     h.app.world_mut().entity_mut(h.player).insert(reputation);
+    let baseline = query(&mut h);
     for faction_id in [2503, 4_000_000] {
         let (denied, updates) =
             request_with_updates(&mut h, RenownRequest::SetWatchedFaction { faction_id });
@@ -147,8 +148,7 @@ fn renown_watch_unknown_or_unevaluated_faction_does_not_replace_watch() {
         assert!(denied.watch_error.is_some());
         assert_eq!(denied.watched_faction, Some(72));
         assert_eq!(
-            denied.factions.len(),
-            29,
+            denied.factions, baseline.factions,
             "Refusal must not discard the catalog"
         );
     }
