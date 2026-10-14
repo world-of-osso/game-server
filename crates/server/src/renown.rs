@@ -164,6 +164,30 @@ pub(crate) fn snapshot(db: &Database, character: u64) -> RenownSnapshot {
     }
 }
 
+/// ReputationBar.lua's major-faction branch, independent of reward-catalog delivery.
+pub(crate) fn read_watched_renown(
+    db: &Database,
+    character: u64,
+    faction_id: u32,
+) -> Option<shared::protocol_snapshots::WatchedReputationSnapshot> {
+    let faction = catalog()
+        .iter()
+        .find(|faction| faction.faction_id == faction_id)?;
+    let current = read_progress(db, character)
+        .get(&faction.id)
+        .copied()
+        .unwrap_or_default();
+    Some(shared::protocol_snapshots::WatchedReputationSnapshot {
+        faction_id,
+        name: faction.name.clone(),
+        value: current.standing,
+        maximum: faction.level_threshold,
+        capped: current.level >= faction.max_level,
+        is_major_faction: true,
+        reaction: shared::reputation::Standing::Neutral,
+    })
+}
+
 pub(crate) struct RenownPlugin;
 impl Plugin for RenownPlugin {
     fn build(&self, app: &mut App) {
@@ -225,12 +249,14 @@ fn receive_requests(
             &PlayerLink,
             &mut MessageReceiver<RenownRequest>,
             &mut MessageSender<RenownSnapshot>,
+            &mut MessageSender<shared::protocol::ReputationStateUpdate>,
         ),
         With<Authenticated>,
     >,
 ) {
-    for (owner, link, mut receiver, mut sender) in &mut connections {
+    for (owner, link, mut receiver, mut sender, mut reputation_sender) in &mut connections {
         for request in receiver.receive() {
+            let updates_watch = matches!(request, RenownRequest::SetWatchedFaction { .. });
             let mut reputation = reputations.get_mut(link.0).ok();
             let reply = reply_to_request(
                 &db.db,
@@ -238,6 +264,21 @@ fn receive_requests(
                 reputation.as_deref_mut(),
                 request,
             );
+            if updates_watch && let Some(reputation) = reputation.as_deref() {
+                let snapshot = crate::reputation::read_reputation_snapshot(
+                    &db.db,
+                    owner.character_id,
+                    reputation,
+                    &shared::reputation::default_faction_registry(),
+                );
+                reputation_sender.send::<shared::protocol::ReputationChannel>(
+                    shared::protocol::ReputationStateUpdate {
+                        snapshot: Some(snapshot),
+                        message: None,
+                        error: None,
+                    },
+                );
+            }
             sender.send::<InstanceChannel>(reply);
         }
     }

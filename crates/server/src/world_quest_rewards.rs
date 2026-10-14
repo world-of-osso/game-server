@@ -192,7 +192,13 @@ impl Settlement {
             return;
         };
         let currency = crate::currency::build_currency_snapshot(&self.wallet);
-        let reputation = crate::reputation::build_reputation_snapshot(
+        let character = world
+            .get::<crate::auth::InWorld>(connection)
+            .expect("world-quest reward owner must be in world")
+            .character_id;
+        let reputation = crate::reputation::read_reputation_snapshot(
+            &world.resource::<crate::persistence::GameDatabase>().db,
+            character,
             &self.reputation,
             &shared::reputation::default_faction_registry(),
         );

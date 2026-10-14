@@ -21,6 +21,8 @@ fn request(h: &mut Harness, request: RenownRequest) -> RenownSnapshot {
         MessageReceiver::<RenownRequest>::default(),
         MessageSender::<RenownSnapshot>::default(),
         MessageReceiver::<RenownSnapshot>::default(),
+        MessageSender::<shared::protocol::ReputationStateUpdate>::default(),
+        MessageReceiver::<shared::protocol::ReputationStateUpdate>::default(),
     ));
     h.app
         .world_mut()
@@ -53,6 +55,20 @@ fn renown_watch_query_reads_live_reputation_and_zero_clears_persistently() {
     let cleared = request(&mut h, RenownRequest::SetWatchedFaction { faction_id: 0 });
     assert_eq!(cleared.watched_faction, None);
     assert_eq!(cleared.watch_error, None);
+    let updates: Vec<_> = h
+        .app
+        .world_mut()
+        .get_mut::<MessageReceiver<shared::protocol::ReputationStateUpdate>>(h.connection)
+        .unwrap()
+        .receive()
+        .collect();
+    assert!(
+        updates.iter().any(|update| update
+            .snapshot
+            .as_ref()
+            .is_some_and(|snapshot| snapshot.watched.is_none())),
+        "Clearing must publish the main-screen bar removal"
+    );
     assert_eq!(
         h.app
             .world()
