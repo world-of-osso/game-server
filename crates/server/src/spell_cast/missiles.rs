@@ -219,6 +219,7 @@ fn split_reflected(
                     units: vec![caster],
                     dest: planned.dest,
                     chain_multipliers: vec![(caster, planned.chain_multiplier(reflector))],
+                    blocked_units: Vec::new(),
                 })
                 .collect();
             (reflector, turned)

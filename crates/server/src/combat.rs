@@ -984,6 +984,38 @@ fn blocked_pct(
     }
 }
 
+/// TC Unit::IsBlockCritical: integer aura253 amounts on the defender.
+pub(crate) fn roll_critical_block(auras: Option<&crate::auras::ActiveAuras>) -> bool {
+    const MOD_BLOCK_CRIT_CHANCE: u32 = 253;
+    let chance = auras.map_or(0.0, |auras| {
+        auras
+            .iter()
+            .map(|aura| {
+                let stacks = aura.stack_multiplier();
+                aura.effects
+                    .iter()
+                    .filter(|effect| effect.aura_type == MOD_BLOCK_CRIT_CHANCE)
+                    .map(|effect| effect.amount.trunc() * stacks)
+                    .sum::<f32>()
+            })
+            .sum::<f32>()
+    });
+    chance >= 100.0 || chance > 0.0 && rand::random::<f32>() * 100.0 < chance
+}
+
+fn roll_critical_block_damage(
+    auras: Option<&crate::auras::ActiveAuras>,
+    damage: f32,
+    blocked: f32,
+) -> (f32, f32) {
+    if roll_critical_block(auras) {
+        // Autoswings double AFTER the ordinary block amount was truncated.
+        (damage - blocked, blocked * 2.0)
+    } else {
+        (damage, blocked)
+    }
+}
+
 struct SwingOutcome {
     hand: Hand,
     kind: MeleeOutcome,
@@ -1154,6 +1186,11 @@ fn try_swing(
         level_difference,
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
+    let (outcome_damage, blocked) = if kind == MeleeOutcome::Block && !immune {
+        roll_critical_block_damage(avoidance.1.as_deref(), outcome_damage, blocked)
+    } else {
+        (outcome_damage, blocked)
+    };
     let critical_multiplier = if kind == MeleeOutcome::Crit {
         attacker.mods.map_or(1.0, |mods| mods.critical_damage(1))
     } else {
