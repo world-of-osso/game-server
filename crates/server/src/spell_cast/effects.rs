@@ -45,6 +45,7 @@ const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x100;
 
 pub const EFFECT_INSTAKILL: u32 = 1;
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
+pub const EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT: u32 = 165;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
@@ -95,6 +96,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_INSTAKILL => instakill,
         EFFECT_SCHOOL_DAMAGE => school_damage,
+        EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT => damage_from_max_health_pct,
         33 | 95 => crate::gathering::effect_gather,
         87 => crate::pvp::isle_siege::effect_damage,
         EFFECT_HEALTH_LEECH => health_leech,
@@ -755,6 +757,36 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
+/// TC SpellEffects5165–5173/Unit.h809: integer percent of the target's maximum.
+/// This effect bypasses SpellDamageBonusDone/Taken, unlike EffectSchoolDMG.
+fn damage_from_max_health_pct(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+) {
+    let Some(health) = world.get::<Health>(target) else {
+        return;
+    };
+    let maximum = health.max;
+    let percent = modded_base_points(world, ctx.caster, ctx.spell, effect);
+    let amount = (maximum * percent / 100.0).trunc() * ctx.chain_multiplier;
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, amount);
+    deal_damage_and_report(
+        world,
+        ctx,
+        target,
+        DamageInput {
+            amount,
+            crit,
+            periodic: false,
+            resolved_source: true,
+            effect: Some(effect),
+            bonus_caster: ctx.caster,
+        },
+    );
+}
+
 /// 58 WEAPON_DAMAGE and 121 NORMALIZED_WEAPON_DMG: weapon hit + BasePoints.
 fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let normalized = effect.effect == EFFECT_NORMALIZED_WEAPON_DMG;
@@ -1029,7 +1061,11 @@ fn deal_damage_and_report(
             * crate::auras::summon_damage::multiplier(world, bonus_caster)
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
     };
-    let taken = crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell);
+    let taken = if effect.is_some_and(|effect| effect.effect == EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT) {
+        crate::auras::damage_resilience_multiplier(world, target, ctx.spell)
+    } else {
+        crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell)
+    };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
         ..*ctx
