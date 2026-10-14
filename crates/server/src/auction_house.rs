@@ -26,6 +26,9 @@ mod browse;
 use crate::persistence::mail_store;
 
 mod handlers;
+pub(crate) use handlers::{
+    MarketPublication, PendingMarketCommits, enqueue_market_commit, load_auction_state,
+};
 mod operations;
 mod queries;
 
@@ -84,6 +87,11 @@ pub struct AuctionHousePlugin;
 impl Plugin for AuctionHousePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AuctionHouseState>();
+        app.init_resource::<PendingMarketCommits>();
+        app.add_systems(
+            Update,
+            handlers::publish_market_commits.after(initialize_auction_state),
+        );
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<crate::maps::ServerClock>();
         app.add_systems(Update, initialize_auction_state);

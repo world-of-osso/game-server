@@ -1,5 +1,7 @@
 use super::*;
-use crate::gold::{GoldUpdateQueue, record_persisted_gold};
+use crate::gold::GoldUpdateQueue;
+#[cfg(test)]
+use crate::gold::record_persisted_gold;
 use crate::npc_interaction::ActiveInteraction;
 use redb::ReadableDatabase;
 
@@ -316,115 +318,267 @@ pub(super) fn process_bid_list_requests(
     });
 }
 
+#[derive(Resource, Default)]
+pub(crate) struct PendingMarketCommits(std::collections::VecDeque<PendingMarketCommit>);
+
+struct PendingMarketCommit {
+    connection: Option<Entity>,
+    receipt: crate::persistence_writer::CommitReceipt<MarketPublication>,
+}
+
+#[derive(Clone)]
+pub(crate) struct MarketPublication {
+    pub(crate) auctions: HashMap<u64, AuctionData>,
+    pub(crate) criteria: Vec<(u64, crate::achievement::CriteriaEvent)>,
+    pub(crate) gold: Vec<(u64, u64)>,
+    pub(crate) economy: Option<crate::economy::model::EconomyState>,
+    pub(crate) response: Option<AuctionOperationResponse>,
+}
+
+impl MarketPublication {
+    pub(crate) fn from_auctions(mut state: AuctionHouseState) -> Self {
+        Self {
+            auctions: state.auctions,
+            criteria: std::mem::take(&mut state.pending_criteria),
+            gold: Vec::new(),
+            economy: None,
+            response: None,
+        }
+    }
+}
+
+pub(crate) fn load_auction_state(db: &redb::Database) -> AuctionHouseState {
+    AuctionHouseState {
+        initialized: true,
+        auctions: persistence::load_auctions(db)
+            .into_iter()
+            .map(|auction| (auction.auction_id, auction))
+            .collect(),
+        pending_criteria: Vec::new(),
+    }
+}
+
+pub(crate) fn enqueue_market_commit(
+    db: &GameDatabase,
+    pending: &mut PendingMarketCommits,
+    connection: Option<Entity>,
+    name: &'static str,
+    operation: impl FnOnce(&redb::Database) -> Result<MarketPublication, String> + Send + 'static,
+) -> crate::persistence_writer::CommitReceipt<MarketPublication> {
+    let receipt = db.writer.enqueue(name, operation);
+    pending.0.push_back(PendingMarketCommit {
+        connection,
+        receipt: receipt.clone(),
+    });
+    receipt
+}
+
+pub(super) fn publish_market_commits(
+    mut pending: ResMut<PendingMarketCommits>,
+    mut auctions: ResMut<AuctionHouseState>,
+    mut gold: ResMut<GoldUpdateQueue>,
+    mut economy: Option<ResMut<crate::economy::Economy>>,
+    mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
+) {
+    while let Some(result) = pending.0.front().and_then(|commit| commit.receipt.result()) {
+        let commit = pending.0.pop_front().expect("completed market commit");
+        let response = match result {
+            Ok(publication) => {
+                auctions.auctions = publication.auctions;
+                auctions.pending_criteria.extend(publication.criteria);
+                for (character, value) in publication.gold {
+                    gold.record(character, value);
+                }
+                if let (Some(state), Some(economy)) = (publication.economy, economy.as_deref_mut())
+                {
+                    *economy = crate::economy::Economy::from_state(state);
+                }
+                publication.response
+            }
+            Err(error) => Some(err(&error)),
+        };
+        if let (Some(connection), Some(response)) = (commit.connection, response) {
+            send_auction_message(&mut senders, connection, response);
+        }
+    }
+}
+
 pub(super) fn process_create_requests(
     mut receivers: SessionReceiver<CreateAuction>,
     db: Option<Res<GameDatabase>>,
     templates: Option<Res<ItemTemplates>>,
-    mut state: ResMut<AuctionHouseState>,
-    mut gold_updates: ResMut<GoldUpdateQueue>,
+    mut pending: ResMut<PendingMarketCommits>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_session_operations(
-        &mut receivers,
-        db,
-        &mut senders,
-        |db, character_id, house, req| {
-            let Some(templates) = templates.as_deref() else {
-                return err("item templates unavailable");
-            };
-            create_auction_with_gold_update(
-                &db.db,
-                templates,
-                &mut state,
-                character_id,
-                house,
-                &req,
-                &mut gold_updates,
-            )
-        },
-    );
+    let Some(db) = db else {
+        return;
+    };
+    for_each_session_request(&mut receivers, |connection, character, house, request| {
+        let (Some(house), Some(templates)) = (house, templates.as_deref()) else {
+            send_auction_message(&mut senders, connection, err(NO_AUCTIONEER));
+            return;
+        };
+        let templates = templates.clone();
+        enqueue_market_commit(
+            &db,
+            &mut pending,
+            Some(connection),
+            "create auction",
+            move |db| {
+                let mut state = load_auction_state(db);
+                let response =
+                    create_auction(db, &templates, &mut state, character, house, &request);
+                let mut publication = MarketPublication::from_auctions(state);
+                if response.success {
+                    publication
+                        .gold
+                        .push((character, persistence::load_inventory(db, character).gold));
+                }
+                publication.response = Some(response);
+                Ok(publication)
+            },
+        );
+    });
 }
 
 pub(super) fn process_bid_requests(
     mut receivers: SessionReceiver<PlaceBid>,
     db: Option<Res<GameDatabase>>,
-    mut state: ResMut<AuctionHouseState>,
-    mut gold_updates: ResMut<GoldUpdateQueue>,
+    mut pending: ResMut<PendingMarketCommits>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_session_operations(
+    enqueue_auction_operations(
         &mut receivers,
-        db,
+        db.as_deref(),
+        &mut pending,
         &mut senders,
-        |db, character_id, _, req| {
-            place_bid_with_gold_updates(
-                &db.db,
-                &mut state,
-                character_id,
-                req.auction_id,
-                req.amount,
-                &mut gold_updates,
-            )
+        |db, state, character, request| {
+            place_bid(db, state, character, request.auction_id, request.amount)
         },
+        |request| request.auction_id,
     );
 }
 
 pub(super) fn process_buyout_requests(
     mut receivers: SessionReceiver<BuyoutAuction>,
     db: Option<Res<GameDatabase>>,
-    mut state: ResMut<AuctionHouseState>,
-    mut gold_updates: ResMut<GoldUpdateQueue>,
+    mut pending: ResMut<PendingMarketCommits>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_session_operations(
+    enqueue_auction_operations(
         &mut receivers,
-        db,
+        db.as_deref(),
+        &mut pending,
         &mut senders,
-        |db, character_id, _, req| {
-            buyout_auction_with_gold_updates(
-                &db.db,
-                &mut state,
-                character_id,
-                req.auction_id,
-                &mut gold_updates,
-            )
-        },
+        |db, state, character, request| buyout_auction(db, state, character, request.auction_id),
+        |request| request.auction_id,
     );
 }
 
 pub(super) fn process_cancel_requests(
     mut receivers: SessionReceiver<CancelAuction>,
     db: Option<Res<GameDatabase>>,
-    mut state: ResMut<AuctionHouseState>,
+    mut pending: ResMut<PendingMarketCommits>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_session_operations(
+    enqueue_auction_operations(
         &mut receivers,
-        db,
+        db.as_deref(),
+        &mut pending,
         &mut senders,
-        |db, character_id, _, req| cancel_auction(&db.db, &mut state, character_id, req.auction_id),
+        |db, state, character, request| cancel_auction(db, state, character, request.auction_id),
+        |request| request.auction_id,
     );
+}
+
+fn enqueue_auction_operations<M: lightyear::prelude::Message, F, I>(
+    receivers: &mut SessionReceiver<M>,
+    db: Option<&GameDatabase>,
+    pending: &mut PendingMarketCommits,
+    senders: &mut Query<&mut MessageSender<AuctionOperationResponse>>,
+    operation: F,
+    auction_id: I,
+) where
+    F: Fn(&redb::Database, &mut AuctionHouseState, u64, &M) -> AuctionOperationResponse
+        + Copy
+        + Send
+        + 'static,
+    I: Fn(&M) -> u64,
+{
+    let Some(db) = db else {
+        return;
+    };
+    for_each_session_request(receivers, |connection, character, house, request| {
+        if house.is_none() {
+            send_auction_message(senders, connection, err(NO_AUCTIONEER));
+            return;
+        }
+        let id = auction_id(&request);
+        enqueue_market_commit(
+            db,
+            pending,
+            Some(connection),
+            "auction operation",
+            move |db| {
+                let mut state = load_auction_state(db);
+                let previous = state
+                    .auctions
+                    .get(&id)
+                    .and_then(|auction| auction.current_bidder_character_id);
+                let response = operation(db, &mut state, character, &request);
+                let mut publication = MarketPublication::from_auctions(state);
+                if response.success {
+                    publication.gold = [Some(character), previous]
+                        .into_iter()
+                        .flatten()
+                        .map(|id| (id, persistence::load_inventory(db, id).gold))
+                        .collect();
+                }
+                publication.response = Some(response);
+                Ok(publication)
+            },
+        );
+    });
 }
 
 pub(super) fn expire_auctions(
     db: Option<Res<GameDatabase>>,
-    mut state: ResMut<AuctionHouseState>,
+    state: Res<AuctionHouseState>,
     clock: Res<crate::maps::ServerClock>,
+    mut pending: ResMut<PendingMarketCommits>,
+    mut expiry: Local<Option<crate::persistence_writer::CommitReceipt<MarketPublication>>>,
 ) {
     let Some(db) = db else { return };
+    if expiry
+        .as_ref()
+        .is_some_and(|receipt| receipt.result().is_none())
+    {
+        return;
+    }
+    *expiry = None;
     let now = clock.unix().max(0) as u64;
-    let expired: Vec<u64> = state
+    if !state
         .auctions
         .values()
-        .filter(|auction| auction.expires_at_unix_secs <= now)
-        .map(|auction| auction.auction_id)
-        .collect();
-    for auction_id in expired {
-        let Some(auction) = state.auctions.get(&auction_id).cloned() else {
-            continue;
-        };
-        match expire_single_auction(&db.db, &auction) {
-            Ok(()) => {
+        .any(|auction| auction.expires_at_unix_secs <= now)
+    {
+        return;
+    }
+    *expiry = Some(enqueue_market_commit(
+        &db,
+        &mut pending,
+        None,
+        "expire auctions",
+        move |db| {
+            let mut state = load_auction_state(db);
+            let expired: Vec<_> = state
+                .auctions
+                .values()
+                .filter(|auction| auction.expires_at_unix_secs <= now)
+                .cloned()
+                .collect();
+            for auction in expired {
+                expire_single_auction(db, &auction)?;
                 if let (Some(winner), Some(price)) =
                     (auction.current_bidder_character_id, auction.current_bid)
                 {
@@ -436,11 +590,11 @@ pub(super) fn expire_auctions(
                             price,
                         ));
                 }
-                state.auctions.remove(&auction_id);
+                state.auctions.remove(&auction.auction_id);
             }
-            Err(error) => error!(auction_id, %error, "auction expiry settlement failed"),
-        }
-    }
+            Ok(MarketPublication::from_auctions(state))
+        },
+    ));
 }
 
 fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(), String> {
@@ -475,6 +629,7 @@ fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(
     )
 }
 
+#[cfg(test)]
 pub(super) fn create_auction_with_gold_update(
     db: &redb::Database,
     templates: &ItemTemplates,
@@ -489,6 +644,7 @@ pub(super) fn create_auction_with_gold_update(
     response
 }
 
+#[cfg(test)]
 pub(super) fn place_bid_with_gold_updates(
     db: &redb::Database,
     state: &mut AuctionHouseState,
@@ -511,6 +667,7 @@ pub(super) fn place_bid_with_gold_updates(
     response
 }
 
+#[cfg(test)]
 pub(super) fn buyout_auction_with_gold_updates(
     db: &redb::Database,
     state: &mut AuctionHouseState,
@@ -532,6 +689,7 @@ pub(super) fn buyout_auction_with_gold_updates(
     response
 }
 
+#[cfg(test)]
 fn record_successful_gold_updates(
     db: &redb::Database,
     response: &AuctionOperationResponse,
@@ -544,25 +702,6 @@ fn record_successful_gold_updates(
     for character_id in character_ids {
         record_persisted_gold(db, character_id, gold_updates);
     }
-}
-
-fn process_session_operations<M, F>(
-    receivers: &mut SessionReceiver<M>,
-    db: Option<Res<GameDatabase>>,
-    senders: &mut Query<&mut MessageSender<AuctionOperationResponse>>,
-    mut build_response: F,
-) where
-    M: lightyear::prelude::Message,
-    F: FnMut(&GameDatabase, u64, u8, M) -> AuctionOperationResponse,
-{
-    let Some(db) = db else { return };
-    for_each_session_request(receivers, |entity, character_id, house, req| {
-        let response = match house {
-            Some(house) => build_response(&db, character_id, house, req),
-            None => err(NO_AUCTIONEER),
-        };
-        send_auction_message(senders, entity, response);
-    });
 }
 
 fn send_auction_message<M>(senders: &mut Query<&mut MessageSender<M>>, entity: Entity, message: M)

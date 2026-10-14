@@ -190,9 +190,7 @@ pub(super) fn create_auction(
         inventories: vec![(character_id, inventory)],
         ..Default::default()
     };
-    if let Err(error) = commit_market(db, None, &changes) {
-        return err(&error);
-    }
+    commit_market(db, None, &changes).expect("commit created auction");
     state.auctions.insert(auction.auction_id, auction);
     state.pending_criteria.push((
         character_id,
@@ -289,9 +287,7 @@ pub(super) fn place_bid(
     } else {
         changes.auctions.push(updated.clone());
     }
-    if let Err(error) = commit_market(db, None, &changes) {
-        return err(&error);
-    }
+    commit_market(db, None, &changes).expect("commit auction bid");
     state.pending_criteria.push((
         character_id,
         crate::achievement::CriteriaEvent::HighestAuctionBid(amount),
@@ -345,9 +341,7 @@ pub(super) fn buyout_auction(
     };
     stage_previous_bidder_refund(db, auction, character_id, &mut changes);
     let credits = auction_sale_events(auction, Some(character_id), price);
-    if let Err(error) = commit_market(db, None, &changes) {
-        return err(&error);
-    }
+    commit_market(db, None, &changes).expect("commit auction buyout");
     state.pending_criteria.extend(credits);
     state.pending_criteria.push((
         character_id,
@@ -387,9 +381,7 @@ pub(super) fn cancel_auction(
         )],
         ..Default::default()
     };
-    if let Err(error) = commit_market(db, None, &changes) {
-        return err(&error);
-    }
+    commit_market(db, None, &changes).expect("commit cancelled auction");
     state.auctions.remove(&auction_id);
     ok("auction cancelled")
 }

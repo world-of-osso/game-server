@@ -108,6 +108,62 @@ fn request_app(bonding: u8, bound: bool) -> (App, Entity, u64, u64) {
     (app, connection, seller, 92)
 }
 
+#[test]
+fn auction_create_ack_waits_for_fifo_commit_without_blocking_updates() {
+    use std::time::Instant;
+    let (mut app, connection, seller, guid) = request_app(0, false);
+    app.update();
+    let before = persistence::load_inventory(&app.world().resource::<GameDatabase>().db, seller);
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    app.world_mut()
+        .get_mut::<MessageSender<CreateAuction>>(connection)
+        .unwrap()
+        .send::<AuctionChannel>(CreateAuction {
+            item_guid: guid,
+            stack_count: 1,
+            min_bid: 100,
+            buyout_price: None,
+            duration: AuctionDuration::Short,
+        });
+    let started = Instant::now();
+    app.update();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature = std::mem::take(&mut app.world_mut().resource_mut::<Responses>().0);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "auction tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "auction ack precedes commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let response = loop {
+        app.update();
+        if let Some(response) = app.world_mut().resource_mut::<Responses>().0.pop() {
+            break response;
+        }
+        assert!(Instant::now() < deadline, "no durable auction response");
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert!(response.success, "{:?}", response);
+    let stored = persistence::load_inventory(&app.world().resource::<GameDatabase>().db, seller);
+    assert_eq!(stored.gold, before.gold - 100);
+    assert!(stored.items.is_empty());
+    assert_eq!(
+        app.world().resource::<AuctionHouseState>().auctions.len(),
+        1
+    );
+}
+
 fn post(app: &mut App, connection: Entity, guid: u64) -> AuctionOperationResponse {
     app.world_mut()
         .entity_mut(connection)
