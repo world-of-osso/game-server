@@ -13,6 +13,70 @@ use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::persistence::ClientId;
 
 #[test]
+fn inventory_delta_normalization_enqueues_without_waiting_for_the_writer() {
+    use std::time::Instant;
+    let mut app = setup_app(persistence::temp_database());
+    let client = spawn_client(&mut app, 1, "Fifodelta");
+    enter_world(&mut app, &client);
+    let mut inventory = persistence::load_inventory(db(&app), client.character_id);
+    let mut duplicate = inventory
+        .items
+        .iter()
+        .find(|item| item.item_id == LINEN)
+        .unwrap()
+        .clone();
+    duplicate.stack_count = 5;
+    inventory.items.push(duplicate);
+    persistence::save_inventory(db(&app), client.character_id, &inventory);
+    let held = db(&app).begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    app.world_mut()
+        .resource_mut::<GoldUpdateQueue>()
+        .record_items(client.character_id);
+    let started = Instant::now();
+    app.update();
+    let elapsed = started.elapsed();
+    let premature = received::<InventoryDelta>(&mut app, &client);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "inventory delta normalization tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "normalized delta precedes commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        app.update();
+        if !received::<InventoryDelta>(&mut app, &client).is_empty() {
+            break;
+        }
+        assert!(Instant::now() < deadline, "no normalized inventory delta");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let record = load_inventory_record(db(&app), client.character_id).unwrap();
+    assert_eq!(
+        record
+            .inventory
+            .items
+            .iter()
+            .filter(|item| item.item_id == LINEN)
+            .map(|item| item.stack_count)
+            .sum::<u32>(),
+        25
+    );
+    let guids: std::collections::HashSet<_> = record
+        .inventory
+        .items
+        .iter()
+        .map(|item| item.item_guid)
+        .collect();
+    assert_eq!(guids.len(), record.inventory.items.len());
+    assert_eq!(record.inventory.items.len(), record.placements.len());
+}
+
+#[test]
 fn initial_inventory_snapshot_waits_for_fifo_normalization_without_blocking_updates() {
     use std::time::Instant;
     let mut app = setup_app(persistence::temp_database());

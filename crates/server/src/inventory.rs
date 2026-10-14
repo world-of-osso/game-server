@@ -56,7 +56,8 @@ impl Plugin for InventoryPlugin {
                     process_equip_requests,
                     process_sort_requests,
                     publish_inventory_commits,
-                ),
+                )
+                    .chain(),
             );
         app.add_systems(
             PostUpdate,
@@ -209,17 +210,7 @@ fn send_initial_inventory(
         let receipt = db
             .writer
             .enqueue("initial inventory normalization", move |db| {
-                Ok(load_model(db, &templates, character).map(|model| {
-                    let initial = actor::InitialInventory {
-                        snapshot: model.inventory_snapshot(),
-                        equipment: model.equipment_snapshot(),
-                        view: model.view(),
-                        appearances: model.appearance_sources(),
-                        equipped: model.equipped_items(),
-                    };
-                    save_inventory_record(db, character, &model.into_record());
-                    initial
-                }))
+                Ok(actor::normalize_inventory(db, &templates, character))
             });
         store
             .pending
@@ -542,68 +533,34 @@ type DeltaConnections<'w, 's> = Query<
         Entity,
         &'static InWorld,
         &'static PlayerLink,
-        &'static mut SentInventoryView,
+        &'static SentInventoryView,
     ),
 >;
 
-/// Send each changed character's owner the locations that differ from its last view,
-/// and refresh the replicated `EquipmentAppearance` and the connection's
-/// `AppearanceSourceItems`.
+/// Normalize changed records on the writer before publishing owner deltas.
 fn send_inventory_deltas(
-    mut commands: Commands,
     mut updates: ResMut<GoldUpdateQueue>,
-    store: InventoryStore,
-    mut connections: DeltaConnections,
-    mut players: Query<(&mut EquipmentAppearance, Option<&mut EquippedItems>), With<Player>>,
-    dirty_queue: Option<Res<ReplicationDirtyQueue>>,
-    mut senders: Query<(
-        &mut MessageSender<InventoryDelta>,
-        &mut MessageSender<InventorySnapshot>,
-    )>,
+    mut store: InventoryStore,
+    connections: DeltaConnections,
 ) {
     let changed = updates.take_changed_inventories();
-    let Some((db, templates)) = store.get() else {
+    let (Some(db), Some(templates)) = (store.db.as_deref(), store.templates.as_deref()) else {
         return;
     };
-    if changed.is_empty() {
-        return;
-    }
-    for (connection, in_world, link, mut sent) in &mut connections {
-        if !changed.contains(&in_world.character_id) {
+    for (connection, session, link, _) in &connections {
+        if !changed.contains(&session.character_id) {
             continue;
         }
-        let Ok(model) = load_model(db, templates, in_world.character_id) else {
-            continue;
-        };
-        let view = model.view();
-        let snapshot = model.inventory_snapshot();
-        commands
-            .entity(connection)
-            .insert(AppearanceSourceItems(model.appearance_sources()));
-        let appearance = model.appearance().clone();
-        let equipped = model.equipped_items();
-        let changes = diff_views(&sent.0, &view);
-        if !changes.is_empty()
-            && let Ok((mut sender, mut snapshot_sender)) = senders.get_mut(connection)
-        {
-            if changes.iter().any(changes_bag_slot) {
-                snapshot_sender.send::<InventoryChannel>(snapshot);
-            }
-            sender.send::<InventoryChannel>(InventoryDelta { changes });
-            sent.0 = view;
-        }
-        let Ok((mut current, current_equipped)) = players.get_mut(link.0) else {
-            continue;
-        };
-        if let Some(mut current_equipped) = current_equipped {
-            current_equipped.set_if_neq(equipped);
-        }
-        if *current != appearance {
-            *current = appearance;
-            if let Some(dirty_queue) = dirty_queue.as_deref() {
-                dirty_queue.mark(link.0);
-            }
-        }
+        let character = session.character_id;
+        let templates = templates.clone();
+        let receipt = db
+            .writer
+            .enqueue("inventory delta normalization", move |db| {
+                Ok(actor::normalize_inventory(db, &templates, character))
+            });
+        store
+            .pending
+            .push_delta(connection, link.0, character, receipt);
     }
 }
 
