@@ -3303,6 +3303,7 @@ fn achievements_criteria_mixed_difficulty_and_aura_tree_needs_both() {
                 auras: aura.then_some(55817).into_iter().collect(),
                 ..Default::default()
             }),
+            ..Default::default()
         };
         let mut state = PlayerAchievementState::default();
         catalog.update_at(
