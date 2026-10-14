@@ -24,10 +24,14 @@ pub(crate) struct MountCatalog {
 #[derive(Component, Default)]
 pub(crate) struct AccountMounts(pub mount_store::AccountMounts);
 
+mod actor;
+use actor::{PendingMountFavourites, enqueue_mount_favourite, publish_mount_favourites};
+
 pub struct MountJournalPlugin;
 impl Plugin for MountJournalPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_catalog)
+        app.init_resource::<PendingMountFavourites>()
+            .add_systems(Startup, load_catalog)
             .add_systems(Update, update_mount_journal);
     }
 }
@@ -35,6 +39,7 @@ impl Plugin for MountJournalPlugin {
 // Auth may enter world before or after this exclusive step. Every reader sees
 // account state initialized first; replies are queued before Lightyear's send cycle.
 fn update_mount_journal(world: &mut World) {
+    publish_mount_favourites(world);
     sync_accounts(world);
     publish_mount_changes(world);
     receive_favourites(world);
@@ -331,17 +336,7 @@ fn requests<M: lightyear::prelude::Message>(world: &mut World) -> Vec<(Entity, u
 
 fn receive_favourites(world: &mut World) {
     for (connection, account, player, request) in requests::<SetMountFavourite>(world) {
-        let result = mount_store::favourite(
-            &world.resource::<GameDatabase>().db,
-            account,
-            request.mount_id,
-            request.favourite,
-        );
-        if result.is_ok() {
-            broadcast_account(world, account);
-        } else {
-            send_snapshot(world, connection, player, result.err());
-        }
+        enqueue_mount_favourite(world, connection, account, player, request);
     }
 }
 

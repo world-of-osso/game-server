@@ -36,6 +36,84 @@ fn setup() -> Harness {
     h
 }
 #[test]
+fn mount_favourite_waits_for_fifo_and_preserves_other_queued_mounts() {
+    use std::time::{Duration, Instant};
+    let mut h = setup();
+    mount_store::learn_spells(&h.app.world().resource::<GameDatabase>().db, 1, &[18]);
+    broadcast_account(h.app.world_mut(), 1);
+    h.advance(3);
+    drain::<MountJournalUpdate>(&mut h.app, h.connection);
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let prior =
+        h.app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .enqueue("prior mount ownership", |db| {
+                mount_store::learn_spells(db, 1, &[6]);
+                Ok(())
+            });
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SetMountFavourite>>(h.connection)
+        .unwrap()
+        .send::<CollectionChannel>(SetMountFavourite {
+            mount_id: 18,
+            favourite: true,
+        });
+    let started = Instant::now();
+    h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = drain::<MountJournalUpdate>(&mut h.app, h.connection);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "mount favourite tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature.is_empty(),
+        "mount favourite snapshot precedes commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        h.advance(1);
+        let replies = drain::<MountJournalUpdate>(&mut h.app, h.connection);
+        if replies.iter().any(|reply| {
+            reply.error.is_none()
+                && reply
+                    .mounts
+                    .iter()
+                    .any(|mount| mount.mount_id == 18 && mount.favourite)
+        }) {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "no committed mount favourite reply"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(prior.result(), Some(Ok(())));
+    let durable = mount_store::load(&h.app.world().resource::<GameDatabase>().db, 1);
+    assert_eq!(durable, [(6, false), (18, true)].into());
+    assert_eq!(
+        h.app.world().get::<AccountMounts>(h.caster).unwrap().0,
+        durable
+    );
+    assert!(mount_store::load(&h.app.world().resource::<GameDatabase>().db, 2).is_empty());
+}
+
+#[test]
 fn mount_journal_initial_catalog_and_changed_rows_reach_account_without_repeating_catalog() {
     let mut h = setup();
     drain::<MountJournalUpdate>(&mut h.app, h.connection);
@@ -271,10 +349,28 @@ fn mount_journal_spell_learning_and_favourites_publish_only_to_same_account() {
         });
     let mut same_updates = Vec::new();
     let mut foreign_updates = Vec::new();
-    for _ in 0..7 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    let mut frames = 0;
+    loop {
         h.advance(1);
+        frames += 1;
         same_updates.extend(drain::<MountJournalUpdate>(&mut h.app, same));
         foreign_updates.extend(drain::<MountJournalUpdate>(&mut h.app, foreign));
+        let pending = !h
+            .app
+            .world()
+            .resource::<PendingMountFavourites>()
+            .is_empty();
+        if frames >= 7 && !pending {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "mount favourite receipt did not complete"
+        );
+        if pending {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
     }
     assert!(same_updates.iter().any(|update| {
         update
