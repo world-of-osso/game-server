@@ -1,6 +1,6 @@
 ## 2026-10-14 — Authored goober spell dispatch
 
-[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) retains Data10/23 and source caster selection after normal use validation. Persistent-owner/free-space source Workshop fixture RED6 reaches owned46847 count0 versus1; implementation committed before pending GREEN. Native render, timed traps and siege victory remain separate gates.
+[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) retains Data10/23 and source caster selection after normal use validation. Persistent-owner/free-space source Workshop fixture RED6 reaches owned46847 count0 versus1; implementation34d32065 committed before corrected GREEN1/1 (26.43s), with helper-resolved leased protocol/transport provenance. Direct-Cargo API-drift compile failure is retained separately. Native render, timed traps and siege victory remain separate gates.
 
 ## 2026-10-14 — Derived factions survive DB2 replacement
 
