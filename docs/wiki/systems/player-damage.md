@@ -77,3 +77,10 @@ Live proof: `game-engine/data/diagnostics/playerdamage-20260926/` (server and cl
 - [[level-scaling]] — damage and health multipliers after armor
 - [[spell-casting]] — effect handlers
 - [[auras]] — `AuraStatMods` (MOD_AUTOATTACK_DAMAGE, damage done/taken)
+
+
+### Native player critical/block hit state
+
+Autoswings consume integer aura253 chance on the defender and double the already-truncated blocked amount. Player weapon-spell hit plans retain sparse per-unit block results through flight; the existing innermost matching `ResolvingHits` frame supplies that result before absorption. Critical spell blocks double the integer shield percentage before truncation/full-block cap, not the amount after truncation. Chance is read at impact; facing/block hit result belongs to launch. Source: TC a352b1fa Unit.cpp2564–2570,1469–1473,2610–2741,1243–1257.
+
+This player slice does not certify NPC block flags/baseline/totems or full hit-table ordering. Aura638 ownership conflicts between pinnedCPP and MartialExpert description; generic253/186 certificates remain absent. Exact source and proof ledger: [class completeness](../../class-completeness6.md).
