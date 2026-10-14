@@ -9,6 +9,8 @@ mod ragefire_completion;
 
 #[path = "shadowfang_keep.rs"]
 mod shadowfang_keep;
+#[path = "wailing_escort.rs"]
+mod wailing_escort;
 #[path = "wailing_progress.rs"]
 mod wailing_progress;
 
@@ -209,7 +211,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
-            || (map_id == 43 && [3654, 3678, 3679].contains(id))
+            || (map_id == 43 && [3636, 3654, 3678, 3679].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
