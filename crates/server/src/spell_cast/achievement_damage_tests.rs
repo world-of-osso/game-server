@@ -51,7 +51,7 @@ fn prove_bbking_faction(race: u8, achievement: u32, leaders: &[(u32, u32)]) {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Bbkingproof", race, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -150,7 +150,7 @@ fn prove_bbking_faction(race: u8, achievement: u32, leaders: &[(u32, u32)]) {
         assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
     }
     let mut rejoined = new_bbking_harness(race);
-    rejoined.app.insert_resource(GameDatabase { db });
+    rejoined.app.insert_resource(GameDatabase::new(db));
     rejoined
         .app
         .world_mut()
@@ -214,7 +214,7 @@ fn achievements_criteria_bbgun_real_effect_hits_authored_enemy_leader() {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "Bbgunproof", 1, 1).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .entity_mut(h.caster)

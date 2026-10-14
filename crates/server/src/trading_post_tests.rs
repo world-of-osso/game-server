@@ -93,7 +93,7 @@ fn trading_post_completed_receipt_publishes_without_opening_another_write() {
         .world()
         .resource::<GameDatabase>()
         .writer
-        .enqueue("ready Trading Post receipt", |_| Ok(None));
+        .enqueue("ready Trading Post receipt", |_| Ok(Vec::new()));
     let deadline = Instant::now() + Duration::from_secs(3);
     while commit.result().is_none() {
         assert!(Instant::now() < deadline, "query receipt timeout");
