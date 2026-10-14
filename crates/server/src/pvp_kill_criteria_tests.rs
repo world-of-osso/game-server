@@ -8,6 +8,7 @@ use shared::components::{Health, Position};
 #[test]
 fn achievements_criteria_earned_player_requires_native_prerequisite_before_player_kill() {
     let (mut world, players, file) = kill_match();
+    world.init_resource::<crate::spell_cast::effects::UnhandledEffects>();
     let killer = players[0].1;
     let first_victim = players[1].1;
     damage(&mut world, killer, first_victim, 1000.0);
