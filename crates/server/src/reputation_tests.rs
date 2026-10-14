@@ -132,7 +132,7 @@ fn initial_reputation_update_restores_persisted_watch_without_a_journeys_query()
     reputation.watch(72);
     crate::persistence::save_reputation(h.db(), character, &reputation);
     drop(h);
-    let mut reopened = crate::bank_test_harness::harness_at(file.path(), "Barloginprobe").unwrap();
+    let mut reopened = crate::bank_test_harness::harness_at(file.path(), "Barprobe").unwrap();
     reopened.play_as(character);
     let persisted = crate::persistence::load_reputation(reopened.db(), character, || {
         panic!("persisted watch required")
