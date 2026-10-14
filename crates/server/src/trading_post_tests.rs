@@ -313,6 +313,65 @@ fn trading_post_admin_tender_and_refund_window_enable_wire_refund() {
 }
 
 #[test]
+fn trading_post_purchase_reply_does_not_publish_an_adventure_guide_snapshot() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderreply").unwrap();
+    prepare(&mut h, 1790812900);
+    store::grant_tender(h.db(), ACCOUNT, 700).unwrap();
+    open_tawny(&mut h);
+    h.app
+        .world_mut()
+        .get_mut::<MessageReceiver<AdventureGuideSnapshot>>(h.connection)
+        .unwrap()
+        .receive()
+        .for_each(drop);
+    assert!(matches!(
+        h.app
+            .world()
+            .resource::<crate::adventure_guide::AdventureCatalog>(),
+        crate::adventure_guide::AdventureCatalog::Ready(_)
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
+        .unwrap()
+        .send::<InstanceChannel>(TradingPostRequest::Purchase { vendor_item_id: 4 });
+    let mut replies = Vec::new();
+    let mut guide_replies = Vec::new();
+    for _ in 0..10 {
+        h.app.update();
+        replies.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+        guide_replies.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<AdventureGuideSnapshot>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    let purchased = replies.pop().expect("purchase reply");
+    assert!(purchased.error.is_none(), "{:?}", purchased.error);
+    assert_eq!(purchased.tender, 600);
+    assert!(
+        purchased
+            .items
+            .iter()
+            .any(|row| row.id == 4 && row.purchased && row.collected)
+    );
+    assert!(
+        guide_replies.is_empty(),
+        "purchase emitted {} unsolicited Guide snapshots",
+        guide_replies.len()
+    );
+}
+
+#[test]
 fn trading_post_item_usability_tracks_player_level_class_race_and_unknown_metadata() {
     use crate::item_templates::{ItemTemplate, ItemTemplates};
     let file = tempfile::NamedTempFile::new().unwrap();
