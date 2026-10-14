@@ -461,9 +461,7 @@ fn object_app() -> App {
     )
     .unwrap();
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&source).unwrap());
-    app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
-        &[25295],
-    ));
+    app.insert_resource(crate::world_data::load_world_data(&data.powers_db));
     app
 }
 
