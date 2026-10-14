@@ -79,6 +79,29 @@ The earlier loaded-host reproduction was 20.9–23.4 ms idle; do not present tha
 
 Durable logs and harness: `game-engine/data/diagnostics/server-tick-perf-2026-10-12/`; branch/proof ledger in `/home/osso/.worktrees/handoff-server-tick-perf.md`. The peer fixture is [native_tick_perf_peers.rs](../../../../game-engine/godot/network/examples/native_tick_perf_peers.rs).
 
+## Login/catalog/admission investigation (verified 2026-10-13)
+
+Private UDP5831 uses a reflinked world.db, isolated redb and `fb_perf1`/PerfOne; no production operations. The debug diagnostic scenario restores the same `paired-seed.redb`, warms through four frame-report windows, then runs `crates/client/examples/tick_perf_login.rs` for60s. Host contention varies; these sequential runs are not a controlled CPU-load comparison or a release/deployed proof.
+
+| Boundary | Root cause / change | Behavioral proof |
+|---|---|---|
+| Achievement publication | Multiple final snapshots and Adventure Guide refreshes per frame; deferred final construction preserves every toast | Coalescing, final counters, toast order and reopened contributions |
+| Observed spell facts | Full grant passes per simultaneous fact, including unrelated empty criterion trees; batch facts and index counter/dependency candidates |131 imported facts1.0003s before;15.656ms after;71 achievement/account/cascade tests |
+| Health aura watchers | Changed filters still traversed idle units; maintain watcher membership structurally |250k units/five passes152.85ms before;7.525µs after; authentic threshold/remove/reapply |
+| Admission geometry | Cold WDT/ADT/WMO/M2/LOS/nav IO ran on tick thread; worker prepares surrounding activated NPC/home/waypoint regions, installs one nav tile/frame | Blocked actualWDT FIFO keeps updates running; absent assets admit, corruption fails;22 auth/admission/death/reconnect tests |
+| Connection replication | Default-visible bootstrap and disabled diagnostic census scanned hidden world population; default-hidden whitelist, spatial candidates and sparse full sync | Real UDP pre-world privacy, nearby replication, movement and unlink/re-entry;100k hidden NPCs max1.672ms |
+| Credentials | Password hash ran synchronously; worker verifies, tick completion rechecks ban/hash before token | Async roster/token and credential-rotation/ban rejection |
+| Toy presentation | Source-only availability classification repeated per owner; source revision cache is prewarmed, owner flags remain uncached |8-owner production SpellStore burst85.898ms before;1.812ms after; same-tick source replacement/restoration |
+| Sleeping detection | Geometry changes rescanned dormant units; initialize at spawn and refresh on wake |32 interest tests, including source ShadowSight/Prowl facing, dormant mutation, wake and expiry |
+
+Shared protocol `2559d19` adds owned LOS preload/merge and shallow immutable WMO collision cloning, with no wire changes. Two LOS tests prove prepared queries survive later disk corruption and absence differs from parse failure. Two navigation tests prove prepared route endpoints after disk corruption and missing/empty-bake/corrupt distinctions. Empty navigation artifacts are intentional bake outputs, not corrupt headers. Admission never uses a timeout to bypass geometry readiness.
+
+Budget remains **unmet**. Initial debug baseline `11988b33`: admission5.9ticks/s, work mean848.7/max3261.7ms; eventual steady11.0ticks/s, mean455.5/max566.2ms. At `fb2ea6ac`, private entry2.687s and worker1.618s, but online means50–107ms and admission max675.2ms remained over budget. At `05b6b965` (Toy cache), entry7.747s and worker5.743s; online means100–124ms, maxima265–1197ms. Three achievement messages were observed over60s, not three messages in one frame. No claim that host contention or code alone explains the timing difference.
+
+Latest tick-thread maxima: `save_account_progress`223ms, `save_monthly_contribution`120ms, achievement flush376ms, initial Toy publication252ms, periodic character save204ms and economy update967ms. Source-only caching does not remove those durable transactions. Neither reduced durability, a larger tick budget nor altered admission timeouts is implemented. Durable evidence: `game-engine/data/diagnostics/server-tick-perf-2026-10-13/`; `toy-cache-server.log`, `toy-cache-client.log`, `auth-admission-regressions.log`, `interest-final-tests-corrected.log`, `protocol-preparation-tests-corrected.log`, `prepared-navigation-tests.log`. Earlier zero-test filters are not evidence.
+
+Contract: [server tick budget](../../specs/server-tick-budget.md). Existing [persistence](../systems/persistence.md) boundaries remain authoritative.
+
 ## Sources
 
 - [crates/server/src/frame_stats.rs](../../../crates/server/src/frame_stats.rs) — frame work and fixed-step report

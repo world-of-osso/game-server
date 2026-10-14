@@ -14,8 +14,8 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [x] Connection bootstrap must not enumerate every hidden world entity; visibility changes, unlink/re-entry and component filters must retain the same network results.
 - [x] Password verification runs off the tick thread; successful completion rechecks bans and credential rotation before minting a token and authenticating.
 - [x] Grant evaluation avoids walking unrelated empty criterion trees, retaining zero-threshold and earned-achievement dependency semantics.
-- [ ] Toy presentation preflight is shared across owner snapshots and refreshed when source catalogs change; ownership/favourites remain account-specific.
-- [ ] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
+- [x] Toy presentation preflight is shared across owner snapshots and refreshed when source catalogs change; ownership/favourites remain account-specific.
+- [x] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
 
 ## How it works
 
@@ -39,6 +39,9 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - `crates/server/src/auras/health_pct_trigger.rs`, `auras/tests.rs` — 250k-unit catch-up budget and authentic aura lifecycle.
 - `crates/server/src/admission_geometry_tests.rs` — actual blocked WDT FIFO, absent assets and corrupt asset admission.
 - Shared-protocol `src/los/map_tests.rs` — prepared tiles stay usable without rereading changed disk files; missing/corrupt distinction.
+- `crates/navigation/src/query.rs` — prepared routes remain usable after disk mutation; absent, valid empty bake and corrupt artifact behavior.
+- `crates/server/src/interest_tests.rs` — source stealth/facing/expiry and dormant-mutation/wake visibility.
+- `crates/server/src/toys_tests.rs` — production-catalog owner burst and source revision invalidation.
 
 ## Known gaps (current cycle)
 
