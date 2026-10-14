@@ -326,6 +326,15 @@ fn toy_learning_and_following_favourite_wait_for_fifo_without_blocking_updates()
         .db
         .begin_write()
         .unwrap();
+    let prior_wallet = h.app.world().resource::<GameDatabase>().writer.enqueue(
+        "prior toy learner wallet",
+        move |db| {
+            let mut inventory = persistence::load_inventory(db, character);
+            inventory.gold = 777;
+            persistence::save_inventory(db, character, &inventory);
+            Ok(())
+        },
+    );
     let release = std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(250));
         held.abort().unwrap();
@@ -391,6 +400,8 @@ fn toy_learning_and_following_favourite_wait_for_fifo_without_blocking_updates()
     );
     let db = &h.app.world().resource::<GameDatabase>().db;
     assert_eq!(toy_store::load(db, 1).get(&FIGURINE), Some(&true));
+    assert_eq!(prior_wallet.result(), Some(Ok(())));
+    assert_eq!(persistence::load_inventory(db, character).gold, 777);
     assert!(
         !persistence::load_inventory(db, character)
             .items
