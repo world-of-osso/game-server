@@ -641,6 +641,34 @@ impl Harness {
             .unwrap()
             .send::<C>(message);
         self.advance(3);
+        self.wait_for_profession_publications();
+    }
+
+    fn wait_for_profession_publications(&mut self) {
+        if !self
+            .app
+            .world()
+            .resource::<PendingProfessionSnapshots>()
+            .has_pending()
+        {
+            return;
+        }
+        let fence = self
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .enqueue("profession fixture publication fence", |_| Ok(()));
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        while fence.result().is_none() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "profession fixture fence did not complete"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        fence.result().unwrap().unwrap();
+        self.advance(3);
     }
 
     fn advance(&mut self, frames: usize) {
@@ -803,8 +831,9 @@ impl Harness {
         for _ in 0..400 {
             self.app.update();
             if !self.casting() && self.app.world().get::<CraftQueue>(self.player).is_none() {
-                // Deliver the last snapshot and failures.
+                // Deliver the last snapshot and failures after profession durability.
                 self.advance(3);
+                self.wait_for_profession_publications();
                 return;
             }
         }

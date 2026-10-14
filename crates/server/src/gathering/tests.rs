@@ -284,8 +284,7 @@ fn gathering_underivable_authored_lock_is_a_gap_not_a_pool_update_panic() {
 #[test]
 fn gathering_skill_up_survives_redb_close_and_reopen() {
     let (mut h, directory) = setup(2556);
-    h.app
-        .add_plugins(crate::profession::ProfessionPersistencePlugin);
+    crate::profession::ProfessionPersistencePlugin::install(&mut h.app);
     let target = nearby_node(&mut h, 1617);
     use_resource(h.app.world_mut(), h.caster, target);
     h.advance(200);

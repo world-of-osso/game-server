@@ -13,6 +13,11 @@ struct PendingSnapshot {
 pub(super) struct PendingProfessionSnapshots(VecDeque<PendingSnapshot>);
 
 impl PendingProfessionSnapshots {
+    #[cfg(test)]
+    pub(super) fn has_pending(&self) -> bool {
+        !self.0.is_empty()
+    }
+
     pub(super) fn enqueue(
         &mut self,
         db: &GameDatabase,
@@ -34,13 +39,19 @@ impl PendingProfessionSnapshots {
 
 pub(crate) struct ProfessionPersistencePlugin;
 
-impl Plugin for ProfessionPersistencePlugin {
-    fn build(&self, app: &mut App) {
+impl ProfessionPersistencePlugin {
+    pub(crate) fn install(app: &mut App) {
         app.init_resource::<PendingProfessionSnapshots>()
             .add_systems(
                 PostUpdate,
                 (enqueue_profession_snapshots, publish_profession_snapshots).chain(),
             );
+    }
+}
+
+impl Plugin for ProfessionPersistencePlugin {
+    fn build(&self, app: &mut App) {
+        Self::install(app);
     }
 }
 
