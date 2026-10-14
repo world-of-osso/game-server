@@ -940,6 +940,7 @@ pub(crate) fn receive_cast_requests(world: &mut World) {
             warn!("Cast rejected: connection has no authenticated in-world owner");
             continue;
         };
+        debug!(caster = ?owner, request = ?request, "SpellCastRequest received (SpellCastIntent)");
         if let Err((spell_id, failure)) = request_cast(world, owner, &request) {
             debug!("Cast of {spell_id} by {owner} failed: {failure:?}");
             let (reason, detail) = failure.to_contract();
@@ -1006,6 +1007,7 @@ fn cast_granted_with_item_context(
     retail_item_id: Option<u32>,
     item_cooldown: Option<ItemCooldown>,
 ) -> Result<(), CastFailure> {
+    debug!(caster = ?caster, spell_id, target = ?target, moving = ?world.get::<Moving>(caster), active_cast = ?world.get::<CastState>(caster), "SpellCastRequest received (granted object/item cast)");
     let result = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
@@ -1028,6 +1030,7 @@ fn cast_granted_with_item_context(
             }
             start_cast(world, caster, &spell, target, None)
         });
+    debug!(caster = ?caster, spell_id, result = ?result, "Granted cast acceptance result");
     if let Err(failure) = &result {
         let (reason, detail) = failure.to_contract();
         send_to_owner(
@@ -1805,6 +1808,7 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
         CastType::Normal => cast_allows_moving(world, caster, spell),
         CastType::Channel => channel_allows_moving(world, caster, spell),
     };
+    debug!(caster = ?caster, state = ?cast, "Cast state started");
     world
         .entity_mut(caster)
         .insert((cast.clone(), PendingCastSpell(spell.clone())));
@@ -1914,6 +1918,9 @@ pub(crate) fn execute_cast(
     ));
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
+    if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+        debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
+    }
     const DISCOUNT_POWER_ON_MISS: u32 = 0x0800_0000;
     let discounted_player =
         world.get::<Player>(caster).is_some() && attributes(spell, 1) & DISCOUNT_POWER_ON_MISS != 0;
@@ -2197,6 +2204,9 @@ fn resolve_effects(
             index, units, dest, ..
         } = planned;
         let effect = &spell.effects[*index];
+        if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+            debug!(caster = ?caster, effect = ?effect, enabled = scripts::effect_enabled(world, caster, spell.id, effect.index), "Azerite effect dispatch");
+        }
         if !scripts::effect_enabled(world, caster, spell.id, effect.index) {
             continue;
         }
@@ -2778,6 +2788,7 @@ pub(crate) fn interrupt_cast(
     let Some(cast) = end_cast(world, caster) else {
         return;
     };
+    debug!(caster = ?caster, spell_id = cast.spell_id, reason = ?reason, failed_by = ?failed_by, "Cast interrupted");
     send_spell_failure(world, caster, cast.spell_id, reason, failed_by);
 }
 
@@ -2809,6 +2820,7 @@ pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
         .entity_mut(caster)
         .remove::<crate::profession::CraftQueue>();
     let cast = world.entity_mut(caster).take::<CastState>()?;
+    debug!(caster = ?caster, state = ?cast, "Cast state ended");
     mark_dirty(world, caster);
     if cast.cast_type == CastType::Channel {
         crate::auras::channel_ended(world, caster, cast.spell_id);
@@ -2858,7 +2870,9 @@ pub(crate) fn advance_casts(world: &mut World) {
         else {
             continue;
         };
-        if (!cast_while_moving && moving) || !targets::is_alive(world, caster) {
+        let alive = targets::is_alive(world, caster);
+        if (!cast_while_moving && moving) || !alive {
+            debug!(caster = ?caster, moving, alive, cast_while_moving, "Cast progress interrupted by movement or death");
             cancel_cast(world, caster);
             continue;
         }
@@ -2884,6 +2898,7 @@ pub(crate) fn advance_casts(world: &mut World) {
                 );
             }
             CastTickResult::Completed => {
+                debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
                 world.entity_mut(caster).remove::<CastState>();
                 complete_cast(world, caster, spell_id, target);
             }
@@ -2897,6 +2912,7 @@ struct PendingCastSpell(SpellInfo);
 
 fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Option<Entity>) {
     let Some(PendingCastSpell(spell)) = world.entity_mut(caster).take::<PendingCastSpell>() else {
+        debug!(caster = ?caster, spell_id, "Cast completion has no pending spell snapshot");
         return;
     };
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
