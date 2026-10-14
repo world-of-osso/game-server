@@ -32,6 +32,8 @@ pub struct AuraStatMods {
     pub healing_taken_mult: f32,
     /// MOD_AUTOATTACK_DAMAGE 344.
     pub autoattack_damage_mult: f32,
+    /// MOD_AUTOATTACK_RANGE153: signed additive yards, attacker-owned only.
+    pub autoattack_range_bonus: f32,
     /// MOD_SUMMON_DAMAGE429: consumed by units whose owner carries this aura.
     pub summon_damage_mult: f32,
     /// MOD_RAGE_FROM_DAMAGE_DEALT 213, summed percent (TrinityCore
@@ -97,6 +99,7 @@ impl Default for AuraStatMods {
             healing_done_mult: 1.0,
             healing_taken_mult: 1.0,
             autoattack_damage_mult: 1.0,
+            autoattack_range_bonus: 0.0,
             summon_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
@@ -395,6 +398,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
             MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
+            MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,
             MOD_SUMMON_DAMAGE => combat.summon_damage_mult *= pct(amount),
             MOD_RAGE_FROM_DAMAGE_DEALT => combat.rage_from_damage_dealt_pct += amount,
             MOD_POWER_REGEN_PERCENT => {

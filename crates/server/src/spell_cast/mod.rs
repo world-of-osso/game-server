@@ -23,6 +23,8 @@ pub mod area_trigger;
 #[cfg(test)]
 mod attack_speed_tests;
 #[cfg(test)]
+mod autoattack_range_tests;
+#[cfg(test)]
 mod base_armor_tests;
 pub(crate) mod blooming_infusion;
 #[cfg(test)]
