@@ -6,7 +6,8 @@ use std::path::{Path, PathBuf};
 
 const MAX_PATH: usize = 2048;
 const MAX_NODES: i32 = 8192;
-const NEAREST_EXTENTS: [f32; 3] = [0.8, 2.0, 0.8];
+// TC a352b1fa PathGenerator.cpp:128 nominal Y5; no Y50 retry or shortcuts.
+const NEAREST_EXTENTS: [f32; 3] = [0.8, 5.0, 0.8];
 
 /// Owns a mesh and its mutable query scratch space; callers serialize queries with &mut.
 /// Artifacts are trusted outputs of nav-bake, not network-supplied Detour buffers.
@@ -395,14 +396,11 @@ mod tests {
             "Ruby entrance to collected boss floor: {} corners",
             approach.len()
         );
-        assert!(
-            nav.path(
-                wow(1386.2, -169.719, 131.0),
-                wow(1551.33, -257.688, 129.782)
-            )
-            .is_err(),
-            "authored height mismatch must not be silently snapped"
-        );
+        nav.path(
+            wow(1386.2, -169.719, 131.0),
+            wow(1551.33, -257.688, 129.782),
+        )
+        .expect("TC nominal vertical search must resolve the unchanged authored boss height");
     }
 
     #[test]

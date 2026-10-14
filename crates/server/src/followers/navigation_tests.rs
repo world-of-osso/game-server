@@ -152,11 +152,11 @@ fn follower_ruby_regroup_walks_from_entrance_across_metalplate_to_boss_floor() {
                 .unwrap(),
             "Ruby follower tick{tick} crosses collision: {previous:?}->{at:?}"
         );
-        let GroundProbe::Supported(floor) = support.ground_at(2521, point(at)) else {
+        let GroundProbe::Supported(floor) = support.creature_ground_at(2521, point(at)) else {
             let samples = [0.0, 1.0, 2.0, 5.0, 10.0].map(|offset| {
                 (
                     offset,
-                    support.ground_at(2521, point(at) + Vec3::Y * offset),
+                    support.creature_ground_at(2521, point(at) + Vec3::Y * offset),
                 )
             });
             panic!(
@@ -175,6 +175,37 @@ fn follower_ruby_regroup_walks_from_entrance_across_metalplate_to_boss_floor() {
         "Ruby follower must complete regroup across the metalplate: gap{gap} at{previous:?}"
     );
     eprintln!("Ruby actual grounded follower regroup: {from:?}->{previous:?} gap{gap}");
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_RUBY_DATA authored local WMO assets"]
+fn ruby_creature_height_supports_steep_step_without_changing_player_floor_policy() {
+    let data = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_DATA").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut ground = GroundMap::new(
+        &data,
+        HashMap::from([(2521, maps.map(2521).unwrap().wdt_file_data_id)]),
+    );
+    // Actual WMO4391460 face1016: world-up normal0.564409, collision height128.1038.
+    let feet = Vec3::new(1405.7883, 127.84611, 173.86066);
+    assert_eq!(ground.ground_at(2521, feet), GroundProbe::Unsupported);
+    let GroundProbe::Supported(height) = ground.creature_ground_at(2521, feet) else {
+        panic!("native creature map-height query must support the actual WMO step")
+    };
+    assert!(
+        (height - 128.1038).abs() < 0.01,
+        "actual WMO collision height: {height}"
+    );
+    assert_eq!(
+        ground.ground_at(2521, feet),
+        GroundProbe::Unsupported,
+        "creature sampling must not change the player slope filter"
+    );
 }
 
 #[test]
