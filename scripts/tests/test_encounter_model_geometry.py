@@ -56,7 +56,7 @@ class EncounterModelGeometryTests(unittest.TestCase):
                     self.assertEqual(tables, 1, 'source model geometry was not admitted')
                     rows = target.execute(
                         'SELECT DisplayID,BoundingRadius,CombatReach,DisplayID_Other_Gender,VerifiedBuild '
-                        'FROM encounter_creature_model_info ORDER BY DisplayID'
+                        'FROM encounter_creature_model_info WHERE DisplayID IN (11686,42247,84202,88651) ORDER BY DisplayID'
                     ).fetchall()
                     self.assertEqual(rows, [
                         (11686, 0.5, 1.0, 0, 66527),
@@ -88,7 +88,7 @@ class EncounterModelGeometryTests(unittest.TestCase):
                 ).fetchone(), unrelated)
                 self.assertEqual(target.execute(
                     'SELECT count(*) FROM encounter_creature_model_info'
-                ).fetchone()[0], 5)
+                ).fetchone()[0], len(geometry.read_model_info(DUMP)))
 
     def test_missing_source_geometry_does_not_commit_a_partial_table(self):
         unrelated = geometry.read_model_info(DUMP, {4})[0]

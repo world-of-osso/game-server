@@ -134,10 +134,9 @@ fn run_speed(world: &World, unit: Entity) -> f32 {
 
 /// Absolute caster-relative direction, as required by the lead's away-from-caster
 /// contract; Bevy x/z replaces native x/y, with no extra owner-facing rotation.
-fn flee_point(from: Vec3, caster: Option<Vec3>, rng: &mut impl Rng) -> Vec3 {
+fn flee_point(from: Vec3, caster: Option<Vec3>, distance: f32, rng: &mut impl Rng) -> Vec3 {
     use std::f32::consts::{PI, TAU};
     let offset = caster.map(|caster| from - caster);
-    let distance = offset.map_or(0.0, |delta| delta.length());
     let angle = match offset {
         Some(delta) if distance > 0.2 => delta.z.atan2(delta.x),
         _ => rng.gen_range(0.0..TAU),
@@ -172,7 +171,17 @@ fn choose_path(world: &World, unit: Entity, state: &mut Fleeing) {
         .and_then(|fear| world.get::<Position>(fear.flee_from))
         .copied()
         .map(point);
-    let wanted = flee_point(from, caster, &mut rand::thread_rng());
+    let distance = if caster.is_some() {
+        let caster = world.get::<Feared>(unit).expect("feared owner").flee_from;
+        let Some(distance) = crate::scripted_ai::model_reach::distance(world, unit, caster) else {
+            debug!("Fear {unit}: missing source combat reach; no guessed flee distance");
+            return;
+        };
+        distance
+    } else {
+        0.0
+    };
+    let wanted = flee_point(from, caster, distance, &mut rand::thread_rng());
     let destination = match nav.first_collision(map.map_id, from, wanted) {
         Ok(Some(destination)) => destination,
         Ok(None) => return,
