@@ -58,6 +58,49 @@ fn pet_battle_state_reads_never_wait_for_a_writer() {
 }
 
 #[test]
+fn derived_pet_state_reads_never_persist_or_wait_for_a_writer() {
+    use bevy::prelude::*;
+    use std::time::{Duration, Instant};
+    let owned = journal(25);
+    let pet = &owned.pets[0];
+    let db = crate::persistence::temp_database();
+    crate::battle_pets::save_journal(&db, 42, &owned);
+    let mut world = World::new();
+    world.insert_resource(crate::persistence::GameDatabase::new(db));
+    world.insert_resource(crate::battle_pets::load_test_catalog());
+    let owner = world
+        .spawn(crate::collection::default_collection_state())
+        .id();
+    world.spawn((
+        crate::auth::Authenticated { account_id: 42 },
+        crate::auth::InWorld { character_id: 42 },
+        crate::networking::PlayerLink(owner),
+    ));
+    crate::battle_pets::load_account_journals(&mut world);
+    let database = &world.resource::<crate::persistence::GameDatabase>().db;
+    save_states(database, 42, &BTreeMap::new()).unwrap();
+    let held = database.begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = Instant::now();
+    let states = crate::battle_pets::load_or_initialize_pet_states(&world, owner).unwrap();
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "derived pet read waited: {elapsed:?}"
+    );
+    assert_eq!(states[&pet.id].health, 1563);
+    assert_eq!(states[&pet.id].selected_abilities, [384, 389, 459]);
+    assert!(
+        load_states(database, 42).unwrap().is_empty(),
+        "reader persisted defaults"
+    );
+}
+
+#[test]
 fn pet_journal_state_preserves_real_injury_and_chosen_ability_after_database_reopen() {
     let catalog = catalog();
     let journal = journal(25);
@@ -116,8 +159,7 @@ fn pet_journal_request_checks_authenticated_account_ownership_and_keeps_injuries
         owners.push(owner);
     }
     crate::battle_pets::load_account_journals(&mut world);
-    let mut injured =
-        load_states(&world.resource::<crate::persistence::GameDatabase>().db, 42).unwrap();
+    let mut injured = crate::battle_pets::load_or_initialize_pet_states(&world, owners[0]).unwrap();
     injured.get_mut(&owned_id).unwrap().health = 73;
     save_states(
         &world.resource::<crate::persistence::GameDatabase>().db,

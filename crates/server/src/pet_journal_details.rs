@@ -22,13 +22,11 @@ pub(crate) fn load_or_initialize_pet_states(
         .ok_or("Account pet journal unavailable")?;
     let db = &world.resource::<GameDatabase>().db;
     let mut states = load_states(db, account.account_id)?;
-    if initialize_pet_states(
+    initialize_pet_states(
         world.resource::<PetCatalog>(),
         &account.journal,
         &mut states,
-    )? {
-        save_states(db, account.account_id, &states)?;
-    }
+    )?;
     Ok(states)
 }
 
