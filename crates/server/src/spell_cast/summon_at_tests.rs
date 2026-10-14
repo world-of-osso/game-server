@@ -320,3 +320,18 @@ fn summon_at_summon_and_area_are_removed_when_owner_leaves_map() {
         assert!(h.app.world().get_entity(entity).is_err());
     }
 }
+
+/// 12.1.5 authors SummonProperties 3001 with Title -1 (TC `int32 Title`); startup must load it
+/// and report it unsupported instead of aborting the whole table.
+#[test]
+fn installed_summon_properties_load_signed_title_as_unsupported() {
+    let conn = rusqlite::Connection::open_with_flags(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = super::summon::load_summon_properties(&conn).unwrap();
+    let properties = store.0[&3001];
+    assert_eq!((properties.control, properties.title), (1, -1));
+    assert!(!properties.is_supported());
+}
