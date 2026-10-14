@@ -1,5 +1,9 @@
 # Auras
 
+## Independent melee and ranged attack power
+
+Native166/167 fold independent percentages into separate `StatModifiers` fields before character AP computation. `ChrClasses.RangedAttackPowerPerAgility` loads with class properties; ranged AP is `(level + max(live Agility,0)) × coefficient`, not melee AP. `CharacterStats.ranged_attack_power` is server-only; existing replicated `DerivedStats.attack_power` still means melee AP. Non-melee ranged-weapon spell AP coefficients and hunter pet owner inheritance consume RAP; AP-to-spell-power remains melee-owned. Source: TC a352b1fa StatSystem.cpp354–414, Unit.cpp6880–6890/9973–9998. [Contract](../../specs/class-completeness.md). Source-backed weapon/flat-AP additions and client RAP display are not certified by this percentage slice.
+
 Server aura runtime in `crates/server/src/auras/`. `AuraPlugin` keeps every unit's auras in `ActiveAuras`. It handles stacking and refresh, periodic ticks, procs, spell modifiers, stat modifiers, expiry and removal. The replicated view is `UnitAuras`, which changes only when the aura set changes. [[spell-casting]] resolves aura effects through `auras::apply_aura` and reads spell modifiers when it computes cost, cast time, cooldown, GCD, range and amounts. The data comes from [[spell-info]].
 
 ## Application

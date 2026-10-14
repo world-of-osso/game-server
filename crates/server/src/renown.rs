@@ -180,7 +180,33 @@ pub(crate) fn snapshot(db: &Database, character: u64) -> RenownSnapshot {
     RenownSnapshot {
         factions,
         source_error: None,
+        watched_faction: None,
+        watch_error: None,
     }
+}
+
+/// ReputationBar.lua's major-faction branch, independent of reward-catalog delivery.
+pub(crate) fn read_watched_renown(
+    db: &Database,
+    character: u64,
+    faction_id: u32,
+) -> Option<shared::protocol_snapshots::WatchedReputationSnapshot> {
+    let faction = catalog()
+        .iter()
+        .find(|faction| faction.faction_id == faction_id)?;
+    let current = read_progress(db, character)
+        .get(&faction.id)
+        .copied()
+        .unwrap_or_default();
+    Some(shared::protocol_snapshots::WatchedReputationSnapshot {
+        faction_id,
+        name: faction.name.clone(),
+        value: current.standing,
+        maximum: faction.level_threshold,
+        capped: current.level >= faction.max_level,
+        is_major_faction: true,
+        reaction: shared::reputation::Standing::Neutral,
+    })
 }
 
 pub(crate) struct RenownPlugin;
@@ -190,20 +216,103 @@ impl Plugin for RenownPlugin {
     }
 }
 
+/// Retail watch setter. Unknown unlock status never establishes eligibility.
+fn set_watched_faction(
+    reputation: &mut shared::reputation::CharacterReputation,
+    faction_id: u32,
+    eligibility: Option<&RenownUnlock>,
+) -> Result<(), String> {
+    if faction_id == 0 {
+        reputation.unwatch();
+        return Ok(());
+    }
+    match eligibility {
+        Some(RenownUnlock::Ungated) => reputation.watch(faction_id),
+        Some(RenownUnlock::Unsupported { .. }) => {
+            return Err("Faction unlock condition is not evaluated by this realm.".into());
+        }
+        None => return Err(format!("Unknown major faction reputation {faction_id}")),
+    }
+    Ok(())
+}
+
+fn reply_to_request(
+    db: &Database,
+    character: u64,
+    reputation: Option<&mut shared::reputation::CharacterReputation>,
+    request: RenownRequest,
+) -> RenownSnapshot {
+    let mut reply = snapshot(db, character);
+    let Some(reputation) = reputation else {
+        reply.watch_error = Some("Watched faction reputation is unavailable.".into());
+        return reply;
+    };
+    if let RenownRequest::SetWatchedFaction { faction_id } = request {
+        let eligibility = catalog()
+            .iter()
+            .find(|f| f.faction_id == faction_id)
+            .map(unlock);
+        match set_watched_faction(reputation, faction_id, eligibility.as_ref()) {
+            Ok(()) => crate::persistence::save_reputation(db, character, reputation),
+            Err(error) => reply.watch_error = Some(error),
+        }
+    }
+    reply.watched_faction = reputation.watched_faction();
+    reply
+}
+
+fn send_watched_bar_update(
+    db: &Database,
+    character: u64,
+    reputation: &shared::reputation::CharacterReputation,
+    sender: &mut MessageSender<shared::protocol::ReputationStateUpdate>,
+) {
+    let snapshot = crate::reputation::read_reputation_snapshot(
+        db,
+        character,
+        reputation,
+        &shared::reputation::default_faction_registry(),
+    );
+    sender.send::<shared::protocol::ReputationChannel>(shared::protocol::ReputationStateUpdate {
+        snapshot: Some(snapshot),
+        message: None,
+        error: None,
+    });
+}
+
 fn receive_requests(
     db: Res<GameDatabase>,
+    mut reputations: Query<&mut shared::reputation::CharacterReputation>,
     mut connections: Query<
         (
             &InWorld,
+            &PlayerLink,
             &mut MessageReceiver<RenownRequest>,
             &mut MessageSender<RenownSnapshot>,
+            &mut MessageSender<shared::protocol::ReputationStateUpdate>,
         ),
-        (With<Authenticated>, With<PlayerLink>),
+        With<Authenticated>,
     >,
 ) {
-    for (owner, mut receiver, mut sender) in &mut connections {
-        for RenownRequest::Query in receiver.receive() {
-            sender.send::<InstanceChannel>(snapshot(&db.db, owner.character_id));
+    for (owner, link, mut receiver, mut sender, mut reputation_sender) in &mut connections {
+        for request in receiver.receive() {
+            let updates_watch = matches!(request, RenownRequest::SetWatchedFaction { .. });
+            let mut reputation = reputations.get_mut(link.0).ok();
+            let reply = reply_to_request(
+                &db.db,
+                owner.character_id,
+                reputation.as_deref_mut(),
+                request,
+            );
+            if updates_watch && let Some(reputation) = reputation.as_deref() {
+                send_watched_bar_update(
+                    &db.db,
+                    owner.character_id,
+                    reputation,
+                    &mut reputation_sender,
+                );
+            }
+            sender.send::<InstanceChannel>(reply);
         }
     }
 }

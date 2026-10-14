@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Warrior effect-hit stuns
+
+`warrior_stuns` runs the pinned Shockwave46968/Storm Bolt107570 effect0 SCHOOL_DAMAGE hooks before the default damage handler, after target/effect immunity filtering. Shockwave casts132168 with ordinary validation except cast-in-progress and suppressed owner errors; Storm Bolt casts132169 fully triggered. Child missile speed/duration remain native. The separate Storm Bolt destination-area filter keeps only its explicit target without caster-owned436162, and otherwise retains native area selection. Other effects and unbound Dummy fields remain separate gaps. Source: TC a352b1fa `spell_warrior.cpp:1792–1856`, `Spell.cpp:5719–5734`; [contract](../../specs/class-completeness.md).
+
 ## Twenty-second batch: native Rewind non-raid healing
 
 Rewind363534's native effect0 already scales each periodic heal by0.4 SP. SpellMisc's EXTRA_INITIAL_PERIOD,4sec duration and1000ms period yield five ticks, matching local description variable775's minimum. Its previously skipped s4=200 is now consumed by a named healing multiplier: GroupRegistry's caster membership distinguishes raids from parties/solo, without changing recipient selection, native amount, clock, rounding or overflow. This does not implement s2/s3's historical-damage component. [Contract](../../specs/spell-dummy-scripts.md#twenty-second-batch-native-rewind-non-raid-healing), [sources/proof/census](../../spell-dummy22-coverage.md).
