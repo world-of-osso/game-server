@@ -65,6 +65,50 @@ pub(super) fn load_summon_groups(
     Ok(groups)
 }
 
+/// WorldObject::SummonCreatureGroup, shared by native C++ ports and SmartAI.
+pub(crate) fn summon_creature_group(ctx: &mut Ctx, group_id: u32) -> Option<Vec<Entity>> {
+    let members = read_group_members(ctx, group_id)?;
+    let mut summons = Vec::with_capacity(members.len());
+    for member in members {
+        if let Some(summon) = summon_group_member(ctx, member) {
+            summons.push(summon);
+        }
+    }
+    Some(summons)
+}
+
+fn read_group_members(ctx: &Ctx, group_id: u32) -> Option<Vec<GroupMember>> {
+    let Some(entry) = ctx
+        .world
+        .get::<shared::components::Npc>(ctx.me)
+        .map(|npc| npc.template_id)
+    else {
+        warn!(actor = ?ctx.me, group_id, "SummonCreatureGroup has no creature owner");
+        return None;
+    };
+    let members = ctx
+        .world
+        .resource::<SmartScripts>()
+        .3
+        .get(&(entry, group_id))
+        .cloned();
+    if members.is_none() {
+        warn!(
+            entry,
+            group_id, "SummonCreatureGroup: authored group is absent"
+        );
+    }
+    members
+}
+
+fn summon_group_member(ctx: &mut Ctx, member: GroupMember) -> Option<Entity> {
+    let summon = ctx.summon_creature(member.entry, member.position)?;
+    ctx.world
+        .entity_mut(summon)
+        .insert(SummonLifetime::new(member.kind, member.duration_ms));
+    Some(summon)
+}
+
 impl SmartAi {
     pub(super) fn summon_group(
         &mut self,
@@ -72,38 +116,16 @@ impl SmartAi {
         event: &SmartEvent,
         invoker: Option<Entity>,
     ) {
-        let Some(entry) = ctx
-            .world
-            .get::<shared::components::Npc>(ctx.me)
-            .map(|npc| npc.template_id)
-        else {
-            return;
-        };
         let [group_id, attack_invoker, stored_id, ..] = event.action_params;
-        let members = ctx
-            .world
-            .resource::<SmartScripts>()
-            .3
-            .get(&(entry, group_id))
-            .cloned();
-        let Some(members) = members else {
-            warn!(entry, group_id, "SmartAI creature summon group is absent");
+        let Some(summons) = ctx.summon_creature_group(group_id) else {
             return;
         };
-        let mut summons = Vec::new();
-        for member in members {
-            let Some(summon) = ctx.summon_creature(member.entry, member.position) else {
-                continue;
-            };
-            ctx.world
-                .entity_mut(summon)
-                .insert(SummonLifetime::new(member.kind, member.duration_ms));
-            if attack_invoker != 0
-                && let Some(invoker) = invoker
-            {
+        if attack_invoker != 0
+            && let Some(invoker) = invoker
+        {
+            for &summon in &summons {
                 crate::creature_aggro::add_threat(ctx.world, summon, invoker, 0.0);
             }
-            summons.push(summon);
         }
         if stored_id != 0 {
             self.stored_targets.insert(stored_id, summons);
