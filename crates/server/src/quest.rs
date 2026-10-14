@@ -133,17 +133,22 @@ pub(crate) fn giver_statuses(
 
 fn send_initial_quest_log(
     mut commands: Commands,
-    connections: Query<(Entity, &InWorld), (With<Authenticated>, Added<InWorld>)>,
+    connections: Query<(Entity, &InWorld, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
     store: QuestStore,
+    players: Query<(&Player, &Level)>,
     mut senders: Query<&mut MessageSender<QuestLogSnapshot>>,
 ) {
     let Some((db, quests)) = store.get() else {
         return;
     };
-    for (connection, in_world) in &connections {
+    for (connection, in_world, link) in &connections {
+        let (player, level) = players
+            .get(link.0)
+            .expect("entered quest-log owner has Player and Level");
+        let player = quest_player(player, level);
         let log = load_quest_log(db, in_world.character_id);
         let inventory = persistence::load_inventory(db, in_world.character_id);
-        let snapshot = log_snapshot(db, quests, &log, &inventory);
+        let snapshot = log_snapshot(db, quests, &log, &inventory, player);
         commands.entity(connection).insert((
             SentQuestLog {
                 entries: view_of(&snapshot.entries),
@@ -541,7 +546,11 @@ pub(crate) fn send_quest_updates(
         }
         let log = load_quest_log(db, in_world.character_id);
         let inventory = persistence::load_inventory(db, in_world.character_id);
-        let view = view_of(&log_entries(db, quests, &log, &inventory));
+        let (player, level) = players
+            .get(link.0)
+            .expect("active quest-log owner has Player and Level");
+        let attributes = quest_player(player, level);
+        let view = view_of(&log_entries(db, quests, &log, &inventory, attributes));
         if let Some(update) = diff_log(&sent.entries, &sent.watched, &view, &log.watched)
             && let Ok(mut sender) = log_senders.get_mut(connection)
         {
@@ -550,9 +559,6 @@ pub(crate) fn send_quest_updates(
             sent.watched = log.watched.clone();
         }
         queried.0.retain(|&npc| npcs.contains(npc));
-        let Ok((player, level)) = players.get(link.0) else {
-            continue;
-        };
         if queried.0.is_empty() {
             continue;
         }
@@ -560,14 +566,7 @@ pub(crate) fn send_quest_updates(
             .0
             .iter()
             .filter_map(|&npc| Some((npc, npcs.get(npc).ok()?.template_id)));
-        let statuses = giver_statuses(
-            db,
-            quests,
-            &log,
-            &inventory,
-            quest_player(player, level),
-            givers,
-        );
+        let statuses = giver_statuses(db, quests, &log, &inventory, attributes, givers);
         if let Ok(mut sender) = status_senders.get_mut(connection) {
             sender.send::<QuestChannel>(QuestGiverStatusMultiple { statuses });
         }

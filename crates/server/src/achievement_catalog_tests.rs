@@ -1,6 +1,46 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_pet_team_threshold_rejects_unknown_and_preserves_other_qualifiers() {
+    let catalog = catalog();
+    for (minimum, qualifies) in [(None, false), (Some(24), false), (Some(25), true)] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                battle_pet_team_min_level: minimum,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::WinPetBattle,
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&23257), qualifies.then_some(&1));
+        assert!(
+            !state.criteria_progress.contains_key(&23306),
+            "NYI PvP90 remains required"
+        );
+        assert!(!state.earned_ids.contains(&8278));
+    }
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::WinPetBattle,
+        None,
+        1,
+        &PlayerConditions::default(),
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&23257),
+        "map-wide credit has no pet journal"
+    );
+}
+
+#[test]
 fn achievements_criteria_known_spell_needs_player_knowledge_and_an_authored_spell_row() {
     let catalog = catalog();
     for (spells, qualifies) in [(vec![], false), (vec![432962], false), (vec![406106], true)] {
@@ -547,6 +587,48 @@ fn achievements2_holiday_and_missing_spell_assets_remain_untrackable() {
 }
 
 #[test]
+fn achievements_criteria_target_class_rejects_missing_target_even_when_caster_matches() {
+    let catalog = catalog();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            race: 2,
+            class: 6,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    for (target, qualifies) in [
+        (None, false),
+        (Some(SpellHitPlayer { race: 1, class: 6 }), false),
+        (Some(SpellHitPlayer { race: 2, class: 1 }), false),
+        (Some(SpellHitPlayer { race: 2, class: 6 }), true),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::LandTargetedSpell(27571, target),
+            None,
+            2,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&6302), qualifies.then_some(&1));
+    }
+    let mut state = PlayerAchievementState::default();
+    let target = Some(SpellHitPlayer { race: 2, class: 6 });
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::LandTargetedSpell(27571, target),
+        None,
+        2,
+        &PlayerConditions::default(),
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&6302),
+        "missing caster authority stays rejected"
+    );
+}
+
+#[test]
 fn achievements2_pinned_snapshot_trackable_union_matches_census() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
@@ -561,9 +643,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Pinned census:5450 +18805/19704/19716 behind known-spell104 markers.
+    // Installed 12.1.5.70391 census: 5479; build delta recorded in the wiki.
     // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5453);
+    assert_eq!(union.len(), 5479);
+    for achievement in [291, 1699, 3559, 63640] {
+        assert!(union.contains(&achievement));
+    }
     for achievement in [
         578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
         6030, 6031, 6350, 6584, 6621, 6973, 13025, 13026, 13623, 14728, 14729, 14730, 14731, 16729,

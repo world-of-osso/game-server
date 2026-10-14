@@ -1,3 +1,30 @@
+## 2026-10-14 — Derived factions survive DB2 replacement
+
+[DB2 refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) restores six Zephras factions from existing authored receipts atomically; preserves124 build receipts. Private import changes only faction_template+6/db2_row_source+6, integrity OK; native reaction test and9 importer/Skyborne tests pass. Old-source audit118/120; AreaTable/OverrideSpellData explicitly unavailable. Canonical untouched.
+
+## 2026-10-14 — Active installed achievement import
+
+[Importer](systems/dungeon-achievements.md#active-installed-achievement-import) no longer selects69933. Actual70391 process RED→GREEN2/2 covers current row counts, source build, Stockade and unrelated SQL; corrupt actual layout rejects before mutation. Build-selection/native-golden unit3/3; work-copy fingerprint/swap and native census gate pending.
+
+## 2026-10-14 — Player-anchored spell-hit target class
+
+[TargetIsPlayer5/TargetClass28](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) use the actual Player hit snapshot, with a complete positive player/race anchor for class predicates. Compiler32/32; native/catalog2/2 at b2b90543 include actual rose/turkey hits, wrong identity, missing authority and idle/reopen. Census5456/1816 adds1699/3559 structurally, excluding13 hypothetical unanchored class orphans. Mandatory acceptance pending.
+
+## 2026-10-14 — Silverlaine primary identity
+
+[Silverlaine](systems/boss-scripts.md#silverlaine-source-primary) adds pinned header/instance plus current canonical Journal/SmartAI validation to the copy-only producer. RED→GREEN and private120→121 application preserve unrelated/model data; no other Shadowfang boss is admitted. A real actor/spell fixture separately proves two victim casts/aura isolation and controlled-death1070/bit1 copy isolation; staged corpse→inventory once and Normal redb reopen/population/fresh-owner boundaries now have separate behavioral proof. Full fights and native acceptance remain open.
+## 2026-10-14 — Actual spell-hit target race
+
+[TargetRace27](systems/dungeon-achievements.md#actual-spell-hit-target-race) carries each hit player's race only for type110. Compiler31/31 and native1/1 at cc546863 prove delayed44212 Human/Orc hits, caster isolation, NPC/missing/depth/idle/reopen; census adds only account291 structurally. Required full four-thread workspace filter171/0/1ignored plus site-export1/1 passes at2e6a8661; server/engine checks and three-repo fmt pass. No full291/content/UI certificate.
+
+## 2026-10-13 — Battle-pet team minimum level
+
+[BattlePetTeamLevel34](systems/dungeon-achievements.md#battle-pet-team-minimum-level) reads all three equipped owned journal slots. Compiler30/30; native level25-team win RED lacks23257. Native/catalog3/3 proves matched-team win/lower equipped slot, numeric8278, idle/reopen and missing journal/slot qualification. Statistic8278 only; required full170/0/1ignored plus site-export1/1, server/engine checks and three-repo fmt pass at4531ce2b code scope.
+
+## 2026-10-13 — Encounter loot eligibility ordering
+
+[Type97](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) reads existing active lock bits before native DONE saves them. Actual Skorpyron Normal14 death RED commits bit1 but lacks35448; native2/2 and required full167/0/1ignored plus checks/fmt pass at fa181cea code scope. No new lock state or bag-loot substitute; current roots remain unchanged.
+
 ## 2026-10-13 — Positive known-spell marker
 
 [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) reads existing class/profession/owned-mount IDs, not global spell metadata. Compiler RED→GREEN29/29; native/catalog2/2 prove all26 learned recipe facts and three account grants, absent/wrong knowledge and reopened persistence. Fixture runs standard ClassProgression PostUpdate publication before the next Update credit. Full four-thread workspace filter165/0/1ignored and server/engine/three-repo checks pass; no trait/public-UI marker acquisition claim.
@@ -1156,3 +1183,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: native Druid/Fear master integration85 controls pass,17 actual unshifted BeforeCast receipts and current check/fmt; canonical model-info98,609 rows verified equal to source-prepared slot. Full class census/rendered acceptance remains open.
 
 - 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
+
+- 2026-10-14 — [Quest fixture refresh](../../quest-objectives-coverage.md#fixture-refresh--2026-10-14): reproduced missing SpellTargetConditions in real Tear item cast and stale empty-loot Netherwing Egg fixture; load authored conditions and use real9548/181746/23830 chest data. Both tests GREEN with unchanged gameplay/data; original open/autoloot ordering retained.
+
+- 2026-10-14: [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation): regenerate same supported predicate families,5479 ordinary/1821 statistics, reconcile243 inventory rows; coherent-source delta+23/+5, no removals versus69933. Runtime gate pending.
+
+- 2026-10-14: Installed70391 runtime acceptance at a4de9864:173/0/1ignored plus site-export1/1, compiler/policy38/38, server/engine checks and three-repo fmt pass; sibling quest schema aligned before gate. Whole audit continues.

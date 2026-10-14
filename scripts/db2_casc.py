@@ -291,14 +291,13 @@ def select_rows(rows, record_ids):
 
 def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
     """Observed WDC5 0x5: record bytes, IDs, copies, offsets, relations, sparse IDs."""
-    if header["flags"] != 5:
+    # Local CollectableSource*Sparse 0x7 puts offset-map IDs before relations.
+    if header["flags"] not in (5, 7):
         raise ValueError(f"sparse DB2 flags {header['flags']:#x} are not supported")
     sections = [
         struct.unpack_from("<Q8I", data, 204 + 40 * i)
         for i in range(header["section_count"])
     ]
-    if record_ids is None and any(section[0] for section in sections):
-        raise ValueError("encrypted DB2 section is not supported")
     offset = 204 + 40 * header["section_count"]
     metadata = [
         struct.unpack_from("<hH", data, offset + 4 * i)
@@ -328,7 +327,12 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
         map_count,
         copies,
     ) in sections:
-        if key:
+        if key and count and not any(data[start:end]):
+            import warnings
+            warnings.warn(
+                f"Skipping zero-filled DB2 section key {key:016X}, {count} records",
+                stacklevel=2,
+            )
             continue
         if strings or map_count != count or id_size not in (0, 4 * count):
             raise ValueError("unsupported sparse DB2 section shape")
@@ -343,21 +347,41 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
         )
         map_at = copy_at + 8 * copies
         entries = struct.iter_unpack("<IH", data[map_at : map_at + 6 * map_count])
-        relation_at = map_at + 6 * map_count
-        related = read_sparse_relations(data, relation_at, relations, count)
-        ids_at = relation_at + relations
+        map_ids_at = map_at + 6 * map_count
+        if header['flags'] & 2:
+            ids_at = map_ids_at
+            relation_at = ids_at + 4 * map_count
+        else:
+            relation_at = map_ids_at
+            ids_at = relation_at + relations
         ids = struct.unpack_from(f"<{map_count}I", data, ids_at)
+        relation_ids = set(ids) if header['flags'] & 2 else None
+        related = read_sparse_relations(data, relation_at, relations, count, relation_ids)
         for index, (record_id, (at, size)) in enumerate(zip(ids, entries)):
             if not size or not start <= at < at + size <= end:
                 raise ValueError(f"sparse DB2 row {record_id}: invalid offset/size")
-            values = read_sparse_row(
-                data[at : at + size], metadata, infos, text_columns, arrays, field_types
-            )
+            try:
+                values = read_sparse_row(
+                    data[at : at + size], metadata, infos, text_columns, arrays, field_types
+                )
+            except UnicodeDecodeError as error:
+                import warnings
+                warnings.warn(f"unreadable UTF-8 in DB2 row {record_id}: {error}", stacklevel=2)
+                header.setdefault('unreadable_record_ids', []).append(record_id)
+                continue
+            except ValueError as error:
+                raise ValueError(f"sparse DB2 row {record_id} in section {key:016X}: {error}") from error
             rows[record_id] = [record_id, *values]
             if relations:
-                rows[record_id].append(related.get(index, 0))
+                relation_key = record_id if header['flags'] & 2 else index
+                rows[record_id].append(related.get(relation_key, 0))
     for new_id, source_id in copy_pairs:
         if source_id not in rows:
+            if source_id in header.get('unreadable_record_ids', []):
+                import warnings
+                warnings.warn(f"DB2 copy {new_id} has unreadable source {source_id}", stacklevel=2)
+                header['unreadable_record_ids'].append(new_id)
+                continue
             raise ValueError(
                 f"sparse DB2 copy {new_id}: missing readable source {source_id}"
             )
@@ -365,7 +389,7 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
     return select_rows(rows, record_ids)
 
 
-def read_sparse_relations(data, at, size, count):
+def read_sparse_relations(data, at, size, count, record_ids=None):
     if not size:
         return {}
     if size < 12:
@@ -377,7 +401,9 @@ def read_sparse_relations(data, at, size, count):
         index: foreign
         for foreign, index in struct.iter_unpack("<II", data[at + 12 : at + size])
     }
-    if any(index >= count for index in related):
+    invalid = (any(index not in record_ids for index in related) if record_ids is not None
+               else any(index >= count for index in related))
+    if invalid:
         raise ValueError("invalid sparse DB2 relationship record index")
     return related
 

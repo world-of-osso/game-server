@@ -1,5 +1,21 @@
 # Wiki Index
 
+- [DB2 derived-faction refresh](systems/content-import.md#db2-refresh-preserves-derived-factions) — atomic Zephras reconstruction and other importers' build-receipt preservation; source audit and private-copy proof.
+
+- [Installed70391 reconciliation](systems/dungeon-achievements.md#installed70391-reconciliation) — coherent predicates/census5479+1821, build delta and retained auxiliary-source boundary.
+
+- [Active installed achievement import](systems/dungeon-achievements.md#active-installed-achievement-import) — active Retail build agreement, actual layout guards and atomic four-table replacement.
+
+- [Player-anchored spell-hit target class](systems/dungeon-achievements.md#player-anchored-spell-hit-target-class) — actual Player identity, preserving target/race companions; unanchored NPC class predicates excluded.
+
+- [Silverlaine source primary](systems/boss-scripts.md#silverlaine-source-primary) — pinned map33/3887→1070/bit1, source SmartAI identity and copy-only SQL; combat/native/full-instance proof remains open.
+- [Actual spell-hit target race](systems/dungeon-achievements.md#actual-spell-hit-target-race) — per-hit Player race, not caster race; NPC/missing snapshots rejected.
+
+- [Battle-pet team minimum level](systems/dungeon-achievements.md#battle-pet-team-minimum-level) — equipped owned slots, not all pets; unknown/lower team rejection and numeric statistic boundary.
+
+- [Encounter loot eligibility](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) — existing active lock bit at native DONE before save, not bag-loot success; allocated-copy authority retained.
+- [Quest fixture refresh](../quest-objectives-coverage.md#fixture-refresh--2026-10-14) — current authored chest9548 open/autoloot/turn-in and real Tear item-cast conditions; two reproduced fixture failures corrected without gameplay or SQLite changes.
+
 - [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) — actual class/profession/owned-mount IDs versus global spell metadata; recipe-marker boundaries, no trait/UI acquisition claim.
 - [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
 

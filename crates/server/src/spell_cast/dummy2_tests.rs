@@ -214,8 +214,9 @@ fn dummy2_evoker_pyre_explodes_at_target_and_hits_nearby_enemies_only() {
     h.cast_and_deliver(357211, Some(h.npc));
     h.advance(25);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(varied(440.0).contains(&(5000.0 - h.health(h.npc))));
-    assert!(varied(440.0).contains(&(5000.0 - h.health(nearby))));
+    // Active SpellEffect 891602: 4.84 SP, fixture SP100, native variance5%.
+    assert!(varied(484.0).contains(&(5000.0 - h.health(h.npc))));
+    assert!(varied(484.0).contains(&(5000.0 - h.health(nearby))));
     assert_eq!(h.health(distant), 5000.0);
     assert_eq!(h.health(ally), 1000.0);
     assert_eq!(

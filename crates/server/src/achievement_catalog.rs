@@ -17,7 +17,8 @@ use super::PlayerAchievementState;
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62,
     63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
-    157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220, 221, 245, 246,
+    253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -145,9 +146,11 @@ pub(crate) enum CriteriaEvent {
     MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
-    LandTargetedSpell(u32),
+    LandTargetedSpell(u32, Option<SpellHitPlayer>),
     LearnSpell(u32),
     DefeatEncounter(u32),
+    /// One DONE while the character's active encounter loot-lock bit was unset.
+    DefeatEncounterEligibleForLoot(u32),
 }
 
 impl CriteriaEvent {
@@ -252,9 +255,10 @@ impl CriteriaEvent {
             Self::MoneySpentOnTaxis(_) => 63,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
-            Self::LandTargetedSpell(_) => 110,
+            Self::LandTargetedSpell(_, _) => 110,
             Self::LearnSpell(_) => 34,
             Self::DefeatEncounter(_) => 165,
+            Self::DefeatEncounterEligibleForLoot(_) => 97,
         }
     }
 
@@ -352,7 +356,7 @@ impl CriteriaEvent {
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
             | Self::BeSpellTarget(asset)
-            | Self::LandTargetedSpell(asset)
+            | Self::LandTargetedSpell(asset, _)
             | Self::LearnSpell(asset)
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
@@ -375,7 +379,8 @@ impl CriteriaEvent {
             | Self::LearnTaxiNode(asset)
             | Self::RewardedQuestsInZone(asset, _)
             | Self::BankTabsOwned(asset, _)
-            | Self::DefeatEncounter(asset) => asset == criteria.asset,
+            | Self::DefeatEncounter(asset)
+            | Self::DefeatEncounterEligibleForLoot(asset) => asset == criteria.asset,
         }
     }
 }
@@ -456,6 +461,13 @@ pub(crate) struct PlayerConditions {
     pub player: Option<ReferencePlayer>,
 }
 
+/// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SpellHitPlayer {
+    pub race: u8,
+    pub class: u8,
+}
+
 /// The reference player's own state read by TC player-only ModifierTree leaves.
 #[derive(Debug, Default)]
 pub(crate) struct ReferencePlayer {
@@ -463,6 +475,8 @@ pub(crate) struct ReferencePlayer {
     pub auras: BTreeSet<u32>,
     /// IDs in existing class/profession knowledge and the owning mount journal.
     pub known_spells: BTreeSet<u32>,
+    /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
+    pub battle_pet_team_min_level: Option<u8>,
     /// Current terrain area (TC Player::GetAreaId).
     pub area: Option<u32>,
     pub map: u32,
@@ -484,12 +498,18 @@ enum CriteriaFact {
     Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
     KnownSpell(u32),
+    BattlePetTeamLevel(u8),
     /// Some8 requiring one of these complete, authenticated PlayerHasAura8 spells.
     PlayerAuras(BTreeSet<u32>),
     /// ItemId19 or item-template quality14/15 against this native receipt's itemID.
     EventItems(BTreeSet<u32>),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
+    /// TargetRace27 from the actual hit unit, never the reference player.
+    TargetRace(u8),
+    TargetIsPlayer,
+    /// Accepted only with positive player/race authority; NPC class predicates stay disabled.
+    TargetClass(u8),
     /// Some8 requiring one of these complete TargetCreatureId4 leaves.
     TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
@@ -517,6 +537,9 @@ impl CriteriaFact {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
+            Self::BattlePetTeamLevel(level) => player
+                .battle_pet_team_min_level
+                .is_some_and(|minimum| minimum >= *level),
             Self::PlayerAuras(spells) => !player.auras.is_disjoint(spells),
             Self::EventItems(items) => match event {
                 CriteriaEvent::ObtainAnyItem(item) | CriteriaEvent::LootAnyItem(item) => {
@@ -526,6 +549,13 @@ impl CriteriaFact {
             },
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
+            }
+            Self::TargetRace(race) => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target)) if target.race == *race)
+            }
+            Self::TargetIsPlayer => matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(_))),
+            Self::TargetClass(class) => {
+                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target)) if target.class == *class)
             }
             Self::TargetCreatures(entries) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
@@ -1304,6 +1334,7 @@ fn load_criteria_facts(
                 .ok()
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
+            5 => Some(CriteriaFact::TargetIsPlayer),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
@@ -1323,8 +1354,17 @@ fn load_criteria_facts(
             26 => small
                 .filter(|class| (1..=13).contains(class))
                 .map(CriteriaFact::Class),
+            27 => small
+                .filter(|race| crate::race_class::race_bit(*race).is_some())
+                .map(CriteriaFact::TargetRace),
+            28 => small
+                .filter(|class| (1..=13).contains(class))
+                .map(CriteriaFact::TargetClass),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
+            34 => small
+                .filter(|level| (1..=shared::pet_battle::MAX_PET_LEVEL).contains(level))
+                .map(CriteriaFact::BattlePetTeamLevel),
             35 => Some(CriteriaFact::NotInParty),
             41 => {
                 if !exists("area_table")? {
@@ -1339,7 +1379,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/29/32/35/41/60/69/71/104/122"
+                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/60/69/71/104/122"
                 )
             }
         };
@@ -1534,7 +1574,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // unlike old TC ArenaTeam numeric2/3/5; no retired/other bracket inference.
                         || (kind == 39 && matches!(row.get::<_, i32>(2)?, 0 | 1))
                         // Native rated arena result has a real positive map ID, never an all-map alias0.
-                        || (matches!(kind, 32 | 33) && row.get::<_, i32>(2)? > 0)
+                        || (matches!(kind, 32 | 33 | 97) && row.get::<_, i32>(2)? > 0)
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)

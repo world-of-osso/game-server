@@ -63,6 +63,14 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [ ] Factory13965 opens after Glubtok, Mast16400 after Helix, Heavy17153 outside Helix combat and Foundry16399 after Foe Reaper per source. Source-authored door behavior is identified, not implemented or proved. Missing primaries47296/47739/49541 have no TDB placements; no invented spawn coordinates.
 - [ ] No Deadmines full-combat, loot/lockout or native acceptance claim. [Census](../encounter-coverage.md).
 
+## Shadowfang Keep source identity
+
+- [x] Prepare only Silverlaine3887→1070/bit1 (map33, Journal97/actor367/display37288) from pinned TC header/instance and current canonical catalogs. Require the authored empty ScriptName/SmartAI, refuse identity drift, preserve unrelated rows and remain idempotent on independent copies. This admits no unported Shadowfang boss or guessed placement.
+- [x] Silverlaine's existing source row7068 casts on the victim and repeats without changing its authored1s/22.3–35.1s timers or100% chance. Real actor/spell fixture proves two successful casts, aura application/copy isolation and a controlled lethal Fireball callback granting only1070/bit1 in the owning copy. Actual7068 aura reduces a controlled noncritical1000 heal input to500 at the shared healing-modifier boundary; the same input heals1000 before Veil.
+- [x] Silverlaine's staged real corpse generates the authored94–279 coins and one group1 boss item6321/6323; actual open/take requests persist every generated reward once and duplicate takes leave inventory unchanged. Source food/cloth rows remain permitted; staging isolates loot, not the encounter fight.
+- [x] Real Silverlaine death→Normal redb close/reopen restores only1070/bit1 for the same owner without scheduled raid/Heroic locks. Repopulation filters only3887 while retaining uncompleted authored primaries; a fresh owner gets an uncompleted copy.
+- [ ] Full Silverlaine combat, complete healing-spell cast/coefficient behavior and both-skin native acceptance remain unproved. Fixture stages high-health player survival and a source-authenticated runtime binding; controlled death is not a balanced fight.
+
 ## Wailing Caverns source slices
 
 - [x] Anacondra's source Thorns8148 applies at7s, repeats63s, and retaliates after positive damaging melee swings through aura15; ordinary spell damage and dispelled/death-removed shields must not retaliate. Lethal melee must run the shared death-aura removal before post-damage retaliation, retaining native passive/allow-while-dead exceptions. Shield damage uses the aura caster's bonuses, the shield owner's damage attribution, native hit defenses, immunity/absorbs and no critical roll; it does not refresh creature last-damaged leash time. Missing Lightning spell2 is not replaced.
