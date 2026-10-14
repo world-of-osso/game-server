@@ -226,6 +226,8 @@ class SkyborneImportTest(unittest.TestCase):
                         sys.executable,
                         str(SCRIPTS / "db2.py"),
                         "import",
+                        "--build",
+                        db2.DEFAULT_BUILD,
                         "--csv-root",
                         str(root),
                         "--db",
