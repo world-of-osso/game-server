@@ -445,16 +445,20 @@ fn private_summon_owner(world: &World, caster: Entity, flags: u32) -> Option<Pri
         return Some(PrivateSummonOwner::Player(owner.0));
     }
     if flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0
-        && world.get::<shared::components::Player>(caster).is_some()
-        && let Some(character) = world.get::<crate::persistence::ClientId>(caster)
-        && let Some(group) = world
-            .resource::<crate::group::GroupRegistry>()
-            .group_id(character.0)
+        && let Some(group) = read_caster_group(world, caster)
     {
         return Some(PrivateSummonOwner::Group(group));
     }
     // Authored ungrouped case is the caster GUID, never public visibility.
     Some(PrivateSummonOwner::Player(caster))
+}
+
+fn read_caster_group(world: &World, caster: Entity) -> Option<crate::group::GroupId> {
+    world.get::<shared::components::Player>(caster)?;
+    let character = world.get::<crate::persistence::ClientId>(caster)?;
+    world
+        .resource::<crate::group::GroupRegistry>()
+        .group_id(character.0)
 }
 
 fn insert_summon_privacy(entity: &mut EntityWorldMut<'_>, owner: Option<PrivateSummonOwner>) {
