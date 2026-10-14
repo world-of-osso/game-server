@@ -34,7 +34,11 @@ impl NavigationMap {
                     points.push(target);
                     return Ok(points);
                 }
-                return Err("waypoint surface steering stopped before endpoint".into());
+                return Err(format!(
+                    "waypoint surface steering stopped before endpoint: at={at:?} target={target:?} points={} polygons={}",
+                    points.len(),
+                    polygons.len()
+                ));
             };
             at = self.step_surface(at, &steering, &mut polygons)?;
             if steering.end && in_range(at, steering.point, SLOP, 1.0) {
