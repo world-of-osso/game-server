@@ -225,6 +225,13 @@ fn ragefire_completion_adarogg_intro_unbaked_navigation_cannot_fake_path_arrival
 fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival_injection() {
     let navigation = std::path::PathBuf::from(std::env::var_os("RAGEFIRE_NAV_ROOT").unwrap());
     let (mut h, boss) = trigger_adarogg_intro(&navigation);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(389, maps.map(389).unwrap().wdt_file_data_id)]),
+    ));
     let meals: Vec<Vec<_>> = [61659, 61669]
         .into_iter()
         .map(|entry| {
