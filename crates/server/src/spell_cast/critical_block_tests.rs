@@ -4,7 +4,7 @@ use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
 use crate::melee::PlayerDefense;
 use crate::stats::CharacterStats;
 use bevy::prelude::*;
-use shared::components::Rotation;
+use shared::components::{Rotation, UnitLevel};
 use shared::protocol::CombatLogKind;
 
 const CRITICAL_BLOCK: u32 = 76857;
@@ -14,10 +14,13 @@ fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
     let defender = spawn_player(&mut h.app, 1, 3.0);
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::duel::DuelOpponent(defender),
+        // Native player entry inserts matching owner/combat levels.
+        UnitLevel(10),
         crate::class_progression::KnownSpells::fixture(Vec::new()),
     ));
     h.app.world_mut().entity_mut(defender).insert((
         crate::duel::DuelOpponent(h.caster),
+        UnitLevel(10),
         Rotation {
             x: 0.0,
             y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
