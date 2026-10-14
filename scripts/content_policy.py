@@ -176,19 +176,24 @@ def build_items(conn, item_map, item_reasons, retail_ids, report):
         "INSERT INTO temp.item_source VALUES (?, NULL)",
         ((item,) for item in sorted(retail_ids - set(item_map.values()))),
     )
+    project_retail_items(conn)
+    db2.skyborne_data.project_items(conn)
+
+
+def project_retail_items(conn):
+    """Replace Retail definitions from the selected IDs and reviewed source mappings."""
     conn.execute("DROP TABLE IF EXISTS content_item")
     conn.execute(f"""CREATE TABLE content_item AS SELECT {ITEM_COLUMNS}, im.source_id AS SourceEntry
         FROM temp.item_source im JOIN item_sparse s ON s.ID = im.retail_id JOIN item i ON i.ID = s.ID""")
     conn.execute("CREATE UNIQUE INDEX content_item_id ON content_item(ID)")
-    db2.skyborne_data.project_items(conn)
 
 
 def refresh_items(conn):
     """Reproject installed definitions only, retaining reviewed SourceEntry mappings."""
-    item_map = dict(conn.execute(
-        "SELECT SourceEntry, ID FROM content_item WHERE SourceEntry IS NOT NULL"))
-    create_map_table(conn, "item_map", item_map)
-    build_items(conn, item_map, {}, retail_content.retail_item_ids(conn), Report())
+    conn.execute("""CREATE TEMP TABLE item_source AS
+        SELECT s.ID AS retail_id, c.SourceEntry AS source_id
+        FROM item_sparse s JOIN item i ON i.ID=s.ID LEFT JOIN content_item c ON c.ID=s.ID""")
+    project_retail_items(conn)
     conn.execute("DROP TABLE temp.item_source")
 
 
