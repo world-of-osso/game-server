@@ -267,6 +267,8 @@ pub(crate) fn witness_holds(
         target_eye = ?target.eyes,
         start_distance = start.distance(caster.eyes),
         end_in_body = target.contains(end, WITNESS_END_TOLERANCE),
+        witness_segment_clear = los.clear(map, start, end),
+        authoritative_witness = ?los.witness(map, &caster, &target),
         ?witness,
         held,
         "Cast witness checked"
