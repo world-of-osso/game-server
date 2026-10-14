@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Quest fixture refresh](../quest-objectives-coverage.md#fixture-refresh--2026-10-14) — current authored chest9548 open/autoloot/turn-in and real Tear item-cast conditions; two reproduced fixture failures corrected without gameplay or SQLite changes.
+
 - [Known-spell qualifier](systems/dungeon-achievements.md#known-spell-qualifier-2026-10-13) — actual class/profession/owned-mount IDs versus global spell metadata; recipe-marker boundaries, no trait/UI acquisition claim.
 - [Creature-type damage](systems/auras.md#damage-versus-creature-type) — source168 real spell/tick/main/off-hand damage and shared NPC/form/race authority; canonical59-row producer/equality and exact behavior limits.
 
