@@ -13,7 +13,7 @@ def read_races(path, skyborne):
         for row in csv.DictReader(file):
             race_id = int(row["ID"])
             if (race_id in SKYBORNE_RACE_IDS) == skyborne:
-                rows.append((race_id, row["Name_lang"], int(row["FactionID"])))
+                rows.append((race_id, row["Name_lang"], int(row["FactionID"]), int(row["CreatureType"])))
         return rows
 
 def prepare(source, retail_races, forever_races, output):
@@ -28,8 +28,8 @@ def prepare(source, retail_races, forever_races, output):
             with sqlite3.connect(output) as copy:
                 original.backup(copy)
                 copy.execute("DROP TABLE IF EXISTS chr_races")
-                copy.execute("CREATE TABLE chr_races(ID INTEGER PRIMARY KEY, Name_lang TEXT NOT NULL, FactionID INTEGER NOT NULL)")
-                copy.executemany("INSERT INTO chr_races VALUES(?,?,?)", rows)
+                copy.execute("CREATE TABLE chr_races(ID INTEGER PRIMARY KEY, Name_lang TEXT NOT NULL, FactionID INTEGER NOT NULL, CreatureType INTEGER NOT NULL)")
+                copy.executemany("INSERT INTO chr_races VALUES(?,?,?,?)", rows)
     except Exception:
         output.unlink()
         raise
