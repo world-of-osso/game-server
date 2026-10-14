@@ -1,3 +1,14 @@
+## 2026-10-13 — Ground C++ waypoint arrivals
+
+[Ground paths](systems/boss-scripts.md#ground-c-waypoint-paths) now use sourced baked routes rather than reject all non-exact ground MovePath calls. Real AT7904/Adarogg reaches the three authored paths and both meal-condition branches; empty-bake rejection and Golden Serpent flying-path controls accompany the walking-gait RED→GREEN. Native clear and both-skin loot remain open.
+
+## 2026-10-13 — Ragefire copy persistence and corpse rewards
+
+[Whole-copy boundaries](systems/boss-scripts.md#ragefire-whole-copy-proof) now exercise four real primary deaths, Normal redb reopen/dead-boss population and fresh-owner isolation; actual corpse loot requests persist each boss reward once. Native staged entry rendered but encountered missing source LOS eye receipts; no complete-fight or both-skin certificate follows.
+
+## 2026-10-13 — Slagmaw logical identity versus preview
+
+[Pinned primary identity](systems/boss-scripts.md#slagmaw-source-primary) authenticates61463→1445/bit2 independently of Journal preview38391 versus live model42247. Producer/census RED→GREEN and actual idempotent private SQL preserve both models/unrelated bindings; publication and full-fight/native gates stay separate.
 ## 2026-10-13 — Native autoattack range
 
 [Attacker range153](systems/auras.md#autoattack-range) now affects real main/off-hand swings, preserving signed addition, inclusive boundaries and unchanged weapon-spell ranges. Native Cat/Astral zero fields are not converted into invented positive bindings; whole13/40 remains open.
