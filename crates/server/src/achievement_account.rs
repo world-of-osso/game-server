@@ -76,8 +76,7 @@ pub(super) fn save_account_progress(
         .insert(update.account, bytes.as_slice())
         .expect("save account achievements");
     drop(accounts);
-    txn.commit()
-        .expect("commit account achievement migration/update");
+    commit_progress_transaction(txn, "tick_db::account_achievement_commit");
     (aggregate, toasts)
 }
 
@@ -107,7 +106,18 @@ pub(super) fn save_monthly_contribution(
         .insert(account, bytes.as_slice())
         .expect("save monthly contribution");
     drop(accounts);
-    txn.commit().expect("commit monthly contribution");
+    commit_progress_transaction(txn, "tick_db::monthly_contribution_commit");
+}
+
+fn commit_progress_transaction(txn: redb::WriteTransaction, operation: &'static str) {
+    let _span = bevy::log::info_span!("system", name = operation).entered();
+    let started = std::time::Instant::now();
+    txn.commit().expect(operation);
+    bevy::log::debug!(
+        operation,
+        elapsed_ms = started.elapsed().as_secs_f64() * 1000.0,
+        "Achievement persistence commit completed"
+    );
 }
 
 pub(super) fn monthly_contributions(
