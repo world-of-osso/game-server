@@ -1,5 +1,9 @@
 # Wiki Index
 
+- [Generic item receipts](systems/dungeon-achievements.md#generic-item-receipts-2026-10-13) — one loot/acquisition event versus stack quantity; canonical item predicates, current-root contradictions retained.
+
+- [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
+- [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
 - [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
 - [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
 
