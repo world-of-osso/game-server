@@ -38,6 +38,7 @@ use self::handlers::{
 };
 pub(crate) use self::operations::deposit_cost;
 pub(crate) use self::operations::{auction_sale_events, seller_sale_mail};
+#[cfg(test)]
 use self::operations::{buyout_auction, cancel_auction, create_auction, place_bid};
 pub(crate) use self::queries::{duration_secs, unix_now};
 use self::queries::{inventory_snapshot, min_next_bid, search_auctions, to_listing_summary};

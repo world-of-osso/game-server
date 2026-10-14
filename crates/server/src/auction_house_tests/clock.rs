@@ -97,7 +97,7 @@ fn assert_clock_expiry(with_bid: bool, delete_buyer: bool) {
 
     advance_clock_through_admin(&mut app);
     app.update();
-    finish_market_work(&mut app);
+    finish_expiry_work(&mut app);
     assert!(
         app.world()
             .resource::<AuctionHouseState>()

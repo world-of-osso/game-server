@@ -24,6 +24,25 @@ fn install_expiry_fixture(app: &mut App) {
     );
 }
 
+fn finish_expiry_work(app: &mut App) {
+    use bevy::ecs::system::RunSystemOnce;
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while !app
+        .world()
+        .resource::<super::PendingMarketCommits>()
+        .is_empty()
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "expiry did not complete"
+        );
+        app.world_mut()
+            .run_system_once(super::handlers::publish_market_commits)
+            .unwrap();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+}
+
 pub(crate) fn finish_market_work(app: &mut App) {
     let deadline = std::time::Instant::now() + Duration::from_secs(3);
     while !app
@@ -160,9 +179,9 @@ mod bounded_slice {
         app.insert_resource(GameDatabase::new(db));
         app.insert_resource(state);
         app.init_resource::<crate::maps::ServerClock>();
-        app.add_systems(Update, super::super::handlers::expire_auctions);
+        install_expiry_fixture(&mut app);
         app.update();
-        app.update();
+        finish_expiry_work(&mut app);
         let db = &app.world().resource::<GameDatabase>().db;
         assert!(persistence::load_auctions(db).is_empty());
         for id in [1, 2] {

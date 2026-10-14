@@ -489,6 +489,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
         .auctions
         .insert(first.auction_id, first);
     app.world_mut().run_schedule(FixedUpdate);
+    finish_expiry_work(&mut app);
 
     assert!(
         !app.world()
@@ -528,6 +529,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
         .resource_mut::<Time>()
         .advance_by(std::time::Duration::from_millis(750));
     app.world_mut().run_schedule(FixedUpdate);
+    finish_expiry_work(&mut app);
     assert!(
         !app.world()
             .resource::<AuctionHouseState>()
@@ -705,7 +707,7 @@ fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
     app.init_resource::<crate::maps::ServerClock>();
     install_expiry_fixture(&mut app);
     app.update();
-    finish_market_work(&mut app);
+    finish_expiry_work(&mut app);
     assert_eq!(
         app.world().resource::<AuctionHouseState>().auctions[&91],
         auction
@@ -739,13 +741,13 @@ fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
     app.init_resource::<crate::maps::ServerClock>();
     install_expiry_fixture(&mut app);
     app.update();
-    finish_market_work(&mut app);
+    finish_expiry_work(&mut app);
     app.world_mut()
         .resource_mut::<AuctionHouseState>()
         .auctions
         .insert(91, auction);
     app.update();
-    finish_market_work(&mut app);
+    finish_expiry_work(&mut app);
     let db = &app.world().resource::<GameDatabase>().db;
     assert!(persistence::load_auctions(db).is_empty());
     assert_eq!(mail_store::load_mailbox(db, 1).len(), 1);

@@ -433,8 +433,9 @@ pub(super) fn process_create_requests(
             "create auction",
             move |db| {
                 let mut state = load_auction_state(db);
-                let response =
-                    create_auction(db, &templates, &mut state, character, house, &request);
+                let response = super::operations::try_create_auction(
+                    db, &templates, &mut state, character, house, &request,
+                )?;
                 let mut publication = MarketPublication::from_auctions(state);
                 if response.success {
                     publication
@@ -460,7 +461,13 @@ pub(super) fn process_bid_requests(
         &mut pending,
         &mut senders,
         |db, state, character, request| {
-            place_bid(db, state, character, request.auction_id, request.amount)
+            super::operations::try_place_bid(
+                db,
+                state,
+                character,
+                request.auction_id,
+                request.amount,
+            )
         },
         |request| request.auction_id,
     );
@@ -477,7 +484,9 @@ pub(super) fn process_buyout_requests(
         db.as_deref(),
         &mut pending,
         &mut senders,
-        |db, state, character, request| buyout_auction(db, state, character, request.auction_id),
+        |db, state, character, request| {
+            super::operations::try_buyout_auction(db, state, character, request.auction_id)
+        },
         |request| request.auction_id,
     );
 }
@@ -493,7 +502,9 @@ pub(super) fn process_cancel_requests(
         db.as_deref(),
         &mut pending,
         &mut senders,
-        |db, state, character, request| cancel_auction(db, state, character, request.auction_id),
+        |db, state, character, request| {
+            super::operations::try_cancel_auction(db, state, character, request.auction_id)
+        },
         |request| request.auction_id,
     );
 }
@@ -506,7 +517,12 @@ fn enqueue_auction_operations<M: lightyear::prelude::Message, F, I>(
     operation: F,
     auction_id: I,
 ) where
-    F: Fn(&redb::Database, &mut AuctionHouseState, u64, &M) -> AuctionOperationResponse
+    F: Fn(
+            &redb::Database,
+            &mut AuctionHouseState,
+            u64,
+            &M,
+        ) -> Result<AuctionOperationResponse, String>
         + Copy
         + Send
         + 'static,
@@ -532,7 +548,7 @@ fn enqueue_auction_operations<M: lightyear::prelude::Message, F, I>(
                     .auctions
                     .get(&id)
                     .and_then(|auction| auction.current_bidder_character_id);
-                let response = operation(db, &mut state, character, &request);
+                let response = operation(db, &mut state, character, &request)?;
                 let mut publication = MarketPublication::from_auctions(state);
                 if response.success {
                     publication.gold = [Some(character), previous]
@@ -556,12 +572,13 @@ pub(super) fn expire_auctions(
     mut expiry: Local<Option<crate::persistence_writer::CommitReceipt<MarketPublication>>>,
 ) {
     let Some(db) = db else { return };
-    if let Some(receipt) = expiry.as_ref() {
-        if receipt.result().is_some() {
-            *expiry = None;
-        }
+    if expiry
+        .as_ref()
+        .is_some_and(|receipt| receipt.result().is_none())
+    {
         return;
     }
+    *expiry = None;
     let now = clock.unix().max(0) as u64;
     if !state
         .auctions

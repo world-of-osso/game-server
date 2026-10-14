@@ -143,6 +143,7 @@ fn validate_auction_deposit(
     Ok(())
 }
 
+#[cfg(test)]
 pub(super) fn create_auction(
     db: &redb::Database,
     templates: &ItemTemplates,
@@ -151,9 +152,21 @@ pub(super) fn create_auction(
     house: u8,
     req: &CreateAuction,
 ) -> AuctionOperationResponse {
+    try_create_auction(db, templates, state, character_id, house, req)
+        .unwrap_or_else(|error| err(&error))
+}
+
+pub(super) fn try_create_auction(
+    db: &redb::Database,
+    templates: &ItemTemplates,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    house: u8,
+    req: &CreateAuction,
+) -> Result<AuctionOperationResponse, String> {
     let validated = match validate_create_auction(db, templates, state, character_id, req) {
         Ok(validated) => validated,
-        Err(response) => return response,
+        Err(response) => return Ok(response),
     };
 
     let mut inventory = validated.inventory.clone();
@@ -190,13 +203,13 @@ pub(super) fn create_auction(
         inventories: vec![(character_id, inventory)],
         ..Default::default()
     };
-    commit_market(db, None, &changes).expect("commit created auction");
+    commit_market(db, None, &changes)?;
     state.auctions.insert(auction.auction_id, auction);
     state.pending_criteria.push((
         character_id,
         crate::achievement::CriteriaEvent::AuctionPosted,
     ));
-    ok("auction created")
+    Ok(ok("auction created"))
 }
 
 /// Gold already held by the auction house from a previous bid by this character.
@@ -240,6 +253,7 @@ fn stage_previous_bidder_refund(
     ));
 }
 
+#[cfg(test)]
 pub(super) fn place_bid(
     db: &redb::Database,
     state: &mut AuctionHouseState,
@@ -247,24 +261,34 @@ pub(super) fn place_bid(
     auction_id: u64,
     amount: u64,
 ) -> AuctionOperationResponse {
+    try_place_bid(db, state, character_id, auction_id, amount).unwrap_or_else(|error| err(&error))
+}
+
+pub(super) fn try_place_bid(
+    db: &redb::Database,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    auction_id: u64,
+    amount: u64,
+) -> Result<AuctionOperationResponse, String> {
     let Some(auction) = state.auctions.get(&auction_id) else {
-        return err("auction not found");
+        return Ok(err("auction not found"));
     };
     if auction.expires_at_unix_secs <= unix_now() {
-        return err("auction has expired");
+        return Ok(err("auction has expired"));
     }
     if auction.seller_character_id == character_id {
-        return err("cannot bid on your own auction");
+        return Ok(err("cannot bid on your own auction"));
     }
     let min_next = min_next_bid(auction);
     if amount < min_next {
-        return err("bid is below the minimum next bid");
+        return Ok(err("bid is below the minimum next bid"));
     }
     let mut bidder_inventory = persistence::load_inventory(db, character_id);
     let credit = previous_bid_credit(auction, character_id);
     let additional = amount.saturating_sub(credit);
     if bidder_inventory.gold < additional {
-        return err("not enough gold");
+        return Ok(err("not enough gold"));
     }
     let expected_inventory = bidder_inventory.clone();
     bidder_inventory.gold -= additional;
@@ -287,7 +311,7 @@ pub(super) fn place_bid(
     } else {
         changes.auctions.push(updated.clone());
     }
-    commit_market(db, None, &changes).expect("commit auction bid");
+    commit_market(db, None, &changes)?;
     state.pending_criteria.push((
         character_id,
         crate::achievement::CriteriaEvent::HighestAuctionBid(amount),
@@ -297,37 +321,47 @@ pub(super) fn place_bid(
             .pending_criteria
             .extend(auction_sale_events(&updated, Some(character_id), amount));
         state.auctions.remove(&auction_id);
-        ok("bid met buyout — auction sold")
+        Ok(ok("bid met buyout — auction sold"))
     } else {
         state.auctions.insert(auction_id, updated);
-        ok("bid placed")
+        Ok(ok("bid placed"))
     }
 }
 
+#[cfg(test)]
 pub(super) fn buyout_auction(
     db: &redb::Database,
     state: &mut AuctionHouseState,
     character_id: u64,
     auction_id: u64,
 ) -> AuctionOperationResponse {
+    try_buyout_auction(db, state, character_id, auction_id).unwrap_or_else(|error| err(&error))
+}
+
+pub(super) fn try_buyout_auction(
+    db: &redb::Database,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    auction_id: u64,
+) -> Result<AuctionOperationResponse, String> {
     let Some(auction) = state.auctions.get(&auction_id) else {
-        return err("auction not found");
+        return Ok(err("auction not found"));
     };
     if auction.expires_at_unix_secs <= unix_now() {
-        return err("auction has expired");
+        return Ok(err("auction has expired"));
     }
     if auction.seller_character_id == character_id {
-        return err("cannot buy out your own auction");
+        return Ok(err("cannot buy out your own auction"));
     }
     let Some(price) = auction.buyout_price else {
-        return err("auction has no buyout price");
+        return Ok(err("auction has no buyout price"));
     };
 
     let mut buyer_inventory = persistence::load_inventory(db, character_id);
     let credit = previous_bid_credit(auction, character_id);
     let additional = price.saturating_sub(credit);
     if buyer_inventory.gold < additional {
-        return err("not enough gold");
+        return Ok(err("not enough gold"));
     }
     let expected_inventory = buyer_inventory.clone();
     buyer_inventory.gold -= additional;
@@ -341,30 +375,40 @@ pub(super) fn buyout_auction(
     };
     stage_previous_bidder_refund(db, auction, character_id, &mut changes);
     let credits = auction_sale_events(auction, Some(character_id), price);
-    commit_market(db, None, &changes).expect("commit auction buyout");
+    commit_market(db, None, &changes)?;
     state.pending_criteria.extend(credits);
     state.pending_criteria.push((
         character_id,
         crate::achievement::CriteriaEvent::HighestAuctionBid(price),
     ));
     state.auctions.remove(&auction_id);
-    ok("auction bought out")
+    Ok(ok("auction bought out"))
 }
 
+#[cfg(test)]
 pub(super) fn cancel_auction(
     db: &redb::Database,
     state: &mut AuctionHouseState,
     character_id: u64,
     auction_id: u64,
 ) -> AuctionOperationResponse {
+    try_cancel_auction(db, state, character_id, auction_id).unwrap_or_else(|error| err(&error))
+}
+
+pub(super) fn try_cancel_auction(
+    db: &redb::Database,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    auction_id: u64,
+) -> Result<AuctionOperationResponse, String> {
     let Some(auction) = state.auctions.get(&auction_id) else {
-        return err("auction not found");
+        return Ok(err("auction not found"));
     };
     if auction.seller_character_id != character_id {
-        return err("cannot cancel another player's auction");
+        return Ok(err("cannot cancel another player's auction"));
     }
     if auction.current_bidder_character_id.is_some() {
-        return err("cannot cancel an auction that already has bids");
+        return Ok(err("cannot cancel an auction that already has bids"));
     }
     let changes = MarketChanges {
         expected_auctions: vec![(auction_id, auction.clone())],
@@ -381,9 +425,9 @@ pub(super) fn cancel_auction(
         )],
         ..Default::default()
     };
-    commit_market(db, None, &changes).expect("commit cancelled auction");
+    commit_market(db, None, &changes)?;
     state.auctions.remove(&auction_id);
-    ok("auction cancelled")
+    Ok(ok("auction cancelled"))
 }
 
 /// TC item-style settlement: seller profit includes deposit less cut; highest sale is gross bid.

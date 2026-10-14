@@ -86,7 +86,7 @@ fn run_expiry(db: redb::Database) -> redb::Database {
     app.init_resource::<crate::maps::ServerClock>();
     install_expiry_fixture(&mut app);
     app.update();
-    finish_market_work(&mut app);
+    finish_expiry_work(&mut app);
     app.world_mut()
         .remove_resource::<GameDatabase>()
         .unwrap()
