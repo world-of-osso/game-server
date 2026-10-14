@@ -140,10 +140,10 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
             properties.control, properties.title
         ));
     }
-    if properties.flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0 {
-        return Some(format!(
-            "summon {properties_id} requires private group visibility"
-        ));
+    if properties.flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0
+        && !world.contains_resource::<crate::group::GroupRegistry>()
+    {
+        return Some(format!("summon {properties_id} requires group registry"));
     }
     let entry = effect.misc_values[0] as u32;
     let exists = world
@@ -229,9 +229,7 @@ fn spawn_wild_summon(
     if properties.faction != 0 {
         entity.insert(UnitFactionTemplate(properties.faction));
     }
-    if let Some(owner) = private_owner {
-        entity.insert(crate::interest::PrivateObjectOwner(owner));
-    }
+    insert_summon_privacy(&mut entity, private_owner);
     drop(entity);
     crate::auras::auras_changed(world, actor);
 }
@@ -420,9 +418,7 @@ fn spawn_summon(
             IMMUNE_TO_PC_AND_NPC | UnitFlags::NON_ATTACKABLE_2,
         ));
     }
-    if let Some(owner) = private_owner {
-        entity.insert(crate::interest::PrivateObjectOwner(owner));
-    }
+    insert_summon_privacy(&mut entity, private_owner);
     if replicate {
         entity.insert((
             Replicate::to_clients(NetworkTarget::All),
@@ -431,18 +427,46 @@ fn spawn_summon(
     }
 }
 
-fn private_summon_owner(world: &World, caster: Entity, flags: u32) -> Option<Entity> {
-    // Group-private summons remain an explicit toy preflight gap; do not reinterpret
-    // their group GUID as owner-only. Other class summon behavior is not changed here.
-    if flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0 || flags & ONLY_VISIBLE_TO_SUMMONER == 0 {
+#[derive(Clone, Copy)]
+enum PrivateSummonOwner {
+    Player(Entity),
+    Group(crate::group::GroupId),
+}
+
+fn private_summon_owner(world: &World, caster: Entity, flags: u32) -> Option<PrivateSummonOwner> {
+    if flags & (ONLY_VISIBLE_TO_SUMMONER | ONLY_VISIBLE_TO_SUMMONER_GROUP) == 0 {
         return None;
     }
-    // TC: an already-private caster passes its actual private owner to the child.
-    let owner = match world.get::<crate::interest::PrivateObjectOwner>(caster) {
-        Some(owner) => owner.0,
-        None => caster,
-    };
-    Some(owner)
+    // TC EffectSummonType: inherited privacy precedes either requested flag.
+    if let Some(group) = world.get::<crate::interest::PrivateObjectGroup>(caster) {
+        return Some(PrivateSummonOwner::Group(group.0));
+    }
+    if let Some(owner) = world.get::<crate::interest::PrivateObjectOwner>(caster) {
+        return Some(PrivateSummonOwner::Player(owner.0));
+    }
+    if flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0
+        && world.get::<shared::components::Player>(caster).is_some()
+        && let Some(character) = world.get::<crate::persistence::ClientId>(caster)
+        && let Some(group) = world
+            .resource::<crate::group::GroupRegistry>()
+            .group_id(character.0)
+    {
+        return Some(PrivateSummonOwner::Group(group));
+    }
+    // Authored ungrouped case is the caster GUID, never public visibility.
+    Some(PrivateSummonOwner::Player(caster))
+}
+
+fn insert_summon_privacy(entity: &mut EntityWorldMut<'_>, owner: Option<PrivateSummonOwner>) {
+    match owner {
+        Some(PrivateSummonOwner::Player(owner)) => {
+            entity.insert(crate::interest::PrivateObjectOwner(owner));
+        }
+        Some(PrivateSummonOwner::Group(group)) => {
+            entity.insert(crate::interest::PrivateObjectGroup(group));
+        }
+        None => {}
+    }
 }
 
 pub(super) fn expire_summons(world: &mut World) {

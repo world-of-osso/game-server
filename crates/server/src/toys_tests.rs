@@ -4,6 +4,11 @@ use crate::spell_cast::test_harness::*;
 use shared::components::{CombatStatus, Level, Position};
 use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, UseItem};
 
+#[path = "toys_group_inheritance_tests.rs"]
+mod group_inheritance;
+#[path = "toys_group_tests.rs"]
+mod group_private;
+
 const FIGURINE: u32 = 32782;
 const TRANSFORM: u32 = 41301;
 const FLAG_OWNERSHIP: u32 = 38578; // The Flag of Ownership: effect 3, spell 51640.

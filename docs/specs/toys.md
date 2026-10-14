@@ -89,6 +89,12 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 - Target87 DEST_DEST preserves a requested or earlier selected destination, or uses the caster's position when none was selected (TC SelectImplicitDestDestTargets/CheckDst). It is not ground-height snapping. Native UseToy has no ground-picking destination field; its target87 objects spawn at the caster.
 - Aura233 CHANGE_MODEL_FOR_ALL_HUMANOIDS is viewer-local, client-owned appearance. Apply/replicate its spell identity and normal duration/cancellation; never change global ModelDisplay or infer support for other effects. Rendered viewer-local models require client consumption, outside this server change.
 
+## Group-private summons
+
+- Source `OnlyVisibleToSummonerGroup` captures the caster's current party/raid ID at creation. Solo casts use caster-only visibility. An already-private caster passes its existing player/group owner to its children, before interpreting either visibility flag.
+- A group-owned summon is visible only to current members of that captured group within ordinary map-copy/range/detection rules. Joining/leaving updates visibility without movement. The creator leaving or joining a different group does not reassign existing summons.
+- Source summon identity, display choices, count, duration, owner and recovery remain unchanged. Supporting group visibility does not implement other summon flags, missing creature interactions or unrelated script effects.
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.

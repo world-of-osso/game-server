@@ -295,3 +295,5 @@ Debug logs and root cause analyses.
 
 - [Ruby authored support and search](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13) — sourced metalplate normals, creature/player map-height separation and TC nominalY5; query/native fixture proof is not full-dungeon completion.
 - [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
+
+- [Group-private summon runtime](systems/toys.md#source-group-private-runtime-2026-10-13) — source group identity and roster-driven interest transitions.
