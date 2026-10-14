@@ -1,6 +1,10 @@
+## 2026-10-13 — Battle-pet team minimum level
+
+[BattlePetTeamLevel34](systems/dungeon-achievements.md#battle-pet-team-minimum-level) reads all three equipped owned journal slots. Compiler30/30; native level25-team win RED lacks23257. Statistic8278 only; GREEN/final proof pending.
+
 ## 2026-10-13 — Encounter loot eligibility ordering
 
-[Type97](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) reads existing active lock bits before native DONE saves them. Actual Skorpyron Normal14 death RED commits bit1 but lacks35448; targeted/final proof pending. No new lock state or bag-loot substitute; current roots remain unchanged.
+[Type97](systems/dungeon-achievements.md#encounter-loot-eligibility-2026-10-13) reads existing active lock bits before native DONE saves them. Actual Skorpyron Normal14 death RED commits bit1 but lacks35448; native2/2 and required full167/0/1ignored plus checks/fmt pass at fa181cea code scope. No new lock state or bag-loot substitute; current roots remain unchanged.
 
 ## 2026-10-13 — Positive known-spell marker
 

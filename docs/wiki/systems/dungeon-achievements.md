@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Battle-pet team minimum level
+
+TC a352b1fa CriteriaHandler1935–1939 checks every journal slot's pet level. `ReferencePlayer.battle_pet_team_min_level` snapshots the minimum across existing `AccountPetJournal.journal.battle_slots` and their owned GUIDs; missing journal/slot/GUID yields unknown, never maximum by default. Complete All4/single-childSome positive34 leaves compile to `CriteriaFact::BattlePetTeamLevel`; unknown companion90 stays disabled. Existing terminal battle settlement persists the journal before WinPetBattle credit. Compiler30/30 and actual max-level-team native RED are recorded; GREEN/final gate pending. Census adds statistic8278 only; controlled owned levels are not level acquisition or UI proof. [Contract](../../specs/dungeon-achievements.md).
+
 ## Current personal arena ratings
 
 Current imported criteria451/asset0 and447/asset1 back Highest2v2/3v3 statistics370/595 and JustTwo/ThreeCompany thresholds;452/asset2 is retired5v5. Retail Constants.lua503–511 maps personal-rating UI indices1/2 to2v2/3v3, with3deprecated5v5. These are not old TC ArenaTeam.h raw types2/3/5. TC CriteriaHandler758–785/ArenaTeam.cpp448 establishes post-personal-rating mutation and highest-value semantics. Native `arena_rated_results::apply_result` supplies actual after-rating only after durable player progress and the applied-once marker; authenticated accepted-copy conditions select asset0/1. Existing win37 retains pre-rating semantics. Controlled starting ratings are inputs, never credits; native party validation, invitation, preparation, lethal elimination, settlement, replay and reopen are fixture boundaries. No proprietary Retail MMR or other-bracket claim. [Contract](../../specs/dungeon-achievements.md).

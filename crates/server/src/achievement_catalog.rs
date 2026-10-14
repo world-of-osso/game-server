@@ -468,6 +468,8 @@ pub(crate) struct ReferencePlayer {
     pub auras: BTreeSet<u32>,
     /// IDs in existing class/profession knowledge and the owning mount journal.
     pub known_spells: BTreeSet<u32>,
+    /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
+    pub battle_pet_team_min_level: Option<u8>,
     /// Current terrain area (TC Player::GetAreaId).
     pub area: Option<u32>,
     pub map: u32,
@@ -489,6 +491,7 @@ enum CriteriaFact {
     Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
     KnownSpell(u32),
+    BattlePetTeamLevel(u8),
     /// Some8 requiring one of these complete, authenticated PlayerHasAura8 spells.
     PlayerAuras(BTreeSet<u32>),
     /// ItemId19 or item-template quality14/15 against this native receipt's itemID.
@@ -522,6 +525,9 @@ impl CriteriaFact {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
+            Self::BattlePetTeamLevel(level) => player
+                .battle_pet_team_min_level
+                .is_some_and(|minimum| minimum >= *level),
             Self::PlayerAuras(spells) => !player.auras.is_disjoint(spells),
             Self::EventItems(items) => match event {
                 CriteriaEvent::ObtainAnyItem(item) | CriteriaEvent::LootAnyItem(item) => {
@@ -1330,6 +1336,9 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Class),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
+            34 => small
+                .filter(|level| (1..=shared::pet_battle::MAX_PET_LEVEL).contains(level))
+                .map(CriteriaFact::BattlePetTeamLevel),
             35 => Some(CriteriaFact::NotInParty),
             41 => {
                 if !exists("area_table")? {
@@ -1344,7 +1353,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/29/32/35/41/60/69/71/104/122"
+                    "generated facts use only 2/4/8/14/15/16/17/19/24/25/26/29/32/34/35/41/60/69/71/104/122"
                 )
             }
         };
