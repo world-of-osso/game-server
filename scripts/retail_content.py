@@ -263,6 +263,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     # click scripts or interaction payloads. See docs/toy-effects14-coverage.md.
     80682, 125119, 99535, 116213, 125120, 139198, 139204, 143703,
     149954, 163441, 199054, 231372,
+    # Sea-Blessed Shrine: source cursor placement, no click/AI/script payload.
+    246037,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
