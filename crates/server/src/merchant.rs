@@ -40,10 +40,13 @@ use crate::npc_interaction::ActiveInteraction;
 use crate::persistence::inventory_store::save_inventory_record;
 use crate::persistence::{self, GameDatabase, InventoryItemData};
 
+mod actor;
 mod catalog;
 mod economic;
 mod mount_costs;
 mod stock;
+mod transactions;
+use actor::{PendingMerchant, drive_merchant_commits};
 
 use catalog::VendorSlot;
 pub use catalog::{VendorCatalog, load_vendor_catalog};
@@ -66,6 +69,7 @@ impl Plugin for MerchantPlugin {
             .init_resource::<VendorStock>()
             .init_resource::<DailyReset>()
             .init_resource::<ChangedGuilds>()
+            .init_resource::<PendingMerchant>()
             .add_systems(
                 Update,
                 (
@@ -76,6 +80,7 @@ impl Plugin for MerchantPlugin {
                     process_sell_all_junk_requests,
                     process_buyback_requests,
                     process_repair_requests,
+                    drive_merchant_commits,
                 )
                     .chain(),
             );
@@ -187,22 +192,6 @@ impl Shop<'_, '_> {
             .get(vendor)
             .map(|(npc, _)| npc.template_id)
             .map_err(|_| MerchantError::NotInteracting)
-    }
-
-    fn mint(&self) -> impl FnMut() -> u64 + '_ {
-        let db = self.db();
-        move || persistence::next_id(db, "item_instance")
-    }
-
-    fn load(&self, character_id: u64) -> Result<InventoryModel, MerchantError> {
-        let templates = self.templates.as_ref().expect("checked by ready");
-        load_model(self.db(), templates, character_id).map_err(|_| MerchantError::ItemNotFound)
-    }
-
-    fn save(&mut self, character_id: u64, model: InventoryModel) {
-        let gold = model.gold();
-        save_inventory_record(self.db(), character_id, &model.into_record());
-        self.gold.record(character_id, gold);
     }
 
     /// The vendor list `customer` sees, with the guild money they may spend here on
@@ -353,35 +342,36 @@ fn open_vendor(interaction: Option<&ActiveInteraction>) -> Option<Entity> {
         .map(|interaction| interaction.npc)
 }
 
-/// Run `handle` for each request; a refusal answers `MerchantFailed` for its NPC.
+/// Queue decoded requests with the interaction validated at receipt time.
 fn process<M: lightyear::prelude::Message + std::fmt::Debug>(
     requests: &mut Requests<M>,
     shop: &mut Shop,
+    pending: &mut PendingMerchant,
     npc_of: impl Fn(&M) -> u64,
-    handle: impl Fn(&mut Shop, &mut Customer, M) -> MerchantResult,
+    operation: impl Fn(M) -> transactions::Operation,
 ) {
     if !shop.ready() {
         return;
     }
-    for (connection, in_world, link, interaction, mut buyback, mut receiver) in requests.iter_mut()
-    {
-        let mut customer = Customer {
-            connection,
-            character_id: in_world.character_id,
-            player: link.0,
-            vendor: open_vendor(interaction),
-            buyback: &mut *buyback,
-        };
+    for (connection, in_world, link, interaction, _, mut receiver) in requests.iter_mut() {
         for request in receiver.receive() {
             let npc = npc_of(&request);
-            // One line per decoded vendor request: the server-side record of what a client sent.
+            let Some(vendor) = open_vendor(interaction).filter(|vendor| vendor.to_bits() == npc)
+            else {
+                shop.fail(connection, npc, MerchantError::NotInteracting);
+                continue;
+            };
             info!(
                 "merchant request character={} {request:?}",
-                customer.character_id
+                in_world.character_id
             );
-            if let Err(error) = handle(shop, &mut customer, request) {
-                shop.fail(connection, npc, error);
-            }
+            pending.requests.push_back(actor::Request {
+                connection,
+                character: in_world.character_id,
+                player: link.0,
+                vendor,
+                operation: operation(request),
+            });
         }
     }
 }
@@ -418,423 +408,74 @@ fn send_vendor_lists(
     }
 }
 
-fn process_buy_requests(mut requests: Requests<BuyItem>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, buy);
-}
-
-fn process_sell_requests(mut requests: Requests<SellItem>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, sell);
-}
-
-fn process_sell_all_junk_requests(mut requests: Requests<SellAllJunkItems>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, sell_all_junk);
-}
-
-fn process_buyback_requests(mut requests: Requests<BuybackItemRequest>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, buy_back);
-}
-
-/// AzerothCore `Player::BuyItemFromVendorSlot`: `count` purchases of
-/// `VendorStackCount` items each, `BuyPrice` copper per purchase.
-fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult {
-    let vendor = customer.vendor_for(req.npc)?;
-    let entry = shop.vendor_entry(vendor)?;
-    if economic::is_business(shop, entry) {
-        return economic::buy(shop, customer, vendor, entry, req);
-    }
-    let slot = shop
-        .catalog
-        .items(entry)
-        .get(req.slot as usize)
-        .copied()
-        .filter(|slot| slot.item_id == req.item_id)
-        .ok_or(MerchantError::ItemNotFound)?;
-    let mut goods = shop
-        .catalog
-        .goods
-        .get(&slot.item_id)
-        .cloned()
-        .ok_or(MerchantError::ItemNotFound)?;
-    let template = shop
-        .template(
-            shared::item_data::ItemDefinitionSource::Retail,
-            slot.item_id,
-        )
-        .ok_or(MerchantError::ItemNotFound)?;
-    let buyer = shop.buyer(customer.player);
-    if !buyer.offered(&template) {
-        return Err(MerchantError::ItemNotFound);
-    }
-    if !shop.mount_reputation_met(buyer, slot.item_id) {
-        return Err(MerchantError::ReputationRequired);
-    }
-    let mount_cost = shop.catalog.mount_costs.get(&(entry, req.slot)).cloned();
-    if let Some(cost) = &mount_cost {
-        goods.buy_price = cost.money;
-    }
-    let count = if mount_cost.is_some() {
-        req.count.max(1)
-    } else {
-        match goods.buy_price {
-            0 => req.count.max(1),
-            price => req
-                .count
-                .max(1)
-                .min(u32::try_from(MAX_MONEY / u64::from(price)).unwrap_or(u32::MAX)),
-        }
-    };
-    let items = goods
-        .buy_count
-        .checked_mul(count)
-        .ok_or(MerchantError::CantCarryMore)?;
-    let now = shop.now();
-    let available = shop
-        .stock
-        .available(vendor, req.slot, slot, goods.buy_count, now);
-    if available.is_some_and(|left| left < items) {
-        return Err(MerchantError::SoldOut);
-    }
-    let price = u64::from(goods.buy_price) * u64::from(count);
-    let mut model = shop.load(customer.character_id)?;
-    if model.gold() < price {
-        return Err(MerchantError::NotEnoughMoney);
-    }
-    if goods.max_count > 0
-        && model.owned_count(
-            shared::item_data::ItemDefinitionSource::Retail,
-            slot.item_id,
-        ) + items
-            > goods.max_count
-    {
-        return Err(MerchantError::CantCarryMore);
-    }
-    let wallet = mount_cost
-        .as_ref()
-        .map(|cost| mount_costs::debit_turnins(shop, customer.player, &mut model, cost, count))
-        .transpose()?
-        .flatten();
-    let mut mint = shop.mint();
-    let item = InventoryItemData {
-        item_guid: mint(),
-        item_id: slot.item_id,
-        name: goods.name.clone(),
-        quality: goods.quality,
-        required_level: template.required_level,
-        stack_count: items,
-        vendor_sell_price: goods.sell_price,
-        unique_auction: false,
-    };
-    match req.destination {
-        Some(location) => model.store_item_at(
-            item,
-            shared::item_data::ItemDefinitionSource::Retail,
-            template,
-            location,
-            &mut mint,
-        ),
-        None => model.store_item(
-            item,
-            shared::item_data::ItemDefinitionSource::Retail,
-            template,
-            &mut mint,
-        ),
-    }
-    .map_err(|error| match error.reason {
-        InventoryErrorReason::CantStack => MerchantError::CantStack,
-        _ => MerchantError::InventoryFull,
-    })?;
-    drop(mint);
-    model.set_gold(model.gold() - price);
-    if mount_cost.is_some() {
-        mount_costs::persist_purchase(shop, customer, model, wallet);
-    } else {
-        shop.save(customer.character_id, model);
-    }
-    shop.gold
-        .record_acquisition(customer.character_id, slot.item_id, items);
-    // TC Player::BuyItemFromVendorSlot (Player.cpp:23902): one committed purchase.
-    shop.gold.record_criteria(
-        customer.character_id,
-        crate::achievement::CriteriaEvent::BuyItemsFromVendors,
+fn process_buy_requests(
+    mut requests: Requests<BuyItem>,
+    mut pending: ResMut<PendingMerchant>,
+    mut shop: Shop,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut pending,
+        |req| req.npc,
+        transactions::Operation::Buy,
     );
-    if let Some(quests) = &shop.quests {
-        let mut log =
-            crate::persistence::quest_store::load_quest_log(shop.db(), customer.character_id);
-        if crate::housing_quests::credit_acquired_item(quests, &mut log, slot.item_id, items) {
-            crate::persistence::quest_store::save_quest_log(shop.db(), customer.character_id, &log);
-        }
-    }
-    if slot.maxcount > 0 {
-        shop.stock
-            .consume(vendor, req.slot, slot, goods.buy_count, items, now);
-        shop.send_inventory(customer.connection, vendor, buyer, customer.character_id);
-    }
-    Ok(())
 }
 
-/// AzerothCore `HandleSellItemOpcode`: items without a sell price are refused;
-/// the sale moves the item into a buyback slot priced at what it paid.
-fn sell(shop: &mut Shop, customer: &mut Customer, req: SellItem) -> MerchantResult {
-    customer.vendor_for(req.npc)?;
-    let mut model = shop.load(customer.character_id)?;
-    let item = model
-        .bag_item(req.item_guid)
-        .cloned()
-        .ok_or(MerchantError::ItemNotFound)?;
-    let count = if req.count == 0 {
-        item.stack_count
-    } else {
-        req.count
-    };
-    if count > item.stack_count {
-        return Err(MerchantError::NotInterested);
-    }
-    let sell_price = item.vendor_sell_price;
-    if sell_price == 0 {
-        return Err(MerchantError::NotInterested);
-    }
-    let money = u64::from(sell_price) * u64::from(count);
-    if model.gold() + money > MAX_MONEY {
-        return Err(MerchantError::TooMuchGold);
-    }
-    let mut mint = shop.mint();
-    let sold = model
-        .take_bag_item(req.item_guid, count, &mut mint)
-        .map_err(|_| MerchantError::ItemNotFound)?;
-    drop(mint);
-    model.collect_disposed_appearance(&sold);
-    model.set_gold(model.gold() + money);
-    shop.save(customer.character_id, model);
-    // TC Player::SellItemToVendor (Player.cpp:23946-23950).
-    for event in [
-        crate::achievement::CriteriaEvent::MoneyEarnedFromSales(money),
-        crate::achievement::CriteriaEvent::SellItemsToVendors,
-    ] {
-        shop.gold.record_criteria(customer.character_id, event);
-    }
-    let sold_at = shop.now();
-    customer.buyback.add(BuybackEntry {
-        item: sold,
-        price: sell_price.saturating_mul(count),
-        sold_at,
-    });
-    shop.send_buyback(customer.connection, customer.buyback);
-    Ok(())
+fn process_sell_requests(
+    mut requests: Requests<SellItem>,
+    mut pending: ResMut<PendingMerchant>,
+    mut shop: Shop,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut pending,
+        |req| req.npc,
+        transactions::Operation::Sell,
+    );
 }
 
-/// TrinityCore `HandleSellAllJunkItems` (ItemHandler.cpp:427-484): every
-/// poor-quality bag stack the vendor buys is sold whole in bag order, each into a
-/// buyback slot. The first refused sale (gold cap) ends it without a message,
-/// as TrinityCore discards the `SellItemToVendor` error.
-fn sell_all_junk(
-    shop: &mut Shop,
-    customer: &mut Customer,
-    req: SellAllJunkItems,
-) -> MerchantResult {
-    customer.vendor_for(req.npc)?;
-    let junk: Vec<u64> = shop
-        .load(customer.character_id)?
-        .bag_items()
-        .filter(|item| item.quality == QUALITY_POOR && item.vendor_sell_price > 0)
-        .map(|item| item.item_guid)
-        .collect();
-    for item_guid in junk {
-        let sale = SellItem {
-            npc: req.npc,
-            item_guid,
-            count: 0,
-        };
-        if sell(shop, customer, sale).is_err() {
-            break;
-        }
-    }
-    Ok(())
+fn process_sell_all_junk_requests(
+    mut requests: Requests<SellAllJunkItems>,
+    mut pending: ResMut<PendingMerchant>,
+    mut shop: Shop,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut pending,
+        |req| req.npc,
+        transactions::Operation::Junk,
+    );
 }
 
-/// AzerothCore `HandleBuybackItem`: pay the sale price back and store the item.
-fn buy_back(shop: &mut Shop, customer: &mut Customer, req: BuybackItemRequest) -> MerchantResult {
-    customer.vendor_for(req.npc)?;
-    let entry = customer
-        .buyback
-        .get(req.slot)
-        .cloned()
-        .ok_or(MerchantError::ItemNotFound)?;
-    let mut model = shop.load(customer.character_id)?;
-    if model.gold() < u64::from(entry.price) {
-        return Err(MerchantError::NotEnoughMoney);
-    }
-    let source =
-        persistence::inventory_store::load_item_definition_source(shop.db(), entry.item.item_guid);
-    let template = shop
-        .template(source, entry.item.item_id)
-        .ok_or(MerchantError::ItemNotFound)?;
-    let mut mint = shop.mint();
-    model
-        .store_item(entry.item, source, template, &mut mint)
-        .map_err(|_| MerchantError::InventoryFull)?;
-    drop(mint);
-    model.set_gold(model.gold() - u64::from(entry.price));
-    shop.save(customer.character_id, model);
-    customer.buyback.remove(req.slot);
-    shop.send_buyback(customer.connection, customer.buyback);
-    Ok(())
+fn process_buyback_requests(
+    mut requests: Requests<BuybackItemRequest>,
+    mut pending: ResMut<PendingMerchant>,
+    mut shop: Shop,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut pending,
+        |req| req.npc,
+        transactions::Operation::Buyback,
+    );
 }
 
-fn process_repair_requests(mut requests: Requests<RepairItem>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, repair);
-}
-
-/// AzerothCore `DurabilityRepairAll` / `DurabilityRepair`: each damaged item costs
-/// `ItemDurability::repair_cost`; an item that costs more than the money left stays
-/// damaged (AzerothCore skips it silently; we answer "You don't have enough money.").
-/// Per-item repair also accepts damaged owned bag items.
-fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> MerchantResult {
-    let vendor = customer.vendor_for(req.npc)?;
-    let repairs = shop
-        .npcs
-        .get(vendor)
-        .is_ok_and(|(_, flags)| flags.contains(NpcFlags::REPAIR));
-    if !repairs {
-        return Err(MerchantError::NotInteracting);
-    }
-    // TrinityCore `HandleRepairItemOpcode` uses the guild bank for repair-all only.
-    if req.guild_bank && req.item_guid.is_none() {
-        return guild_repair(shop, customer, vendor);
-    }
-    let mut model = shop.load(customer.character_id)?;
-    // TrinityCore `Player::DurabilityRepair` resolves any owned item by position,
-    // not just equipment. The request identifies that item by guid.
-    let only: Option<EquipmentVisualSlot> = match req.item_guid {
-        None => None,
-        Some(guid) => match model.equipped_visual_slot(guid) {
-            Some(slot) => Some(slot),
-            None => return repair_bag_item(shop, customer, model, guid),
-        },
-    };
-    let Ok(mut durability) = shop.durability.get_mut(customer.player) else {
-        return Err(MerchantError::ItemNotFound);
-    };
-    if let Some(slot) = only {
-        let damaged = durability
-            .slots
-            .iter()
-            .any(|entry| entry.slot == slot && entry.current < entry.max);
-        if !damaged {
-            return Err(MerchantError::ItemNotFound);
-        }
-    }
-    let mut gold = model.gold();
-    let mut short = false;
-    for entry in durability
-        .slots
-        .iter_mut()
-        .filter(|entry| only.is_none_or(|slot| slot == entry.slot))
-    {
-        let Some(cost) = shop
-            .durability_rules
-            .repair_cost(entry.item_id, entry.max - entry.current)
-        else {
-            continue;
-        };
-        if cost == 0 {
-            continue;
-        }
-        if u64::from(cost) > gold {
-            short = true;
-            continue;
-        }
-        gold -= u64::from(cost);
-        entry.current = entry.max;
-    }
-    drop(durability);
-    if gold != model.gold() {
-        model.set_gold(gold);
-        shop.save(customer.character_id, model);
-    }
-    if short {
-        return Err(MerchantError::NotEnoughMoney);
-    }
-    Ok(())
-}
-
-/// Repair an owned bag item and save its damage and payment in one transaction.
-fn repair_bag_item(
-    shop: &mut Shop,
-    customer: &Customer,
-    mut model: InventoryModel,
-    guid: u64,
-) -> MerchantResult {
-    let item = model.bag_item(guid).ok_or(MerchantError::ItemNotFound)?;
-    let state = model
-        .bag_durability(guid)
-        .ok_or(MerchantError::ItemNotFound)?;
-    let cost = shop
-        .durability_rules
-        .repair_cost(item.item_id, state.max.saturating_sub(state.current))
-        .filter(|&cost| cost > 0)
-        .ok_or(MerchantError::ItemNotFound)?;
-    if u64::from(cost) > model.gold() {
-        return Err(MerchantError::NotEnoughMoney);
-    }
-    model.restore_bag_durability(guid);
-    model.set_gold(model.gold() - u64::from(cost));
-    shop.save(customer.character_id, model);
-    Ok(())
-}
-
-/// TrinityCore `Player::DurabilityRepairAll(guildBank = true)` (Player.cpp:4636-4669):
-/// damaged items are repaired cheapest first while the guild money left for the player
-/// (`GetMemberAvailableMoneyForRepairItems`) covers them, and the total is taken once
-/// (`Guild::HandleMemberWithdrawMoney(repair = true)`); the player's own money is never
-/// touched. TrinityCore answers nothing; we answer `ERR_GUILD_PERMISSIONS` to a rank
-/// without `GR_RIGHT_WITHDRAW_REPAIR` and `ERR_GUILD_NOT_ENOUGH_MONEY` when items stay
-/// damaged, as the personal repair answers `ERR_NOT_ENOUGH_MONEY`.
-fn guild_repair(shop: &mut Shop, customer: &mut Customer, vendor: Entity) -> MerchantResult {
-    let day = shop.reset.day(unix_now());
-    let available = guild_repair_money(shop.db(), customer.character_id, day)
-        .ok_or(MerchantError::GuildPermissions)?;
-    let Ok(durability) = shop.durability.get(customer.player) else {
-        return Err(MerchantError::ItemNotFound);
-    };
-    let mut costs: Vec<(usize, u64)> = durability
-        .slots
-        .iter()
-        .enumerate()
-        .filter_map(|(index, entry)| {
-            let cost = shop
-                .durability_rules
-                .repair_cost(entry.item_id, entry.max - entry.current)?;
-            (cost > 0).then_some((index, u64::from(cost)))
-        })
-        .collect();
-    costs.sort_by_key(|&(_, cost)| cost);
-    let mut total = 0;
-    let mut repaired = Vec::new();
-    for &(index, cost) in &costs {
-        if total + cost > available {
-            break;
-        }
-        total += cost;
-        repaired.push(index);
-    }
-    if total > 0 {
-        let mut durability = shop
-            .durability
-            .get_mut(customer.player)
-            .expect("read above");
-        for index in &repaired {
-            let entry = &mut durability.slots[*index];
-            entry.current = entry.max;
-        }
-        let guild_id = pay_guild_repair(shop.db(), customer.character_id, day, total);
-        shop.changed_guilds.0.push(guild_id);
-        let buyer = shop.buyer(customer.player);
-        shop.send_inventory(customer.connection, vendor, buyer, customer.character_id);
-    }
-    if repaired.len() < costs.len() {
-        return Err(MerchantError::GuildNotEnoughMoney);
-    }
-    Ok(())
+fn process_repair_requests(
+    mut requests: Requests<RepairItem>,
+    mut pending: ResMut<PendingMerchant>,
+    mut shop: Shop,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut pending,
+        |req| req.npc,
+        transactions::Operation::Repair,
+    );
 }
 
 #[cfg(test)]

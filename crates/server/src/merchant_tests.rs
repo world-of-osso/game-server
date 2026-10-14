@@ -29,6 +29,64 @@ use crate::item_templates::load_item_templates;
 use crate::npc_interaction::{NpcInteractionPlugin, load_gossip_catalog};
 use crate::persistence::ClientId;
 
+#[test]
+fn merchant_purchase_enqueues_without_waiting_and_publishes_after_commit() {
+    use std::time::Instant;
+    let mut h = harness().expect("authentic vendor database");
+    let vendor = h.open(GODRIC_ROTHGAR);
+    h.take::<VendorInventory>();
+    let before = h.inventory().gold;
+    let db = h.app.world().resource::<GameDatabase>();
+    let held = db.db.begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<BuyItem>>(h.connection)
+        .unwrap()
+        .send::<MerchantChannel>(BuyItem {
+            npc: vendor.to_bits(),
+            slot: VEST_SLOT,
+            item_id: TARNISHED_CHAIN_VEST,
+            count: 1,
+            destination: None,
+        });
+    let started = Instant::now();
+    h.app.update();
+    h.app.update();
+    let elapsed = started.elapsed();
+    let published = h
+        .app
+        .world()
+        .resource::<GoldUpdateQueue>()
+        .changed_inventories()
+        .contains(&h.character_id);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "merchant tick waited: {elapsed:?}"
+    );
+    assert!(!published, "purchase gold published before durable commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while !h
+        .app
+        .world()
+        .resource::<GoldUpdateQueue>()
+        .changed_inventories()
+        .contains(&h.character_id)
+    {
+        assert!(
+            Instant::now() < deadline,
+            "no committed purchase publication"
+        );
+        h.app.update();
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(h.inventory().gold, before - 89);
+}
+
 const HUMAN_TEMPLATE: u32 = 1;
 /// Godric Rothgar, Northshire armorer (npcflag vendor | repair, 8 items).
 const GODRIC_ROTHGAR: u32 = 1213;

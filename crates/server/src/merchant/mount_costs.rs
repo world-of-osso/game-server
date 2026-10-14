@@ -2,12 +2,10 @@
 use std::collections::{HashMap, HashSet};
 
 use rusqlite::{Connection, OptionalExtension};
-use shared::currency::CurrencyWallet;
-use shared::item_data::ItemDefinitionSource;
 use shared::protocol::VendorCost;
 use shared::reputation::CharacterReputation;
 
-use super::*;
+use bevy::prelude::warn;
 
 pub(super) const MOUNT_ITEMS: &str = "SELECT DISTINCT x.ItemID FROM item_x_item_effect x \
     JOIN item_effect e ON e.ID=x.ItemEffectID AND e.TriggerType=6 \
@@ -122,87 +120,4 @@ fn load_turnin(
         name,
         icon_file_data_id,
     }))
-}
-
-/// Work only on detached copies until the complete purchase can commit.
-pub(super) fn debit_turnins(
-    shop: &Shop,
-    player: Entity,
-    model: &mut InventoryModel,
-    cost: &MountCost,
-    count: u32,
-) -> Result<Option<CurrencyWallet>, MerchantError> {
-    let mut wallet = if cost.extra.iter().any(|cost| cost.currency) {
-        Some(
-            shop.currencies
-                .get(player)
-                .map_err(|_| MerchantError::MissingTurnins)?
-                .0
-                .clone(),
-        )
-    } else {
-        None
-    };
-    for turnin in &cost.extra {
-        let amount = turnin
-            .amount
-            .checked_mul(count)
-            .ok_or(MerchantError::MissingTurnins)?;
-        if turnin.currency {
-            let entry = wallet
-                .as_mut()
-                .expect("currency payment wallet")
-                .entries
-                .iter_mut()
-                .find(|entry| entry.id == turnin.id)
-                .ok_or(MerchantError::MissingTurnins)?;
-            entry.amount = entry
-                .amount
-                .checked_sub(amount)
-                .ok_or(MerchantError::MissingTurnins)?;
-        } else {
-            model
-                .destroy_bag_items(ItemDefinitionSource::Retail, turnin.id, amount)
-                .map_err(|_| MerchantError::MissingTurnins)?;
-        }
-    }
-    Ok(wallet)
-}
-
-/// Gold, token destruction, delivery and currency share the same durable boundary.
-pub(super) fn persist_purchase(
-    shop: &mut Shop,
-    customer: &Customer,
-    model: InventoryModel,
-    wallet: Option<CurrencyWallet>,
-) {
-    let gold = model.gold();
-    let txn = shop.db().begin_write().expect("begin mount purchase");
-    persistence::inventory_store::write_inventory_record(
-        &txn,
-        customer.character_id,
-        &model.into_record(),
-    );
-    if let Some(wallet) = &wallet {
-        let bytes = serde_json::to_vec(wallet).expect("encode mount payment wallet");
-        txn.open_table(persistence::CURRENCIES)
-            .expect("open mount payment currencies")
-            .insert(customer.character_id, bytes.as_slice())
-            .expect("write mount payment currencies");
-    }
-    txn.commit().expect("commit mount payment and delivery");
-    shop.gold.record(customer.character_id, gold);
-    if let Some(wallet) = wallet {
-        shop.currencies
-            .get_mut(customer.player)
-            .expect("validated payment wallet")
-            .0 = wallet.clone();
-        crate::currency::send_currency_update(
-            customer.connection,
-            &wallet,
-            None,
-            None,
-            &mut shop.currency_updates,
-        );
-    }
 }

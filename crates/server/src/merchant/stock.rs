@@ -15,7 +15,7 @@ struct StockCount {
 }
 
 /// Limited stock per vendor creature and slot, in seconds of server time.
-#[derive(Resource, Debug, Default)]
+#[derive(Resource, Debug, Default, Clone)]
 pub struct VendorStock(HashMap<(Entity, u32), StockCount>);
 
 impl VendorStock {
