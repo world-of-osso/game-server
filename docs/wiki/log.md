@@ -1,3 +1,7 @@
+## 2026-10-13 — Startup-owned generated Toy casting data
+
+[Runtime data](../toy-runtime-data.md): removed production area/facing JSON from server source; current canonical export build is mandatory producer input. Generator4/4, loader3/3 and four private process cases verify missing-file refusal and two builds without binary rebuild. Historical69-area and single-radius test fixtures stay test-only. DB2 apply/deploy commands coordinated through lead-inbox-db2.md; canonical data remains lead-owned.
+
 ## 2026-10-13 — Clean-master coin dispatch recheck
 
 [Coin ordering](../toy-effects14-coverage.md#coin-dispatch-regression-recheck-2026-10-13): reproduced missing emote on c732ab79, traced targetless dispatch to3ca41770, confirmed existing709082c0 fix after master merge (90839e14,1/1PASS). No duplicate runtime fix or native/transport completion claim.

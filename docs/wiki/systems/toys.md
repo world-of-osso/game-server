@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Runtime generated casting data (2026-10-13)
+
+[Runtime data guide](../../toy-runtime-data.md) owns producer commands, source-build provenance and deployment sync. Startup loads both required JSON artifacts into an ECS resource and refuses missing data. Process tests reject each missing file and load two controlled builds with the same binary; fresh-app tests verify changed facing behavior. Production generated data is no longer embedded in Rust source.
+
 ## Authored script dispatch regression (2026-10-13)
 
 [Coin ordering regression](../../toy-effects14-coverage.md#coin-dispatch-regression-recheck-2026-10-13) records the clean-master counterexample, introducing commit and retained source-specific fix.
