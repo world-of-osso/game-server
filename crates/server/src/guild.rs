@@ -497,6 +497,7 @@ fn build_guild_snapshot(
         .map(|member| build_member_snapshot(db, member, &online, &ranks))
         .collect();
     GuildSnapshot {
+        tabard: crate::persistence::guild_tabards::load_design(db, guild.guild_id),
         guild_id: guild.guild_id,
         guild_name: guild.guild_name.clone(),
         created_at: crate::persistence::charters::created_at(db, guild.guild_id),
