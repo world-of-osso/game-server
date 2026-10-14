@@ -36,6 +36,40 @@ fn setup() -> Harness {
     h
 }
 #[test]
+fn mount_random_delivery_control_with_already_committed_favourite() {
+    for coupled in [false, true] {
+        let mut h = setup();
+        let db = &h.app.world().resource::<GameDatabase>().db;
+        mount_store::learn_spells(db, 1, &[18]);
+        mount_store::favourite(db, 1, 18, true).unwrap();
+        broadcast_account(h.app.world_mut(), 1);
+        h.advance(40);
+        drain::<MountJournalUpdate>(&mut h.app, h.connection);
+        if coupled {
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<SetMountFavourite>>(h.connection)
+                .unwrap()
+                .send::<CollectionChannel>(SetMountFavourite {
+                    mount_id: 18,
+                    favourite: true,
+                });
+        }
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<SummonRandomFavouriteMount>>(h.connection)
+            .unwrap()
+            .send::<CollectionChannel>(SummonRandomFavouriteMount);
+        h.advance(40);
+        assert!(
+            h.app.world().get::<Mounted>(h.caster).is_some(),
+            "random delivery control coupled={coupled}; cast failures={:?}",
+            h.inbox.failed
+        );
+    }
+}
+
+#[test]
 fn mount_random_request_after_favourite_waits_for_the_committed_choice() {
     use std::time::{Duration, Instant};
     let mut h = setup();

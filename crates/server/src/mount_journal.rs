@@ -380,6 +380,8 @@ fn receive_summons(world: &mut World) {
     }
     for (connection, _, player, _) in requests::<SummonRandomFavouriteMount>(world) {
         let candidates = random_candidates(world, player);
+        #[cfg(test)]
+        eprintln!("mount random request received for {player:?}: candidates={candidates:?}");
         let result = candidates
             .choose(&mut rand::thread_rng())
             .copied()
