@@ -71,18 +71,6 @@ fn send_initial(world: &mut World) {
 
 fn send_snapshot(world: &mut World, connection: Entity, account: u64) {
     let update = snapshot(world, account);
-    eprintln!(
-        "TOY26_PRODUCER_CATALOG connection={connection:?} count={} bauble={:?} sender={}",
-        update.toys.len(),
-        update
-            .toys
-            .iter()
-            .find(|toy| toy.item_id == 140309)
-            .map(|toy| toy.learned),
-        world
-            .get::<MessageSender<ToyCollectionUpdate>>(connection)
-            .is_some()
-    );
     if let Some(mut sender) = world.get_mut::<MessageSender<ToyCollectionUpdate>>(connection) {
         sender.send::<CollectionChannel>(update);
     }

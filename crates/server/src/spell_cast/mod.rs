@@ -2708,9 +2708,6 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         *charges
     });
     let cooldown_ms = recovery_ms.max(if category != 0 { category_ms } else { 0 });
-    if spell.id == 223143 {
-        eprintln!("TOY26_PRODUCER_CD caster={caster:?} cooldown={cooldown_ms}");
-    }
     if cooldown_ms > 0 {
         send_to_owner(
             world,
