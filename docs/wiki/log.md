@@ -1,3 +1,7 @@
+## 2026-10-14 — Silverlaine primary identity
+
+[Silverlaine](systems/boss-scripts.md#silverlaine-source-primary) adds pinned header/instance plus current canonical Journal/SmartAI validation to the copy-only producer. RED→GREEN and private120→121 application preserve unrelated/model data; no other Shadowfang boss, combat or native acceptance is admitted.
+
 ## 2026-10-13 — Ground C++ waypoint arrivals
 
 [Ground paths](systems/boss-scripts.md#ground-c-waypoint-paths) now use sourced baked routes rather than reject all non-exact ground MovePath calls. Real AT7904/Adarogg reaches the three authored paths and both meal-condition branches; empty-bake rejection and Golden Serpent flying-path controls accompany the walking-gait RED→GREEN. Native clear and both-skin loot remain open.

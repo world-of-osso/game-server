@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Silverlaine source primary](systems/boss-scripts.md#silverlaine-source-primary) — pinned map33/3887→1070/bit1, source SmartAI identity and copy-only SQL; combat/native/full-instance proof remains open.
+
 - [Slagmaw source primary](systems/boss-scripts.md#slagmaw-source-primary) — pinned NPC61463/BOSS2→1445/bit2 authenticates identity despite distinct Journal/live models; copy-only SQL preserves both appearances.
 - [Autoattack range](systems/auras.md#autoattack-range) — native153 signed attacker-only yards, actual swing/lifecycle boundaries; zero Cat/Astral fields and whole-ability limits explicit.
 - [Survived fall producer](systems/dungeon-achievements.md#survived-fall-producer-2026-10-13) — actual landing distance, Alive16/Area17 preserved; realm damage/absorption boundaries explicit.
