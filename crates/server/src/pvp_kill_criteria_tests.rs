@@ -19,8 +19,13 @@ fn achievements_criteria_earned_player_requires_native_prerequisite_before_playe
         h.app.world_mut().despawn(entity);
     }
     let initialized = std::mem::take(h.app.world_mut());
-    let (initialized, players, file) =
-        native_flag_match_in_world(&shared::battleground::warsong_gulch(), initialized);
+    let (initialized, players, file) = native_flag_match_in_world(
+        &shared::battleground::warsong_gulch(),
+        initialized,
+        |index| {
+            if index == 3 { 1 } else { index }
+        },
+    );
     *h.app.world_mut() = initialized;
     pvp_objective::update_battleground_objectives(h.app.world_mut());
     h.app.update();
@@ -83,13 +88,16 @@ fn achievements_criteria_earned_player_requires_native_prerequisite_before_playe
     );
     let teammate = players[2].1;
     assert_eq!(player_kills(world, teammate), Some(2));
+    let third_victim = players[5].1;
+    damage(world, killer, third_victim, 1000.0);
+    assert_eq!(player_kills(world, teammate), Some(3));
     assert!(
         !world
             .get::<PlayerAchievementState>(teammate)
             .unwrap()
             .criteria_progress
             .contains_key(&32961),
-        "eligible teammate cannot borrow the killer's character-only achievement"
+        "same-account eligible teammate cannot borrow another character's earned10460"
     );
     damage(world, killer, victim, 1000.0);
     pvp_objective::update_battleground_objectives(world);
@@ -99,7 +107,7 @@ fn achievements_criteria_earned_player_requires_native_prerequisite_before_playe
             .unwrap()
             .criteria_progress
             .get(&32961),
-        Some(&1),
+        Some(&2),
         "dead/idle replay cannot credit again"
     );
     h.app.update();
@@ -110,14 +118,14 @@ fn achievements_criteria_earned_player_requires_native_prerequisite_before_playe
             .unwrap()
             .criteria_progress
             .get(&32961),
-        Some(&1),
+        Some(&2),
         "full native App update cannot duplicate credit"
     );
     drop(h);
     let db = redb::Database::open(file.path()).unwrap();
     let saved = crate::persistence::load_achievements(&db, players[0].0);
     assert!(saved.earned_ids.contains(&10460));
-    assert_eq!(saved.criteria_progress.get(&32961), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&32961), Some(&2));
 }
 
 #[test]
