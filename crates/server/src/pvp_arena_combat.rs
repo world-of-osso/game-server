@@ -22,8 +22,13 @@ pub(crate) fn relation_between(
 ) -> Option<ArenaRelation> {
     let attacker = match_state(attacker);
     let victim = match_state(victim);
-    if attacker.is_none() && victim.is_none() {
-        return None;
+    match (attacker, victim) {
+        (None, None) => return None,
+        // Battleground NPCs have no match snapshot: retain source faction rules.
+        // Arena outsider checks remain strict; ordinary player PvP still rejects
+        // unmatched players through the existing faction attack rules.
+        (Some(state), None) | (None, Some(state)) if state.arena.is_none() => return None,
+        _ => {}
     }
     let (Some(attacker), Some(victim), Some(map)) = (attacker, victim, attacker_map) else {
         return Some(ArenaRelation::Blocked);
