@@ -129,9 +129,13 @@ mod warrior_stun_tests;
 mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
+mod enemy_dodge_tests;
+#[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
+#[cfg(test)]
+mod mechanic_resistance_tests;
 #[cfg(test)]
 mod melee_crit_taken_tests;
 #[cfg(test)]
@@ -139,6 +143,8 @@ mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;
 mod missiles;
+#[cfg(test)]
+mod npc_dodge_tests;
 mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
@@ -243,6 +249,8 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(test)]
+        app.insert_resource(toy_requirements::fixture());
         app.add_plugins(crate::knockback::KnockbackPlugin);
         app.init_resource::<crate::group::GroupRegistry>()
             .init_resource::<disenchant::DisenchantData>()
@@ -301,6 +309,8 @@ impl Plugin for SpellCastPlugin {
 /// `NotSupported` carries the specific cause in `detail`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CastFailure {
+    /// Source RequiredAreasID does not contain the current area or its ancestors.
+    IncorrectArea(u32),
     UnknownSpell,
     NotKnown,
     CasterDead,
@@ -315,6 +325,8 @@ pub enum CastFailure {
     InvalidTarget,
     OutOfRange,
     TooClose,
+    /// `SPELL_FAILED_UNIT_NOT_INFRONT`.
+    NotInFront,
     /// `SPELL_FAILED_LINE_OF_SIGHT`.
     LineOfSight,
     /// `SPELL_FAILED_AFFECTING_COMBAT`.
@@ -348,6 +360,10 @@ impl CastFailure {
     pub(crate) fn to_contract(&self) -> (CastFailReason, Option<String>) {
         use CastFailReason as R;
         match self {
+            Self::IncorrectArea(group) => (
+                R::IncorrectArea,
+                Some(format!("Requires area group{group}")),
+            ),
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
             Self::NotKnown => (R::NotSupported, Some("spell not known".into())),
             Self::DisenchantNotKnown => (R::NotKnown, None),
@@ -378,6 +394,7 @@ impl CastFailure {
             Self::InvalidTarget => (R::InvalidTarget, None),
             Self::OutOfRange => (R::OutOfRange, None),
             Self::TooClose => (R::TooClose, None),
+            Self::NotInFront => (R::NotInFront, None),
             Self::LineOfSight => (R::LineOfSight, None),
             Self::AffectingCombat => (R::AffectingCombat, None),
             Self::NotMounted => (R::NotMounted, None),
@@ -1117,6 +1134,10 @@ pub(crate) fn cast_item_spell(
 
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
 /// the per-item recovery omitted by the older consumable-item path.
+pub(crate) mod toy_area;
+mod toy_facing;
+pub(crate) mod toy_requirements;
+
 pub(crate) fn cast_toy_spell(
     world: &mut World,
     caster: Entity,
@@ -1258,7 +1279,7 @@ fn request_cast(
     spell.cast_destination = request.destination;
     spell.cast_target_item_guid = request.target_item_guid;
     let delay = cast_queue_delay(world, caster, &spell);
-    // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
+    // Compare at CastState's precision: a widened f32 window can exceed its f64 value.
     if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
         world.entity_mut(caster).insert(QueuedSpellCast {
             spell: requested_spell,
@@ -1275,8 +1296,9 @@ fn request_cast(
         .map_err(|failure| (spell.id, failure))
 }
 
-/// TrinityCore a352b1fa Player.cpp:31545-31559: one request in the last 400 ms.
-const SPELL_QUEUE_WINDOW_SECS: f32 = 0.4;
+/// One request in the last 750 ms. TrinityCore a352b1fa Player.cpp:31545-31559 and Retail
+/// use 400 ms; World of Osso widens it to the 750 ms hasted-GCD floor (user, 2026-10-15).
+const SPELL_QUEUE_WINDOW_SECS: f32 = 0.75;
 
 /// Player-request slot, distinct from the snapshot belonging to the active cast bar.
 #[derive(Component)]
@@ -1392,7 +1414,7 @@ fn taught_by_known_spell(world: &World, caster: Entity, spell_id: u32) -> bool {
 /// Validate everything checked before a cast starts; returns the explicit
 /// target the spell will use.
 fn validate_start(
-    world: &World,
+    world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
@@ -1407,6 +1429,7 @@ fn validate_start(
     }
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
+    toy_area::check_cast(world, caster, spell.id)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
@@ -1431,6 +1454,7 @@ fn validate_start(
         )));
     }
     let target = validate_target(world, caster, spell, explicit, Sight::Start(witness))?;
+    toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
@@ -1914,8 +1938,12 @@ pub(crate) fn execute_cast(
     }
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
+    toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
+    if cast_time_ms(world, caster, spell) > 0 {
+        toy_facing::check_cast(world, caster, spell.id, explicit)?;
+    }
     blooming_infusion::check_children(world, caster, spell)?;
     crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
@@ -2253,6 +2281,11 @@ fn resolve_effects(
             }
             continue;
         }
+        // Authored spell scripts own their effect before generic dispatch.
+        if let Some(handler) = scripts::cast_effect(spell.id, effect.index) {
+            handler(world, &ctx, effect);
+            continue;
+        }
         // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
         // hit units, but still cast their child once with the parent's destination.
         if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
@@ -2270,9 +2303,7 @@ fn resolve_effects(
         if open_lock::is_item_cast(spell) && open_lock::is_item_effect(effect) {
             continue;
         }
-        if let Some(handler) = scripts::cast_effect(spell.id, effect.index)
-            .or_else(|| effects::cast_handler(effect.effect))
-        {
+        if let Some(handler) = effects::cast_handler(effect.effect) {
             handler(world, &ctx, effect);
             continue;
         }

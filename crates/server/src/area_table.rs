@@ -29,6 +29,23 @@ struct AreaEntry {
 pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
+    /// TC DB2Manager::IsInArea: the area itself or any ParentAreaID ancestor.
+    pub(crate) fn is_in_area(&self, mut area_id: u32, required: u32) -> bool {
+        for _ in 0..=self.0.len() {
+            if area_id == required {
+                return true;
+            }
+            let Some(area) = self.0.get(&area_id) else {
+                return false;
+            };
+            if area.parent == 0 {
+                return false;
+            }
+            area_id = area.parent;
+        }
+        false
+    }
+
     /// TC TerrainInfo::GetZoneId: one flagged parent, never a recursive ancestry walk.
     pub(crate) fn zone_id(&self, area_id: u32, map_id: u32) -> Option<u32> {
         let area = self.0.get(&area_id)?;
@@ -127,6 +144,17 @@ mod tests {
     use rusqlite::Connection;
 
     use super::load_area_table;
+
+    #[test]
+    fn toyfx21_source_ancestry_does_not_infer_membership_from_continent_or_require_parent_rows() {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let areas = load_area_table(&conn).unwrap();
+        // TC DB2Stores.cpp1985: IDs and parent links, without a continent test.
+        assert!(areas.is_in_area(6797, 6719));
+        // Genuine69933 parent16311 has no row; matching that ID precedes lookup.
+        assert!(areas.is_in_area(16328, 16311));
+        assert!(!areas.is_in_area(16328, 6719));
+    }
 
     #[test]
     fn achievements_criteria_top_level_zone_uses_subzone_flag_not_recursive_parent() {

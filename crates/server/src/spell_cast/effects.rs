@@ -484,7 +484,36 @@ pub(crate) fn modded_base_points(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let base_points = calc_base_value(world, caster, spell, effect)
+    let base_points = calc_base_value(world, caster, spell, effect);
+    modify_base_points(world, caster, spell, effect, base_points)
+}
+
+/// TC CalcValue applies variance before level contributions and point modifiers.
+pub(super) fn roll_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
+    let base_points = calc_base_value(world, caster, spell, effect);
+    let delta = (effect.variance * 0.5).abs();
+    let rolled_points = if delta == 0.0 {
+        base_points
+    } else {
+        let roll = rand::Rng::gen_range(&mut rand::thread_rng(), -delta..=delta);
+        base_points + base_points * roll
+    };
+    modify_base_points(world, caster, spell, effect, rolled_points)
+}
+
+fn modify_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    base_points: f32,
+) -> f32 {
+    let base_points = base_points
         + level_scaled_points(world, caster, spell, effect)
         + crate::auras::mastery::effect_bonus(world, caster, spell, effect);
     let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, base_points);
@@ -995,21 +1024,32 @@ fn creature_type_damage_multiplier(
 /// Unit.cpp1243–1257: spell blocks double integer percentage before truncating
 /// the resulting amount, with a full-block cap. Critical block is not a crit hit.
 fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f32) -> (f32, f32) {
-    let stats = world
-        .get::<CharacterStats>(target)
-        .expect("blocked player retains native shield stats");
-    let caster = UnitScaling::of(world, ctx.caster);
-    let victim = UnitScaling::of(world, target);
-    let constant = world
-        .resource::<ArmorConstants>()
-        .at(caster.level_against(&victim))
-        .expect("native armor constant for blocked spell caster level");
-    let mut percent = stats.defense.blocked_pct(constant).trunc();
+    let mut percent = spell_block_percent(world, ctx.caster, target).trunc();
     if crate::combat::roll_critical_block(world.get::<crate::auras::ActiveAuras>(target)) {
         percent *= 2.0;
     }
     let blocked = (amount * percent / 100.0).trunc().min(amount);
     (amount - blocked, blocked)
+}
+
+fn spell_block_percent(world: &World, caster: Entity, target: Entity) -> f32 {
+    if world.get::<shared::components::Player>(target).is_none() {
+        assert!(
+            world.get::<shared::components::Npc>(target).is_some(),
+            "blocked creature retains native NPC identity"
+        );
+        return crate::melee::CREATURE_BLOCKED_PCT;
+    }
+    let stats = world
+        .get::<CharacterStats>(target)
+        .expect("blocked player retains native shield stats");
+    let caster = UnitScaling::of(world, caster);
+    let victim = UnitScaling::of(world, target);
+    let constant = world
+        .resource::<ArmorConstants>()
+        .at(caster.level_against(&victim))
+        .expect("native armor constant for blocked spell caster level");
+    stats.defense.blocked_pct(constant)
 }
 
 fn deal_damage_and_report(

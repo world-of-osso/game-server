@@ -63,8 +63,12 @@ fn dummy2_hunter_cobra_shot_does_not_create_a_kill_command_cooldown() {
 
 #[test]
 fn dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two() {
-    let mut h =
-        harness(Vec::new(), &[100784, 261917, 107428, 185099], 10).expect("real world.db required");
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[100784, 261917, 107428, 185099],
+        10,
+    )
+    .expect("real world.db required");
     h.set_power(PowerType::Chi, 6.0);
     h.cast_and_deliver(107428, Some(h.npc));
     h.advance(35);
@@ -97,8 +101,12 @@ fn dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two() {
 
 #[test]
 fn dummy2_monk_blackout_kick_reduces_fists_of_fury_cooldown_with_rank_two() {
-    let mut h = harness(Vec::new(), &[100784, 261917, 113656, 117418, 120086], 10)
-        .expect("real world.db required");
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[100784, 261917, 113656, 117418, 120086],
+        10,
+    )
+    .expect("real world.db required");
     // This is a cooldown-sequence fixture, not a target-death test. Real cone damage
     // now reaches the target; keep it alive for the subsequent Blackout Kick.
     *h.app
@@ -155,7 +163,9 @@ fn dummy2_monk_blackout_kick_reduces_fists_of_fury_cooldown_with_rank_two() {
 
 #[test]
 fn dummy2_monk_blackout_kick_without_rank_two_does_not_reduce_recharge() {
-    let mut h = harness(Vec::new(), &[100784, 107428, 185099], 10).expect("real world.db required");
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[100784, 107428, 185099], 10)
+            .expect("real world.db required");
     h.set_power(PowerType::Chi, 6.0);
     h.cast_and_deliver(107428, Some(h.npc));
     h.advance(35);
@@ -181,7 +191,8 @@ fn dummy2_monk_blackout_kick_without_rank_two_does_not_reduce_recharge() {
 
 #[test]
 fn dummy2_rogue_backstab_deals_twenty_percent_more_from_behind() {
-    let mut h = harness(Vec::new(), &[53], 4).expect("real world.db required");
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[53], 4)
+        .expect("real world.db required");
     h.set_power(PowerType::Energy, 100.0);
     h.cast_and_deliver(53, Some(h.npc)); // NPC faces +X; caster is at X=0.
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -189,19 +200,57 @@ fn dummy2_rogue_backstab_deals_twenty_percent_more_from_behind() {
     assert_eq!(h.power(PowerType::ComboPoints), 1.0);
 }
 
-#[test]
-fn dummy2_rogue_backstab_from_front_keeps_base_damage() {
-    let mut h = harness(Vec::new(), &[53], 4).expect("real world.db required");
+fn frontal_backstab_harness(guaranteed_block: bool) -> Harness {
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[53, 10021], 4)
+        .expect("real world.db required");
+    h.app.insert_resource(load_native_creature_world(&[6]));
+    if guaranteed_block {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.npc,
+                target: h.npc,
+                spell_id: 10021,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
     h.app
         .world_mut()
         .get_mut::<shared::components::Position>(h.caster)
         .unwrap()
         .x = 5.0;
     h.set_power(PowerType::Energy, 100.0);
-    h.cast_and_deliver(53, Some(h.npc));
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(varied(107.31 * 260.0 / 370.0).contains(&(5000.0 - h.health(h.npc))));
-    assert_eq!(h.power(PowerType::ComboPoints), 1.0);
+    h
+}
+
+fn backstab_damage_before_block(h: &Harness, guaranteed_block: bool) -> f32 {
+    let mut hits = h.inbox.log.iter().filter(|event| {
+        event.spell_id == Some(53)
+            && event.kind == CombatLogKind::Damage
+            && event.target == Some(h.npc.to_bits())
+    });
+    let hit = hits.next().expect("Backstab hit the native NPC");
+    assert!(hits.next().is_none(), "one Backstab damage receipt");
+    assert_eq!(5000.0 - h.health(h.npc), hit.amount as f32);
+    if guaranteed_block {
+        assert!(hit.blocked > 0, "native10021 must exercise actual block");
+    }
+    // Backstab's positional coefficient precedes the target's native block.
+    (hit.amount + hit.blocked) as f32
+}
+
+#[test]
+fn dummy2_rogue_backstab_from_front_keeps_base_damage() {
+    for guaranteed_block in [false, true] {
+        let mut h = frontal_backstab_harness(guaranteed_block);
+        h.cast_and_deliver(53, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let damage = backstab_damage_before_block(&h, guaranteed_block);
+        assert!(varied(107.31 * 260.0 / 370.0).contains(&damage));
+        assert_eq!(h.power(PowerType::ComboPoints), 1.0);
+    }
 }
 
 #[test]
@@ -597,21 +646,21 @@ fn dummy2_hunter_cobra_shot_level_curve_reaches_unity_at_twenty() {
 
 #[test]
 fn dummy2_rogue_backstab_level_curve_reaches_unity_at_twenty() {
-    for (level, multiplier) in [(19, 359.0 / 370.0), (20, 1.0), (80, 1.0)] {
-        let mut h = harness(Vec::new(), &[53], 4).expect("real world.db required");
+    for (level, multiplier, guaranteed_block) in [
+        (19, 359.0 / 370.0, false),
+        (20, 1.0, false),
+        (80, 1.0, false),
+        (20, 1.0, true),
+    ] {
+        let mut h = frontal_backstab_harness(guaranteed_block);
         h.app
             .world_mut()
             .get_mut::<shared::components::Level>(h.caster)
             .unwrap()
             .0 = level;
-        h.app
-            .world_mut()
-            .get_mut::<shared::components::Position>(h.caster)
-            .unwrap()
-            .x = 5.0;
-        h.set_power(PowerType::Energy, 100.0);
         h.cast_and_deliver(53, Some(h.npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-        assert!(varied(107.31 * multiplier).contains(&(5000.0 - h.health(h.npc))));
+        let damage = backstab_damage_before_block(&h, guaranteed_block);
+        assert!(varied(107.31 * multiplier).contains(&damage));
     }
 }
