@@ -1,3 +1,7 @@
+## 2026-10-14 — Wailing chamber continuation
+
+[Source events12–13](systems/boss-scripts.md#wailing-chamber-approach--2026-10-14) add1s speech and +5s path367803 launch. Controlled prior arrival then actual78.6692yd movement passes floor/budget/corridor/LOS and timing/copy checks; strengthened upper-bound proof and merged24/24 gate206.06s, check/fmt pass. Awakening/natural activation/native clears remain open.
+
 ## 2026-10-14 — C++ waypoint motion ownership and physical escort
 
 [Ownership/support proof](systems/navigation.md#current-controlled-physical-proof): source default/active preemption, fresh-goal diff0, real-position resume, callback ownership and exact moving-foot support pass23/23 in134.17s; check/fmt pass. Controlled Wailing traversal reaches both camps and stopped endpoint (477.2578yd, waves[2,3], real6270). Natural activation, balance and native clears remain open.
