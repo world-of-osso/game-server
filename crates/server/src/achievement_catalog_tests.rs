@@ -1193,9 +1193,17 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5494 + native CastSpell29 unearned-self guard Dastardly Devices41707.
-    // Structural union, not prerequisite acquisition or complete-content proof.
-    assert_eq!(union.len(), 5495);
+    // Installed70391: 5495 + eleven complete root area17/zone41 Some definitions.
+    // Structural union, not full achievements, terrain travel or acquisition proof.
+    assert_eq!(union.len(), 5506);
+    for achievement in [
+        1785, 3557, 6558, 6559, 6560, 9248, 9264, 9463, 9487, 9630, 9924,
+    ] {
+        assert!(
+            union.contains(&achievement),
+            "location alternative {achievement}"
+        );
+    }
     for achievement in [
         141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 6609, 6610, 9070, 11154, 11298, 11419, 11665,
         11666, 11667, 11668, 41707, 63640,
