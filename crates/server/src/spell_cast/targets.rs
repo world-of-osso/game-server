@@ -1023,6 +1023,13 @@ pub fn effect_dest(
                 position(world, caster).map(|point| random_destination(point, effect, slot))
             }
             Selector::DestRandom => {
+                // Native CheckDst initializes an absent destination before applying the offset.
+                if dest.is_none() {
+                    dest = Some(Dest {
+                        position: position(world, caster)?,
+                        orientation: orientation(world, caster),
+                    });
+                }
                 dest.map(|dest: Dest| random_destination(dest.position, effect, slot))
             }
             Selector::DestOffset(angle) => dest.map(|dest: Dest| {
