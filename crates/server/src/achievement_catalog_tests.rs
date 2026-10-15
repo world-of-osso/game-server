@@ -1,6 +1,93 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_pet_type_level_resolves_species_and_preserves_zero_type() {
+    let catalog = catalog();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer::default()),
+        ..Default::default()
+    };
+    for (species, level, expected) in [
+        (39, 25, Some(21377)),
+        (83, 25, Some(21377)),
+        (1426, 25, Some(21378)),
+        (93, 25, Some(21378)),
+        (107, 25, Some(21376)),
+        (39, 10, Some(21367)),
+        (1426, 10, Some(21368)),
+        (107, 10, Some(21366)),
+        (39, 24, None),
+        (0, 25, None),
+        (999999, 25, None),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::BattlePetReachedLevel { species, level },
+            None,
+            1,
+            &conditions,
+        );
+        for criterion in [21366, 21367, 21368, 21376, 21377, 21378] {
+            assert_eq!(
+                state.criteria_progress.get(&criterion),
+                (expected == Some(criterion)).then_some(&1),
+                "species{species}/level{level} criterion{criterion}"
+            );
+        }
+    }
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::ActivelyEarnedPetLevel {
+            species: 39,
+            level: 25,
+        },
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&21377),
+        "type162 cannot impersonate160"
+    );
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "CREATE TABLE battle_pet_species(species_id INTEGER PRIMARY KEY);
+        CREATE TABLE battle_pet_species_metadata(ID INTEGER PRIMARY KEY,PetTypeEnum INTEGER);",
+    )
+    .unwrap();
+    assert!(load_battle_pet_type_fact(&conn, 10).unwrap().is_none());
+    assert!(load_battle_pet_type_fact(&conn, 9).unwrap().is_none());
+    conn.execute("INSERT INTO battle_pet_species_metadata VALUES(39,9)", [])
+        .unwrap();
+    assert!(
+        load_battle_pet_type_fact(&conn, 9).unwrap().is_none(),
+        "metadata alone cannot supply an authored species"
+    );
+    conn.execute("INSERT INTO battle_pet_species VALUES(39)", [])
+        .unwrap();
+    let fact = load_battle_pet_type_fact(&conn, 9).unwrap().unwrap();
+    let player = ReferencePlayer::default();
+    assert!(fact.holds(
+        &player,
+        CriteriaEvent::BattlePetReachedLevel {
+            species: 39,
+            level: 25
+        },
+        &BTreeMap::new()
+    ));
+    assert!(!fact.holds(
+        &player,
+        CriteriaEvent::BattlePetReachedLevel {
+            species: 1426,
+            level: 25
+        },
+        &BTreeMap::new()
+    ));
+}
+
+#[test]
 fn achievements_criteria_killed_creature_type_requires_actual_known_victim() {
     let catalog = catalog();
     let conditions = PlayerConditions {
