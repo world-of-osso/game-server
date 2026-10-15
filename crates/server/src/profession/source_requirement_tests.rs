@@ -45,12 +45,14 @@ fn fixture(id: u32, tools: Option<Tools>) -> (World, Entity, u64, SpellInfo) {
     }
     let mut world = World::new();
     world.insert_resource(GameDatabase::new(db));
-    world.insert_resource(ItemTemplates {
-        retail: HashMap::from([(id, template)]),
-        forever: HashMap::from([(id, template)]),
-        loot_need: Default::default(),
-        retail_learning_spells: Default::default(),
-    });
+    world.insert_resource(ItemTemplates::from(
+        crate::item_templates::ItemTemplateData {
+            retail: HashMap::from([(id, template)]),
+            forever: HashMap::from([(id, template)]),
+            loot_need: Default::default(),
+            retail_learning_spells: Default::default(),
+        },
+    ));
     world.insert_resource(VendorCatalog::default());
     world.insert_resource(data);
     world.insert_resource(GoldUpdateQueue::default());

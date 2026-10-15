@@ -3,6 +3,26 @@
 use super::*;
 
 #[test]
+fn fifo_catalog_snapshots_fit_tick_budget_and_preserve_captured_definitions() {
+    use std::time::{Duration, Instant};
+    let mut templates = load_item_templates(&crate::test_data::world_db_path()).unwrap();
+    let mare = templates.retail[&5655];
+    let started = Instant::now();
+    let snapshots: Vec<_> = (0..8).map(|_| templates.clone()).collect();
+    let elapsed = started.elapsed();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "eight FIFO catalog snapshots blocked tick: {elapsed:?}"
+    );
+    templates.retail.get_mut(&5655).unwrap().required_level = 123;
+    for snapshot in &snapshots {
+        assert_eq!(snapshot.retail[&5655], mare);
+        assert_eq!(snapshot.retail.len(), templates.retail.len());
+    }
+    assert_eq!(templates.retail[&5655].required_level, 123);
+}
+
+#[test]
 fn mount_journal_chestnut_mare_item_retains_authentic_learn_spell() {
     let templates = load_item_templates(&crate::test_data::world_db_path()).unwrap();
     let mare = templates.retail.get(&5655).expect("Chestnut Mare item");

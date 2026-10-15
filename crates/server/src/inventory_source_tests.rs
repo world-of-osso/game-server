@@ -38,7 +38,7 @@ fn catalog() -> ItemTemplates {
         },
         ..plain
     };
-    ItemTemplates {
+    crate::item_templates::ItemTemplateData {
         retail: HashMap::from([
             (
                 2947,
@@ -62,6 +62,7 @@ fn catalog() -> ItemTemplates {
         loot_need: Default::default(),
         retail_learning_spells: Default::default(),
     }
+    .into()
 }
 
 fn record(

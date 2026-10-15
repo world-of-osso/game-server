@@ -133,13 +133,37 @@ fn one_based_bit(id: u8) -> Option<u64> {
         .and_then(|shift| 1u64.checked_shl(u32::from(shift)))
 }
 
+/// Owned FIFO snapshots share immutable catalogs; explicit mutations copy on write.
 #[derive(Resource, Debug, Default, Clone)]
-pub struct ItemTemplates {
+pub struct ItemTemplates(std::sync::Arc<ItemTemplateData>);
+
+#[derive(Debug, Default, Clone)]
+pub struct ItemTemplateData {
     pub retail: HashMap<u32, ItemTemplate>,
     pub forever: HashMap<u32, ItemTemplate>,
     pub loot_need: LootNeedMetadata,
     /// Retail ItemEffect TriggerType6 (ON_LEARN), keyed by the owning item.
     pub(crate) retail_learning_spells: HashMap<u32, Vec<u32>>,
+}
+
+impl From<ItemTemplateData> for ItemTemplates {
+    fn from(data: ItemTemplateData) -> Self {
+        Self(std::sync::Arc::new(data))
+    }
+}
+
+impl std::ops::Deref for ItemTemplates {
+    type Target = ItemTemplateData;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for ItemTemplates {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        std::sync::Arc::make_mut(&mut self.0)
+    }
 }
 
 impl ItemTemplates {
@@ -255,12 +279,13 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
 
 pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    Ok(ItemTemplates {
+    Ok(ItemTemplateData {
         retail: load_item_template_rows(&conn, ITEM_QUERY)?,
         forever: HashMap::new(),
         loot_need: loot_need::load(&conn)?,
         retail_learning_spells: load_item_learning_spells(&conn)?,
-    })
+    }
+    .into())
 }
 
 fn load_item_learning_spells(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {

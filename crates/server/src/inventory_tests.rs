@@ -215,7 +215,7 @@ fn test_templates() -> ItemTemplates {
         },
         ..template(18, 1, 0, 0, -1)
     };
-    ItemTemplates {
+    crate::item_templates::ItemTemplateData {
         retail: [
             (WORN_SHORTSWORD, template(21, 1, 2, 1, -1)),
             (WORN_DAGGER, template(13, 1, 2, 1, -1)),
@@ -234,6 +234,7 @@ fn test_templates() -> ItemTemplates {
         loot_need: Default::default(),
         retail_learning_spells: Default::default(),
     }
+    .into()
 }
 
 fn bag(slot: u8) -> ItemLocation {

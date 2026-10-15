@@ -826,22 +826,23 @@ mod tests {
         crate::item_templates::ItemTemplates,
         crate::merchant::VendorCatalog,
     ) {
-        let templates = crate::item_templates::ItemTemplates {
-            retail: [(
-                2589,
-                crate::item_templates::ItemTemplate {
-                    max_stack: 1000,
-                    allowable_class: -1,
-                    allowable_race: u64::MAX,
-                    ..Default::default()
-                },
-            )]
-            .into_iter()
-            .collect(),
-            forever: Default::default(),
-            loot_need: Default::default(),
-            retail_learning_spells: Default::default(),
-        };
+        let templates =
+            crate::item_templates::ItemTemplates::from(crate::item_templates::ItemTemplateData {
+                retail: [(
+                    2589,
+                    crate::item_templates::ItemTemplate {
+                        max_stack: 1000,
+                        allowable_class: -1,
+                        allowable_race: u64::MAX,
+                        ..Default::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+                forever: Default::default(),
+                loot_need: Default::default(),
+                retail_learning_spells: Default::default(),
+            });
         let mut catalog = crate::merchant::VendorCatalog::default();
         catalog.goods.insert(
             2589,

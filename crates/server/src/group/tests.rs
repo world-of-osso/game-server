@@ -1581,23 +1581,25 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
     let mut app = setup_app_with(move |app| {
         app.insert_resource(GameDatabase::new(db));
         app.init_resource::<crate::gold::GoldUpdateQueue>();
-        app.insert_resource(ItemTemplates {
-            retail: [(
-                HELM,
-                ItemTemplate {
-                    inventory_type: 1,
-                    max_stack: 1,
-                    allowable_class: -1,
-                    allowable_race: u64::MAX,
-                    ..Default::default()
-                },
-            )]
-            .into_iter()
-            .collect(),
-            forever: Default::default(),
-            loot_need: Default::default(),
-            retail_learning_spells: Default::default(),
-        });
+        app.insert_resource(ItemTemplates::from(
+            crate::item_templates::ItemTemplateData {
+                retail: [(
+                    HELM,
+                    ItemTemplate {
+                        inventory_type: 1,
+                        max_stack: 1,
+                        allowable_class: -1,
+                        allowable_race: u64::MAX,
+                        ..Default::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+                forever: Default::default(),
+                loot_need: Default::default(),
+                retail_learning_spells: Default::default(),
+            },
+        ));
         app.register_message::<InventorySnapshot>();
         app.register_message::<EquipmentSnapshot>();
         app.register_message::<InventoryDelta>();
