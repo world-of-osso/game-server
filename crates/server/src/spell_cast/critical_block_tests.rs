@@ -681,7 +681,7 @@ fn class_completeness_native_ranged_deflection_and_block_share_one_hit_table() {
 fn evasion_duel(class: u8) -> (Harness, Entity) {
     let mut h = harness_with_plugins(
         Vec::new(),
-        &[5277, 1464, 7384, 19434],
+        &[5277, 1464, 7384, 19434, 51723, 853],
         class,
         false,
         |app| {
@@ -745,4 +745,96 @@ fn class_completeness_native_evasion_dodges_frontal_weapon_spell() {
         "{:?}",
         h.inbox.log
     );
+}
+
+#[test]
+fn class_completeness_native_evasion_does_not_dodge_attacks_from_behind() {
+    let (mut h, defender) = evasion_duel(1);
+    h.app.world_mut().get_mut::<Rotation>(defender).unwrap().y = std::f32::consts::FRAC_PI_2;
+    let hits = cast_damage_spell(&mut h, defender, 1464, 3);
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].amount > 0);
+    assert!(crate::auras::has_aura(h.app.world(), defender, 5277));
+}
+
+#[test]
+fn class_completeness_native_evasion_cannot_dodge_while_stunned() {
+    let (mut h, defender) = evasion_duel(1);
+    let paladin = spawn_player(&mut h.app, 2, 1.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: paladin,
+            target: defender,
+            spell_id: 853,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(defender)
+            .unwrap()
+            .is_stunned()
+    );
+    let hits = cast_damage_spell(&mut h, defender, 1464, 3);
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].amount > 0);
+}
+
+#[test]
+fn class_completeness_native_evasion_honors_no_active_defense_and_no_attack_dodge() {
+    for (class, spell) in [(1, 7384), (4, 51723)] {
+        let (mut h, defender) = evasion_duel(class);
+        let hits = cast_damage_spell(&mut h, defender, spell, 3);
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].amount > 0);
+        assert!(crate::auras::has_aura(h.app.world(), defender, 5277));
+    }
+}
+
+#[test]
+fn class_completeness_native_evasion_does_not_dodge_ranged_aimed_shot() {
+    let (mut h, defender) = evasion_duel(3);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(defender)
+        .unwrap()
+        .x = 40.0;
+    let hits = cast_damage_spell(&mut h, defender, 19434, 65);
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].amount > 0);
+    assert!(crate::auras::has_aura(h.app.world(), defender, 5277));
+}
+
+#[test]
+fn class_completeness_native_evasion_removal_and_expiry_restore_weapon_hits() {
+    for expires in [false, true] {
+        let (mut h, defender) = evasion_duel(1);
+        if expires {
+            h.advance(205); // Native5277 duration10000ms.
+        } else {
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                defender,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 5277,
+            );
+            h.advance(2);
+        }
+        assert!(!crate::auras::has_aura(h.app.world(), defender, 5277));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<CharacterStats>(defender)
+                .unwrap()
+                .defense
+                .dodge,
+            0.0
+        );
+        let hits = cast_damage_spell(&mut h, defender, 1464, 3);
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].amount > 0);
+    }
 }
