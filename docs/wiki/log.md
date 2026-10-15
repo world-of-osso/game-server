@@ -1,6 +1,6 @@
 ## 2026-10-15 — Nested encounter conjunction
 
-[Native165 nested All](systems/dungeon-achievements.md#nested-encounter-conjunction) preserves complete companions and scoped prerequisites. Compiler44/44, genuine native-handler RED, exact structural5512/1824 adds only11660; no boss combat or prerequisite acquisition certificate.
+[Native165 nested All](systems/dungeon-achievements.md#nested-encounter-conjunction) preserves complete companions and scoped prerequisites. Compiler44/44, genuine native-handler RED→GREEN3/3, exact structural5512/1824 adds only11660. Required integrated four-filter205/0/1ignored plus site-export1/1 at299b09a9; checks/fmt pass. Initial missing fixture-env setup failures retained, corrected invocation green without source changes. No boss combat or prerequisite acquisition certificate.
 
 ## 2026-10-15 — Absent-player-aura kill guard
 
