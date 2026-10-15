@@ -1,5 +1,5 @@
 //! Real guild lifecycle history, distinct from bank logs and guild news.
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, TableDefinition};
 use shared::protocol::{GuildEvent, GuildEventLog, GuildRankError};
 
 pub(crate) const EVENTS: TableDefinition<u32, &str> = TableDefinition::new("guild_event_log");

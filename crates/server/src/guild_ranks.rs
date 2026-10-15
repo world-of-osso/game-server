@@ -41,7 +41,10 @@ pub(super) fn apply_rank_request(
     if persistence::load_character_guild(db, actor).is_none_or(|g| g.guild_id != guild_id) {
         return Err(GuildRankError::NotInGuild);
     }
-    if matches!(request, GuildRankRequest::Query) {
+    if matches!(
+        request,
+        GuildRankRequest::Query | GuildRankRequest::QueryEventLog
+    ) {
         return Ok(());
     }
     if let GuildRankRequest::SetMemberNote {
@@ -289,7 +292,7 @@ fn edit_rank(
         GuildRankRequest::Leave | GuildRankRequest::RemoveMember { .. } => {
             return Err(GuildRankError::Permissions);
         }
-        GuildRankRequest::Query => {}
+        GuildRankRequest::Query | GuildRankRequest::QueryEventLog => {}
         GuildRankRequest::Promote { .. }
         | GuildRankRequest::Demote { .. }
         | GuildRankRequest::SetMemberNote { .. } => {
