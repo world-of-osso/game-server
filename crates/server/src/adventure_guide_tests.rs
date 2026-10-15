@@ -59,6 +59,43 @@ fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
 }
 
 #[test]
+fn suggested_provider_uses_existing_earned_achievement_authority_for_bonus() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let now = Utc
+        .with_ymd_and_hms(2026, 10, 15, 16, 0, 0)
+        .single()
+        .unwrap()
+        .timestamp();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalbonus").unwrap();
+    attach_requests(&mut h);
+    prepare_real_catalog(&mut h, now);
+    let unearned = request(&mut h, AdventureGuideRequest::Query);
+    let position = |snapshot: &AdventureGuideSnapshot, id| {
+        snapshot
+            .suggestions
+            .iter()
+            .position(|row| row.id == id)
+            .unwrap_or_else(|| panic!("Eligible authored suggestion {id} missing"))
+    };
+    // Actual Random Battleground27 receives bonus4 from PlayerCondition33559 / achievement39935.
+    assert!(position(&unearned, 27) > position(&unearned, 852));
+    h.app
+        .world_mut()
+        .get_mut::<PlayerAchievementState>(h.player)
+        .unwrap()
+        .earned_ids
+        .insert(39935);
+    let earned = request(&mut h, AdventureGuideRequest::Query);
+    assert!(position(&earned, 27) < position(&earned, 852));
+    assert!(
+        earned
+            .suggestions
+            .iter()
+            .all(|row| row.button_text.is_empty())
+    );
+}
+
+#[test]
 fn adventure_guide_month_utc_boundary_and_leap_year_follow_reset_hour() {
     let at = |y, m, d, h| {
         Utc.with_ymd_and_hms(y, m, d, h, 0, 0)
