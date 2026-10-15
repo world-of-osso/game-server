@@ -4,6 +4,7 @@ mod character_data;
 
 const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters");
 const CHARACTER_NAMES: TableDefinition<&str, u64> = TableDefinition::new("character_names");
+const CHARACTER_MAPS: TableDefinition<u64, u32> = TableDefinition::new("character_maps");
 
 fn main() {
     let name = std::env::args()
@@ -39,6 +40,12 @@ fn main() {
     println!("character_id={character_id}");
     println!("stored_bytes={}", stored.len());
     println!("name={}", data.name);
+    println!("position_wow=({}, {}, {})", data.x, data.y, data.z);
+    let maps = read
+        .open_table(CHARACTER_MAPS)
+        .expect("open character maps");
+    let map = maps.get(character_id).expect("read character map");
+    println!("map_id={:?}", map.map(|value| value.value()));
     println!("appearance={:?}", data.appearance);
     println!("equipment_appearance={:?}", data.equipment_appearance);
 }
