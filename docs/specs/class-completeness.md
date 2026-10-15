@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] At the existing live-player melee weapon-spell dodge boundary, caster aura251 contributes its signed active total before expertise subtraction and final nonnegative clamp. Positive and negative native effects sum on the actual attacker; recipient-only effects do not contribute, and removal ends the modifier. Keep native facing/control/attribute/ranged exclusions. NPC dodge, aura248, player expertise and full251/ability acceptance remain separate.
+
 - [ ] Physical weapon-spell resistance consumes victim aura117 totals for the effect mechanic when nonzero, otherwise the spell category mechanic; take the nonnegative maximum total across selected mechanics, not their sum. Add its truncated hundredths after miss and before NoActiveDefense on the same native roll; resisted casts apply no stun/control effects. Recipient ownership, removal and mismatched selectors retain native behavior. Magic probability and full-ability acceptance remain separate.
 
 - [ ] Non-player attacker native aura240 expertise reduces live player melee weapon-spell dodge by one percentage point per four expertise, clamped at zero. Only the actual caster's active expertise contributes; removal restores native avoidance. Real NPC Hit Buffs62627 and native Strike38598 against a Rogue's real Evasion exercise the boundary without fake AP/dodge values. Player expertise, NPC dodge, parry, generic aura-handler/census and whole-spell certification remain separate requirements.
