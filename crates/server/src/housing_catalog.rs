@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use rusqlite::{Connection, params};
 use shared::protocol::HousingPlot;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 type Fields = BTreeMap<String, String>;
 
@@ -19,6 +20,23 @@ pub(crate) struct Neighborhood {
     pub entry: WorldLocation,
 }
 
+/// Immutable scale metadata owned by queued edits without copying the full catalog.
+#[derive(Clone, Debug)]
+pub(crate) struct DecorScaleRules(Arc<BTreeMap<u32, (u32, f32)>>);
+
+impl DecorScaleRules {
+    pub(crate) fn validate(&self, decor_id: u32, scale: f32) -> Result<(), String> {
+        let (model_type, initial_scale) = self
+            .0
+            .get(&decor_id)
+            .ok_or_else(|| format!("Decor {decor_id} has no authenticated scale source."))?;
+        if *model_type != 1 && scale != *initial_scale {
+            return Err("Retail expert mode cannot scale WMO decor.".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Resource, Clone, Debug)]
 pub(crate) struct HousingCatalog {
     neighborhoods: BTreeMap<u32, Neighborhood>,
@@ -26,7 +44,7 @@ pub(crate) struct HousingCatalog {
     cornerstones: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
     bulletin_boards: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
     home_entry: Option<WorldLocation>,
-    decor_scales: BTreeMap<u32, (u32, f32)>,
+    decor_scales: DecorScaleRules,
     pub(crate) dyes: DyeCatalog,
 }
 
@@ -41,18 +59,20 @@ impl HousingCatalog {
             cornerstones: BTreeMap::new(),
             bulletin_boards: BTreeMap::new(),
             dyes: DyeCatalog::read(db)?,
-            decor_scales: read_rows(db, "HouseDecor")?
-                .into_iter()
-                .map(|(id, fields)| {
-                    Ok((
-                        id,
-                        (
-                            number(&fields, "ModelType")?,
-                            number(&fields, "InitialScale")?,
-                        ),
-                    ))
-                })
-                .collect::<Result<_, String>>()?,
+            decor_scales: DecorScaleRules(Arc::new(
+                read_rows(db, "HouseDecor")?
+                    .into_iter()
+                    .map(|(id, fields)| {
+                        Ok((
+                            id,
+                            (
+                                number(&fields, "ModelType")?,
+                                number(&fields, "InitialScale")?,
+                            ),
+                        ))
+                    })
+                    .collect::<Result<_, String>>()?,
+            )),
             home_entry: read_rows(db, "NeighborhoodMap")?
                 .into_iter()
                 .find(|(id, _)| *id == 7)
@@ -115,15 +135,8 @@ impl HousingCatalog {
         Ok(plots)
     }
 
-    pub(crate) fn validate_decor_scale(&self, decor_id: u32, scale: f32) -> Result<(), String> {
-        let (model_type, initial_scale) = self
-            .decor_scales
-            .get(&decor_id)
-            .ok_or_else(|| format!("Decor {decor_id} has no authenticated scale source."))?;
-        if *model_type != 1 && scale != *initial_scale {
-            return Err("Retail expert mode cannot scale WMO decor.".into());
-        }
-        Ok(())
+    pub(crate) fn decor_scale_rules(&self) -> DecorScaleRules {
+        self.decor_scales.clone()
     }
 
     pub(crate) fn home_entry(&self) -> Result<WorldLocation, String> {

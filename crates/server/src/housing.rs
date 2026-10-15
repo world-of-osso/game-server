@@ -113,17 +113,7 @@ pub(crate) fn process_requests(world: &mut World) {
             continue;
         }
         let result = execute(world, actor, &request.command);
-        if result.is_ok()
-            && matches!(
-                request.command,
-                HousingCommand::PlaceDecor { .. }
-                    | HousingCommand::MoveDecor { .. }
-                    | HousingCommand::RotateDecor { .. }
-                    | HousingCommand::TransformDecor { .. }
-                    | HousingCommand::RemoveDecor { .. }
-                    | HousingCommand::CommitDecorDyes { .. }
-            )
-        {
+        if result.is_ok() && matches!(request.command, HousingCommand::CommitDecorDyes { .. }) {
             publish_layout_to_observers(world, actor);
         }
         let (neighborhood, error) = match result {
@@ -142,11 +132,15 @@ fn publish_layout_to_observers(world: &mut World, editor: Actor) {
     let map = *world
         .get::<InMap>(editor.player)
         .expect("accepted house edit requires an admitted map");
+    publish_layout_at(world, map, Some(editor.connection));
+}
+
+fn publish_layout_at(world: &mut World, map: InMap, excluded: Option<Entity>) {
     let mut query = world.query::<(Entity, &InWorld, &Authenticated, &PlayerLink)>();
     let observers: Vec<_> = query
         .iter(world)
         .filter(|(connection, _, _, link)| {
-            *connection != editor.connection && world.get::<InMap>(link.0) == Some(&map)
+            Some(*connection) != excluded && world.get::<InMap>(link.0) == Some(&map)
         })
         .map(|(connection, entered, auth, link)| Actor {
             connection,
@@ -220,19 +214,18 @@ fn apply_house_command(
     command: &HousingCommand,
 ) -> Result<(), String> {
     match command {
-        HousingCommand::PurchasePlot { .. } => {
-            unreachable!("purchase is queued before synchronous house commands")
+        HousingCommand::PurchasePlot { .. }
+        | HousingCommand::RedeemDecor { .. }
+        | HousingCommand::SaveHouseAccess { .. }
+        | HousingCommand::PlaceDecor { .. }
+        | HousingCommand::TransformDecor { .. }
+        | HousingCommand::MoveDecor { .. }
+        | HousingCommand::RotateDecor { .. }
+        | HousingCommand::RemoveDecor { .. } => {
+            unreachable!("durable mutations are queued before synchronous house commands")
         }
         HousingCommand::EnterHouse { house_id } => enter_house(world, actor, context, *house_id)?,
         HousingCommand::LeaveHouse => leave_house(world, actor, context)?,
-        HousingCommand::SaveHouseAccess { house_id, access } => {
-            store::set_access(
-                &world.resource::<GameDatabase>().db,
-                context,
-                *house_id,
-                *access,
-            )?;
-        }
         HousingCommand::PreviewDecorDyes {
             house_id,
             instance_id,
@@ -243,43 +236,6 @@ fn apply_house_command(
             instance_id,
         } => dye_requests::commit_preview(world, actor, context, *house_id, *instance_id)?,
         HousingCommand::CancelDecorDyes => dye_requests::cancel(world, actor),
-        HousingCommand::RedeemDecor { .. } => {
-            unreachable!("collection is queued before synchronous house commands")
-        }
-        HousingCommand::PlaceDecor {
-            decor_id,
-            transform,
-            ..
-        } => {
-            catalog(world)?.validate_decor_scale(*decor_id, transform.scale)?;
-            store::edit(&world.resource::<GameDatabase>().db, context, command)?;
-        }
-        HousingCommand::TransformDecor {
-            house_id,
-            instance_id,
-            transform,
-        } => {
-            let layout = store::snapshot(
-                &world.resource::<GameDatabase>().db,
-                context,
-                Some(*house_id),
-                world.get_resource::<crate::group::GroupRegistry>(),
-            )?
-            .layout
-            .ok_or("House layout is unavailable.")?;
-            let decor = layout
-                .decor
-                .iter()
-                .find(|decor| decor.instance_id == *instance_id)
-                .ok_or("Placed decor not found in this house.")?;
-            catalog(world)?.validate_decor_scale(decor.decor_id, transform.scale)?;
-            store::edit(&world.resource::<GameDatabase>().db, context, command)?;
-        }
-        HousingCommand::MoveDecor { .. }
-        | HousingCommand::RotateDecor { .. }
-        | HousingCommand::RemoveDecor { .. } => {
-            store::edit(&world.resource::<GameDatabase>().db, context, command)?;
-        }
         HousingCommand::ReloadLayout { house_id } => {
             store::house(
                 &world.resource::<GameDatabase>().db,

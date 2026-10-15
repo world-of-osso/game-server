@@ -11,6 +11,7 @@ pub(super) enum ReplyOrigin {
 }
 
 enum InventoryPublication {
+    Unchanged,
     Items,
     Gold,
 }
@@ -19,6 +20,7 @@ struct PendingHousingWrite {
     actor: Actor,
     origin: ReplyOrigin,
     inventory: InventoryPublication,
+    observer_map: Option<InMap>,
     receipt: CommitReceipt,
 }
 
@@ -48,6 +50,12 @@ pub(super) fn enqueue_request(world: &mut World, actor: Actor, request: &Housing
         HousingCommand::PurchasePlot { plot_id } => {
             enqueue_purchase(world, actor, *plot_id, request.request_id)
         }
+        HousingCommand::SaveHouseAccess { .. }
+        | HousingCommand::PlaceDecor { .. }
+        | HousingCommand::TransformDecor { .. }
+        | HousingCommand::MoveDecor { .. }
+        | HousingCommand::RotateDecor { .. }
+        | HousingCommand::RemoveDecor { .. } => enqueue_house_mutation(world, actor, request),
         _ => return false,
     };
     if let Err(error) = result {
@@ -72,6 +80,7 @@ pub(super) fn enqueue_collection(
             actor,
             origin,
             inventory: InventoryPublication::Items,
+            observer_map: None,
             receipt,
         });
     Ok(())
@@ -102,9 +111,88 @@ pub(super) fn enqueue_purchase(
             actor,
             origin: ReplyOrigin::Request(request_id),
             inventory: InventoryPublication::Gold,
+            observer_map: None,
             receipt,
         });
     Ok(())
+}
+
+fn enqueue_house_mutation(
+    world: &mut World,
+    actor: Actor,
+    request: &HousingRequest,
+) -> Result<(), String> {
+    let context = actor_context(world, actor)?;
+    let rules = catalog(world)?.decor_scale_rules();
+    let command = request.command.clone();
+    let observer_map = match command {
+        HousingCommand::SaveHouseAccess { .. } => None,
+        _ => world.get::<InMap>(actor.player).copied(),
+    };
+    let receipt = world
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("housing layout/access mutation", move |db| {
+            persist_house_mutation(db, context, &command, &rules)
+        });
+    world
+        .resource_mut::<PendingHousingWrites>()
+        .0
+        .push_back(PendingHousingWrite {
+            actor,
+            origin: ReplyOrigin::Request(request.request_id),
+            inventory: InventoryPublication::Unchanged,
+            observer_map,
+            receipt,
+        });
+    Ok(())
+}
+
+fn persist_house_mutation(
+    db: &redb::Database,
+    actor: store::Actor,
+    command: &HousingCommand,
+    rules: &crate::housing_catalog::DecorScaleRules,
+) -> Result<(), String> {
+    if let HousingCommand::SaveHouseAccess { house_id, access } = command {
+        return store::set_access(db, actor, *house_id, *access);
+    }
+    validate_layout_scale(db, actor, command, rules)?;
+    store::edit(db, actor, command)
+}
+
+fn validate_layout_scale(
+    db: &redb::Database,
+    actor: store::Actor,
+    command: &HousingCommand,
+    rules: &crate::housing_catalog::DecorScaleRules,
+) -> Result<(), String> {
+    match command {
+        HousingCommand::PlaceDecor {
+            decor_id,
+            transform,
+            ..
+        } => rules.validate(*decor_id, transform.scale),
+        HousingCommand::TransformDecor {
+            house_id,
+            instance_id,
+            transform,
+        } => {
+            let layout = store::snapshot(db, actor, Some(*house_id), None)?
+                .layout
+                .ok_or("House layout is unavailable.")?;
+            let decor = layout
+                .decor
+                .iter()
+                .find(|decor| decor.instance_id == *instance_id)
+                .ok_or("Placed decor not found in this house.")?;
+            rules.validate(decor.decor_id, transform.scale)
+        }
+        HousingCommand::MoveDecor { .. }
+        | HousingCommand::RotateDecor { .. }
+        | HousingCommand::RemoveDecor { .. } => Ok(()),
+        _ => unreachable!("only layout commands reach scale validation"),
+    }
 }
 
 fn drain_completed(world: &mut World) -> Vec<(PendingHousingWrite, Result<(), String>)> {
@@ -135,7 +223,13 @@ fn owns_housing_session(world: &World, actor: Actor) -> bool {
 
 pub(super) fn publish_writes(world: &mut World) {
     for (job, result) in drain_completed(world) {
-        if owns_housing_session(world, job.actor) {
+        let same_session = owns_housing_session(world, job.actor);
+        if result.is_ok()
+            && let Some(map) = job.observer_map
+        {
+            publish_layout_at(world, map, same_session.then_some(job.actor.connection));
+        }
+        if same_session {
             publish_write_result(world, job, result);
         }
     }
@@ -143,6 +237,7 @@ pub(super) fn publish_writes(world: &mut World) {
 
 fn publish_inventory(world: &mut World, actor: Actor, publication: InventoryPublication) {
     match publication {
+        InventoryPublication::Unchanged => {}
         InventoryPublication::Items => world
             .resource_mut::<crate::gold::GoldUpdateQueue>()
             .record_items(actor.character),
