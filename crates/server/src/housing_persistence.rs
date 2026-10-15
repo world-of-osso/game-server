@@ -20,6 +20,7 @@ struct PendingHousingWrite {
     actor: Actor,
     origin: ReplyOrigin,
     inventory: InventoryPublication,
+    // Layout observers stay bound to the request map after its editor leaves.
     observer_map: Option<InMap>,
     receipt: CommitReceipt,
 }
@@ -157,11 +158,11 @@ fn persist_house_mutation(
     if let HousingCommand::SaveHouseAccess { house_id, access } = command {
         return store::set_access(db, actor, *house_id, *access);
     }
-    validate_layout_scale(db, actor, command, rules)?;
+    read_and_validate_layout_scale(db, actor, command, rules)?;
     store::edit(db, actor, command)
 }
 
-fn validate_layout_scale(
+fn read_and_validate_layout_scale(
     db: &redb::Database,
     actor: store::Actor,
     command: &HousingCommand,
@@ -178,21 +179,31 @@ fn validate_layout_scale(
             instance_id,
             transform,
         } => {
-            let layout = store::snapshot(db, actor, Some(*house_id), None)?
-                .layout
-                .ok_or("House layout is unavailable.")?;
-            let decor = layout
-                .decor
-                .iter()
-                .find(|decor| decor.instance_id == *instance_id)
-                .ok_or("Placed decor not found in this house.")?;
-            rules.validate(decor.decor_id, transform.scale)
+            let decor_id = read_placed_decor_id(db, actor, *house_id, *instance_id)?;
+            rules.validate(decor_id, transform.scale)
         }
         HousingCommand::MoveDecor { .. }
         | HousingCommand::RotateDecor { .. }
         | HousingCommand::RemoveDecor { .. } => Ok(()),
         _ => unreachable!("only layout commands reach scale validation"),
     }
+}
+
+fn read_placed_decor_id(
+    db: &redb::Database,
+    actor: store::Actor,
+    house_id: u64,
+    instance_id: u64,
+) -> Result<u32, String> {
+    let layout = store::snapshot(db, actor, Some(house_id), None)?
+        .layout
+        .ok_or("House layout is unavailable.")?;
+    layout
+        .decor
+        .iter()
+        .find(|decor| decor.instance_id == instance_id)
+        .map(|decor| decor.decor_id)
+        .ok_or_else(|| "Placed decor not found in this house.".into())
 }
 
 fn drain_completed(world: &mut World) -> Vec<(PendingHousingWrite, Result<(), String>)> {
