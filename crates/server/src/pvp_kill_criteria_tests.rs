@@ -6,6 +6,129 @@ use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Health, Position};
 
 #[test]
+fn achievements_criteria_earned_player_requires_native_prerequisite_before_player_kill() {
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[220737], 1, false, |app| {
+            app.add_plugins((
+                crate::achievement::AchievementPlugin,
+                crate::death::DeathPlugin,
+            ));
+        })
+        .unwrap();
+    for entity in [h.connection, h.caster, h.npc] {
+        h.app.world_mut().despawn(entity);
+    }
+    let initialized = std::mem::take(h.app.world_mut());
+    let (initialized, players, file) = native_flag_match_in_world(
+        &shared::battleground::warsong_gulch(),
+        initialized,
+        |index| {
+            if index == 3 { 1 } else { index }
+        },
+    );
+    *h.app.world_mut() = initialized;
+    pvp_objective::update_battleground_objectives(h.app.world_mut());
+    h.app.update();
+    let world = h.app.world_mut();
+    let killer = players[0].1;
+    let first_victim = players[1].1;
+    damage(world, killer, first_victim, 1000.0);
+    assert_eq!(world.get::<Health>(first_victim).unwrap().current, 0.0);
+    assert_eq!(player_kills(world, killer), Some(1));
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&32961),
+        "native player kill before Hidden Potential cannot qualify"
+    );
+    assert!(!crate::spell_cast::try_cast_triggered(
+        world,
+        killer,
+        220737,
+        Some(killer),
+        u8::MAX
+    ));
+    assert!(crate::spell_cast::try_cast_triggered(
+        world,
+        killer,
+        220737,
+        Some(killer),
+        0
+    ));
+    assert!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .earned_ids
+            .contains(&10460),
+        "authentic self-hit earns Hidden Potential; no seeded ID"
+    );
+    let victim = players[3].1;
+    damage(world, killer, victim, 1.0);
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&32961),
+        "a nonlethal hit is not a player kill"
+    );
+    damage(world, killer, victim, 1000.0);
+    assert_eq!(world.get::<Health>(victim).unwrap().current, 0.0);
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&32961),
+        Some(&1),
+        "accepted Warsong player kill after earned10460 must satisfy87"
+    );
+    let teammate = players[2].1;
+    assert_eq!(player_kills(world, teammate), Some(2));
+    let third_victim = players[5].1;
+    damage(world, killer, third_victim, 1000.0);
+    assert_eq!(player_kills(world, teammate), Some(3));
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(teammate)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&32961),
+        "same-account eligible teammate cannot borrow another character's earned10460"
+    );
+    damage(world, killer, victim, 1000.0);
+    pvp_objective::update_battleground_objectives(world);
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&32961),
+        Some(&2),
+        "dead/idle replay cannot credit again"
+    );
+    h.app.update();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&32961),
+        Some(&2),
+        "full native App update cannot duplicate credit"
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = crate::persistence::load_achievements(&db, players[0].0);
+    assert!(saved.earned_ids.contains(&10460));
+    assert_eq!(saved.criteria_progress.get(&32961), Some(&2));
+}
+
+#[test]
 fn achievements_criteria_native_player_map_some_credits_only_actual_warsong_killing_blow() {
     let (mut world, players, file) = kill_match();
     let killer = players[0].1;
