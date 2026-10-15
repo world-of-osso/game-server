@@ -185,7 +185,11 @@ fn achievement_frame_publishes_one_final_snapshot_and_preserves_every_toast() {
     let (character, _) = persistence::create_character(&db, 41, "Perfproof", 1, 1).unwrap();
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     let catalog = load_achievement_catalog(&conn).unwrap();
-    let adventure = crate::adventure_guide::load_catalog(&conn, &catalog);
+    let journal_csv = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("db2/active/AdventureJournal.csv");
+    let adventure = crate::adventure_guide::load_catalog(&conn, &catalog, &journal_csv);
     assert!(matches!(
         adventure,
         crate::adventure_guide::AdventureCatalog::Ready(_)
