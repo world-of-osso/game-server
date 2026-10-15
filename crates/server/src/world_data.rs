@@ -48,8 +48,6 @@ pub struct CreatureTemplate {
     pub gives_experience: bool,
     /// `ScriptName`: the AzerothCore CreatureScript (`creature_scripts`).
     pub script_name: String,
-    /// `detection_range`: aggro radius against a same-level target.
-    pub detection_range: f32,
     pub aggro_mode: AggroMode,
     /// `CREATURE_FLAG_EXTRA_TRIGGER`: the template spawns with its invisible model.
     pub trigger: bool,
@@ -62,6 +60,9 @@ pub struct CreatureTemplate {
     /// Armor at `min_level` of an untuned template (ExpectedStat
     /// CreatureArmor × ArmorModifier); a tuned one reads `tuning.stats`.
     pub armor: f32,
+    /// Authored multiplier retained when the NPC is promoted to another level.
+    pub armor_modifier: f32,
+    pub health_scaling_expansion: i32,
     /// `ManaModifier` (creature_template_difficulty): max mana is
     /// creature_classlevelstats `basemana` × this (Creature::UpdateLevelDependantStats).
     pub mana_modifier: f32,
@@ -209,6 +210,8 @@ pub struct WorldData {
     /// `creature_classlevelstats` basemana keyed by (level, class).
     pub class_level_base_mana: HashMap<(u8, u8), u32>,
     pub armor_constants: ArmorConstants,
+    /// Installed level/modifier rows retained for NPC owner-level initialization.
+    pub expected_stats: ExpectedStats,
     /// `content_pool_*` spawn pools (PoolMgr).
     pub pools: crate::spawn_pools::SpawnPools,
     /// TDB `spawn_group` members whose battleground runtime spawns them by condition.
@@ -231,6 +234,20 @@ impl WorldData {
         self.difficulty_templates
             .get(&(entry, difficulty_id))
             .or_else(|| self.templates.get(&entry))
+    }
+
+    /// Source NPC armor at `level`, including its template/difficulty modifiers.
+    pub fn creature_armor_at(&self, entry: u32, difficulty: u32, level: u8) -> Option<f32> {
+        let template = self.template_for(entry, difficulty)?;
+        Some(match &template.tuning {
+            Some(tuning) => tuning.stats.armor(level),
+            None => self.expected_stats.untuned_armor_for_expansion(
+                level,
+                template.health_scaling_expansion,
+                template.unit_class,
+                template.armor_modifier,
+            ),
+        })
     }
 
     /// AzerothCore `Creature::GetCreatureAddon`: the spawn's row, else its template's.
@@ -298,6 +315,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         class_level_base_hp,
         class_level_base_mana,
         armor_constants,
+        expected_stats,
         pools,
         spawn_groups,
         vignettes,
@@ -553,7 +571,6 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         script_name: row.get(13)?,
         unit_class,
         expansion: row.get::<_, i64>(15)? as u8,
-        detection_range: row.get(16)?,
         aggro_mode: AggroMode::for_template(
             row.get::<_, i64>(10)? as u32,
             row.get::<_, i64>(11)? as u32,
@@ -564,6 +581,8 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         unit_flags: row.get::<_, i64>(17)? as u32,
         models: Vec::new(),
         armor: expected.untuned_armor(row.get::<_, i64>(1)? as u8, unit_class, armor_modifier),
+        armor_modifier,
+        health_scaling_expansion: row.get::<_, i64>(19)? as i32,
         tuning,
         mana_modifier: row.get(25)?,
         regenerates_power: row.get::<_, i64>(26)? & UNIT_FLAG2_REGENERATE_POWER != 0,

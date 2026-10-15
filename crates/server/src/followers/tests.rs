@@ -222,6 +222,10 @@ fn follower_combat_ownership_allows_ruby_faction_to_retaliate() {
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
     let kit = profile(209059, GroupRole::Dps, 133, 0);
+    h.app
+        .insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+            &[kit.entry],
+        ));
     let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
     super::spawning::initialize(h.app.world_mut(), h.caster, unit, kit).unwrap();
     h.app
@@ -250,6 +254,10 @@ fn follower_initialization_uses_native_stats_without_unassigned_follower_aura() 
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
     let kit = profile(209059, GroupRole::Dps, 133, 0);
+    h.app
+        .insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+            &[kit.entry],
+        ));
     let expected = super::spawning::class_stats(h.app.world(), &kit, 10)
         .unwrap()
         .0;
@@ -304,6 +312,15 @@ fn tank_recovers_a_party_attackers_threat_with_real_hand_of_reckoning() {
     kit.taunt_spell = 62124;
     kit.melee = true;
     let tank = spawn_follower(&mut h, kit);
+    // This tests successful threat recovery; native taunt misses have a
+    // separate forced-miss control in profile_behavior_tests.
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::auras::AuraStatMods {
+            melee_hit_chance_pct: 100.0,
+            ..default()
+        });
     let enemy = h.npc;
     h.app.world_mut().entity_mut(enemy).insert((
         shared::components::ThreatTable::default(),
@@ -321,7 +338,10 @@ fn tank_recovers_a_party_attackers_threat_with_real_hand_of_reckoning() {
             .get::<crate::networking::CombatTarget>(enemy)
             .unwrap()
             .0,
-        Some(tank)
+        Some(tank),
+        "attacker {enemy:?} must switch from owner {:?} to tank {tank:?}; combat {:?}",
+        h.caster,
+        h.inbox.log
     );
     assert!(
         h.app

@@ -1,12 +1,12 @@
 # Character Stats
 
-`StatsPlugin` (`crates/server/src/stats.rs`) computes player stats in the retail 12.x model. Players spawn with default `UnitStats` and the health persisted in redb. `update_character_stats` then computes their stats on the first frame, and again whenever `Level`, `ActiveSpec`, `EquippedItems` or `StatModifiers` changes. It writes:
+`StatsPlugin` (`crates/server/src/stats.rs`) computes player stats and the approved [NPC follower bridge](../investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) in the retail 12.x model. Players spawn with default `UnitStats` and the health persisted in redb; followers initialize the same stat fields from their labelled class/spec and retain race0. `update_character_stats` computes both on the first frame and again when their level, spec/profile, equipment, known spells or `StatModifiers` changes. It writes:
 
 - the effective `UnitStats` and `CombatRatings`, and `DerivedStats` (`CharacterStats::derived`: spell power, distinct melee/ranged attack power, the crit/haste/mastery/versatility percentages and leech/avoidance/speed);
 - `Health.max` and `Mana.max`, keeping each current value at the same fraction of the new max;
 - the server-only `CharacterStats` component, read by the [[spell-casting]] effects and costs.
 
-NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0.
+Ordinary NPCs without `CharacterStats` still have no class-derived spell power, attack power or crit. Approved followers carry `CharacterStats` and the stat fields required by this same production query, while remaining NPCs rather than persisted players. Their absent `SheetOwner` keeps owner-only sheet fields hidden; health/mana replication remains ordinary.
 
 ## Sources
 
@@ -142,7 +142,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 
 ### Other
 - **Not modeled:**
-  - spec and class passives (armor specializations, tank stamina, spec mana pools);
+  - authentic NPC follower gear/stat-budget parity (the approved bridge applies sourced class/spec passive modifiers, not invented NPC budgets);
   - `octclasscombatratingscalar`;
   - multiplicative haste stacking;
   - additional dodge/parry/block aura types beyond handled 49/51.
