@@ -26,10 +26,7 @@ fn dye_world_db() -> rusqlite::Connection {
     source
 }
 
-#[test]
-fn housing_dye_wire_preview_cancel_and_player_replacement_never_spend_or_restore_drafts() {
-    let dir = tempfile::tempdir().unwrap();
-    let db = redb::Database::create(dir.path().join("wire-dyes.redb")).unwrap();
+fn dye_editor(db: redb::Database) -> (Harness, Traveler, u64) {
     crate::persistence::create_tables(&db);
     crate::persistence::save_inventory(
         &db,
@@ -117,8 +114,130 @@ fn housing_dye_wire_preview_cancel_and_player_replacement_never_spend_or_restore
         .error,
         None
     );
+    (h, owner, house.house_id)
+}
+
+#[test]
+fn housing_dye_commit_waits_for_fifo_and_preserves_earlier_wallet() {
+    assert_dye_commit_fifo(true);
+}
+
+#[test]
+fn housing_dye_failed_fifo_commit_keeps_preview_and_consumes_nothing() {
+    assert_dye_commit_fifo(false);
+}
+
+fn assert_dye_commit_fifo(dye_available: bool) {
+    use std::time::{Duration, Instant};
+    let dir = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(dir.path().join("fifo-dyes.redb")).unwrap();
+    let (mut h, owner, house_id) = dye_editor(db);
+    let staged = h.housing_request(
+        &owner,
+        HousingCommand::PreviewDecorDyes {
+            house_id,
+            instance_id: 1,
+            changes: vec![DecorDye {
+                slot_id: 28,
+                color_id: Some(23),
+            }],
+        },
+    );
+    assert_eq!(staged.error, None);
+    let database = h.app.world().resource::<GameDatabase>();
+    let held = database.db.begin_write().unwrap();
+    let prior = database.writer.enqueue("earlier dye wallet", move |db| {
+        let mut inventory = crate::persistence::load_inventory(db, 30);
+        inventory.gold = 777;
+        if !dye_available {
+            inventory.items.clear();
+        }
+        crate::persistence::save_inventory(db, 30, &inventory);
+        Ok(())
+    });
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<HousingRequest>>(owner.connection)
+        .unwrap()
+        .send::<HousingChannel>(HousingRequest {
+            request_id: 91,
+            command: HousingCommand::CommitDecorDyes {
+                house_id,
+                instance_id: 1,
+            },
+        });
+    let started = Instant::now();
+    h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = h
+        .app
+        .world_mut()
+        .get_mut::<MessageReceiver<HousingReply>>(owner.connection)
+        .unwrap()
+        .receive()
+        .next();
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "housing dye tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_none(), "dye reply preceded durable commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let saved = loop {
+        h.advance(1);
+        if let Some(reply) = h
+            .app
+            .world_mut()
+            .get_mut::<MessageReceiver<HousingReply>>(owner.connection)
+            .unwrap()
+            .receive()
+            .next()
+        {
+            break reply;
+        }
+        assert!(Instant::now() < deadline, "no durable dye result");
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert_eq!(prior.result(), Some(Ok(())));
+    assert_eq!(saved.request_id, 91);
+    if dye_available {
+        assert_eq!(saved.error, None);
+        assert!(saved.state.dye_preview.is_none());
+        assert_eq!(
+            saved.state.layout.unwrap().decor[0].dyes,
+            vec![DecorDye {
+                slot_id: 28,
+                color_id: Some(23)
+            }]
+        );
+    } else {
+        assert!(saved.error.unwrap().contains("Not enough owned Retail dye"));
+        assert_eq!(
+            saved.state.dye_preview.unwrap().changes,
+            vec![DecorDye {
+                slot_id: 28,
+                color_id: Some(23)
+            }]
+        );
+        assert!(saved.state.layout.unwrap().decor[0].dyes.is_empty());
+    }
+    let inventory =
+        crate::persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, 30);
+    assert_eq!(inventory.gold, 777);
+    assert!(inventory.items.is_empty());
+}
+
+#[test]
+fn housing_dye_wire_preview_cancel_and_player_replacement_never_spend_or_restore_drafts() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(dir.path().join("wire-dyes.redb")).unwrap();
+    let (mut h, owner, house_id) = dye_editor(db);
     let preview = HousingCommand::PreviewDecorDyes {
-        house_id: house.house_id,
+        house_id,
         instance_id: 1,
         changes: vec![DecorDye {
             slot_id: 28,
@@ -145,7 +264,7 @@ fn housing_dye_wire_preview_cancel_and_player_replacement_never_spend_or_restore
     assert_eq!(cancelled.error, None);
     assert!(cancelled.state.dye_preview.is_none());
     let commit = HousingCommand::CommitDecorDyes {
-        house_id: house.house_id,
+        house_id,
         instance_id: 1,
     };
     assert!(
