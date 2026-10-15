@@ -281,7 +281,7 @@ Flute98552 is the concrete zero-primary-radius case; native6122 proves nonzero p
 
 ### Source forward destination
 
-TC a352b1fa `SpellInfo.cpp` maps78 to DEST_DEST_FRONT; `Spell.cpp::SelectImplicitDestDestTargets` moves the prior destination by this slot's CalcRadius and direction. The bounded18/78 route shares destination-offset calculation with existing18/79 backward placement. Spirit of Bashiok173895 authors18/78, primary radius0 and secondary radius8=5yd. AttributesEx4=0x00800000 does not set USE_FACING_FROM_SPELL0x80000000, so its authored facing pi is ignored. No destination fallback, other directional selector, or terrain/collision implementation is added. Authentic86916/display60051 and60s actor lifecycle remain separate from destination selection; see [contract](../../specs/toys.md).
+TC a352b1fa `SpellInfo.cpp` maps78 to DEST_DEST_FRONT; `Spell.cpp::SelectImplicitDestDestTargets` moves the prior destination by this slot's CalcRadius and direction. The bounded18/78 route shares destination-offset calculation with existing18/79 backward placement. Caster-based destinations retain caster facing even when an unrelated unit is selected; destination-relative offsets retain that prior destination's facing rather than replacing it with the selected unit's orientation. Spirit of Bashiok173895 authors18/78, primary radius0 and secondary radius8=5yd. AttributesEx4=0x00800000 does not set USE_FACING_FROM_SPELL0x80000000, so its authored facing pi is ignored. No destination fallback, other directional selector, or terrain/collision implementation is added. Authentic86916/display60051 and60s actor lifecycle remain separate from destination selection; see [contract](../../specs/toys.md).
 
 ### Initial random destination radius (2026-10-14)
 
