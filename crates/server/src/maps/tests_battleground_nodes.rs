@@ -736,7 +736,7 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                 .send::<InteractionChannel>(UseGameObject {
                     object: object.to_bits(),
                 });
-            h.advance(1);
+            h.advance(3);
             let errors: Vec<_> = h
                 .app
                 .world_mut()
@@ -755,6 +755,15 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                 h.app.world().get::<Position>(object)
             );
             if user.player == foreign.player {
+                assert_eq!(
+                    errors.len(),
+                    1,
+                    "the foreign request must actually be processed before the control is accepted"
+                );
+                assert_eq!(
+                    errors[0].error,
+                    shared::protocol::InteractionError::InvalidTarget
+                );
                 assert_eq!(
                     objects_in(h, entered.copy, 195235).len(),
                     1,
