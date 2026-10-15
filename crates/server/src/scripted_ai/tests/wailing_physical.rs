@@ -410,7 +410,7 @@ fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
     assert!(
         h.app
             .world()
-            .get::<super::super::waypoint_path::PathMovement>(disciple)
+            .get::<crate::scripted_ai::waypoint_path::PathMovement>(disciple)
             .is_none()
     );
     let mut previous = start;
