@@ -1,3 +1,7 @@
+## 2026-10-15 — Initial target population RED
+
+[Tick lag](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15): actual spawn path187770 NPCs reproduces292ms of empty-target insertion after spawn. Local fix initializes the value with creation; GREEN/release proof pending live reservation. Merged30cffd30/cac6080 has current warning-free runtime check and both format checks, with64-control proof retained.
+
 ## 2026-10-15 — Cold deferred producers identified; toy-master integration
 
 [Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): actual release command spans name target-sync215.5ms and grid-registration280.3ms, distinct from startup population and preparation. Source initialization/wake regression remains open. Toy-master merge retains detection geometry plus private-group authority and Toy Box cache plus incoming modules;64 intersecting controls pass, current gate publication/check pending shared live window.

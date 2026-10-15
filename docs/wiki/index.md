@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Initial target population regression](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15) — real187770-NPC spawn path RED292ms; initial empty-target fix awaits GREEN/release proof.
+
 - [st157 FIFO fixture integration](investigations/server-tick-lag.md#st157-fixture-integration-follow-up--2026-10-15) — explicit housing publishers and reply/initial-inventory fences;22 controls+5 repaired wires pass, full gate pending.
 
 - [Schedule/deferred attribution](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15) — inclusive schedule/preparation diagnostics; root system-span boundary reproduced, corrected instrumentation passes3/3; release names cold deferred target-sync/grid-registration producers; initialization/wake fix remains open.
