@@ -1,3 +1,7 @@
+## 2026-10-15 — Minion ownership flag composition
+
+[Source ownership](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14): native minion/player-owner rule replaces category-only player-control flags; companion immunity augments rather than overwrites ownership. Combat-pet designation, counts and captured privacy remain separate.
+
 ## 2026-10-14 — Spawn-group guardian count
 
 [Scarab2301 source boundary](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14): preserve flag-directed default-title guardian routing and source count/scatter without inventing attacks or a pet frame; native visuals and other count routes remain open.
