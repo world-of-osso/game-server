@@ -44,6 +44,30 @@ class Conditions(unittest.TestCase):
         mods[392320]['Asset'] = '0'
         self.assertEqual(self.compile(mods, criteria), {})
 
+    def test_some_locations_preserve_area_and_zone_leaf_meanings(self):
+        criteria = {27968: dict(self.criteria[1], Type='29', Asset='181842',
+                               ModifierTreeId='20912')}
+        mods = {20912: node(0, 8, amount=1),
+                20913: node(20912, 2, 17, 1445),
+                20914: node(20912, 2, 17, 254),
+                20915: node(20912, 2, 41, 25)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {27968: [None, ((17, 254), (17, 1445), (41, 25))]})
+        mods[20913]['Type'] = '41'
+        mods[20914]['Type'] = '41'
+        self.assertEqual(self.compile(mods, criteria),
+                         {27968: [None, ((41, 25), (41, 254), (41, 1445))]})
+        for field, value in [('Type', '999'), ('Operator', '3'),
+                             ('SecondaryAsset', '1'), ('Asset', '0')]:
+            invalid = copy.deepcopy(mods)
+            invalid[20915][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+        mods[20912]['Amount'] = '2'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[20912]['Amount'] = '1'
+        mods[20916] = node(20915, 2, 17, 25)
+        self.assertEqual(self.compile(mods, criteria), {})
+
     def test_plain_empty_all_is_true_but_empty_some_and_single_are_false(self):
         self.assertEqual(self.compile({10: node(0, 4)}), {1: [None, ()]})
         self.assertEqual(self.compile({10: node(0, 8)}), {})
