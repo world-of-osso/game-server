@@ -785,7 +785,8 @@ pub(crate) fn chase_system(
         };
         // MotionMaster initializes a newly-preempting active generator with
         // diff0. The default spline may already have moved before sight/aggro.
-        let initializing = default_waypoint.is_some_and(|mut path| path.deactivate());
+        let initializing =
+            default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Chase(target)));
         if initializing {
             continue;
         }
@@ -1522,7 +1523,7 @@ pub(crate) fn return_to_spawn_system(
         if *state != CreatureState::Returning {
             continue;
         }
-        let initializing = default_waypoint.is_some_and(|mut path| path.deactivate());
+        let initializing = default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Home));
         if initializing {
             continue;
         }
