@@ -7,6 +7,23 @@ import achievement_census
 
 
 class RawTypeInventory(unittest.TestCase):
+    def test_pet_level_species_requires_authored_species_valid_level_and_correct_type(self):
+        criteria = {
+            cid: {'Type': str(kind), 'Asset': str(asset), 'ModifierTreeId': str(root),
+                  'StartEvent': '0', 'StartTimer': '0', 'FailEvent': '0',
+                  'EligibilityWorldStateID': '0'}
+            for cid, kind, asset, root in ((25123, 160, 25, 15698), (34667, 162, 25, 47510),
+                                            (1, 160, 25, 900), (2, 160, 26, 901), (3, 157, 0, 902))
+        }
+        datasets = dict.fromkeys(('spells', 'skills', 'mythic_ids', 'overlay_assets',
+                                 'pet_creatures', 'toy_items', 'scenarios', 'zones', 'taxi_nodes'), frozenset())
+        supported = achievement_census.supported_criteria(
+            criteria, {157, 160, 162}, **datasets, pet_species={1426, 1974},
+            single_modifiers={25123: (15698, 1426), 34667: (47510, 1974),
+                              1: (900, 999999), 2: (901, 1426), 3: (902, 1426)},
+            condition_trees=set())
+        self.assertEqual(supported, {25123, 34667})
+
     def test_personal_rating_accepts_only_authored_current_two_and_three_player_assets(self):
         criteria = {index: {'Type': '39', 'Asset': str(asset), 'ModifierTreeId': '0',
                             'StartEvent': '0', 'StartTimer': '0', 'FailEvent': '0',
