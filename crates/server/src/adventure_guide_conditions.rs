@@ -42,6 +42,26 @@ pub(super) fn load_conditions(
 }
 
 fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
+    let Some(fields) = read_condition_fields(conn, id)? else {
+        return Ok(ConditionRule::Unsupported(format!(
+            "PlayerCondition {id} missing"
+        )));
+    };
+    let flags = condition_number(&fields, id, "Flags")?;
+    // Same TC flags as maps/store.rs; ClientExecutable adds no predicate.
+    if flags & DISABLED != 0 {
+        return Ok(ConditionRule::Always);
+    }
+    if let Some(reason) = unsupported_predicate(&fields, id, flags)? {
+        return Ok(ConditionRule::Unsupported(reason));
+    }
+    read_supported_predicate(conn, id, &fields, flags)
+}
+
+fn read_condition_fields(
+    conn: &Connection,
+    id: u32,
+) -> Result<Option<BTreeMap<String, Value>>, String> {
     let mut query = conn
         .prepare("SELECT * FROM player_condition WHERE ID=?1")
         .map_err(|e| e.to_string())?;
@@ -54,61 +74,76 @@ fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
         })
         .optional()
         .map_err(|e| e.to_string())?;
-    let Some(values) = values else {
-        return Ok(ConditionRule::Unsupported(format!(
-            "PlayerCondition {id} missing"
-        )));
-    };
-    let fields: BTreeMap<_, _> = names.into_iter().zip(values).collect();
-    let number = |name: &str| match fields.get(name) {
+    Ok(values.map(|values| names.into_iter().zip(values).collect()))
+}
+
+fn signed_condition_number(
+    fields: &BTreeMap<String, Value>,
+    id: u32,
+    name: &str,
+) -> Result<i64, String> {
+    match fields.get(name) {
         Some(Value::Integer(value)) => Ok(*value),
         _ => Err(format!(
             "PlayerCondition {id}: required integer {name} unavailable"
         )),
-    };
-    let flags = u32::try_from(number("Flags")?)
-        .map_err(|_| format!("PlayerCondition {id}: invalid flags"))?;
-    // Same TC flags as maps/store.rs: Disabled is unconditional; WithinOrAbove drops max.
-    if flags & DISABLED != 0 {
-        return Ok(ConditionRule::Always);
     }
-    // TC PlayerConditionFlags::ClientExecutable0x1 adds no predicate.
+}
+
+fn condition_number(fields: &BTreeMap<String, Value>, id: u32, name: &str) -> Result<u32, String> {
+    u32::try_from(signed_condition_number(fields, id, name)?)
+        .map_err(|_| format!("PlayerCondition {id}: invalid {name}"))
+}
+
+fn unsupported_predicate(
+    fields: &BTreeMap<String, Value>,
+    id: u32,
+    flags: u32,
+) -> Result<Option<String>, String> {
     if flags & !(CLIENT_EXECUTABLE | WITHIN_OR_ABOVE) != 0 {
-        return Ok(ConditionRule::Unsupported(format!(
+        return Ok(Some(format!(
             "PlayerCondition {id}: unsupported flags {flags}"
         )));
     }
-    let races = (number("RaceMasks_0")?, number("RaceMasks_1")?);
-    if !matches!(races, (0, 0) | (-1, -1)) {
-        return Ok(ConditionRule::Unsupported(format!(
-            "PlayerCondition {id}: unsupported race mask"
-        )));
+    let races = (
+        signed_condition_number(fields, id, "RaceMasks_0")?,
+        signed_condition_number(fields, id, "RaceMasks_1")?,
+    );
+    let unconstrained = matches!(races, (0, 0) | (-1, -1));
+    if !unconstrained {
+        return Ok(Some(format!("PlayerCondition {id}: unsupported race mask")));
     }
-    if let Some((name, _)) = fields
+    Ok(fields
         .iter()
         .find(|(name, value)| !supported_field(name, value))
-    {
-        return Ok(ConditionRule::Unsupported(format!(
-            "PlayerCondition {id}: unsupported {name}"
-        )));
+        .map(|(name, _)| format!("PlayerCondition {id}: unsupported {name}")))
+}
+
+fn read_supported_predicate(
+    conn: &Connection,
+    id: u32,
+    fields: &BTreeMap<String, Value>,
+    flags: u32,
+) -> Result<ConditionRule, String> {
+    let tuning = condition_number(fields, id, "ContentTuningID")?;
+    let achievement = condition_number(fields, id, "Achievement_0")?;
+    match (tuning, achievement) {
+        (0, 0) => Ok(ConditionRule::Always),
+        // Source33559 is this single earned-achievement predicate, not a level gate.
+        (0, id) => Ok(ConditionRule::Achievement { id }),
+        (tuning, 0) => read_level_rule(conn, id, tuning, flags),
+        _ => Ok(ConditionRule::Unsupported(format!(
+            "PlayerCondition {id}: combined ContentTuning/achievement unavailable"
+        ))),
     }
-    let tuning = u32::try_from(number("ContentTuningID")?)
-        .map_err(|_| format!("PlayerCondition {id}: invalid ContentTuningID"))?;
-    let achievement = u32::try_from(number("Achievement_0")?)
-        .map_err(|_| format!("PlayerCondition {id}: invalid Achievement_0"))?;
-    if achievement != 0 {
-        // Source33559 is a single earned-achievement predicate with no other constraint.
-        return Ok(if tuning == 0 {
-            ConditionRule::Achievement { id: achievement }
-        } else {
-            ConditionRule::Unsupported(format!(
-                "PlayerCondition {id}: combined ContentTuning/achievement unavailable"
-            ))
-        });
-    }
-    if tuning == 0 {
-        return Ok(ConditionRule::Always);
-    }
+}
+
+fn read_level_rule(
+    conn: &Connection,
+    id: u32,
+    tuning: u32,
+    flags: u32,
+) -> Result<ConditionRule, String> {
     let range = conn
         .query_row(
             "SELECT minlevel,maxlevel FROM content_tuning_level WHERE ID=?1",
