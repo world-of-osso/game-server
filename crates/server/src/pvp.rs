@@ -424,6 +424,7 @@ impl Plugin for PvpPlugin {
         app.add_systems(Update, process_pvp_dequeue_requests);
         app.add_systems(Update, pvp_talents::receive_requests);
         app.add_systems(PostUpdate, pvp_talents::sync_players);
+        pvp_war_mode::install_persistence(app);
         app.add_systems(
             Update,
             (pvp_war_mode::receive_requests, pvp_war_mode::sync_state).chain(),

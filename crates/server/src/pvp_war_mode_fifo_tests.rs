@@ -1,4 +1,5 @@
 use super::*;
+use crate::persistence;
 use crate::spell_cast::test_harness::{Harness, harness};
 use shared::protocol::PvpChannel;
 use std::time::{Duration, Instant};
@@ -85,6 +86,7 @@ fn city_harness() -> (Harness, u64) {
             .unwrap()
             .is_resting()
     );
+    install_persistence(&mut h.app);
     h.app.add_systems(Update, receive_requests);
     (h, character)
 }

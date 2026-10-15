@@ -1,12 +1,16 @@
 //! TC a352b1fa Player.cpp:30965–31054. Territory bits from local AreaTable.
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
-use crate::persistence::{self, GameDatabase};
+use crate::persistence::GameDatabase;
 use crate::pvp::{PlayerPvpState, pvp_support};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Player, Position};
 use shared::protocol::{PvpStateUpdate, SetWarModeDesired, WarModeSnapshot};
+#[path = "pvp_war_mode_persistence.rs"]
+mod persistence_actor;
+pub(super) use persistence_actor::install as install_persistence;
+
 const ENLISTED_INSIDE: u32 = 282559;
 const ENLISTED_OUTSIDE: u32 = 269083;
 
@@ -110,6 +114,7 @@ pub(super) fn receive_requests(
             Entity,
             &PlayerLink,
             &InWorld,
+            &Authenticated,
             &mut MessageReceiver<SetWarModeDesired>,
         ),
         With<Authenticated>,
@@ -117,13 +122,12 @@ pub(super) fn receive_requests(
     mut players: Players,
     mut areas: Areas,
     db: Res<GameDatabase>,
-    mut commands: Commands,
+    mut pending: ResMut<persistence_actor::PendingWarModeWrites>,
     mut senders: Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
-    for (connection, link, in_world, mut receiver) in &mut receivers {
+    for (connection, link, in_world, auth, mut receiver) in &mut receivers {
         for request in receiver.receive() {
-            let Ok((position, player, map, rest, combat, mut state)) = players.get_mut(link.0)
-            else {
+            let Ok((position, player, map, rest, combat, state)) = players.get_mut(link.0) else {
                 pvp_support::send_pvp_error(
                     connection,
                     &mut senders,
@@ -143,15 +147,17 @@ pub(super) fn receive_requests(
                 pvp_support::send_pvp_update(connection, &state, None, Some(error), &mut senders);
                 continue;
             }
-            state.progress.war_mode_desired = request.enabled;
-            persistence::save_pvp(&db.db, in_world.character_id, &state.progress);
-            let next = snapshot(context, request.enabled);
-            state.war_mode = Some(next.clone());
-            let owner = link.0;
-            commands.queue(move |world: &mut World| {
-                sync_enlisted_aura(world, owner, next.enlisted_spell)
-            });
-            pvp_support::send_pvp_update(connection, &state, None, None, &mut senders);
+            persistence_actor::enqueue(
+                &db,
+                &mut pending,
+                persistence_actor::Toggle {
+                    connection,
+                    player: link.0,
+                    account: auth.account_id,
+                    character: in_world.character_id,
+                    desired: request.enabled,
+                },
+            );
         }
     }
 }

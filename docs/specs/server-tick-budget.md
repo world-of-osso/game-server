@@ -41,6 +41,7 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [ ] Appearance refresh grants merge fresh durable account state on FIFO; complete owner snapshots and caches follow receipts. Existing atomic inventory/equipment/disposal grants remain unchanged.
 - [ ] Toy favourite changes read fresh durable ownership on FIFO; successful results and account-wide broadcasts follow commit receipts. Toy learning likewise loads fresh durable inventory on FIFO and atomically consumes the matching item with ownership; learning results, inventory publication and ownership credit wait for receipts. Other item consumption writers remain separately required.
 - [ ] NPC-kill reputation gains read fresh durable state and commit on FIFO, preserving successive kills and spillover; live reputation and owner snapshots change only after durability. Quest-reward writers remain separately required.
+- War Mode preferences merge fresh durable PvP progress on FIFO, preserving prior honor, brackets and talent choices. Successful owner preference/aura/snapshot publication follows a receipt bound to the same authenticated account, character and player. Active Enlisted effects use the player's current territory/instance at publication, not the original request context; unavailable territory defers active effects until normal context synchronization resumes.
 - [ ] Writer errors log and increment an observable failure metric; shutdown drains queued work.
 - [ ] Process-crash proof loses only work not acknowledged as durable.
 
