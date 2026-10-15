@@ -157,7 +157,7 @@ impl Plugin for ClassProgressionPlugin {
         app.add_systems(
             Update,
             (
-                init_player_progression,
+                init_player_progression.in_set(crate::achievement::InitializeSpellKnowledge),
                 process_set_specialization,
                 process_commit_trait_config,
                 process_set_action_button,

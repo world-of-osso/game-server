@@ -361,11 +361,7 @@ pub(crate) fn spawn_creature(
         }
         insert_ai_components(&mut entity, spawn, template, addon, world_data);
         crate::pvp::insert_track_switch(&mut entity, spawn);
-        crate::creature_aggro::insert_aggro_components(
-            &mut entity,
-            template.aggro_mode,
-            template.detection_range,
-        );
+        crate::creature_aggro::insert_aggro_components(&mut entity, template.aggro_mode);
         crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
         crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
         let string_ids = CreatureStringIds {
@@ -862,7 +858,6 @@ mod tests {
             experience_modifier: 1.0,
             gives_experience: true,
             script_name: String::new(),
-            detection_range: 20.0,
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             trigger: false,
             unit_flags: 0,
@@ -874,6 +869,8 @@ mod tests {
             }],
             tuning: None,
             armor: 0.0,
+            armor_modifier: 1.0,
+            health_scaling_expansion: 0,
             mana_modifier: 1.0,
             regenerates_power: false,
             regenerates_health: true,
