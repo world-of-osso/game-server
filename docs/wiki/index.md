@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions-native-proof-pending) — exact authored1778/1779 OR decoder3/3; native5253 credit not enabled or certified yet.
+
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
 
 - [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.
