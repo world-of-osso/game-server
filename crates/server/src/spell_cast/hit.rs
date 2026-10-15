@@ -521,7 +521,48 @@ fn roll_percent(chance: f32) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::spell_chance_units;
+    use super::{DEFENSE_MELEE, spell_chance_units, weapon_spell_dodge_chance};
+
+    #[test]
+    fn native_npc_dodge_chance_follows_authored_tuning_and_exact_level_bonus() {
+        use crate::auras::{RemoveReason, remove_auras};
+        use crate::spell_cast::npc_dodge_tests::spawn_native_dodge_target;
+        use shared::components::{Level, UnitLevel};
+
+        // Native40 tuning73 clamps1..30; native626 tuning6 clamps5..30.
+        for (entry, level, expected) in [(40, 10, 3.0), (40, 31, 3.0), (626, 1, 9.0), (626, 2, 7.5)]
+        {
+            let mut h = spawn_native_dodge_target(entry, 0.0);
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert((Level(level), UnitLevel(level)));
+            h.advance(2);
+            let spell = crate::spell_cast::test_harness::world_db()
+                .unwrap()
+                .store
+                .get(38598)
+                .unwrap();
+            let chance =
+                weapon_spell_dodge_chance(h.app.world(), h.caster, spell, h.npc, DEFENSE_MELEE);
+            assert_eq!(
+                chance,
+                expected + 100.0,
+                "native49 plus level chance for NPC{entry}/player{level}"
+            );
+            remove_auras(h.app.world_mut(), h.npc, RemoveReason::Cancelled, |aura| {
+                aura.spell_id == 70188
+            });
+            h.advance(2);
+            let chance =
+                weapon_spell_dodge_chance(h.app.world(), h.caster, spell, h.npc, DEFENSE_MELEE);
+            assert_eq!(
+                chance, expected,
+                "native baseline/level chance for NPC{entry}/player{level}"
+            );
+            assert_eq!(spell_chance_units(chance), (expected * 100.0) as u32);
+        }
+    }
 
     #[test]
     fn weapon_spell_probability_truncates_to_native_hundredths() {
