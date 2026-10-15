@@ -7,6 +7,9 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
         Duration::from_millis(250),
     ));
     let player = connect(&mut app, 1, "Alice");
+    app.world_mut()
+        .entity_mut(player.player)
+        .insert(crate::maps::DungeonDifficulty(205));
     pump(&mut app);
     let mut online = OnlineView::from([(
         1,
@@ -89,7 +92,7 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
             ))
             .id();
         let member = crate::followers::Follower::member_id(unit);
-        online.insert(member, follower.online(unit, 80));
+        online.insert(member, follower.online(unit, 80, 205));
         members.push((member, role));
         if entry == 209057 {
             tank = Some(unit);

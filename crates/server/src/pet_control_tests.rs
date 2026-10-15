@@ -37,7 +37,8 @@ fn world_db() -> Option<Connection> {
 
 fn wolf_template(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut templates = load_templates(conn, &load_expected_stats(conn));
-    templates.retain(|entry, _| *entry == DISEASED_YOUNG_WOLF);
+    // Keep native defense metadata for the harness's live Kobold target too.
+    templates.retain(|entry, _| [6, DISEASED_YOUNG_WOLF].contains(entry));
     templates
 }
 

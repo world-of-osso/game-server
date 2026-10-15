@@ -54,7 +54,9 @@ fn class_completeness_native_bladestorm_blocks_foreign_class_arcane_explosion() 
 
 #[test]
 fn class_completeness_native_bladestorm_parent_family_allows_real_mortal_strike() {
-    let mut h = harness(Vec::new(), &[BLADESTORM, MORTAL_STRIKE], 1).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[BLADESTORM, MORTAL_STRIKE], 1)
+            .unwrap();
     h.set_power(PowerType::Rage, 1000.0);
     apply_restriction(&mut h);
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
@@ -65,7 +67,9 @@ fn class_completeness_native_bladestorm_parent_family_allows_real_mortal_strike(
             .iter()
             .any(|event| event.spell_id == Some(MORTAL_STRIKE)
                 && event.kind == CombatLogKind::Damage
-                && event.amount > 0)
+                && event.amount > 0),
+        "{:?}",
+        h.inbox.log
     );
 }
 

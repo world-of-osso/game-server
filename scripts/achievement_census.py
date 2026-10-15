@@ -121,7 +121,7 @@ def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
     if kind in item_facts:
         return asset in item_facts[kind]
-    if kind == 87:
+    if kind in (87, -87):
         return asset in achievement_ids
     if kind == 67:
         return asset in node_counts
