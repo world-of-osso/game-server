@@ -439,6 +439,14 @@ mod tests {
             .find(|phase| phase["phase"] == "Update" && phase["preparation"] == false)
             .unwrap_or_else(|| panic!("missing measured Update execution/deferred work: {output}"));
         assert!(update["work_ms"].as_f64().unwrap() >= 50.0);
+        let deferred = output
+            .lines()
+            .find(|line| line.contains("Deferred command stall"))
+            .unwrap_or_else(|| panic!("deferred producer is not attributed: {output}"));
+        assert!(
+            deferred.contains("slow_deferred_command_is_attributed_to_its_enclosing_schedule"),
+            "deferred work lost its producing system: {deferred}"
+        );
         assert_eq!(
             output.matches("Main schedule breakdown").count(),
             2,
