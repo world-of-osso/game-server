@@ -1282,3 +1282,4 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-15: Wailing source21–27 wake-up/flight exit port after actual Sleep→Stand RED; existing flight policy unchanged, behavioral GREEN/native proof still pending.
 - 2026-10-15: Wake/flight exit GREEN053915ae1/1 in31.22s, unchanged firstwave/fourdruid controls2PASS, all-target check14.62s/no warnings and scopedfmt/diff exit0. Corrected fixture instant-aura assumption using actual8153 five-second cast. Independent lead gate pending; natural/native clears still open.
+- 2026-10-15: Wailing Normal ritual-wave copy-only projection profile after process-boundary RED; source identity/stat fields preserved, canonical publication/balance separate.
