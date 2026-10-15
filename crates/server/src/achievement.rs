@@ -97,6 +97,10 @@ impl Plugin for AchievementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::maps::ServerClock>();
         app.add_message::<CriteriaCredit>();
+        app.configure_sets(
+            Update,
+            InitializeSpellKnowledge.after(crate::auth::process_select_character),
+        );
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(PostUpdate, kills::publish_rewarded_creature_kills);
