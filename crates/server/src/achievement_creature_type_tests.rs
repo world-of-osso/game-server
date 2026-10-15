@@ -51,6 +51,31 @@ fn kill_source_target_with_shadow_bolts(h: &mut Harness, target: Entity) {
     assert!(h.inbox.go.iter().any(|cast| cast.spell_id == 686));
 }
 
+fn assert_creature_statistics(h: &Harness, total: u64, maximum: u64, distinct: u64) {
+    let catalog = h.app.world().resource::<AchievementCatalog>();
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    for (achievement, value) in [(107, total), (1336, maximum), (1337, distinct)] {
+        let AchievementCatalogPage::Statistics { achievements, .. } = catalog.page(
+            state,
+            QueryAchievementCatalog::Statistics {
+                category_id: 135,
+                after_id: achievement - 1,
+            },
+            1,
+        ) else {
+            panic!("expected creature statistics page");
+        };
+        let row = achievements.first().unwrap();
+        assert_eq!(row.achievement_id, achievement);
+        assert_eq!(row.statistic_value, Some(value));
+        assert!(!row.earned, "statistics cannot become earned achievements");
+    }
+}
+
 #[test]
 fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopened_counters() {
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -75,6 +100,7 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
         crate::persistence::ClientId(character),
         PlayerAchievementState::default(),
     ));
+    assert_creature_statistics(&h, 0, 0, 0);
     for (entry, kind, criterion, total, typed) in [
         (40, 7, 4953, 1, 1),
         (299, 1, 4948, 2, 1),
@@ -129,28 +155,7 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
             counters,
             "dead/idle updates cannot replay a kill"
         );
-    }
-    let catalog = h.app.world().resource::<AchievementCatalog>();
-    let state = h
-        .app
-        .world()
-        .get::<PlayerAchievementState>(h.caster)
-        .unwrap();
-    for (achievement, value) in [(107, 3), (1336, 2), (1337, 2)] {
-        let AchievementCatalogPage::Statistics { achievements, .. } = catalog.page(
-            state,
-            QueryAchievementCatalog::Statistics {
-                category_id: 135,
-                after_id: achievement - 1,
-            },
-            1,
-        ) else {
-            panic!("expected creature statistics page");
-        };
-        let row = achievements.first().unwrap();
-        assert_eq!(row.achievement_id, achievement);
-        assert_eq!(row.statistic_value, Some(value));
-        assert!(!row.earned, "statistics cannot become earned achievements");
+        assert_creature_statistics(&h, total, typed, total.min(2));
     }
     drop(h);
     let reopened = redb::Database::open(file.path()).unwrap();
