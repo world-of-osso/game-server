@@ -126,6 +126,28 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
             "dead/idle updates cannot replay a kill"
         );
     }
+    let catalog = h.app.world().resource::<AchievementCatalog>();
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    for (achievement, value) in [(107, 2), (1336, 1)] {
+        let AchievementCatalogPage::Statistics { achievements, .. } = catalog.page(
+            state,
+            QueryAchievementCatalog::Statistics {
+                category_id: 135,
+                after_id: achievement - 1,
+            },
+            1,
+        ) else {
+            panic!("expected creature statistics page");
+        };
+        let row = achievements.first().unwrap();
+        assert_eq!(row.achievement_id, achievement);
+        assert_eq!(row.statistic_value, Some(value));
+        assert!(!row.earned, "statistics cannot become earned achievements");
+    }
     drop(h);
     let reopened = redb::Database::open(file.path()).unwrap();
     let saved = persistence::load_achievements(&reopened, character);
