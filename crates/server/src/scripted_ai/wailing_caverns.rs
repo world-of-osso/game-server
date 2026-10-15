@@ -1,6 +1,6 @@
 //! TC a352b1fa instance_wailing_caverns.cpp four-druid DONE notification and
-//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–16. Gossip,
-//! later awakening and targeted random aggro speech remain unported. Escort
+//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–20. Gossip,
+//! wake-up/exit and targeted random aggro speech remain unported. Escort
 //! events use their separate out-of-combat clock.
 use bevy::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Rotation};
@@ -72,6 +72,16 @@ const SAY_RITUAL_PROTECTION: u8 = 7;
 const SAY_RITUAL_BEGINS: u8 = 8;
 const NARALEXS_AWAKENING: u32 = 6271;
 const MOCCASIN_GROUP: u32 = 2;
+const EVENT_NARALEX_RESTLESS: u32 = 17;
+const EVENT_SUMMON_ECTOPLASMS: u32 = 18;
+const EVENT_NARALEX_AGONY: u32 = 19;
+const EVENT_SUMMON_MUTANUS: u32 = 20;
+const ECTOPLASM_GROUP: u32 = 3;
+const MUTANUS_GROUP: u32 = 4;
+const NARALEX: u32 = 3679;
+const EMOTE_NARALEX_RESTLESS: u8 = 0;
+const EMOTE_NARALEX_AGONY: u8 = 1;
+const EMOTE_NARALEX_VISION: u8 = 2;
 
 impl Disciple {
     fn advance_escort(&mut self, ctx: &mut Ctx, diff_ms: u32) {
@@ -90,8 +100,35 @@ impl Disciple {
                 EVENT_RITUAL_SPEECH | EVENT_START_AWAKENING | EVENT_SUMMON_MOCCASINS => {
                     self.run_awakening_event(ctx, event);
                 }
+                EVENT_NARALEX_RESTLESS
+                | EVENT_SUMMON_ECTOPLASMS
+                | EVENT_NARALEX_AGONY
+                | EVENT_SUMMON_MUTANUS => self.run_later_ritual_event(ctx, event),
                 _ => unreachable!("Disciple escort event {event}"),
             }
+        }
+    }
+
+    fn run_later_ritual_event(&mut self, ctx: &mut Ctx, event: u32) {
+        match event {
+            EVENT_NARALEX_RESTLESS => {
+                talk_naralex(ctx, EMOTE_NARALEX_RESTLESS);
+                self.escort_events.schedule(EVENT_SUMMON_ECTOPLASMS, 25_000);
+            }
+            EVENT_SUMMON_ECTOPLASMS => {
+                ctx.summon_creature_group(ECTOPLASM_GROUP);
+                self.escort_events.schedule(EVENT_NARALEX_AGONY, 20_000);
+            }
+            EVENT_NARALEX_AGONY => {
+                talk_naralex(ctx, EMOTE_NARALEX_AGONY);
+                self.escort_events.schedule(EVENT_SUMMON_MUTANUS, 30_000);
+            }
+            EVENT_SUMMON_MUTANUS => {
+                talk_naralex(ctx, EMOTE_NARALEX_VISION);
+                ctx.summon_creature_group(MUTANUS_GROUP);
+                // Source event21 (+25s) belongs to the unported wake-up/exit.
+            }
+            _ => unreachable!("Disciple later ritual event {event}"),
         }
     }
 
@@ -108,7 +145,7 @@ impl Disciple {
             }
             EVENT_SUMMON_MOCCASINS => {
                 ctx.summon_creature_group(MOCCASIN_GROUP);
-                // Source event17 (+15s) belongs to the unported later awakening.
+                self.escort_events.schedule(EVENT_NARALEX_RESTLESS, 15_000);
             }
             _ => unreachable!("Disciple awakening event {event}"),
         }
@@ -170,6 +207,16 @@ impl Disciple {
             }
             _ => unreachable!("Disciple second camp event {event}"),
         }
+    }
+}
+
+fn talk_naralex(ctx: &mut Ctx, group: u8) {
+    let map = *ctx
+        .world
+        .get::<InMap>(ctx.me)
+        .expect("Disciple instance map");
+    if let Some(naralex) = find_instance_creature(ctx.world, map, NARALEX) {
+        super::creature_text::talk(ctx.world, naralex, group);
     }
 }
 
@@ -273,7 +320,7 @@ pub(super) fn on_boss_state_changed(
     if !ready {
         return;
     }
-    if let Some(disciple) = find_disciple(world, map) {
+    if let Some(disciple) = find_instance_creature(world, map, DISCIPLE) {
         super::dispatch(world, disciple, Hook::DoAction(ACTION_ALL_DONE));
     }
 }
@@ -287,12 +334,10 @@ fn all_druids_done(script: &InstanceScript) -> bool {
     })
 }
 
-/// Source GetCreature(DATA_DISCIPLE): only the object in this instance copy.
-fn find_disciple(world: &mut World, map: InMap) -> Option<Entity> {
+/// Source instance GetCreature: only the requested entry in this copy.
+fn find_instance_creature(world: &mut World, map: InMap, entry: u32) -> Option<Entity> {
     world
         .query::<(Entity, &Npc, &InMap)>()
         .iter(world)
-        .find_map(|(actor, npc, copy)| {
-            (npc.template_id == DISCIPLE && *copy == map).then_some(actor)
-        })
+        .find_map(|(actor, npc, copy)| (npc.template_id == entry && *copy == map).then_some(actor))
 }
