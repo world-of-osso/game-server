@@ -1,3 +1,7 @@
+## 2026-10-15 — Breakable CC target protection
+
+[Source boundary](investigations/follower-data.md#breakable-cc-targeting--2026-10-15): follower hold/retarget and unfinished hostile cast/swing stop; Attr6 `0x100` implicit chain/area exclusion. Native118/profile/31935/176017 RED8 plus explicit-player positive control; GREEN/build/live proof tracked separately. Stats, CC budgets and launched missiles unchanged; Stockade0/3 remains open.
+
 ## 2026-10-14 — Source-correct proximity distance
 
 [Creature aggro](systems/creature-aggro.md#aggro-on-sight) replaces the pet-style detection radius with TC a352b1fa GetAttackDistance, level/expansion and detect-aura rules, authored scaled combat reaches and strict distance. Stockade30vs32 native player/companion regressions RED2→GREEN34, including positive boundary and scaled cross-cell controls. Check/build/live rerun remain separate gates; no claim that radius alone caused the prior over-pull.
