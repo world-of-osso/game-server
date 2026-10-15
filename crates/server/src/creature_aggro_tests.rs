@@ -17,8 +17,6 @@ const HUMAN: u32 = 1;
 const MONSTER: u32 = 22;
 /// FactionTemplate 189 (Stonetusk Boar): no groups, neutral to players.
 const NEUTRAL_BEAST: u32 = 189;
-/// Forest Spider `detection_range`.
-const SPIDER_DETECTION: f32 = 18.0;
 
 fn faction_templates() -> FactionTemplates {
     let entry = |id, faction, flags, faction_group, friend_group, enemy_group| {
@@ -48,7 +46,15 @@ fn aggro_app() -> App {
     app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
         50,
     )));
-    app.insert_resource(WorldData::default());
+    app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+        &[30],
+    ));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(faction_templates());
     app.add_plugins((CombatPlugin, CreatureAiPlugin, CreatureAggroPlugin));
     app.update();
@@ -104,6 +110,7 @@ const STONETUSK_BOAR: CreatureFixture = CreatureFixture {
 
 /// Spawned through the same component path as world spawns (`zones.rs`).
 fn spawn_creature(app: &mut App, fixture: &CreatureFixture, position: Position) -> Entity {
+    let display_id = app.world().resource::<WorldData>().templates[&30].models[0].display_id;
     let world = app.world_mut();
     let mut commands = world.commands();
     let mut entity = commands.spawn((
@@ -113,6 +120,7 @@ fn spawn_creature(app: &mut App, fixture: &CreatureFixture, position: Position) 
             template_id: 30,
             name: "Forest Spider".into(),
         },
+        shared::components::ModelDisplay { display_id },
         Health {
             current: fixture.health,
             max: fixture.health,
@@ -128,7 +136,7 @@ fn spawn_creature(app: &mut App, fixture: &CreatureFixture, position: Position) 
             speed_run: 1.14286,
         },
     ));
-    insert_aggro_components(&mut entity, fixture.mode, SPIDER_DETECTION);
+    insert_aggro_components(&mut entity, fixture.mode);
     let id = entity.id();
     world.flush();
     id
@@ -187,24 +195,6 @@ fn attack(app: &mut App, player: Entity, target: Entity) {
         .insert(AutoAttack::new(target));
 }
 
-#[test]
-fn aggro_radius_follows_level_difference_with_clamps() {
-    assert_eq!(aggro_radius(18.0, 5, 5), 18.0);
-    assert_eq!(aggro_radius(18.0, 5, 10), 13.0);
-    assert_eq!(aggro_radius(18.0, 10, 5), 23.0);
-    assert_eq!(
-        aggro_radius(20.0, 60, 1),
-        45.0,
-        "capped at MAX_AGGRO_RADIUS"
-    );
-    assert_eq!(aggro_radius(20.0, 1, 60), 5.0, "floor of 5 yards");
-    assert_eq!(
-        aggro_radius(0.0, 5, 5),
-        0.0,
-        "no detection range never aggroes"
-    );
-}
-
 /// Recorded Stockade cell geometry is 15.70 yd from the level32 tank.
 /// TC GetAttackDistance (Creature.cpp:2165) gives a 14.5 yd center boundary
 /// for level30 vs32 and source combat reaches1.5, not detection_range20−2.
@@ -219,12 +209,15 @@ fn stockade_level30_does_not_body_pull_a_level32_player_at_15_7_yards() {
         },
         at(0.0, 0.0),
     );
-    app.world_mut()
-        .entity_mut(criminal)
-        .insert(AggroRange(20.0));
-    spawn_player(&mut app, at(15.7, 0.0), 32);
+    let player = spawn_player(&mut app, at(15.7, 0.0), 32);
     run(&mut app, 1);
     assert_eq!(state(&app, criminal), Some(CreatureState::Idle));
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(14.5, 0.0);
+    run(&mut app, 1);
+    assert_eq!(state(&app, criminal), Some(CreatureState::Idle));
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(14.49, 0.0);
+    run(&mut app, 1);
+    assert_eq!(state(&app, criminal), pursuing(player));
 }
 
 #[test]
@@ -238,10 +231,7 @@ fn stockade_level30_does_not_body_pull_a_level32_companion_at_15_7_yards() {
         },
         at(0.0, 0.0),
     );
-    app.world_mut()
-        .entity_mut(criminal)
-        .insert(AggroRange(20.0));
-    spawn_creature(
+    let companion = spawn_creature(
         &mut app,
         &CreatureFixture {
             faction: HUMAN,
@@ -251,8 +241,64 @@ fn stockade_level30_does_not_body_pull_a_level32_companion_at_15_7_yards() {
         },
         at(15.7, 0.0),
     );
+    app.world_mut().entity_mut(companion).insert((
+        Npc {
+            template_id: 209057,
+            name: "Captain Garrick".into(),
+        },
+        shared::components::ModelDisplay { display_id: 113753 },
+    ));
     run(&mut app, 24);
     assert_eq!(state(&app, criminal), Some(CreatureState::Idle));
+    *app.world_mut().get_mut::<Position>(companion).unwrap() = at(14.49, 0.0);
+    app.world()
+        .resource::<crate::interest::InterestDirtyQueue>()
+        .mark(companion);
+    run(&mut app, 24);
+    assert_eq!(state(&app, criminal), pursuing(companion));
+}
+
+#[test]
+fn creature_aggro_search_includes_scaled_bodies_beyond_the_forty_five_yard_cells() {
+    let mut app = aggro_app();
+    app.world_mut()
+        .resource_mut::<WorldData>()
+        .templates
+        .get_mut(&30)
+        .unwrap()
+        .health_scaling_expansion = 11;
+    let criminal = spawn_creature(
+        &mut app,
+        &CreatureFixture {
+            level: 90,
+            ..FOREST_SPIDER
+        },
+        at(44.0, 0.0),
+    );
+    let companion = spawn_creature(
+        &mut app,
+        &CreatureFixture {
+            faction: HUMAN,
+            level: 1,
+            mode: AggroMode::Reactive,
+            health: 7840.0,
+        },
+        at(95.1, 0.0),
+    );
+    for unit in [criminal, companion] {
+        app.world_mut().entity_mut(unit).insert((
+            shared::components::ModelDisplay { display_id: 113753 },
+            shared::components::UnitScale(2.0),
+        ));
+    }
+    run(&mut app, 24);
+    assert_eq!(state(&app, criminal), Some(CreatureState::Idle));
+    *app.world_mut().get_mut::<Position>(companion).unwrap() = at(94.0, 0.0);
+    app.world()
+        .resource::<crate::interest::InterestDirtyQueue>()
+        .mark(companion);
+    run(&mut app, 24);
+    assert_eq!(state(&app, criminal), pursuing(companion));
 }
 
 #[test]
@@ -303,12 +349,12 @@ fn hostile_spider_aggroes_player_in_radius_chases_and_hits() {
 fn player_outside_level_scaled_radius_is_ignored() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
-    // Level 10 vs level 5 spider: radius 18 - 5 = 13 yards.
+    // Level10 vs5: TC center radius15 + target reach1.5 -5 =11.5.
     spawn_player(&mut app, at(15.0, 0.0), 10);
     run(&mut app, 10);
     assert_eq!(state(&app, spider), Some(CreatureState::Idle));
 
-    // Level 1: radius 18 + 4 = 22 yards.
+    // Level1: TC center radius15 +1.5 +4 =20.5.
     let low = spawn_player(&mut app, at(0.0, 20.0), 1);
     run(&mut app, 1);
     assert_eq!(state(&app, spider), pursuing(low));
@@ -333,22 +379,27 @@ fn tuned_creature_aggro_radius_uses_its_level_against_the_player() {
         max_level: 30,
         delta: 0,
     });
-    // Scaled to level 10 against a level 10 player: radius 18 yards.
+    // Scaled to level10 against level10: TC center radius16.5 yards.
     spawn_player(&mut app, at(20.0, 0.0), 10);
     run(&mut app, 10);
     assert_eq!(state(&app, spider), Some(CreatureState::Idle));
-    let near = spawn_player(&mut app, at(0.0, 17.0), 10);
+    let near = spawn_player(&mut app, at(0.0, 16.0), 10);
     run(&mut app, 1);
     assert_eq!(state(&app, spider), pursuing(near));
 }
 
 #[test]
-fn long_detection_range_is_capped_at_max_aggro_radius() {
+fn attack_distance_is_capped_before_adding_combat_reaches() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
-    // 80 yd detection against a level 1 player would be 84 yd; the cap is 45.
-    app.world_mut().entity_mut(spider).insert(AggroRange(80.0));
-    spawn_player(&mut app, at(46.0, 0.0), 1);
+    app.world_mut().get_mut::<UnitLevel>(spider).unwrap().0 = 90;
+    app.world_mut()
+        .resource_mut::<WorldData>()
+        .templates
+        .get_mut(&30)
+        .unwrap()
+        .health_scaling_expansion = 11;
+    spawn_player(&mut app, at(60.0, 0.0), 1);
     run(&mut app, 10);
     assert_eq!(state(&app, spider), Some(CreatureState::Idle));
 
@@ -714,7 +765,7 @@ fn spawn_harness_boar(h: &mut crate::spell_cast::test_harness::Harness, x: f32) 
             max: 5000.0,
         },
     ));
-    insert_aggro_components(&mut entity, AggroMode::Aggressive, 18.0);
+    insert_aggro_components(&mut entity, AggroMode::Aggressive);
     let id = entity.id();
     world.flush();
     id

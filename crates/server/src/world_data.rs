@@ -45,8 +45,6 @@ pub struct CreatureTemplate {
     pub gives_experience: bool,
     /// `ScriptName`: the AzerothCore CreatureScript (`creature_scripts`).
     pub script_name: String,
-    /// `detection_range`: aggro radius against a same-level target.
-    pub detection_range: f32,
     pub aggro_mode: AggroMode,
     /// `CREATURE_FLAG_EXTRA_TRIGGER`: the template spawns with its invisible model.
     pub trigger: bool,
@@ -563,7 +561,6 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         script_name: row.get(13)?,
         unit_class,
         expansion: row.get::<_, i64>(15)? as u8,
-        detection_range: row.get(16)?,
         aggro_mode: AggroMode::for_template(
             row.get::<_, i64>(10)? as u32,
             row.get::<_, i64>(11)? as u32,
