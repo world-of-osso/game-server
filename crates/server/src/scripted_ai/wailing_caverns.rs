@@ -1,7 +1,7 @@
 //! TC a352b1fa instance_wailing_caverns.cpp four-druid DONE notification and
-//! wailing_caverns.cpp Disciple DoAction0 and combat spells. Escort, gossip and
-//! targeted random aggro speech remain unported. The first escort camp (source
-//! path367800/367801 ends → events4–11) run on their separate out-of-combat clock.
+//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–13. Gossip and
+//! targeted random aggro speech remain unported. Source path367800–367802 ends
+//! drive events4–13 on their separate out-of-combat clock.
 use bevy::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Rotation};
 
@@ -61,6 +61,10 @@ const EVENT_CHAMBER_PATH: u32 = 11;
 const SECOND_CAMP_GROUP: u32 = 1;
 const SAY_SECOND_CAMP: u8 = 4;
 const SAY_PURIFIED: u8 = 5;
+const EVENT_CHAMBER_SPEECH: u32 = 12;
+const EVENT_APPROACH_NARALEX: u32 = 13;
+const SAY_CHAMBER: u8 = 6;
+const PATH_APPROACH_NARALEX: u32 = 367803;
 
 impl Disciple {
     fn advance_escort(&mut self, ctx: &mut Ctx, diff_ms: u32) {
@@ -75,8 +79,24 @@ impl Disciple {
                 | EVENT_SECOND_CAMP_SUMMONS
                 | EVENT_PURIFIED_SPEECH
                 | EVENT_CHAMBER_PATH => self.run_second_camp_event(ctx, event),
+                EVENT_CHAMBER_SPEECH | EVENT_APPROACH_NARALEX => {
+                    self.run_chamber_event(ctx, event);
+                }
                 _ => unreachable!("Disciple escort event {event}"),
             }
+        }
+    }
+
+    fn run_chamber_event(&mut self, ctx: &mut Ctx, event: u32) {
+        match event {
+            EVENT_CHAMBER_SPEECH => {
+                ctx.talk(SAY_CHAMBER);
+                self.escort_events.schedule(EVENT_APPROACH_NARALEX, 5_000);
+            }
+            EVENT_APPROACH_NARALEX => {
+                super::waypoint_path::move_path(ctx.world, ctx.me, PATH_APPROACH_NARALEX);
+            }
+            _ => unreachable!("Disciple chamber event {event}"),
         }
     }
 
@@ -154,6 +174,7 @@ impl CreatureAi for Disciple {
         match path_id {
             PATH_FIRST_CAMP => self.escort_events.schedule(EVENT_FIRST_CAMP_SPEECH, 1_000),
             PATH_SECOND_CAMP => self.escort_events.schedule(EVENT_SECOND_CAMP_CLEANSING, 0),
+            PATH_NARALEX_CHAMBER => self.escort_events.schedule(EVENT_CHAMBER_SPEECH, 1_000),
             _ => {}
         }
     }
