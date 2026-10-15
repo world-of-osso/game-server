@@ -1,6 +1,6 @@
 ## 2026-10-14 — Cold aura population, shared snapshots and mount item FIFO
 
-[Tick lag](investigations/server-tick-lag.md#cold-population-and-request-catalog-snapshots--2026-10-14): dormant initialization/wake and owned catalog snapshot RED/GREEN; mount consumption preserves earlier FIFO wallet state. Native36/36 plus vendor control pass; learner-departure follow-up and new release acceptance remain open.
+[Tick lag](investigations/server-tick-lag.md#cold-population-and-request-catalog-snapshots--2026-10-14): dormant initialization/wake and owned catalog snapshot RED/GREEN; mount consumption preserves earlier FIFO wallet state. Native36/36 plus vendor control pass; latest departure/merge scopes5/5 and catalog30/30 pass. Runtime check is warning-free; new release acceptance remains open.
 
 ## 2026-10-14 — Spell-derived mount FIFO and quiet cold-budget failure
 
