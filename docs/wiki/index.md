@@ -34,13 +34,18 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Wailing targeted aggro Say](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) — attacker-name substitution, unchanged25yd broadcast, controlled native-server proof; natural activation/native clear open.
+
+- [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
+- [Wailing later ritual waves](systems/boss-scripts.md#wailing-later-ritual-waves--2026-10-14) — same-copy Naralex emotes, seven Ectoplasms and actual timed Mutanus; controlled deaths, wake-up/exit still open.
 - [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
 
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
 
 - [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.
 
-- [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
+- [C++ waypoint source generation/ownership](systems/navigation.md#current-controlled-physical-proof) — smooth controls, active-owner reset and exact moving feet; controlled three-path/two-camp traversal passes, natural/native clear open.
+- [Wailing chamber approach](systems/boss-scripts.md#wailing-chamber-approach--2026-10-14) — source1s speech/+5s launch; actual fourth-path78.6692yd with floor/budget/corridor/LOS proof.
 
 - [Alterac captain combat](investigations/alterac-captain-combat.md) — AV25 source stat budget and incomplete normal combat driver; missing script is not a proven wipe cause.
 
@@ -388,3 +393,6 @@ Debug logs and root cause analyses.
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
 
 - [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the unresolved Flute follow promise.
+- [Wailing wake-up and flight exit](systems/boss-scripts.md#wailing-wake-up-and-flight-exit--2026-10-15) — source21–27 controlled RED/GREEN, real distinct flight endpoints/retirement and ordinary5s Owl cast; lead gate pending.
+
+- [Wailing Normal wave projection](systems/boss-scripts.md#wailing-normal-wave-projection--2026-10-15) — copy-only source Normal rows; two process-boundary tests pass, no canonical/balance claim.
