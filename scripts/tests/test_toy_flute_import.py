@@ -17,6 +17,9 @@ class ToyFluteImportTests(unittest.TestCase):
     def test_scarab_preserves_native_template_and_weighted_model_choices(self):
         self.copy_import_and_compare_native_models(51113, [36611, 36595], [1.0, 2.0])
 
+    def test_bashiok_preserves_native_template_and_source_model(self):
+        self.copy_import_and_compare_native_models(86916, [60051], [1.0])
+
     def copy_import_and_compare_native_models(self, entry, displays, weights):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "world.sqlite"

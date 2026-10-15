@@ -6,6 +6,9 @@
 
 [Twenty real battles](systems/dungeon-achievements.md#full-family-earned-level-proof) at33782a95 pass1/1(37.10s), proving all0–9 families at10/25, actual6609/6610 grants only after every family, original dates, real Repair/persistent injuries, consumed targets, DB reopen/auth login and account43 isolation. No HP/XP/progress/earned-ID overrides after baseline. Source state161 guard stays intact; optional unsupported Extra Plating was not used. Predicate/census unchanged; acquisition/world population/rendered UI unclaimed.
 
+## 2026-10-15 — Source Toy forward destination
+
+[Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
 ## 2026-10-14 — Pet-level type qualifiers, native proof
 
 [BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); the subsequent twenty-battle follow-up proves all ten types/10-level/25-level grants; acquisition/rendered UI remain unclaimed.
@@ -1333,3 +1336,4 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Pre-effect spell-hit target creature entries
 
 [TargetCreatureId4](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) and complete Some selectors use actual hit NPC.template_id for native110, retaining DoEmote54 and every companion. Source165 actualdamage/bonus-exclusion/zero-hit boundary passes before valid predicate RED12660Nonevs3. Generated5621/census5483+1821 adds account4436/4437 only. Native GREEN4091b81b2/2(18.30s) proves both factions’ actual leader grants, wrong NPC/Player/missing/depth/idle rejection and durable counters/grant dates after reopen/re-entry. All243 matrix/pinned5483 and readability pass; required workspace filter178/0/1ignored(269.99s) +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b source scope. Independent verifier unavailable; no content/acquisition/UI certificate.
+- 2026-10-15 — [Spell casting](systems/spell-casting.md): spell queue window widened from 400 ms to 750 ms, the hasted-GCD floor (user decision; Retail/TrinityCore use 400 ms). RED: `spellqueue_exact_750ms_boundary_is_inclusive` 9/1 with the 400 ms constant; GREEN 10/10.
