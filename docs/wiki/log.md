@@ -1,3 +1,7 @@
+## 2026-10-15 — Source guardian level selection
+
+[Guardian51](systems/toys.md#source-guardian-level-selection-2026-10-15): actual UseToy owner80 Scarabs RED80→GREEN30, owner20 retained20; template/map/destination-area tuning and difficulty delta precede guardian initialization, explicit UseCreatureLevel. Thirteen scoped controls pass at77ef8c6f, including retained class/count/follow/expiry/startup fixtures. Private wire, merged checks and complete guardian-stat/AI parity remain separate.
+
 ## 2026-10-15 — Follower passive-derived stat recomputation
 
 [Source boundary](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15): NPC bridge passives stored modifiers but the player-only query never recomputed them. Native spec66 RED2 proves7840 versus sourced10584/8232 without stat overrides; same production query now accepts follower profile identity and ordinary modifier changes. GREEN/build/live proof remain separate; Stockade0/3 stays open.

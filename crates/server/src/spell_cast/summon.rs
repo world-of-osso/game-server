@@ -457,30 +457,9 @@ fn read_summon_template(
     properties: SummonProperties,
     dest: super::targets::Dest,
 ) -> Option<SummonTemplate> {
-    let map = *world.get::<InMap>(owner)?;
-    let difficulty = if properties.is_guardian() {
-        crate::zones::map_difficulty_id(world, map)
-    } else {
-        0
-    };
-    let area = if properties.is_guardian() {
-        world
-            .get_resource_mut::<crate::ground::GroundMap>()
-            .and_then(|mut ground| ground.area_at(map.map_id, dest.position))
-    } else {
-        None
-    };
+    let (difficulty, level) = roll_summon_level(world, owner, entry, properties, dest)?;
     let data = world.get_resource::<crate::world_data::WorldData>()?;
     let template = data.template_for(entry, difficulty)?;
-    let owner_level = world.get::<Level>(owner).map_or(1, |level| level.0);
-    let level = if properties.is_guardian() {
-        let range = data
-            .summon_levels
-            .guardian_range(template, map.map_id, difficulty, area)?;
-        roll_guardian_level(owner_level, range, properties.flags)
-    } else {
-        owner_level
-    };
     let display_id = crate::zones::template_display_id(template, &mut rand::thread_rng());
     let display_scale = model_display_scale(template, display_id);
     Some(SummonTemplate {
@@ -494,6 +473,34 @@ fn read_summon_template(
         display_id,
         display_scale,
     })
+}
+
+/// Return the selected map difficulty and native level before reading health/model stats.
+fn roll_summon_level(
+    world: &mut World,
+    owner: Entity,
+    entry: u32,
+    properties: SummonProperties,
+    dest: super::targets::Dest,
+) -> Option<(u32, u8)> {
+    let owner_level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    if !properties.is_guardian() {
+        return Some((0, owner_level));
+    }
+    let map = *world.get::<InMap>(owner)?;
+    let difficulty = crate::zones::map_difficulty_id(world, map);
+    let area = world
+        .get_resource_mut::<crate::ground::GroundMap>()
+        .and_then(|mut ground| ground.area_at(map.map_id, dest.position));
+    let data = world.get_resource::<crate::world_data::WorldData>()?;
+    let template = data.template_for(entry, difficulty)?;
+    let range = data
+        .summon_levels
+        .guardian_range(template, map.map_id, difficulty, area)?;
+    Some((
+        difficulty,
+        roll_guardian_level(owner_level, range, properties.flags),
+    ))
 }
 
 /// Creature::SelectLevel precedes TempSummon::InitStats and Guardian::InitStats.
