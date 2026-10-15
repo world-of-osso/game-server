@@ -34,7 +34,7 @@ impl MountPersistencePlugin {
 }
 
 #[cfg(test)]
-pub(super) fn persistence_pending(world: &World) -> bool {
+pub(crate) fn persistence_pending(world: &World) -> bool {
     !world.resource::<PendingMountLearning>().0.is_empty()
 }
 
