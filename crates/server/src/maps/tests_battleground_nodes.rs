@@ -1342,7 +1342,7 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
         let (created, mut data) =
             crate::persistence::create_character(&database, id, &name, 1, 1).unwrap();
         assert_eq!(created, id);
-        data.level = template.bracket.min_level;
+        data.level = u16::from(template.bracket.min_level);
         crate::persistence::save_character(&database, id, &data);
     }
     let mut entered = enter_source_match_with(&template, rules.starts, |app| {
