@@ -212,13 +212,30 @@ fn frontal_backstab_harness(guaranteed_block: bool) -> Harness {
     h
 }
 
+fn backstab_damage_before_block(h: &Harness, guaranteed_block: bool) -> f32 {
+    let mut hits = h.inbox.log.iter().filter(|event| {
+        event.spell_id == Some(53)
+            && event.kind == CombatLogKind::Damage
+            && event.target == Some(h.npc.to_bits())
+    });
+    let hit = hits.next().expect("Backstab hit the native NPC");
+    assert!(hits.next().is_none(), "one Backstab damage receipt");
+    assert_eq!(5000.0 - h.health(h.npc), hit.amount as f32);
+    if guaranteed_block {
+        assert!(hit.blocked > 0, "native10021 must exercise actual block");
+    }
+    // Backstab's positional coefficient precedes the target's native block.
+    (hit.amount + hit.blocked) as f32
+}
+
 #[test]
 fn dummy2_rogue_backstab_from_front_keeps_base_damage() {
     for guaranteed_block in [false, true] {
         let mut h = frontal_backstab_harness(guaranteed_block);
         h.cast_and_deliver(53, Some(h.npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-        assert!(varied(107.31 * 260.0 / 370.0).contains(&(5000.0 - h.health(h.npc))));
+        let damage = backstab_damage_before_block(&h, guaranteed_block);
+        assert!(varied(107.31 * 260.0 / 370.0).contains(&damage));
         assert_eq!(h.power(PowerType::ComboPoints), 1.0);
     }
 }
@@ -630,6 +647,7 @@ fn dummy2_rogue_backstab_level_curve_reaches_unity_at_twenty() {
             .0 = level;
         h.cast_and_deliver(53, Some(h.npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-        assert!(varied(107.31 * multiplier).contains(&(5000.0 - h.health(h.npc))));
+        let damage = backstab_damage_before_block(&h, guaranteed_block);
+        assert!(varied(107.31 * multiplier).contains(&damage));
     }
 }
