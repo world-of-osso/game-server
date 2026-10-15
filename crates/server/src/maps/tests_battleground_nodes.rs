@@ -744,16 +744,6 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                 .unwrap()
                 .receive()
                 .collect();
-            eprintln!(
-                "Disarm diagnostic user={:?} errors={errors:?} armed={} player_at={:?} bomb_at={:?}",
-                user.player,
-                h.app
-                    .world()
-                    .get::<crate::game_objects::seaforium_bombs::SeaforiumFuse>(object)
-                    .is_some(),
-                h.app.world().get::<Position>(user.player),
-                h.app.world().get::<Position>(object)
-            );
             if user.player == foreign.player {
                 assert_eq!(
                     errors.len(),
@@ -768,6 +758,11 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                     objects_in(h, entered.copy, 195235).len(),
                     1,
                     "another copy cannot disarm the bomb"
+                );
+            } else {
+                assert!(
+                    errors.is_empty(),
+                    "normal in-copy disarm rejected: {errors:?}"
                 );
             }
         }
