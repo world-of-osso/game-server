@@ -4,7 +4,7 @@ use super::*;
 use crate::auras::{ActiveAuras, AuraInstance, RemoveReason};
 use shared::components::{ModelDisplay, Npc};
 
-const MAP_ID: u16 = 628;
+const MAP_ID: u32 = 628;
 const DEMOLISHER: u32 = 34775;
 const CONTROL_VEHICLE: u32 = 236;
 
