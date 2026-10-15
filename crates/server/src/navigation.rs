@@ -109,6 +109,24 @@ impl Navigation {
         from: Vec3,
         to: Vec3,
     ) -> Result<Option<Vec<Vec3>>, String> {
+        self.query_map(map_id, |map| map.path(from, to))
+    }
+
+    /// Only normal ground C++ script waypoints select TC smooth-surface controls.
+    pub(crate) fn query_waypoint_path(
+        &self,
+        map_id: u32,
+        from: Vec3,
+        to: Vec3,
+    ) -> Result<Option<Vec<Vec3>>, String> {
+        self.query_map(map_id, |map| map.smooth_waypoint_path(from, to))
+    }
+
+    fn query_map<T>(
+        &self,
+        map_id: u32,
+        query: impl FnOnce(&mut navigation::NavigationMap) -> Result<T, String>,
+    ) -> Result<Option<T>, String> {
         let mut maps = self.maps.lock().unwrap();
         if !maps.contains_key(&map_id) {
             let dir = self.dir.join(map_id.to_string());
@@ -136,7 +154,7 @@ impl Navigation {
             maps.insert(map_id, map);
         }
         match maps.get_mut(&map_id).unwrap() {
-            Some(map) => map.path(from, to).map(Some),
+            Some(map) => query(map).map(Some),
             None => Ok(None),
         }
     }

@@ -11,6 +11,8 @@ mod ragefire_completion;
 mod shadowfang_keep;
 #[path = "wailing_escort.rs"]
 mod wailing_escort;
+#[path = "wailing_physical.rs"]
+mod wailing_physical;
 #[path = "wailing_progress.rs"]
 mod wailing_progress;
 
