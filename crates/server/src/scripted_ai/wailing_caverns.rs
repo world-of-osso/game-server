@@ -1,7 +1,7 @@
 //! TC a352b1fa instance_wailing_caverns.cpp four-druid DONE notification and
-//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–13. Gossip and
-//! targeted random aggro speech remain unported. Source path367800–367802 ends
-//! drive events4–13 on their separate out-of-combat clock.
+//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–16. Gossip,
+//! later awakening and targeted random aggro speech remain unported. Escort
+//! events use their separate out-of-combat clock.
 use bevy::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Rotation};
 
@@ -65,6 +65,13 @@ const EVENT_CHAMBER_SPEECH: u32 = 12;
 const EVENT_APPROACH_NARALEX: u32 = 13;
 const SAY_CHAMBER: u8 = 6;
 const PATH_APPROACH_NARALEX: u32 = 367803;
+const EVENT_RITUAL_SPEECH: u32 = 14;
+const EVENT_START_AWAKENING: u32 = 15;
+const EVENT_SUMMON_MOCCASINS: u32 = 16;
+const SAY_RITUAL_PROTECTION: u8 = 7;
+const SAY_RITUAL_BEGINS: u8 = 8;
+const NARALEXS_AWAKENING: u32 = 6271;
+const MOCCASIN_GROUP: u32 = 2;
 
 impl Disciple {
     fn advance_escort(&mut self, ctx: &mut Ctx, diff_ms: u32) {
@@ -79,11 +86,30 @@ impl Disciple {
                 | EVENT_SECOND_CAMP_SUMMONS
                 | EVENT_PURIFIED_SPEECH
                 | EVENT_CHAMBER_PATH => self.run_second_camp_event(ctx, event),
-                EVENT_CHAMBER_SPEECH | EVENT_APPROACH_NARALEX => {
-                    self.run_chamber_event(ctx, event);
+                EVENT_CHAMBER_SPEECH | EVENT_APPROACH_NARALEX => self.run_chamber_event(ctx, event),
+                EVENT_RITUAL_SPEECH | EVENT_START_AWAKENING | EVENT_SUMMON_MOCCASINS => {
+                    self.run_awakening_event(ctx, event);
                 }
                 _ => unreachable!("Disciple escort event {event}"),
             }
+        }
+    }
+
+    fn run_awakening_event(&mut self, ctx: &mut Ctx, event: u32) {
+        match event {
+            EVENT_RITUAL_SPEECH => {
+                ctx.talk(SAY_RITUAL_PROTECTION);
+                self.escort_events.schedule(EVENT_START_AWAKENING, 5_000);
+            }
+            EVENT_START_AWAKENING => {
+                ctx.do_cast_self(NARALEXS_AWAKENING);
+                ctx.talk(SAY_RITUAL_BEGINS);
+                self.escort_events.schedule(EVENT_SUMMON_MOCCASINS, 4_000);
+            }
+            EVENT_SUMMON_MOCCASINS => {
+                ctx.summon_creature_group(MOCCASIN_GROUP);
+            }
+            _ => unreachable!("Disciple awakening event {event}"),
         }
     }
 
@@ -175,6 +201,7 @@ impl CreatureAi for Disciple {
             PATH_FIRST_CAMP => self.escort_events.schedule(EVENT_FIRST_CAMP_SPEECH, 1_000),
             PATH_SECOND_CAMP => self.escort_events.schedule(EVENT_SECOND_CAMP_CLEANSING, 0),
             PATH_NARALEX_CHAMBER => self.escort_events.schedule(EVENT_CHAMBER_SPEECH, 1_000),
+            PATH_APPROACH_NARALEX => self.escort_events.schedule(EVENT_RITUAL_SPEECH, 1_000),
             _ => {}
         }
     }
