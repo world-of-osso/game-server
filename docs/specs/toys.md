@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Direct destination selectors86/91 initialize an absent prior destination from the caster before applying their source offset, matching native CheckDst. Fisherman's Folly199894/388259 uses91 with a fixed2yd radius, not placement at the caster's feet.
+
 - Spirit of Bashiok118222/173895 requires authentic TDB86916/display60051 and one stationary, non-pet actor for60000ms. Its18/78 destination is five yards forward from the caster using TargetB's radius and caster orientation; effect-facing pi is inactive because USE_FACING_FROM_SPELL is unset. Preserve owner/map and the player's body/health. Open-ground placement does not certify terrain/collision handling or native rendering; no follow, combat or interaction script is inferred.
 
 - Scarab Storm64881/92146 requires authentic TDB51113 with displays36611/36595 and source weights1/2. Property2301's JoinSummonerSpawnGroup routes to guardians despite title0: vary source25 by variance0.400000006 before int32 truncation/minimum1, never fixed25 or one. First actor uses the selected destination; additional guardians scatter in the native5yd disk. Preserve source24000ms lifetime, owner/map, follow designation and no combat-pet frame. Missing creature spells must not be invented; template/count proof alone does not certify complete Scarab behavior or native rendering.
