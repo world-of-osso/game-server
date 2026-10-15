@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Winner's Podium source placement (2026-10-15)
+
+239018/1227063 selects static240220/display127527 through47→138. Actual-source RED reproduces1.25yd instead of native player reach1.5yd, airborne82.5378 instead of terrain80.52305, and real bag-learning/UseToy refusal for missing240220. The additive source importer now includes240220; player-front47 clamps to the existing sourced scaled reach, and the mutable cast-plan ground step resolves138 alongside62. Non-player front reach is not redesigned. Source TDB has no AI/script/spell/click/vehicle binding and properties64 has no flags; no interaction is inferred.
+
+At3c2d0bb6, six targeted tests pass66.51s: actual Podium learning/use, owner/map/body/health/non-pet/static placement and1200000ms simulation expiry using the existing50ms harness unchanged; three player scales, actual terrain grounding and retained62/Bashiok/Shrine87 controls. No cooldown/max-delta/runtime-clock reset. Native assets, both-skin rendered acceptance, importer/final checks and complete1166 remain separate gates. [Contract](../../specs/toys.md); source/RED/GREEN capsules under `toy-effects14-continuation/podium54-*`.
+
 ## Runtime generated casting data (2026-10-13)
 
 [Runtime data guide](../../toy-runtime-data.md) owns producer commands, source-build provenance and deployment sync. Startup loads both required JSON artifacts into an ECS resource and refuses missing data. Process tests reject each missing file and load two controlled builds with the same binary; fresh-app tests verify changed facing behavior. Production generated data is no longer embedded in Rust source.

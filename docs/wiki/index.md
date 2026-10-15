@@ -1,5 +1,6 @@
 # Wiki Index
 
+- [Winner's Podium placement](systems/toys.md#winners-podium-source-placement-2026-10-15) — source47 scaled player reach and138 actual ground; actual UseToy/template/20min simulation expiry, native proof pending.
 - [Source guardian level selection](systems/toys.md#source-guardian-level-selection-2026-10-15) — actual Scarab UseToy20/80, ContentTuning priority/deltas and pre-init clamp; thirteen final controls and private UDP20/30 replication pass; full stats/AI remain open.
 
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
