@@ -241,6 +241,7 @@ struct InteractionWorld<'w, 's> {
             &'static GameObjectBounds,
             Has<crate::game_objects::GameObjectScript>,
             Has<crate::game_objects::GameObjectInUse>,
+            Has<crate::game_objects::seaforium_bombs::SeaforiumFuse>,
         ),
     >,
     templates: Res<'w, FactionTemplates>,
@@ -264,13 +265,14 @@ impl InteractionWorld<'_, '_> {
 
     /// What using a game object does if `player` may use it now.
     fn usable_object(&self, player: Entity, object: Entity) -> Result<ObjectUse, InteractionError> {
-        let (info, position, bounds, scripted, in_use) = self
+        let (info, position, bounds, scripted, in_use, seaforium) = self
             .objects
             .get(object)
             .map_err(|_| InteractionError::InvalidTarget)?;
         let role = match info.go_type {
             // Only buttons with a ported GameObjectAI; generic door/button use is not modelled.
             crate::game_objects::GAMEOBJECT_TYPE_BUTTON if scripted && !in_use => ObjectUse::Script,
+            crate::game_objects::GAMEOBJECT_TYPE_TRAP if seaforium => ObjectUse::Seaforium,
             GAMEOBJECT_TYPE_GUILD_BANK => ObjectUse::Role(NpcRole::GuildBanker),
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
@@ -327,6 +329,7 @@ impl InteractionWorld<'_, '_> {
 enum ObjectUse {
     QuestObject,
     Spellcaster,
+    Seaforium,
     /// Opens a role frame.
     Role(NpcRole),
     /// Casts the object's spell (`meeting_stone::use_object`).
@@ -502,6 +505,22 @@ fn process_game_object_uses(
                     commands.queue(move |world: &mut World| {
                         if let Err(error) =
                             crate::game_objects::spellcaster::use_object(world, player, object)
+                            && let Some(mut sender) =
+                                world.get_mut::<MessageSender<InteractionFailed>>(connection)
+                        {
+                            sender.send::<InteractionChannel>(InteractionFailed {
+                                npc: object.to_bits(),
+                                error,
+                            });
+                        }
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::Seaforium)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        if let Err(error) =
+                            crate::game_objects::seaforium_bombs::disarm(world, player, object)
                             && let Some(mut sender) =
                                 world.get_mut::<MessageSender<InteractionFailed>>(connection)
                         {
