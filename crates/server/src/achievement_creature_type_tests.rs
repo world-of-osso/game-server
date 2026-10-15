@@ -75,7 +75,7 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
         crate::persistence::ClientId(character),
         PlayerAchievementState::default(),
     ));
-    for (entry, kind, criterion, total) in [(6, 7, 4953, 1), (299, 1, 4948, 2)] {
+    for (entry, kind, criterion, total) in [(40, 7, 4953, 1), (299, 1, 4948, 2)] {
         let target = spawn_source_kill_target(&mut h, entry);
         assert_eq!(crate::unit_creature_type::get(h.app.world(), target), kind);
         assert!(!crate::spell_cast::try_cast_triggered(
