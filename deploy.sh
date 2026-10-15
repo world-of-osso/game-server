@@ -28,6 +28,11 @@ scp data/world.db "${SERVER_HOST}:${STATE_DIR}/data/world.db"
 test -f data/game_object_locks.json || { echo "Missing data/game_object_locks.json: run scripts/import_game_object_locks.py" >&2; exit 1; }
 scp data/game_object_locks.json "${SERVER_HOST}:${STATE_DIR}/data/game_object_locks.json"
 scp data/economy/config.json "${SERVER_HOST}:${STATE_DIR}/data/economy/config.json"
+# Startup panics without the generated Toy casting requirements (world_data.rs).
+for toy_data in toy_required_areas.json toy_facing_requirements.json; do
+	test -f "data/${toy_data}" || { echo "Missing data/${toy_data}: run scripts/generate_toy_area_requirements.py and scripts/generate_toy_facing_requirements.py" >&2; exit 1; }
+	scp "data/${toy_data}" "${SERVER_HOST}:${STATE_DIR}/data/${toy_data}"
+done
 echo "Uploading installed-build DB2 tables (the server reads data/db2/active at startup)..."
 # Missing here crash-looped production on 2026-10-14 (guild tabard catalog). Ship the whole
 # active build so new runtime readers cannot be forgotten, and keep the active link.

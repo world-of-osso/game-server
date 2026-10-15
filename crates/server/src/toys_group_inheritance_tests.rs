@@ -6,16 +6,14 @@ fn toyfx28_group_private_use_captures_group_and_child_inherits_it() {
     use crate::interest::{PrivateObjectGroup, PrivateObjectOwner};
     use crate::spell_cast::summon::SummonedCreature;
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("inherit.redb"));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-    h.app
-        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
     h.app
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     h.app
