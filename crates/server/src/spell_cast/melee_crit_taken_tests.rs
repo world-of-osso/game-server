@@ -263,8 +263,10 @@ fn spawn_native_guardian_progression() -> Harness {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    h.app
-        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    // The shared cast fixture strips specs/learnable spells; this test exercises grants.
+    let (spells, classes) = crate::spell_info::load_spell_data(&conn).unwrap();
+    h.app.insert_resource(spells);
+    h.app.insert_resource(classes);
     h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = NIGHT_ELF;
     h.app
         .world_mut()
