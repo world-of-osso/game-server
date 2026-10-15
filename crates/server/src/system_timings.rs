@@ -40,6 +40,7 @@ struct SystemTimings {
 enum ScopeKind {
     System,
     Schedule,
+    Preparation,
 }
 
 struct TimedScope {
@@ -52,7 +53,6 @@ struct Entered(Instant);
 #[derive(Default)]
 struct TimingFields {
     name: Option<String>,
-    schedule_prepared: bool,
 }
 
 impl Visit for TimingFields {
@@ -65,12 +65,6 @@ impl Visit for TimingFields {
     fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
         if field.name() == "name" {
             self.name = Some(format!("{value:?}"));
-        }
-    }
-
-    fn record_bool(&mut self, field: &Field, value: bool) {
-        if field.name() == "schedule_prepared" {
-            self.schedule_prepared = value;
         }
     }
 }
@@ -95,6 +89,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
         let kind = match attrs.metadata().name() {
             "system" => ScopeKind::System,
             "schedule" => ScopeKind::Schedule,
+            "schedule_preparation" => ScopeKind::Preparation,
             _ => return,
         };
         let mut fields = TimingFields::default();
@@ -124,6 +119,10 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
         };
         let (kind, name, elapsed) = (scope.kind, scope.name.clone(), entered.0.elapsed());
         drop(ext);
+        if kind == ScopeKind::Preparation {
+            record_preparation(&ctx, id, &name);
+            return;
+        }
         if kind == ScopeKind::System {
             self.record_system_work(&name, elapsed);
         } else if name == "Main" {
@@ -143,30 +142,6 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
             log_scope_stall(kind, &name, elapsed);
         }
     }
-
-    fn on_event(&self, event: &bevy::log::tracing::Event<'_>, ctx: Context<'_, S>) {
-        let mut fields = TimingFields::default();
-        event.record(&mut fields);
-        if !fields.schedule_prepared {
-            return;
-        }
-        let Some((id, name, elapsed)) = measure_schedule_preparation(event, &ctx) else {
-            return;
-        };
-        record_main_phase(
-            &ctx,
-            &id,
-            PhaseMeasurement {
-                phase: name.clone(),
-                preparation: true,
-                work_ms: elapsed.as_secs_f64() * 1000.0,
-            },
-        );
-        if elapsed > SYSTEM_STALL_BUDGET {
-            bevy::log::tracing::warn!(schedule = %name,
-                schedule_prepare_ms = elapsed.as_secs_f64() * 1000.0, "Schedule preparation stall");
-        }
-    }
 }
 
 fn log_scope_stall(kind: ScopeKind, name: &str, elapsed: Duration) {
@@ -175,22 +150,52 @@ fn log_scope_stall(kind: ScopeKind, name: &str, elapsed: Duration) {
             system_work_ms = elapsed.as_secs_f64() * 1000.0, "System stall"),
         ScopeKind::Schedule => bevy::log::tracing::warn!(schedule = %name,
             schedule_work_ms = elapsed.as_secs_f64() * 1000.0, "Schedule stall"),
+        ScopeKind::Preparation => bevy::log::tracing::warn!(schedule = %name,
+            schedule_prepare_ms = elapsed.as_secs_f64() * 1000.0, "Schedule preparation stall"),
     }
 }
 
 fn measure_schedule_preparation<S: Subscriber + for<'a> LookupSpan<'a>>(
-    event: &bevy::log::tracing::Event<'_>,
     ctx: &Context<'_, S>,
-) -> Option<(Id, String, Duration)> {
-    ctx.event_scope(event)?.find_map(|span| {
+    id: &Id,
+    name: &str,
+) -> Option<(Id, Duration)> {
+    let span = ctx.span(id)?;
+    span.scope().find_map(|span| {
         let ext = span.extensions();
         let scope = ext.get::<TimedScope>()?;
-        if scope.kind != ScopeKind::Schedule {
+        if scope.kind != ScopeKind::Schedule || scope.name != name {
             return None;
         }
         let entered = ext.get::<Entered>()?;
-        Some((span.id(), scope.name.clone(), entered.0.elapsed()))
+        Some((span.id(), entered.0.elapsed()))
     })
+}
+
+fn record_preparation<S: Subscriber + for<'a> LookupSpan<'a>>(
+    ctx: &Context<'_, S>,
+    id: &Id,
+    name: &str,
+) {
+    let Some((schedule, elapsed)) = measure_schedule_preparation(ctx, id, name) else {
+        bevy::log::warn!(
+            schedule = name,
+            "Schedule preparation lacks an active schedule timer"
+        );
+        return;
+    };
+    record_main_phase(
+        ctx,
+        &schedule,
+        PhaseMeasurement {
+            phase: name.to_owned(),
+            preparation: true,
+            work_ms: elapsed.as_secs_f64() * 1000.0,
+        },
+    );
+    if elapsed > SYSTEM_STALL_BUDGET {
+        log_scope_stall(ScopeKind::Preparation, name, elapsed);
+    }
 }
 
 fn record_main_phase<S: Subscriber + for<'a> LookupSpan<'a>>(
@@ -230,7 +235,8 @@ fn report_main_phases<S: Subscriber + for<'a> LookupSpan<'a>>(
 
 // ScheduleBuilt fires after graph/system initialization, before executor initialization/run.
 fn report_schedule_prepared(event: On<bevy::ecs::schedule::ScheduleBuilt>) {
-    info!(schedule_prepared = true, schedule = ?event.label, "Schedule prepared");
+    let _notice =
+        bevy::log::tracing::info_span!("schedule_preparation", name = ?event.label).entered();
 }
 
 impl SystemTimingLayer {
@@ -319,7 +325,7 @@ mod tests {
         );
     }
     #[test]
-    fn slow_schedule_preparation_is_named_before_system_execution() {
+    fn slow_schedule_preparation_is_measured_before_system_execution() {
         struct SlowInitialState;
         impl FromWorld for SlowInitialState {
             fn from_world(_world: &mut World) -> Self {
@@ -358,7 +364,7 @@ mod tests {
         let prepared = phases
             .iter()
             .find(|phase| phase["phase"] == "Update" && phase["preparation"] == true)
-            .expect("measured Update preparation");
+            .unwrap_or_else(|| panic!("missing measured Update preparation: {output}"));
         assert!(prepared["work_ms"].as_f64().unwrap() >= 50.0);
     }
 
@@ -402,7 +408,7 @@ mod tests {
         let update = phases
             .iter()
             .find(|phase| phase["phase"] == "Update" && phase["preparation"] == false)
-            .expect("measured Update execution/deferred work");
+            .unwrap_or_else(|| panic!("missing measured Update execution/deferred work: {output}"));
         assert!(update["work_ms"].as_f64().unwrap() >= 50.0);
     }
 }
