@@ -670,7 +670,6 @@ fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
         "/sleep" => Some(EmoteKind::Sleep),
         "/kneel" => Some(EmoteKind::Kneel),
         "/love" => Some(EmoteKind::Love),
-        "/mountspecial" => Some(EmoteKind::MountSpecial),
         _ => None,
     }
 }

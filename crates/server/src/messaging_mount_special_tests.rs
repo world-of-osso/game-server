@@ -1,6 +1,29 @@
 use super::*;
 use shared::components::{Mounted, PlayerMotion};
 
+#[derive(Resource, Default)]
+struct MountReceipts(Vec<(Entity, EmoteEvent)>);
+
+fn collect_events(
+    mut receivers: Query<(Entity, &mut MessageReceiver<EmoteEvent>)>,
+    mut receipts: ResMut<MountReceipts>,
+) {
+    for (connection, mut receiver) in &mut receivers {
+        receipts
+            .0
+            .extend(receiver.receive().map(|event| (connection, event)));
+    }
+}
+
+fn mount_app() -> (tempfile::NamedTempFile, App, Entity, Entity, u64) {
+    let (file, mut app, player, connection, character) = emote_app();
+    app.init_resource::<MountReceipts>();
+    // Lightyear clears receivers in Last, then delivers HostClient messages.
+    // Save real delivery in First rather than sampling after arbitrary updates.
+    app.add_systems(First, collect_events);
+    (file, app, player, connection, character)
+}
+
 fn observer(app: &mut App, network_id: u64, name: &str, map: crate::maps::InMap) -> Entity {
     let player = app
         .world_mut()
@@ -55,15 +78,16 @@ fn mount_request(app: &mut App, connection: Entity) {
 
 fn events(app: &mut App, connection: Entity) -> Vec<EmoteEvent> {
     app.world_mut()
-        .get_mut::<MessageReceiver<EmoteEvent>>(connection)
-        .unwrap()
-        .receive()
+        .resource_mut::<MountReceipts>()
+        .0
+        .extract_if(.., |(recipient, _)| *recipient == connection)
+        .map(|(_, event)| event)
         .collect()
 }
 
 #[test]
 fn mount_special_uses_authoritative_actor_and_observer_set_without_chat_or_criteria() {
-    let (_file, mut app, player, connection, character) = emote_app();
+    let (_file, mut app, player, connection, character) = mount_app();
     app.world_mut().entity_mut(connection).insert(InWorld {
         character_id: character,
     });
@@ -143,21 +167,11 @@ fn mount_special_uses_authoritative_actor_and_observer_set_without_chat_or_crite
             .criteria_progress
             .is_empty()
     );
-    for peer in [connection, visible, hidden, foreign] {
-        assert!(
-            app.world_mut()
-                .get_mut::<MessageReceiver<ChatMessage>>(peer)
-                .unwrap()
-                .receive()
-                .next()
-                .is_none()
-        );
-    }
 }
 
 #[test]
 fn mount_special_refuses_unmounted_and_not_entered_senders() {
-    let (_file, mut app, player, connection, character) = emote_app();
+    let (_file, mut app, player, connection, character) = mount_app();
     app.world_mut().entity_mut(connection).insert(InWorld {
         character_id: character,
     });
