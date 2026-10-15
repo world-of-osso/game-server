@@ -12,7 +12,25 @@ enum SelectionCase {
     Fresh,
     Departed,
     QueuedCooldown,
+    QueuedDuplicate,
+    OutsideRest,
     WithWarMode,
+    WarModeFirst,
+}
+
+impl SelectionCase {
+    fn changes_war_mode(self) -> bool {
+        matches!(self, Self::WithWarMode | Self::WarModeFirst)
+    }
+
+    fn refusal(self) -> Option<&'static str> {
+        match self {
+            Self::QueuedCooldown => Some("cooldown"),
+            Self::QueuedDuplicate => Some("already selected"),
+            Self::OutsideRest => Some("rest area"),
+            _ => None,
+        }
+    }
 }
 
 #[test]
@@ -33,6 +51,21 @@ fn pvp_talent_second_queued_selection_checks_the_first_selected_spells_real_cool
 #[test]
 fn pvp_talent_then_war_mode_preserve_both_durable_and_live_preferences() {
     assert_selection_fifo(SelectionCase::WithWarMode);
+}
+
+#[test]
+fn pvp_talent_second_queued_duplicate_reads_the_first_durable_choice() {
+    assert_selection_fifo(SelectionCase::QueuedDuplicate);
+}
+
+#[test]
+fn pvp_talent_second_queued_replacement_outside_rest_cannot_treat_the_slot_as_empty() {
+    assert_selection_fifo(SelectionCase::OutsideRest);
+}
+
+#[test]
+fn pvp_war_mode_then_talent_preserve_both_durable_and_live_preferences() {
+    assert_selection_fifo(SelectionCase::WarModeFirst);
 }
 
 fn selection_harness(case: SelectionCase) -> (Harness, u64) {
@@ -68,12 +101,43 @@ fn selection_harness(case: SelectionCase) -> (Harness, u64) {
         },
     );
     assert!(project(h.app.world(), h.caster).unwrap().1.is_empty());
-    h.app.add_systems(
-        Update,
-        receive_requests.before(crate::pvp::pvp_war_mode::receive_requests),
-    );
+    if matches!(case, SelectionCase::OutsideRest) {
+        let position = shared::components::Position {
+            x: -9605.0,
+            y: 60.0,
+            z: 105.0,
+        };
+        assert_eq!(
+            h.app
+                .world_mut()
+                .resource_mut::<crate::ground::GroundMap>()
+                .area_at(0, Vec3::new(position.x, position.y, position.z)),
+            Some(12)
+        );
+        h.app.world_mut().entity_mut(h.caster).insert(position);
+    }
+    if matches!(case, SelectionCase::WarModeFirst) {
+        h.app.add_systems(
+            Update,
+            receive_requests.after(crate::pvp::pvp_war_mode::receive_requests),
+        );
+    } else {
+        h.app.add_systems(
+            Update,
+            receive_requests.before(crate::pvp::pvp_war_mode::receive_requests),
+        );
+    }
     h.app.add_systems(PostUpdate, sync_players);
     h.advance(6);
+    if matches!(case, SelectionCase::OutsideRest) {
+        assert!(
+            !h.app
+                .world()
+                .get::<crate::rest::PlayerRestState>(h.caster)
+                .unwrap()
+                .is_resting()
+        );
+    }
     if matches!(case, SelectionCase::QueuedCooldown) {
         h.cast_and_deliver(204018, Some(h.caster));
         h.advance(3);
@@ -122,11 +186,22 @@ fn assert_selection_fifo(case: SelectionCase) {
         std::thread::sleep(Duration::from_millis(250));
         held.abort().unwrap();
     });
-    if matches!(case, SelectionCase::QueuedCooldown) {
-        send_selection(&mut h, 5573);
+    match case {
+        SelectionCase::QueuedCooldown => {
+            send_selection(&mut h, 5573);
+            send_selection(&mut h, 752);
+        }
+        SelectionCase::QueuedDuplicate => {
+            send_selection(&mut h, 752);
+            send_selection(&mut h, 752);
+        }
+        SelectionCase::OutsideRest => {
+            send_selection(&mut h, 752);
+            send_selection(&mut h, 5573);
+        }
+        _ => send_selection(&mut h, 752),
     }
-    send_selection(&mut h, 752);
-    if matches!(case, SelectionCase::WithWarMode) {
+    if case.changes_war_mode() {
         h.app
             .world_mut()
             .get_mut::<MessageSender<SetWarModeDesired>>(h.connection)
@@ -205,10 +280,7 @@ fn assert_selection_fifo(case: SelectionCase) {
     let durable = persistence::load_pvp(&h.app.world().resource::<GameDatabase>().db, character);
     assert_eq!(durable.honor, 777);
     assert_eq!(durable.pvp_talents[&70][&1], expected);
-    assert_eq!(
-        durable.war_mode_desired,
-        matches!(case, SelectionCase::WithWarMode)
-    );
+    assert_eq!(durable.war_mode_desired, case.changes_war_mode());
     let state = h.app.world().get::<PlayerPvpState>(h.caster).unwrap();
     if matches!(case, SelectionCase::Departed) {
         assert!(state.progress.pvp_talents.is_empty());
@@ -218,8 +290,8 @@ fn assert_selection_fifo(case: SelectionCase) {
         assert_eq!(state.progress.pvp_talents[&70][&1], expected);
         assert_eq!(state.progress.war_mode_desired, durable.war_mode_desired);
         let last = replies.last().unwrap();
-        if matches!(case, SelectionCase::QueuedCooldown) {
-            assert!(last.error.as_ref().unwrap().contains("cooldown"));
+        if let Some(reason) = case.refusal() {
+            assert!(last.error.as_ref().unwrap().contains(reason));
         } else {
             assert_eq!(last.error, None);
         }
@@ -232,7 +304,7 @@ fn assert_selection_fifo(case: SelectionCase) {
             .contains(210256),
         !matches!(
             case,
-            SelectionCase::Departed | SelectionCase::QueuedCooldown
+            SelectionCase::Departed | SelectionCase::QueuedCooldown | SelectionCase::OutsideRest
         )
     );
 }
@@ -266,9 +338,9 @@ fn await_selection(
                     .iter()
                     .any(|slot| slot.index == 1 && slot.selected == Some(expected))
             });
-            let mode_ok = !matches!(case, SelectionCase::WithWarMode)
+            let mode_ok = !case.changes_war_mode()
                 || snapshot.war_mode.as_ref().is_some_and(|mode| mode.desired);
-            let error_ok = !matches!(case, SelectionCase::QueuedCooldown) || reply.error.is_some();
+            let error_ok = case.refusal().is_none() || reply.error.is_some();
             selected && mode_ok && error_ok
         });
         let replied = matches!(case, SelectionCase::Departed) || selected_reply;
