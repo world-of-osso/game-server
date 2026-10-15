@@ -124,6 +124,27 @@ fn talent_starter_installed_class_builds_are_legal_at_unlock_cap_and_apex_levels
     }
 }
 
+#[test]
+fn talent_starter_zero_cost_arms_apex_waits_for_authored_level_conditions() {
+    let tree = &classes()
+        .unwrap()
+        .classes
+        .iter()
+        .find(|class| class.class_id == 1)
+        .unwrap()
+        .traits;
+    for (level, expected) in [(70, 0), (80, 0), (81, 1), (84, 3), (90, 4)] {
+        let ctx = TraitContext { spec_id: 71, level };
+        let purchases = starter_purchases(tree, ctx).unwrap();
+        let apex = purchases
+            .iter()
+            .filter(|purchase| purchase.node_id == 110407)
+            .map(|purchase| purchase.ranks)
+            .sum::<u32>();
+        assert_eq!(apex, expected, "Arms authored apex at level{level}");
+    }
+}
+
 fn ret(level: u8) -> TraitContext {
     TraitContext {
         spec_id: SPEC_RETRIBUTION,

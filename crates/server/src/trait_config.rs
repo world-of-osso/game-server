@@ -128,8 +128,8 @@ pub fn build_config(
 }
 
 /// TraitMgr::InitializeStarterBuildTraitConfig: visit authored OrderIndex rows,
-/// use the first node entry for ID zero, buy the cumulative rank only when affordable.
-/// Normal validation remains authoritative; malformed authored builds fail explicitly.
+/// use the first node entry for ID zero, buy eligible cumulative ranks only.
+/// Normal eligibility is needed as zero-cost authored apex rows can precede level81.
 pub fn starter_purchases(tree: &TraitTree, ctx: TraitContext) -> Result<Vec<Purchase>, String> {
     let build = tree
         .starter_builds
@@ -137,7 +137,6 @@ pub fn starter_purchases(tree: &TraitTree, ctx: TraitContext) -> Result<Vec<Purc
         .find(|build| build.spec_id == ctx.spec_id)
         .ok_or("Starter Build is not available for this specialization")?;
     let mut purchases: Vec<Purchase> = Vec::new();
-    let grants = granted_entries(tree, ctx);
     for row in &build.purchases {
         let node = tree
             .node(row.node_id)
@@ -166,11 +165,9 @@ pub fn starter_purchases(tree: &TraitTree, ctx: TraitContext) -> Result<Vec<Purc
                 ranks: row.ranks,
             });
         }
-        let entries = merge_purchases(tree, grants.clone(), &candidate)?;
-        if unspent(tree, ctx, &entries)
-            .iter()
-            .all(|(_, amount)| *amount >= 0)
-        {
+        // An authored future-level row is not yet a legal purchase, even if free.
+        // This is the same eligibility check used for ordinary manual purchases.
+        if build_config(tree, ctx, &candidate).is_ok() {
             purchases = candidate;
         }
     }
