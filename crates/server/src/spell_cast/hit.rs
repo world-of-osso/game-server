@@ -16,8 +16,6 @@ const ATTR8_NO_ATTACK_BLOCK: u32 = 0x1;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const ATTR7_NO_ATTACK_DODGE: u32 = 0x0080_0000;
-const MOD_EXPERTISE: u32 = 240;
-const EXPERTISE_PER_DODGE_PERCENT: f32 = 4.0;
 const MELEE_HIT_DODGE: i32 = 2;
 const MELEE_HIT_BLOCK: i32 = 3;
 const DEFENSE_MAGIC: u32 = 1;
@@ -204,8 +202,8 @@ fn weapon_spell_miss_chance(
     }
 }
 
-/// Existing live player DodgePercentage and non-player caster expertise,
-/// Unit.cpp2750–2785. Player expertise/248/251 and NPC dodge remain gaps.
+/// Existing live player DodgePercentage, Unit.cpp2750–2785. Attacker
+/// expertise/248/251 modifiers and NPC dodge remain separate source gaps.
 fn player_spell_dodge_chance(
     world: &World,
     caster: Entity,
@@ -222,19 +220,11 @@ fn player_spell_dodge_chance(
     if disabled || !can_defend_from_front(world, caster, unit, auras) {
         return 0.0;
     }
-    let dodge = world
+    world
         .get::<crate::stats::CharacterStats>(unit)
         .expect("player retains native dodge percentage")
         .defense
-        .dodge;
-    let expertise = if world.get::<shared::components::Player>(caster).is_some() {
-        0.0
-    } else {
-        world.get::<ActiveAuras>(caster).map_or(0.0, |auras| {
-            auras.modifier(MOD_EXPERTISE) / EXPERTISE_PER_DODGE_PERCENT
-        })
-    };
-    (dodge - expertise).max(0.0)
+        .dodge
 }
 
 fn can_defend_from_front(
