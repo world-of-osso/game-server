@@ -78,6 +78,17 @@ fn load_suggestions(path: &Path) -> Result<Vec<Suggestion>, String> {
     );
     Ok(rows)
 }
+fn suggestion_snapshot(row: &Suggestion) -> AdventureSuggestion {
+    AdventureSuggestion {
+        id: row.id,
+        name: row.name.clone(),
+        description: row.description.clone(),
+        reward_description: row.reward.clone(),
+        texture_fdid: row.texture,
+        button_text: String::new(),
+    }
+}
+
 #[derive(Deserialize)]
 struct ActivityCondition {
     #[serde(rename = "PerksActivityID")]
@@ -272,21 +283,11 @@ impl CatalogData {
         // Named inference: Retail Lua forwards opaque C_AdventureJournal order unchanged.
         // This provider ranks authored fixed priority + met bonuses descending; ID breaks ties.
         ranked.sort_by_key(|(score, row)| (std::cmp::Reverse(*score), row.id));
+        census.unsupported_actions =
+            ranked.iter().filter(|(_, row)| row.action != 0).count() as u32;
         let visible = ranked
             .into_iter()
-            .map(|(_, row)| {
-                if row.action != 0 {
-                    census.unsupported_actions += 1;
-                }
-                AdventureSuggestion {
-                    id: row.id,
-                    name: row.name.clone(),
-                    description: row.description.clone(),
-                    reward_description: row.reward.clone(),
-                    texture_fdid: row.texture,
-                    button_text: String::new(),
-                }
-            })
+            .map(|(_, row)| suggestion_snapshot(row))
             .collect();
         (visible, census)
     }
