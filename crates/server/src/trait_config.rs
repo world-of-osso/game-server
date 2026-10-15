@@ -127,6 +127,57 @@ pub fn build_config(
     Ok(entries)
 }
 
+/// TraitMgr::InitializeStarterBuildTraitConfig: visit authored OrderIndex rows,
+/// use the first node entry for ID zero, buy the cumulative rank only when affordable.
+/// Normal validation remains authoritative; malformed authored builds fail explicitly.
+pub fn starter_purchases(tree: &TraitTree, ctx: TraitContext) -> Result<Vec<Purchase>, String> {
+    let build = tree
+        .starter_builds
+        .iter()
+        .find(|build| build.spec_id == ctx.spec_id)
+        .ok_or("Starter Build is not available for this specialization")?;
+    let mut purchases: Vec<Purchase> = Vec::new();
+    let grants = granted_entries(tree, ctx);
+    for row in &build.purchases {
+        let node = tree
+            .node(row.node_id)
+            .ok_or_else(|| format!("Starter node {} is missing", row.node_id))?;
+        let entry = if row.entry_id == 0 {
+            node.entries.first()
+        } else {
+            node.entry(row.entry_id)
+        }
+        .ok_or_else(|| {
+            format!(
+                "Starter entry {} is missing on node {}",
+                row.entry_id, row.node_id
+            )
+        })?;
+        let mut candidate = purchases.clone();
+        if let Some(purchase) = candidate
+            .iter_mut()
+            .find(|p| p.node_id == node.id && p.entry_id == entry.id)
+        {
+            purchase.ranks = row.ranks;
+        } else {
+            candidate.push(Purchase {
+                node_id: node.id,
+                entry_id: entry.id,
+                ranks: row.ranks,
+            });
+        }
+        let entries = merge_purchases(tree, grants.clone(), &candidate)?;
+        if unspent(tree, ctx, &entries)
+            .iter()
+            .all(|(_, amount)| *amount >= 0)
+        {
+            purchases = candidate;
+        }
+    }
+    build_config(tree, ctx, &purchases)?;
+    Ok(purchases)
+}
+
 fn merge_purchases(
     tree: &TraitTree,
     mut entries: Vec<ConfigEntry>,

@@ -55,6 +55,45 @@ fn paladin_tree() -> Option<&'static TraitTree> {
     Some(&class.traits)
 }
 
+#[test]
+fn talent_starter_authored_rows_use_cumulative_ranks_and_independent_budgets() {
+    let classes = classes().unwrap();
+    for (class_id, spec_id) in [(2, 70), (8, 62)] {
+        let tree = &classes
+            .classes
+            .iter()
+            .find(|class| class.class_id == class_id)
+            .unwrap()
+            .traits;
+        for (level, expected) in [(10, 1), (11, 2), (20, 11), (70, 61), (80, 61), (90, 68)] {
+            let ctx = TraitContext { spec_id, level };
+            let purchases = starter_purchases(tree, ctx)
+                .unwrap_or_else(|reason| panic!("spec{spec_id} level{level}: {reason}"));
+            assert_eq!(
+                purchases.iter().map(|purchase| purchase.ranks).sum::<u32>(),
+                expected,
+                "spec{spec_id} level{level}"
+            );
+            let entries = build_config(tree, ctx, &purchases).unwrap();
+            assert!(
+                unspent(tree, ctx, &entries)
+                    .iter()
+                    .all(|(_, left)| *left >= 0)
+            );
+        }
+    }
+    assert!(
+        starter_purchases(
+            paladin_tree().unwrap(),
+            TraitContext {
+                spec_id: 62,
+                level: 80
+            }
+        )
+        .is_err()
+    );
+}
+
 fn ret(level: u8) -> TraitContext {
     TraitContext {
         spec_id: SPEC_RETRIBUTION,

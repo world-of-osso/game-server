@@ -13,6 +13,82 @@ fn change(app: &mut App, player: Entity, operation: TraitLoadoutOperation) {
         },
     );
 }
+/// Starter is an authoritative built-in selection, never a user-named config.
+#[test]
+fn talent_starter_activation_level_up_relog_and_manual_edit() {
+    let classes = class_spells().expect("world.db");
+    let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
+    app.world_mut().get_mut::<Level>(player).unwrap().0 = 10;
+    advance(&mut app);
+    drain(&mut app, player);
+    change(
+        &mut app,
+        player,
+        TraitLoadoutOperation::Activate { id: u32::MAX },
+    );
+    let result = received::<TraitCommitResult>(&mut app, player)
+        .pop()
+        .unwrap();
+    assert!(result.ok, "Starter activation: {:?}", result.reason);
+    let list = received::<TraitLoadoutsSnapshot>(&mut app, player)
+        .pop()
+        .unwrap();
+    assert_eq!(list.selected_id, u32::MAX);
+    assert!(list.configs.is_empty());
+    let at_ten = app.world().get::<TraitLoadout>(player).unwrap().purchases();
+    assert_eq!(at_ten.iter().map(|p| p.ranks).sum::<u32>(), 1);
+    assert_eq!(at_ten[0].node_id, 109999); // Authored loadout922 OrderIndex1.
+    app.world_mut().get_mut::<Level>(player).unwrap().0 = 11;
+    advance(&mut app);
+    let at_eleven = app.world().get::<TraitLoadout>(player).unwrap().purchases();
+    assert_eq!(at_eleven.iter().map(|p| p.ranks).sum::<u32>(), 2);
+    assert!(at_eleven.contains(&at_ten[0]));
+    app.world_mut().despawn(player);
+    let relog = spawn_player(&mut app, 9, HUMAN, PALADIN, 11);
+    advance(&mut app);
+    assert_eq!(
+        app.world().get::<TraitLoadout>(relog).unwrap().purchases(),
+        at_eleven
+    );
+    assert_eq!(
+        received::<TraitLoadoutsSnapshot>(&mut app, relog)
+            .last()
+            .unwrap()
+            .selected_id,
+        u32::MAX
+    );
+    send_request(
+        &mut app,
+        relog,
+        CommitTraitConfig {
+            spec_id: SPEC_RETRIBUTION,
+            entries: vec![],
+        },
+    );
+    assert!(
+        received::<TraitCommitResult>(&mut app, relog)
+            .last()
+            .unwrap()
+            .ok
+    );
+    assert_eq!(
+        received::<TraitLoadoutsSnapshot>(&mut app, relog)
+            .last()
+            .unwrap()
+            .selected_id,
+        0
+    );
+    app.world_mut().get_mut::<Level>(relog).unwrap().0 = 12;
+    advance(&mut app);
+    assert!(
+        app.world()
+            .get::<TraitLoadout>(relog)
+            .unwrap()
+            .purchases()
+            .is_empty()
+    );
+}
+
 #[test]
 fn talent_loadouts_create_apply_switch_rename_delete_and_login_restore() {
     let classes = class_spells().expect("world.db");
