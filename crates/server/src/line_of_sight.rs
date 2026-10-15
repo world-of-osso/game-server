@@ -234,6 +234,23 @@ pub(crate) fn sees_in_world(world: &World, watcher: Entity, target: Entity) -> b
     }
 }
 
+/// Area-hit visibility from the recipient to the area center. TC's point LOS
+/// raises the destination by the recipient's collision height; our eye-geometry
+/// contract uses its baked eye height instead (no witness from the caster).
+pub(crate) fn sees_area_center(world: &World, target: Entity, center: Vec3) -> bool {
+    let Some(los) = world.get_resource::<LineOfSight>() else {
+        return true;
+    };
+    let Some(map) = world.get::<InMap>(target).copied() else {
+        return false;
+    };
+    let Some(body) = parts_in_world(world, target).and_then(|parts| los.body(parts)) else {
+        return false;
+    };
+    let eye_height = body.eyes.y - body.feet.y;
+    los.clear(map, body.eyes, center + Vec3::Y * eye_height)
+}
+
 /// A player cast's witness ray (spec, Player casts): it starts within
 /// [`WITNESS_START_TOLERANCE`] of the caster's eye point, ends inside the target's body
 /// volume grown by [`WITNESS_END_TOLERANCE`], both at the server's current positions, and
@@ -258,9 +275,22 @@ pub(crate) fn witness_holds(
         return false;
     };
     let (start, end) = (Vec3::from(witness.start), Vec3::from(witness.end));
-    start.distance(caster.eyes) <= WITNESS_START_TOLERANCE
+    let held = start.distance(caster.eyes) <= WITNESS_START_TOLERANCE
         && target.contains(end, WITNESS_END_TOLERANCE)
-        && los.clear(map, start, end)
+        && los.clear(map, start, end);
+    debug!(
+        ?map,
+        caster_eye = ?caster.eyes,
+        target_eye = ?target.eyes,
+        start_distance = start.distance(caster.eyes),
+        end_in_body = target.contains(end, WITNESS_END_TOLERANCE),
+        witness_segment_clear = los.clear(map, start, end),
+        authoritative_witness = ?los.witness(map, &caster, &target),
+        ?witness,
+        held,
+        "Cast witness checked"
+    );
+    held
 }
 
 pub struct LineOfSightPlugin;

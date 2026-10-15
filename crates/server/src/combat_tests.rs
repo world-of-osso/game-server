@@ -127,6 +127,7 @@ fn run_attack_tick(app: &mut App) {
                     stats,
                     haste_pct: 0.0,
                     creature: false,
+                    spirit_wolf: None,
                 };
                 for hand in [Hand::Main, Hand::Off] {
                     if try_swing(

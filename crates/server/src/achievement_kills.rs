@@ -9,7 +9,12 @@ use shared::components::Position;
 type DeadTappedCreatures<'w, 's> = Query<
     'w,
     's,
-    (&'static CreatureTap, &'static Position, &'static InMap),
+    (
+        &'static Npc,
+        &'static CreatureTap,
+        &'static Position,
+        &'static InMap,
+    ),
     (With<Npc>, Added<crate::combat::DeathState>),
 >;
 
@@ -25,11 +30,16 @@ pub(super) fn publish_rewarded_creature_kills(
     positions: RewardPlayers,
     lives: PlayerLives,
     groups: Option<Res<GroupRegistry>>,
+    data: Option<Res<crate::world_data::WorldData>>,
     connections: OnlinePlayers,
     mut credits: MessageWriter<CriteriaCredit>,
 ) {
     let online: BTreeSet<_> = connections.iter().map(|link| link.0).collect();
-    for (tap, position, map) in &killed {
+    for (npc, tap, position, map) in &killed {
+        let creature_type = data
+            .as_deref()
+            .and_then(|data| data.templates.get(&npc.template_id))
+            .map(|template| template.creature_type);
         for character in
             rewarded_characters(&tap.tappers, (map, position), &positions, groups.as_deref())
         {
@@ -45,7 +55,7 @@ pub(super) fn publish_rewarded_creature_kills(
             if online.contains(&player) && (!grouped || !corpse_blocks_credit) {
                 credits.write(CriteriaCredit {
                     player,
-                    event: CriteriaEvent::KillAnyCreature,
+                    event: CriteriaEvent::KillAnyCreature(creature_type),
                 });
             }
         }

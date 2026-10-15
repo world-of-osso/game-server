@@ -86,8 +86,8 @@ def some_difficulties(root, modifiers, children, legacy):
     return ids
 
 
-def some_leaf_alternatives(root, modifiers, children, kind):
-    """Plain Some requiring one of multiple complete same-kind positive leaves."""
+def some_leaf_alternatives(root, modifiers, children, kinds):
+    """Plain Some requiring one of multiple complete positive leaves of allowed kinds."""
     parent = modifiers[root]
     if int(parent['Operator']) != SOME:
         return None
@@ -97,9 +97,9 @@ def some_leaf_alternatives(root, modifiers, children, kind):
     for child in children[root]:
         leaf = modifiers[child]
         if (children[child] or int(leaf['Operator']) != SINGLE_TRUE
-                or int(leaf['Type']) != kind or int(leaf['Asset']) <= 0 or not plain(leaf)):
+                or int(leaf['Type']) not in kinds or int(leaf['Asset']) <= 0 or not plain(leaf)):
             return None
-        assets.append(int(leaf['Asset']))
+        assets.append((int(leaf['Type']), int(leaf['Asset'])))
     return tuple(sorted(assets))
 
 
@@ -112,21 +112,21 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
     parent = modifiers[root]
     if (int(parent['Type']), int(parent['Asset'])) != (0, 0) or not plain(parent):
         return None
-    auras = some_leaf_alternatives(root, modifiers, children, 8)
+    auras = some_leaf_alternatives(root, modifiers, children, {8})
     if auras is not None:
-        return None, tuple((8, spell) for spell in auras)
-    areas = some_leaf_alternatives(root, modifiers, children, 17)
-    if areas is not None:
-        return None, tuple((17, area) for area in areas)
-    maps = some_leaf_alternatives(root, modifiers, children, 32)
+        return None, auras
+    locations = some_leaf_alternatives(root, modifiers, children, {17, 41})
+    if locations is not None:
+        return None, locations
+    maps = some_leaf_alternatives(root, modifiers, children, {32})
     if maps is not None:
-        return None, tuple((32, map_id) for map_id in maps)
-    items = some_leaf_alternatives(root, modifiers, children, 19) if criteria_type in (90, 91) else None
+        return None, maps
+    items = some_leaf_alternatives(root, modifiers, children, {19}) if criteria_type in (90, 91) else None
     if items is not None:
-        return None, tuple((19, item) for item in items)
-    targets = some_leaf_alternatives(root, modifiers, children, 4) if criteria_type in (54, 110) else None
+        return None, items
+    targets = some_leaf_alternatives(root, modifiers, children, {4}) if criteria_type in (54, 110) else None
     if targets is not None:
-        return None, tuple((4, target) for target in targets)
+        return None, targets
     some = some_difficulties(root, modifiers, children, legacy)
     if some is not None:
         return ((True, tuple(sorted(some))), ()) if some else None
@@ -154,6 +154,12 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
             allowed = ids if allowed is None else allowed & ids
         elif kind in DIFFICULTY_TYPES and operator == SINGLE_FALSE:
             excluded |= difficulty_ids(node, legacy)
+        elif criteria_type == 29 and kind == 87 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
+            # TC SingleFalse1730 negates scoped HasAchieved2200; signed compiled kind, not a raw DB2 kind.
+            facts.append((-87, int(node['Asset'])))
+        elif criteria_type == 74 and kind == 104 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
+            # Login waits for complete native spell knowledge before HasSpell can be negated.
+            facts.append((-104, int(node['Asset'])))
         elif kind in PLAYER_FACTS and operator == SINGLE_TRUE and int(node['Asset']) > 0:
             facts.append((kind, int(node['Asset'])))
         elif criteria_type == 110 and kind == 5 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
@@ -168,6 +174,12 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
             facts.append((kind, int(node['Asset'])))
         elif criteria_type == 110 and kind == 46 and operator == SINGLE_TRUE and 1 <= int(node['Asset']) <= 100:
             # TC TargetHealthBelowPercent1998–2001 is inclusive and reads the hit unit.
+            facts.append((kind, int(node['Asset'])))
+        elif criteria_type == 160 and kind == 78 and operator == SINGLE_TRUE and 0 <= int(node['Asset']) <= 9:
+            # TC BattlePetType2157–2164 reads the actual earned-level event species' type.
+            facts.append((kind, int(node['Asset'])))
+        elif criteria_type == 78 and kind == 30 and operator == SINGLE_TRUE and 1 <= int(node['Asset']) <= 15:
+            # TC CreatureType1906–1912 / SharedDefines5016–5032: exact killed NPC type.
             facts.append((kind, int(node['Asset'])))
         elif criteria_type in (1, 130) and kind == 67 and operator == SINGLE_TRUE and int(node['Asset']) > 0:
             # Loader admits only the sourced two-team occupied-node equality OR subset.
@@ -230,8 +242,11 @@ def qualified_conditions(criteria, modifiers, legacy):
         if int(row['Type']) in UNGATED_TYPES or root not in modifiers or any(int(row[key]) for key in CONDITIONS):
             continue
         compiled = tree_conditions(root, modifiers, children, legacy, int(row['Type']))
-        if compiled:
-            qualified[row_id] = (root, *compiled)
+        if not compiled:
+            continue
+        if any(kind == 78 for kind, _ in compiled[1]) and not 1 <= int(row['Asset']) <= 25:
+            continue
+        qualified[row_id] = (root, *compiled)
     return qualified
 
 
@@ -243,10 +258,13 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// Generated by scripts/import_achievement_conditions.py; do not edit.',
         '// TC CriteriaHandler.cpp1723-1751 operators over difficulty (20/68) and',
         '// player-only (2/8/17/25/26/29/32/34/41/69/71/87/104; exact39 lowers to69+71), emote/native110 TargetCreatureId4,',
-        '// including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerIsInArea17 or PlayerHasAura8 alternatives,',
+        '// including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerHasAura8 or typed area17/zone41 alternatives,',
         '// native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.',
         '// native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.',
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
+        '// Native CastSpell29 SingleFalse87 and Login74 SingleFalse104 use signed compiled kinds; raw DB2 kinds stay unchanged.',
+        '// Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.',
+        '// Native kill78 CreatureType30 preserves the actual eligible victim type.',
         '// Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
@@ -263,12 +281,15 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         else:
             difficulty = 'None'
         alternative_kind = facts[0][0] if facts else None
-        variant = {4: 'TargetCreatures', 32: 'PlayerMaps', 17: 'PlayerAreas',
+        variant = {4: 'TargetCreatures', 32: 'PlayerMaps',
                    8: 'PlayerAuras', 19: 'EventItems'}.get(alternative_kind)
-        complete_some = (int(modifiers[modifier]['Operator']) == SOME
-                         and len(facts) > 1
-                         and all(kind == alternative_kind for kind, _ in facts))
-        if complete_some and variant is not None:
+        some_alternatives = int(modifiers[modifier]['Operator']) == SOME and len(facts) > 1
+        location_alternatives = some_alternatives and all(kind in (17, 41) for kind, _ in facts)
+        complete_some = some_alternatives and all(kind == alternative_kind for kind, _ in facts)
+        if location_alternatives:
+            leaves = ', '.join(f'({kind}, {asset})' for kind, asset in facts)
+            compiled = f'CompiledConditions::PlayerLocations(&[{leaves}])'
+        elif complete_some and variant is not None:
             assets = ', '.join(str(asset) for _, asset in facts)
             compiled = f'CompiledConditions::{variant}(&[{assets}])'
         else:

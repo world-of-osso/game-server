@@ -151,7 +151,13 @@ pub(super) fn advance_runs(world: &mut World) {
     let orphans: Vec<_> = world
         .query::<(Entity, &Follower)>()
         .iter(world)
-        .filter(|(_, follower)| world.get::<FollowerRun>(follower.owner).is_none())
+        .filter(|(_, follower)| {
+            let retail_run = world.get::<FollowerRun>(follower.owner).is_some();
+            let diagnostic_run = world
+                .get::<super::stockade_diagnostic::DiagnosticParty>(follower.owner)
+                .is_some();
+            !retail_run && !diagnostic_run
+        })
         .map(|(unit, _)| unit)
         .collect();
     for unit in orphans {
@@ -160,22 +166,9 @@ pub(super) fn advance_runs(world: &mut World) {
 }
 
 fn spawn_party(world: &mut World, owner: Entity, run: &FollowerRun) -> Result<(), String> {
-    let mut members = Vec::new();
-    for profile in &run.profiles {
-        match super::spawning::spawn(world, owner, profile.clone()) {
-            Ok(unit) => members.push(unit),
-            Err(error) => {
-                for unit in members {
-                    crate::zones::unsummon(world, unit);
-                }
-                return Err(error);
-            }
-        }
-    }
+    let members = super::spawning::spawn_members(world, owner, &run.profiles)?;
     if let Err(error) = join_party(world, owner, run, &members) {
-        for unit in members {
-            crate::zones::unsummon(world, unit);
-        }
+        super::spawning::unsummon_members(world, &members);
         return Err(error);
     }
     let copy = *world
@@ -203,6 +196,19 @@ fn join_party(
     run: &FollowerRun,
     members: &[Entity],
 ) -> Result<(), String> {
+    join_members(world, owner, run.player_role, members)
+}
+
+pub(super) fn join_members(
+    world: &mut World,
+    owner: Entity,
+    role: GroupRole,
+    members: &[Entity],
+) -> Result<(), String> {
+    let difficulty = world
+        .get::<DungeonDifficulty>(owner)
+        .ok_or("companion owner has no dungeon difficulty")?
+        .0;
     let id = world.get::<ClientId>(owner).ok_or("owner logged out")?.0;
     let player = world.get::<Player>(owner).ok_or("owner is not a player")?;
     let online_player = OnlineMember {
@@ -214,7 +220,7 @@ fn join_party(
             player,
             world.get::<shared::components::EquipmentAppearance>(owner),
         ),
-        dungeon_difficulty: FOLLOWER_DIFFICULTY,
+        dungeon_difficulty: difficulty,
         raid_difficulty: world
             .get::<crate::maps::RaidDifficulty>(owner)
             .copied()
@@ -230,13 +236,14 @@ fn join_party(
                 follower.online(
                     unit,
                     world.get::<UnitLevel>(unit).expect("follower level").0,
+                    difficulty,
                 ),
             );
             (Follower::member_id(unit), follower.profile.role)
         })
         .collect();
     let mut registry = world.resource_mut::<GroupRegistry>();
-    let group = registry.create_companion_party(id, run.player_role, &companion_roles, &online)?;
+    let group = registry.create_companion_party(id, role, &companion_roles, &online)?;
     let roster = registry
         .build_roster(group, &online)
         .expect("formed companion roster");
@@ -257,7 +264,15 @@ fn join_party(
 }
 
 fn end_run(world: &mut World, player: Entity, run: &FollowerRun) {
-    for &unit in &run.members {
+    leave_members(world, player, &run.members);
+    world.entity_mut(player).remove::<FollowerRun>().insert((
+        DungeonDifficulty(run.previous_difficulty),
+        crate::lfg::PlayerLfgState::default(),
+    ));
+}
+
+pub(super) fn leave_members(world: &mut World, player: Entity, members: &[Entity]) {
+    for &unit in members {
         if world.get_entity(unit).is_ok() {
             crate::zones::unsummon(world, unit);
         }
@@ -265,10 +280,6 @@ fn end_run(world: &mut World, player: Entity, run: &FollowerRun) {
     if let Some(id) = world.get::<ClientId>(player).map(|id| id.0) {
         world.resource_mut::<GroupRegistry>().leave(id);
     }
-    world.entity_mut(player).remove::<FollowerRun>().insert((
-        DungeonDifficulty(run.previous_difficulty),
-        crate::lfg::PlayerLfgState::default(),
-    ));
     if let Some(conn) = crate::spell_cast::owner_connection(world, player) {
         if let Some(mut sender) =
             world.get_mut::<MessageSender<shared::protocol::GroupRosterSnapshot>>(conn)

@@ -172,7 +172,7 @@ fn class_completeness_native_darkness_ground_destination_snaps_to_authored_terra
 }
 
 #[test]
-fn class_completeness_native_random_summons_use_authored_caster_or_target_ring() {
+fn class_completeness_native_random_summons_use_authored_caster_or_target_disk() {
     let prepared = prepare_class_world();
     for (spell_id, class, entry, effect_index) in [(1276452, 9, 258584, 1), (123904, 10, 63508, 0)]
     {
@@ -204,8 +204,14 @@ fn class_completeness_native_random_summons_use_authored_caster_or_target_ring()
             })
             .collect();
         for point in &points {
-            assert!((point.distance(origin) - authored_radius).abs() < 0.001);
+            assert!(point.distance(origin) <= authored_radius + 0.001);
         }
+        assert!(
+            points
+                .iter()
+                .any(|point| point.distance(origin) < authored_radius * 0.8),
+            "native random radius reaches the disk interior for {spell_id}"
+        );
         assert!(points.iter().any(|point| point.distance(points[0]) > 0.1));
         super::execute_cast(h.app.world_mut(), h.caster, &spell, Some(h.npc))
             .expect("native random summon");
@@ -220,6 +226,56 @@ fn class_completeness_native_random_summons_use_authored_caster_or_target_ring()
             .filter(|(npc, owner)| npc.template_id == entry && owner.0 == caster.to_bits())
             .collect();
         assert_eq!(owned.len(), 1, "native summon {spell_id}");
+    }
+}
+
+/// TC a352b1fa SpellInfo.cpp CalcRadius:72/86 use (Max-Min)*sqrt(rand_norm());91 does not.
+#[test]
+fn toyfx38_native_flute_destination_samples_area_not_ring_or_uniform_distance() {
+    let h = harness(Vec::new(), &[142917], 8).unwrap();
+    let spell = world_db().unwrap().store.get(142917).unwrap();
+    let mut effect = spell.effects[0].clone();
+    let native_radius = effect.radius[1].unwrap();
+    // Real Flute first; a nonzero minimum distinguishes a span from a shifted annulus.
+    for minimum in [native_radius.radius_min, 1.0] {
+        effect.radius[1] = Some(crate::spell_info::SpellRadius {
+            radius_min: minimum,
+            ..native_radius
+        });
+        let maximum_distance = native_radius.radius - minimum;
+        let squared_distances: Vec<_> = (0..512)
+            .map(|_| {
+                let destination =
+                    super::targets::effect_dest(h.app.world(), h.caster, None, &effect, None)
+                        .unwrap();
+                assert_eq!(destination.position.y, 0.0);
+                destination.position.length_squared() / maximum_distance.powi(2)
+            })
+            .collect();
+        assert!(squared_distances.iter().all(|distance| *distance <= 1.0001));
+        let mean = squared_distances.iter().sum::<f32>() / squared_distances.len() as f32;
+        assert!(
+            (0.4..0.6).contains(&mean),
+            "uniform disk area, got {mean} (min {minimum})"
+        );
+    }
+}
+
+#[test]
+fn toyfx38_native_flute_destination_inherits_radius_target_identity() {
+    let h = harness(Vec::new(), &[142917], 8).unwrap();
+    let mut effect = world_db().unwrap().store.get(142917).unwrap().effects[0].clone();
+    let native_radius = effect.radius[1].unwrap();
+    // CalcRadius only changes to TargetB when B has its own radius entry.
+    effect.radius = [Some(native_radius), None];
+    for _ in 0..32 {
+        let destination =
+            super::targets::effect_dest(h.app.world(), h.caster, None, &effect, None).unwrap();
+        let distance = destination.position.length();
+        assert!(
+            (distance - native_radius.radius).abs() < 0.001,
+            "inherited TargetA18 radius {distance}"
+        );
     }
 }
 

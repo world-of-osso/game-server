@@ -213,19 +213,19 @@ fn spellqueue_death_revalidates_pending_once_without_executing_it() {
 }
 
 #[test]
-fn spellqueue_exact_400ms_boundary_is_inclusive() {
+fn spellqueue_exact_750ms_boundary_is_inclusive() {
     let mut h = harness(Vec::new(), &[FIREBALL, SLAM], 1).unwrap();
     h.cast_and_deliver(FIREBALL, Some(h.npc));
     let now = h.app.world().resource::<Time>().elapsed_secs_f64();
     let mut cast = h.app.world_mut().get_mut::<CastState>(h.caster).unwrap();
-    cast.duration = 0.4;
+    cast.duration = 0.75;
     cast.elapsed = 0.0;
     h.app
         .world_mut()
         .get_mut::<super::SpellHistory>(h.caster)
         .unwrap()
         .gcd_ready_at
-        .insert(133, now + 0.4);
+        .insert(133, now + 0.75);
     h.set_power(PowerType::Rage, 200.0);
     let request = shared::protocol::SpellCastIntent {
         target_item_guid: None,
@@ -236,7 +236,7 @@ fn spellqueue_exact_400ms_boundary_is_inclusive() {
         witness: None,
     };
     let result = super::request_cast(h.app.world_mut(), h.caster, &request);
-    assert_eq!(result, Ok(()), "400ms is inside the queue window");
+    assert_eq!(result, Ok(()), "750ms is inside the queue window");
     h.advance(15);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(h.power(PowerType::Rage), 0.0);

@@ -42,7 +42,11 @@ fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
         .expect("explicit private prepared world copy");
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let criteria = crate::achievement::load_achievement_catalog(&conn).unwrap();
-    let catalog = load_catalog(&conn, &criteria);
+    let journal_csv = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("db2/active/AdventureJournal.csv");
+    let catalog = load_catalog(&conn, &criteria, &journal_csv);
     assert!(matches!(catalog, AdventureCatalog::Ready(_)), "{catalog:?}");
     h.app.insert_resource(criteria);
     h.app.insert_resource(catalog);
@@ -56,6 +60,43 @@ fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
         .world_mut()
         .entity_mut(h.player)
         .insert(shared::components::Level(80));
+}
+
+#[test]
+fn suggested_provider_uses_existing_earned_achievement_authority_for_bonus() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let now = Utc
+        .with_ymd_and_hms(2026, 10, 15, 16, 0, 0)
+        .single()
+        .unwrap()
+        .timestamp();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalbonus").unwrap();
+    attach_requests(&mut h);
+    prepare_real_catalog(&mut h, now);
+    let unearned = request(&mut h, AdventureGuideRequest::Query);
+    let position = |snapshot: &AdventureGuideSnapshot, id| {
+        snapshot
+            .suggestions
+            .iter()
+            .position(|row| row.id == id)
+            .unwrap_or_else(|| panic!("Eligible authored suggestion {id} missing"))
+    };
+    // Actual Random Battleground27 receives bonus4 from PlayerCondition33559 / achievement39935.
+    assert!(position(&unearned, 27) > position(&unearned, 852));
+    h.app
+        .world_mut()
+        .get_mut::<PlayerAchievementState>(h.player)
+        .unwrap()
+        .earned_ids
+        .insert(39935);
+    let earned = request(&mut h, AdventureGuideRequest::Query);
+    assert!(position(&earned, 27) < position(&earned, 852));
+    assert!(
+        earned
+            .suggestions
+            .iter()
+            .all(|row| row.button_text.is_empty())
+    );
 }
 
 #[test]
@@ -103,7 +144,16 @@ fn adventure_guide_real_rows_unavailable_census_tracking_and_monthly_persistence
         "suggestion census {census:?}; visible {}",
         snapshot.suggestions.len()
     );
-    assert_eq!(census.source_rows, 698);
+    let journal_csv = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("db2/active/AdventureJournal.csv");
+    let source_rows = csv::Reader::from_path(journal_csv)
+        .unwrap()
+        .records()
+        .map(Result::unwrap)
+        .count();
+    assert_eq!(census.source_rows as usize, source_rows);
     assert_eq!(
         census.source_rows,
         census.unsupported_conditions
