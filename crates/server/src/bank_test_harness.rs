@@ -113,13 +113,15 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
     let character_id = create_character(&mut app, name);
     let (connection, player) = spawn_connection(&mut app, 1, character_id, name);
     app.update();
-    Some(Harness {
+    let mut harness = Harness {
         app,
         conn,
         connection,
         player,
         character_id,
-    })
+    };
+    harness.finish_bank_work();
+    Some(harness)
 }
 
 /// A logged-in connection (peer `peer`) whose player is `name` at the origin.
@@ -248,6 +250,7 @@ impl Harness {
             .entity_mut(player)
             .insert(ClientId(character_id));
         self.app.update();
+        self.finish_bank_work();
     }
 
     pub fn send<M: lightyear::prelude::Message, C: Channel>(&mut self, message: M) {
@@ -269,23 +272,26 @@ impl Harness {
         for _ in 0..3 {
             self.app.update();
         }
-        let deadline = std::time::Instant::now() + Duration::from_secs(3);
-        while !self
-            .app
-            .world()
+        self.finish_bank_work();
+    }
+
+    fn bank_work_pending(&self) -> bool {
+        let world = self.app.world();
+        !world
             .resource::<crate::bank::PendingBankCommits>()
             .is_idle()
-            || !self
-                .app
-                .world()
+            || !world
                 .resource::<crate::guild_bank::PendingGuildBankCommits>()
                 .is_idle()
-            || !self
-                .app
-                .world()
+            || !world
                 .resource::<crate::inventory::PendingInventoryCommits>()
                 .is_idle()
-        {
+    }
+
+    // Fixture seeds use direct DB writes; never race them with the initial FIFO normalization.
+    fn finish_bank_work(&mut self) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        while self.bank_work_pending() {
             assert!(
                 std::time::Instant::now() < deadline,
                 "bank fixture commit timeout"
