@@ -457,6 +457,47 @@ fn waypoint_new_home_initializes_without_second_position_step_in_handoff_tick() 
     );
 }
 
+#[test]
+fn waypoint_completion_handoff_does_not_add_chase_after_the_final_path_step() {
+    let (mut world, actor, target) = motion_ownership_world();
+    for _ in 0..200 {
+        world
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(50));
+        path_movement_system(&mut world);
+        if !world.resource::<ArrivalReceipts>().0.is_empty() {
+            break;
+        }
+    }
+    assert_eq!(world.resource::<ArrivalReceipts>().0, vec![(1, 1)]);
+    let after_waypoint = *world.get::<Position>(actor).unwrap();
+    assert_eq!(after_waypoint, bevy(Vec3::new(12.0, 0.0, 0.0)));
+    // The completion callback may engage a target before active motion runs.
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Pursuing {
+            target: target.to_bits(),
+        });
+    world
+        .run_system_once(crate::creature_ai::chase_system)
+        .unwrap();
+    assert_eq!(
+        *world.get::<Position>(actor).unwrap(),
+        after_waypoint,
+        "finishing the default path cannot lose that tick's sole position owner"
+    );
+    tick_owned_motion(&mut world);
+    let actual = *world.get::<Position>(actor).unwrap();
+    let distance = Vec3::new(
+        actual.x - after_waypoint.x,
+        actual.y - after_waypoint.y,
+        actual.z - after_waypoint.z,
+    )
+    .length();
+    assert!((distance - 0.35).abs() < 0.0001);
+    assert_eq!(world.resource::<ArrivalReceipts>().0, vec![(1, 1)]);
+}
+
 #[derive(Resource, Default)]
 struct ArrivalReceipts(Vec<(u32, u32)>);
 
