@@ -28,6 +28,13 @@ scp data/world.db "${SERVER_HOST}:${STATE_DIR}/data/world.db"
 test -f data/game_object_locks.json || { echo "Missing data/game_object_locks.json: run scripts/import_game_object_locks.py" >&2; exit 1; }
 scp data/game_object_locks.json "${SERVER_HOST}:${STATE_DIR}/data/game_object_locks.json"
 scp data/economy/config.json "${SERVER_HOST}:${STATE_DIR}/data/economy/config.json"
+echo "Uploading installed-build DB2 tables (the server reads data/db2/active at startup)..."
+# Missing here crash-looped production on 2026-10-14 (guild tabard catalog). Ship the whole
+# active build so new runtime readers cannot be forgotten, and keep the active link.
+db2_build=$(readlink data/db2/active)
+test -n "$db2_build" -a -d "data/db2/${db2_build}" || { echo "data/db2/active must link to an installed build directory" >&2; exit 1; }
+rsync -a --delete --chown=game-server:game-server "data/db2/${db2_build}/" "${SERVER_HOST}:${STATE_DIR}/data/db2/${db2_build}/"
+ssh "$SERVER_HOST" "ln -sfn ${db2_build} ${STATE_DIR}/data/db2/active && chown -h game-server:game-server ${STATE_DIR}/data/db2/active"
 
 echo "Uploading ground (WDTs, ADTs and WMOs of the spawned and hosted maps)..."
 python3 scripts/ground_files.py --world-db data/world.db --cache ../game-engine/data > "$GROUND_LIST"
