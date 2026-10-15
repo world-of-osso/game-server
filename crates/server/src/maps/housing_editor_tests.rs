@@ -1,5 +1,40 @@
 use super::*;
 
+fn collect_editor_replies(
+    h: &mut Harness,
+    owner: &Traveler,
+    visitor: &Traveler,
+) -> (Vec<HousingReply>, Vec<HousingReply>) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    let mut replies = (Vec::new(), Vec::new());
+    let mut frames = 0;
+    loop {
+        h.advance(1);
+        frames += 1;
+        for (person, received) in [(owner, &mut replies.0), (visitor, &mut replies.1)] {
+            received.extend(
+                h.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<HousingReply>>(person.connection)
+                    .unwrap()
+                    .receive(),
+            );
+        }
+        if frames >= 6
+            && !crate::housing::persistence_pending(h.app.world())
+            && !replies.0.is_empty()
+            && !replies.1.is_empty()
+        {
+            return replies;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "owner/visitor edit publication timed out"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+}
+
 #[test]
 fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storage() {
     use crate::persistence::{
@@ -118,25 +153,7 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
                 },
             },
         });
-    let mut owner_replies = Vec::new();
-    let mut visitor_replies = Vec::new();
-    for _ in 0..6 {
-        h.advance(1);
-        owner_replies.extend(
-            h.app
-                .world_mut()
-                .get_mut::<MessageReceiver<HousingReply>>(owner.connection)
-                .unwrap()
-                .receive(),
-        );
-        visitor_replies.extend(
-            h.app
-                .world_mut()
-                .get_mut::<MessageReceiver<HousingReply>>(visitor.connection)
-                .unwrap()
-                .receive(),
-        );
-    }
+    let (owner_replies, visitor_replies) = collect_editor_replies(&mut h, &owner, &visitor);
     assert_eq!(owner_replies.len(), 1);
     assert_eq!(
         visitor_replies.len(),
@@ -172,25 +189,7 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
                 transform,
             },
         });
-    let mut updated = Vec::new();
-    let mut observed = Vec::new();
-    for _ in 0..6 {
-        h.advance(1);
-        updated.extend(
-            h.app
-                .world_mut()
-                .get_mut::<MessageReceiver<HousingReply>>(owner.connection)
-                .unwrap()
-                .receive(),
-        );
-        observed.extend(
-            h.app
-                .world_mut()
-                .get_mut::<MessageReceiver<HousingReply>>(visitor.connection)
-                .unwrap()
-                .receive(),
-        );
-    }
+    let (updated, observed) = collect_editor_replies(&mut h, &owner, &visitor);
     assert_eq!(updated.len(), 1);
     assert_eq!(updated[0].error, None);
     assert_eq!(observed.len(), 1);
