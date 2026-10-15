@@ -127,7 +127,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 41 | UseItem | 1310/1404 | 1216/1231 | 94 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 42 | LootItem | 388/582 | 292/292 | 96 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 43 | RevealWorldMapOverlay | 1738/1932 | 1734/1779 | 4 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 44 | EarnTitle | 0/14 | 0/14 | 0 | Source/producer gap: deprecated/internal criterion or title grant; no designer/title ownership producer. |
+| 44 | EarnTitle | 0/14 | 0/14 | 0 | Source progress gap: TC CriteriaHandler812 is explicitly unimplemented through877, with NYI4977. Title ownership/grant alone cannot establish this criterion's counter/reset semantics. |
 | 45 | BankSlotsPurchased | 0/2 | 0/1 | 0 | Producer gap: native banks buy tabs, not legacy bank bag slots. |
 | 46 | ReputationGained | 273/388 | 234/343 | 39 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 47 | TotalExaltedFactions | 1/2 | 0/0 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -141,13 +141,13 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 55 | HealingDone | 1/16 | 0/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 56 | DeliveredKillingBlow | 42/80 | 27/63 | 15 | Native: authenticated in-world killer on actual lethal health commits, plus genuine HunterPet owner credit (TC Unit::Kill); dead replay/self raw KillUnit idle. See spec. |
 | 57 | EquipItem | 162/163 | 11/11 | 151 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 58 | CompleteQuestsInSort | 0/3 | 0/0 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 58 | CompleteQuestsInSort | 0/3 | 0/0 | 0 | Source progress gap: pinned CriteriaHandler has only name4176–4177 and NYI4981, no executable progress/caller. Native positive QuestSortID already belongs to zone11; sort412 cannot establish58 semantics. |
 | 59 | MoneyEarnedFromSales | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 60 | MoneySpentOnRespecs | 0/1 | 0/0 | 0 | Producer gap: current trait commits do not execute legacy paid Player::ResetTalents; no respec fee/reset settlement. |
 | 61 | TotalRespecs | 0/1 | 0/0 | 0 | Producer gap: current trait commits do not execute legacy paid Player::ResetTalents; no respec fee/reset settlement. |
 | 62 | MoneyEarnedFromQuesting | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 63 | MoneySpentOnTaxis | 1/2 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 64 | KilledAllUnitsInSpawnRegion | 0/75 | 0/0 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 64 | KilledAllUnitsInSpawnRegion | 0/75 | 0/0 | 0 | Source progress gap: CriteriaHandler852 is explicitly unimplemented through877. Native deaths/tap recipients do not define all-spawns region identity, reset or completion policy. |
 | 65 | MoneySpentAtBarberShop | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 66 | MoneySpentOnPostage | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 67 | MoneyLootedFromCreatures | 1/2 | 1/2 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -230,7 +230,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 150 | GroupedTankLeftEarlyInLFRDungeon | 0/1 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |
 | 151 | CompleteAnyScenario | 6/8 | 1/2 | 5 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 152 | CompleteScenario | 933/1079 | 78/139 | 855 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 153 | EnterAreaTriggerWithActionSet | 0/33 | 0/8 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
+| 153 | EnterAreaTriggerWithActionSet | 0/33 | 0/8 | 0 | Producer/content gap: MiscHandler516/AreaTrigger1020 use actual action-set identity. Native teleport store drops it;324 action-bearing portals match none of153 assets, dynamic TDB templates match none. Only matching client8683/action3755 is scenario1050 without native admission. |
 | 155 | LearnedNewPet | 127/127 | 122/122 | 5 | Native: battle_pets::learn_companion_from_item and wild capture credit species after the new-GUID journal commit (TC BattlePetMgr::AddPet:483); compiled AND4→BattlePetSpecies91 leaves only. Local item sources exist for species1928/1929 only; Coiled Isle wild species lack battle abilities. See spec. |
 | 156 | UniquePetsOwned | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 157 | AccountObtainPetThroughBattle | 2/510 | 1/459 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -284,7 +284,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 214 | EarnArtifactXPForAzeriteItem | 0/1 | 0/1 | 0 | Producer/state gap: no artifact/relic/Azerite/soulbind progression lifecycle. |
 | 215 | AzeriteLevelReached | 0/3 | 0/0 | 0 | Producer/state gap: no artifact/relic/Azerite/soulbind progression lifecycle. |
 | 216 | MythicPlusCompleted | 64/813 | 63/781 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 218 | CompleteAnyReplayQuest | 0/1 | 0/0 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
+| 218 | CompleteAnyReplayQuest | 0/1 | 0/0 | 0 | Source condition gap: Player15278 emits1 after each reward, but sole orphan46674 requires277 RaF-recruit grouping plus283/284 Party Sync. The latter are pinned hard-false NYI3568–3575; ordinary rewards cannot bypass them. |
 | 219 | BuyItemsFromVendors | 2/5 | 1/1 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 220 | SellItemsToVendors | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 221 | ReachMaxLevel | 16/16 | 15/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
