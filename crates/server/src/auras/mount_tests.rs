@@ -116,6 +116,7 @@ fn expert_riding_mounts_the_golden_gryphon_with_standard_steady_flight() {
     assert_eq!(
         h.app.world().get::<Mounted>(h.caster),
         Some(&Mounted {
+            mount_id: 129,
             mount_display_id: GOLDEN_GRYPHON_DISPLAY,
             ..Default::default()
         })
