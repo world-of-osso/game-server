@@ -818,7 +818,7 @@ fn achievements_criteria_native_unearned_self_guard_stops_after_real_twenty_cast
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
-    let (character, _) = persistence::create_character(&db, 1, "Gearcastproof", 1, 1).unwrap();
+    let (character, _) = persistence::create_character(&db, 1, "Gearproof", 1, 1).unwrap();
     let (sibling, _) = persistence::create_character(&db, 1, "Gearsibling", 1, 1).unwrap();
     let (foreign, _) = persistence::create_character(&db, 2, "Gearforeign", 1, 1).unwrap();
     let mut h = spawn_saved_gear_cast_fixture(db, character, 1);
