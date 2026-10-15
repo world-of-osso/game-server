@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.
+
 - [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
 
 - [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; native13 controls pass, frontend RAP propagation and whole-AP limits remain open.
