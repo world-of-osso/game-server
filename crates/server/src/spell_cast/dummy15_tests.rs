@@ -54,7 +54,12 @@ fn dummy15_vampiric_blood_grants_native_max_health_without_refresh_stacking() {
 #[test]
 fn dummy15_frost_strike_uses_native_two_hand_or_dual_wield_children_not_both() {
     for dual in [false, true] {
-        let mut h = harness(Vec::new(), &[49143, 222026, 66196, 325464], 6).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[49143, 222026, 66196, 325464],
+            6,
+        )
+        .unwrap();
         let caster = h.caster;
         h.app
             .world_mut()
@@ -78,7 +83,12 @@ fn dummy15_frost_strike_uses_native_two_hand_or_dual_wield_children_not_both() {
 #[test]
 fn dummy15_rising_sun_kick_rank_wounds_only_actual_primary_and_expires() {
     for ranked in [false, true] {
-        let mut h = harness(Vec::new(), &[107428, 185099, 128595, 115804], 10).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[107428, 185099, 128595, 115804],
+            10,
+        )
+        .unwrap();
         pin_known(&mut h, &[107428]);
         let caster = h.caster;
         if ranked {
