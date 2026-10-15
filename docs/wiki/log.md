@@ -1488,3 +1488,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-15: Wake/flight exit GREEN053915ae1/1 in31.22s, unchanged firstwave/fourdruid controls2PASS, all-target check14.62s/no warnings and scopedfmt/diff exit0. Corrected fixture instant-aura assumption using actual8153 five-second cast. Independent lead gate pending; natural/native clears still open.
 - 2026-10-15: Wailing Normal ritual-wave copy-only projection profile after process-boundary RED; source identity/stat fields preserved, canonical publication/balance separate.
 - 2026-10-15: Wailing copy-only Normal wave projection GREENb3cc6fed2/2 PASS7.421s, actual CLI/idempotency/identity-refusal and unchanged row hashes; canonical/runtime application and balance still separate.
+
+## 2026-10-15 — Typed location alternatives
+
+Replaced area-only Some projection with typed17/41 alternatives and strict complete-asset validation. Compiler/native genuine RED8984dbbd; generated5759; GREEN/census pending. [System](systems/dungeon-achievements.md#typed-areazone-alternatives).
+
+Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/8(59.21s), compiler41/41, census5506/1824 with all243/same7hashes. Native cached254 selfie27968/refused/outside/idle/reopen; no full grants/travel/acquisition/UI claim.
