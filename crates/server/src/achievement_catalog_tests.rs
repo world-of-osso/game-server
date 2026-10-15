@@ -1277,9 +1277,13 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5509 + two character-only negative8 kill definitions.
+    // Installed70391: 5511 + nested-All encounter definition11660.
     // Structural union, not full boss content, recipe repair, travel or acquisition proof.
-    assert_eq!(union.len(), 5511);
+    assert_eq!(union.len(), 5512);
+    assert!(
+        union.contains(&11660),
+        "complete nested encounter conjunction"
+    );
     for achievement in [7257, 10458] {
         assert!(
             union.contains(&achievement),
