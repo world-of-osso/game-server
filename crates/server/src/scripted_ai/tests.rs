@@ -176,7 +176,6 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     app.add_plugins(ProtocolPlugin);
     app.add_plugins((
         crate::combat::CombatPlugin,
-        crate::stats::StatsPlugin,
         crate::spell_cast::SpellCastPlugin,
         crate::auras::AuraPlugin,
         crate::creature_ai::CreatureAiPlugin,
@@ -196,7 +195,6 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     let all = crate::spell_cast::test_harness::world_db().unwrap();
     app.insert_resource(SpellStore::fixture(data.spells.clone()));
     app.insert_resource(crate::spell_cast::test_harness::power_table(all));
-    app.insert_resource(crate::spell_cast::test_harness::class_spells(all));
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
     app.insert_resource(WorldData {
         templates: stockade_templates(),
@@ -234,9 +232,45 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     app
 }
 
-/// A level30 Human at WoW `(x, y, z)`, facing `o`; StatsPlugin derives native stats.
+/// Run the real native stat producer once, separately from encounter health buffers.
+fn load_native_player_stats() -> crate::stats::CharacterStats {
+    use bevy::ecs::system::RunSystemOnce;
+    static STATS: OnceLock<crate::stats::CharacterStats> = OnceLock::new();
+    *STATS.get_or_init(|| {
+        let mut world = World::new();
+        let all = crate::spell_cast::test_harness::world_db().unwrap();
+        world.insert_resource(crate::spell_cast::test_harness::class_spells(all));
+        let player = world
+            .spawn((
+                Player {
+                    name: "Stockade stat inputs".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: default(),
+                },
+                shared::components::Level(30),
+                shared::components::UnitStats::default(),
+                shared::components::CombatRatings::default(),
+                shared::components::DerivedStats::default(),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id();
+        world
+            .run_system_once(crate::stats::update_character_stats)
+            .unwrap();
+        *world
+            .get::<crate::stats::CharacterStats>(player)
+            .expect("native player stats produced")
+    })
+}
+
+/// A level30 Human with encounter health buffer, native stats and WoW pose.
 fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, Entity) {
     let (x, y, z) = crate::terrain_height::wow_to_bevy(wow[0], wow[1], wow[2]);
+    let stats = load_native_player_stats();
     let player = app
         .world_mut()
         .spawn((
@@ -257,11 +291,12 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
                 current: 1_000_000.0,
                 max: 1_000_000.0,
             },
-            // Same empty stat inputs as native character entry; never fabricate dodge.
+            // Actual producer output; encounter buffers are intentionally independent.
             shared::components::Level(30),
-            shared::components::UnitStats::default(),
-            shared::components::CombatRatings::default(),
-            shared::components::DerivedStats::default(),
+            stats.primary,
+            stats.ratings,
+            stats.derived(),
+            stats,
             UnitLevel(30),
             UnitFactionTemplate(1),
             CombatStatus(false),
