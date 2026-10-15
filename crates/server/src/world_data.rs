@@ -1099,7 +1099,11 @@ fn startup_load_world_data(mut commands: Commands) {
         "Failed to load scenarios; run scripts/import_scenarios.py on a private world data copy",
     );
     commands.insert_resource(scenarios);
-    commands.insert_resource(crate::adventure_guide::load_catalog(&conn, &achievements));
+    commands.insert_resource(crate::adventure_guide::load_catalog(
+        &conn,
+        &achievements,
+        Path::new("data/db2/active/AdventureJournal.csv"),
+    ));
     commands.insert_resource(achievements);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");
