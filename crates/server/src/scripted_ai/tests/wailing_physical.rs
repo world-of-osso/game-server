@@ -257,7 +257,8 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
                 camp_counts[camp] += 1;
             }
         }
-        if camp_counts == [2, 3] && point.distance(endpoint) < 0.2 {
+        let stopped = h.app.world().get::<CreatureMotion>(disciple) == Some(&CreatureMotion::Still);
+        if camp_counts == [2, 3] && point.distance(endpoint) <= GROUND_TOLERANCE && stopped {
             arrived = true;
             break;
         }
