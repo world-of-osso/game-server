@@ -1,5 +1,16 @@
 # Wiki Index
 
+- [Spawn-group guardian count](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14) — Scarab2301 flag routing, variable count and independent native5yd secondary scatter; other count paths remain open.
+
+- [Toy initial random destination radius](systems/toys.md#initial-random-destination-radius-2026-10-14) — native72/86 disk area versus91 fixed distance; independent of secondary scatter and unresolved Flute following.
+
+- [Source Toy facing](systems/toys.md#source-facing-boundary-2026-10-13) — two roots, inclusive180° arc and strict exact3D target-radius exemption; no CombatReach substitution.
+
+- [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
+
+- [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
+
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
 
 - [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.
@@ -348,4 +359,7 @@ Debug logs and root cause analyses.
 - [Ruby authored support and search](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13) — sourced metalplate normals, creature/player map-height separation and TC nominalY5; query/native fixture proof is not full-dungeon completion.
 - [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
 
+- [Group-private summon runtime](systems/toys.md#source-group-private-runtime-2026-10-13) — source group identity and roster-driven interest transitions.
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
+
+- [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the unresolved Flute follow promise.

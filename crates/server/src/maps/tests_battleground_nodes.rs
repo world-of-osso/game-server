@@ -26,6 +26,13 @@ fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_
         .unwrap()
         .0;
     let h = &mut entered.h;
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CurrentPvpFaction>(actor.player),
+        Some(&shared::components::CurrentPvpFaction(1)),
+        "Human entered on Horde team"
+    );
     h.app.world_mut().entity_mut(actor.connection).insert((
         pair::<shared::protocol::AttackSwing>(),
         pair::<shared::protocol::AttackStop>(),
@@ -85,6 +92,13 @@ fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_
             .unwrap()
             .0,
         1
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CurrentPvpFaction>(actor.player),
+        Some(&shared::components::CurrentPvpFaction(2)),
+        "successful return restores racial Alliance"
     );
 }
 
@@ -1038,6 +1052,7 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
             shared::components::Level(40),
+            shared::components::CurrentPvpFaction(2),
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
             pair::<QueueForBattleground>(),
@@ -1053,7 +1068,10 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
             });
     }
     h.receive_pvp_updates(5);
-    let who = &players[0];
+    let who = players
+        .iter()
+        .find(|who| battleground(&h, who).team == BgTeam::B)
+        .unwrap();
     let match_id = battleground(&h, who).match_id;
     h.app
         .world_mut()
@@ -1068,12 +1086,19 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
         updates[&who.connection].iter().any(|update| update
             .error
             .as_deref()
-            .is_some_and(|error| error.contains("transport 35"))),
+            .is_some_and(|error| error.contains("transport 36"))),
         "{:#?}",
         updates[&who.connection]
     );
     assert!(h.new_worlds(who).is_empty());
     assert_eq!(h.map_of(who), Some(STORMWIND));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CurrentPvpFaction>(who.player),
+        Some(&shared::components::CurrentPvpFaction(2)),
+        "refused Horde entry retains racial Alliance"
+    );
 }
 
 fn seething_objects(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
@@ -1181,6 +1206,7 @@ fn enter_source_match_with(
             crate::pvp::PlayerPvpState::default(),
             shared::components::Level(template.bracket.min_level),
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
+            shared::components::CurrentPvpFaction(2),
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
             pair::<QueueForBattleground>(),
@@ -1208,6 +1234,13 @@ fn enter_source_match_with(
     for (who, invitation) in players.iter().zip(&invitations) {
         assert_eq!(invitation.match_id, match_id);
         assert_eq!(invitation.map_id, template.map_id);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::CurrentPvpFaction>(who.player),
+            Some(&shared::components::CurrentPvpFaction(2)),
+            "invitation is not entry"
+        );
         h.app
             .world_mut()
             .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
@@ -1322,12 +1355,7 @@ fn use_object(h: &mut Harness, who: &Traveler, object: Entity) {
 /// Every player ends on Team A's victory, leaves, returns to its origin and the copy unloads.
 fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
     let EnteredMatch {
-        h,
-        players,
-        match_id,
-        copy,
-        origin,
-        ..
+        h, players, copy, ..
     } = entered;
     for who in players.iter() {
         let result = battleground(h, who);
@@ -1346,6 +1374,20 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
             _ => 1776,
         };
         assert!(result.world_states.contains(&(score_state, score as i32)));
+    }
+    leave_and_return(entered);
+}
+
+fn leave_and_return(entered: &mut EnteredMatch) {
+    let EnteredMatch {
+        h,
+        players,
+        match_id,
+        copy,
+        origin,
+        ..
+    } = entered;
+    for who in players.iter() {
         h.app
             .world_mut()
             .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
@@ -1419,6 +1461,296 @@ fn arathi_channel_objectives_scoreboard_victory_and_origin_return() {
 #[test]
 fn gilneas_channel_objectives_scoreboard_victory_and_origin_return() {
     node_match(shared::battleground::battle_for_gilneas());
+}
+
+fn create_node_achievement_characters(path: &std::path::Path, template: &BgTemplate) {
+    let database = redb::Database::create(path).unwrap();
+    crate::persistence::create_tables(&database);
+    for id in 1..=u64::from(template.min_players_per_team) * 2 {
+        let name = format!("Node{}", char::from(b'a' + (id - 1) as u8));
+        let (created, mut data) =
+            crate::persistence::create_character(&database, id, &name, 1, 1).unwrap();
+        assert_eq!(created, id);
+        data.level = u16::from(template.bracket.min_level);
+        crate::persistence::save_character(&database, id, &data);
+    }
+}
+
+fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -> EnteredMatch {
+    let database = redb::Database::open(path).unwrap();
+    let rules = node_rules(template.map_id).unwrap();
+    let mut entered = enter_source_match_with(template, rules.starts, |app| {
+        app.insert_resource(crate::persistence::GameDatabase { db: database });
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(crate::achievement::AchievementPlugin);
+    });
+    // Authentication loads this component before gameplay (auth_character.rs468).
+    for who in &entered.players {
+        let world = entered.h.app.world_mut();
+        let character = world.get::<ClientId>(who.player).unwrap().0;
+        let state = crate::persistence::load_achievements(
+            &world.resource::<crate::persistence::GameDatabase>().db,
+            character,
+        );
+        world.entity_mut(who.player).insert(state);
+    }
+    entered
+}
+
+fn probe_node_count_authority(world: &mut World, player: Entity, expected: [u8; 2]) {
+    use crate::pvp::{PlayerPvpState, player_controlled_node_counts};
+    assert_eq!(player_controlled_node_counts(world, player), Some(expected));
+    let character = world.get::<ClientId>(player).unwrap().0;
+    world.entity_mut(player).insert(ClientId(character + 1000));
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "unaccepted identity cannot borrow counts"
+    );
+    world.entity_mut(player).insert(ClientId(character));
+    let map = *world.get::<InMap>(player).unwrap();
+    world
+        .entity_mut(player)
+        .insert(InMap::continent(map.map_id));
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "same map ID in another copy is not the match"
+    );
+    world.entity_mut(player).insert(map);
+    let mut snapshot = world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground
+        .take()
+        .unwrap();
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "missing battleground context is unknown"
+    );
+    let match_id = snapshot.match_id;
+    let states = std::mem::take(&mut snapshot.world_states);
+    snapshot.match_id = u64::MAX;
+    world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground = Some(snapshot);
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "stale match identity is not authority"
+    );
+    world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground
+        .as_mut()
+        .unwrap()
+        .match_id = match_id;
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        Some(expected),
+        "wire-cache contents are not the native node ledger"
+    );
+    world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground
+        .as_mut()
+        .unwrap()
+        .world_states = states;
+}
+
+fn assert_node_win_progress(
+    entered: &EnteredMatch,
+    expected: [(u64, u64); 2],
+    dates: &mut std::collections::BTreeMap<u64, i64>,
+) -> Vec<(u64, u64)> {
+    use crate::achievement::PlayerAchievementState;
+    entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .map(|(who, team)| {
+            let world = entered.h.app.world();
+            let character = world.get::<ClientId>(who.player).unwrap().0;
+            let index = match team {
+                BgTeam::A => 0,
+                BgTeam::B => 1,
+            };
+            let (qualified, wins) = expected[index];
+            let state = world.get::<PlayerAchievementState>(who.player).unwrap();
+            assert_eq!(
+                state.criteria_progress.get(&14943).copied(),
+                (qualified > 0).then_some(qualified)
+            );
+            assert_eq!(
+                state.criteria_progress.get(&16513).copied(),
+                (wins > 0).then_some(wins),
+                "ordinary wins still credit when ownership predicate fails"
+            );
+            assert!(
+                !state.criteria_progress.contains_key(&14944),
+                "timed/start/fail criterion stays disabled"
+            );
+            let account = state.account.as_ref().unwrap();
+            assert_eq!(
+                account.earned_ids.contains(&5253),
+                qualified >= 10,
+                "authored leaf15057 requires10 genuine wins"
+            );
+            if qualified >= 10 {
+                let date = *account
+                    .earned_at
+                    .get(&5253)
+                    .expect("native grant has a date");
+                assert_eq!(
+                    *dates
+                        .entry(character)
+                        .or_insert_with(|| world.resource::<ServerClock>().unix()),
+                    date,
+                    "later wins retain original award date"
+                );
+            } else {
+                assert!(!account.earned_at.contains_key(&5253));
+            }
+            (character, qualified)
+        })
+        .collect()
+}
+
+#[test]
+fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_state() {
+    use crate::achievement::PlayerAchievementState;
+    let template = shared::battleground::battle_for_gilneas();
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let required: u64 = source
+        .query_row(
+            "SELECT Amount FROM criteria_tree WHERE ID=15057 AND CriteriaID=14943",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(required, 10, "installed authored Full Coverage threshold");
+    let ordinary: u32 = source.query_row("SELECT COUNT(*) FROM criteria WHERE ID=16513 AND Type=1 AND Asset=761 AND ModifierTreeId=0 AND StartEvent=0 AND StartTimer=0 AND FailEvent=0 AND EligibilityWorldStateID=0", [], |row| row.get(0)).unwrap();
+    assert_eq!(
+        ordinary, 1,
+        "the control must be a sourced unconditional Gilneas win"
+    );
+    let file = tempfile::NamedTempFile::new().unwrap();
+    create_node_achievement_characters(file.path(), &template);
+    let mut dates = std::collections::BTreeMap::new();
+    // Ten source-qualified Alliance wins, one Horde win, then an unqualified two-base win.
+    for round in 1_u64..=required + 2 {
+        let winner = if round == required + 1 {
+            BgTeam::B
+        } else {
+            BgTeam::A
+        };
+        let held = if round == required + 2 { 2 } else { 3 };
+        let mut entered = enter_achievement_node_match(file.path(), &template);
+        entered
+            .h
+            .app
+            .world_mut()
+            .resource_mut::<ServerClock>()
+            .offset_secs = i64::try_from(round).unwrap();
+        let actor_index = entered
+            .teams
+            .iter()
+            .position(|team| *team == winner)
+            .unwrap();
+        let actor = &entered.players[actor_index];
+        let (h, copy) = (&mut entered.h, entered.copy);
+        let initial = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(actor.player)
+            .unwrap()
+            .criteria_progress
+            .get(&14943)
+            .copied();
+        for point in source_battleground_objects(template.map_id)
+            .0
+            .into_iter()
+            .take(held)
+        {
+            let (object, _) = objects_in(h, copy, point.info.entry)[0];
+            h.walk_to(actor, point.position);
+            use_object(h, actor, object);
+        }
+        let before = battleground(h, actor);
+        assert_eq!(before.phase, BgPhase::InProgress);
+        assert_eq!(
+            before.score_a + before.score_b,
+            0,
+            "assaults are not instant captures or wins"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(actor.player)
+                .unwrap()
+                .criteria_progress
+                .get(&14943)
+                .copied(),
+            initial
+        );
+        use_second_frames(h);
+        h.advance(if held == 2 { 620 } else { 120 });
+        let result = battleground(h, actor);
+        assert_eq!(result.phase, BgPhase::Ended);
+        assert_eq!(result.outcome, Some(BgOutcome::Winner(winner)));
+        let (score, state_id) = match winner {
+            BgTeam::A => (result.score_a, 1779),
+            BgTeam::B => (result.score_b, 1778),
+        };
+        assert_eq!(score, 1500, "source node clocks, not seeded scores");
+        assert!(result.world_states.contains(&(state_id, held as i32)));
+        if round == 1 {
+            probe_node_count_authority(h.app.world_mut(), actor.player, [3, 0]);
+        }
+        let expected = [
+            (
+                round.min(required),
+                round.min(required) + u64::from(round == required + 2),
+            ),
+            (u64::from(round > required), u64::from(round > required)),
+        ];
+        assert_node_win_progress(&entered, expected, &mut dates);
+        entered.h.advance(3);
+        let saved = assert_node_win_progress(&entered, expected, &mut dates);
+        leave_and_return(&mut entered);
+        drop(entered);
+        let database = redb::Database::open(file.path()).unwrap();
+        for (character, qualified) in saved {
+            assert_eq!(
+                crate::persistence::load_achievements(&database, character)
+                    .criteria_progress
+                    .get(&14943)
+                    .copied(),
+                (qualified > 0).then_some(qualified)
+            );
+        }
+    }
+    let template = shared::battleground::warsong_gulch();
+    let rules = shared::battleground::flag_rules(template.map_id).unwrap();
+    let entered = enter_source_match(&template, rules.starts);
+    assert_eq!(
+        crate::pvp::player_controlled_node_counts(entered.h.app.world(), entered.players[0].player),
+        None,
+        "an actual accepted flag match has no node-count authority"
+    );
 }
 
 fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
