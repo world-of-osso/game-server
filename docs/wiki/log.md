@@ -87,6 +87,25 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-15 — Wailing targeted Say
+
+[Source engagement speech](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) adds30% group10 with Player/Npc `$n`, preserving nearby Say listeners. Corrected host-boundary RED→5/5 GREEN79.17s/check18.26s/fmt ond6aa7d3e includes source schedule-before-roll order, unchanged combat and real wake/flight exit controls. No protocol/data mutation or natural/native-clear claim; lead independent gate pending.
+
+## 2026-10-14 — Wailing later ritual waves
+
+[Events17–20](systems/boss-scripts.md#wailing-later-ritual-waves--2026-10-14) add same-copy Naralex emotes and timed group3/group4 summons (seven Ectoplasms, Mutanus). Source combat-paused15/25/20/30s sequence passes3/3 in69.88s with first-wave/notification regressions; check/fmt pass. Controlled deaths, runtimebase stats and prior arrival are not ordinary fights or native clears; wake-up/exit21+ remain open.
+
+## 2026-10-14 — Wailing first awakening wave
+
+[Source events14–16](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) add1s Talk7/+5s self6271/Talk8/+4s three Moccasins. Actual aura/birth coordinates/target/copy/timers pass after retaining the runtime template in the fixture (not changing summons); merged25/25 gate184.24s/check/fmt pass. Normal difficulty stats, later awakening and native clears remain open.
+
+## 2026-10-14 — Wailing chamber continuation
+
+[Source events12–13](systems/boss-scripts.md#wailing-chamber-approach--2026-10-14) add1s speech and +5s path367803 launch. Controlled prior arrival then actual78.6692yd movement passes floor/budget/corridor/LOS and timing/copy checks; strengthened upper-bound proof and merged24/24 gate206.06s, check/fmt pass. Awakening/natural activation/native clears remain open.
+
+## 2026-10-14 — C++ waypoint motion ownership and physical escort
+
+[Ownership/support proof](systems/navigation.md#current-controlled-physical-proof): source default/active preemption, fresh-goal diff0, real-position resume, callback ownership and exact moving-foot support pass23/23 in134.17s; check/fmt pass. Controlled Wailing traversal reaches both camps and stopped endpoint (477.2578yd, waves[2,3], real6270). Natural activation, balance and native clears remain open.
 ## 2026-10-14 — Native node-ownership expression credit
 
 [Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
@@ -1364,3 +1383,8 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 [TargetCreatureId4](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) and complete Some selectors use actual hit NPC.template_id for native110, retaining DoEmote54 and every companion. Source165 actualdamage/bonus-exclusion/zero-hit boundary passes before valid predicate RED12660Nonevs3. Generated5621/census5483+1821 adds account4436/4437 only. Native GREEN4091b81b2/2(18.30s) proves both factions’ actual leader grants, wrong NPC/Player/missing/depth/idle rejection and durable counters/grant dates after reopen/re-entry. All243 matrix/pinned5483 and readability pass; required workspace filter178/0/1ignored(269.99s) +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b source scope. Independent verifier unavailable; no content/acquisition/UI certificate.
 - 2026-10-15 — [Spell casting](systems/spell-casting.md): spell queue window widened from 400 ms to 750 ms, the hasted-GCD floor (user decision; Retail/TrinityCore use 400 ms). RED: `spellqueue_exact_750ms_boundary_is_inclusive` 9/1 with the 400 ms constant; GREEN 10/10.
+
+- 2026-10-15: Wailing source21–27 wake-up/flight exit port after actual Sleep→Stand RED; existing flight policy unchanged, behavioral GREEN/native proof still pending.
+- 2026-10-15: Wake/flight exit GREEN053915ae1/1 in31.22s, unchanged firstwave/fourdruid controls2PASS, all-target check14.62s/no warnings and scopedfmt/diff exit0. Corrected fixture instant-aura assumption using actual8153 five-second cast. Independent lead gate pending; natural/native clears still open.
+- 2026-10-15: Wailing Normal ritual-wave copy-only projection profile after process-boundary RED; source identity/stat fields preserved, canonical publication/balance separate.
+- 2026-10-15: Wailing copy-only Normal wave projection GREENb3cc6fed2/2 PASS7.421s, actual CLI/idempotency/identity-refusal and unchanged row hashes; canonical/runtime application and balance still separate.
