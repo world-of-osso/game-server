@@ -36,7 +36,12 @@ pub(crate) fn decline_invites(
 ) {
     for (world, mut receiver) in &mut connections {
         for _ in receiver.receive() {
-            persistence::take_pending_guild_invite(&db.db, world.character_id);
+            let character = world.character_id;
+            // This packet has no acknowledgement; the writer logs/counts errors and drains on shutdown.
+            db.writer.enqueue("guild invite decline", move |db| {
+                persistence::take_pending_guild_invite(db, character);
+                Ok(())
+            });
         }
     }
 }

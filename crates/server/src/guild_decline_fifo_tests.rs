@@ -85,6 +85,7 @@ enum Case {
     Pending,
     Missing,
     PrefixReplacement,
+    PrefixCreation,
     AcceptAfterDecline,
     Relog,
     StorageFailure,
@@ -103,6 +104,10 @@ fn guild_decline_removes_the_earlier_queued_replacement_at_its_fifo_position() {
     assert_decline(Case::PrefixReplacement);
 }
 #[test]
+fn guild_decline_consumes_an_earlier_queued_invite_when_the_live_row_is_missing() {
+    assert_decline(Case::PrefixCreation);
+}
+#[test]
 fn guild_decline_is_observed_by_a_following_queued_accept() {
     assert_decline(Case::AcceptAfterDecline);
 }
@@ -116,7 +121,7 @@ fn guild_decline_decode_failure_is_counted_without_killing_the_writer() {
 }
 
 fn assert_decline(case: Case) {
-    let mut f = fixture(!matches!(case, Case::Missing));
+    let mut f = fixture(!matches!(case, Case::Missing | Case::PrefixCreation));
     if matches!(case, Case::StorageFailure) {
         let txn = f
             .app
@@ -138,7 +143,7 @@ fn assert_decline(case: Case) {
         .db
         .begin_write()
         .unwrap();
-    if matches!(case, Case::PrefixReplacement) {
+    if matches!(case, Case::PrefixReplacement | Case::PrefixCreation) {
         let character = f.character;
         f.app.world().resource::<GameDatabase>().writer.enqueue(
             "prior invite replacement",
@@ -203,7 +208,10 @@ fn assert_decline(case: Case) {
     );
     assert_eq!(
         pending_before,
-        !matches!(case, Case::Missing | Case::StorageFailure)
+        !matches!(
+            case,
+            Case::Missing | Case::PrefixCreation | Case::StorageFailure
+        )
     );
     let (done, wait) = std::sync::mpsc::channel();
     f.app
