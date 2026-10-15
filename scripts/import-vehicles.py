@@ -8,7 +8,9 @@ from contextlib import closing
 from pathlib import Path
 
 
-VEHICLE_COLUMNS = [("ID", "INTEGER"), *[(f"SeatID_{i}", "INTEGER") for i in range(8)]]
+VEHICLE_MOVEMENT_COLUMNS = [("Flags", "INTEGER"), ("TurnSpeed", "REAL")]
+VEHICLE_COLUMNS = [("ID", "INTEGER"), *[(f"SeatID_{i}", "INTEGER") for i in range(8)],
+                   *VEHICLE_MOVEMENT_COLUMNS]
 SEAT_COLUMNS = [("ID", "INTEGER"), ("Flags", "INTEGER"), ("AttachmentID", "INTEGER"),
                 *[(f"AttachmentOffset_{i}", "REAL") for i in range(3)]]
 CATALOGS = [("Vehicle", "vehicle", VEHICLE_COLUMNS),
@@ -33,6 +35,12 @@ def import_catalogs(directory, database):
                                    for name, kind in columns)
                 conn.execute(f"CREATE TABLE IF NOT EXISTS {table} ({schema})")
                 conn.execute(f"DELETE FROM {table}")
+                if table == "vehicle":
+                    existing = {row[1] for row in conn.execute("PRAGMA table_info(vehicle)")}
+                    for name, kind in VEHICLE_MOVEMENT_COLUMNS:
+                        if name not in existing:
+                            # The transaction emptied the catalog: no synthetic default is needed.
+                            conn.execute(f"ALTER TABLE vehicle ADD COLUMN {name} {kind} NOT NULL")
                 names = ", ".join(name for name, _ in columns)
                 placeholders = ", ".join("?" for _ in columns)
                 conn.executemany(f"INSERT INTO {table} ({names}) VALUES ({placeholders})", rows)

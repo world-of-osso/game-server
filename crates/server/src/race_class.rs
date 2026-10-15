@@ -1,13 +1,13 @@
-//! Playable race/class combinations.
-//!
-//! world.db has no `chr_races` or `CharBaseInfo` table, so the combinations are
-//! kept here. Classes per race match the client character-creation table
-//! (`game-engine src/scenes/char_create/data.rs` RACES). Monk (10), Demon Hunter
-//! (12) and Evoker (13), and the Dracthyr rows, follow Retail `CharBaseInfo`
-//! (FileDataID 1343386, 12.1.0.69933): Monk except Dracthyr, Demon Hunter
-//! for Night Elf, Blood Elf and Void Elf, Evoker for Dracthyr only. `race_bit` is
-//! `ChrRaces.PlayableRaceBit` (`game-engine data/ChrRaces.csv`), the bit that
-//! DB2 `RaceMasks` use.
+//! Retail eligibility and race-mask bits from installed `data/db2/active` CSVs.
+//! Read once for this server process; missing/corrupt source never selects an old
+//! Retail table. Supported gameplay classes and start-level/visage policy remain
+//! unchanged. Separately contracted Forever95/96 gates retain their pinned source.
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+
+use serde::Deserialize;
 
 /// ChrClasses IDs with class spell data.
 pub const PLAYABLE_CLASSES: [u8; 13] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -15,73 +15,153 @@ pub const PLAYABLE_CLASSES: [u8; 13] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1
 struct PlayableRace {
     id: u8,
     race_bit: u8,
-    classes: &'static [u8],
+    classes: BTreeSet<u8>,
 }
 
-const PANDAREN_CLASSES: &[u8] = &[1, 3, 4, 5, 7, 8, 10];
-const DRACTHYR_CLASSES: &[u8] = &[1, 3, 4, 5, 8, 9, 13];
-/// CharBaseInfo classes of Kul Tiran, Earthen and Haranir (Adventurer 14 is not playable).
-const KUL_TIRAN_CLASSES: &[u8] = &[1, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-const EARTHEN_CLASSES: &[u8] = &[1, 2, 3, 4, 5, 7, 8, 9, 10];
-const HARANIR_CLASSES: &[u8] = &[1, 3, 4, 5, 7, 8, 9, 10, 11];
 /// Skyborne classes from WoW Forever 1.60.1 CharBaseInfo (FileDataID 1343386).
 const SKYBORNE_95_CLASSES: &[u8] = &[1, 3, 4, 8, 11];
 const SKYBORNE_96_CLASSES: &[u8] = &[1, 3, 4, 7, 11];
 
-const PLAYABLE_RACES: &[PlayableRace] = &[
-    race(1, 0, &[1, 2, 3, 4, 5, 6, 8, 9, 10]),       // Human
-    race(2, 1, &[1, 3, 4, 6, 7, 8, 9, 10]),          // Orc
-    race(3, 2, &[1, 2, 3, 4, 5, 6, 10]),             // Dwarf
-    race(4, 3, &[1, 3, 4, 5, 6, 10, 11, 12]),        // Night Elf
-    race(5, 4, &[1, 4, 5, 6, 8, 9, 10]),             // Undead
-    race(6, 5, &[1, 3, 6, 7, 10, 11]),               // Tauren
-    race(7, 6, &[1, 4, 6, 8, 9, 10]),                // Gnome
-    race(8, 7, &[1, 3, 4, 5, 6, 7, 8, 10]),          // Troll
-    race(9, 8, &[1, 3, 4, 5, 6, 7, 8, 9, 10]),       // Goblin
-    race(10, 9, &[2, 3, 4, 5, 6, 8, 9, 10, 12]),     // Blood Elf
-    race(11, 10, &[1, 2, 3, 5, 6, 7, 8, 10]),        // Draenei
-    race(22, 21, &[1, 3, 4, 5, 6, 8, 9, 10, 11]),    // Worgen
-    race(24, 23, PANDAREN_CLASSES),                  // Pandaren (neutral)
-    race(25, 24, PANDAREN_CLASSES),                  // Pandaren (Alliance)
-    race(26, 25, PANDAREN_CLASSES),                  // Pandaren (Horde)
-    race(27, 26, &[1, 3, 4, 5, 6, 8, 9, 10]),        // Nightborne
-    race(28, 27, &[1, 3, 5, 6, 7, 10, 11]),          // Highmountain Tauren
-    race(29, 28, &[1, 3, 4, 5, 6, 8, 9, 10, 12]),    // Void Elf
-    race(30, 29, &[1, 2, 3, 5, 6, 8, 10]),           // Lightforged Draenei
-    race(31, 30, &[1, 2, 3, 4, 5, 6, 7, 8, 10, 11]), // Zandalari Troll
-    race(32, 31, KUL_TIRAN_CLASSES),                 // Kul Tiran
-    race(34, 11, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),  // Dark Iron Dwarf
-    race(35, 12, &[1, 3, 4, 5, 7, 8, 9, 10]),        // Vulpera
-    race(36, 13, &[1, 3, 4, 5, 6, 7, 8, 10]),        // Mag'har Orc
-    race(37, 14, &[1, 3, 4, 5, 6, 8, 9, 10]),        // Mechagnome
-    race(52, 16, DRACTHYR_CLASSES),                  // Dracthyr (Alliance)
-    race(70, 15, DRACTHYR_CLASSES),                  // Dracthyr (Horde)
-    race(84, 17, EARTHEN_CLASSES),                   // Earthen (Horde)
-    race(85, 18, EARTHEN_CLASSES),                   // Earthen (Alliance)
-    race(86, 20, HARANIR_CLASSES),                   // Haranir (Alliance)
-    race(91, 19, HARANIR_CLASSES),                   // Haranir (Horde)
-    // Verified Forever 1.60.1.70205 ChrRaces.PlayableRaceBit (FDID 1305311);
-    // classes verified from that build's CharBaseInfo (FDID 1343386).
-    race(95, 32, SKYBORNE_95_CLASSES), // Skyborne
-    race(96, 33, SKYBORNE_96_CLASSES), // Skyborne
-];
+#[derive(Deserialize)]
+struct RaceMetadataRow {
+    #[serde(rename = "ID")]
+    id: u8,
+    #[serde(rename = "PlayableRaceBit")]
+    race_bit: i16,
+}
 
-const fn race(id: u8, race_bit: u8, classes: &'static [u8]) -> PlayableRace {
-    PlayableRace {
-        id,
+#[derive(Deserialize)]
+struct RaceClassRow {
+    #[serde(rename = "RaceID")]
+    race: u8,
+    #[serde(rename = "ClassID")]
+    class: u8,
+}
+
+fn decode_playable_race(row: RaceMetadataRow) -> Result<Option<PlayableRace>, String> {
+    if row.race_bit < 0 {
+        return Ok(None);
+    }
+    let race_bit = u8::try_from(row.race_bit).map_err(|_| {
+        format!(
+            "race {} has invalid PlayableRaceBit {}",
+            row.id, row.race_bit
+        )
+    })?;
+    if u32::from(race_bit) >= u64::BITS {
+        return Err(format!(
+            "race {} PlayableRaceBit {race_bit} exceeds RaceMasks",
+            row.id
+        ));
+    }
+    Ok(Some(PlayableRace {
+        id: row.id,
         race_bit,
-        classes,
+        classes: BTreeSet::new(),
+    }))
+}
+
+fn read_race_metadata(path: &Path) -> Result<BTreeMap<u8, PlayableRace>, String> {
+    let mut reader =
+        csv::Reader::from_path(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mut races = BTreeMap::new();
+    for row in reader.deserialize::<RaceMetadataRow>() {
+        let row = row.map_err(|error| format!("{}: {error}", path.display()))?;
+        let Some(race) = decode_playable_race(row)? else {
+            continue;
+        };
+        let id = race.id;
+        if races.insert(id, race).is_some() {
+            return Err(format!("{}: duplicate race {id}", path.display()));
+        }
+    }
+    Ok(races)
+}
+
+fn read_class_memberships(
+    path: &Path,
+    races: &mut BTreeMap<u8, PlayableRace>,
+) -> Result<(), String> {
+    let mut reader =
+        csv::Reader::from_path(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    for row in reader.deserialize::<RaceClassRow>() {
+        let row = row.map_err(|error| format!("{}: {error}", path.display()))?;
+        if !PLAYABLE_CLASSES.contains(&row.class) {
+            continue;
+        }
+        let race = races.get_mut(&row.race).ok_or_else(|| {
+            format!(
+                "{}: race {} has no playable ChrRaces metadata",
+                path.display(),
+                row.race
+            )
+        })?;
+        race.classes.insert(row.class);
+    }
+    Ok(())
+}
+
+fn insert_skyborne_races(races: &mut BTreeMap<u8, PlayableRace>) -> Result<(), String> {
+    // Pinned Forever product contract, not a substitute for missing Retail source.
+    for (id, race_bit, classes) in [(95, 32, SKYBORNE_95_CLASSES), (96, 33, SKYBORNE_96_CLASSES)] {
+        if races.contains_key(&id) {
+            return Err(format!(
+                "Retail playable race {id} collides with the Forever race contract"
+            ));
+        }
+        races.insert(
+            id,
+            PlayableRace {
+                id,
+                race_bit,
+                classes: classes.iter().copied().collect(),
+            },
+        );
+    }
+    Ok(())
+}
+
+fn load_playable_races(directory: &Path) -> Result<BTreeMap<u8, PlayableRace>, String> {
+    let mut races = read_race_metadata(&directory.join("ChrRaces.csv"))?;
+    read_class_memberships(&directory.join("CharBaseInfo.csv"), &mut races)?;
+    races.retain(|_, race| !race.classes.is_empty());
+    if races.is_empty() {
+        return Err(format!(
+            "{}: no playable Retail race/class pairs",
+            directory.display()
+        ));
+    }
+    insert_skyborne_races(&mut races)?;
+    Ok(races)
+}
+
+fn installed_db2_directory() -> PathBuf {
+    #[cfg(test)]
+    {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active")
+    }
+    #[cfg(not(test))]
+    {
+        PathBuf::from("data/db2/active")
     }
 }
 
+fn read_installed_races() -> &'static BTreeMap<u8, PlayableRace> {
+    static RACES: OnceLock<BTreeMap<u8, PlayableRace>> = OnceLock::new();
+    RACES.get_or_init(|| {
+        load_playable_races(&installed_db2_directory())
+            .unwrap_or_else(|error| panic!("Unable to load installed race/class source: {error}"))
+    })
+}
+
 fn playable_race(race: u8) -> Option<&'static PlayableRace> {
-    PLAYABLE_RACES.iter().find(|entry| entry.id == race)
+    read_installed_races().get(&race)
 }
 
 /// Every playable (race, class) combination, by race then class.
 pub fn playable_pairs() -> impl Iterator<Item = (u8, u8)> {
-    PLAYABLE_RACES
-        .iter()
+    read_installed_races()
+        .values()
         .flat_map(|entry| entry.classes.iter().map(move |&class| (entry.id, class)))
 }
 
@@ -106,8 +186,8 @@ pub fn validate_race_class(race: u8, class: u8) -> Result<(), String> {
 }
 
 /// Races with `ChrRacesFlag::IsAlliedRace` 0x80000 in DB2 12.1.0.69933 `ChrRaces.Flags`
-/// (game-engine `godot/core/data/db2/12.1.0.69933/ChrRaces.csv`; DBCEnums.h:370). The
-/// server loads no ChrRaces data: world.db has no `chr_races` table.
+/// (game-engine `godot/core/data/db2/12.1.0.69933/ChrRaces.csv`; DBCEnums.h:370).
+/// Existing start-level policy is separate from installed eligibility/race-bit loading.
 const ALLIED_RACES: [u8; 14] = [27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 84, 85, 86, 91];
 const RACE_PANDAREN_ALLIANCE: u8 = 25;
 const RACE_PANDAREN_HORDE: u8 = 26;
@@ -173,6 +253,59 @@ pub fn race_mask_has_race(race_masks: [u32; 2], race: u8) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn race_source_installed_char_base_info_pairs_are_admitted() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/db2/active/CharBaseInfo.csv");
+        let mut reader = csv::Reader::from_path(path).unwrap();
+        let headers = reader.headers().unwrap().clone();
+        let race_column = headers.iter().position(|name| name == "RaceID").unwrap();
+        let class_column = headers.iter().position(|name| name == "ClassID").unwrap();
+        let mut pairs = std::collections::BTreeSet::new();
+        for record in reader.records() {
+            let record = record.unwrap();
+            let race: u8 = record[race_column].parse().unwrap();
+            let class: u8 = record[class_column].parse().unwrap();
+            if PLAYABLE_CLASSES.contains(&class) {
+                pairs.insert((race, class));
+            }
+        }
+        assert!(pairs.contains(&(3, 7)), "installed Dwarf/Shaman source row");
+        for (race, class) in pairs {
+            assert_eq!(
+                validate_race_class(race, class),
+                Ok(()),
+                "source {race}/{class}"
+            );
+        }
+    }
+
+    #[test]
+    fn race_source_missing_or_empty_installed_tables_do_not_use_static_defaults() {
+        let directory = tempfile::tempdir().unwrap();
+        let result = load_playable_races(directory.path());
+        assert!(matches!(result, Err(error) if error.contains("ChrRaces.csv")));
+        std::fs::write(
+            directory.path().join("ChrRaces.csv"),
+            "ID,PlayableRaceBit\n3,2\n",
+        )
+        .unwrap();
+        let result = load_playable_races(directory.path());
+        assert!(matches!(result, Err(error) if error.contains("CharBaseInfo.csv")));
+        std::fs::write(
+            directory.path().join("ChrRaces.csv"),
+            "ID,PlayableRaceBit\n",
+        )
+        .unwrap();
+        std::fs::write(
+            directory.path().join("CharBaseInfo.csv"),
+            "RaceID,ClassID\n",
+        )
+        .unwrap();
+        let result = load_playable_races(directory.path());
+        assert!(matches!(result, Err(error) if error.contains("no playable Retail")));
+    }
 
     #[test]
     fn validate_race_class_accepts_listed_combinations_only() {

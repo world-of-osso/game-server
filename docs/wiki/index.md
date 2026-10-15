@@ -2,6 +2,11 @@
 
 - [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native GREEN pending, controlled boss identities are not full encounters.
 
+- [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
+
+- [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
+
+- [Breakable CC targeting](investigations/follower-data.md#breakable-cc-targeting--2026-10-15) — shared follower hold/retarget/cast-stop and authored Attr6 implicit filtering; native118/31935 regressions, dungeon completion still open.
 - [Unknown-spell login guard](systems/dungeon-achievements.md#unknown-spell-login-guard) — bounded negative104 requires complete native spell sources and initialization before Login74; repair side effects remain separate.
 
 - [Typed area/zone alternatives](systems/dungeon-achievements.md#typed-areazone-alternatives) — complete root Some17/41 preserves distinct ancestry/zone semantics; actual selfie RED→GREEN and strict missing-zone controls, integrated8/8; full grants/travel unclaimed.
@@ -41,7 +46,7 @@
 
 - [Spawn-group guardian count](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14) — Scarab2301 flag routing, variable count and independent native5yd secondary scatter; other count paths remain open.
 
-- [Toy initial random destination radius](systems/toys.md#initial-random-destination-radius-2026-10-14) — native72/86 disk area versus91 fixed distance; independent of secondary scatter and unresolved Flute following.
+- [Toy initial random destination radius](systems/toys.md#initial-random-destination-radius-2026-10-14) — native72/86 disk area versus91 fixed distance; independent of secondary scatter and the [Flute source adjudication](systems/toys.md#flute-follow-source-adjudication-2026-10-15).
 
 - [Source Toy facing](systems/toys.md#source-facing-boundary-2026-10-13) — two roots, inclusive180° arc and strict exact3D target-radius exemption; no CombatReach substitution.
 
@@ -406,6 +411,7 @@ Debug logs and root cause analyses.
 - [Group-private summon runtime](systems/toys.md#source-group-private-runtime-2026-10-13) — source group identity and roster-driven interest transitions.
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
 
+- [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the [Flute source adjudication](systems/toys.md#flute-follow-source-adjudication-2026-10-15).
 - [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the unresolved Flute follow promise.
 - [Wailing wake-up and flight exit](systems/boss-scripts.md#wailing-wake-up-and-flight-exit--2026-10-15) — source21–27 controlled RED/GREEN, real distinct flight endpoints/retirement and ordinary5s Owl cast; lead gate pending.
 
