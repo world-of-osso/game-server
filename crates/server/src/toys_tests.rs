@@ -77,10 +77,8 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
     h.app.init_resource::<crate::group::GroupRegistry>();
     h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-    h.app
-        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
     h.app.insert_resource(GameDatabase { db });
     h.app.init_resource::<crate::gold::GoldUpdateQueue>();
     h.app.add_systems(
@@ -1805,19 +1803,79 @@ fn toyfx7_drake_basket_preserves_aura_identity_and_cancellation() {
     );
 }
 
-fn import_toyfx8_world(directory: &std::path::Path) -> std::path::PathBuf {
-    let path = directory.join("world.sqlite");
-    std::fs::copy(crate::test_data::world_db_path(), &path).unwrap();
-    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../scripts/add_toy_summon_templates.py");
-    let output = std::process::Command::new("python3")
-        .arg(script)
-        .arg("--db")
-        .arg(&path)
-        .output()
-        .unwrap();
-    assert!(output.status.success(), "{:?}", output);
-    path
+/// world.db plus `add_toy_summon_templates.py`, imported once per test process and shared
+/// read-only by every toy test. A per-test copy and import of the 770 MB database cost ~2 s.
+/// The file is named by PID; an import whose process has exited is removed here.
+fn toyfx8_world() -> std::path::PathBuf {
+    static PATH: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    PATH.get_or_init(|| {
+        let directory = std::env::temp_dir();
+        remove_exited_toyfx8_worlds(&directory);
+        let path = directory.join(format!("toyfx8-world-{}.sqlite", std::process::id()));
+        std::fs::copy(crate::test_data::world_db_path(), &path).unwrap();
+        let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../scripts/add_toy_summon_templates.py");
+        let output = std::process::Command::new("python3")
+            .arg(script)
+            .arg("--db")
+            .arg(&path)
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{:?}", output);
+        path
+    })
+    .clone()
+}
+
+fn remove_exited_toyfx8_worlds(directory: &std::path::Path) {
+    for entry in std::fs::read_dir(directory).unwrap().flatten() {
+        let name = entry.file_name();
+        let Some(pid) = name
+            .to_str()
+            .and_then(|name| name.strip_prefix("toyfx8-world-"))
+            .and_then(|rest| rest.strip_suffix(".sqlite"))
+        else {
+            continue;
+        };
+        if !std::path::Path::new("/proc").join(pid).exists() {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
+}
+
+/// The creature and item products of the world database at `path`, loaded once per test
+/// process: reloading them in every toy test took most of its ~20 s in a debug build and
+/// made the toy module the slowest part of the server suite (2026-10-15).
+fn world_products(
+    path: &std::path::Path,
+) -> &'static (
+    crate::world_data::WorldData,
+    crate::item_templates::ItemTemplates,
+) {
+    type Products = (
+        crate::world_data::WorldData,
+        crate::item_templates::ItemTemplates,
+    );
+    static LOADED: std::sync::Mutex<
+        std::collections::BTreeMap<std::path::PathBuf, &'static Products>,
+    > = std::sync::Mutex::new(std::collections::BTreeMap::new());
+    let mut loaded = LOADED
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    loaded.entry(path.to_path_buf()).or_insert_with(|| {
+        Box::leak(Box::new((
+            crate::world_data::load_world_data(path),
+            crate::item_templates::load_item_templates(path).unwrap(),
+        )))
+    })
+}
+
+fn shared_world_data(path: &std::path::Path) -> crate::world_data::WorldData {
+    world_products(path).0.clone()
+}
+
+fn shared_item_templates(path: &std::path::Path) -> crate::item_templates::ItemTemplates {
+    world_products(path).1.clone()
 }
 
 #[test]
@@ -1825,7 +1883,7 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{ModelDisplay, Npc, Position, UnitFactionTemplate, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -1834,8 +1892,7 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
         (88584, 128180, 65387, vec![41838], 1200),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("{item}.redb")));
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app.insert_resource(shared_world_data(&path));
         h.app
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         learn_effect_toy(&mut h, character, item);
@@ -1895,8 +1952,7 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
 
 #[test]
 fn toyfx8_scenery_census() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX8_CENSUS_REPORT");
     for item in [88381, 88584] {
         let toy = report["toys"]
@@ -1928,7 +1984,7 @@ fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
         ModelDisplay, Npc, Position, Rotation, UnitFactionTemplate, UnitSummonedBy,
     };
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -1954,10 +2010,8 @@ fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
         let (mut h, character) =
             setup_for_race(&directory.path().join(format!("{item}.redb")), race);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
         h.app
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.world_mut().entity_mut(h.caster).insert(Rotation {
@@ -2075,8 +2129,7 @@ fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
 
 #[test]
 fn toyfx9_prepared_census_preserves_interaction_blockers() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX9_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
     for item in [
@@ -2480,8 +2533,7 @@ fn toyfx12_abyss_horn_casts_visual_without_creating_gameplay_water_or_actor() {
 
 #[test]
 fn toyfx12_prepared_census_retains_underivable_non_summon_scripts() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX12_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
     for item in [50471, 88377, 129149, 205045, 211931, 1973] {
@@ -2510,18 +2562,15 @@ fn toyfx10_aqir_egg_missile_triggers_fifteen_second_target_aura() {
 }
 
 fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_frames: usize) {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let state = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&state.path().join("toys.redb"));
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::world_data::load_world_data(&path));
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app.insert_resource(shared_world_data(&path));
+    h.app.insert_resource(shared_item_templates(&path));
     let distance = if item == 175063 { 8.0 } else { 3.0 };
     let friend = spawn_player(&mut h.app, 8, distance);
     let target = if item == 131812 { h.caster } else { friend };
@@ -2620,8 +2669,7 @@ fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_
 
 #[test]
 fn toyfx10_prepared_census_retains_script_and_interaction_refusals() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX10_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
     for item in [88417, 88587, 131812, 175063, 238852] {
@@ -2641,7 +2689,7 @@ fn toyfx11_sweeper_and_trophy_learn_spawn_and_expire() {
         ModelDisplay, Npc, Position, Rotation, UnitAuras, UnitFactionTemplate,
     };
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -2651,8 +2699,7 @@ fn toyfx11_sweeper_and_trophy_learn_spawn_and_expire() {
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app.insert_resource(shared_world_data(&path));
         h.app
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         learn_effect_toy(&mut h, character, item);
@@ -2737,8 +2784,7 @@ fn toyfx11_sweeper_and_trophy_learn_spawn_and_expire() {
 
 #[test]
 fn toyfx11_prepared_census_keeps_unbound_controls_and_actions_blocked() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX11_CENSUS_REPORT");
     for item in [147867, 169865] {
         let toy = report["toys"]
@@ -2769,14 +2815,13 @@ fn toyfx11_prepared_census_keeps_unbound_controls_and_actions_blocked() {
 fn toyfx14_source_item_preparation_enables_real_transform_learning_use_and_restore() {
     use shared::components::{ModelDisplay, UnitAuras};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("transform.redb"));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app.insert_resource(shared_item_templates(&path));
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     let before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
@@ -2820,8 +2865,7 @@ fn toyfx14_source_item_preparation_enables_real_transform_learning_use_and_resto
 
 #[test]
 fn toyfx14_prepared_item_census_records_all_remaining_mechanics() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX14_CENSUS_REPORT");
     for item in [64646, 109183, 113542] {
         let toy = report["toys"]
@@ -2850,7 +2894,7 @@ fn toyfx14_prepared_item_census_records_all_remaining_mechanics() {
 fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
     use shared::components::{ModelDisplay, Player, UnitAuras};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -2878,8 +2922,7 @@ fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
                 class,
             );
             h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-            h.app
-                .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+            h.app.insert_resource(shared_item_templates(&path));
             h.app
                 .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
             h.app
@@ -2943,8 +2986,7 @@ fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
     // No source mapping for Goblin9: no successful cosmetic no-op or spent cooldown.
     let (mut h, character) = setup_for_race(&directory.path().join("orb-unmapped.redb"), 9);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app.insert_resource(shared_item_templates(&path));
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     learn_effect_toy(&mut h, character, 1973);
@@ -2964,7 +3006,7 @@ fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
 fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
     use shared::components::{ModelDisplay, Player, UnitAuras};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -2979,8 +3021,7 @@ fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
                 race,
             );
             h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-            h.app
-                .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+            h.app.insert_resource(shared_item_templates(&path));
             h.app
                 .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
             h.app
@@ -3054,7 +3095,7 @@ fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
 fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_gameplay() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -3075,8 +3116,7 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("attachment-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(store.clone());
         let model_before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
         let caster_health = *h.app.world().get::<Health>(h.caster).unwrap();
@@ -3148,7 +3188,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{ModelDisplay, Npc, Position, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -3166,10 +3206,8 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("scenery-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
         h.app
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.insert_resource(store.clone());
@@ -3268,8 +3306,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
 
 #[test]
 fn toyfx14_stationary_source_summon_census() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX14_SUMMON_CENSUS_REPORT");
     for item in [
         104331, 119039, 170196, 170197, 89869, 141299, 184415, 272339, 279590,
@@ -3290,7 +3327,7 @@ fn toyfx14_area_cosmetics_preserve_authored_recipients_and_lifetimes() {
         Health, ModelDisplay, Position, Rotation, UnitAuras, UnitFactionTemplate,
     };
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -3298,8 +3335,7 @@ fn toyfx14_area_cosmetics_preserve_authored_recipients_and_lifetimes() {
     for (item, spell, duration) in [(141300, 225826, 10000), (141301, 225828, 30000)] {
         let (mut h, character) = setup(&directory.path().join(format!("area-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(store.clone());
         h.app
             .insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
@@ -3382,8 +3418,7 @@ fn toyfx14_area_cosmetics_preserve_authored_recipients_and_lifetimes() {
 
 #[test]
 fn toyfx14_area_cosmetics_census() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX14_AREA_CENSUS_REPORT");
     for item in [141300, 141301] {
         let toy = report["toys"]
@@ -3399,16 +3434,14 @@ fn toyfx14_area_cosmetics_census() {
 #[test]
 fn toyfx14_ground_toy_waits_for_a_clicked_destination() {
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("ground.redb"));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-    h.app
-        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     h.app
@@ -3464,7 +3497,7 @@ fn toyfx14_ground_toy_waits_for_a_clicked_destination() {
 fn toyfx14_target_and_sound_cosmetics_preserve_source_ownership() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -3472,8 +3505,7 @@ fn toyfx14_target_and_sound_cosmetics_preserve_source_ownership() {
     for (item, spell, duration) in [(122120, 179869, 60000), (168824, 298869, 180000)] {
         let (mut h, character) = setup(&directory.path().join(format!("target-sound-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(store.clone());
         let target = if item == 122120 { h.npc } else { h.caster };
         let other = if item == 122120 { h.caster } else { h.npc };
@@ -3519,8 +3551,7 @@ fn toyfx14_target_and_sound_cosmetics_preserve_source_ownership() {
 
 #[test]
 fn toyfx14_target_and_sound_cosmetics_census() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX14_SOUND_CENSUS_REPORT");
     for item in [122120, 168824] {
         let toy = report["toys"]
@@ -3538,14 +3569,13 @@ fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
     use shared::components::{ModelDisplay, Position, Rotation, UnitAuras};
     use shared::protocol::WitnessRay;
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("witness.redb"));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app.insert_resource(shared_item_templates(&path));
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     let dir = crate::ground::ground_data_dir().join("los");
@@ -3672,7 +3702,7 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{ModelDisplay, Npc, Position, UnitScale};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -3685,10 +3715,8 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("scaled-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
         h.app
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.insert_resource(store.clone());
@@ -3752,8 +3780,7 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
 
 #[test]
 fn toyfx14_scaled_scenery_census() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX14_SCALE_CENSUS_REPORT");
     for item in [170476, 238852, 246227, 276229] {
         let toy = report["toys"]
@@ -3771,7 +3798,7 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{ModelDisplay, Npc, Position, UnitScale};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -3782,10 +3809,8 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("statue-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
         h.app
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.insert_resource(store.clone());
@@ -4665,8 +4690,7 @@ fn toyfx19_gladiator_banners_respect_faction_and_cancel_persistent_cosmetic_aura
 
 #[test]
 fn toyfx18_placed_statues_census() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let report = report_toy_census(&path, "TOYFX18_STATUE_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
     let find = |item: u32| toys.iter().find(|toy| toy["item_id"] == item).unwrap();
@@ -6320,10 +6344,10 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
-    world.insert_resource(crate::world_data::load_world_data(path));
+    world.insert_resource(shared_world_data(path));
     world.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
     world.insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
-    world.insert_resource(crate::item_templates::load_item_templates(path).unwrap());
+    world.insert_resource(shared_item_templates(path));
     let has_summon_properties: bool = conn
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='summon_properties')",
