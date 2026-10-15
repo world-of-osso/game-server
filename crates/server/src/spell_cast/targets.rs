@@ -28,7 +28,7 @@ use shared::components::{Health, Player, Position, Rotation, UnitFactionTemplate
 
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
-use crate::spell_info::{SpellEffect, SpellInfo, SpellRadius};
+use crate::spell_info::{SpellEffect, SpellInfo};
 
 const MELEE_RANGE: f32 = 5.0;
 /// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
@@ -336,16 +336,13 @@ pub fn spell_range(spell: &SpellInfo, hostile: bool) -> (f32, f32) {
 
 /// Radius for target slot `slot` (TrinityCore `CalcRadius`: TargetB prefers
 /// the second radius entry).
-fn radius_entry(effect: &SpellEffect, slot: usize) -> Option<SpellRadius> {
-    if slot == 1 {
-        effect.radius[1].or(effect.radius[0])
-    } else {
-        effect.radius[0]
-    }
+/// TC CalcRadius inherits both TargetA's entry and target identity when B has no entry.
+fn radius_slot(effect: &SpellEffect, slot: usize) -> usize {
+    usize::from(slot == 1 && effect.radius[1].is_some())
 }
 
 pub(super) fn radius(effect: &SpellEffect, slot: usize) -> f32 {
-    radius_entry(effect, slot).map_or(0.0, |radius| {
+    effect.radius[radius_slot(effect, slot)].map_or(0.0, |radius| {
         if radius.radius > 0.0 {
             radius.radius
         } else {
@@ -968,9 +965,10 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
 fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
     let mut rng = rand::thread_rng();
     let angle = rand::Rng::gen_range(&mut rng, 0.0..std::f32::consts::TAU);
-    let maximum = radius(effect, slot);
-    let distance = if matches!(effect.implicit_targets[slot], 72 | 86) {
-        let minimum = radius_entry(effect, slot).map_or(0.0, |entry| entry.radius_min);
+    let source_slot = radius_slot(effect, slot);
+    let maximum = radius(effect, source_slot);
+    let distance = if matches!(effect.implicit_targets[source_slot], 72 | 86) {
+        let minimum = effect.radius[source_slot].map_or(0.0, |entry| entry.radius_min);
         let area_fraction = rand::Rng::gen_range(&mut rng, 0.0_f32..1.0);
         (maximum - minimum) * area_fraction.sqrt()
     } else {
