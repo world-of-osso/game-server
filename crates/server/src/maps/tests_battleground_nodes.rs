@@ -1447,7 +1447,7 @@ fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -
     let database = redb::Database::open(path).unwrap();
     let rules = node_rules(template.map_id).unwrap();
     let mut entered = enter_source_match_with(template, rules.starts, |app| {
-        app.insert_resource(crate::persistence::GameDatabase { db: database });
+        app.insert_resource(crate::persistence::GameDatabase::new(database));
         let conn = Connection::open_with_flags(
             crate::test_data::world_db_path(),
             OpenFlags::SQLITE_OPEN_READ_ONLY,
