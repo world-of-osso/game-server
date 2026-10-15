@@ -113,6 +113,69 @@ fn class_completeness_native_caster_rectangle_selects_front_width_not_back_allie
 }
 
 #[test]
+fn toyfx54_podium_destination_snaps_to_authored_ground_not_airborne_caster() {
+    let mut h = harness(Vec::new(), &[1227063], 8).unwrap();
+    let data = world_db().unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &data.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    place_guardian_fixture_on_native_start(&mut h, &conn);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .y += 2.0;
+    let effect = &data.store.get(1227063).unwrap().effects[0];
+    let selected = super::targets::effect_dest(h.app.world(), h.caster, None, effect, None)
+        .expect("source Podium47→138 destination");
+    let crate::ground::GroundProbe::Supported(height) = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .ground_at(0, selected.position)
+    else {
+        panic!("real Northshire destination terrain required");
+    };
+    let grounded =
+        super::targets::ground_destination(h.app.world_mut(), h.caster, effect, Some(selected))
+            .unwrap()
+            .unwrap();
+    assert_eq!(grounded.position.x, selected.position.x);
+    assert_eq!(grounded.position.z, selected.position.z);
+    assert_eq!(grounded.orientation, selected.orientation);
+    assert!(
+        (grounded.position.y - height).abs() < 0.01,
+        "source138 must use map height {height}, not airborne height {}",
+        grounded.position.y,
+    );
+}
+
+#[test]
+fn toyfx54_podium_front_destination_respects_source_player_combat_reach() {
+    use shared::components::UnitScale;
+    let mut h = harness(Vec::new(), &[1227063], 8).unwrap();
+    let data = world_db().unwrap();
+    let effect = &data.store.get(1227063).unwrap().effects[0];
+    let origin = super::targets::position(h.app.world(), h.caster).unwrap();
+    // Authored radius1.25; TC clamps caster-relative offsets to scaled player reach1.5.
+    for (scale, expected_distance) in [(1.0, 1.5), (2.0, 3.0), (0.5, 1.25)] {
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(UnitScale(scale));
+        let destination = super::targets::effect_dest(h.app.world(), h.caster, None, effect, None)
+            .expect("source Podium front destination");
+        let distance = destination.position.distance(origin);
+        assert!(
+            (distance - expected_distance).abs() < 0.001,
+            "source47 distance at scale{scale}: {distance} != {expected_distance}",
+        );
+    }
+}
+
+#[test]
 fn class_completeness_native_darkness_ground_destination_snaps_to_authored_terrain() {
     let mut h = harness(Vec::new(), &[196718], 12).unwrap();
     let conn = rusqlite::Connection::open_with_flags(

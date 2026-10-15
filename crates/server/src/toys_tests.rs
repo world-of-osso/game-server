@@ -14,6 +14,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
+#[path = "toys_podium_tests.rs"]
+mod podium;
 #[path = "toys_scarab_tests.rs"]
 mod scarab;
 #[path = "toys_shrine_tests.rs"]
