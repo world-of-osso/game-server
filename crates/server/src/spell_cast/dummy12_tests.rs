@@ -132,6 +132,15 @@ fn dummy12_guardian_damage_reaches_owner_without_guardian_connection() {
     h.advance(4);
     h.cast_and_deliver(49206, Some(h.npc));
     let gargoyle = actors(&mut h, 27829)[0];
+    // Isolate delivery from the unimplemented non-demon AP inheritance curve,
+    // using the same explicit actor stats as the existing Gargoyle script fixture.
+    h.app
+        .world_mut()
+        .entity_mut(gargoyle)
+        .insert(crate::stats::CharacterStats {
+            attack_power: 100.0,
+            ..default()
+        });
     h.advance(100);
     let summon_index = h
         .inbox
