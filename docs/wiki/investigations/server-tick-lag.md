@@ -10,7 +10,7 @@ Authentic Stormwind Trade District terrain (MCNK5148/parent1519), AreaTable/fact
 
 ## Titan's Grip FIFO merge — 2026-10-15
 
-Master50fcd1c5 added learned effect155 subclass masks beside effect40 dual wield. The merge keeps both capabilities as a small owned `WeaponSkills` snapshot for each actual inventory request, then applies it to the model loaded from fresh durable rows on FIFO. No complete spell catalog is cloned, no synchronous inventory mutation is restored, and idle connections do not build capability snapshots. Incoming two-hand/off-hand/subclass/unlearning controls and existing inventory receipt controls are queued for verification. This integration is not yet a passing proof.
+Master50fcd1c5 added learned effect155 subclass masks beside effect40 dual wield. The merge keeps both capabilities as a small owned `WeaponSkills` snapshot for each actual inventory request, then applies it to the model loaded from fresh durable rows on FIFO. No complete spell catalog is cloned, no synchronous inventory mutation is restored, and idle connections do not build capability snapshots. `titan-fifo-master-controls-fd9c03df-7313ec4.log` records19/19 passes in84.59s, including all six native Titan controls, dual-wield rules, initial/split receipt boundaries, the incoming persisted achievement fixture and four Summon-event producer controls. Protocol7313ec4 (official master) adds the required Summon variant; both combat-log wire tests pass separately. The earlier server compile failure against old protocolcac6080 ran no tests and is retained. Current runtime check is still pending; native controls are not release-budget/full-gameplay proof.
 
 ## Housing destination transaction boundary — 2026-10-15
 

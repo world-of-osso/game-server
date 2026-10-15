@@ -1,6 +1,6 @@
 ## 2026-10-15 — War Mode FIFO and Titan's Grip merge
 
-[War Mode](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15): three real-territory/wire held-writer REDs become5/5 controls, preserving earlier honor and current-instance/departed-session effect boundaries. [Titan merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) keeps effect40/155 metadata in owned requests and preserves fresh FIFO inventory writes; merged capability controls/runtime verification remain pending.
+[War Mode](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15): three real-territory/wire held-writer REDs become5/5 controls, preserving earlier honor and current-instance/departed-session effect boundaries. [Titan merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) keeps effect40/155 metadata in owned requests and preserves fresh FIFO inventory writes; 19 merged capability/receipt/Summon controls plus2 protocol wire controls pass; current runtime verification remains pending.
 
 ## 2026-10-15 — Atomic housing destinations and retained cold failure
 
