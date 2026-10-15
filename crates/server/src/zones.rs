@@ -900,6 +900,39 @@ mod tests {
         }
     }
 
+    #[test]
+    fn cold_population_target_sync_does_not_rebuild_every_creature() {
+        use shared::components::UnitTarget;
+        use std::time::{Duration, Instant};
+        const POPULATION: usize = 187_770;
+        let spawns = (0..POPULATION)
+            .map(|index| {
+                let mut spawn = make_spawn(1, 100.0, 100.0, 0.0);
+                spawn.guid = index as u32 + 1;
+                spawn
+            })
+            .collect();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(crate::unit_target::UnitTargetPlugin);
+        app.insert_resource(make_world_data(vec![make_template(1, 1.0, 101)], spawns));
+        app.add_systems(PostStartup, spawn_test);
+        // Production starts its population before any FixedPreUpdate registration.
+        app.world_mut().run_schedule(PostStartup);
+        let started = Instant::now();
+        app.world_mut().run_schedule(PostUpdate);
+        let elapsed = started.elapsed();
+        let world = app.world_mut();
+        let mut targets = world.query::<(&Npc, &UnitTarget)>();
+        assert_eq!(targets.iter(world).count(), POPULATION);
+        assert!(targets.iter(world).all(|(_, target)| target.0.is_none()));
+        eprintln!("cold {POPULATION} creature target sync: {elapsed:?}");
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "initial population target sync rebuilt creature storage: {elapsed:?}"
+        );
+    }
+
     /// ObjectMgr::GetEquipmentInfo: equipment_id 2 picks ID 2, -1 one of the entry's IDs
     /// (both, over 200 rolls), 0 and a missing ID none. Winterskorn Warrior 23664's
     /// AzerothCore row (1, 33320, 13922) and an invented ID 2.
