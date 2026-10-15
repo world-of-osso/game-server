@@ -792,11 +792,14 @@ fn spawn_saved_gear_cast_fixture(
     h.app
         .insert_resource(load_achievement_catalog(&conn).unwrap());
     h.app.insert_resource(GameDatabase { db });
+    // Authentication inserts InWorld; changing its ID alone cannot replay Added<InWorld>.
     h.app
         .world_mut()
-        .get_mut::<InWorld>(h.connection)
-        .unwrap()
-        .character_id = character;
+        .entity_mut(h.connection)
+        .remove::<InWorld>();
+    h.app.world_mut().entity_mut(h.connection).insert(InWorld {
+        character_id: character,
+    });
     h.app
         .world_mut()
         .get_mut::<crate::auth::Authenticated>(h.connection)
