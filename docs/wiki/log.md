@@ -1,6 +1,6 @@
 ## 2026-10-14 — Post-count7 source audit
 
-[Remaining boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) pins44/58/64's missing progress rules,153's actual action-set dispatch with zero matching native portals/templates, and218's hard-false Party Sync companions. Source/data proof only; no runtime/census activation. Removed stale spec assertions that already-implemented BG70/objective30/rated37 had no producers; world honor and garrison gaps remain.
+[Remaining boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) pins44/58/64's missing progress rules,153's actual action-set dispatch with zero matching native portals/templates, and218's hard-false Party Sync companions. Follow-up208/222/229/230/234 likewise lacks executable progress/callers; existing scenario/item/spell/Mythic events cannot stand in. Source/data proof only; no runtime/census activation. Removed stale spec assertions that already-implemented BG70/objective30/rated37 had no producers; world honor and garrison gaps remain.
 
 ## 2026-10-14 — Raw StartedAtLeast statistic projection
 
