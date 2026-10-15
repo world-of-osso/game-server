@@ -25,6 +25,10 @@
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 
 [Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
+## 2026-10-14 — Native node-ownership expression credit
+
+[Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
+
 ## 2026-10-14 — Alterac captain source diagnosis
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
