@@ -1,6 +1,6 @@
 ## 2026-10-15 — Guild rank request FIFO
 
-[Guild rank requests](investigations/server-tick-lag.md#guild-rank-request-fifo--2026-10-15): five real HostClient held-writer REDs become nonwaiting request/query FIFO; fresh permission revocation, delayed member cleanup, departed/rebound source boundaries and actual worker-failure notice/metric are exercised.18 current native controls pass together; check/release and legacy guild writers remain pending/separate.
+[Guild rank requests](investigations/server-tick-lag.md#guild-rank-request-fifo--2026-10-15): five real HostClient held-writer REDs become nonwaiting request/query FIFO; fresh permission revocation, delayed member cleanup, departed/rebound source boundaries and actual worker-failure notice/metric are exercised.18 current native controls pass together; feature check passes39.81s without warnings, format/diff pass. Release and legacy guild writers remain pending/separate.
 
 ## 2026-10-15 — Companion writer failure classification
 
