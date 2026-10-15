@@ -1,6 +1,6 @@
 ## 2026-10-15 — Installed race/class source
 
-[Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Native283-pair and actual kit/persistence tests precede gates; source95/96 contracts, start-level and visage policy remain separate and unchanged. No realm5000 operation or stat tuning.
+[Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Installed283-pair/missing-source/actual admin kit+persistence regressions pass3/3; post-master race/mask/start/Forever controls10/10 and scoped check/fmt pass. Source95/96 contracts, start-level and visage policy remain separate and unchanged; rendered Dwarf login is not claimed. No realm5000 operation or stat tuning.
 
 ## 2026-10-15 — Follower passive-derived stat recomputation
 
