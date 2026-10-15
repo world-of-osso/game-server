@@ -524,7 +524,7 @@ fn enter_isle_bomb_match() -> EnteredMatch {
 /// TC npc_four_car_garage / source34775 spellclick66245: aura236 boards the
 /// Demolisher's Vehicle509 driver seat5766 after normal Workshop capture.
 #[test]
-fn isle_channel_workshop_demolisher_spellclick_boards_its_source_driver_seat() {
+fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_requests() {
     let template = shared::battleground::isle_of_conquest();
     let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
         let source = Connection::open_with_flags(
@@ -612,6 +612,97 @@ fn isle_channel_workshop_demolisher_spellclick_boards_its_source_driver_seat() {
     assert_eq!(rider.driver, demolisher.to_bits());
     assert_eq!(rider.seat_index, 0);
     assert_eq!(rider.seat_id, 5766);
+    assert!(
+        h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    let vehicle_position = h.app.world().get::<Position>(demolisher).unwrap();
+    let rider_position = h.app.world().get::<Position>(actor.player).unwrap();
+    let yaw = h.app.world().get::<Rotation>(demolisher).unwrap().y;
+    let relative = Quat::from_rotation_y(-yaw)
+        * Vec3::new(
+            rider_position.x - vehicle_position.x,
+            rider_position.y - vehicle_position.y,
+            rider_position.z - vehicle_position.z,
+        );
+    // Source123367 M2 attachment39=(-3.84265995,0,6.19728518), DB2scale0.75;
+    // VehicleSeat5766 attachment13 maps to39 with zero offset, model aligns -90deg.
+    assert!(
+        relative.distance(Vec3::new(0.0, 4.647964, -2.881995)) < 0.002,
+        "{relative:?}"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(actor.connection)
+        .insert(pair::<shared::protocol::ExitVehicle>());
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::ExitVehicle>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::ExitVehicle);
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
+
+    // Reentry must reuse the freed driver seat, not a later passenger seat.
+    h.walk_to(actor, position);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .unwrap()
+            .seat_index,
+        0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<LeaveBattleground>>(actor.connection)
+        .unwrap()
+        .send::<PvpChannel>(LeaveBattleground {
+            match_id: entered.match_id,
+        });
+    h.receive_pvp_updates(5);
+    h.ack(actor);
+    h.receive_pvp_updates(5);
+    assert_eq!(h.map_of(actor), Some(STORMWIND));
+    assert!(close(h.position(actor), entered.origin));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
 }
 
 /// TC a352b1fa GameObject::Use goober Data10 spell (GameObject.cpp:2930-2932, 3563-3567):
