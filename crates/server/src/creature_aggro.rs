@@ -28,10 +28,9 @@ use crate::taxi::TaxiFlight;
 
 /// `MAX_AGGRO_RADIUS` (Unit.h:45).
 pub(crate) const MAX_AGGRO_RADIUS: f32 = 45.0;
-/// Minimum aggro radius of a non-pet creature (`GetAggroRange`).
-const MIN_AGGRO_RADIUS: f32 = 5.0;
-/// `GetAggroRange` caps the level difference at 25 below the creature.
-const MAX_LEVEL_DIFF_BELOW: i32 = -25;
+#[path = "creature_aggro_distance.rs"]
+mod attack_distance;
+pub(crate) use attack_distance::AggroDistance;
 /// `ATTACK_DISTANCE` (ObjectDefines.h:25): melee range for the threat
 /// swap threshold.
 const ATTACK_DISTANCE: f32 = 5.0;
@@ -105,43 +104,23 @@ impl AggroMode {
     }
 }
 
-/// `creature_template.detection_range`: aggro radius against a same-level
-/// target, before level scaling.
+/// An aggressive creature participates in proximity acquisition. Distance comes
+/// from TC GetAttackDistance, not the legacy template detection_range column.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub struct AggroRange(pub f32);
+pub struct AggroRange;
 
 /// Spawn-time combat components: a threat list for every non-passive
 /// creature, an aggro radius for aggressive ones.
-pub(crate) fn insert_aggro_components(
-    entity: &mut EntityCommands,
-    mode: AggroMode,
-    detection_range: f32,
-) {
+pub(crate) fn insert_aggro_components(entity: &mut EntityCommands, mode: AggroMode) {
     match mode {
         AggroMode::Passive => {}
         AggroMode::Reactive => {
             entity.insert((ThreatTable::default(), CreatureState::Idle));
         }
         AggroMode::Aggressive => {
-            entity.insert((
-                ThreatTable::default(),
-                CreatureState::Idle,
-                AggroRange(detection_range),
-            ));
+            entity.insert((ThreatTable::default(), CreatureState::Idle, AggroRange));
         }
     }
-}
-
-/// `Creature::GetAggroRange` with `Rate.Creature.Aggro` 1 and no detect
-/// range auras: the detection range grows 1 yard per level the creature is
-/// above the target, clamped to 5..45 yards; under 1 yard never aggroes.
-pub fn aggro_radius(detection_range: f32, creature_level: u8, target_level: u8) -> f32 {
-    if detection_range < 1.0 {
-        return 0.0;
-    }
-    let level_diff =
-        (i32::from(target_level) - i32::from(creature_level)).max(MAX_LEVEL_DIFF_BELOW);
-    (detection_range - level_diff as f32).clamp(MIN_AGGRO_RADIUS, MAX_AGGRO_RADIUS)
 }
 
 type Victims<'w, 's> = Query<
@@ -200,7 +179,6 @@ type Watchers<'w, 's> = Query<
     (
         Entity,
         &'static Position,
-        &'static AggroRange,
         &'static UnitLevel,
         Option<&'static LevelScaling>,
         &'static UnitFactionTemplate,
@@ -208,7 +186,7 @@ type Watchers<'w, 's> = Query<
         &'static InMap,
         Option<&'static crate::scripted_ai::ReactState>,
     ),
-    (Without<DeathState>, Without<GridDormant>),
+    (With<AggroRange>, Without<DeathState>, Without<GridDormant>),
 >;
 
 /// `CreatureAI::MoveInLineOfSight` → `Creature::CanStartAttack`: an idle
@@ -221,6 +199,7 @@ fn aggro_on_sight_system(
     players: Query<(Entity, &Position, &InMap), With<Player>>,
     victims: Victims,
     templates: Res<FactionTemplates>,
+    attack_distance: AggroDistance,
     bodies: Query<crate::line_of_sight::BodyParts>,
     los: Option<Res<crate::line_of_sight::LineOfSight>>,
     mut commands: Commands,
@@ -232,19 +211,19 @@ fn aggro_on_sight_system(
     if players.is_empty() {
         return;
     }
-    for (creature, position, range, level, scaling, faction, state, map, react) in &watchers {
+    for (creature, position, level, scaling, faction, state, map, react) in &watchers {
         let aggressive =
             react.is_none_or(|react| *react == crate::scripted_ai::ReactState::Aggressive);
         if !state.is_idle() || !aggressive {
             continue;
         }
-        // A victim shares the creature's map copy, and no level or detection
-        // range gives a radius beyond MAX_AGGRO_RADIUS.
+        // Model reaches are added after TC's45yd clamp; do not truncate the
+        // center-distance candidates at the unclothed attack-distance limit.
         let in_reach = players
             .iter()
             .filter_map(|(player, player_pos, player_map)| {
                 let distance = distance(position, player_pos);
-                (player_map == map && distance <= MAX_AGGRO_RADIUS).then_some((*player, distance))
+                (player_map == map).then_some((*player, distance))
             });
         let mut candidates: Vec<(Entity, f32)> = in_reach
             .filter(|&(player, distance)| {
@@ -254,10 +233,14 @@ fn aggro_on_sight_system(
                 let player_level = player_level.map_or(1, |l| l.0);
                 // Creature::GetAttackDistance: both levels against each other.
                 let creature_level = level_for_viewer(*level, scaling, player_level);
-                let radius = aggro_radius(range.0, creature_level, player_level);
+                let Some(radius) =
+                    attack_distance.center_radius(creature, player, creature_level, player_level)
+                else {
+                    return false;
+                };
                 let hostile = templates.reaction(faction.0, player_faction.map_or(0, |f| f.0))
                     == Reaction::Hostile;
-                distance <= radius
+                distance < radius
                     && hostile
                     && valid_victim(&victims, &templates, faction.0, map, player)
             })

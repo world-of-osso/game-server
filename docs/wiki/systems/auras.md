@@ -278,7 +278,7 @@ Every aura change recomputes two components, each written only when its value ch
 | `mastery_points` | MASTERY 318 |
 | `max_health_pct` | MOD_INCREASE_HEALTH_PERCENT 133 |
 
-  Consumers: spell crit rolls `CharacterStats.crit_pct` (+ CritChance mods); cast time divides by `1 + CharacterStats.haste_pct/100`. NPCs have no `CharacterStats`, so these auras do not change NPC stats.
+  Consumers: spell crit rolls `CharacterStats.crit_pct` (+ CritChance mods); cast time divides by `1 + CharacterStats.haste_pct/100`. Ordinary NPCs without `CharacterStats` are unchanged. Approved [NPC follower bridge units](../investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) carry `CharacterStats` and now share player stat recomputation; their sourced modifiers apply without a synthetic `Player` identity.
 - **`AuraStatMods`** (multipliers, `1 + amount/100` each): combat paths read it directly.
 
 | Field | Aura types | Consumer |

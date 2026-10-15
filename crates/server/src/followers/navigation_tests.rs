@@ -257,3 +257,146 @@ fn follower_unbaked_follow_and_chase_hold_position_instead_of_using_direct_movem
         "unbaked combat chase must not become direct movement either"
     );
 }
+
+#[test]
+#[ignore = "requires prepared follower eye/nav bake; set GAME_SERVER_GROUND_DIR"]
+fn follower_healer_walks_through_actual_stockade_doorway_before_healing() {
+    let engine = crate::ground::ground_data_dir();
+    // Stockwatch42 command-00535.log: Crenna stopped here while Garrick was
+    // injured inside the cell. A stationary owner patient isolates this same
+    // doorway/range boundary without another follower moving the recorded point.
+    let from = Position {
+        x: 105.6,
+        y: -26.2,
+        z: 3.2,
+    };
+    let patient = Position {
+        x: 106.1,
+        y: -26.5,
+        z: 17.6,
+    };
+    let (mut h, healer, profile) = spawn_profile_fixture(209072);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Level>(h.caster)
+        .unwrap()
+        .0 = 32;
+    super::spawning::initialize(h.app.world_mut(), h.caster, healer, profile).unwrap();
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let display: u32 = db.query_row(
+        "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=209072 ORDER BY Idx LIMIT 1",
+        [], |row| row.get(0),
+    ).unwrap();
+    h.app.world_mut().entity_mut(healer).insert((
+        from,
+        InMap::continent(34),
+        shared::components::ModelDisplay {
+            display_id: display,
+        },
+        shared::components::Rotation {
+            x: 0.0,
+            y: crate::creature_ai::facing_along(patient.x - from.x, patient.z - from.z).unwrap(),
+            z: 0.0,
+        },
+        crate::creature_ai::SpawnPoint {
+            x: from.x,
+            y: from.y,
+            z: from.z,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+            speed_run: 1.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        patient,
+        InMap::continent(34),
+        shared::components::Health {
+            current: 4979.0,
+            max: 7840.0,
+        },
+    ));
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    h.app.insert_resource(GroundMap::new(
+        &engine,
+        HashMap::from([(34, maps.map(34).unwrap().wdt_file_data_id)]),
+    ));
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&engine.join("navmesh")));
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&engine.join("los")).unwrap());
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    {
+        let world = h.app.world_mut();
+        let mut bodies = world.query::<crate::line_of_sight::BodyParts>();
+        let sight = world.resource::<crate::line_of_sight::LineOfSight>();
+        let healer_body = sight
+            .body(bodies.get(world, healer).unwrap())
+            .expect("sourced Crenna eye row");
+        let patient_body = sight
+            .body(bodies.get(world, h.caster).unwrap())
+            .expect("sourced Human eye row");
+        assert!(
+            sight
+                .witness(InMap::continent(34), &healer_body, &patient_body)
+                .is_none(),
+            "recorded doorway must obstruct authoritative eyes, chest and feet rays"
+        );
+    }
+    let mut collision = los::LosMap::new(&engine.join("los/34"));
+    let mut previous = from;
+    for tick in 0..200 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(healer).unwrap();
+        assert!(
+            collision
+                .clear(point(previous) + Vec3::Y, point(at) + Vec3::Y)
+                .unwrap(),
+            "healer tick{tick} crossed authored collision: {previous:?}->{at:?}"
+        );
+        previous = at;
+        if h.inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(8936)
+                    && event.amount > 0
+                    && event.kind == shared::protocol::CombatLogKind::Heal
+            })
+            .any(|event| {
+                event.source == Some(healer.to_bits()) && event.target == Some(h.caster.to_bits())
+            })
+        {
+            assert!(
+                h.health(h.caster) > 4979.0,
+                "ordinary Regrowth must reach the patient"
+            );
+            let GroundProbe::Supported(floor) = h
+                .app
+                .world_mut()
+                .resource_mut::<GroundMap>()
+                .creature_ground_at(34, point(at))
+            else {
+                panic!("healer feet lost authored support: {at:?}")
+            };
+            assert!(
+                (at.y - floor).abs() < 0.05,
+                "healer must stay on the actual floor"
+            );
+            return;
+        }
+    }
+    panic!(
+        "in-range Crenna remained unable to heal through the doorway: {from:?}->{previous:?}; {:?}",
+        h.inbox.log
+    );
+}
