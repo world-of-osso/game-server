@@ -1,3 +1,7 @@
+## 2026-10-15 — Guild rank request FIFO
+
+[Guild rank requests](investigations/server-tick-lag.md#guild-rank-request-fifo--2026-10-15): five real HostClient held-writer REDs become nonwaiting request/query FIFO; fresh permission revocation, delayed member cleanup, departed/rebound source boundaries and actual worker-failure notice/metric are exercised.18 current native controls pass together; check/release and legacy guild writers remain pending/separate.
+
 ## 2026-10-15 — Companion writer failure classification
 
 [Companion storage errors](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15): malformed durable journal RED exposed writerfailed0 vs1 despite owner refusal. Storage errors now log/count through the writer; species caps remain ordinary refusals.After masterd5e59a07/protocolab40a18,9 companion/guild-note controls pass together; feature check passes46.55s without warnings, format/diff pass. No recovery behavior added.

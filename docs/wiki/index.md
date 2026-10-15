@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Guild rank request FIFO](investigations/server-tick-lag.md#guild-rank-request-fifo--2026-10-15) — fresh rights, ordered queries and receipt-bound member publication; five held-writer REDs plus rebound-account RED become18 native passes; check/release pending.
+
 - [Companion teaching-item FIFO](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15) — fresh physical-item/journal/GUID atomic commit; real held-writer RED261.8ms becomes GREEN, prior pet/wallet and departed learner/current-peer controls pass; initial merged8 controls/check pass; storage-error follow-up passes9 merged controls and a warning-free current check.
 
 - [st210 toy fixture clock](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15) — expired summon jump leaked into later network pumping; jobs already committed. Restore one-shot clock, deterministic fixture barriers;21 controls plus3 MountSpecial controls and warning-free runtime check pass.
