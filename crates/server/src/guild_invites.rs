@@ -5,6 +5,10 @@ use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::protocol::{AuthChannel, GuildDeclineInviteRequest, GuildInvitation};
 
+#[cfg(test)]
+#[path = "guild_decline_fifo_tests.rs"]
+mod fifo_tests;
+
 pub(crate) fn send_pending_invites(
     db: Res<GameDatabase>,
     mut connections: Query<
