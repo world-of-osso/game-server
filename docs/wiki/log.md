@@ -1,3 +1,7 @@
+## 2026-10-14 — Live player weapon-spell dodge
+
+[Live player field](systems/player-damage.md#shared-weapon-spell-defense-roll) feeds melee dodge before block. Native Rogue Evasion/receiver stat producer gives genuine Slam301 RED then six GREEN controls for direction/stun/flags/ranged/removal/expiry. NPC dodge, attacker modifiers, full probabilities and independent acceptance remain gaps.
+
 ## 2026-10-14 — Wildfire primary variance master red
 
 [Native variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) re-sources coefficient/primary bonus without widening tolerance or changing runtime math. Actual292 upper draw reproduces the stale interval;256 primary draws plus owned six-tick/expiry and AP37/RAP100 controls pass within merged76 tests/check/fmt. Cone/secondary and whole-class certification remain gaps.
