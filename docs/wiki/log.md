@@ -13,6 +13,10 @@
 ## 2026-10-14 — C++ waypoint motion ownership and physical escort
 
 [Ownership/support proof](systems/navigation.md#current-controlled-physical-proof): source default/active preemption, fresh-goal diff0, real-position resume, callback ownership and exact moving-foot support pass23/23 in134.17s; check/fmt pass. Controlled Wailing traversal reaches both camps and stopped endpoint (477.2578yd, waves[2,3], real6270). Natural activation, balance and native clears remain open.
+## 2026-10-14 — Native node-ownership expression credit
+
+[Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
+
 ## 2026-10-14 — Alterac captain source diagnosis
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
