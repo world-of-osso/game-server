@@ -1,3 +1,7 @@
+## 2026-10-15 — Guild lifecycle query boundary
+
+[Lifecycle history](systems/guild-lifecycle.md): additive history table and authenticated actor-guild query; six-action atomic producers, retention and native/restart acceptance remain pending. No fabricated/backfilled history or bank/news reuse.
+
 ## 2026-10-15 — Installed race/class source
 
 [Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Installed283-pair/missing-source/actual admin kit+persistence regressions pass3/3; post-master race/mask/start/Forever controls10/10 and scoped check/fmt pass. Source95/96 contracts, start-level and visage policy remain separate and unchanged; rendered Dwarf login is not claimed. No realm5000 operation or stat tuning.

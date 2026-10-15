@@ -413,11 +413,21 @@ pub(super) fn process_rank_requests(
     mut receivers: Receivers,
     connections: Connections,
     mut senders: Query<&mut MessageSender<GuildRanksState>>,
+    mut log_senders: Query<&mut MessageSender<GuildEventLog>>,
     mut changed: ResMut<ChangedGuilds>,
     mut commands: Commands,
 ) {
     for (connection, world, mut receiver) in &mut receivers {
         for request in receiver.receive() {
+            if matches!(request, GuildRankRequest::QueryEventLog) {
+                if let Ok(mut sender) = log_senders.get_mut(connection) {
+                    sender.send::<GuildChannel>(crate::guild_event_log::query(
+                        &db.db,
+                        world.character_id,
+                    ));
+                }
+                continue;
+            }
             let membership = persistence::load_character_guild(&db.db, world.character_id);
             let query = matches!(request, GuildRankRequest::Query);
             let previous_members = membership
