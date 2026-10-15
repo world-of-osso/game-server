@@ -1,6 +1,6 @@
 ## 2026-10-14 — Physical mechanic resistance
 
-[Native physical hit table](systems/player-damage.md#shared-weapon-spell-defense-roll) requires recipient aura117 after miss and before NoActiveDefense. Initial cd651cb7 full-table RED invalid: neutralNPC6 omits baseline5, actual85+10. Corrected hostileNPC40 and restored pre117 consumer await genuine RED; foreign and silence-selector controls pass. Bounded GREEN/check/fmt pending; full117/magic/ability acceptance open.
+[Native physical hit table](systems/player-damage.md#shared-weapon-spell-defense-roll) requires recipient aura117 after miss and before NoActiveDefense. Initial cd651cb7 full-table RED invalid: neutralNPC6 omits baseline5, actual85+10. Corrected hostileNPC40/pre117 consumer at2c4a7ecb records genuine native1833 stun RED atdraw10; foreign and silence-selector controls pass. Implementation follows corrected RED. Bounded GREEN/check/fmt pending; full117/magic/ability acceptance open.
 
 ## 2026-10-14 — Non-player expertise dodge consumer
 
