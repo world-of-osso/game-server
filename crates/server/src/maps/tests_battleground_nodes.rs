@@ -1355,6 +1355,16 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
         app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
         app.add_plugins(crate::achievement::AchievementPlugin);
     });
+    // Authentication loads this component before gameplay (auth_character.rs468).
+    for who in &entered.players {
+        let world = entered.h.app.world_mut();
+        let character = world.get::<ClientId>(who.player).unwrap().0;
+        let state = crate::persistence::load_achievements(
+            &world.resource::<crate::persistence::GameDatabase>().db,
+            character,
+        );
+        world.entity_mut(who.player).insert(state);
+    }
     let actor = &entered.players[0];
     let (h, copy) = (&mut entered.h, entered.copy);
     for point in source_battleground_objects(template.map_id).0 {
