@@ -26,6 +26,29 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_kill_absent_aura_keeps_alive_and_difficulty_companions(self):
+        criteria = {20693: dict(self.criteria[1], ModifierTreeId='6635')}
+        mods = {6635: node(0, 4), 6636: node(6635, 2, 16),
+                6637: node(6635, 3, 8, 115013)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {20693: [None, ((-8, 115013), (16, 0))]})
+        self.assertEqual(self.compile({**mods, 6638: node(6635, 2, 999, 1)}, criteria), {})
+        criteria = {29405: dict(self.criteria[1], ModifierTreeId='27075')}
+        mods = {27075: node(0, 4), 27076: node(27075, 3, 8, 196665),
+                27077: node(27075, 3, 8, 196666), 27078: node(27075, 3, 68, 1),
+                27079: node(27075, 3, 68, 2)}
+        expected = {29405: [(False, (1, 2)), ((-8, 196665), (-8, 196666))]}
+        self.assertEqual(self.compile(mods, criteria), expected)
+        for kind in ('8', '29', '74', '78', '110'):
+            criteria[29405]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[29405]['Type'] = '0'
+        for field, value in [('SecondaryAsset', '1'), ('TertiaryAsset', '1'),
+                             ('Asset', '0')]:
+            invalid = copy.deepcopy(mods)
+            invalid[27076][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+
     def test_native_login_unknown_spell_requires_plain_complete_negation(self):
         criteria = {43205: dict(self.criteria[1], Type='74', Asset='0',
                                ModifierTreeId='86619')}

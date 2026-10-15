@@ -1570,6 +1570,9 @@ fn query_comparison_target(
 }
 
 #[cfg(test)]
+#[path = "achievement_absent_aura_tests.rs"]
+mod absent_aura_tests;
+#[cfg(test)]
 #[path = "achievement_creature_type_tests.rs"]
 mod creature_type_tests;
 #[cfg(test)]
