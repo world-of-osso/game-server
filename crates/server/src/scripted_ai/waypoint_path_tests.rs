@@ -222,37 +222,56 @@ fn waypoint_wailing_single_chase_snap_samples_both_real_floors() {
         HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
     );
     let navigation = crate::navigation::Navigation::new(&root);
-    // Recorded tick2137 after the source handoff removes the second driver.
-    let endpoints = [
-        Vec3::new(-55.3435, -95.25101, -205.98676),
-        Vec3::new(-54.952423, -95.577065, -206.07079),
-    ];
-    let floors: Vec<_> = endpoints
-        .iter()
-        .map(|&feet| {
-            let crate::ground::GroundProbe::Supported(floor) = ground.creature_ground_at(43, feet)
-            else {
-                panic!("recorded endpoint has no collision support: {feet:?}");
-            };
-            // Existing nearest-poly policy admits only WALK_FLAG polygons, baked
-            // under AGENT_SLOPE/AGENT_CLIMB; no new looser search or slope policy.
-            let support = navigation.query_path(43, feet, feet).unwrap().unwrap();
-            println!("recorded feet={feet:?} actual_floor={floor} walkable_nav={support:?}");
-            floor
-        })
-        .collect();
-    assert!((endpoints[1].y - floors[1]).abs() < 0.05);
-    let horizontal = (endpoints[1].x - endpoints[0].x).hypot(endpoints[1].z - endpoints[0].z);
-    let slope = (floors[1] - floors[0]).abs().atan2(horizontal).to_degrees();
-    assert!(
-        slope <= navigation::AGENT_SLOPE,
-        "real floor segment slope={slope}, baked limit={}",
-        navigation::AGENT_SLOPE
-    );
-    println!(
-        "horizontal={horizontal} real_floor_slope={slope}deg; prior feet offset={}",
-        endpoints[0].y - floors[0]
-    );
+    let mut los = los::LosMap::new(&root.parent().unwrap().parent().unwrap().join("los/43"));
+    for (label, endpoints) in [
+        (
+            "single-chase handoff",
+            [
+                Vec3::new(-55.3435, -95.25101, -205.98676),
+                Vec3::new(-54.952423, -95.577065, -206.07079),
+            ],
+        ),
+        (
+            "camp2 nav edge",
+            [
+                Vec3::new(-52.340485, -92.84426, -267.44452),
+                Vec3::new(-52.42458, -92.84426, -267.5363),
+            ],
+        ),
+    ] {
+        let floors: Vec<_> = endpoints
+            .iter()
+            .map(|&feet| {
+                let crate::ground::GroundProbe::Supported(floor) =
+                    ground.creature_ground_at(43, feet)
+                else {
+                    panic!("recorded endpoint has no collision support: {feet:?}");
+                };
+                // Existing nearest-poly policy admits only WALK_FLAG polygons, baked
+                // under AGENT_SLOPE/AGENT_CLIMB; no new looser search or slope policy.
+                let support = navigation.query_path(43, feet, feet).unwrap().unwrap();
+                println!("recorded feet={feet:?} actual_floor={floor} walkable_nav={support:?}");
+                floor
+            })
+            .collect();
+        assert!((endpoints[1].y - floors[1]).abs() < 0.05);
+        let horizontal = (endpoints[1].x - endpoints[0].x).hypot(endpoints[1].z - endpoints[0].z);
+        let slope = (floors[1] - floors[0]).abs().atan2(horizontal).to_degrees();
+        assert!(
+            slope <= navigation::AGENT_SLOPE,
+            "real floor segment slope={slope}, baked limit={}",
+            navigation::AGENT_SLOPE
+        );
+        println!(
+            "horizontal={horizontal} real_floor_slope={slope}deg; prior feet offset={}",
+            endpoints[0].y - floors[0]
+        );
+        println!(
+            "{label}: surface-ray={:?} LOS={:?}",
+            navigation.first_collision(43, endpoints[0], endpoints[1]),
+            los.clear(endpoints[0] + Vec3::Y, endpoints[1] + Vec3::Y)
+        );
+    }
 }
 
 fn motion_ownership_world() -> (World, Entity, Entity) {
