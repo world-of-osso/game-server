@@ -353,3 +353,5 @@ Debug logs and root cause analyses.
 - [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
 
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
+
+- [Wailing wake-up and flight exit](systems/boss-scripts.md#wailing-wake-up-and-flight-exit--2026-10-15) — source21–27 port; behavioral RED observed, real flight-exit gate pending.
