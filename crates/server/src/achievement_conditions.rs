@@ -14602,6 +14602,13 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(4, 3144)],
         }),
+        (36050, 56522) => Some(CompiledConditions::All {
+            difficulty: Some(DifficultyRule {
+                allowed: true,
+                ids: &[15, 16],
+            }),
+            facts: &[(87, 11611)],
+        }),
         (36055, 54879) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(87, 11611)],
