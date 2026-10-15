@@ -299,3 +299,164 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         "physical source walk {start:?} -> {previous:?}; {walked}yd; waves={camp_counts:?}; real6270={saw_cleansing}"
     );
 }
+
+/// Controlled path2 arrival; actual source timing and full path3 movement.
+/// Not natural activation or an awakening-wave/native-clear certificate.
+#[test]
+#[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
+fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
+    let root = std::path::PathBuf::from(std::env::var_os("WAILING_NAV_ROOT").unwrap());
+    let (mut h, prerequisite, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    h.hit_pct(prerequisite, 1_000.0);
+    h.advance(0.05);
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&root));
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
+    let source_end = |path: u32| -> Vec3 {
+        conn.query_row(
+            "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=?1 ORDER BY NodeId DESC LIMIT 1",
+            [path], |row| Ok(Vec3::new(row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).unwrap()
+    };
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
+    );
+    let mut start = source_end(367802);
+    let mut end = source_end(367803);
+    for point in [&mut start, &mut end] {
+        let crate::ground::GroundProbe::Supported(floor) =
+            ground.creature_ground_at(43, nav_point(*point))
+        else {
+            panic!("authored chamber endpoint requires exact support");
+        };
+        point.z = floor;
+    }
+    h.app.insert_resource(ground);
+    let mut los = los::LosMap::new(&root.parent().unwrap().parent().unwrap().join("los/43"));
+    let projected = nav_point(start);
+    let position = Position {
+        x: projected.x,
+        y: projected.y,
+        z: projected.z,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(disciple)
+        .insert((position, UnitFactionTemplate(250)));
+    let observer = h.player();
+    h.app.world_mut().entity_mut(observer).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.advance(0.1);
+    dispatch(
+        h.app.world_mut(),
+        disciple,
+        Hook::WaypointPathEnded {
+            node_id: 0,
+            path_id: 367802,
+        },
+    );
+    // Exercise the actual out-of-combat clock predicate with controlled state;
+    // no claim that this is a naturally engaged encounter.
+    h.app
+        .world_mut()
+        .get_mut::<CombatStatus>(disciple)
+        .unwrap()
+        .0 = true;
+    dispatch(h.app.world_mut(), disciple, Hook::UpdateAi(10_000));
+    assert!(
+        !h.inbox(0)
+            .chat
+            .iter()
+            .any(|m| m.content.contains("Beyond this corridor"))
+    );
+    h.app
+        .world_mut()
+        .get_mut::<CombatStatus>(disciple)
+        .unwrap()
+        .0 = false;
+    h.advance(0.8);
+    assert!(
+        !h.inbox(0)
+            .chat
+            .iter()
+            .any(|m| m.content.contains("Beyond this corridor"))
+    );
+    h.advance(0.3);
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|m| m.content.contains("Beyond this corridor")),
+        "source progress12 speech after one out-of-combat second"
+    );
+    assert!(
+        !h.inbox(1)
+            .chat
+            .iter()
+            .any(|m| m.content.contains("Beyond this corridor")),
+        "speech stays in its copy"
+    );
+    h.advance(4.5);
+    assert!(
+        h.wow_position(disciple).distance(start) <= GROUND_TOLERANCE,
+        "source five-second delay before progress13 movement"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<super::super::waypoint_path::PathMovement>(disciple)
+            .is_none()
+    );
+    let mut previous = start;
+    let mut walked = 0.0;
+    let mut arrived = false;
+    for tick in 0..1_200 {
+        let speed_before = physical_source_speed(&h, disciple);
+        h.advance(0.05);
+        let to = h.wow_position(disciple);
+        assert_physical_ground_step(
+            &mut h,
+            disciple,
+            map,
+            &PhysicalStep {
+                from: previous,
+                to,
+                speed_before,
+                tick,
+            },
+        );
+        assert!(
+            los.clear(nav_point(previous) + Vec3::Y, nav_point(to) + Vec3::Y)
+                .unwrap(),
+            "chamber step crosses collision at tick{tick}"
+        );
+        walked += to.distance(previous);
+        previous = to;
+        let position = *h.app.world().get::<Position>(disciple).unwrap();
+        h.app.world_mut().entity_mut(observer).insert(Position {
+            x: position.x + 1.0,
+            ..position
+        });
+        if to.distance(end) <= GROUND_TOLERANCE
+            && h.app.world().get::<CreatureMotion>(disciple) == Some(&CreatureMotion::Still)
+        {
+            arrived = true;
+            break;
+        }
+    }
+    assert!(
+        arrived,
+        "source path367803 failed: last={previous:?}, end={end:?}, walked={walked}"
+    );
+    assert!(
+        walked > start.distance(end),
+        "actual authored route, not a straight shortcut"
+    );
+    println!("physical chamber walk {start:?}->{previous:?}; {walked}yd");
+}
