@@ -52,7 +52,7 @@ fn preowned_family_journal(catalog: &WildCatalog) -> PetJournal {
 }
 
 fn select_native_repair_loadout(world: &mut World, owner: Entity) {
-    for (slot, ability) in [(1, 384), (2, 392), (3, 278)] {
+    for (slot, ability) in [(1, 384), (3, 278)] {
         validate_ability(&world.resource::<WildCatalog>().turns, ability)
             .unwrap_or_else(|error| panic!("source ability{ability}: {error}"));
         crate::battle_pets::choose_ability(
@@ -116,8 +116,6 @@ fn play_native_repair_carry_battle(
             WildPetBattleAction::Swap(2)
         } else if current.continuation.is_some() {
             WildPetBattleAction::Pass
-        } else if ready(392) {
-            WildPetBattleAction::Ability(2)
         } else if current.health < current.base_health && ready(278) {
             repairs += 1;
             WildPetBattleAction::Ability(3)
@@ -132,6 +130,12 @@ fn play_native_repair_carry_battle(
         let health = current.health;
         advance_encounter(world, owner, request)
             .unwrap_or_else(|error| panic!("turn{turn}/{action:?}, health{health}: {error}"));
+        if turn < 12 {
+            let health_after = crate::battle_pets::load_or_initialize_pet_states(world, owner)
+                .unwrap()[&FIGHTER]
+                .health;
+            println!("native repair turn{turn} {action:?} hp{health}->{health_after}");
+        }
     }
     panic!("native repair carry battle exceeded100 turns");
 }
@@ -223,6 +227,10 @@ fn achievements_criteria_native_all_pet_families_earn_both_level_grants_without_
             assert_eq!(
                 selected[&FIGHTER].health, before[&FIGHTER].health,
                 "loadout changes cannot heal"
+            );
+            println!(
+                "starting family{family} species{species} threshold{threshold} fighterHP{}",
+                before[&FIGHTER].health
             );
             repairs +=
                 play_native_repair_carry_battle(app.world_mut(), connection, owner, creature);
