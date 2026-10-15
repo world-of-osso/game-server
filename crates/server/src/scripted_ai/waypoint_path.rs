@@ -430,23 +430,37 @@ fn query_ground_waypoints(
     route
         .into_iter()
         .skip(1)
-        .map(|mut point| {
-            let crate::ground::GroundProbe::Supported(height) =
-                ground.creature_ground_in(launch_from.map, point)
-            else {
-                return Err(format!(
-                    "ground waypoint lacks collision support at {point:?}"
-                ));
-            };
-            // PathGenerator::NormalizePath -> non-flying UpdateAllowedPositionZ.
-            point.y = height;
-            Ok(wow(&Position {
-                x: point.x,
-                y: point.y,
-                z: point.z,
-            }))
+        .map(|point| {
+            let position = sample_script_ground(
+                Some(&mut *ground),
+                launch_from.map,
+                Position {
+                    x: point.x,
+                    y: point.y,
+                    z: point.z,
+                },
+            )?;
+            Ok(wow(&position))
         })
         .collect()
+}
+
+/// Exact creature collision support, shared by generated controls and moving feet.
+fn sample_script_ground(
+    ground: Option<&mut crate::ground::GroundMap>,
+    map: crate::maps::InMap,
+    mut position: Position,
+) -> Result<Position, String> {
+    let ground = ground.ok_or("ground waypoint requires collision geometry")?;
+    let point = Vec3::new(position.x, position.y, position.z);
+    let crate::ground::GroundProbe::Supported(height) = ground.creature_ground_in(map, point)
+    else {
+        return Err(format!(
+            "ground waypoint lacks collision support at {point:?}"
+        ));
+    };
+    position.y = height;
+    Ok(position)
 }
 
 fn wow(position: &Position) -> Vec3 {
@@ -516,9 +530,23 @@ pub(crate) fn path_movement_system(world: &mut World) {
         let update_ms = if reset { 0 } else { dt_ms };
         // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
         let before = *position;
+        let ground_path = !flying && !movement.path.exact_spline();
+        let path_id = movement.path.id;
         if let Some(spline) = &mut movement.spline {
             spline.elapsed_ms = (spline.elapsed_ms + update_ms).min(spline.end_ms);
-            *position = bevy(spline.position(spline.elapsed_ms));
+            let candidate = bevy(spline.position(spline.elapsed_ms));
+            let supported = if ground_path {
+                sample_script_ground(ground.as_mut(), *map, candidate)
+            } else {
+                Ok(candidate)
+            };
+            match supported {
+                Ok(next) => *position = next,
+                Err(error) => {
+                    failed.push((entity, path_id, error));
+                    continue;
+                }
+            }
             if spline.elapsed_ms == spline.end_ms {
                 movement.node = spline.last_node;
                 movement.spline = None;

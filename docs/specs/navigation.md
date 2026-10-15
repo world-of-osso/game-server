@@ -26,7 +26,8 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 - [x] An active chase/home generator preempts the default-slot C++ waypoint; only the active owner advances position and lower waypoint time does not run in parallel.
 - [x] Reactivation relaunches the remaining authored target from the actor's real position; already-visited exact nodes are not replayed. Keep route generation and strict collision/segment thresholds unchanged.
-- [ ] Physical Wailing tick2136 RED must become a complete collision-clear, non-relocating three-path/two-camp walk. Source faction/highHP fixture limits remain explicit; no natural/native-clear claim.
+- [x] Normal ground C++ moving feet use the same exact creature-collision sampler as generated controls; exact/flying paths are unchanged. Missing support stops without synthetic arrival.
+- [ ] Physical Wailing tick2136 RED must become a complete collision-clear, non-relocating three-path/two-camp walk. Verify source horizontal speed × tick (native integer-ms precision), exact floor within existing0.05yd tolerance, baked walkable surface and no vertical-only snap—not an unsourced fixed3D displacement threshold. Source faction/highHP fixture limits remain explicit; no natural/native-clear claim.
 
 ## How it works
 
