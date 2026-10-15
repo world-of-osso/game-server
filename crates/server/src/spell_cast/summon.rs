@@ -11,7 +11,7 @@ use lightyear::prelude::*;
 use rusqlite::Connection;
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
-    Position, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy, Zone,
+    Player, Position, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy, Zone,
 };
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
@@ -71,6 +71,18 @@ impl SummonProperties {
     pub(super) fn is_guardian(self) -> bool {
         matches!(self.title, TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE)
             || (self.title == 0 && self.joins_summoner_spawn_group())
+    }
+
+    /// TC Map::SummonCreature: Guardian and Companion masks inherit Minion ownership.
+    fn is_minion(self) -> bool {
+        match self.control {
+            CONTROL_PET => true,
+            CONTROL_WILD | CONTROL_ALLY => match self.title {
+                TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE | TITLE_COMPANION => true,
+                _ => self.joins_summoner_spawn_group(),
+            },
+            _ => false,
+        }
     }
 
     pub(crate) fn is_supported(self) -> bool {
@@ -446,6 +458,22 @@ fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTe
     })
 }
 
+/// TC Unit::SetMinion sets PLAYER_CONTROLLED only for player owners.
+/// Companion immunity augments ownership flags instead of replacing them.
+fn calculate_summon_unit_flags(owner_is_player: bool, properties: SummonProperties) -> u32 {
+    let ownership = if owner_is_player && properties.is_minion() {
+        crate::faction::UNIT_FLAG_PLAYER_CONTROLLED
+    } else {
+        0
+    };
+    let immunity = if properties.title == TITLE_COMPANION {
+        IMMUNE_TO_PC_AND_NPC | UnitFlags::NON_ATTACKABLE_2
+    } else {
+        0
+    };
+    ownership | immunity
+}
+
 fn spawn_summon(
     world: &mut World,
     ctx: &EffectCtx,
@@ -480,6 +508,7 @@ fn spawn_summon(
     let replicate = world.get::<Replicate>(owner).is_some();
     let display_id = template.display_id;
     let private_owner = private_summon_owner(world, owner, properties.flags);
+    let unit_flags = calculate_summon_unit_flags(world.get::<Player>(owner).is_some(), properties);
     let mut entity = world.spawn((
         (
             Position {
@@ -526,8 +555,8 @@ fn spawn_summon(
             super::cast_triggered(world, owner, RUNE_WEAPON_PARRY, Some(owner), ctx.depth + 1);
         }
     });
-    if properties.control == CONTROL_ALLY || properties.control == CONTROL_PET {
-        entity.insert(UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED));
+    if unit_flags != 0 {
+        entity.insert(UnitFlags(unit_flags));
     }
     if properties.is_pet() {
         entity.insert(shared::components::UnitIsPet(true));
@@ -536,12 +565,6 @@ fn spawn_summon(
         entity.insert(crate::creature_ai::FollowOwner::new(owner));
     }
 
-    if properties.title == TITLE_COMPANION {
-        // TC EffectSummonType: companions are minions immune to both players and NPCs.
-        entity.insert(UnitFlags(
-            IMMUNE_TO_PC_AND_NPC | UnitFlags::NON_ATTACKABLE_2,
-        ));
-    }
     insert_summon_privacy(&mut entity, private_owner);
     if replicate {
         entity.insert((
