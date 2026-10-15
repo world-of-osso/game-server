@@ -184,7 +184,7 @@ fn dummy9_remorseless_winter_hit_applies_slow_and_native_expiry_removes_it() {
 }
 #[test]
 fn dummy9_scourge_strike_applies_base_virulent_plague_without_refreshing_existing_owned_mark() {
-    let mut h = harness(Vec::new(), &[55090, 191587], 6).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[55090, 191587], 6).unwrap();
     h.cast_and_deliver(55090, Some(h.npc));
     h.advance(5);
     landed(&h);

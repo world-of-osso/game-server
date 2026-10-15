@@ -86,18 +86,14 @@ impl InventoryStore<'_, '_> {
         Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
     }
 
-    /// SPELL_EFFECT_DUAL_WIELD sets `CanDualWield` (TC Spell::EffectDualWield).
-    fn can_dual_wield(&self, connection: Entity) -> bool {
+    /// Learned effect40/155 spells supply TC's per-player weapon capabilities.
+    fn configure_weapon_skills(&self, connection: Entity, model: &mut InventoryModel) {
         let known = self
             .links
             .get(connection)
             .ok()
             .and_then(|link| self.known.get(link.0).ok());
-        crate::stats::knows_effect(
-            known,
-            self.spells.as_deref(),
-            crate::stats::EFFECT_DUAL_WIELD,
-        )
+        model.set_weapon_skills(known, self.spells.as_deref());
     }
 }
 
@@ -237,10 +233,9 @@ fn process_requests<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, mut receiver) in receivers.iter_mut() {
         let character_id = in_world.character_id;
-        let can_dual_wield = store.can_dual_wield(connection);
         for request in receiver.receive() {
             let result = load_model(db, templates, character_id).and_then(|mut model| {
-                model.set_can_dual_wield(can_dual_wield);
+                store.configure_weapon_skills(connection, &mut model);
                 apply(&mut model, request, db)?;
                 save_inventory_record(db, character_id, &model.into_record());
                 Ok(())
@@ -286,7 +281,6 @@ fn process_item_moves<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, interaction, mut receiver) in receivers.iter_mut() {
         let character_id = in_world.character_id;
-        let can_dual_wield = store.store.can_dual_wield(connection);
         for request in receiver.receive() {
             let (from, to) = locations(&request);
             let bank_move = matches!(from, ItemLocation::Bank { .. })
@@ -300,7 +294,7 @@ fn process_item_moves<M: lightyear::prelude::Message>(
                 bank_move,
                 banker_open,
                 |model| {
-                    model.set_can_dual_wield(can_dual_wield);
+                    store.store.configure_weapon_skills(connection, model);
                     apply(model, request, db)
                 },
             );

@@ -232,9 +232,45 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     app
 }
 
-/// A level 30 Human with 1,000,000 health at WoW `(x, y, z)` in `map`, facing `o`.
+/// Run the real native stat producer once, separately from encounter health buffers.
+fn load_native_player_stats() -> crate::stats::CharacterStats {
+    use bevy::ecs::system::RunSystemOnce;
+    static STATS: OnceLock<crate::stats::CharacterStats> = OnceLock::new();
+    *STATS.get_or_init(|| {
+        let mut world = World::new();
+        let all = crate::spell_cast::test_harness::world_db().unwrap();
+        world.insert_resource(crate::spell_cast::test_harness::class_spells(all));
+        let player = world
+            .spawn((
+                Player {
+                    name: "Stockade stat inputs".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: default(),
+                },
+                shared::components::Level(30),
+                shared::components::UnitStats::default(),
+                shared::components::CombatRatings::default(),
+                shared::components::DerivedStats::default(),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id();
+        world
+            .run_system_once(crate::stats::update_character_stats)
+            .unwrap();
+        *world
+            .get::<crate::stats::CharacterStats>(player)
+            .expect("native player stats produced")
+    })
+}
+
+/// A level30 Human with encounter health buffer, native stats and WoW pose.
 fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, Entity) {
     let (x, y, z) = crate::terrain_height::wow_to_bevy(wow[0], wow[1], wow[2]);
+    let stats = load_native_player_stats();
     let player = app
         .world_mut()
         .spawn((
@@ -255,6 +291,12 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
                 current: 1_000_000.0,
                 max: 1_000_000.0,
             },
+            // Actual producer output; encounter buffers are intentionally independent.
+            shared::components::Level(30),
+            stats.primary,
+            stats.ratings,
+            stats.derived(),
+            stats,
             UnitLevel(30),
             UnitFactionTemplate(1),
             CombatStatus(false),
@@ -819,7 +861,10 @@ fn hogger_wipe_resets_the_encounter_and_a_new_pull_starts_it_again() {
     assert!(h.health(hogger).current < h.health(hogger).max);
     // Revive and pull again: the pull yell, the encounter start and Maddening
     // Call's first timer come back once.
-    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1_000_000.0;
+    {
+        let mut health = h.app.world_mut().get_mut::<Health>(player).unwrap();
+        health.current = health.max;
+    }
     h.advance(12.0);
     h.engage(hogger);
     h.advance(4.7);

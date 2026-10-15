@@ -777,11 +777,19 @@ pub(crate) fn chase_system(
         combat_move_disabled,
         cannot_reach,
         follower_reach,
+        default_waypoint,
     ) in &mut units.p0()
     {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
+        // MotionMaster initializes a newly-preempting active generator with
+        // diff0. The default spline may already have moved before sight/aggro.
+        let initializing =
+            default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Chase(target)));
+        if initializing {
+            continue;
+        }
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
         if speed <= 0.0
             || combat_move_disabled.is_some()
@@ -861,6 +869,7 @@ type Chaser = (
     Option<&'static crate::scripted_ai::smart_ai::CombatMovementDisabled>,
     Option<&'static CannotReachTarget>,
     Option<&'static crate::followers::FollowerReach>,
+    Option<&'static mut crate::scripted_ai::waypoint_path::PathMovement>,
 );
 
 /// `Creature::Update`: no-path evade after five seconds, never on raid maps.
@@ -1464,7 +1473,7 @@ fn leash_check_system(
 /// for a creature without `RegenHealth` ("otherwise it would immediately go back to
 /// full health anyway"): full, as `curHealthPct` is not loaded. A regenerating
 /// creature heals by `Creature::RegenerateHealth` once it is no longer evading.
-fn return_to_spawn_system(
+pub(crate) fn return_to_spawn_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
@@ -1484,6 +1493,7 @@ fn return_to_spawn_system(
             Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
             Option<&HomePosition>,
+            Option<&mut crate::scripted_ai::waypoint_path::PathMovement>,
         ),
         (
             Without<GridDormant>,
@@ -1507,9 +1517,14 @@ fn return_to_spawn_system(
         regen,
         escort,
         explicit_home,
+        default_waypoint,
     ) in &mut query
     {
         if *state != CreatureState::Returning {
+            continue;
+        }
+        let initializing = default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Home));
+        if initializing {
             continue;
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
