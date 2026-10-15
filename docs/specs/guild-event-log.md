@@ -20,14 +20,17 @@ Authoritative Mainline invite/join/promote/demote/remove/quit history, separate 
 | Files | Role |
 |---|---|
 | shared-protocol `src/protocol/guild_rank_messages.rs` | QueryEventLog and typed six-kind reply |
-| `crates/server/src/guild_event_log.rs` | Additive history read and member-scoped query |
-| `crates/server/src/guild_ranks.rs`, `persistence.rs` | Authenticated request route and table initialization |
+| `crates/server/src/guild_event_log.rs` | Additive bounded history, transaction append and member-scoped query |
+| `crates/server/src/guild_ranks.rs`, `persistence.rs` | Authenticated route, rank labels and initialization |
+| `persistence_character.rs`, `persistence_banks.rs`, `persistence_charters.rs` | Same-transaction lifecycle events, including real founder joins |
 | `crates/server/src/guild_ranks_tests.rs` | Real action sequence, refusals, privacy and reopen acceptance |
 
 ## Tests asserting this spec
 
 - `guild_ranks_tests.rs::guild_lifecycle_log_records_real_actions_only_and_survives_restart` — pending RED/GREEN.
-- Native/loopback query, retention and transaction rollback controls remain to be added.
+- `guild_event_log.rs::tests::guild_lifecycle_retains_hundred_tied_events_across_reopen_and_rollback` — concrete103-event cap/order and abort/reopen control.
+- `persistence_charters_tests.rs::guild_charter_purchase_sign_rename_create_and_consumption_survive_database_reopen` — actual founder join labels/timestamps survive reopen.
+- Native/loopback query controls remain to be added.
 
 ## Known gaps (current cycle)
 

@@ -70,25 +70,43 @@ pub(super) fn apply_rank_request(
             (m.character_id, m.name, rank)
         })
         .collect();
-    match request {
-        GuildRankRequest::Promote { character_name } => {
-            change_member_rank(&guild, &mut members, actor_rank, &character_name, true)?
-        }
-        GuildRankRequest::Demote { character_name } => {
-            change_member_rank(&guild, &mut members, actor_rank, &character_name, false)?
-        }
-        request => {
-            if actor_rank != 0 {
-                return Err(GuildRankError::Permissions);
+    let event = if let GuildRankRequest::Promote { character_name }
+    | GuildRankRequest::Demote { character_name } = &request
+    {
+        let promote = matches!(request, GuildRankRequest::Promote { .. });
+        let (member, rank) =
+            change_member_rank(&guild, &mut members, actor_rank, character_name, promote)?;
+        let actor = members
+            .iter()
+            .find(|(id, _, _)| *id == actor)
+            .expect("authenticated actor is a stored guild member")
+            .1
+            .clone();
+        Some(if promote {
+            GuildEventKind::Promote {
+                actor,
+                member,
+                rank,
             }
-            edit_rank(&mut guild, &mut members, request)?;
+        } else {
+            GuildEventKind::Demote {
+                actor,
+                member,
+                rank,
+            }
+        })
+    } else {
+        if actor_rank != 0 {
+            return Err(GuildRankError::Permissions);
         }
-    }
+        edit_rank(&mut guild, &mut members, request)?;
+        None
+    };
     let positions: Vec<_> = members
         .into_iter()
         .map(|(id, _, rank)| (id, rank))
         .collect();
-    save_guild_ranks(db, guild_id, &guild, &positions);
+    save_guild_ranks(db, guild_id, &guild, &positions, event);
     Ok(())
 }
 
@@ -161,7 +179,7 @@ fn remove_member(
         }
         _ => unreachable!("only membership removal requests"),
     };
-    persistence::remove_character_guild(db, target);
+    persistence::remove_character_guild(db, target, actor);
     Ok(())
 }
 
@@ -171,7 +189,7 @@ fn change_member_rank(
     actor_rank: u8,
     name: &str,
     promote: bool,
-) -> Result<(), GuildRankError> {
+) -> Result<(String, String), GuildRankError> {
     let right = if promote {
         GUILD_RIGHT_PROMOTE
     } else {
@@ -199,7 +217,10 @@ fn change_member_rank(
     } else {
         return Err(GuildRankError::RankTooLow);
     }
-    Ok(())
+    Ok((
+        target.1.clone(),
+        guild.ranks[usize::from(target.2)].name.clone(),
+    ))
 }
 
 fn mutable_rank(guild: &mut GuildData, rank: u8) -> Result<&mut GuildRankData, GuildRankError> {
