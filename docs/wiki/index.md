@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Live player weapon-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — real Rogue Evasion and receiver stat producer; six direction/control/flag/ranged/lifecycle controls, NPC/attacker-modifier/full hit-system gaps retained.
+
 - [Wildfire primary variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) — reproduced valid upper draw292, source-aligned interval and distinct AP/RAP; merged76 controls/check/fmt pass, no runtime coefficient change.
 
 - [Shared weapon-spell defense roll](systems/player-damage.md#shared-weapon-spell-defense-roll) — native cumulative miss/deflect/block and quantization,19 bounded controls; other hit-system outcomes remain gaps.
