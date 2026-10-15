@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Titan's Grip hand rules](systems/inventory.md#titans-grip-hand-rules--2026-10-15) — native effect155 capability/masks and type17 hand placement; three behavioral REDs→five native controls GREEN; ranged/final gates pending; acquisition and unlearn-time eviction unclaimed.
+- [Titan's Grip hand rules](systems/inventory.md#titans-grip-hand-rules--2026-10-15) — native effect155 capability/masks and type17 hand placement; three behavioral REDs→nine scoped controls GREEN, check/fmt pass; acquisition, unlearn-time eviction and full-Fury acceptance unclaimed.
 
 - [Ordinary NPC physical-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native49 front/rear RED→GREEN, source tuning and separate health buffer; exact chance3/3/9/7.5 component proof, not sampled attack distribution/full NPC loadouts.
 
