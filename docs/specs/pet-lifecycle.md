@@ -8,7 +8,7 @@ Retail Mainline behavior applies to every client art skin. Hunter taming is exis
 - Stable Master interaction exposes the Retail active/stabled slots, moves/swaps, rename, abandon and pet specialization selection. Slot capacity and spell identities come from the installed Retail data/UI, never estimates.
 - Character-scoped redb storage preserves health, name, specialization and summoned/dismissed state through logout/relog and death. Existing stable records migrate without losing identity, slots or stance.
 - Warlock summons use the authored demon template for each supported local summon spell. Dismiss keeps its record; relog restores the current demon. Fel Domination is conditional on authentic data support.
-- Pet frame/action bar reflect the current owned pet. Forever changes art only.
+- Pet frame/action bar reflect the current owned pet. Actual pet constructors and source Control=PET publish `UnitIsPet(true)` alongside owner identity; player-controlled ally guardians do not. Local and party frames must not infer pet designation from ownership/flags. [Shared identity contract](../../../shared-protocol/docs/specs/pet-identity.md). Forever changes art only.
 
 ## Evidence boundary
 

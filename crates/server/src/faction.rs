@@ -16,10 +16,21 @@ use crate::faction_reaction::{self, FactionTemplateEntry};
 
 pub(crate) fn faction_for_race(race: u8) -> u8 {
     match race {
-        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 | 95 => 1,
-        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 | 96 => 2,
+        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 | 52 | 85 | 86 | 95 => 1,
+        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 | 70 | 84 | 91 | 96 => 2,
         _ => 0,
     }
+}
+
+/// PlayerCondition encoding differs from this server's legacy Alliance=1/Horde=2.
+pub(crate) fn current_pvp_faction_for_race(race: u8) -> shared::components::CurrentPvpFaction {
+    // TC's outside-match condition treats known neutral Pandaren as non-Alliance.
+    // Keep undefined races unknown instead of manufacturing a racial identity.
+    shared::components::CurrentPvpFaction(match (race, faction_for_race(race)) {
+        (_, 1) => 2,
+        (24, _) | (_, 2) => 1,
+        _ => 0,
+    })
 }
 
 /// `FactionTemplate.FactionGroup` of each race's `ChrRaces.FactionID` template

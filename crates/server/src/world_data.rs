@@ -972,6 +972,8 @@ fn load_formations(conn: &Connection) -> HashMap<u32, FormationInfo> {
 
 fn startup_load_world_data(mut commands: Commands) {
     let path = Path::new("data/world.db");
+    commands.insert_resource(crate::spell_cast::toy_requirements::load(Path::new("data"))
+        .expect("Load current generated Toy casting data; run generate_toy_area_requirements.py and generate_toy_facing_requirements.py before startup"));
     let data = load_world_data(path);
     commands.insert_resource(data.armor_constants.clone());
     commands.insert_resource(data);
