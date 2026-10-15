@@ -360,13 +360,9 @@ fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
     assert_eq!(creatures_in(h, copy, 13359), 16, "flag-0 tower guards stay");
 }
 
-/// TC a352b1fa GameObject::Use goober Data10 spell (GameObject.cpp:2930-2932, 3563-3567):
-/// a captured Workshop's TDB group1227/1230 Seaforium Bombs195237 cast66265, which creates
-/// item46847 for the user in that battleground copy only.
-#[test]
-fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
+fn enter_isle_bomb_match() -> EnteredMatch {
     let template = shared::battleground::isle_of_conquest();
-    let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
+    enter_source_match_with(&template, [1299, 1245], |app| {
         let db = &app
             .world()
             .resource::<crate::persistence::GameDatabase>()
@@ -377,6 +373,9 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
             "native inventory owner matches the first channel actor"
         );
         assert!(crate::persistence::inventory_store::load_inventory_record(db, owner).is_some());
+        let mut character = crate::persistence::load_character(db, owner).unwrap();
+        character.level = TRAVELER_LEVEL;
+        crate::persistence::save_character(db, owner, &character);
         let path = crate::test_data::world_db_path();
         let source = rusqlite::Connection::open_with_flags(
             &path,
@@ -388,15 +387,27 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
         app.insert_resource(templates);
         app.insert_resource(crate::merchant::load_vendor_catalog(&source).unwrap());
         app.insert_resource(crate::quest_data::load_quest_db(&path).unwrap());
+        app.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+        app.insert_resource(crate::toy_catalog::load(&source).unwrap());
+        app.insert_resource(crate::game_objects::summoned::load_templates(&source).unwrap());
         app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.add_systems(Update, crate::inventory::process_use_requests);
         let data = crate::spell_cast::test_harness::world_db().unwrap();
         app.insert_resource(crate::spell_info::SpellStore::fixture(
-            [21651, 66265]
+            [21651, 66265, 66268, 66676, 66669, 66674, 66672]
                 .into_iter()
                 .map(|id| data.store.get(id).unwrap().clone())
                 .collect(),
         ));
-    });
+    })
+}
+
+/// TC a352b1fa GameObject::Use goober Data10 spell (GameObject.cpp:2930-2932, 3563-3567):
+/// a captured Workshop's TDB group1227/1230 Seaforium Bombs195237 cast66265, which creates
+/// item46847 for the user in that battleground copy only.
+#[test]
+fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
+    let mut entered = enter_isle_bomb_match();
     let actor = &entered.players[0];
     use_second_frames(&mut entered.h);
     // TDB groups1227/1230 expose195237 only after normal Workshop capture.
@@ -451,6 +462,117 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
         1,
         "normal authored goober use must create item46847"
     );
+}
+
+/// TC EffectTransmitted50: normal item46847 use casts66268 and owns trap195235.
+#[test]
+fn isle_channel_normal_seaforium_use_deploys_owned_bomb_in_its_copy() {
+    let mut entered = enter_isle_bomb_match();
+    let actor = &entered.players[0];
+    use_second_frames(&mut entered.h);
+    let (banner, position) = objects_in(&mut entered.h, entered.copy, 195133)[0];
+    entered.h.walk_to(actor, position);
+    use_object(&mut entered.h, actor, banner);
+    entered.h.advance(8);
+    entered.h.advance(60);
+    let (pickup, position) = objects_in(&mut entered.h, entered.copy, 195237)[0];
+    entered.h.walk_to(actor, position);
+    use_object(&mut entered.h, actor, pickup);
+    let h = &mut entered.h;
+    let inventory = crate::inventory::load_model(
+        &h.app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+        h.app
+            .world()
+            .resource::<crate::item_templates::ItemTemplates>(),
+        1,
+    )
+    .unwrap()
+    .inventory_snapshot();
+    let location = inventory
+        .bags
+        .iter()
+        .find_map(|bag| {
+            bag.items
+                .iter()
+                .find(|slot| slot.item.item_id == 46847)
+                .map(|slot| ItemLocation::Bag {
+                    bag: bag.bag,
+                    slot: slot.slot,
+                })
+        })
+        .expect("normal Workshop pickup creates the owned bomb used below");
+    h.app.world_mut().entity_mut(actor.connection).insert((
+        pair::<UseItem>(),
+        pair::<InventoryError>(),
+        pair::<CastFailed>(),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(actor.connection)
+        .unwrap()
+        .send::<InventoryChannel>(UseItem {
+            location,
+            target: None,
+        });
+    let mut inventory_errors = Vec::new();
+    let mut cast_errors = Vec::new();
+    for _ in 0..5 {
+        h.advance(1);
+        inventory_errors.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<InventoryError>>(actor.connection)
+                .unwrap()
+                .receive(),
+        );
+        cast_errors.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<CastFailed>>(actor.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    assert!(
+        inventory_errors.is_empty(),
+        "normal item use: {inventory_errors:?}"
+    );
+    assert!(
+        cast_errors.is_empty(),
+        "normal deployment cast: {cast_errors:?}"
+    );
+    let remaining = crate::persistence::load_inventory(
+        &h.app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+        1,
+    )
+    .items
+    .iter()
+    .filter(|item| item.item_id == 46847)
+    .map(|item| item.stack_count)
+    .sum::<u32>();
+    assert_eq!(
+        remaining, 0,
+        "the authored expendable item is consumed by normal use"
+    );
+    let bombs = objects_in(h, entered.copy, 195235);
+    assert_eq!(
+        bombs.len(),
+        1,
+        "normal owned46847 use must deploy one authored195235"
+    );
+    let summoned = h
+        .app
+        .world()
+        .get::<crate::game_objects::summoned::SummonedObject>(bombs[0].0)
+        .unwrap();
+    assert_eq!(summoned.owner, Some(actor.player));
+    assert_eq!(summoned.spell_id, 66268);
 }
 
 /// Isle of Conquest (TC a352b1fa battleground_isle_of_conquest.cpp, TDB spawn groups
