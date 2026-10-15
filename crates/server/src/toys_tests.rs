@@ -10,6 +10,8 @@ mod flute;
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
 mod group_private;
+#[path = "toys_owner_flags_tests.rs"]
+mod owner_flags;
 #[path = "toys_scarab_tests.rs"]
 mod scarab;
 #[path = "toys_shrine_tests.rs"]

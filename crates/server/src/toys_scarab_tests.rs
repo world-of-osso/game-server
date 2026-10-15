@@ -58,6 +58,13 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
                 caster.to_bits()
             );
             assert!(!world.get::<UnitIsPet>(*actor).is_some_and(|pet| pet.0));
+            assert!(
+                world
+                    .get::<shared::components::UnitFlags>(*actor)
+                    .is_some_and(
+                        |flags| flags.0 & crate::faction::UNIT_FLAG_PLAYER_CONTROLLED != 0
+                    )
+            );
             assert_eq!(
                 world
                     .get::<crate::creature_ai::FollowOwner>(*actor)
