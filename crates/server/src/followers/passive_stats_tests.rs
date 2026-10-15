@@ -15,6 +15,12 @@ fn spawn_level32_garrick() -> (Harness, Entity) {
         app.add_plugins(StatsPlugin);
     });
     h.app.world_mut().despawn(old_unit);
+    let native_world = crate::world_data::load_world_data(
+        &crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .powers_db,
+    );
+    h.app.insert_resource(native_world);
     h.app
         .world_mut()
         .entity_mut(h.caster)
