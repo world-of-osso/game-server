@@ -672,13 +672,17 @@ pub(crate) fn record_pet_level_changes(
         .filter_map(|pet| {
             let old = before.get(pet.id)?;
             let creature = catalog.creature_id(pet.species_id)?;
-            (creature != 0 && pet.level > old.level).then_some((old.level, pet.level))
+            (creature != 0 && pet.level > old.level).then_some((
+                pet.species_id,
+                old.level,
+                pet.level,
+            ))
         })
-        .flat_map(|(old, new)| {
-            ((old + 1)..=new).flat_map(|level| {
+        .flat_map(|(species, old, new)| {
+            ((old + 1)..=new).flat_map(move |level| {
                 [
-                    CriteriaEvent::BattlePetReachedLevel(level),
-                    CriteriaEvent::ActivelyEarnedPetLevel(level),
+                    CriteriaEvent::BattlePetReachedLevel { species, level },
+                    CriteriaEvent::ActivelyEarnedPetLevel { species, level },
                 ]
             })
         })

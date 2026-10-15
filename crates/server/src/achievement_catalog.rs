@@ -95,8 +95,14 @@ pub(crate) enum CriteriaEvent {
     LearnedNewPet(u32),
     /// TC BattlegroundScore::UpdatePvpStat: one native objective credit of this PvpStat.
     TrackedWorldStateUIModified(u32),
-    BattlePetReachedLevel(u8),
-    ActivelyEarnedPetLevel(u8),
+    BattlePetReachedLevel {
+        species: u32,
+        level: u8,
+    },
+    ActivelyEarnedPetLevel {
+        species: u32,
+        level: u8,
+    },
     Login,
     ExploreAreaBit(u32),
     EnterTopLevelArea(u32),
@@ -221,8 +227,8 @@ impl CriteriaEvent {
             Self::CaptureBattlePet => 157,
             Self::LearnedNewPet(_) => 155,
             Self::TrackedWorldStateUIModified(_) => 30,
-            Self::BattlePetReachedLevel(_) => 160,
-            Self::ActivelyEarnedPetLevel(_) => 162,
+            Self::BattlePetReachedLevel { .. } => 160,
+            Self::ActivelyEarnedPetLevel { .. } => 162,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
             Self::EnterTopLevelArea(_) => 225,
@@ -278,8 +284,13 @@ impl CriteriaEvent {
                 rating > 0 && criteria.asset == bracket
             }
             Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
-            Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
-                u32::from(level) == criteria.asset
+            Self::BattlePetReachedLevel { species, level }
+            | Self::ActivelyEarnedPetLevel { species, level } => {
+                species != 0
+                    && u32::from(level) == criteria.asset
+                    && criteria
+                        .modifier_asset
+                        .is_none_or(|required| required == species)
             }
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::EnterArea(area) => area != 0 && criteria.area_members.contains(&area),
@@ -1646,9 +1657,14 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         } else {
             Vec::new()
         };
-        let modifier_asset = if matches!(kind, 155 | 221) && row.get::<_, i32>(2)? == 0 {
+        let accepts_single_modifier = match kind {
+            155 | 221 => row.get::<_, i32>(2)? == 0,
+            160 | 162 => (1..=25).contains(&row.get::<_, i32>(2)?),
+            _ => false,
+        };
+        let modifier_asset = if accepts_single_modifier {
             single_modifiers::single_modifier_asset(criteria_id, conditional[0])
-                .filter(|species| kind != 155 || catalog.pet_species.contains(species))
+                .filter(|species| kind == 221 || catalog.pet_species.contains(species))
         } else {
             None
         };
