@@ -87,6 +87,7 @@ fn handle_create(
                 class: data.class,
                 appearance: data.appearance,
                 equipment_appearance: data.equipment_appearance,
+                tabard: None,
             };
             sender.send::<AuthChannel>(CreateCharacterResponse {
                 success: true,
