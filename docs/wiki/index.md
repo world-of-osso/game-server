@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Companion teaching-item FIFO](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15) — fresh physical-item/journal/GUID atomic commit; real held-writer RED261.8ms becomes GREEN, prior pet/wallet and departed learner/current-peer controls pass; merged check pending.
+- [Companion teaching-item FIFO](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15) — fresh physical-item/journal/GUID atomic commit; real held-writer RED261.8ms becomes GREEN, prior pet/wallet and departed learner/current-peer controls pass; merged8 controls and warning-free check pass.
 
 - [st210 toy fixture clock](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15) — expired summon jump leaked into later network pumping; jobs already committed. Restore one-shot clock, deterministic fixture barriers;21 controls plus3 MountSpecial controls and warning-free runtime check pass.
 
