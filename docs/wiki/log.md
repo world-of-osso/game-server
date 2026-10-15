@@ -1,3 +1,7 @@
+## 2026-10-15 — Authored talent Starter builds
+
+[Starter Build](systems/talents.md#starter-build): DB2 OrderIndex/cumulative ranks and independent affordable currencies, built-in selection using existing redb encoding, login/spec/level refresh and accepted-edit deactivation. Targeted real-data/message RED→GREEN2; coupled native proof pending.
+
 ## 2026-10-15 — Installed race/class source
 
 [Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Installed283-pair/missing-source/actual admin kit+persistence regressions pass3/3; post-master race/mask/start/Forever controls10/10 and scoped check/fmt pass. Source95/96 contracts, start-level and visage policy remain separate and unchanged; rendered Dwarf login is not claimed. No realm5000 operation or stat tuning.

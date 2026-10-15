@@ -1221,8 +1221,15 @@ fn sync_level_changes(
                 continue;
             }
         };
+        let starter_active = configs.specs.iter().any(|spec| {
+            spec.spec_id == current_spec && spec.selected_id == STARTER_BUILD_LOADOUT_ID
+        });
         let evaluated = evaluate(&classes, entry.0, entry.1.0, current_spec, |spec| {
-            configs.spec(spec).to_vec()
+            if spec == current_spec && !starter_active {
+                entry.6.purchases()
+            } else {
+                configs.spec(spec).to_vec()
+            }
         });
         refresh_player(
             entry,

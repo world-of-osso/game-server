@@ -77,7 +77,7 @@ Contract: [Starter Build](../../specs/talent-starter-build.md). `trait_data` loa
 
 The built-in selection uses `STARTER_BUILD_LOADOUT_ID` (`u32::MAX`, outside allocatable named IDs); purchased ranks live in the existing unnamed-default field, preserving redb encoding. It is not inserted in named config rows. Snapshots explicitly advertise `starter_available`. Login, spec activation and level changes rebuild an active Starter allocation against current budgets. Accepted manual Apply changes selection to default; named create/activate selects that named config. Failed requests do not persist mutations.
 
-Source receipt: engine `data/diagnostics/talent-import-export-2026-10-15/source/receipt.json`; a352b1fa `src/server/game/Spells/TraitMgr.cpp` SHA256 `b1477eb159576a833ccc0779903585a2399d4f454e86155b7883da95209fa3e9`. Installed Retail `Blizzard_ClassTalentsFrame.lua:475–531,793–803,1084–1117,1171–1217` grounds availability, built-in/noneditable selection and deviation handling. Native presentation contract remains in the [engine talent-loadout spec](../../../../../game-engine/docs/specs/talent-loadouts.md).
+Source receipt: engine `data/diagnostics/talent-import-export-2026-10-15/source/receipt.json`; a352b1fa `src/server/game/Spells/TraitMgr.cpp` SHA256 `b1477eb159576a833ccc0779903585a2399d4f454e86155b7883da95209fa3e9`. Installed Retail `Blizzard_ClassTalentsFrame.lua:475–531,793–803,1084–1117,1171–1217` grounds availability, built-in/noneditable selection and deviation handling. Native presentation contract remains in the [engine talent-loadout spec](../../../../game-engine/docs/specs/talent-loadouts.md).
 
 ## Persistence and messages
 
