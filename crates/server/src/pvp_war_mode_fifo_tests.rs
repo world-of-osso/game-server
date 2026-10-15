@@ -90,7 +90,7 @@ pub(in crate::pvp) fn city_harness_with_spells(spells: &[u32]) -> (Harness, u64)
             .unwrap()
             .is_resting()
     );
-    install_persistence(&mut h.app);
+    persistence_actor::install(&mut h.app);
     h.app
         .add_systems(Update, (receive_requests, sync_state).chain());
     h.advance(6);

@@ -2,18 +2,20 @@
 use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::{ActionBar, KnownSpells};
 use crate::networking::PlayerLink;
-use crate::persistence::{self, GameDatabase};
-use crate::pvp::{PlayerPvpProgress, PlayerPvpState, pvp_support};
+use crate::persistence::GameDatabase;
+use crate::pvp::persistence_actor::send_state;
+use crate::pvp::{PlayerPvpProgress, PlayerPvpState, persistence_actor};
 use crate::spell_info::SpellStore;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use rusqlite::Connection;
 use shared::components::{ActiveSpec, CombatStatus, Health, Level, Player};
 use shared::protocol::{
-    ActionBarSnapshot, PvpChannel, PvpStateUpdate, PvpTalentSlotSnapshot, PvpTalentSnapshot,
-    PvpTalentsSnapshot, SelectPvpTalent, SpellsLearned, SpellsUnlearned, TalentChannel,
+    ActionBarSnapshot, PvpTalentSlotSnapshot, PvpTalentSnapshot, PvpTalentsSnapshot,
+    SelectPvpTalent, SpellsLearned, SpellsUnlearned, TalentChannel,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 #[derive(Clone)]
 struct Talent {
@@ -24,11 +26,11 @@ struct Talent {
     level: u8,
     condition: u32,
 }
-#[derive(Resource, Default)]
+#[derive(Resource, Clone, Default)]
 pub(crate) struct Catalog {
-    talents: BTreeMap<u32, Talent>,
-    categories: BTreeMap<u32, u8>,
-    slots: BTreeMap<u8, [u8; 3]>,
+    talents: Arc<BTreeMap<u32, Talent>>,
+    categories: Arc<BTreeMap<u32, u8>>,
+    slots: Arc<BTreeMap<u8, [u8; 3]>>,
 }
 #[derive(Clone, Copy)]
 struct SelectionContext {
@@ -67,9 +69,9 @@ impl Catalog {
             .query_map([], |r| Ok((r.get(0)?, [r.get(1)?, r.get(2)?, r.get(3)?])))?
             .collect::<rusqlite::Result<_>>()?;
         Ok(Self {
-            talents,
-            categories,
-            slots,
+            talents: Arc::new(talents),
+            categories: Arc::new(categories),
+            slots: Arc::new(slots),
         })
     }
     fn required_level(&self, slot: u8, class: u8) -> Option<u8> {
@@ -200,59 +202,98 @@ pub(super) fn receive_requests(world: &mut World) {
         Entity,
         &PlayerLink,
         &InWorld,
+        &Authenticated,
         &mut MessageReceiver<SelectPvpTalent>,
     ), With<Authenticated>>();
     let requests: Vec<_> = query
         .iter_mut(world)
-        .flat_map(|(connection, link, in_world, mut r)| {
+        .flat_map(|(connection, link, in_world, auth, mut r)| {
+            let owner = persistence_actor::Owner {
+                connection,
+                player: link.0,
+                account: auth.account_id,
+                character: in_world.character_id,
+            };
             r.receive()
-                .map(|request| (connection, link.0, in_world.character_id, request))
+                .map(|request| (owner, request))
                 .collect::<Vec<_>>()
         })
         .collect();
-    for (connection, owner, character, request) in requests {
-        let result = select_and_persist(world, connection, owner, character, request);
-        send_state(world, connection, owner, result.err());
+    for (owner, request) in requests {
+        if let Err(error) = enqueue_selection(world, owner, request) {
+            send_state(world, owner.connection, owner.player, Some(error));
+        }
     }
 }
-fn select_and_persist(
+fn enqueue_selection(
     world: &mut World,
-    connection: Entity,
-    owner: Entity,
-    character: u64,
+    owner: persistence_actor::Owner,
     request: SelectPvpTalent,
 ) -> Result<(), String> {
     let catalog = world
         .get_resource::<Catalog>()
         .ok_or("PvP catalog unavailable; run import-pvp-progression.py")?;
-    let context = read_context(world, owner, request.slot)?;
+    let context = read_context(world, owner.player, request.slot)?;
     let talent = catalog.validate(context, request.slot, request.talent_id)?;
     if world.resource::<SpellStore>().get(talent.spell).is_none() {
         return Err("PvP talent spell source is unavailable".into());
     }
-    let mut progress = world
-        .get::<PlayerPvpState>(owner)
-        .ok_or("PvP state unavailable")?
-        .progress
-        .clone();
-    catalog.select(&mut progress, context, request.slot, request.talent_id)?;
-    persistence::save_pvp(&world.resource::<GameDatabase>().db, character, &progress);
-    world
-        .get_mut::<PlayerPvpState>(owner)
-        .expect("validated PvP state")
-        .progress = progress;
-    sync_player(world, connection, owner);
+    if world.get::<PlayerPvpState>(owner.player).is_none() {
+        return Err("PvP state unavailable".into());
+    }
+    let cooling = read_cooling_talent_spells(world, catalog, owner.player, context.spec);
+    let rules = catalog.clone();
+    world.resource_scope(
+        |world, mut pending: Mut<persistence_actor::PendingPvpWrites>| {
+            persistence_actor::enqueue(
+                world.resource::<GameDatabase>(),
+                &mut pending,
+                owner,
+                persistence_actor::Change::Talents,
+                move |progress| select_fresh_progress(progress, &rules, context, &cooling, request),
+            );
+        },
+    );
     Ok(())
 }
-fn send_state(world: &mut World, connection: Entity, owner: Entity, error: Option<String>) {
-    let state = world.get::<PlayerPvpState>(owner).cloned();
-    if let Some(mut sender) = world.get_mut::<MessageSender<PvpStateUpdate>>(connection) {
-        sender.send::<PvpChannel>(PvpStateUpdate {
-            snapshot: state.as_ref().map(pvp_support::build_pvp_snapshot),
-            message: None,
-            error,
-        });
-    }
+
+fn read_cooling_talent_spells(
+    world: &World,
+    catalog: &Catalog,
+    owner: Entity,
+    spec: u32,
+) -> BTreeSet<u32> {
+    let now = world.resource::<Time<Virtual>>().elapsed_secs_f64();
+    let history = world.get::<crate::spell_cast::SpellHistory>(owner);
+    let spells = world.resource::<SpellStore>();
+    catalog
+        .talents
+        .values()
+        .filter(|talent| talent.spec == spec)
+        .filter(|talent| {
+            spells
+                .get(talent.spell)
+                .is_some_and(|spell| history.is_some_and(|history| history.on_cooldown(spell, now)))
+        })
+        .map(|talent| talent.spell)
+        .collect()
+}
+
+fn select_fresh_progress(
+    progress: &mut PlayerPvpProgress,
+    catalog: &Catalog,
+    mut context: SelectionContext,
+    cooling: &BTreeSet<u32>,
+    request: SelectPvpTalent,
+) -> Result<(), String> {
+    let old_spell = progress
+        .pvp_talents
+        .get(&context.spec)
+        .and_then(|selected| selected.get(&request.slot))
+        .and_then(|id| catalog.talents.get(id))
+        .map(|talent| talent.spell);
+    context.old_on_cooldown = old_spell.is_some_and(|spell| cooling.contains(&spell));
+    catalog.select(progress, context, request.slot, request.talent_id)
 }
 fn project(world: &World, owner: Entity) -> Option<(PvpTalentsSnapshot, Vec<(u32, u32)>)> {
     let catalog = world.get_resource::<Catalog>()?;
@@ -349,7 +390,7 @@ pub(super) fn sync_players(world: &mut World) {
         sync_player(world, connection, owner);
     }
 }
-fn sync_player(world: &mut World, connection: Entity, owner: Entity) {
+pub(super) fn sync_player(world: &mut World, connection: Entity, owner: Entity) {
     let Some((snapshot, mut grants)) = project(world, owner) else {
         return;
     };

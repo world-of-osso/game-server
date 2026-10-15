@@ -1,6 +1,7 @@
 use super::*;
+use crate::persistence;
 use crate::spell_cast::test_harness::Harness;
-use shared::protocol::SetWarModeDesired;
+use shared::protocol::{PvpChannel, PvpStateUpdate, SetWarModeDesired};
 use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy)]

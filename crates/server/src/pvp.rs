@@ -16,6 +16,8 @@ use self::pvp_support::{
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
 
+#[path = "pvp_persistence.rs"]
+mod persistence_actor;
 #[path = "pvp_support.rs"]
 mod pvp_support;
 #[path = "pvp_talents.rs"]
@@ -424,7 +426,7 @@ impl Plugin for PvpPlugin {
         app.add_systems(Update, process_pvp_dequeue_requests);
         app.add_systems(Update, pvp_talents::receive_requests);
         app.add_systems(PostUpdate, pvp_talents::sync_players);
-        pvp_war_mode::install_persistence(app);
+        persistence_actor::install(app);
         app.add_systems(
             Update,
             (pvp_war_mode::receive_requests, pvp_war_mode::sync_state).chain(),

@@ -2,20 +2,16 @@
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
 use crate::persistence::GameDatabase;
-use crate::pvp::{PlayerPvpState, pvp_support};
+use crate::pvp::{PlayerPvpState, persistence_actor, pvp_support};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Player, Position};
 use shared::protocol::{PvpStateUpdate, SetWarModeDesired, WarModeSnapshot};
-#[path = "pvp_war_mode_persistence.rs"]
-mod persistence_actor;
-pub(super) use persistence_actor::install as install_persistence;
-
 const ENLISTED_INSIDE: u32 = 282559;
 const ENLISTED_OUTSIDE: u32 = 269083;
 
 #[derive(Clone, Copy)]
-struct Context {
+pub(super) struct Context {
     resting: bool,
     in_combat: bool,
     in_instance: bool,
@@ -36,7 +32,7 @@ fn validate_toggle(context: Context, desired: bool) -> Result<(), String> {
     }
     Ok(())
 }
-fn snapshot(context: Context, desired: bool) -> WarModeSnapshot {
+pub(super) fn snapshot(context: Context, desired: bool) -> WarModeSnapshot {
     let enlisted_spell = if desired && !context.in_instance {
         Some(if context.can_enable_area {
             ENLISTED_INSIDE
@@ -61,7 +57,7 @@ pub(super) struct Areas<'w> {
     factions: Option<Res<'w, crate::faction::FactionTemplates>>,
 }
 impl Areas<'_> {
-    fn context(
+    pub(super) fn context(
         &mut self,
         position: &Position,
         player: &Player,
@@ -122,7 +118,7 @@ pub(super) fn receive_requests(
     mut players: Players,
     mut areas: Areas,
     db: Res<GameDatabase>,
-    mut pending: ResMut<persistence_actor::PendingWarModeWrites>,
+    mut pending: ResMut<persistence_actor::PendingPvpWrites>,
     mut senders: Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
     for (connection, link, in_world, auth, mut receiver) in &mut receivers {
@@ -147,15 +143,20 @@ pub(super) fn receive_requests(
                 pvp_support::send_pvp_update(connection, &state, None, Some(error), &mut senders);
                 continue;
             }
+            let desired = request.enabled;
             persistence_actor::enqueue(
                 &db,
                 &mut pending,
-                persistence_actor::Toggle {
+                persistence_actor::Owner {
                     connection,
                     player: link.0,
                     account: auth.account_id,
                     character: in_world.character_id,
-                    desired: request.enabled,
+                },
+                persistence_actor::Change::WarMode,
+                move |progress| {
+                    progress.war_mode_desired = desired;
+                    Ok(())
                 },
             );
         }
@@ -186,7 +187,7 @@ pub(super) fn sync_state(
         pvp_support::send_pvp_update(connection, &state, None, None, &mut senders);
     }
 }
-fn sync_enlisted_aura(world: &mut World, player: Entity, spell: Option<u32>) {
+pub(super) fn sync_enlisted_aura(world: &mut World, player: Entity, spell: Option<u32>) {
     crate::auras::remove_auras(
         world,
         player,
