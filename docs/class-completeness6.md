@@ -2,6 +2,12 @@
 
 Verified: 2026-10-12. [Contract](specs/class-completeness.md), [prior batches](class-completeness2.md), [implementation](wiki/systems/spell-casting.md#level80-class-completeness).
 
+## cw150 integration fixture repairs — 2026-10-14
+
+Lead gate `gate-cw150-srv.log` reports three missing-`WorldData` panics at the new frontal NPC block boundary (Hammer wave and two Backstab controls). The common cast harness now supplies authentic template6 metadata; gameplay defense checks and damage assertions remain unchanged. Evasion receiver creation removes fixed `CharacterStats` and initializes empty native stat inputs for the real `StatsPlugin` producer, without a hand-set dodge value.
+
+Adarogg failed before gameplay while `VACUUM INTO` wrote its isolated snapshot (`SQLITE_IOERR_WRITE`, extended778). Its fixture now creates snapshots under checkout-local disk-backed `target/encounter-fixtures`, not shared `/tmp` tmpfs. Gate-time capacity evidence is unavailable, so tmpfs exhaustion is not a proven historical cause; this removes that storage dependency rather than certifying encounter behavior. Targeted current-head tests/check/fmt remain pending capacity ADD after the bg-coverage-av live window. Full13/40 and independent acceptance remain open.
+
 ## Native form admission — batch28
 
 `spell_cast::shapeshift::check_cast` consumes native `SpellShapeshift` required/excluded masks as64-bit values. Exclusions precede allowed-form matches. Unmatched forms use `SpellShapeshiftForm.Flags`: Stance1 distinguishes stances from shifted forms; CanOnlyCastShapeshiftSpells0x400 restricts unmatched spells. Attr0NotShapeshifted0x10000 and Attr2AllowCasterForm0x80000 retain their distinct source meaning. Recipient aura275 bypasses this check only when its native family/effect mask matches; MiscValue is not interpreted as a spell ID. Missing form rows log and permit exactly as the pinned source, without invented flags. Existing triggered casts remain exempt. Appended wire failures distinguish forbidden and missing-required forms. Retained Retail UI files do not supply the relevant GlobalStrings, so native UI displays explicit source failure names; localized/form-specific strings remain a presentation gap.
