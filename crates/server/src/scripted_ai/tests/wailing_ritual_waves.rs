@@ -233,7 +233,14 @@ fn assert_wailing_owl_departure(h: &mut Harness, disciple: Entity, naralex: Enti
     }
     h.advance(0.7);
     for actor in [disciple, naralex] {
-        assert!(h.has_aura(actor, 8153), "ordinary source Owl Form cast");
+        let cast = h
+            .app
+            .world()
+            .get::<shared::casting::CastState>(actor)
+            .expect("ordinary Owl Form cast onset");
+        assert_eq!(cast.spell_id, 8153);
+        assert_eq!(cast.duration, 5.0, "local CastingTimeIndex6");
+        assert!(!h.has_aura(actor, 8153));
         assert!(h.app.world().get::<GravityDisabled>(actor).is_none());
     }
     assert_eq!(
@@ -241,7 +248,21 @@ fn assert_wailing_owl_departure(h: &mut Harness, disciple: Entity, naralex: Enti
         Some(&UnitFactionTemplate(35))
     );
     assert!(!h.has_aura(decoy, 8153));
-    h.advance(7.3);
+    h.advance(4.3);
+    for actor in [disciple, naralex] {
+        assert!(
+            !h.has_aura(actor, 8153),
+            "ordinary five-second cast has not completed"
+        );
+    }
+    h.advance(0.7);
+    for actor in [disciple, naralex] {
+        assert!(
+            h.has_aura(actor, 8153),
+            "actual Owl Form aura after cast completion"
+        );
+    }
+    h.advance(2.3);
     for actor in [disciple, naralex] {
         assert!(
             h.app.world().get::<GravityDisabled>(actor).is_none(),
