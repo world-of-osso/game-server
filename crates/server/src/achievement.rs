@@ -1087,6 +1087,9 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .collect(),
         known_spells: known_player_spell_ids(world, player),
         earned_achievements: earned_player_achievement_ids(world, player),
+        account_achievements_known: world
+            .get::<PlayerAchievementState>(player)
+            .is_some_and(|state| state.account.is_some()),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         area: world
             .get::<AchievementTracker>(player)

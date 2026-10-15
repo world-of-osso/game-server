@@ -59,6 +59,7 @@ fn achievements_criteria_unearned_cast_requires_reference_and_authored_award() {
         (
             Some(ReferencePlayer {
                 earned_achievements: Some(BTreeSet::new()),
+                account_achievements_known: true,
                 ..Default::default()
             }),
             Some(1),
