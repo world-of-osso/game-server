@@ -15,6 +15,9 @@ const ATTR3_COMPLETELY_BLOCKED: u32 = 0x8;
 const ATTR8_NO_ATTACK_BLOCK: u32 = 0x1;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
+const ATTR7_NO_ATTACK_DODGE: u32 = 0x0080_0000;
+const MELEE_HIT_DODGE: i32 = 2;
+const MELEE_HIT_BLOCK: i32 = 3;
 const DEFENSE_MAGIC: u32 = 1;
 const DEFENSE_MELEE: u32 = 2;
 const DEFENSE_RANGED: u32 = 3;
@@ -153,7 +156,7 @@ fn roll_defense(
 }
 
 /// Unit.cpp2622–2743: one uniform integer roll, cumulative truncated buckets.
-/// Dodge/parry, mechanic resistance and baseline hit statistics remain separate gaps.
+/// NPC dodge, parry, mechanic resistance and baseline hit statistics remain gaps.
 fn roll_weapon_spell_defense(
     world: &World,
     caster: Entity,
@@ -162,11 +165,7 @@ fn roll_weapon_spell_defense(
     defense: u32,
 ) -> Option<MissKind> {
     let auras = world.get::<ActiveAuras>(unit);
-    let miss = if attributes(spell, 7) & ATTR7_NO_ATTACK_MISS != 0 {
-        0.0
-    } else {
-        incoming_miss_chance(world, caster, spell, unit, defense)
-    };
+    let miss = weapon_spell_miss_chance(world, caster, spell, unit, defense);
     let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000);
     let mut threshold = spell_chance_units(miss);
     if roll < threshold {
@@ -179,8 +178,65 @@ fn roll_weapon_spell_defense(
     if roll < threshold {
         return Some(MissKind::Deflect);
     }
+    threshold += spell_chance_units(player_spell_dodge_chance(
+        world, caster, spell, unit, defense,
+    ));
+    if roll < threshold {
+        return Some(MissKind::Dodge);
+    }
     threshold += spell_chance_units(spell_block_chance(world, caster, spell, unit, auras));
     (roll < threshold).then_some(MissKind::Block)
+}
+
+fn weapon_spell_miss_chance(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    unit: Entity,
+    defense: u32,
+) -> f32 {
+    if attributes(spell, 7) & ATTR7_NO_ATTACK_MISS != 0 {
+        0.0
+    } else {
+        incoming_miss_chance(world, caster, spell, unit, defense)
+    }
+}
+
+/// Existing live player DodgePercentage, Unit.cpp2750–2785. Attacker
+/// expertise/248/251 modifiers and NPC dodge remain separate source gaps.
+fn player_spell_dodge_chance(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    unit: Entity,
+    defense: u32,
+) -> f32 {
+    if defense != DEFENSE_MELEE || world.get::<shared::components::Player>(unit).is_none() {
+        return 0.0;
+    }
+    let disabled = attributes(spell, 7) & ATTR7_NO_ATTACK_DODGE != 0
+        || caster_ignores_combat_result(world, caster, spell, MELEE_HIT_DODGE);
+    let auras = world.get::<ActiveAuras>(unit);
+    if disabled || !can_defend_from_front(world, caster, unit, auras) {
+        return 0.0;
+    }
+    world
+        .get::<crate::stats::CharacterStats>(unit)
+        .expect("player retains native dodge percentage")
+        .defense
+        .dodge
+}
+
+fn can_defend_from_front(
+    world: &World,
+    caster: Entity,
+    unit: Entity,
+    auras: Option<&ActiveAuras>,
+) -> bool {
+    let controlled =
+        auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared());
+    let casting = world.get::<shared::casting::CastState>(unit).is_some();
+    !controlled && !casting && can_deflect_from(world, caster, unit, auras)
 }
 
 fn spell_chance_units(chance: f32) -> u32 {
@@ -217,16 +273,10 @@ fn spell_block_chance(
 ) -> f32 {
     let disabled = attributes(spell, 0) & ATTR0_NO_ACTIVE_DEFENSE != 0
         || attributes(spell, 8) & ATTR8_NO_ATTACK_BLOCK != 0;
-    if disabled || caster_ignores_spell_block(world, caster, spell) {
+    if disabled || caster_ignores_combat_result(world, caster, spell, MELEE_HIT_BLOCK) {
         return 0.0;
     }
-    let controlled =
-        auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared());
-    let casting = world.get::<shared::casting::CastState>(unit).is_some();
-    if controlled || casting {
-        return 0.0;
-    }
-    if !can_deflect_from(world, caster, unit, auras) {
+    if !can_defend_from_front(world, caster, unit, auras) {
         return 0.0;
     }
     if world.get::<shared::components::Player>(unit).is_some() {
@@ -276,15 +326,19 @@ fn creature_spell_block_chance(
         .max(0.0)
 }
 
-fn caster_ignores_spell_block(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+fn caster_ignores_combat_result(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    result: i32,
+) -> bool {
     // SpellAuraDefines.h289; aura186 is incoming spell-hit chance instead.
     const IGNORE_COMBAT_RESULT: u32 = 202;
-    const MELEE_HIT_BLOCK: i32 = 3;
     world.get::<ActiveAuras>(caster).is_some_and(|auras| {
         auras.iter().any(|aura| {
             aura.effects.iter().any(|effect| {
                 effect.aura_type == IGNORE_COMBAT_RESULT
-                    && effect.misc_values[0] == MELEE_HIT_BLOCK
+                    && effect.misc_values[0] == result
                     && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
             })
         })
