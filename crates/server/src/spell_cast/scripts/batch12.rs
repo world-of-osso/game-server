@@ -19,13 +19,11 @@ pub(super) const BUTCHERY: u32 = 212436;
 const BLOODY_CLAWS: u32 = 459868;
 const BUTCHERY_BLEED: u32 = 459870;
 
-///51533 explicitly names228562; the native child's base amount is two wolves.
+///51533 names228562 once; EffectSummonType owns its native two-wolf count
+///(TC SpellEffects.cpp1934–1936, SummonProperties1161).
 ///The source's movement/physical/maelstrom variants are separate contracts.
 pub(super) fn summon_wolves(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let count = script_effect_value(world, caster, SPIRIT_WOLVES, 0) as usize;
-    for _ in 0..count {
-        spell_cast::cast_triggered(world, caster, SPIRIT_WOLVES, Some(target), depth + 1);
-    }
+    spell_cast::cast_triggered(world, caster, SPIRIT_WOLVES, Some(target), depth + 1);
 }
 
 ///1242147's always-critical attack is limited to its actual49206 guardian.
