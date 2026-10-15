@@ -1214,17 +1214,7 @@ impl AchievementCatalog {
         let tree = &self.trees[&id];
         let current = match tree.operator {
             TreeOperator::Any => children.iter().filter(|child| child.completed).count() as u64,
-            TreeOperator::CountDirectChildren => self
-                .children
-                .get(&id)
-                .into_iter()
-                .flatten()
-                .filter(|child| {
-                    let criteria = self.trees[child].criteria_id;
-                    self.criterion_counter(criteria, state)
-                        .is_some_and(|counter| counter >= 1)
-                })
-                .count() as u64,
+            TreeOperator::CountDirectChildren => self.count_started_children(id, state),
             TreeOperator::SumChildren => self.sum_counters(id, state, false),
             TreeOperator::SumChildrenWeight => self.sum_counters(id, state, true),
             TreeOperator::MaxChild => self.max_counter(id, state),
@@ -1235,6 +1225,18 @@ impl AchievementCatalog {
             required: tree.amount,
             completed: current >= tree.amount,
         }
+    }
+
+    /// TC StartedAtLeast1118–1129 counts direct children with an actual positive counter.
+    fn count_started_children(&self, id: u32, state: &PlayerAchievementState) -> u64 {
+        let direct_children = self.children.get(&id).into_iter().flatten();
+        direct_children
+            .filter(|child| {
+                let criteria = self.trees[child].criteria_id;
+                self.criterion_counter(criteria, state)
+                    .is_some_and(|counter| counter >= 1)
+            })
+            .count() as u64
     }
 
     fn sum_counters(&self, id: u32, state: &PlayerAchievementState, weighted: bool) -> u64 {
