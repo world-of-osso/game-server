@@ -14,7 +14,8 @@ struct PetFixture {
 fn fixture() -> PetFixture {
     let prepared = crate::spell_cast::test_harness::prepare_class_world();
     let mut data = crate::world_data::load_world_data(&prepared.path());
-    data.templates.retain(|entry, _| *entry == 17252);
+    // Keep native defense metadata for the harness's live Kobold target too.
+    data.templates.retain(|entry, _| [6, 17252].contains(entry));
     let source = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
