@@ -512,12 +512,7 @@ fn visible_guild_snapshot(
     online: &OnlinePlayers,
     viewer: u64,
 ) -> GuildSnapshot {
-    let mut snapshot = build_guild_snapshot(db, guild, online);
-    for member in &mut snapshot.members {
-        member.is_self =
-            crate::persistence_character::find_character_id_by_name(db, &member.character_name)
-                == Some(viewer);
-    }
+    let mut snapshot = build_guild_snapshot(db, guild, online, viewer);
     if !character_has_right(
         db,
         viewer,
@@ -535,13 +530,19 @@ fn build_guild_snapshot(
     db: &redb::Database,
     guild: &GuildMembership,
     online_players: &OnlinePlayers,
+    viewer: u64,
 ) -> GuildSnapshot {
     let profile = load_guild_profile(db, guild.guild_id);
     let online = online_member_map(online_players, guild.guild_id);
     let ranks = crate::persistence::banks::load_guild(db, guild.guild_id);
     let members = list_guild_members(db, guild.guild_id)
         .into_iter()
-        .map(|member| build_member_snapshot(db, member, &online, &ranks))
+        .map(|member| {
+            let is_self = member.character_id == viewer;
+            let mut snapshot = build_member_snapshot(db, member, &online, &ranks);
+            snapshot.is_self = is_self;
+            snapshot
+        })
         .collect();
     GuildSnapshot {
         tabard: crate::persistence::guild_tabards::load_design(db, guild.guild_id),
