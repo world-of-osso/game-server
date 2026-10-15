@@ -54,7 +54,7 @@ pub(super) fn enqueue(world: &mut World, request: LearningRequest) {
         .resource::<GameDatabase>()
         .writer
         .enqueue("companion item learning", move |db| {
-            Ok(commit_learning(db, &templates, &owned))
+            commit_learning(db, &templates, &owned)
         });
     world
         .resource_mut::<PendingCompanionLearning>()
@@ -66,35 +66,47 @@ fn commit_learning(
     db: &Database,
     templates: &crate::item_templates::ItemTemplates,
     request: &LearningRequest,
-) -> Result<(), InventoryError> {
+) -> Result<Result<(), InventoryError>, String> {
+    let inventory = match consume_inventory(db, templates, request) {
+        Ok(inventory) => inventory,
+        Err(error) => return Ok(Err(error)),
+    };
+    persist_learning(db, request, &inventory)
+}
+
+fn consume_inventory(
+    db: &Database,
+    templates: &crate::item_templates::ItemTemplates,
+    request: &LearningRequest,
+) -> Result<crate::persistence::inventory_store::InventoryRecord, InventoryError> {
     let mut model = crate::inventory::load_model(db, templates, request.character)?;
     let item = model.existing(request.location)?;
     if item.item_guid != request.guid || item.item_id != request.item {
         return Err(learning_error("Companion item changed before learning"));
     }
     model.destroy(request.location, 1)?;
-    persist_learning(db, request, &model.into_record()).map_err(learning_error)
+    Ok(model.into_record())
 }
 
 fn persist_learning(
     db: &Database,
     request: &LearningRequest,
     inventory: &crate::persistence::inventory_store::InventoryRecord,
-) -> Result<(), String> {
+) -> Result<Result<(), InventoryError>, String> {
     let txn = db
         .begin_write()
         .map_err(|error| format!("Begin companion learning: {error}"))?;
     let mut journal = read_journal_for_write(&txn, request.account)?;
     let guid = allocate_pet_guid(&txn)?;
-    journal
-        .add_with_guid(
-            request.species,
-            request.level,
-            shared::pet_battle::PetQuality::Common,
-            BALANCED_BREED,
-            guid,
-        )
-        .map_err(|reason| format!("cannot learn pet: {reason:?}"))?;
+    if let Err(reason) = journal.add_with_guid(
+        request.species,
+        request.level,
+        shared::pet_battle::PetQuality::Common,
+        BALANCED_BREED,
+        guid,
+    ) {
+        return Ok(Err(learning_error(format!("cannot learn pet: {reason:?}"))));
+    }
     let bytes = serde_json::to_vec(&journal)
         .map_err(|error| format!("Encode companion journal: {error}"))?;
     txn.open_table(ACCOUNT_PET_JOURNALS)
@@ -103,7 +115,8 @@ fn persist_learning(
         .map_err(|error| error.to_string())?;
     crate::persistence::inventory_store::write_inventory_record(&txn, request.character, inventory);
     crate::persistence_commit::commit(txn)
-        .map_err(|error| format!("Commit companion learning: {error}"))
+        .map_err(|error| format!("Commit companion learning: {error}"))?;
+    Ok(Ok(()))
 }
 
 fn read_journal_for_write(
@@ -168,7 +181,12 @@ fn publish_learning(world: &mut World) {
         completed
     };
     for (request, result) in completed {
-        let result = result.unwrap_or_else(|message| Err(learning_error(message)));
+        let result = result.unwrap_or_else(|message| {
+            Err(InventoryError {
+                reason: InventoryErrorReason::InternalBagError,
+                detail: Some(message),
+            })
+        });
         publish_result(world, request, result);
     }
 }

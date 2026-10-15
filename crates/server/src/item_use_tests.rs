@@ -733,6 +733,7 @@ fn companion_item_storage_failure_is_counted_and_consumes_nothing() {
     use_slot(&mut eater, 0);
     let errors = errors(&mut eater);
     assert_eq!(errors.len(), 1, "{errors:?}");
+    assert_eq!(errors[0].reason, InventoryErrorReason::InternalBagError);
     assert!(
         errors[0]
             .detail
@@ -933,6 +934,19 @@ fn companion_item_learns_three_instances_and_keeps_fourth_item() {
     use_slot(&mut eater, 0);
     assert_eq!(errors(&mut eater).len(), 1);
     assert_eq!(count_of(&eater, 4401), 1);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .metrics
+            .failed
+            .load(std::sync::atomic::Ordering::Relaxed),
+        0,
+        "species-cap refusal is not a storage failure"
+    );
 }
 
 const MAGE: u8 = 8;
