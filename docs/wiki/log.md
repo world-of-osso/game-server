@@ -1,6 +1,10 @@
 ## 2026-10-15 — Source Toy forward destination
 
 [Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
+## 2026-10-15 — Titan's Grip hand rules
+
+[Inventory](systems/inventory.md#titans-grip-hand-rules--2026-10-15) derives effect155 capability and weapon/armor subclass masks from learned native spells; type17 gains the off hand with Dual Wield and matching Grip. Explicit/auto-equip retain the permitted two-hand pair. Published70391 authentication:261 spell fields plus pinned TC hashes. Request/persistence RED: three missing-admission/auto-equip failures; two negative controls pass. At9593985e native five tests GREEN under four threads (73.94s); merged7ff7b5e4 native ranged plus three retained Dual Wield controls bring scoped proof to nine pass/zero fail (7.62s). Workspace/all-target check72.481s/fmt4.779s pass warning-free. Acquisition, unlearn-time eviction and whole-Fury acceptance remain open.
+
 ## 2026-10-15 — Ordinary NPC physical-spell dodge
 
 [Shared physical hit roll](systems/player-damage.md#shared-weapon-spell-defense-roll) consumes NPC3+aura49+positive effective-level bonus, allowing rear PvE dodge. Native70188/38598 genuine damage RED→4 native controls GREEN; actual tuning and separate nonlethal health buffer preserve guard proof. Block-only fixtures isolate dodge with source45769e1/251−20 and suitable caster level; repaired23 block/type/table controls pass. Final8fe095bc defense32/32 pass (95.39s tests); workspace/all-target check17.901s/fmt2.774s pass warning-free. Follow-up97592a1e native tuning/level chance assertions prove3/3/9/7.5 after49 removal across four native level cases; seven scoped controls pass64.20s tests. Sampled attack distribution, Totems, player expertise, full loadouts and independent acceptance remain unproved.
