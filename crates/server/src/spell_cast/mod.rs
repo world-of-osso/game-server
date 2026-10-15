@@ -143,6 +143,8 @@ mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;
 mod missiles;
+#[cfg(test)]
+mod npc_dodge_tests;
 mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
