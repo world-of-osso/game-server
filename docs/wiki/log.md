@@ -1,3 +1,7 @@
+## 2026-10-15 — Wailing targeted Say
+
+[Source engagement speech](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) adds30% group10 with Player/Npc `$n`, preserving nearby Say listeners. Corrected host-boundary RED→5/5 GREEN68.79s/check/fmt onfd2b8856 includes unchanged combat and real wake/flight exit controls. No protocol/data mutation or natural/native-clear claim; lead independent gate pending.
+
 ## 2026-10-14 — Wailing later ritual waves
 
 [Events17–20](systems/boss-scripts.md#wailing-later-ritual-waves--2026-10-14) add same-copy Naralex emotes and timed group3/group4 summons (seven Ectoplasms, Mutanus). Source combat-paused15/25/20/30s sequence passes3/3 in69.88s with first-wave/notification regressions; check/fmt pass. Controlled deaths, runtimebase stats and prior arrival are not ordinary fights or native clears; wake-up/exit21+ remain open.
