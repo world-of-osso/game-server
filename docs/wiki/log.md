@@ -1,6 +1,6 @@
 ## 2026-10-15 — Independent vehicle control-aura ownership
 
-[Demolisher seats](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15): driver/source-pose/normal-exit/reentry/departure and vehicle/rider death release pass3/3, deploy closure4/4. A second real friendly caster then reproduces seat0 instead of2 because generic aura replacement ejects the first driver. TC vehicle-control stacking rule added; occupancy/overfill/reuse verification pending, no native movement/fire claim.
+[Demolisher seats](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15): driver/source-pose/normal-exit/reentry/departure and vehicle/rider death release pass3/3, deploy closure4/4. A second real friendly caster then reproduces seat0 instead of2 because generic aura replacement ejects the first driver. TC vehicle-control stacking rule added; same occupancy/overfill/seat2-reuse test GREEN1 at31939668. No native movement/fire claim.
 
 ## 2026-10-15 — Demolisher boarding implementation, verification pending
 

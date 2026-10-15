@@ -194,6 +194,14 @@ fn valid_seat(
         })
 }
 
+fn is_current_passenger(world: &World, passenger: Entity, driver: Entity, index: usize) -> bool {
+    world
+        .get::<VehiclePassenger>(passenger)
+        .is_some_and(|seat| {
+            seat.driver == driver.to_bits() && usize::from(seat.seat_index) == index
+        })
+}
+
 pub(crate) fn reconcile_passengers(world: &mut World) {
     let passengers: Vec<_> = world
         .query::<(Entity, &VehiclePassenger)>()
@@ -221,11 +229,8 @@ pub(crate) fn reconcile_passengers(world: &mut World) {
     for (driver, seats) in drivers {
         for (index, occupant) in seats.into_iter().enumerate() {
             if let Some(occupant) = occupant {
-                let seated = world
-                    .get::<VehiclePassenger>(Entity::from_bits(occupant))
-                    .is_some_and(|seat| {
-                        seat.driver == driver.to_bits() && usize::from(seat.seat_index) == index
-                    });
+                let seated =
+                    is_current_passenger(world, Entity::from_bits(occupant), driver, index);
                 if !seated {
                     world.get_mut::<Mounted>(driver).unwrap().seats[index] = None;
                     mark_dirty(world, driver);
