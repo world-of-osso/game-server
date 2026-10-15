@@ -7,9 +7,7 @@ use crate::persistence::{
 
 #[test]
 fn race_source_admin_dwarf_shaman_uses_authentic_kit_and_persists() {
-    let database = crate::persistence::GameDatabase {
-        db: temp_database(),
-    };
+    let database = crate::persistence::GameDatabase::new(temp_database());
     let (account, _) = register_account(&database.db, "raceclassdb2", "testpass").unwrap();
     let owned = crate::player_create_info::OwnedKit::from_world_db().expect("native world data");
     let response = crate::admin_handlers::handle_create_character(
