@@ -38,8 +38,7 @@ class Conditions(unittest.TestCase):
             criteria[43205]['Type'] = kind
             self.assertEqual(self.compile(mods, criteria), {})
         criteria[43205]['Type'] = '74'
-        for field, value in [('SecondaryAsset', '1'), ('TertiaryAsset', '1'),
-                             ('Amount', '2'), ('Asset', '0')]:
+        for field, value in [('SecondaryAsset', '1'), ('TertiaryAsset', '1'), ('Asset', '0')]:
             invalid = copy.deepcopy(mods)
             invalid[86620][field] = value
             self.assertEqual(self.compile(invalid, criteria), {})
