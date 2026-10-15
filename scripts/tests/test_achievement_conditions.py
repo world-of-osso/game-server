@@ -31,6 +31,29 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_earned_player_achievement_requires_complete_positive_companions(self):
+        mods = {10: node(0, 4), 11: node(10, 2, 87, 10460)}
+        self.assertEqual(self.compile(mods), {1: [None, ((87, 10460),)]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 25, 1)}),
+                         {1: [None, ((25, 1), (87, 10460))]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 999, 1)}), {})
+        mods[10] = node(0, 8, amount=1)
+        self.assertEqual(self.compile(mods), {1: [None, ((87, 10460),)]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 87, 11611)}), {},
+                         'multi-child earned87 Some is outside the bounded contract')
+        mods[11]['Operator'] = '3'
+        self.assertEqual(self.compile(mods), {})
+        mods[11]['Operator'] = '2'
+        mods[11]['Asset'] = '0'
+        self.assertEqual(self.compile(mods), {})
+        mods[11]['Asset'] = '10460'
+        mods[11]['SecondaryAsset'] = '1'
+        self.assertEqual(self.compile(mods), {})
+        mods[11]['SecondaryAsset'] = '0'
+        criteria = copy.deepcopy(self.criteria)
+        criteria[1]['Type'] = '8'
+        self.assertEqual(self.compile(mods, criteria), {}, 'ungated meta cannot read player state')
+
     def test_spell_hit_target_creature_keeps_complete_companions_and_alternatives(self):
         criteria = copy.deepcopy(self.criteria)
         criteria[1]['Type'] = '110'
