@@ -635,6 +635,108 @@ fn achievements_criteria_player_aura_some_rejects_a_missing_spell_alternative_at
 }
 
 #[test]
+fn achievements_criteria_location_some_keeps_distinct_area_and_zone_members() {
+    let catalog = catalog();
+    for (area, qualifies) in [
+        (Some(254), true),
+        (Some(1445), true),
+        (Some(25), true),
+        (Some(1519), false),
+        (None, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                area,
+                map: 0,
+                race: 1,
+                class: 1,
+                level: 30,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::CastSpell(181842),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&27968),
+            qualifies.then_some(&1),
+            "area {area:?}"
+        );
+    }
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            area: Some(7004),
+            map: 1116,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::WinPetBattle,
+        None,
+        1,
+        &conditions,
+    );
+    assert_eq!(
+        state.criteria_progress.get(&25818),
+        Some(&1),
+        "Frostwall is an explicit area17 alternative"
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&25418),
+        "unflagged Frostwall must not satisfy Zone41(Frostfire) merely through ancestry"
+    );
+}
+
+#[test]
+fn achievements_criteria_location_some_rejects_missing_zone_even_when_area_leaf_matches() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("location-some.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let conn = Connection::open(&path).unwrap();
+    conn.execute("DELETE FROM area_table WHERE ID = 25", [])
+        .unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            area: Some(254),
+            map: 0,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::CastSpell(181842),
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&27968),
+        "missing zone cannot be dropped from the OR"
+    );
+}
+
+#[test]
 fn achievements_criteria_player_area_some_accepts_alternatives_and_authored_descendants() {
     let catalog = catalog();
     for (area, qualifies) in [
@@ -1091,9 +1193,17 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5494 + native CastSpell29 unearned-self guard Dastardly Devices41707.
-    // Structural union, not prerequisite acquisition or complete-content proof.
-    assert_eq!(union.len(), 5495);
+    // Installed70391: 5495 + eleven complete root area17/zone41 Some definitions.
+    // Structural union, not full achievements, terrain travel or acquisition proof.
+    assert_eq!(union.len(), 5506);
+    for achievement in [
+        1785, 3557, 6558, 6559, 6560, 9248, 9264, 9463, 9487, 9630, 9924,
+    ] {
+        assert!(
+            union.contains(&achievement),
+            "location alternative {achievement}"
+        );
+    }
     for achievement in [
         141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 6609, 6610, 9070, 11154, 11298, 11419, 11665,
         11666, 11667, 11668, 41707, 63640,
