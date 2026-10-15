@@ -69,6 +69,24 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
     assert_eq!(actors.len(), count, "item {item}");
     for actor in &actors {
         assert!(world.get::<ModelDisplay>(*actor).unwrap().display_id > 0);
+        // Native properties3535/4799 carry JoinSummonerSpawnGroup0x200.
+        if matches!(item, 112324 | 120857 | 142536 | 151877 | 229828) {
+            assert_eq!(
+                world
+                    .get::<crate::creature_ai::FollowOwner>(*actor)
+                    .unwrap()
+                    .owner,
+                h.caster,
+                "source spawn-group follow designation for {item}"
+            );
+            assert_eq!(
+                world
+                    .get::<shared::components::UnitLevel>(*actor)
+                    .unwrap()
+                    .0,
+                80
+            );
+        }
         assert!(
             !world
                 .get::<shared::components::UnitIsPet>(*actor)
