@@ -6,9 +6,11 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5491 ordinary (3476 account/2015 character),1821 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5492 ordinary (3477 account/2015 character),1821 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Node-owned WorldStateExpression67 is limited to native win1/130 and exact sourced equality OR over occupied-base1778/1779, equal positive counts1–5. Only5717/8656 decode; current accepted NodeBattle copy supplies counts, never a queued preference, stale wire cache or absent-state zero. Runtime25a6b906; valid native RED4f69590f wins761 at1500 with real3 bases but14943Nonevs1. Compiler37/37/decoder3/3, generated5703 conditions; native/catalog/Arathi/Gilneas GREEN4/4 atc0a6f87f(60.80s). Twelve actual matches prove5253's ten-win grant, team symmetry, two-base exclusion with unconditional16513, timed14944-disabled, authority/account/idle/reopen/date controls. Only account5253 becomes structurally trackable; no generic world-state/honor/UI claim.
 
 - Sole BattlePetSpecies91 on160/162 now retains actual changed-pet species alongside every XP-crossed level. Compiler149 predicates/5 unit tests; catalog requires authored species and exact level1–25. Actual imported-XP native RED34411d29 reaches25 but has no25123; runtime693218ca/native/catalog90220bb0 GREEN2/2(11.08s) proves actual9070 grant, wrong species/level, missing authored species, stale/forfeit/idle/reopen boundaries. Qualified162 positive remains catalog-only: native1974–1977 combat states are absent. Only account9070 newly structural. Required workspace four-thread filter182/0/1ignored(255.20s), site-export1/1, server/engine checks and three-repo fmt pass at9610ef81 source scope; all243 rows/pinned5491 reconcile. Capture157/win158 payload inference, native-qualified162 positive, acquisition and UI remain excluded.
 
@@ -83,7 +85,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | Type | Pinned source name | Raw | Current roots | Orphans | State / producer evidence |
 |---:|---|---:|---:|---:|---|
 | 0 | KillCreature | 7403/10169 | 3487/4429 | 3916 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 1 | WinBattleground | 27/212 | 25/160 | 2 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 1 | WinBattleground | 29/212 | 27/160 | 2 | Native completed-map wins; positive67 loads only exact occupied-node equality OR5717/8656, read from current accepted NodeBattle copy. Other world states/conditions remain disabled; new native GREEN pending. |
 | 3 | CompleteAnyResearchProject | 0/12 | 0/12 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 4 | FindResearchObject | 0/12 | 0/0 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 5 | ReachLevel | 65/270 | 17/196 | 48 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |

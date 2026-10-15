@@ -31,6 +31,20 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_node_world_state_win_requires_complete_positive_companions(self):
+        criteria = {14943: dict(self.criteria[1], Type='1', ModifierTreeId='2061')}
+        mods = {2061: node(0, 4), 2062: node(2061, 2, 67, 8656)}
+        self.assertEqual(self.compile(mods, criteria), {14943: [None, ((67, 8656),)]})
+        self.assertEqual(self.compile({**mods, 2063: node(2061, 2, 32, 761)}, criteria),
+                         {14943: [None, ((32, 761), (67, 8656))]})
+        self.assertEqual(self.compile({**mods, 2063: node(2061, 2, 999, 1)}, criteria), {})
+        mods[2062]['Operator'] = '3'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[2062]['Operator'] = '2'
+        for kind in ('0', '8', '15'):
+            criteria[14943]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+
     def test_earned_player_achievement_requires_complete_positive_companions(self):
         mods = {10: node(0, 4), 11: node(10, 2, 87, 10460)}
         self.assertEqual(self.compile(mods), {1: [None, ((87, 10460),)]})
