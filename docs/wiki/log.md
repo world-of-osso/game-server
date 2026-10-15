@@ -1,3 +1,7 @@
+## 2026-10-15 — Merged IoC vehicle foundation gates
+
+[Demolisher](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15): serverd414bb03/protocol5ce52e0 pass19 foundation+8bomb/AV/arena controls, runtime check and shared handshake2. Client source/scene/UDP proof linked; no driving/fire/both-skin model claim. Earlier fingerprints runner error and fixture integration compile error remain separate from gameplay RED.
+
 ## 2026-10-15 — General promoted-map spellclick publication
 
 [Source spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): lead rejects NPC-specific filtering; authentic map628+559 RED expects nine source rows, got one. Refresh all spawned-entry rows, preserve unrelated entries and transaction rollback on absent source table. Process GREEN4/4 atd0c7a255,168.538s,0skips; no canonical write.

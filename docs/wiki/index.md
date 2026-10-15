@@ -6,7 +6,7 @@
 
 - [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — driver boarding/source pose/exit/death/departure GREEN3 and deploy closure GREEN4; independent-occupant stacking RED→GREEN1 retains seats0/2/3 and refuses overfill; native vehicle path open.
 
-- [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, verification and driver boarding pending.
+- [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, source-tag/boarding/lifetime/occupancy gates pass.
 
 - [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — owned normal/huge lifecycle/disarm GREEN5, BG/NPC/arena controls checked; Modern83/Forever88 native four-phase/20-player return pass; render/framing/timing remain separate.
 - [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
