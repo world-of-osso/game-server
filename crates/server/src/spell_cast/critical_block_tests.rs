@@ -444,7 +444,7 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
 fn creature_block_duel(entry: u32, class: u8) -> Harness {
     let mut h = harness(
         Vec::new(),
-        &[1464, 10021, 203524, 853, 3248, 3650, 19434, 87322],
+        &[1464, 10021, 203524, 853, 3248, 3650, 19434, 87322, 45769],
         class,
     )
     .unwrap();
@@ -454,7 +454,12 @@ fn creature_block_duel(entry: u32, class: u8) -> Harness {
     let faction = template.faction;
     let level = template.min_level;
     h.app.insert_resource(data);
-    h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
+    // Isolate block without a high-level NPC's legitimate level-based dodge.
+    let caster_level = level.max(10);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        shared::components::Level(caster_level),
+        UnitLevel(caster_level),
+    ));
     h.app.world_mut().entity_mut(h.npc).insert((
         shared::components::Npc {
             template_id: entry,
@@ -468,6 +473,26 @@ fn creature_block_duel(entry: u32, class: u8) -> Harness {
             z: 0.0,
         },
     ));
+    // Permanent native Sunwell Radiance effect1 reduces enemy dodge by20 points.
+    // Keep baseline dodge out of this block-only fixture, without changing RNG.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 45769,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(h.caster)
+            .unwrap()
+            .modifier(251),
+        -20.0
+    );
     // Native10021 effect0 gives100 block percentage points to a creature.
     crate::auras::apply_aura(
         h.app.world_mut(),
