@@ -39,6 +39,7 @@ struct SystemTimings {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ScopeKind {
     System,
+    Commands,
     Schedule,
     Preparation,
 }
@@ -91,6 +92,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
     fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         let kind = match attrs.metadata().name() {
             "system" => ScopeKind::System,
+            "system_commands" => ScopeKind::Commands,
             "schedule" => ScopeKind::Schedule,
             "schedule_preparation" => ScopeKind::Preparation,
             _ => return,
@@ -137,20 +139,9 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
         }
         if kind == ScopeKind::System {
             self.record_system_work(&name, elapsed);
-        } else if name == "Main" {
-            report_main_phases(&ctx, id, elapsed);
-        } else {
-            self.record_main_phase(
-                &ctx,
-                PhaseMeasurement {
-                    phase: name.clone(),
-                    preparation: false,
-                    work_ms: elapsed.as_secs_f64() * 1000.0,
-                },
-            );
         }
         if kind == ScopeKind::Schedule {
-            self.pop_schedule(id);
+            self.record_schedule_work(&ctx, id, &name, elapsed);
         }
         if elapsed > SYSTEM_STALL_BUDGET {
             log_scope_stall(kind, &name, elapsed);
@@ -162,6 +153,8 @@ fn log_scope_stall(kind: ScopeKind, name: &str, elapsed: Duration) {
     match kind {
         ScopeKind::System => bevy::log::tracing::warn!(system = %name,
             system_work_ms = elapsed.as_secs_f64() * 1000.0, "System stall"),
+        ScopeKind::Commands => bevy::log::tracing::warn!(system = %name,
+            deferred_work_ms = elapsed.as_secs_f64() * 1000.0, "Deferred command stall"),
         ScopeKind::Schedule => bevy::log::tracing::warn!(schedule = %name,
             schedule_work_ms = elapsed.as_secs_f64() * 1000.0, "Schedule stall"),
         ScopeKind::Preparation => bevy::log::tracing::warn!(schedule = %name,
@@ -170,6 +163,28 @@ fn log_scope_stall(kind: ScopeKind, name: &str, elapsed: Duration) {
 }
 
 impl SystemTimingLayer {
+    fn record_schedule_work<S: Subscriber + for<'a> LookupSpan<'a>>(
+        &self,
+        ctx: &Context<'_, S>,
+        id: &Id,
+        name: &str,
+        elapsed: Duration,
+    ) {
+        if name == "Main" {
+            report_main_phases(ctx, id, elapsed);
+        } else {
+            self.record_main_phase(
+                ctx,
+                PhaseMeasurement {
+                    phase: name.to_owned(),
+                    preparation: false,
+                    work_ms: elapsed.as_secs_f64() * 1000.0,
+                },
+            );
+        }
+        self.pop_schedule(id);
+    }
+
     fn pop_schedule(&self, id: &Id) {
         let mut active = self.active_schedules.lock().expect("active schedules lock");
         let thread = std::thread::current().id();
