@@ -10,6 +10,7 @@ fn encounter_coverage_wailing_aggro_speech_names_target_and_keeps_say_audience()
     let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
     let origin = *h.app.world().get::<Position>(disciple).unwrap();
     let enemy_name = h.app.world().get::<Npc>(enemy).unwrap().name.clone();
+    let speaker_name = h.app.world().get::<Npc>(disciple).unwrap().name.clone();
     let near = h.player();
     let other = h.players[1].0;
     for listener in [near, other] {
@@ -76,7 +77,7 @@ fn encounter_coverage_wailing_aggro_speech_names_target_and_keeps_say_audience()
         }
         for message in messages {
             assert_eq!(message.channel, ChatType::MonsterSay(disciple.to_bits()));
-            assert_eq!(message.sender, "Disciple of Naralex");
+            assert_eq!(message.sender, speaker_name);
             assert!(expected.contains(&message.content), "{}", message.content);
             assert!(!message.content.contains("$n"));
             named |= message.content.contains(&enemy_name);
