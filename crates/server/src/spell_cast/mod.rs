@@ -129,6 +129,8 @@ mod warrior_stun_tests;
 mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
+mod enemy_dodge_tests;
+#[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
