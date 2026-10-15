@@ -1,3 +1,7 @@
+## 2026-10-14 — Low-pressure cold-login percentile proof
+
+[Tick lag](investigations/server-tick-lag.md#low-pressure-cold-login-follow-up--2026-10-14): matching releasee91/protocol4135 records cold onlinep9932.8ms and zero tick commits, with memory+IO PSI and exact swap counters. Startupp99209.6ms/coldmax288ms remain visible; the earlier pressure-confounded attempt stays discarded. Login-only proof does not complete full gameplay/HOL/all-writer acceptance.
+
 ## 2026-10-14 — FIFO housing plot payment
 
 [Tick lag](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14): authentic cornerstone purchase queues fresh atomic wallet/ownership on FIFO; owner gold/success/error publication follows durability. Held-writer RED254ms becomes GREEN with prior payment funds preserved;26 native controls pass. Latest-master intersection35/35 and warning-free runtime check pass after correcting the incoming native pet fixture constructor. Release gameplay proof remains open.
