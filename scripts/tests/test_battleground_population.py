@@ -101,6 +101,17 @@ class BattlegroundPopulationTest(unittest.TestCase):
                         other,
                     )
 
+    def test_isle_missing_demolisher_spellclick_rolls_back_population_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.copy_database(directory)
+            with closing(sqlite3.connect(path)) as db, db:
+                db.execute("DELETE FROM tdb_npc_spellclick_spells WHERE npc_entry=34775")
+            before = hashlib.sha256(path.read_bytes()).hexdigest()
+            result = self.promote(path, (628,))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("missing authored Isle Demolisher34775 spellclick", result.stderr)
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), before)
+
     def test_mixed_open_world_request_is_rejected_without_any_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.copy_database(directory)

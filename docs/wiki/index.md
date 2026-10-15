@@ -1,6 +1,8 @@
 # Wiki Index
 
-- [Vehicle movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) — exact installed Flags/TurnSpeed, observed seat-only-catalog omission and explicit upgrade without defaults; importer GREEN/publication/driving still pending.
+- [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — actual map628 promotion omission RED; source-row copy/missing-source rollback implemented, process proof pending.
+
+- [Vehicle movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) — exact installed Flags/TurnSpeed, observed seat-only-catalog omission and explicit upgrade without defaults; importer GREEN3; canonical publication/driving still pending.
 
 - [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — driver boarding/source pose/exit/death/departure GREEN3 and deploy closure GREEN4; independent-occupant stacking RED→GREEN1 retains seats0/2/3 and refuses overfill; native vehicle path open.
 
