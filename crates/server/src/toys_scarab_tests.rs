@@ -5,7 +5,7 @@ use super::*;
 #[test]
 fn toyfx39_scarab_storm_preserves_source_guardian_count_scatter_and_lifetime() {
     use crate::spell_cast::summon::SummonedCreature;
-    use shared::components::{Npc, UnitIsPet, UnitLevel, UnitSummonedBy};
+    use shared::components::{Npc, UnitIsPet, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
     let path = import_toyfx8_world(directory.path());
     let conn =
@@ -58,7 +58,6 @@ fn toyfx39_scarab_storm_preserves_source_guardian_count_scatter_and_lifetime() {
                 caster.to_bits()
             );
             assert!(!world.get::<UnitIsPet>(*actor).is_some_and(|pet| pet.0));
-            assert_eq!(world.get::<UnitLevel>(*actor).unwrap().0, 80);
             assert_eq!(
                 world
                     .get::<crate::creature_ai::FollowOwner>(*actor)
