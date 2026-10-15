@@ -2,7 +2,10 @@ use super::conditions::{ConditionRule, load_conditions};
 use rusqlite::Connection;
 use serde::Deserialize;
 use shared::protocol::{AdventureSuggestion, PerksActivityTag, SuggestionCensus};
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::Path,
+};
 
 #[derive(Clone, Debug, Deserialize)]
 pub(crate) struct Activity {
@@ -45,7 +48,47 @@ struct Suggestion {
     flags: u32,
     #[serde(rename = "PriorityMin")]
     priority: u32,
+    #[serde(rename = "PriorityMax")]
+    priority_max: u32,
+    #[serde(rename = "BonusValue_0")]
+    bonus_value0: i32,
+    #[serde(rename = "BonusValue_1")]
+    bonus_value1: i32,
 }
+
+fn load_suggestions(path: &Path) -> Result<Vec<Suggestion>, String> {
+    let mut reader = csv::Reader::from_path(path)
+        .map_err(|error| format!("AdventureJournal {}: {error}", path.display()))?;
+    let rows: Vec<Suggestion> = reader
+        .deserialize()
+        .map(|row| row.map_err(|error| format!("AdventureJournal {}: {error}", path.display())))
+        .collect::<Result<_, _>>()?;
+    for row in &rows {
+        if row.priority != row.priority_max {
+            return Err(format!(
+                "AdventureJournal {}: priority range {}–{} requires unverified selection semantics",
+                row.id, row.priority, row.priority_max
+            ));
+        }
+    }
+    bevy::log::info!(
+        "Loaded {} installed AdventureJournal rows from {}",
+        rows.len(),
+        path.display()
+    );
+    Ok(rows)
+}
+fn suggestion_snapshot(row: &Suggestion) -> AdventureSuggestion {
+    AdventureSuggestion {
+        id: row.id,
+        name: row.name.clone(),
+        description: row.description.clone(),
+        reward_description: row.reward.clone(),
+        texture_fdid: row.texture,
+        button_text: String::new(),
+    }
+}
+
 #[derive(Deserialize)]
 struct ActivityCondition {
     #[serde(rename = "PerksActivityID")]
@@ -135,6 +178,7 @@ impl CatalogData {
     pub(super) fn load(
         conn: &Connection,
         criteria: &crate::achievement::AchievementCatalog,
+        journal_csv: &Path,
     ) -> Result<Self, String> {
         crate::db2_source_build::read_source_build(conn, "adventure_guide_source")?;
         let activities = read_rows::<Activity>(conn, "perks_activity")?;
@@ -150,7 +194,7 @@ impl CatalogData {
             .filter(|(_, a)| supported_roots.contains(&a.root))
             .map(|(index, _)| index)
             .collect();
-        let suggestions = read_rows::<Suggestion>(conn, "adventure_journal")?;
+        let suggestions = load_suggestions(journal_csv)?;
         let gates = read_rows::<ActivityCondition>(conn, "perks_activity_condition")?;
         let ids: BTreeSet<_> = suggestions
             .iter()
@@ -191,7 +235,12 @@ impl CatalogData {
             activity_conditions,
         })
     }
-    fn condition(&self, id: u32, level: u8) -> Result<bool, String> {
+    fn condition(
+        &self,
+        id: u32,
+        level: u8,
+        earned: Option<&BTreeSet<u32>>,
+    ) -> Result<bool, String> {
         if id == 0 {
             return Ok(true);
         }
@@ -199,7 +248,7 @@ impl CatalogData {
             .conditions
             .get(&id)
             .ok_or_else(|| format!("PlayerCondition {id} missing"))?;
-        rule.evaluate(level).map_err(str::to_string)
+        rule.evaluate(level, earned).map_err(str::to_string)
     }
     pub(super) fn activity_eligibility(&self, id: u32, level: u8) -> Result<bool, String> {
         for &(condition, kind) in self.activity_conditions.get(&id).into_iter().flatten() {
@@ -208,51 +257,180 @@ impl CatalogData {
                     "Activity {id}: unknown source condition kind {kind}"
                 ));
             }
-            if !self.condition(condition, level)? {
+            if !self.condition(condition, level, None)? {
                 return Ok(false);
             }
         }
         Ok(true)
     }
-    pub(super) fn suggestions(&self, level: u8) -> (Vec<AdventureSuggestion>, SuggestionCensus) {
+    pub(super) fn suggestions(
+        &self,
+        level: u8,
+        earned: &BTreeSet<u32>,
+    ) -> (Vec<AdventureSuggestion>, SuggestionCensus) {
         let mut census = SuggestionCensus {
             source_rows: self.suggestions.len() as u32,
             ..Default::default()
         };
-        let mut rows: Vec<_> = self.suggestions.iter().collect();
-        rows.sort_by_key(|row| (std::cmp::Reverse(row.priority), row.id));
-        let mut visible = Vec::new();
-        for row in rows {
-            let gates = [row.condition, row.bonus0, row.bonus1].map(|id| self.condition(id, level));
-            if row.flags != 0 || gates.iter().any(Result::is_err) {
-                census.unsupported_conditions += 1;
-                continue;
+        let mut ranked = Vec::new();
+        for row in &self.suggestions {
+            match self.suggestion_score(row, level, earned) {
+                Err(_) => census.unsupported_conditions += 1,
+                Ok(None) => census.failed_conditions += 1,
+                Ok(Some(score)) => ranked.push((score, row)),
             }
-            if !gates[0].as_ref().is_ok_and(|met| *met) {
-                census.failed_conditions += 1;
-                continue;
-            }
-            // Keep the authored eligible card, but never infer Quest/RPE/LFG activation.
-            // Unsupported actions count a subset of visible cards, not discarded rows.
-            if row.action != 0 {
-                census.unsupported_actions += 1;
-            }
-            visible.push(AdventureSuggestion {
-                id: row.id,
-                name: row.name.clone(),
-                description: row.description.clone(),
-                reward_description: row.reward.clone(),
-                texture_fdid: row.texture,
-                button_text: String::new(),
-            });
         }
+        // Named inference: Retail Lua forwards opaque C_AdventureJournal order unchanged.
+        // This provider ranks authored fixed priority + met bonuses descending; ID breaks ties.
+        ranked.sort_by_key(|(score, row)| (std::cmp::Reverse(*score), row.id));
+        census.unsupported_actions =
+            ranked.iter().filter(|(_, row)| row.action != 0).count() as u32;
+        let visible = ranked
+            .into_iter()
+            .map(|(_, row)| suggestion_snapshot(row))
+            .collect();
         (visible, census)
+    }
+
+    fn suggestion_score(
+        &self,
+        row: &Suggestion,
+        level: u8,
+        earned: &BTreeSet<u32>,
+    ) -> Result<Option<i64>, String> {
+        if row.flags != 0 {
+            return Err(format!(
+                "AdventureJournal {}: unsupported flags {}",
+                row.id, row.flags
+            ));
+        }
+        if !self.condition(row.condition, level, Some(earned))? {
+            return Ok(None);
+        }
+        let mut score = i64::from(row.priority);
+        for (condition, value) in [
+            (row.bonus0, row.bonus_value0),
+            (row.bonus1, row.bonus_value1),
+        ] {
+            // A zero-valued bonus cannot alter ordering and is not an eligibility gate.
+            if value != 0 && self.condition(condition, level, Some(earned))? {
+                score += i64::from(value);
+            }
+        }
+        Ok(Some(score))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn installed_suggestions(ids: &[u32]) -> Vec<Suggestion> {
+        let path = crate::test_data::world_db_path()
+            .parent()
+            .unwrap()
+            .join("db2/active/AdventureJournal.csv");
+        csv::Reader::from_path(path)
+            .unwrap()
+            .deserialize::<Suggestion>()
+            .map(Result::unwrap)
+            .filter(|row| ids.contains(&row.id))
+            .collect()
+    }
+
+    fn suggestion_catalog(
+        suggestions: Vec<Suggestion>,
+        conditions: BTreeMap<u32, ConditionRule>,
+    ) -> CatalogData {
+        CatalogData {
+            activities: vec![],
+            thresholds: vec![],
+            supported_indices: vec![],
+            supported_roots: BTreeSet::new(),
+            suggestions,
+            tags: vec![],
+            activity_tags: BTreeMap::new(),
+            conditions,
+            activity_conditions: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn suggested_provider_missing_csv_fails_without_an_alternate_source() {
+        let directory = tempfile::tempdir().unwrap();
+        let missing = directory.path().join("AdventureJournal.csv");
+        let error = load_suggestions(&missing).unwrap_err();
+        assert!(error.contains(&missing.display().to_string()));
+    }
+
+    #[test]
+    fn suggested_provider_follows_installed_csv_instead_of_old_sqlite_payloads() {
+        let path = crate::test_data::world_db_path();
+        let conn =
+            Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let criteria = crate::achievement::load_achievement_catalog(&conn).unwrap();
+        let catalog = CatalogData::load(
+            &conn,
+            &criteria,
+            &path
+                .parent()
+                .unwrap()
+                .join("db2/active/AdventureJournal.csv"),
+        )
+        .unwrap();
+        let csv_path = path
+            .parent()
+            .unwrap()
+            .join("db2/active/AdventureJournal.csv");
+        let source_count = csv::Reader::from_path(csv_path)
+            .unwrap()
+            .records()
+            .map(Result::unwrap)
+            .count();
+        assert_eq!(
+            catalog.suggestions(80, &BTreeSet::new()).1.source_rows as usize,
+            source_count
+        );
+    }
+
+    #[test]
+    fn suggested_provider_orders_equal_base_priorities_by_evaluated_authored_bonus() {
+        // Actual AdventureJournal7/8 both have base250; their first bonus is1.
+        let catalog = suggestion_catalog(
+            installed_suggestions(&[7, 8]),
+            BTreeMap::from([
+                (33200, ConditionRule::Always),
+                (33201, ConditionRule::Always),
+                (33600, ConditionRule::Level { min: 90, max: 0 }),
+                (33636, ConditionRule::Always),
+            ]),
+        );
+        let (rows, census) = catalog.suggestions(80, &BTreeSet::new());
+        assert_eq!(
+            rows.iter().map(|row| row.id).collect::<Vec<_>>(),
+            vec![8, 7]
+        );
+        assert_eq!(census.unsupported_conditions, 0);
+        assert!(rows.iter().all(|row| row.button_text.is_empty()));
+    }
+
+    #[test]
+    fn suggested_provider_zero_value_bonus_does_not_hide_base_eligible_record() {
+        // Actual Wailing Caverns9 bonus conditions have authored value0.
+        let catalog = suggestion_catalog(
+            installed_suggestions(&[9]),
+            BTreeMap::from([
+                (33956, ConditionRule::Always),
+                (
+                    33955,
+                    ConditionRule::Unsupported("Unevaluated bonus predicate".into()),
+                ),
+            ]),
+        );
+        let (rows, census) = catalog.suggestions(20, &BTreeSet::new());
+        assert_eq!(rows.iter().map(|row| row.id).collect::<Vec<_>>(), vec![9]);
+        assert_eq!(census.unsupported_conditions, 0);
+    }
 
     #[test]
     fn eligible_authored_suggestion_keeps_card_without_unsupported_activation() {
@@ -263,13 +441,13 @@ mod tests {
                 id: 7, name: "Hillsbrad Foothills".into(),
                 description: "Join the Forsaken war machine as it marches on Hillsbrad Foothills for the Horde!".into(),
                 reward: String::new(), texture: 236779,
-                condition: 33200, bonus0: 33600, bonus1: 33200, action: 3, flags: 0, priority: 250,
+                condition: 33200, bonus0: 33600, bonus1: 33200, action: 3, flags: 0, priority: 250, priority_max: 250, bonus_value0: 1, bonus_value1: 0,
             }],
             tags: vec![], activity_tags: BTreeMap::new(),
             conditions: BTreeMap::from([(33200, ConditionRule::Always), (33600, ConditionRule::Always)]),
             activity_conditions: BTreeMap::new(),
         };
-        let (rows, census) = catalog.suggestions(80);
+        let (rows, census) = catalog.suggestions(80, &BTreeSet::new());
         assert_eq!(rows.len(), 1);
         assert_eq!(
             (&*rows[0].name, rows[0].texture_fdid),

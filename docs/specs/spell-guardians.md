@@ -5,6 +5,7 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 ## What it must do
 
 ### Actors
+- [x] Emit one CombatLogKind::Summon per actual spell-created unit: source=summoner, target=unit, spell_id=actual summoning spell. Guardian logs reach the owning player through summon ancestry; quest/PvP/meter credit policies are unchanged. Login/script/journal restoration does not fabricate spell events.
 - [x] Spawn the native Grimoire Imp111859 effect28 creature416 with SummonProperties3314; cast its archive-bound3110 with native1750ms cast time, not immediately.
 - [x] Subsequent casts inherit changed owner selection; absent selection stops new attacks.
 - [x] Native27000ms duration and owner death remove the actor without replacing a persistent pet.
