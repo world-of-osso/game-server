@@ -9,6 +9,9 @@
 ## 2026-10-14 — Source-correct proximity distance
 
 [Creature aggro](systems/creature-aggro.md#aggro-on-sight) replaces the pet-style detection radius with TC a352b1fa GetAttackDistance, level/expansion and detect-aura rules, authored scaled combat reaches and strict distance. Stockade30vs32 native player/companion regressions RED2→GREEN34, including positive boundary and scaled cross-cell controls. Check/build/live rerun remain separate gates; no claim that radius alone caused the prior over-pull.
+## 2026-10-15 — Flute follow source adjudication
+
+[Wild/default route](systems/toys.md#flute-follow-source-adjudication-2026-10-15): current70391 effect142917→property64 Control0/Title0/Slot0/Flags0 selects TempSummon and no follow-on-spawn in pinned TC. Preserve source non-follow; no descriptive-text AI/distance. Independent Retail observation and fresh native source-model pixels remain unproved.
 ## 2026-10-15 — Unearned-achievement cast guard
 
 [Bounded SingleFalse87](systems/dungeon-achievements.md#unearned-achievement-cast-guard) on CastSpell29 uses existing scoped earned state and requires authored metadata. Final native/catalog/prior-positive87/pinned9dfe04b9 GREEN6/6(45.26s), compiler40/40/generated5737; actual twenty1217637 casts grant account41707 then stop, preserving dates/counters across DB/auth reopen and account boundaries. Census5495ordinary/1824statistics adds only41707; no general negation or gear acquisition/encounter/UI certificate.
