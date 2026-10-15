@@ -1457,7 +1457,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/46/60/69/71/87/104/122"
+                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/46/60/67/69/71/87/104/122"
                 )
             }
         };
