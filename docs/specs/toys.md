@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Winner's Podium239018/1227063 requires authentic240220/display127527, one stationary non-pet actor for1200000ms with preserved owner/map/body/health. Its47→138 destination uses authored1.25yd front radius clamped to the caster's scaled combat reach, then resolves actual map height at that destination rather than retaining airborne caster height. Preserve the source1000ms cast and1200000ms item recovery; no invented interaction or timer reset. Native rendering acceptance remains a separate per-skin gate.
+
 - Direct destination selectors86/91 initialize an absent prior destination from the caster before applying their source offset, matching native CheckDst. Fisherman's Folly199894/388259 uses91 with a fixed2yd radius, not placement at the caster's feet.
 
 - Spirit of Bashiok118222/173895 requires authentic TDB86916/display60051 and one stationary, non-pet actor for60000ms. Its18/78 destination is five yards forward from the caster using TargetB's radius and caster orientation; effect-facing pi is inactive because USE_FACING_FROM_SPELL is unset. Preserve owner/map and the player's body/health. Open-ground placement does not certify terrain/collision handling or native rendering; no follow, combat or interaction script is inferred.
