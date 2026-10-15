@@ -4,7 +4,7 @@ Server-owned built-in talent allocation from installed `TraitTreeLoadout`/`Trait
 
 ## What it must do
 - [ ] Advertise availability only for the active specialization's authored build; never create a user-named Starter config.
-- [ ] Activate the eligible, affordable authored allocation (including deferring zero-cost future-level apex rows), update effective spells and publish authoritative selection/allocation snapshots.
+- [ ] Activate the eligible, affordable authored allocation (including deferring affordable future-level apex rows), update effective spells and publish authoritative selection/allocation snapshots.
 - [ ] Persist built-in selection across login and specialization switches; automatically allocate newly earned points on level changes.
 - [ ] Accepted manual talent commits leave Starter mode; rejected mutations preserve allocation and selection. Saved named configurations remain independent.
 
