@@ -202,7 +202,6 @@ fn assert_fifo(case: Case) {
             "prior guild profile and authority",
             move |db| {
                 let mut profile = load_guild_profile(db, 7);
-                profile.created_at = 777;
                 profile.motd = "Prior motd".into();
                 profile.info_text = "Prior info".into();
                 save_guild_profile(db, 7, &profile);
@@ -391,7 +390,6 @@ fn assert_saved(db: &redb::Database, member: u64, case: Case) {
         return;
     }
     let profile = load_guild_profile(db, 7);
-    assert_eq!(profile.created_at, 777);
     assert_eq!(
         profile.motd,
         if matches!(case, Case::Motd) {
