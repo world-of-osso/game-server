@@ -1407,3 +1407,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 Replaced area-only Some projection with typed17/41 alternatives and strict complete-asset validation. Compiler/native genuine RED8984dbbd; generated5759; GREEN/census pending. [System](systems/dungeon-achievements.md#typed-areazone-alternatives).
 
 Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/8(59.21s), compiler41/41, census5506/1824 with all243/same7hashes. Native cached254 selfie27968/refused/outside/idle/reopen; no full grants/travel/acquisition/UI claim.
+
+- 2026-10-15: Feral Spirit owner-power RED and approved owner/weapon-only implementation; intrinsic AP remains named gap; GREEN pending.
