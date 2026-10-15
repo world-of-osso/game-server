@@ -1069,14 +1069,11 @@ fn battle_pet_team_min_level(world: &World, player: Entity) -> Option<u8> {
         })
 }
 
-fn earned_player_achievement_ids(world: &World, player: Entity) -> BTreeSet<u32> {
-    let Some((state, catalog)) = world
+fn earned_player_achievement_ids(world: &World, player: Entity) -> Option<BTreeSet<u32>> {
+    let (state, catalog) = world
         .get::<PlayerAchievementState>(player)
-        .zip(world.get_resource::<AchievementCatalog>())
-    else {
-        return BTreeSet::new();
-    };
-    catalog.iter_earned_achievement_ids(state).collect()
+        .zip(world.get_resource::<AchievementCatalog>())?;
+    Some(catalog.iter_earned_achievement_ids(state).collect())
 }
 
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
@@ -1090,6 +1087,9 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .collect(),
         known_spells: known_player_spell_ids(world, player),
         earned_achievements: earned_player_achievement_ids(world, player),
+        account_achievements_known: world
+            .get::<PlayerAchievementState>(player)
+            .is_some_and(|state| state.account.is_some()),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         area: world
             .get::<AchievementTracker>(player)
@@ -1544,6 +1544,9 @@ fn query_comparison_target(
     Ok((name, catalog.page(state, query, player.race)))
 }
 
+#[cfg(test)]
+#[path = "achievement_creature_type_tests.rs"]
+mod creature_type_tests;
 #[cfg(test)]
 #[path = "achievement_tests.rs"]
 mod tests;

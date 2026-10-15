@@ -13,6 +13,7 @@ use crate::level_scaling::{
     ArmorConstants, CreatureStats, ExpectedStats, LevelStats, TuningInputs,
 };
 
+#[derive(Clone)]
 pub struct CreatureTemplate {
     pub entry: u32,
     pub name: String,
@@ -71,6 +72,7 @@ pub struct CreatureTemplate {
 
 /// A template with a `ContentTuningID`: `min_level`/`max_level` are its
 /// ContentTuning range (docs/specs/level-scaling.md).
+#[derive(Clone)]
 pub struct TemplateTuning {
     pub content_tuning_id: u32,
     /// `LevelScalingDeltaMin..=Max`, rolled per spawn (Creature::ApplyLevelScaling).
@@ -90,6 +92,7 @@ pub struct CreatureModelInfo {
     pub is_trigger: bool,
 }
 
+#[derive(Clone)]
 pub struct CreatureSpawn {
     pub guid: u32,
     pub template_entry: u32,
@@ -124,11 +127,12 @@ impl CreatureSpawn {
     }
 }
 
+#[derive(Clone)]
 pub struct WaypointPath {
     pub points: Vec<WaypointPoint>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct WaypointPoint {
     pub position_x: f32,
     pub position_y: f32,
@@ -179,7 +183,7 @@ pub struct FormationInfo {
 /// `GROUP_AI_FLAG_FOLLOW_LEADER`: the member moves with its patrolling leader.
 pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 
-#[derive(Resource, Default)]
+#[derive(Resource, Clone, Default)]
 pub struct WorldData {
     pub templates: HashMap<u32, CreatureTemplate>,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
@@ -991,6 +995,8 @@ fn load_formations(conn: &Connection) -> HashMap<u32, FormationInfo> {
 
 fn startup_load_world_data(mut commands: Commands) {
     let path = Path::new("data/world.db");
+    commands.insert_resource(crate::spell_cast::toy_requirements::load(Path::new("data"))
+        .expect("Load current generated Toy casting data; run generate_toy_area_requirements.py and generate_toy_facing_requirements.py before startup"));
     let data = load_world_data(path);
     commands.insert_resource(data.armor_constants.clone());
     commands.insert_resource(data);
@@ -1116,7 +1122,11 @@ fn startup_load_world_data(mut commands: Commands) {
         "Failed to load scenarios; run scripts/import_scenarios.py on a private world data copy",
     );
     commands.insert_resource(scenarios);
-    commands.insert_resource(crate::adventure_guide::load_catalog(&conn, &achievements));
+    commands.insert_resource(crate::adventure_guide::load_catalog(
+        &conn,
+        &achievements,
+        Path::new("data/db2/active/AdventureJournal.csv"),
+    ));
     commands.insert_resource(achievements);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");

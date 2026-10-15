@@ -413,7 +413,7 @@ fn dummy7_verdant_embrace_without_panacea_does_not_self_heal() {
 fn rake(stealth: bool, rank: Option<u32>) {
     let mut ids = vec![1822, 155722, 163505, 768, 5215];
     ids.extend(rank);
-    let mut h = harness(Vec::new(), &ids, 11).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 11).unwrap();
     let c = h.caster;
     h.cast_and_deliver(768, Some(c));
     h.advance(35);

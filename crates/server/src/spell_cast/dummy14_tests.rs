@@ -119,12 +119,41 @@ fn dummy14_survival_kill_command_never_borrows_a_foreign_pet() {
 #[test]
 fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
     let mut h = harness(Vec::new(), &[259495, 265163, 265157, 269747], 3).unwrap();
-    h.set_power(PowerType::Focus, 100.0);
     let target = h.npc;
     let other = spawn_npc(&mut h.app, 4.0);
-    execute(&mut h, 259495, Some(target));
-    h.advance(3); // Native root35yd/sec missile must reach3yd target.
-    assert!(varied(157.95 * 1.8).contains(&(5000.0 - h.health(target))));
+    // Unequal AP/RAP proves Hunter damage uses its separate ranged field.
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .attack_power = 37.0;
+    // The master failure occurred near a variance endpoint. Exercise
+    // bounded real casts, cancelling previous bleeds so primary damage is isolated.
+    for attempt in 0..256 {
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 269747,
+        );
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap()
+            .current = 5000.0;
+        h.set_power(PowerType::Focus, 100.0);
+        h.inbox = Inbox::default();
+        execute(&mut h, 259495, Some(target));
+        h.advance(3); // Native root35yd/sec missile must reach3yd target.
+        assert!(
+            // Active265157:1.9RAP;259495s3:50% primary bonus;5% variance.
+            varied(1.9 * 100.0 * 1.5).contains(&(5000.0 - h.health(target))),
+            "attempt{attempt} primary damage{}, caster stats{:?}, native log{:?}",
+            5000.0 - h.health(target),
+            h.app.world().get::<crate::stats::CharacterStats>(h.caster),
+            h.inbox.log,
+        );
+    }
     assert!(crate::auras::has_aura(h.app.world(), target, 269747));
     assert_eq!(
         h.health(other),
@@ -140,8 +169,8 @@ fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
         .collect();
     assert_eq!(ticks.len(), 6);
     assert!(
-        // Active Effect718207 snapshots fixture AP100 at application, before
-        // the first stats update: 0.252 × 100, rounded to25 each native tick.
+        // Active Effect718207 snapshots fixture RAP100, not melee AP37:
+        // 0.252 × 100, rounded to25 each native tick.
         ticks.iter().all(|e| e.amount == 25),
         "{ticks:?}"
     );
