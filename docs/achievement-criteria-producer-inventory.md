@@ -1,6 +1,6 @@
 # Retail achievement criteria producer inventory
 
-verified: 2026-10-14
+verified: 2026-10-15
 
 Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras before effect dispatch, with authored spells and complete companions. Native65403/61925 RED→GREEN1/1 proves target-not-caster, refused-depth/launch/missing/idle/NPC-hook/reopen boundaries and3579; compiler34/34. Full required four-thread filter176/0/1ignored plus site-export1/1, server/engine checks and3repofmt pass. No table acquisition/holiday/full vehicle/UI certificate.
 
