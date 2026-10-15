@@ -122,3 +122,57 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
         assert!(h.app.world().get_entity(actor).is_err());
     }
 }
+
+#[test]
+fn toyfx51_scarab_level_clamps_source_region_before_guardian_initialization() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{Npc, UnitLevel};
+    let directory = tempfile::tempdir().unwrap();
+    let path = toyfx8_world();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    // Actual70391 NorthshireArea9 usesContentTuning73, whose authored range is1..30.
+    let bounds = conn
+        .query_row(
+            "SELECT minlevel,maxlevel FROM content_tuning_level WHERE ID=73",
+            [],
+            |row| Ok((row.get::<_, u8>(0)?, row.get::<_, u8>(1)?)),
+        )
+        .unwrap();
+    assert_eq!(bounds, (1, 30));
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (owner_level, expected_level) in [(20, 20), (80, 30)] {
+        let (mut h, character) = setup(
+            &directory
+                .path()
+                .join(format!("scarab-level-{owner_level}.redb")),
+        );
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(Level(owner_level));
+        h.app.insert_resource(store.clone());
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        learn_effect_toy(&mut h, character, 64881);
+        assert_eq!(activate(&mut h, 64881)[0].error, None);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let world = h.app.world_mut();
+        let levels: Vec<_> = world
+            .query::<(&Npc, &SummonedCreature, &UnitLevel)>()
+            .iter(world)
+            .filter(|(npc, summon, _)| npc.template_id == 51113 && summon.spell_id == 92146)
+            .map(|(_, _, level)| level.0)
+            .collect();
+        assert!(!levels.is_empty(), "actual source Storm Scarabs must spawn");
+        assert!(
+            levels.iter().all(|&level| level == expected_level),
+            "owner{owner_level}: source region expects{expected_level}, observed{levels:?}"
+        );
+    }
+}
