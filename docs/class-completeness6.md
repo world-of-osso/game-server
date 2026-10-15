@@ -2,6 +2,10 @@
 
 Verified: 2026-10-12. [Contract](specs/class-completeness.md), [prior batches](class-completeness2.md), [implementation](wiki/systems/spell-casting.md#level80-class-completeness).
 
+## NPC6 block-flags fixture repair — 2026-10-15
+
+Exact Stockade Felguard route test reproduces `missing sourced block flags for NPC6` at63f870a0 with protocol7313ec4 (0pass/1fail). Three summon fixtures replaced native template maps with only the pet row while retaining the live Kobold6 target. They now retain its authenticated row too; production block lookup and default harness remain unchanged. Attackable world, follower, hunter-pet and spell-summon constructors checked here require native templates before spawning. This is not a universal NPC invariant: species-only critter companions use a separate source and spawn attack-immune; companion-hit behavior was not proved. Exact GREEN, whole `followers::`/`pet_control::` and checks remain pending. Evidence: `data/class-completeness6-2026-10-12/npc-block-template-{source-audit,proof-ledger}.json`.
+
 ## Bear crit fixture production-chain trace — 2026-10-15
 
 Published70391 authentication matches2,038 imported fields: the old fixture uses class1 Warrior and applies5487e2, which is armor142/+220, not crit187. A deterministic pre-swing assertion reproduces actual protection0 versus required−6. Player protection comes from Guardian104 `SpecializationSpells3490` → learned passive137010 → e28/187−6, without a stance restriction.292569 is not justified by the checked player skill/spec/form/trigger grants; applying it directly would not prove the player path. TC a352b1fa `Player::LearnSpecializationSpells` and learned-passive handling, not a new Bear-specific exception, define this route.
