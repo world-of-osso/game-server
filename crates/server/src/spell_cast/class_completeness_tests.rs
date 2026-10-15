@@ -262,6 +262,24 @@ fn toyfx38_native_flute_destination_samples_area_not_ring_or_uniform_distance() 
 }
 
 #[test]
+fn toyfx38_native_flute_destination_inherits_radius_target_identity() {
+    let h = harness(Vec::new(), &[142917], 8).unwrap();
+    let mut effect = world_db().unwrap().store.get(142917).unwrap().effects[0].clone();
+    let native_radius = effect.radius[1].unwrap();
+    // CalcRadius only changes to TargetB when B has its own radius entry.
+    effect.radius = [Some(native_radius), None];
+    for _ in 0..32 {
+        let destination =
+            super::targets::effect_dest(h.app.world(), h.caster, None, &effect, None).unwrap();
+        let distance = destination.position.length();
+        assert!(
+            (distance - native_radius.radius).abs() < 0.001,
+            "inherited TargetA18 radius {distance}"
+        );
+    }
+}
+
+#[test]
 fn class_completeness_native_destination_radius_uses_random_direction_not_fixed_front() {
     let h = harness(Vec::new(), &[46585], 6).unwrap();
     let spell = world_db().unwrap().store.get(46585).unwrap();
