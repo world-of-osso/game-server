@@ -79,13 +79,6 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
                 h.caster,
                 "source spawn-group follow designation for {item}"
             );
-            assert_eq!(
-                world
-                    .get::<shared::components::UnitLevel>(*actor)
-                    .unwrap()
-                    .0,
-                80
-            );
         }
         assert!(
             !world

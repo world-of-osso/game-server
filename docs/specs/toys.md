@@ -99,7 +99,7 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 - Source `OnlyVisibleToSummonerGroup` captures the caster's current party/raid ID at creation. Solo casts use caster-only visibility. An already-private caster passes its existing player/group owner to its children, before interpreting either visibility flag.
 - A group-owned summon is visible only to current members of that captured group within ordinary map-copy/range/detection rules. Joining/leaving updates visibility without movement. The creator leaving or joining a different group does not reassign existing summons.
 - Source summon identity, display choices, count, duration, owner and recovery remain unchanged. Supporting group visibility does not implement other summon flags, missing creature interactions or unrelated script effects.
-- Independently of privacy, properties3535/4799 carry JoinSummonerSpawnGroup: the five native Nightmarish Hitching Post, Bandana/Eyepatch Barrel, Memory Cube and Anniversary Balloon Chest cases preserve source guardian/follow designation and summoner level. This flag is not a combat-pet designation and does not grant visibility outside the captured group.
+- Independently of privacy, properties3535/4799 carry JoinSummonerSpawnGroup: the five native Nightmarish Hitching Post, Bandana/Eyepatch Barrel, Memory Cube and Anniversary Balloon Chest cases preserve source guardian/follow designation. Exact level scaling/clamping is a separate source boundary, not an unconditional summoner-level promise. This flag is not a combat-pet designation and does not grant visibility outside the captured group.
 
 ## Exclusions
 
