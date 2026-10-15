@@ -4,6 +4,30 @@ use shared::components::{Level, Mana, UnitFactionTemplate, UnitFlags, UnitLevel,
 use super::{Follower, Profile};
 use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 
+pub(super) fn spawn_members(
+    world: &mut World,
+    owner: Entity,
+    profiles: &[Profile],
+) -> Result<Vec<Entity>, String> {
+    let mut members = Vec::with_capacity(profiles.len());
+    for profile in profiles {
+        match spawn(world, owner, profile.clone()) {
+            Ok(unit) => members.push(unit),
+            Err(error) => {
+                unsummon_members(world, &members);
+                return Err(error);
+            }
+        }
+    }
+    Ok(members)
+}
+
+pub(super) fn unsummon_members(world: &mut World, members: &[Entity]) {
+    for &unit in members {
+        crate::zones::unsummon(world, unit);
+    }
+}
+
 pub(super) fn spawn(world: &mut World, owner: Entity, profile: Profile) -> Result<Entity, String> {
     let position = *world
         .get::<shared::components::Position>(owner)
@@ -36,6 +60,7 @@ pub(super) fn initialize(
             | crate::faction::UNIT_FLAG_PLAYER_CONTROLLED,
     );
     let (stats, pools, passives) = class_stats(world, &profile, level)?;
+    let armor = derive_creature_armor(world, unit, profile.entry, level)?;
     let mana = Mana {
         current: stats.base_mana,
         max: stats.base_mana,
@@ -45,17 +70,22 @@ pub(super) fn initialize(
         max: stats.max_health,
     };
     let form = profile.form_spell;
+    // The ordinary StatsPlugin query owns derived-stat refresh after passive
+    // StatModifiers change, just as for players. SheetOwner remains absent.
+    let stat_fields = (stats.primary, stats.ratings, stats.derived());
     world
         .entity_mut(unit)
         .remove::<crate::creature_aggro::AggroRange>()
         .insert((
             Follower { owner, profile },
+            stat_fields,
             stats,
             pools,
             mana,
             health,
             UnitLevel(level),
             Level(level),
+            armor,
             faction,
             flags,
             UnitSummonedBy(owner.to_bits()),
@@ -67,6 +97,24 @@ pub(super) fn initialize(
             .map_err(|error| format!("follower preparation spell {form} failed: {error:?}"))?;
     }
     Ok(())
+}
+
+fn derive_creature_armor(
+    world: &World,
+    unit: Entity,
+    entry: u32,
+    level: u8,
+) -> Result<crate::level_scaling::CreatureArmor, String> {
+    let difficulty = world
+        .get::<crate::zones::CreatureDifficulty>(unit)
+        .map_or(0, |difficulty| difficulty.0);
+    world
+        .get_resource::<crate::world_data::WorldData>()
+        .and_then(|data| data.creature_armor_at(entry, difficulty, level))
+        .map(crate::level_scaling::CreatureArmor)
+        .ok_or_else(|| {
+            format!("follower {entry} level{level} difficulty{difficulty} lacks native armor data")
+        })
 }
 
 pub(super) fn class_stats(

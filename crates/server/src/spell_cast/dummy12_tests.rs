@@ -78,6 +78,205 @@ fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
             .iter()
             .all(|wolf| h.app.world().get_entity(*wolf).is_err())
     );
+    assert_wolf_summon_events(&h, &wolves);
+}
+
+#[test]
+fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits() {
+    let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
+    actor_data(&mut h);
+    let caster = h.caster;
+    // Child228562 selects32: the native primary destination is3yd front-left,
+    // not the caster. Center the dummy there so secondary5yd scatter stays in
+    // melee range without teleporting actors or depending on chase support.
+    let child = world_db().unwrap().store.get(228562).unwrap();
+    let destination =
+        super::targets::effect_dest(h.app.world(), caster, Some(h.npc), &child.effects[0], None)
+            .unwrap();
+    let dummy = crate::zones::summon_creature(
+        h.app.world_mut(),
+        caster,
+        44548,
+        [
+            destination.position.x,
+            -destination.position.z,
+            destination.position.y,
+            destination.orientation,
+        ],
+    )
+    .expect("native Training Dummy template");
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_scripts::TrainingDummy>(dummy)
+            .is_some()
+    );
+    h.select(Some(dummy));
+    h.attack(dummy);
+    h.advance(4);
+    h.cast_and_deliver(51533, Some(dummy));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let wolves = actors(&mut h, 29264);
+    assert_eq!(wolves.len(), 2);
+    h.advance(60);
+    for wolf in &wolves {
+        assert_eq!(
+            super::effects::power_stats(h.app.world(), *wolf, false),
+            (31.0, 31.0)
+        );
+        assert_eq!(
+            super::effects::power_stats(h.app.world(), *wolf, true),
+            (31.0, 31.0)
+        );
+    }
+    assert_eq!(
+        super::effects::power_stats(h.app.world(), dummy, false),
+        (0.0, 0.0)
+    );
+    let before: Vec<_> = wolves
+        .iter()
+        .map(|wolf| largest_wolf_hit(&h, *wolf, dummy))
+        .collect();
+    assert!(
+        before.iter().all(|damage| *damage > 0),
+        "initial wolf hits {before:?}; primary destination {destination:?}"
+    );
+    h.inbox.log.clear();
+    // Change only the real owner's melee AP, never actor stats or RNG. The
+    // hundredfold input change must dominate ordinary block/crit variance.
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .attack_power *= 100.0;
+    h.advance(80);
+    assert_eq!(
+        super::effects::power_stats(h.app.world(), dummy, false),
+        (0.0, 0.0)
+    );
+    for (wolf, before) in wolves.into_iter().zip(before) {
+        assert_eq!(
+            super::effects::power_stats(h.app.world(), wolf, false),
+            (3100.0, 3100.0)
+        );
+        let after = largest_wolf_hit(&h, wolf, dummy);
+        assert!(
+            after > before * 10,
+            "wolf {wolf:?}: owner AP100→10000, hit {before}→{after}, power {:?}",
+            super::effects::power_stats(h.app.world(), wolf, false)
+        );
+    }
+}
+
+fn largest_wolf_hit(h: &Harness, wolf: Entity, dummy: Entity) -> i32 {
+    h.inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(wolf.to_bits())
+                && event.target == Some(dummy.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount)
+        .max()
+        .unwrap_or(0)
+}
+
+#[test]
+fn dummy12_feral_spirit_child_logs_two_short_lived_wolves_to_owner() {
+    let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
+    actor_data(&mut h);
+    h.select(Some(h.npc));
+    h.advance(4);
+    let caster = h.caster;
+    let target = h.npc;
+    super::cast_triggered(h.app.world_mut(), caster, 228562, Some(target), 0);
+    h.advance(3);
+    let wolves = actors(&mut h, 29264);
+    assert_eq!(
+        wolves.len(),
+        2,
+        "one native child casts its authored two wolves"
+    );
+    h.advance(400);
+    assert!(
+        wolves
+            .iter()
+            .all(|wolf| h.app.world().get_entity(*wolf).is_err())
+    );
+    assert_wolf_summon_events(&h, &wolves);
+}
+
+fn assert_wolf_summon_events(h: &Harness, wolves: &[Entity]) {
+    let summons: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Summon)
+        .collect();
+    assert_eq!(
+        summons.len(),
+        2,
+        "short-lived wolves need durable owner events"
+    );
+    for wolf in wolves {
+        let event = summons
+            .iter()
+            .find(|event| event.target == Some(wolf.to_bits()))
+            .expect("one event per actual wolf");
+        assert_eq!(event.source, Some(h.caster.to_bits()));
+        assert_eq!(event.spell_id, Some(228562), "actual child summoning spell");
+        assert!(event.timestamp_unix_ms > 0);
+    }
+}
+
+#[test]
+fn dummy12_guardian_damage_reaches_owner_without_guardian_connection() {
+    let mut h = harness(Vec::new(), &[49206, 51963, 61777, 1242147, 211947], 6).unwrap();
+    actor_data(&mut h);
+    h.select(Some(h.npc));
+    h.advance(4);
+    h.cast_and_deliver(49206, Some(h.npc));
+    let gargoyle = actors(&mut h, 27829)[0];
+    // Isolate delivery from the unimplemented non-demon AP inheritance curve,
+    // using the same explicit actor stats as the existing Gargoyle script fixture.
+    h.app
+        .world_mut()
+        .entity_mut(gargoyle)
+        .insert(crate::stats::CharacterStats {
+            attack_power: 100.0,
+            ..default()
+        });
+    h.advance(100);
+    let summon_index = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::Summon && event.target == Some(gargoyle.to_bits())
+        })
+        .expect("owner receives gargoyle summon");
+    let damage_index = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(gargoyle.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.amount > 0
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "owner receives actual guardian damage without a guardian client: {:?}",
+                h.inbox.log
+            )
+        });
+    assert!(
+        summon_index < damage_index,
+        "ownership arrives before guardian damage"
+    );
 }
 
 #[test]
@@ -155,7 +354,8 @@ fn advance_actor_logs(h: &mut Harness, connection: Entity, frames: usize) {
 fn dummy12_dispatch_and_eviscerate_damage_use_combo_spent_not_left() {
     for spell_id in [2098, 196819] {
         for points in [1.0, 3.0, 5.0] {
-            let mut h = harness(Vec::new(), &[spell_id], 4).unwrap();
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(Vec::new(), &[spell_id], 4).unwrap();
             h.set_power(PowerType::ComboPoints, points);
             h.set_power(PowerType::Energy, 100.0);
             let spell = world_db().unwrap().store.get(spell_id).unwrap();
@@ -176,7 +376,12 @@ fn dummy12_dispatch_and_eviscerate_damage_use_combo_spent_not_left() {
 #[test]
 fn dummy12_rake_bleed_snapshots_stealth_bonus_across_later_rank_removal() {
     for empowered in [false, true] {
-        let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[1822, 155722, 231052, 5215, 768, 163505],
+            11,
+        )
+        .unwrap();
         let caster = h.caster;
         apply(&mut h, caster, caster, 768, u32::MAX);
         apply(&mut h, caster, caster, 231052, u32::MAX);
@@ -263,7 +468,9 @@ fn dummy12_shield_of_righteous_applies_native_armor_buff_and_expires() {
 
 #[test]
 fn dummy12_shield_cone_excludes_rear_side_far_and_ally_and_buffs_empty_cast() {
-    let mut h = harness(Vec::new(), &[53600, 132403, 403460, 407467], 2).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[53600, 132403, 403460, 407467], 2)
+            .unwrap();
     let rear = spawn_npc(&mut h.app, -3.0);
     let side = spawn_npc(&mut h.app, 2.0);
     h.app
@@ -302,7 +509,12 @@ fn dummy12_shield_cone_excludes_rear_side_far_and_ally_and_buffs_empty_cast() {
 
 #[test]
 fn dummy12_rake_reapplication_replaces_stealth_snapshot_without_retroactive_bonus() {
-    let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[1822, 155722, 231052, 5215, 768, 163505],
+        11,
+    )
+    .unwrap();
     let caster = h.caster;
     apply(&mut h, caster, caster, 768, u32::MAX);
     apply(&mut h, caster, caster, 231052, u32::MAX);
@@ -382,7 +594,9 @@ fn dummy12_gargoyle_foreign_owner_spend_and_triggered_cast_do_not_empower() {
 #[test]
 fn dummy12_butchery_talent_bleeds_hit_enemies_only() {
     for talented in [false, true] {
-        let mut h = harness(Vec::new(), &[212436, 459868, 459870], 3).unwrap();
+        let mut h =
+            harness_with_native_enemy_dodge_reduction(Vec::new(), &[212436, 459868, 459870], 3)
+                .unwrap();
         if !talented {
             h.app.world_mut().entity_mut(h.caster).insert(
                 crate::class_progression::KnownSpells::fixture(vec![212436, 459870]),

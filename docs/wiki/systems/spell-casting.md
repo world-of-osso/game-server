@@ -90,6 +90,10 @@ Sigil uses the existing destination-owned ground pulse lifecycle with period0: w
 
 Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood's last remaining Dummy root closes. Native238-row equivalence and exact previous40-spec ID sets checked. Targeted11/11 warning-free; single post-origin/master spell_cast gate360/360, fmt/check pass at6a56656. Detailed corrected RED and proof boundaries live in the coverage ledger. Guardian inheritance/melee and Eye Beam11-vs-tooltip10 discrepancy unchanged.
 
+## Wildfire primary variance fixture
+
+Current native source values replace stale golden constants, not runtime coefficients or variance tolerance. A legitimate upper primary draw reproduced the master red; bounded real casts now cover the full source interval while distinct AP/RAP preserve owned bleed and splash limits. [Source, exact failure and merged proof](../../class-completeness6.md#wildfire-primary-variance-master-red--batch61).
+
 ## Fourteenth batch: owned hits and native clocks
 
 [Contract](../../specs/spell-dummy-scripts.md#fourteenth-batch-local-hit-actor-and-periodic-consumers), [capabilities/proof/all40](../../spell-dummy14-coverage.md). `scripts/batch14.rs` binds Frozen Orb/Blizzard's distinct named hit slows, Survival Kill Command's actual persistent-pet caster, Wildfire's named primary hit/bleed, Deathmark's80 total Energy on its existing bleed clock, Eye Beam's named primary/ranked crit, Metamorphosis's8yd destination hit and player daze, and Consume's named Fury. These are eight bounded entries, not full class/talent parity. Frost child-hit tests are not root-cast A proofs; cone179/129 actors remain separate gaps.
@@ -106,7 +110,7 @@ Local guardian templates/bindings do not establish non-demon owner inheritance o
 
 ## Twelfth batch: actor, resource and snapshot consumers
 
-[Contract](../../specs/spell-dummy-scripts.md#twelfth-batch-actorresourcesnapshot-consumers), [capability matrix/all40 table](../../spell-dummy12-coverage.md). Native51533 explicitly names228562: its two29264 wolves reuse the generic summon lifecycle and authentic archive58875/58867 bindings. Dummy remains counted for unimplemented immunity, buff/Maelstrom and elemental contracts; no guessed melee rotation. Native49206's pet-title3238 is a named temporary Gargoyle actor exception, not a blanket pet AI change. Its27829 archive binding51963 uses native cast timing and always critically strikes with1242147. Successful owner costs empower its211947 aura using49206s4 and PowerType DisplayModifier; failed/triggered/foreign casts do not. Non-demon stat inheritance and Army entry remain uncertified.
+[Contract](../../specs/spell-dummy-scripts.md#twelfth-batch-actorresourcesnapshot-consumers), [capability matrix/all40 table](../../spell-dummy12-coverage.md). Native51533 explicitly names228562: its two29264 wolves reuse the generic summon lifecycle and authentic archive58875/58867 bindings. The parent casts the child once; shared EffectSummonType owns count2/property1161 (TC SpellEffects.cpp1934–1936). Repeating the child by its count duplicates this work after generic count support. Dummy remains counted for unimplemented immunity, buff/Maelstrom and elemental contracts; no guessed melee rotation. Native49206's pet-title3238 is a named temporary Gargoyle actor exception, not a blanket pet AI change. Its27829 archive binding51963 uses native cast timing and always critically strikes with1242147. Successful owner costs empower its211947 aura using49206s4 and PowerType DisplayModifier; failed/triggered/foreign casts do not. Non-demon stat inheritance and Army entry remain uncertified.
 
 The launch-owned resource clone now also multiplies2098 Dispatch and196819 Eviscerate damage by actual combo expenditure. Aura construction snapshots Rake155722's60% stealth/rank bonus once; reapplication recomputes it, later rank/stealth changes do not alter an existing bleed. Owned233490 grants30108s3's10% spell/periodic vulnerability once, not per instance; foreign/expired marks are excluded. Melee/direct vulnerability, stacking/dispel/refund remain open.
 
@@ -165,7 +169,7 @@ The nine matrix roots all lack trigger bindings, including Wildfire Bomb's child
 ## Pipeline
 
 1. **Receive** (`Update`): only an authenticated in-world connection's `PlayerLink` player casts. The spell resolves by ID or unique exact name. Explicit target = `target_entity`, else the server `CombatTarget`.
-2. **Queue or validate:** after spell resolution and known-spell admission, hold one `QueuedSpellCast` (spell snapshot, explicit target and witness) while cast/GCD remaining time is positive and at most 400 ms. New admitted requests replace it. No resource, target or cooldown validation at admission. Outside that window use immediate validation. `start_queued_casts` runs after `advance_casts` and due missile effects in the fixed chain, waits for both active cast and applicable GCD to end, takes the slot once and calls the normal start path. Full validation then runs in order:
+2. **Queue or validate:** after spell resolution and known-spell admission, hold one `QueuedSpellCast` (spell snapshot, explicit target and witness) while cast/GCD remaining time is positive and at most 750 ms (user decision 2026-10-15; Retail/TrinityCore use 400 ms). New admitted requests replace it. No resource, target or cooldown validation at admission. Outside that window use immediate validation. `start_queued_casts` runs after `advance_casts` and due missile effects in the fixed chain, waits for both active cast and applicable GCD to end, takes the slot once and calls the normal start path. Full validation then runs in order:
    - player casters must know the spell (`class_progression::knows_spell` on [[class-progression]] `KnownSpells`; NPCs exempt; triggered spells skip it);
    - caster alive;
    - not stunned, silenced or pacified ([[auras]] crowd control);
@@ -246,11 +250,12 @@ The caster's [[auras]] spell modifiers (107/108/218/219) adjust cast time (Chang
 | `CastFailed{reason, detail}` | caster owner | rejected request or failed completion |
 | `SpellCooldownUpdate` | caster owner | GCD start; cooldown start |
 | `SpellChargesUpdate` | caster owner | charge spent |
-| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune); aura events in [[auras]] |
+| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune), Summon; aura events in [[auras]] |
 
 - Other clients in range do not receive combat log events yet.
 - Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
 - Spell effects emit only `CombatLogEvent`.
+- Spell-created effect28 units and effect56 controlled pets emit `Summon` after creation: source=summoner, target=unit, spell_id=actual summoning spell (including triggered child spells). Existing-pet recall and login/script/journal restoration do not synthesize events. Temporary summon ancestry routes logs to the player's connection without altering meter/quest/PvP credit. See [guardian contract](../../specs/spell-guardians.md).
 - `log_event` stamps every event with server wall-clock Unix milliseconds before recording damage or sending to owners, including queued melee events. Constructors leave the timestamp unset until that boundary.
 - `Interrupt.extra_spell_id` identifies the interrupted cast; `Dispel.extra_spell_id` identifies the removed aura. Other kinds leave it `None`; `spell_id` remains the interrupting or dispelling spell.
 
@@ -693,3 +698,9 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 ## Druid automatic forms
 
 `druid_transform.rs` binds exactly five native BeforeCast scripts: Prowl/Tiger Dash→Cat768; Incapacitating Roar/Berserk/Stampeding Roar→Bear5487. It uses real triggered child effects, only when not already in that form, before completion/costs and after initial admission. Berserk alone runs its native AfterCast Mangle/Thrash/Growl spell/category reset, not charge restoration or GCD reset. Category-only cooldowns keep the native spell entry until category recovery (`SpellHistory.cpp:505`). Census emits observed `form_after` separately from form-prerequisite/warning receipts. [Source and behavior proof](../../class-completeness6.md#native-druid-beforecast-transformers--batch52), [contract](../../specs/class-completeness.md). Other form/aura/script gaps remain explicit.
+
+## Feral Spirit owner contribution — 2026-10-15
+
+[Contract](../../specs/spell-guardians.md#feral-spirit-owner-inheritance). Actual51533→228562 creates two29264 wolves. Pinned TC a352b1fa TemporarySummon.h:119 classifies only29264 as Spirit Wolf; StatSystem.cpp:1353/1423 supplies owner melee AP×0.31 (integer AP and bonus SP) and AP/3.5×attack seconds. Pet.cpp:1026 supplies weapon3–5×summon level; local template supplies1500ms. Both spell power and melee swings read live owner power. Other guardian formulas remain unchanged.
+
+Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.

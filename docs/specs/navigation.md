@@ -18,9 +18,18 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Normal ground `MotionMaster::MovePath` uses TC a352b1fa default `PathGenerator::FindSmoothPath` surface stepping (4yd step, 0.3yd steering slop, 74-point/polygon limit), then exact creature collision-height normalization. Generic chase/home/follow/hazard queries retain their existing portal-crossing output.
 - [x] Preserve spline's 0.1yd interior-segment rejection, actual owner start, exact/flying controls and failed-route no-arrival behavior. Missing bake/collision support, incomplete routes, exhausted buffers and unsupported off-mesh links fail explicitly; no direct fallback or corner deletion.
 - [x] Authored Wailing path367801/node2 launches from the production-observed boundary and reaches its exact collision floor; generated controls for all49 nodes of paths367800–367802 remain collision-clear under the existing LOS query.
-- [ ] Whole live escort/camp traversal remains open: the physical probe reaches path1 arrival/cleansing, then unchanged generic movement crosses collision with no script path active. Controlled wave deaths and control-generation tests do not certify natural activation or native clears.
+- [x] Physical source escort traverses all three authored paths and both real camps without injected arrivals or escort relocation, reaching the exact stopped endpoint under the movement checks below.
+- [ ] Natural activation, ordinary balance and both-skin native clears remain open; source-faction/highHP/control-death fixtures do not certify them.
 
 Source and implementation: [smooth script waypoints](../wiki/systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14).
+
+## C++ waypoint motion ownership
+
+- [x] An active chase/home generator preempts the default-slot C++ waypoint; only the active owner advances position and lower waypoint time does not run in parallel.
+- [x] Reactivation relaunches the remaining authored target from the actor's real position; already-visited exact nodes are not replayed. Keep route generation and strict collision/segment thresholds unchanged.
+- [x] A same-tick chase/home handoff initializes without a second position step, including activation from the final path callback. Finalized spline ownership survives that callback; the end event is emitted once. Geometry loss stops both position and replicated gait without an arrival.
+- [x] Normal ground C++ moving feet use the same exact creature-collision sampler as generated controls; exact/flying paths are unchanged. Missing support stops without synthetic arrival.
+- [x] Physical Wailing tick2136 RED becomes a complete collision-clear, non-relocating three-path/two-camp walk. Verify source horizontal speed × tick (native integer-ms precision), exact floor within existing0.05yd tolerance, baked walkable surface and no vertical-only snap—not an unsourced fixed3D displacement threshold. Source faction/highHP fixture limits remain explicit; no natural/native-clear claim.
 
 ## How it works
 
@@ -41,6 +50,8 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 - `crates/server/src/creature_ai_tests/stockade_chase.rs` — real chase/home/waypoint/repath/unreachable-evade fixtures (opt-in), including the supported narrow arch's exact five-second boundary, reachability/victim resets and raid exemption.
 - `crates/los/src/liquid.rs` — real modern ocean LiquidObject42 regression (opt-in).
 - `crates/server/src/navigation_tests.rs` — real Stormwind auction-house floor, per-tick stair support/LOS, cross-tile terrain portals, and missing/unbaked/empty/corrupt artifact boundaries.
+- `crates/server/src/scripted_ai/waypoint_path_tests.rs` — authored node2, all49 source controls, slot handoff/initialization ordering, exact-node resume, completion/no duplicate arrival, and support-loss stopped pose.
+- `crates/server/src/scripted_ai/tests/wailing_physical.rs` — full three-path/two-camp walk with per-step source speed/floor/WALK-corridor/vertical-only/LOS checks; declared controlled-fixture limits.
 
 ## Known gaps (current cycle)
 
@@ -51,3 +62,6 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 ## Out of scope
 
 Dynamic doors/game objects, flying, transports, crowds, ordinary pet/wander/formation movement, per-display agent profiles and swim-capability policy. Explicit dungeon-follower follow/chase requirements now live in [follower dungeons](follower-dungeons.md); they require baked routes without unbaked compatibility. Lead owns shipping data and deploying to sakuin.
+
+### Diagnostic route export
+`cargo run -p navigation --example follower_route -- NAV_DIRECTORY START_X START_Y START_Z END_X END_Y END_Z` prints the complete baked route as Bevy-coordinate x,y,z CSV. It uses the same strict query and fails on an incomplete corridor; output is input for physical walking, not a movement or teleport operation. Concrete Stockade coordinate parsing is tested.

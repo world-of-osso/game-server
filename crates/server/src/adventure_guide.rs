@@ -35,8 +35,9 @@ impl Default for AdventureCatalog {
 pub(crate) fn load_catalog(
     conn: &rusqlite::Connection,
     criteria: &AchievementCatalog,
+    journal_csv: &std::path::Path,
 ) -> AdventureCatalog {
-    match CatalogData::load(conn, criteria) {
+    match CatalogData::load(conn, criteria, journal_csv) {
         Ok(data) => AdventureCatalog::Ready(data),
         Err(error) => {
             error!("Adventure Guide catalog unavailable: {error}");
@@ -207,7 +208,8 @@ fn settle_and_project_month(
                 })
                 .map(|a| a.points)
                 .sum();
-            let (suggestions, census) = data.suggestions(level);
+            let earned = criteria.iter_earned_achievement_ids(state).collect();
+            let (suggestions, census) = data.suggestions(level, &earned);
             AdventureGuideSnapshot{month,activities,tags:data.tags.clone(),suggestions,suggestion_census:census,points,activity_scope_notice:Some("All source activities shown: interval/calendar binding unavailable. Osso default group1 Tender thresholds apply; seasonal reward binding unavailable.".into()),source_error:None}
         }
     };

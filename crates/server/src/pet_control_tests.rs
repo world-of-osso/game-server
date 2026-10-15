@@ -37,7 +37,8 @@ fn world_db() -> Option<Connection> {
 
 fn wolf_template(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut templates = load_templates(conn, &load_expected_stats(conn));
-    templates.retain(|entry, _| *entry == DISEASED_YOUNG_WOLF);
+    // Keep native defense metadata for the harness's live Kobold target too.
+    templates.retain(|entry, _| [6, DISEASED_YOUNG_WOLF].contains(entry));
     templates
 }
 
@@ -388,6 +389,10 @@ fn a_called_wolf_sends_its_owner_the_retail_pet_bar() {
         ]
     );
     let world = p.h.app.world();
+    assert_eq!(
+        world.get::<shared::components::UnitIsPet>(p.pet),
+        Some(&shared::components::UnitIsPet(true))
+    );
     assert_eq!(
         world.get::<UnitSummonedBy>(p.pet),
         Some(&UnitSummonedBy(p.h.caster.to_bits()))

@@ -469,27 +469,38 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
         crate::pet_control::send_pet_spells(world, owner, pet);
         return;
     }
-    if entry != 0 {
-        summon_authored_pet(world, owner, entry, at, facing);
-        return;
-    }
-    let slot = effect_slot(effect);
-    let stored = world
-        .get::<PetStable>(owner)
-        .and_then(|stable| stable.stored.active.get(slot).cloned().flatten());
-    if stored.is_some() && slot < MAX_ACTIVE_PETS {
+    let pet = if entry != 0 {
+        summon_authored_pet(world, owner, entry, at, facing)
+    } else {
+        let slot = effect_slot(effect);
+        let stored = world
+            .get::<PetStable>(owner)
+            .and_then(|stable| stable.stored.active.get(slot).cloned().flatten());
+        if stored.is_none() || slot >= MAX_ACTIVE_PETS {
+            return;
+        }
         put_pet_out(world, owner, slot as u8, at, facing);
+        summoned_pet(world, owner)
+    };
+    if let Some(pet) = pet {
+        crate::spell_cast::log_summon(world, owner, pet, ctx.spell);
     }
 }
 
 /// `Player::SummonPet` loads an existing record or creates a SUMMON_PET from its
 /// creature template at the owner's level, then saves it as current. CheckCast admits
 /// sourced demon spells and Mage31687; timed guardians use their own path.
-fn summon_authored_pet(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
+fn summon_authored_pet(
+    world: &mut World,
+    owner: Entity,
+    entry: u32,
+    at: Position,
+    facing: f32,
+) -> Option<Entity> {
     let stored = create_or_reuse_summon_record(world, owner, entry);
     if init_pet_stable(world, owner).is_none() {
         error!("Summoned pet owner {owner} has no in-world character");
-        return;
+        return None;
     }
     if let Some(pet) = summoned_pet(world, owner) {
         remove_pet(world, pet);
@@ -500,6 +511,7 @@ fn summon_authored_pet(world: &mut World, owner: Entity, entry: u32, at: Positio
         .stored
         .active[0] = Some(stored);
     put_pet_out(world, owner, 0, at, facing);
+    summoned_pet(world, owner)
 }
 
 fn create_or_reuse_summon_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
@@ -819,6 +831,7 @@ fn spawn_pet(
             HunterPet { owner, slot },
             FollowOwner::new(owner),
             UnitSummonedBy(owner.to_bits()),
+            shared::components::UnitIsPet(true),
             pools,
             CombatTarget::default(),
         ),

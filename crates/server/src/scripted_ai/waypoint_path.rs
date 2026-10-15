@@ -120,8 +120,48 @@ pub(crate) struct PathMovement {
     path: Arc<ScriptPath>,
     node: usize,
     started: bool,
+    deactivated: bool,
+    finalized: bool,
+    active_goal: Option<crate::navigation::Goal>,
     wait_ms: i32,
     spline: Option<Spline>,
+}
+
+impl PathMovement {
+    /// An active chase/home generator preempts this default-slot waypoint.
+    fn deactivate(&mut self) {
+        if let Some(spline) = self.spline.take() {
+            if self.path.exact_spline() {
+                // Exact controls correspond one-for-one with authored nodes.
+                self.node += spline.segment_at(spline.elapsed_ms);
+            }
+            self.started = false;
+        }
+        self.deactivated = true;
+    }
+
+    /// Initialize a new active-slot identity exactly once, regardless of which
+    /// system first deactivated the lower default generator.
+    pub(crate) fn preempt_for(&mut self, goal: crate::navigation::Goal) -> bool {
+        self.deactivate();
+        let initializing = self.active_goal != Some(goal);
+        self.active_goal = Some(goal);
+        initializing
+    }
+
+    /// WaypointMovementGenerator::DoReset: stop the old spline, then relaunch
+    /// the current target from the owner's real position, not stale controls.
+    fn reactivate(&mut self) -> bool {
+        if !self.deactivated {
+            return false;
+        }
+        self.deactivated = false;
+        self.active_goal = None;
+        if self.wait_ms <= 0 {
+            self.wait_ms = MINIMAL_DURATION_MS;
+        }
+        true
+    }
 }
 
 /// `MotionMaster::MovePath(pathId, false)`.
@@ -147,6 +187,9 @@ pub(crate) fn move_path(world: &mut World, unit: Entity, path_id: u32) -> bool {
         path,
         node: 0,
         started: false,
+        deactivated: false,
+        finalized: false,
+        active_goal: None,
         wait_ms: INITIALIZE_WAIT_MS,
         spline: None,
     });
@@ -199,11 +242,15 @@ impl Spline {
         length
     }
 
+    fn segment_at(&self, time_ms: i32) -> usize {
+        (0..self.segments())
+            .find(|&segment| time_ms < self.times[segment + 1])
+            .unwrap_or(self.segments() - 1)
+    }
+
     /// `MoveSpline::computePosition`.
     fn position(&self, time_ms: i32) -> Vec3 {
-        let segment = (0..self.segments())
-            .find(|&segment| time_ms < self.times[segment + 1])
-            .unwrap_or(self.segments() - 1);
+        let segment = self.segment_at(time_ms);
         let duration = (self.times[segment + 1] - self.times[segment]) as f32;
         let u = if duration > 0.0 {
             ((time_ms - self.times[segment]) as f32 / duration).min(1.0)
@@ -395,23 +442,37 @@ fn query_ground_waypoints(
     route
         .into_iter()
         .skip(1)
-        .map(|mut point| {
-            let crate::ground::GroundProbe::Supported(height) =
-                ground.creature_ground_in(launch_from.map, point)
-            else {
-                return Err(format!(
-                    "ground waypoint lacks collision support at {point:?}"
-                ));
-            };
-            // PathGenerator::NormalizePath -> non-flying UpdateAllowedPositionZ.
-            point.y = height;
-            Ok(wow(&Position {
-                x: point.x,
-                y: point.y,
-                z: point.z,
-            }))
+        .map(|point| {
+            let position = sample_script_ground(
+                Some(&mut *ground),
+                launch_from.map,
+                Position {
+                    x: point.x,
+                    y: point.y,
+                    z: point.z,
+                },
+            )?;
+            Ok(wow(&position))
         })
         .collect()
+}
+
+/// Exact creature collision support, shared by generated controls and moving feet.
+fn sample_script_ground(
+    ground: Option<&mut crate::ground::GroundMap>,
+    map: crate::maps::InMap,
+    mut position: Position,
+) -> Result<Position, String> {
+    let ground = ground.ok_or("ground waypoint requires collision geometry")?;
+    let point = Vec3::new(position.x, position.y, position.z);
+    let crate::ground::GroundProbe::Supported(height) = ground.creature_ground_in(map, point)
+    else {
+        return Err(format!(
+            "ground waypoint lacks collision support at {point:?}"
+        ));
+    };
+    position.y = height;
+    Ok(position)
 }
 
 fn wow(position: &Position) -> Vec3 {
@@ -424,6 +485,40 @@ fn bevy(position: Vec3) -> Position {
     Position { x, y, z }
 }
 
+fn advance_path_generator(
+    movement: &mut PathMovement,
+    position: &mut Position,
+    launch_from: &Launch,
+    dt_ms: i32,
+    navigation: Option<&crate::navigation::Navigation>,
+    mut ground: Option<&mut crate::ground::GroundMap>,
+) -> Result<Option<u32>, String> {
+    let ground_path = !launch_from.flying && !movement.path.exact_spline();
+    if let Some(spline) = &mut movement.spline {
+        spline.elapsed_ms = (spline.elapsed_ms + dt_ms).min(spline.end_ms);
+        let candidate = bevy(spline.position(spline.elapsed_ms));
+        *position = if ground_path {
+            sample_script_ground(ground.as_deref_mut(), launch_from.map, candidate)?
+        } else {
+            candidate
+        };
+        if spline.elapsed_ms == spline.end_ms {
+            movement.node = spline.last_node;
+            movement.spline = None;
+        }
+    } else if movement.wait_ms > 0 {
+        movement.wait_ms -= dt_ms;
+    }
+    if movement.spline.is_none() && movement.wait_ms <= 0 {
+        let current = Launch {
+            position: wow(position),
+            ..*launch_from
+        };
+        return start_move(movement, &current, navigation, ground);
+    }
+    Ok(None)
+}
+
 /// Advance every script path; a finished path sets home and informs the AI.
 pub(crate) fn path_movement_system(world: &mut World) {
     let dt_ms = world.resource::<Time>().delta().as_millis() as i32;
@@ -431,6 +526,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
     let navigation = world.remove_resource::<crate::navigation::Navigation>();
     let mut ground = world.remove_resource::<crate::ground::GroundMap>();
     let mut ended = Vec::new();
+    let mut retired = Vec::new();
     let mut failed = Vec::new();
     let mut moved = Vec::new();
     let mut changed = Vec::new();
@@ -441,6 +537,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         &mut PathMovement,
         &SpawnPoint,
         &crate::maps::InMap,
+        Option<&crate::creature_ai::CreatureState>,
         Has<Walking>,
         Has<GravityDisabled>,
         Option<&mut Rotation>,
@@ -456,6 +553,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         mut movement,
         spawn,
         map,
+        state,
         walking,
         flying,
         rotation,
@@ -463,38 +561,49 @@ pub(crate) fn path_movement_system(world: &mut World) {
         speed,
     ) in movers.iter_mut(world)
     {
+        if movement.finalized {
+            retired.push(entity);
+            continue;
+        }
+        // MotionMaster updates only its top generator: active chase/home wins
+        // over this default-slot MovePath; route generation is not changed.
+        let reset = match state {
+            Some(
+                crate::creature_ai::CreatureState::Pursuing { .. }
+                | crate::creature_ai::CreatureState::Returning,
+            ) => {
+                movement.deactivate();
+                continue;
+            }
+            _ => movement.reactivate(),
+        };
+        // A reset top generator receives diff0 on its initialization update.
+        let update_ms = if reset { 0 } else { dt_ms };
         // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
         let before = *position;
-        if let Some(spline) = &mut movement.spline {
-            spline.elapsed_ms = (spline.elapsed_ms + dt_ms).min(spline.end_ms);
-            *position = bevy(spline.position(spline.elapsed_ms));
-            if spline.elapsed_ms == spline.end_ms {
-                movement.node = spline.last_node;
+        let launch_from = Launch {
+            map: *map,
+            position: wow(&position),
+            orientation: rotation
+                .as_ref()
+                .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2),
+            spawn,
+            walking,
+            flying,
+        };
+        match advance_path_generator(
+            &mut movement,
+            &mut position,
+            &launch_from,
+            update_ms,
+            navigation.as_ref(),
+            ground.as_mut(),
+        ) {
+            Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
+            Ok(None) => {}
+            Err(error) => {
+                failed.push((entity, movement.path.id, error));
                 movement.spline = None;
-            }
-        } else if movement.wait_ms > 0 {
-            movement.wait_ms -= dt_ms;
-        }
-        if movement.spline.is_none() && movement.wait_ms <= 0 {
-            let launch_from = Launch {
-                map: *map,
-                position: wow(&position),
-                orientation: rotation
-                    .as_ref()
-                    .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2),
-                spawn,
-                walking,
-                flying,
-            };
-            match start_move(
-                &mut movement,
-                &launch_from,
-                navigation.as_ref(),
-                ground.as_mut(),
-            ) {
-                Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
-                Ok(None) => {}
-                Err(error) => failed.push((entity, movement.path.id, error)),
             }
         }
         let path_walk = path_walk_mode(&movement.path, walking);
@@ -533,12 +642,21 @@ pub(crate) fn path_movement_system(world: &mut World) {
     if let Some(ground) = ground {
         world.insert_resource(ground);
     }
+    for entity in retired {
+        world.entity_mut(entity).remove::<PathMovement>();
+    }
     for (entity, walking) in walking_modes {
         super::movement::set_walk(world, entity, walking);
     }
     for (entity, path_id, error) in failed {
         error!("MovePath {path_id} for {entity:?}: {error}; stopped without arrival");
         world.entity_mut(entity).remove::<PathMovement>();
+        if world
+            .get_mut::<CreatureMotion>(entity)
+            .is_some_and(|mut motion| motion.set_if_neq(CreatureMotion::Still))
+        {
+            changed.push(entity);
+        }
     }
     if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
         for &entity in &changed {
@@ -551,10 +669,12 @@ pub(crate) fn path_movement_system(world: &mut World) {
         }
     }
     for (entity, node_id, path_id, home) in ended {
-        // `SetHomePosition` at the last node, then `WaypointPathEnded`.
+        // Keep finalized spline ownership through the callback/handoff. A new
+        // active generator gets diff0 even when this was the final path step;
+        // retire it at the next movement update, without a second end callback.
+        world.get_mut::<PathMovement>(entity).unwrap().finalized = true;
         world
             .entity_mut(entity)
-            .remove::<PathMovement>()
             .insert(super::movement::ScriptedPath { home });
         super::dispatch(world, entity, Hook::WaypointPathEnded { node_id, path_id });
     }

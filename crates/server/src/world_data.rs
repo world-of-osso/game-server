@@ -13,6 +13,7 @@ use crate::level_scaling::{
     ArmorConstants, CreatureStats, ExpectedStats, LevelStats, TuningInputs,
 };
 
+#[derive(Clone)]
 pub struct CreatureTemplate {
     pub entry: u32,
     pub name: String,
@@ -45,8 +46,6 @@ pub struct CreatureTemplate {
     pub gives_experience: bool,
     /// `ScriptName`: the AzerothCore CreatureScript (`creature_scripts`).
     pub script_name: String,
-    /// `detection_range`: aggro radius against a same-level target.
-    pub detection_range: f32,
     pub aggro_mode: AggroMode,
     /// `CREATURE_FLAG_EXTRA_TRIGGER`: the template spawns with its invisible model.
     pub trigger: bool,
@@ -59,6 +58,9 @@ pub struct CreatureTemplate {
     /// Armor at `min_level` of an untuned template (ExpectedStat
     /// CreatureArmor × ArmorModifier); a tuned one reads `tuning.stats`.
     pub armor: f32,
+    /// Authored multiplier retained when the NPC is promoted to another level.
+    pub armor_modifier: f32,
+    pub health_scaling_expansion: i32,
     /// `ManaModifier` (creature_template_difficulty): max mana is
     /// creature_classlevelstats `basemana` × this (Creature::UpdateLevelDependantStats).
     pub mana_modifier: f32,
@@ -70,6 +72,7 @@ pub struct CreatureTemplate {
 
 /// A template with a `ContentTuningID`: `min_level`/`max_level` are its
 /// ContentTuning range (docs/specs/level-scaling.md).
+#[derive(Clone)]
 pub struct TemplateTuning {
     pub content_tuning_id: u32,
     /// `LevelScalingDeltaMin..=Max`, rolled per spawn (Creature::ApplyLevelScaling).
@@ -89,6 +92,7 @@ pub struct CreatureModelInfo {
     pub is_trigger: bool,
 }
 
+#[derive(Clone)]
 pub struct CreatureSpawn {
     pub guid: u32,
     pub template_entry: u32,
@@ -123,11 +127,12 @@ impl CreatureSpawn {
     }
 }
 
+#[derive(Clone)]
 pub struct WaypointPath {
     pub points: Vec<WaypointPoint>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct WaypointPoint {
     pub position_x: f32,
     pub position_y: f32,
@@ -178,7 +183,7 @@ pub struct FormationInfo {
 /// `GROUP_AI_FLAG_FOLLOW_LEADER`: the member moves with its patrolling leader.
 pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 
-#[derive(Resource, Default)]
+#[derive(Resource, Clone, Default)]
 pub struct WorldData {
     pub templates: HashMap<u32, CreatureTemplate>,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
@@ -202,6 +207,8 @@ pub struct WorldData {
     /// `creature_classlevelstats` basemana keyed by (level, class).
     pub class_level_base_mana: HashMap<(u8, u8), u32>,
     pub armor_constants: ArmorConstants,
+    /// Installed level/modifier rows retained for NPC owner-level initialization.
+    pub expected_stats: ExpectedStats,
     /// `content_pool_*` spawn pools (PoolMgr).
     pub pools: crate::spawn_pools::SpawnPools,
     /// TDB `spawn_group` members whose battleground runtime spawns them by condition.
@@ -224,6 +231,20 @@ impl WorldData {
         self.difficulty_templates
             .get(&(entry, difficulty_id))
             .or_else(|| self.templates.get(&entry))
+    }
+
+    /// Source NPC armor at `level`, including its template/difficulty modifiers.
+    pub fn creature_armor_at(&self, entry: u32, difficulty: u32, level: u8) -> Option<f32> {
+        let template = self.template_for(entry, difficulty)?;
+        Some(match &template.tuning {
+            Some(tuning) => tuning.stats.armor(level),
+            None => self.expected_stats.untuned_armor_for_expansion(
+                level,
+                template.health_scaling_expansion,
+                template.unit_class,
+                template.armor_modifier,
+            ),
+        })
     }
 
     /// AzerothCore `Creature::GetCreatureAddon`: the spawn's row, else its template's.
@@ -288,6 +309,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         class_level_base_hp,
         class_level_base_mana,
         armor_constants,
+        expected_stats,
         pools,
         spawn_groups,
         vignettes,
@@ -543,7 +565,6 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         script_name: row.get(13)?,
         unit_class,
         expansion: row.get::<_, i64>(15)? as u8,
-        detection_range: row.get(16)?,
         aggro_mode: AggroMode::for_template(
             row.get::<_, i64>(10)? as u32,
             row.get::<_, i64>(11)? as u32,
@@ -554,6 +575,8 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         unit_flags: row.get::<_, i64>(17)? as u32,
         models: Vec::new(),
         armor: expected.untuned_armor(row.get::<_, i64>(1)? as u8, unit_class, armor_modifier),
+        armor_modifier,
+        health_scaling_expansion: row.get::<_, i64>(19)? as i32,
         tuning,
         mana_modifier: row.get(25)?,
         regenerates_power: row.get::<_, i64>(26)? & UNIT_FLAG2_REGENERATE_POWER != 0,
@@ -972,6 +995,8 @@ fn load_formations(conn: &Connection) -> HashMap<u32, FormationInfo> {
 
 fn startup_load_world_data(mut commands: Commands) {
     let path = Path::new("data/world.db");
+    commands.insert_resource(crate::spell_cast::toy_requirements::load(Path::new("data"))
+        .expect("Load current generated Toy casting data; run generate_toy_area_requirements.py and generate_toy_facing_requirements.py before startup"));
     let data = load_world_data(path);
     commands.insert_resource(data.armor_constants.clone());
     commands.insert_resource(data);
@@ -1097,7 +1122,11 @@ fn startup_load_world_data(mut commands: Commands) {
         "Failed to load scenarios; run scripts/import_scenarios.py on a private world data copy",
     );
     commands.insert_resource(scenarios);
-    commands.insert_resource(crate::adventure_guide::load_catalog(&conn, &achievements));
+    commands.insert_resource(crate::adventure_guide::load_catalog(
+        &conn,
+        &achievements,
+        Path::new("data/db2/active/AdventureJournal.csv"),
+    ));
     commands.insert_resource(achievements);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");

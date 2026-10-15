@@ -2,11 +2,35 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Runtime generated casting data (2026-10-13)
+
+[Runtime data guide](../../toy-runtime-data.md) owns producer commands, source-build provenance and deployment sync. Startup loads both required JSON artifacts into an ECS resource and refuses missing data. Process tests reject each missing file and load two controlled builds with the same binary; fresh-app tests verify changed facing behavior. Production generated data is no longer embedded in Rust source.
+
+## Authored script dispatch regression (2026-10-13)
+
+[Coin ordering regression](../../toy-effects14-coverage.md#coin-dispatch-regression-recheck-2026-10-13) records the clean-master counterexample, introducing commit and retained source-specific fix.
+
+## Prismatic Bauble source boundary (2026-10-13)
+
+Exact223143 cosmetic admission has authoritative lifetime/recovery proof, not native rainbow certification. Source ribbon parsing and actual native delivery/lifecycle gaps remain separate. [Claim-specific coverage](../../toy-effects14-coverage.md#prismatic-bauble--source-admission-native-gaps-open-2026-10-13).
+
+## Source facing boundary (2026-10-13)
+
+Two source-facing roots use selected-unit180° arc validation and TC's strict exact3D target-radius exemption before spending. No CombatReach extension; ordinary start GCD is retained on completion refusal. [Sources and claim-specific proof](../../toy-effects14-coverage.md#source-toy-facing--bounded-gate-2026-10-13); [contract](../../specs/toys.md).
+
+## Source area-group lifecycle (2026-10-13)
+
+Cast start and completion consume the pinned Toy root manifest; actual terrain-area lookup and source ParentAreaID ancestry precede cooldown/effect spending. Player-owned restricted auras use ordinary interrupted removal on exit; within-group travel retains them and category history is unchanged. [Source, exact boundaries and proof](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13); [contract](../../specs/toys.md#source-area-group-closure--active2026-10-13).
+
+## Current PvP faction and War Banner proof (2026-10-13)
+
+`CurrentPvpFaction` carries the authoritative source condition value independently of faction reactions. Login derives the known racial value; accepted BG/arena entry assigns team after successful teleport; successful return restores it. Invitations and refused source transport entry do not assign the team prematurely. Client parser/codec consumes this scalar for36349/36348. Exact sources, coverage matrix, census and private asset boundaries live in [War Banner coverage](../../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13); [match contract](../../specs/battleground-lifecycle.md#current-pvp-faction) owns lifecycle requirements.
+
 ## Source summon flag import (2026-10-12)
 
 Canonical read-only inspection found3610 SummonProperties rows with only ID/Control/Faction/Title/Slot, despite the maintained DB2 schema already naming `Flags_0`/`Flags_1`. Local CASC FDID1345276/layoutA4CA5ECF and pinned TC DB2LoadInfo supply both words for3610 readable records; three encrypted records are explicitly omitted. `scripts/import_summon_property_flags.py` validates every existing source identity, transactionally adds the missing columns and populates flags without rewriting identities/unrelated data. Legacy3001 Title4294967295 equals the source signed32 -1 bit pattern; validation normalizes bits, not stored data.
 
-Private visibility is a separate runtime step: TC `SpellEffects.cpp::EffectSummonType` uses OnlyVisibleToSummoner0x10 and OnlyVisibleToSummonerGroup0x10000 to set a private owner; `Object.cpp::CheckPrivateObjectOwnerVisibility` filters seers. Source3077 used by the four warning signs carries0x10, while the existing summon/interest path ignores it. Importing flags alone is not a visibility fix or a new working-toy claim. The owner-only runtime path reads `Flags_0`, attaches an unreplicated `PrivateObjectOwner` before interest registration, and caches that owner in the existing spatial interest index. Normal visibility transitions therefore omit private replicas for other player connections and remove cached ownership with the target. This does not mark other flag semantics implemented; group-private toy graphs retain an explicit preflight gap. Real two-peer UDP RED receives source-private73781 in both replicas while public66768 is visible to both. The first change missed both target-dirty visibility and the separate wild/default `zones::summon_creature` path; missing spawn traces falsified the assumed path. Wild spawns attach the same private ownership marker, and its Add observer updates/invalidates interest after the zone spawn's initial registration. Actual UDP GREEN with source-private Lilian88280 now has owner=true/nearby observer=false while public66768 remains true for both. Source owner model92597/Shirakess170196 also preserves four meshes,.6 scale/no pet frame and natural60s expiry in fresh Modern/Forever native processes (observed59405/59742ms after model readiness). Requested framed owner PNGs inspected; no two-rendered-client claim. Lead canonical command, once requested:
+Private visibility is a separate runtime step: TC `SpellEffects.cpp::EffectSummonType` uses OnlyVisibleToSummoner0x10 and OnlyVisibleToSummonerGroup0x10000 to set a private owner; `Object.cpp::CheckPrivateObjectOwnerVisibility` filters seers. Source3077 used by the four warning signs carries0x10, while the existing summon/interest path ignores it. Importing flags alone is not a visibility fix or a new working-toy claim. The owner-only runtime path reads `Flags_0`, attaches an unreplicated `PrivateObjectOwner` before interest registration, and caches that owner in the existing spatial interest index. Normal visibility transitions therefore omit private replicas for other player connections and remove cached ownership with the target. This does not mark other flag semantics implemented; group-private graphs formerly retained a preflight gap; the [group-private runtime](#source-group-private-runtime-2026-10-13) now handles this visibility flag. Real two-peer UDP RED receives source-private73781 in both replicas while public66768 is visible to both. The first change missed both target-dirty visibility and the separate wild/default `zones::summon_creature` path; missing spawn traces falsified the assumed path. Wild spawns attach the same private ownership marker, and its Add observer updates/invalidates interest after the zone spawn's initial registration. Actual UDP GREEN with source-private Lilian88280 now has owner=true/nearby observer=false while public66768 remains true for both. Source owner model92597/Shirakess170196 also preserves four meshes,.6 scale/no pet frame and natural60s expiry in fresh Modern/Forever native processes (observed59405/59742ms after model readiness). Requested framed owner PNGs inspected; no two-rendered-client claim. Lead canonical command, once requested:
 
 ```text
 python3 scripts/import_summon_property_flags.py --db2 /home/osso/.worktrees/logs/toy-effects14-continuation/runtime/data/summon-properties-source/1345276.db2 --db data/world.db
@@ -228,3 +252,49 @@ Pinned local export:1166 decrypted toys. Concrete behavioural fixtures cover Orb
 - [[inventory]] — physical UseItem and inventory delta publication.
 - [[spell-casting]] — cast history, effects and cooldown transport.
 - [[auras]] — transform and script-only aura limitations.
+
+## Blazing Diamond Pendant (2026-10-13)
+
+Exact171352 admission uses source zero-payload shape, ordinary ground model937030 and existing area group4031 lifecycle; not generic dummy-aura support. Source/server/native evidence and wall-time limits: [Pendant coverage](../../toy-effects14-coverage.md#blazing-diamond-pendant--bounded-lifecycle-proof-2026-10-13). Dedicated expiry fixture keeps position unchanged and waits for natural aura/kit removal while recovery continues.
+
+## Fountain of Knowledge (2026-10-13)
+
+Exact91743 source cosmetic admission renders ordinary ground253570 with scale.5 for the source10s aura; no creature or gameplay effect. Natural removal preserves the15-minute item recovery. [Source, private asset provenance and bounded native proof](../../toy-effects14-coverage.md#fountain-of-knowledge--bounded-lifecycle-proof-2026-10-13).
+
+## Accursed Tome of the Sargerei (2026-10-13)
+
+Exact187146 source cosmetic admission uses ordinary1097945 at attachment17 and offsets(-.3,0,.3), scale1. Source aura lasts300s; natural removal retains one-hour item recovery without changing body/health/position. [Sources, native scopes and retained learning-update gap](../../toy-effects14-coverage.md#accursed-tome--bounded-lifecycle-proof-2026-10-13).
+
+## Source group-private runtime (2026-10-13)
+
+Pinned TC `SpellEffects.cpp`1890–1904 captures the private group GUID, and `Object.cpp`827–845 tests the viewer's current membership. Server stores the captured ID in `PrivateObjectGroup`, separately from caster-only `PrivateObjectOwner`; private descendants inherit either identity. The existing interest index caches group owners and observer membership, invalidating only observers whose group changes. Ordinary map, radius, stealth and death filters still apply. `retail_content.TOY_SCENERY_SUMMON_ENTRIES` imports the twelve direct source contracts' authentic TDB templates/models; no synthetic click/script payload is added. Seventeen census graphs contain this flag; source-only admission is not complete-effect certification. [Contract](../../specs/toys.md#group-private-summons).
+
+### Signed summon title source boundary (2026-10-13)
+
+The current canonical import publishes SummonProperties3001.Title=-1. The old u32 loader aborted the entire store at that row, preventing unrelated source toys from casting. Pinned TC `DB2Structure.h`4318–4325 declares Title as int32; `SummonProperties.title` and title constants now preserve that signed representation. Unknown titles remain explicitly unsupported; the loader neither wraps the sentinel nor substitutes old data. Concrete3001/4493 loader regression accompanies the actual ten toy loader failures.
+
+## Wild variable-count summons (2026-10-14)
+
+Wild/default E28 rolls source CalcValue variance before int32 truncation and minimum1, only for TC's explicit MiscValueB list. The first actor uses the selected destination; secondary actors use TargetA's primary disk radius and native caster orientation, not TargetB's destination radius. Valid map heights adjust secondary elevation; invalid map heights preserve the source elevation, matching `WorldObject::GetRandomPoint`. Count resolution does not add SP/AP damage coefficients. Other effect handlers retain their existing unrandomized base-point helper.
+
+Flute98552 is the concrete zero-primary-radius case; native6122 proves nonzero primary scatter. Guardian/ally count and Scarab2301 are not implemented by this wild-only slice. [Source, behavioral evidence and pending native scope](../../toy-effects14-coverage.md#xantishs-flute--wild-variable-count-slice-2026-10-14); [contract](../../specs/toys.md).
+
+### Source forward destination
+
+TC a352b1fa `SpellInfo.cpp` maps78 to DEST_DEST_FRONT; `Spell.cpp::SelectImplicitDestDestTargets` moves the prior destination by this slot's CalcRadius and direction. The bounded18/78 route shares destination-offset calculation with existing18/79 backward placement. Caster-based destinations retain caster facing even when an unrelated unit is selected; destination-relative offsets retain that prior destination's facing rather than replacing it with the selected unit's orientation. Spirit of Bashiok173895 authors18/78, primary radius0 and secondary radius8=5yd. AttributesEx4=0x00800000 does not set USE_FACING_FROM_SPELL0x80000000, so its authored facing pi is ignored. No destination fallback, other directional selector, or terrain/collision implementation is added. Authentic86916/display60051 and60s actor lifecycle remain separate from destination selection; see [contract](../../specs/toys.md).
+
+### Initial random destination radius (2026-10-14)
+
+Pinned TC `SpellInfo.cpp`822–825 randomizes `CalcRadius.Max` for targets72/74/86 as `(Max-Min)*sqrt(rand_norm())`; `Spell.cpp` destination callers only consume that result. The implemented72/86 selectors previously randomized direction alone, placing Flute and class summons on rings. They now sample radius too, preserving target91's fixed-distance/random-direction contract. When TargetB lacks its own radius entry, `CalcRadius` inherits both TargetA's entry and target identity; inheriting only the numbers would spuriously randomize an18/86 combination. This is not secondary `GetRandomPoint` scatter: that separate function adds Min, while `CalcRadius` does not. Concrete native Flute142917 and class1276452/123904 destination regressions cover disk interior/area, nonzero-Min span, and target91 isolation. Unsupported74 remains unsupported; broader radius modifiers are not added here. Direct91 without a preceding destination (Fisherman's Folly388259) must run native `CheckDst` before selecting its fixed2yd ring. Destination-relative facing must not return early before that initialization; the generic summon-at-caster path is not a substitute for applying the authored offset.
+
+### Spawn-group guardian count boundary (2026-10-14)
+
+Scarab Storm64881/92146 uses property2301, Control1/Title0/flags0x400202. TC `SpellEffects.cpp`1944–1951 checks JoinSummonerSpawnGroup0x200 before the title switch; `Object.cpp`1191–1231 gives the default title a Guardian actor, and `CreatureAI.cpp`163–205 permits following. The server now preserves that supported default-title route instead of treating it as an ordinary one-actor ally. Source count is rolled once from the existing explicit property list; each actor independently selects its authentic weighted model. `SummonGuardian`5015–5052 places the first at destTarget and additional actors in a5yd disk. Existing follow-owner designation, map/owner identity, private inheritance and non-pet designation remain separate fields. Group28 properties3535/4799 carry the same flag: their five direct source cases also require following; the native Doll/Gong witnesses use other properties and remain separately scoped. No creature spell is invented when local bindings are absent.
+
+`Unit::SetMinion`6264–6290 adds PLAYER_CONTROLLED only when the minion's owner is a player. The server previously treated all ally-category actors as controlled and skipped wild-category flagged guardians; a later companion immunity insert also replaced the ownership bit. A source-role predicate and one pure flag composition now preserve ownership plus existing immunity bits. Concrete actor casts cover the five flagged Group28 cases, NPC-owned guardians, plain allies and both player/NPC companions; IsPet remains a separate component.
+
+The additive importer preserves native51113 and both36611/36595 choices with weights1/2. This bounded source route/count/lifetime slice does not certify native visuals, complete Scarab behavior, default ally multiplicity, or all pet/specialized-title count paths. `TempSummon::InitStats` clamps source levels before guardian initialization; the pre-existing generic guardian level path is not certified by this count slice, and unconditional owner-level assertions were retired rather than presented as a native contract. Earlier wild-only evidence remains scoped to that slice; see [contract](../../specs/toys.md).
+
+### Flute follow source adjudication (2026-10-15)
+
+Active70391 `SpellEffect`191120 routes142917 to71500/property64. That `SummonProperties` row is Control0/Title0/Slot0/Flags0. Pinned TC a352b1fa `SpellEffects.cpp`1943–2036 therefore uses wild/default `TempSummon`, not Minion/Guardian; `CreatureAI.cpp`163–205 `ShouldFollowOnSpawn` returnsfalse. The lead's source-parity decision preserves non-follow behavior rather than inventing a script/distance from descriptive text. This proves the TC route, not independent Retail client behavior. [Contract](../../specs/toys.md); [proof boundaries](../../toy-effects14-coverage.md#xantishs-flute--wild-variable-count-slice-2026-10-14). Private evidence: `flute48-source-properties64.json`, `flute48-source-effect.json`. Both-skin quiet expiry remains separately proved; fresh conclusive source-model pixels remain open.

@@ -26,6 +26,13 @@ fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_
         .unwrap()
         .0;
     let h = &mut entered.h;
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CurrentPvpFaction>(actor.player),
+        Some(&shared::components::CurrentPvpFaction(1)),
+        "Human entered on Horde team"
+    );
     h.app.world_mut().entity_mut(actor.connection).insert((
         pair::<shared::protocol::AttackSwing>(),
         pair::<shared::protocol::AttackStop>(),
@@ -85,6 +92,13 @@ fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_
             .unwrap()
             .0,
         1
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CurrentPvpFaction>(actor.player),
+        Some(&shared::components::CurrentPvpFaction(2)),
+        "successful return restores racial Alliance"
     );
 }
 
@@ -1862,6 +1876,7 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
             shared::components::Level(40),
+            shared::components::CurrentPvpFaction(2),
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
             pair::<QueueForBattleground>(),
@@ -1877,7 +1892,10 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
             });
     }
     h.receive_pvp_updates(5);
-    let who = &players[0];
+    let who = players
+        .iter()
+        .find(|who| battleground(&h, who).team == BgTeam::B)
+        .unwrap();
     let match_id = battleground(&h, who).match_id;
     h.app
         .world_mut()
@@ -1892,12 +1910,19 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
         updates[&who.connection].iter().any(|update| update
             .error
             .as_deref()
-            .is_some_and(|error| error.contains("transport 35"))),
+            .is_some_and(|error| error.contains("transport 36"))),
         "{:#?}",
         updates[&who.connection]
     );
     assert!(h.new_worlds(who).is_empty());
     assert_eq!(h.map_of(who), Some(STORMWIND));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CurrentPvpFaction>(who.player),
+        Some(&shared::components::CurrentPvpFaction(2)),
+        "refused Horde entry retains racial Alliance"
+    );
 }
 
 fn seething_objects(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
@@ -2005,6 +2030,7 @@ fn enter_source_match_with(
             crate::pvp::PlayerPvpState::default(),
             shared::components::Level(template.bracket.min_level),
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
+            shared::components::CurrentPvpFaction(2),
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
             pair::<QueueForBattleground>(),
@@ -2032,6 +2058,13 @@ fn enter_source_match_with(
     for (who, invitation) in players.iter().zip(&invitations) {
         assert_eq!(invitation.match_id, match_id);
         assert_eq!(invitation.map_id, template.map_id);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::CurrentPvpFaction>(who.player),
+            Some(&shared::components::CurrentPvpFaction(2)),
+            "invitation is not entry"
+        );
         h.app
             .world_mut()
             .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
