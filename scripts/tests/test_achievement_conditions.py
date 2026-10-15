@@ -363,7 +363,7 @@ class Conditions(unittest.TestCase):
             'unknown legacy value': {10: node(0, 4), 11: node(10, 2, 20, 7)},
             'some needing two': {10: node(0, 8, amount=2), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
             'some of mixed aura/map facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 32, 2)},
-            'negated fact': {10: node(0, 4), 11: node(10, 3, 8, 46598)},
+            'negated map fact': {10: node(0, 4), 11: node(10, 3, 32, 1)},
             'target leaf': {10: node(0, 4), 11: node(10, 2, 4, 448)},
             'nested all': {10: node(0, 4), 11: node(10, 4), 12: node(11, 2, 8, 1)},
             'zero aura asset': {10: node(0, 4), 11: node(10, 2, 8, 0)},

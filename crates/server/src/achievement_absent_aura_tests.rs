@@ -175,7 +175,7 @@ fn achievements_criteria_absent_aura_native_marks_and_kills_persist() {
 }
 
 #[test]
-fn achievements_criteria_absent_aura_authority_alive_difficulty_and_metadata() {
+fn achievements_criteria_absent_aura_authority_alive_and_difficulty() {
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     let catalog = load_achievement_catalog(&conn).unwrap();
     let mut world = World::new();
