@@ -87,22 +87,26 @@ impl Publication<'_, '_> {
         if !self.owns_session(toggle) {
             return;
         }
+        match result {
+            Ok(progress) => self.publish_preference(toggle, progress),
+            Err(error) => {
+                if let Ok(state) = self.states.get(toggle.player) {
+                    pvp_support::send_pvp_update(
+                        toggle.connection,
+                        state,
+                        None,
+                        Some(error),
+                        &mut self.senders,
+                    );
+                }
+            }
+        }
+    }
+
+    fn publish_preference(&mut self, toggle: Toggle, progress: PlayerPvpProgress) {
         let context = self.read_current_context(toggle.player);
         let Ok(mut state) = self.states.get_mut(toggle.player) else {
             return;
-        };
-        let progress = match result {
-            Ok(progress) => progress,
-            Err(error) => {
-                pvp_support::send_pvp_update(
-                    toggle.connection,
-                    &state,
-                    None,
-                    Some(error),
-                    &mut self.senders,
-                );
-                return;
-            }
         };
         state.progress = progress;
         state.war_mode = context.map(|context| snapshot(context, state.progress.war_mode_desired));
