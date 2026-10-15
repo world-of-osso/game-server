@@ -17,7 +17,7 @@ ALLOWED = {
     "content_creature_template_addon", "content_creature_equip_template",
     "content_creature_addon", "content_creature_formations", "content_game_event_creature",
     "content_waypoint_data", "content_gameobject", "content_gameobject_template",
-    "content_gameobject_template_addon",
+    "content_gameobject_template_addon", "content_npc_spellclick_spells",
 }
 
 
@@ -76,40 +76,35 @@ class BattlegroundPopulationTest(unittest.TestCase):
                 self.assertEqual(promoted, fingerprints(db, ALLOWED))
                 self.assertEqual(unrelated, fingerprints(db, set(tables) - ALLOWED))
 
-    def test_isle_demolisher_spellclick_is_promoted_from_source_without_other_rows_changing(self):
+    def test_promoted_maps_refresh_all_source_spellclicks_and_preserve_unrelated_entries(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.copy_database(directory)
             with closing(sqlite3.connect(path)) as db, db:
-                expected = db.execute(
-                    "SELECT * FROM tdb_npc_spellclick_spells WHERE npc_entry=34775"
-                ).fetchall()
-                self.assertEqual(expected, [(34775, 66245, 1, 0)])
-                db.execute("DELETE FROM content_npc_spellclick_spells WHERE npc_entry=34775")
-                other = db.execute(
-                    "SELECT * FROM content_npc_spellclick_spells WHERE npc_entry<>34775 ORDER BY npc_entry,spell_id"
-                ).fetchall()
+                db.execute("DELETE FROM content_npc_spellclick_spells WHERE npc_entry IN (SELECT id FROM tdb_creature WHERE map IN (628,559))")
+                db.execute("INSERT INTO content_npc_spellclick_spells VALUES (34775,1,1,0)")
+                before = db.execute("SELECT * FROM content_npc_spellclick_spells ORDER BY npc_entry,spell_id").fetchall()
             for _ in range(2):
-                result = self.promote(path, (628,))
+                result = self.promote(path, (628, 559))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 with closing(sqlite3.connect(path)) as db:
-                    self.assertEqual(
-                        db.execute("SELECT * FROM content_npc_spellclick_spells WHERE npc_entry=34775").fetchall(),
-                        expected,
-                    )
-                    self.assertEqual(
-                        db.execute("SELECT * FROM content_npc_spellclick_spells WHERE npc_entry<>34775 ORDER BY npc_entry,spell_id").fetchall(),
-                        other,
-                    )
+                    entries = {row[0] for row in db.execute("SELECT DISTINCT id1 FROM content_creature WHERE map IN (628,559)")}
+                    expected = [row for row in db.execute("SELECT * FROM tdb_npc_spellclick_spells ORDER BY npc_entry,spell_id") if row[0] in entries]
+                    self.assertGreaterEqual(len(expected), 9)
+                    self.assertIn((34776, 46598, 1, 0), expected)
+                    self.assertIn((34776, 66245, 1, 0), expected)
+                    actual = db.execute("SELECT * FROM content_npc_spellclick_spells ORDER BY npc_entry,spell_id").fetchall()
+                    self.assertEqual(expected, [row for row in actual if row[0] in entries])
+                    self.assertEqual([row for row in before if row[0] not in entries], [row for row in actual if row[0] not in entries])
 
-    def test_isle_missing_demolisher_spellclick_rolls_back_population_changes(self):
+    def test_missing_source_spellclick_table_rolls_back_population_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.copy_database(directory)
             with closing(sqlite3.connect(path)) as db, db:
-                db.execute("DELETE FROM tdb_npc_spellclick_spells WHERE npc_entry=34775")
+                db.execute("DROP TABLE tdb_npc_spellclick_spells")
             before = hashlib.sha256(path.read_bytes()).hexdigest()
             result = self.promote(path, (628,))
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("missing authored Isle Demolisher34775 spellclick", result.stderr)
+            self.assertIn("no such table: tdb_npc_spellclick_spells", result.stderr)
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), before)
 
     def test_mixed_open_world_request_is_rejected_without_any_changes(self):
