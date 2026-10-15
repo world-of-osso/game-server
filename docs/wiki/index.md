@@ -15,6 +15,14 @@
 - [Shared weapon-spell defense roll](systems/player-damage.md#shared-weapon-spell-defense-roll) — native cumulative miss/deflect/block and quantization,19 bounded controls; other hit-system outcomes remain gaps.
 
 - [Ordinary NPC weapon-spell blocks](systems/player-damage.md#native-player-criticalblock-hit-state) — authenticated NO_BLOCK16 versus NO_XP64, native30%/critical60% damage and facing/stun; four NPC plus eleven player controls pass, Totem runtime/full probability order remain gaps.
+- [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates, integrated native/catalog/pinned4/4; full ten-family grant unclaimed.
+
+- [Remaining source-only criteria boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) —44/58/64 lack executable rules;153 has no matching native action-set path;218 requires pinned hard-false Party Sync leaves.
+
+- [Started-child statistics](systems/dungeon-achievements.md#started-child-statistic-projection) — native40/299/94 kills prove107sum3/1336max2/1337distinct2; zero/refused/dead/idle/reopen controls.
+
+- [Creature-type kill statistics](systems/dungeon-achievements.md#creature-type-kill-statistics) — actual killed-NPC type30/78, source40/299 lethal casts and reopened counters.
+
 - [Spawn-group guardian count](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14) — Scarab2301 flag routing, variable count and independent native5yd secondary scatter; other count paths remain open.
 
 - [Toy initial random destination radius](systems/toys.md#initial-random-destination-radius-2026-10-14) — native72/86 disk area versus91 fixed distance; independent of secondary scatter and unresolved Flute following.
