@@ -1,5 +1,8 @@
 # Wiki Index
 
+- [War Mode preference FIFO](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15) — three authentic territory/wire held-writer REDs→five controls; fresh honor and receipt-bound current-instance/departure effects, runtime/release pending.
+- [Titan's Grip FIFO merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) — owned dual-wield/Titan subclass capability snapshot without restoring synchronous inventory writes; intersecting controls pending.
+
 - [Housing destination transaction boundary](investigations/server-tick-lag.md#housing-destination-transaction-boundary--2026-10-15) — atomic destination/map/admission, pending-snapshot merge and six departure/relog cases across all four commands; merged controls pass with one repaired fixture; warning-free runtime/format checks pass, release coverage pending.
 - [Cold release repeatability boundary](investigations/server-tick-lag.md#cold-release-repeatability-boundary--2026-10-15) — retain startup55.8ms failure and later passing same-artifact capture separately; login-only, full gameplay/HOL open.
 

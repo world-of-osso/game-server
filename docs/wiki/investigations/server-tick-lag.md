@@ -2,6 +2,16 @@
 
 The :5000 dev server ran its 20 Hz simulation at 55–70% of real time while players were online (2026-09-28/29). Cause: outer frames of the debug build took longer than the 50 ms tick, and under machine load they passed Bevy's 250 ms catch-up clamp, which discards the excess time ([[tick-loop-design]]). Frame cost was dominated by per-tick scans over all ~184 000 spawned creatures and by debug (opt-level 0) codegen of the server crate. Branch `ticklag` removes the scans; the debug build then holds 20 ticks/s with three clients at 15–29 ms per frame on a loaded machine, where the baseline reached 44–64 ms with up to 122 of 200 frames over budget per 10 s.
 
+## War Mode preference FIFO — 2026-10-15
+
+`pvp_war_mode::receive_requests` retains the existing territory/rest/combat/instance validation, then queues only the authenticated desired preference. The shared writer reads fresh PvP progress and changes that flag without resetting honor, brackets or talent choices. Same-account/character/player receipts gate preference publication, Enlisted aura changes and owner snapshots. Active effects use the player's current context: an instance entered while the write was pending keeps the durable preference but receives no Enlisted aura. A departed session receives neither the effect nor the success snapshot.
+
+Authentic Stormwind Trade District terrain (MCNK5148/parent1519), AreaTable/faction metadata, city rest and real `PvpChannel` requests reproduce three held-writer REDs252.7–253.1ms. `war-mode-fifo-green-corrected.log` at82caa573 has5/5 passes: fresh prior honor777, departure, current-instance completion, existing instance aura removal and original source rules. The wire fixture includes normal `sync_state`, so an instance-context update reporting the old preference is distinguished from the later committed toggle. The initial setup failure (missing explicit rest registry population) and first GREEN compile failure (resource visibility) remain separate artifacts, not successful proof. Post-merge runtime verification/release coverage remain pending.
+
+## Titan's Grip FIFO merge — 2026-10-15
+
+Master50fcd1c5 added learned effect155 subclass masks beside effect40 dual wield. The merge keeps both capabilities as a small owned `WeaponSkills` snapshot for each actual inventory request, then applies it to the model loaded from fresh durable rows on FIFO. No complete spell catalog is cloned, no synchronous inventory mutation is restored, and idle connections do not build capability snapshots. Incoming two-hand/off-hand/subclass/unlearning controls and existing inventory receipt controls are queued for verification. This integration is not yet a passing proof.
+
 ## Housing destination transaction boundary — 2026-10-15
 
 Housing location requests now share the serial FIFO with layout, access, collection, purchase and dye writes. A location job owns its catalog/party snapshot and reads durable access at its FIFO position. `save_house_location` and `save_neighborhood_location` commit character coordinates, `CHARACTER_MAPS` and property admission in one transaction. A second location request cannot overtake an already pending admission. Successful receipts gate live transfer and owner reply; a departed/replaced session or changed source map is not teleported.

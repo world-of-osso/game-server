@@ -1,3 +1,7 @@
+## 2026-10-15 — War Mode FIFO and Titan's Grip merge
+
+[War Mode](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15): three real-territory/wire held-writer REDs become5/5 controls, preserving earlier honor and current-instance/departed-session effect boundaries. [Titan merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) keeps effect40/155 metadata in owned requests and preserves fresh FIFO inventory writes; merged capability controls/runtime verification remain pending.
+
 ## 2026-10-15 — Atomic housing destinations and retained cold failure
 
 [Destination boundary](investigations/server-tick-lag.md#housing-destination-transaction-boundary--2026-10-15): three reopened-redb relog REDs become GREEN by committing destination/map/admission together and merging pending FIFO snapshot outcomes. Six departure/relog cases and four held-writer controls pass after master integration;59 intersecting controls plus the separately repaired editor fixture pass. Warning-free merged runtime check and formatting pass; release gameplay remains pending. [Cold repeatability](investigations/server-tick-lag.md#cold-release-repeatability-boundary--2026-10-15): startup55.8ms failure is not superseded by later same-artifact passing percentiles.
