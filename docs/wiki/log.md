@@ -1,3 +1,7 @@
+## 2026-10-15 — General promoted-map spellclick publication
+
+[Source spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): lead rejects NPC-specific filtering; authentic map628+559 RED expects nine source rows, got one. Refresh all spawned-entry rows, preserve unrelated entries and transaction rollback on absent source table. Process GREEN pending; no canonical write.
+
 ## 2026-10-15 — Normal Demolisher spellclick promotion
 
 [Demolisher source row](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): authentic copy/map628 promotion RED proves34775→66245 omitted. Exact source-row copy and missing-source rollback added inside normal population transaction; process GREEN pending, no canonical write. [Movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) importer3PASS retains source Flags/TurnSpeed; current driving/native gates remain open.

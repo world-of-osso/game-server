@@ -52,17 +52,15 @@ def import_creatures(conn, map_list):
     population.import_creature_relationships(conn)
 
 
-def import_isle_demolisher_spellclick(conn):
-    source = conn.execute(
-        "SELECT npc_entry,spell_id,cast_flags,user_type FROM tdb_npc_spellclick_spells WHERE npc_entry=34775"
-    ).fetchall()
-    if not source:
-        raise ValueError("missing authored Isle Demolisher34775 spellclick")
+def import_spellclicks(conn, map_list):
+    entries = f"SELECT DISTINCT id1 FROM content_creature WHERE map IN ({map_list})"
     conn.execute("""CREATE TABLE IF NOT EXISTS content_npc_spellclick_spells
         (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER,
          PRIMARY KEY(npc_entry,spell_id))""")
-    conn.execute("DELETE FROM content_npc_spellclick_spells WHERE npc_entry=34775")
-    conn.executemany("INSERT INTO content_npc_spellclick_spells VALUES (?,?,?,?)", source)
+    conn.execute(f"DELETE FROM content_npc_spellclick_spells WHERE npc_entry IN ({entries})")
+    conn.execute(f"""INSERT INTO content_npc_spellclick_spells (npc_entry,spell_id,cast_flags,user_type)
+        SELECT npc_entry,spell_id,cast_flags,user_type FROM tdb_npc_spellclick_spells
+        WHERE npc_entry IN ({entries})""")
 
 
 def apply_population(conn, maps):
@@ -73,8 +71,7 @@ def apply_population(conn, maps):
     population.select_instance_spawns(conn, map_list=map_list)
     import_creatures(conn, map_list)
     population.import_gameobjects(conn, report, map_list=map_list, rebuild_pools=False)
-    if 628 in maps:
-        import_isle_demolisher_spellclick(conn)
+    import_spellclicks(conn, map_list)
     world_population.restore_rows(conn, snapshots)
     counts = {str(m): {t: conn.execute(f"SELECT count(*) FROM content_{t} WHERE map=?", (m,)).fetchone()[0]
                        for t in ("creature", "gameobject")} for m in maps}
