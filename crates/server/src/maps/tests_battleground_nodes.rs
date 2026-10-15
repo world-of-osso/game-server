@@ -558,7 +558,7 @@ fn isle_channel_workshop_demolisher_spellclick_boards_its_source_driver_seat() {
                 .map(|id| data.store.get(id).unwrap().clone())
                 .collect(),
         ));
-        app.add_plugins(crate::vehicle::VehiclePlugin);
+        crate::vehicle::tests::install_source_vehicle_runtime(app);
     });
     let actor = &entered.players[0];
     let h = &mut entered.h;
