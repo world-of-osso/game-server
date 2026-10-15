@@ -185,16 +185,23 @@ mod tests {
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
-        // TC a352b1fa DBCEnums.h:2103; ConditionMgr.cpp:2806–2826,2923.
-        // Authored Wailing Caverns33956: ClientExecutable, PvPFaction0, tuning193(8–30).
-        let condition = load_condition(&conn, 33956).unwrap();
-        for (level, eligible) in [(7, false), (8, true), (30, true), (31, false)] {
+        // Authored Random Battleground34154: ClientExecutable, PvPFaction0, tuning982(10–90).
+        let condition = load_condition(&conn, 34154).unwrap();
+        for (level, eligible) in [(9, false), (10, true), (90, true), (91, false)] {
             assert_eq!(
                 condition.evaluate(level, None),
                 Ok(eligible),
                 "level{level}"
             );
         }
+        // Wailing Caverns33956 also requires ModifierTree143498; keep it unknown.
+        let unknown = load_condition(&conn, 33956).unwrap();
+        assert!(
+            unknown
+                .evaluate(20, None)
+                .unwrap_err()
+                .contains("ModifierTreeID")
+        );
     }
 
     #[test]
