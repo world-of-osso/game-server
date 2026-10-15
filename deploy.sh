@@ -56,6 +56,12 @@ ssh "$SERVER_HOST" "chown -R game-server:game-server ${STATE_DIR}"
 echo "Restarting service..."
 ssh "$SERVER_HOST" "systemctl restart game-server"
 
-echo "Waiting for startup..."
-sleep 2
-ssh "$SERVER_HOST" "systemctl status game-server --no-pager -l"
+echo "Waiting for the first tick (startup loads world data for ~90 s)..."
+# A crash-looping server used to leave this script exiting 0 (2026-10-14); fail unless it ticks without restarting.
+ssh "$SERVER_HOST" 'since=$(systemctl show -p ActiveEnterTimestamp --value game-server)
+for _ in $(seq 1 48); do
+	sleep 5
+	if [ "$(systemctl show -p NRestarts --value game-server)" != 0 ]; then echo "game-server restarted during startup" >&2; journalctl -u game-server -n 20 --no-pager >&2; exit 1; fi
+	journalctl -u game-server --since "$since" --no-pager | grep -q "Tick " && { systemctl status game-server --no-pager | head -5; exit 0; }
+done
+echo "game-server did not tick within 240 s" >&2; journalctl -u game-server -n 20 --no-pager >&2; exit 1'
