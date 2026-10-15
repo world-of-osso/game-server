@@ -86,7 +86,7 @@ struct PoolTemplate {
 }
 
 /// Every pool of world.db (`PoolMgr` after `LoadFromDB`).
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct SpawnPools {
     templates: BTreeMap<u32, PoolTemplate>,
     /// `mCreatureSearchMap`, `mGameobjectSearchMap`, `mPoolSearchMap`: member -> its pool.

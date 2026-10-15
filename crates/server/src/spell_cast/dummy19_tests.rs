@@ -55,7 +55,8 @@ fn dummy19_flurry_native_three_not_four_bolts() {
 }
 #[test]
 fn dummy19_mutilate_variable394_half_offhand() {
-    let mut h = fixture(&[1329, 5374, 27576], 4);
+    let mut h = fixture(&[1329, 5374, 27576, SUNWELL_RADIANCE], 4);
+    apply_native_enemy_dodge_reduction(&mut h);
     let npc = h.npc;
     execute(&mut h, 1329, npc);
     h.advance(4);

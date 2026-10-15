@@ -107,7 +107,7 @@ Bounded low-count batch only: offspec Crusader's Might cooldown variants, Judgme
 
 ### Twelfth-batch actor/resource/snapshot consumers
 
-- [x] Feral Spirit51533 summons228562's native two29264 Spirit Wolves, using only imported guardian_spells bindings. Summon duration/owner cleanup use native lifecycle; wolf melee, movement immunity, buff/Maelstrom and elemental variants remain uncertified.
+- [x] Feral Spirit51533 summons228562's native two29264 Spirit Wolves, using only imported guardian_spells bindings. Count belongs to the native child summon effect; the parent must not multiply it again. Summon duration/owner cleanup use native lifecycle; wolf melee, movement immunity, buff/Maelstrom and elemental variants remain uncertified.
 - [x] The actual49206 Gargoyle's bound51963 always critically strikes with1242147. Successful owner Runic Power costs increase its native211947 damage aura by1% per displayed point (49206s4), using PowerType's display modifier. Refused/triggered casts do not empower it; other owners/actors are excluded. Non-demon stat inheritance and Army-of-the-Dead entry are not certified.
 - [x] Dispatch2098 and Eviscerate196819 scale their native damage by the actual combo points paid at successful launch; later pool changes cannot alter hits. Optional6/7-point variants remain uncertified.
 - [x] Rake1822's named155722 bleed snapshots the231052-or405834 stealth damage bonus at application; later stealth/rank removal does not reduce its ticks. Reapplication recomputes the snapshot.
@@ -300,7 +300,7 @@ Scope/ranking: [all40-spec table](../spell-mechanics-coverage.md). Flat optional
 
 - [x] Frozen Orb84721 hits apply named205708; Blizzard190357 hits apply named12486. Only landed hits refresh owned slows, with each native duration. Orb movement/pursuit and Blizzard field generation remain separate gaps.
 - [x] Survival Kill Command259489 routes named259277 from the caster's actual owned persistent pet to the explicit enemy. Foreign pets are excluded; native root Focus gain remains generic. Pet inheritance/AI and260285 talent remain uncertified.
-- [x] Wildfire Bomb259495 resolves named265157 at its primary with s3's80% bonus and named269747's native owned bleed. The179 cone actor, secondary targets and s2 reduced-damage curve remain unsupported. No invented splash geometry.
+- [x] Wildfire Bomb259495 resolves named265157 at its primary with s3's authored percentage bonus and named269747's native owned bleed. The179 cone actor, secondary targets and s2 reduced-damage curve remain unsupported. No invented splash geometry.
 - [x] Deathmark360194 restores s3's80 Energy over its native16sec bleed clock, only while that owned aura ticks. Named poison duplication/vulnerability remain uncertified.
 - [x] Eye Beam198013 ticks named198030 at its in-range forward primary on its native200ms channel clock. Secondary129 cone geometry remains unsupported. Native2000ms/200ms and EXTRA_INITIAL_PERIOD author eleven hits; variable316's total-damage expression references ten (retained data discrepancy, not a synthetic clock). Active320415 guarantees critical strikes. Ordinary crit applies without that rank. Channel cancellation stops attacks; extended duration/soft cap/343311 haste remain unsupported.
 - [x] Metamorphosis191427 resolves named200166 damage within the tooltip's8yd destination area, stuns nonplayers and applies247121 daze to players instead. Native endpoint movement is retained; leap traversal/talent cooldown resets remain uncertified.

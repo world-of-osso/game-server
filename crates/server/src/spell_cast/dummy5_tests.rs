@@ -35,7 +35,8 @@ fn bite(rank: bool) -> f32 {
     if rank {
         ids.push(258876);
     }
-    let mut h = harness(Vec::new(), &ids, 12).expect("real catalog");
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 12).expect("real catalog");
     let caster = h.caster;
     if rank {
         apply(&mut h, caster, caster, 258876, u32::MAX);
@@ -61,7 +62,12 @@ fn chaos_strike(chance: u32) {
     let mut proc = world_db().unwrap().store.get(197125).unwrap().clone();
     // Explicit chance endpoints on the real catalog, not a frequency assertion.
     proc.aura_options.as_mut().unwrap().proc_chance = chance;
-    let mut h = harness(vec![proc], &[162794, 222031, 199547, 193840], 12).expect("real catalog");
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        vec![proc],
+        &[162794, 222031, 199547, 193840],
+        12,
+    )
+    .expect("real catalog");
     h.set_power(PowerType::Fury, 50.0);
     h.cast_and_deliver(162794, Some(h.npc));
     h.advance(4);

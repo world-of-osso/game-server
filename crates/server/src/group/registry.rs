@@ -187,6 +187,11 @@ fn notice(to: CharacterId, code: GroupMessageCode, name: &str) -> GroupEffect {
 impl GroupRegistry {
     // --- Chat-routing hooks ---
 
+    /// Stable group identity; private summons retain this ID across roster changes.
+    pub(crate) fn group_id(&self, member: CharacterId) -> Option<GroupId> {
+        self.membership.get(&member).copied()
+    }
+
     /// Whether two characters are in the same party or raid.
     pub fn is_in_same_group(&self, a: CharacterId, b: CharacterId) -> bool {
         match (self.membership.get(&a), self.membership.get(&b)) {

@@ -5,8 +5,6 @@ fn spawn_level_achievement_fixture(
     database: redb::Database,
     carried_species: u32,
 ) -> (App, Entity, Entity, Entity, u64) {
-    let (character_id, _) =
-        crate::persistence::create_character(&database, 42, "Petleveler", 1, 1).unwrap();
     let catalog = super::tests::catalog();
     let mut journal = PetJournal::default();
     journal
@@ -16,7 +14,27 @@ fn spawn_level_achievement_fixture(
     journal
         .add_with_guid(39, 25, PetQuality::Rare, 3, 42)
         .unwrap();
+    spawn_owned_pet_achievement_fixture(database, journal, catalog)
+}
+
+fn spawn_owned_pet_achievement_fixture(
+    database: redb::Database,
+    journal: PetJournal,
+    catalog: WildCatalog,
+) -> (App, Entity, Entity, Entity, u64) {
+    let (character_id, _) =
+        crate::persistence::create_character(&database, 42, "Petleveler", 1, 1).unwrap();
     crate::battle_pets::save_journal(&database, 42, &journal);
+    spawn_saved_pet_achievement_fixture(database, catalog, character_id, 42)
+}
+
+fn spawn_saved_pet_achievement_fixture(
+    database: redb::Database,
+    catalog: WildCatalog,
+    character_id: u64,
+    account_id: u64,
+) -> (App, Entity, Entity, Entity, u64) {
+    let achievements = crate::persistence::load_achievements(&database, character_id);
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
@@ -49,7 +67,7 @@ fn spawn_level_achievement_fixture(
                 appearance: Default::default(),
             },
             shared::components::Level(1),
-            crate::achievement::PlayerAchievementState::default(),
+            achievements,
             position,
             crate::maps::InMap::continent(0),
             Health {
@@ -61,7 +79,7 @@ fn spawn_level_achievement_fixture(
     let connection = app
         .world_mut()
         .spawn((
-            Authenticated { account_id: 42 },
+            Authenticated { account_id },
             InWorld { character_id },
             PlayerLink(owner),
             lightyear::prelude::RemoteId(lightyear::prelude::PeerId::Local(1)),
@@ -172,10 +190,29 @@ fn refuse_stale_and_forfeit(
     assert_eq!(pet.xp, 1979);
 }
 
+fn assert_earned_pet_type(state: &crate::achievement::PlayerAchievementState, pet_type: u8) {
+    for (criterion, required_type) in [(21377, 9), (21378, 5)] {
+        assert_eq!(
+            state.criteria_progress.get(&criterion),
+            (pet_type == required_type).then_some(&1),
+            "actual earned-level species type must match criterion{criterion}"
+        );
+    }
+}
+
 #[test]
 fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
     // Falcosaur1974–1977 have no imported species states; native qualified162 is unproved.
     for species in [39, 1426] {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let pet_type: u8 = conn
+            .query_row(
+                "SELECT PetTypeEnum FROM battle_pet_species_metadata WHERE ID=?1",
+                [species],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(pet_type, if species == 39 { 9 } else { 5 });
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("species.redb");
         let database = redb::Database::create(&path).unwrap();
@@ -191,6 +228,16 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
             None,
             "owned level24 is not credit"
         );
+        for criterion in [21377, 21378] {
+            assert!(
+                !app.world()
+                    .get::<crate::achievement::PlayerAchievementState>(owner)
+                    .unwrap()
+                    .criteria_progress
+                    .contains_key(&criterion),
+                "starting journal level does not credit type78"
+            );
+        }
         refuse_stale_and_forfeit(app.world_mut(), connection, owner, creature);
         assert!(
             app.world()
@@ -200,6 +247,16 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
                 .get(&25123)
                 .is_none()
         );
+        for criterion in [21377, 21378] {
+            assert!(
+                !app.world()
+                    .get::<crate::achievement::PlayerAchievementState>(owner)
+                    .unwrap()
+                    .criteria_progress
+                    .contains_key(&criterion),
+                "refused or forfeited battle does not credit type78"
+            );
+        }
         play_native_carry_battle(app.world_mut(), connection, owner, creature);
         assert_eq!(
             app.world()
@@ -223,6 +280,7 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
                 "actual pet species and level must match type160/162 criterion{criterion}"
             );
         }
+        assert_earned_pet_type(state, pet_type);
         let expected = (species == 1426).then_some(&1);
         assert_eq!(
             state.account.as_ref().unwrap().earned_ids.contains(&9070),
@@ -237,6 +295,12 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
                 .get(&25123),
             expected,
             "idle does not replay level credit"
+        );
+        assert_earned_pet_type(
+            app.world()
+                .get::<crate::achievement::PlayerAchievementState>(owner)
+                .unwrap(),
+            pet_type,
         );
         drop(app);
         let database = redb::Database::open(&path).unwrap();
@@ -254,6 +318,10 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
                 (species == required_species).then_some(&1)
             );
         }
+        assert_earned_pet_type(&saved, pet_type);
         assert_eq!(crate::battle_pets::load_journal(&database, 43).count(), 0);
     }
 }
+
+#[path = "wild_pet_family_grant_tests.rs"]
+mod family_grants;

@@ -589,6 +589,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
         },
         build_player_identity(data),
         UnitFactionTemplate(crate::faction::faction_template_for_race(data.race)),
+        crate::faction::current_pvp_faction_for_race(data.race),
         data.equipment_appearance.clone(),
         build_player_runtime_components(character_id, data),
     )

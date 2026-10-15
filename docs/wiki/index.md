@@ -1,5 +1,42 @@
 # Wiki Index
 
+- [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
+- [Titan's Grip hand rules](systems/inventory.md#titans-grip-hand-rules--2026-10-15) — native effect155 capability/masks and type17 hand placement; three behavioral REDs→nine scoped controls GREEN, check/fmt pass; acquisition, unlearn-time eviction and full-Fury acceptance unclaimed.
+
+- [Ordinary NPC physical-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native49 front/rear RED→GREEN, source tuning and separate health buffer; exact chance3/3/9/7.5 component proof, not sampled attack distribution/full NPC loadouts.
+
+- [Signed attacker enemy dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native251 before expertise/clamp; authenticated Strike damage RED→GREEN11 with signed/clamp/removal/ownership and Evasion/expertise controls; full251/abilities remain open.
+
+- [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; neutral-NPC RED invalidated; corrected hostile40 genuine stun RED→GREEN3,256 miss/resist outcomes; full hit/ability acceptance open.
+
+- [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — native240/4 caster-only reduction; receiver-corrected62627/38598 Strike/Evasion RED→GREEN, removal/ownership and merged31 controls/check/fmt pass; wider hit system remains open.
+
+- [Live player weapon-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — real Rogue Evasion and receiver stat producer; six direction/control/flag/ranged/lifecycle controls, NPC/attacker-modifier/full hit-system gaps retained.
+
+- [Wildfire primary variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) — reproduced valid upper draw292, source-aligned interval and distinct AP/RAP; merged76 controls/check/fmt pass, no runtime coefficient change.
+
+- [Shared weapon-spell defense roll](systems/player-damage.md#shared-weapon-spell-defense-roll) — native cumulative miss/deflect/block and quantization,19 bounded controls; other hit-system outcomes remain gaps.
+
+- [Ordinary NPC weapon-spell blocks](systems/player-damage.md#native-player-criticalblock-hit-state) — authenticated NO_BLOCK16 versus NO_XP64, native30%/critical60% damage and facing/stun; four NPC plus eleven player controls pass, Totem runtime/full probability order remain gaps.
+- [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
+- [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates, integrated native/catalog/pinned4/4; full ten-family grant unclaimed.
+- [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates/integrated4/4; [twenty-battle follow-up](systems/dungeon-achievements.md#full-family-earned-level-proof) earns both ten-family grants with persistent injuries/dates/reopen.
+
+- [Remaining source-only criteria boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) —44/58/64 lack executable rules;153 has no matching native action-set path;218 requires pinned hard-false Party Sync leaves.
+
+- [Started-child statistics](systems/dungeon-achievements.md#started-child-statistic-projection) — native40/299/94 kills prove107sum3/1336max2/1337distinct2; zero/refused/dead/idle/reopen controls.
+
+- [Creature-type kill statistics](systems/dungeon-achievements.md#creature-type-kill-statistics) — actual killed-NPC type30/78, source40/299 lethal casts and reopened counters.
+
+- [Spawn-group guardian count](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14) — Scarab2301 flag routing, variable count and independent native5yd secondary scatter; other count paths remain open.
+
+- [Toy initial random destination radius](systems/toys.md#initial-random-destination-radius-2026-10-14) — native72/86 disk area versus91 fixed distance; independent of secondary scatter and unresolved Flute following.
+
+- [Source Toy facing](systems/toys.md#source-facing-boundary-2026-10-13) — two roots, inclusive180° arc and strict exact3D target-radius exemption; no CombatReach substitution.
+
+- [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
+
+- [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
 - [Wailing targeted aggro Say](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) — attacker-name substitution, unchanged25yd broadcast, controlled native-server proof; natural activation/native clear open.
 
 - [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
@@ -305,7 +342,7 @@ Server gameplay systems.
 | [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
 | [[spell-info]] | SpellStore (every DB2 spell, all effects/costs/options at DifficultyID 0, charge categories), ClassSpells, raw power-cost units, load cost |
 | [[character-stats]] | Retail 12.x player stats: SimC class/race base stats, CASC hppersta/basemp/combatratings, spec main stat and mastery, `StatModifiers` aura fold-in, base-mana costs, gaps (no gear/weapon data) |
-| [[spell-casting]] | [Third local-Retail class script batch](systems/spell-casting.md#third-batch-local-retail-rows), TDB1210-authored fixed destinations and Retail nullable facing, spell teleports/leaps, aura overrides, tested class spell scripts (Dummy bridges, damage/crit modifiers, target plans, removal rewards and live armor), cast pipeline, single-slot 400 ms spell queue with start-time costs, cast bars/channels, GCD/cooldowns/charges, targets/effects, temporary summons and data-bound spell area triggers, combat log, fractional power/rune replication and known-spell check |
+| [[spell-casting]] | [Third local-Retail class script batch](systems/spell-casting.md#third-batch-local-retail-rows), TDB1210-authored fixed destinations and Retail nullable facing, spell teleports/leaps, aura overrides, tested class spell scripts (Dummy bridges, damage/crit modifiers, target plans, removal rewards and live armor), cast pipeline, single-slot 750 ms spell queue with start-time costs, cast bars/channels, GCD/cooldowns/charges, targets/effects, temporary summons and data-bound spell area triggers, combat log, fractional power/rune replication and known-spell check |
 | [[auras]] | Mechanic immunity 77, reduced damage pushback 149, absolute movement cap 191; aura runtime: stacking/refresh, periodic ticks, Recuperate full-health completion, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Maps 0 and 1 plus dungeon copies in one World by `InMap`; map transfers (NewWorld/WorldPortAck), InstanceManager, area trigger teleports; per-zone sets still proposed |
@@ -355,8 +392,10 @@ Debug logs and root cause analyses.
 - [Ruby authored support and search](systems/navigation.md#ruby-authored-support-and-vertical-search--2026-10-13) — sourced metalplate normals, creature/player map-height separation and TC nominalY5; query/native fixture proof is not full-dungeon completion.
 - [Charred Warblades](systems/auras.md#charred-warblades) — native Fire-damage accumulation and one-use periodic self-heal; class goal remains open.
 
+- [Group-private summon runtime](systems/toys.md#source-group-private-runtime-2026-10-13) — source group identity and roster-driven interest transitions.
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
 
+- [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the unresolved Flute follow promise.
 - [Wailing wake-up and flight exit](systems/boss-scripts.md#wailing-wake-up-and-flight-exit--2026-10-15) — source21–27 controlled RED/GREEN, real distinct flight endpoints/retirement and ordinary5s Owl cast; lead gate pending.
 
 - [Wailing Normal wave projection](systems/boss-scripts.md#wailing-normal-wave-projection--2026-10-15) — copy-only source Normal rows; two process-boundary tests pass, no canonical/balance claim.

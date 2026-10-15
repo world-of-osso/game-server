@@ -250,8 +250,12 @@ pub(crate) fn use_toy(
                 .retail[&item_id]
                 .scaling,
         );
-    crate::spell_cast::cast_toy_spell(world, player, &toy, target, item_level, request)
-        .map_err(|failure| format!("{failure:?}"))
+    crate::spell_cast::cast_toy_spell(world, player, &toy, target, item_level, request).map_err(
+        |failure| match failure {
+            crate::spell_cast::CastFailure::IncorrectArea(_) => failure.to_contract().1.unwrap(),
+            _ => format!("{failure:?}"),
+        },
+    )
 }
 
 /// Called by normal UseItem before casting the item's spell. Returns false for non-toys.
