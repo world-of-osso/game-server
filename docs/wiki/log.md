@@ -1,6 +1,6 @@
 ## 2026-10-14 — Pet-level species compiler
 
-[Species91](systems/dungeon-achievements.md#pet-level-species-qualifiers-acceptance-pending) compilerb6aaad84 qualifies sole160/162 species with authored level1–25;5/5 compiler tests and149 generated predicates. Native matching remains pending. Initial fixture used legacy XP;34411d29 switches to imported1979/1980. No accepted runtime census gain, capture/win species or acquisition/UI claim.
+[Species91](systems/dungeon-achievements.md#pet-level-species-qualifiers-acceptance-pending) compilerb6aaad84 qualifies sole160/162 species with authored level1–25;5/5 compiler tests and149 generated predicates. Runtime693218ca preserves actual species/level; native/catalog90220bb0 GREEN2/2(11.08s) proves real9070 grant, negatives and reopened counters. Actual census5491/1821 adds only account9070; all243 rows/pinned membership reconcile. Initial fixture used legacy XP;34411d29 switches to imported1979/1980. Qualified162 positive is catalog-only because1974–1977 lack combat states. Final filtered gate/checks/fmt pending; no capture/win species or acquisition/UI claim.
 
 ## 2026-10-14 — Honor-family and legacy challenge source audit
 
