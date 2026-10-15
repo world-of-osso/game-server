@@ -111,7 +111,17 @@ fn assert_later_currency_publication(preference: Preference) {
         );
         std::thread::sleep(Duration::from_millis(1));
     }
-    h.advance(6);
+    let mut replies = Vec::new();
+    for _ in 0..6 {
+        h.advance(1);
+        replies.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<PvpStateUpdate>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
     assert_eq!(
         h.app
             .world()
@@ -136,13 +146,6 @@ fn assert_later_currency_publication(preference: Preference) {
         Preference::Talent => assert_eq!(live.progress.pvp_talents[&70][&1], 752),
         Preference::WarMode => assert!(live.progress.war_mode_desired),
     }
-    let replies: Vec<_> = h
-        .app
-        .world_mut()
-        .get_mut::<MessageReceiver<PvpStateUpdate>>(h.connection)
-        .unwrap()
-        .receive()
-        .collect();
     assert_eq!(
         replies.last().unwrap().snapshot.as_ref().unwrap().honor,
         777
