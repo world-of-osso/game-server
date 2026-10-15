@@ -385,7 +385,12 @@ pub(super) fn on_applied(world: &mut World, unit: Entity, aura: &AuraInstance) {
     match mount_display(world, unit, aura, creature) {
         Some(mount_display_id) => {
             let vehicle_id = crate::vehicle::mount_vehicle_id(world, creature as u32);
+            let mount_id = world
+                .get_resource::<MountStore>()
+                .and_then(|store| store.mount_for_spell(aura.spell_id))
+                .map_or(0, |mount| mount.id);
             world.entity_mut(unit).insert(Mounted {
+                mount_id,
                 mount_display_id,
                 vehicle_id,
                 ..Default::default()
