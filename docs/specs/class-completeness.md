@@ -4,6 +4,18 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] At the existing live-player melee weapon-spell dodge boundary, caster aura251 contributes its signed active total before expertise subtraction and final nonnegative clamp. Positive and negative native effects sum on the actual attacker; recipient-only effects do not contribute, and removal ends the modifier. Keep native facing/control/attribute/ranged exclusions. NPC dodge, aura248, player expertise and full251/ability acceptance remain separate.
+
+- [ ] Physical weapon-spell resistance consumes victim aura117 totals for the effect mechanic when nonzero, otherwise the spell category mechanic; take the nonnegative maximum total across selected mechanics, not their sum. Add its truncated hundredths after miss and before NoActiveDefense on the same native roll; resisted casts apply no stun/control effects. Recipient ownership, removal and mismatched selectors retain native behavior. Magic probability and full-ability acceptance remain separate.
+
+- [ ] Non-player attacker native aura240 expertise reduces live player melee weapon-spell dodge by one percentage point per four expertise, clamped at zero. Only the actual caster's active expertise contributes; removal restores native avoidance. Real NPC Hit Buffs62627 and native Strike38598 against a Rogue's real Evasion exercise the boundary without fake AP/dodge values. Player expertise, NPC dodge, parry, generic aura-handler/census and whole-spell certification remain separate requirements.
+
+- [ ] Existing live player DodgePercentage feeds melee weapon-spell hit resolution before block on the same cumulative native roll. Native Evasion5277 self-cast must prevent frontal melee damage; behind-player attacks, controlled/casting states, NoAttackDodge/NoActiveDefense and ranged attacks retain source exclusions. Removal/expiry restore the live value. NPC dodge, player expertise/248/251 modifiers and complete hit probabilities remain distinct unproved boundaries.
+
+- [ ] Implemented weapon-spell miss, ranged deflection and block chances share one native integer roll0..9999 with cumulative probabilities truncated to hundredths of a percent. NativeNoAttackMiss/NoActiveDefense and existing target guards retain their ordering. Magic hit behavior remains separate. Missing NPC dodge/parry and player baseline hit statistics remain explicit gaps; physical mechanic resistance has its own bounded requirement above, while magic remains unproved; this bounded table does not certify the full source hit system.
+
+- [ ] Native weapon-spell blocks on ordinary NPCs use authenticated template `flags_extra` (NO_BLOCK16, distinct from NO_XP64), 3% plus victim aura51 and 1.5% per positive effective level difference. They stop native30% damage, or60% on a critical block, before shields. Shared facing/control/attribute exclusions remain intact. Missing template authority fails explicitly. Totem identity requires the source summon runtime, never creature type or title alone; unsupported Totem/Lightwell spawning and full cumulative hit-table ordering remain separate gaps.
+
 - [x] Record native cast/passive-sync outcomes, warning tuples and raw resources for all 13 classes/all 40 local Retail specs, using level-80 actors and real spell rows, without writing world.db or opening a realm port.
 - [x] Preserve exact missing effect/aura types and source/state prerequisites; never close unidentified Dummy fields with no-ops or guessed coefficients.
 - [x] Census uses authored production destinations/maps, actor identity and group state rather than reporting absent fixture startup resources as product gaps.
@@ -204,3 +216,7 @@ Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast s
 ### Distinct owner attack powers
 
 The replicated owner stats carry distinct melee and ranged attack power. Ranged-defense spell coefficient text uses ranged power, matching native damage selection; other spells and explicit `$AP` tokens retain melee power. Missing owner stats must not synthesize either value from the other.
+
+### Ordinary NPC physical-spell dodge
+
+Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per positive effective-level difference. Rear attacks may be dodged in PvE. Controlled/casting victims, ranged attacks and native avoidance/ignore-result attributes retain their exclusions. Signed attacker251 and nonplayer expertise240 apply before the final nonnegative clamp. Specialized Totem/Lightwell spawning and player expertise/248 remain separate gaps; template creature type must not impersonate runtime IsTotem.

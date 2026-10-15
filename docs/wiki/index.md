@@ -1,7 +1,23 @@
 # Wiki Index
 
 - [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
+- [Ordinary NPC physical-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native49 front/rear RED→GREEN, source tuning and separate health buffer; exact chance3/3/9/7.5 component proof, not sampled attack distribution/full NPC loadouts.
+
+- [Signed attacker enemy dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native251 before expertise/clamp; authenticated Strike damage RED→GREEN11 with signed/clamp/removal/ownership and Evasion/expertise controls; full251/abilities remain open.
+
+- [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; neutral-NPC RED invalidated; corrected hostile40 genuine stun RED→GREEN3,256 miss/resist outcomes; full hit/ability acceptance open.
+
+- [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — native240/4 caster-only reduction; receiver-corrected62627/38598 Strike/Evasion RED→GREEN, removal/ownership and merged31 controls/check/fmt pass; wider hit system remains open.
+
+- [Live player weapon-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — real Rogue Evasion and receiver stat producer; six direction/control/flag/ranged/lifecycle controls, NPC/attacker-modifier/full hit-system gaps retained.
+
+- [Wildfire primary variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) — reproduced valid upper draw292, source-aligned interval and distinct AP/RAP; merged76 controls/check/fmt pass, no runtime coefficient change.
+
+- [Shared weapon-spell defense roll](systems/player-damage.md#shared-weapon-spell-defense-roll) — native cumulative miss/deflect/block and quantization,19 bounded controls; other hit-system outcomes remain gaps.
+
+- [Ordinary NPC weapon-spell blocks](systems/player-damage.md#native-player-criticalblock-hit-state) — authenticated NO_BLOCK16 versus NO_XP64, native30%/critical60% damage and facing/stun; four NPC plus eleven player controls pass, Totem runtime/full probability order remain gaps.
 - [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates, integrated native/catalog/pinned4/4; full ten-family grant unclaimed.
+- [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates/integrated4/4; [twenty-battle follow-up](systems/dungeon-achievements.md#full-family-earned-level-proof) earns both ten-family grants with persistent injuries/dates/reopen.
 
 - [Remaining source-only criteria boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) —44/58/64 lack executable rules;153 has no matching native action-set path;218 requires pinned hard-false Party Sync leaves.
 
@@ -18,13 +34,18 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Wailing targeted aggro Say](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) — attacker-name substitution, unchanged25yd broadcast, controlled native-server proof; natural activation/native clear open.
+
+- [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
+- [Wailing later ritual waves](systems/boss-scripts.md#wailing-later-ritual-waves--2026-10-14) — same-copy Naralex emotes, seven Ectoplasms and actual timed Mutanus; controlled deaths, wake-up/exit still open.
 - [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
 
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
 
 - [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.
 
-- [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
+- [C++ waypoint source generation/ownership](systems/navigation.md#current-controlled-physical-proof) — smooth controls, active-owner reset and exact moving feet; controlled three-path/two-camp traversal passes, natural/native clear open.
+- [Wailing chamber approach](systems/boss-scripts.md#wailing-chamber-approach--2026-10-14) — source1s speech/+5s launch; actual fourth-path78.6692yd with floor/budget/corridor/LOS proof.
 
 - [Alterac captain combat](investigations/alterac-captain-combat.md) — AV25 source stat budget and incomplete normal combat driver; missing script is not a proven wipe cause.
 
@@ -372,3 +393,6 @@ Debug logs and root cause analyses.
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
 
 - [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the unresolved Flute follow promise.
+- [Wailing wake-up and flight exit](systems/boss-scripts.md#wailing-wake-up-and-flight-exit--2026-10-15) — source21–27 controlled RED/GREEN, real distinct flight endpoints/retirement and ordinary5s Owl cast; lead gate pending.
+
+- [Wailing Normal wave projection](systems/boss-scripts.md#wailing-normal-wave-projection--2026-10-15) — copy-only source Normal rows; two process-boundary tests pass, no canonical/balance claim.
