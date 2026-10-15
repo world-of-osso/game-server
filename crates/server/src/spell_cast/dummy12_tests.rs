@@ -86,11 +86,25 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
     let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
     actor_data(&mut h);
     let caster = h.caster;
-    // Native guardian scatter stays within5yd; colocating the dummy keeps
-    // this inheritance fixture independent of chase/movement support.
-    let dummy =
-        crate::zones::summon_creature(h.app.world_mut(), caster, 44548, [0.0, 0.0, 0.0, 0.0])
-            .expect("native Training Dummy template");
+    // Child228562 selects32: the native primary destination is3yd front-left,
+    // not the caster. Center the dummy there so secondary5yd scatter stays in
+    // melee range without teleporting actors or depending on chase support.
+    let child = world_db().unwrap().store.get(228562).unwrap();
+    let destination =
+        super::targets::effect_dest(h.app.world(), caster, Some(h.npc), &child.effects[0], None)
+            .unwrap();
+    let dummy = crate::zones::summon_creature(
+        h.app.world_mut(),
+        caster,
+        44548,
+        [
+            destination.position.x,
+            -destination.position.z,
+            destination.position.y,
+            destination.orientation,
+        ],
+    )
+    .expect("native Training Dummy template");
     assert!(
         h.app
             .world()
@@ -110,7 +124,10 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         .iter()
         .map(|wolf| largest_wolf_hit(&h, *wolf, dummy))
         .collect();
-    assert!(before.iter().all(|damage| *damage > 0), "{before:?}");
+    assert!(
+        before.iter().all(|damage| *damage > 0),
+        "initial wolf hits {before:?}; primary destination {destination:?}"
+    );
     h.inbox.log.clear();
     // Change only the real owner's melee AP, never actor stats or RNG. The
     // hundredfold input change must dominate ordinary block/crit variance.
