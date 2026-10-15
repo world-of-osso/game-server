@@ -32,9 +32,13 @@
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 
 [Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
+## 2026-10-14 — Full native pet-family grants
+
+[Twenty real battles](systems/dungeon-achievements.md#full-family-earned-level-proof) at33782a95 pass1/1(37.10s), proving all0–9 families at10/25, actual6609/6610 grants only after every family, original dates, real Repair/persistent injuries, consumed targets, DB reopen/auth login and account43 isolation. No HP/XP/progress/earned-ID overrides after baseline. Source state161 guard stays intact; optional unsupported Extra Plating was not used. Predicate/census unchanged; acquisition/world population/rendered UI unclaimed.
+
 ## 2026-10-14 — Pet-level type qualifiers, native proof
 
-[BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); other native types/level10/all-ten-family grants remain unclaimed.
+[BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); the subsequent twenty-battle follow-up proves all ten types/10-level/25-level grants; acquisition/rendered UI remain unclaimed.
 
 ## 2026-10-14 — Post-count7 source audit
 
