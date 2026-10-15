@@ -712,6 +712,62 @@ fn companion_item_learning_waits_for_fifo_preserves_prior_wallet_and_pet() {
 }
 
 #[test]
+fn companion_item_storage_failure_is_counted_and_consumes_nothing() {
+    use std::sync::atomic::Ordering;
+    let mut eater = spawn_companion_eater();
+    let account = eater
+        .h
+        .app
+        .world()
+        .get::<Authenticated>(eater.h.connection)
+        .unwrap()
+        .account_id;
+    let db = eater.h.app.world().resource::<GameDatabase>();
+    let failed_before = db.writer.metrics.failed.load(Ordering::Relaxed);
+    let txn = db.db.begin_write().unwrap();
+    txn.open_table(crate::battle_pets::ACCOUNT_PET_JOURNALS)
+        .unwrap()
+        .insert(account, b"invalid journal".as_slice())
+        .unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
+    use_slot(&mut eater, 0);
+    let errors = errors(&mut eater);
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(
+        errors[0]
+            .detail
+            .as_deref()
+            .unwrap()
+            .contains("Decode companion journal")
+    );
+    assert_eq!(count_of(&eater, 4401), 2);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::battle_pets::AccountPetJournal>(eater.h.caster)
+            .unwrap()
+            .journal
+            .count_species(39),
+        0
+    );
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .metrics
+            .failed
+            .load(Ordering::Relaxed),
+        failed_before + 1,
+        "storage failure was treated as an ordinary domain refusal"
+    );
+}
+
+#[test]
 fn companion_item_departure_keeps_old_player_unchanged_and_refreshes_current_account_peer() {
     use shared::protocol::CollectionStateUpdate;
     use std::time::Duration;
