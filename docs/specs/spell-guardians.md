@@ -13,8 +13,8 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - [x] Named49206's temporary Gargoyle uses its native pet-title3238 and authentic27829/51963 binding without enabling generic pet-title actors; [batch12 contract](spell-dummy-scripts.md#twelfth-batch-actorresourcesnapshot-consumers).
 
 ### Feral Spirit owner inheritance
-- [ ] Consume authenticated29264 owner melee AP×0.31 (integer AP and bonus SP), level×3–5 weapon range and template BaseAttackTime. Subsequent swings/spells read live owner power; other families keep their separate formulas. Intrinsic wolf base AP is explicitly unsupported (`FERAL_SPIRIT_INTRINSIC_AP_SOURCE`): authentic archive has no29264 pet_levelstats; TC's fake Strength22 must not be substituted.
-- [ ] Actual51533→228562 creates two29264 wolves that deal positive damage to their owner's training-dummy victim without fabricated wolf AP; native owner-power changes affect subsequent damage. Source classification and stat/attack consumption must be proved separately from Summon event delivery.
+- [x] Consume authenticated29264 owner melee AP×0.31 (integer AP and bonus SP), level×3–5 weapon range and template BaseAttackTime. Subsequent swings/spells read live owner power; other families keep their separate formulas. Intrinsic wolf base AP is explicitly unsupported (`FERAL_SPIRIT_INTRINSIC_AP_SOURCE`): authentic archive has no29264 pet_levelstats; TC's fake Strength22 must not be substituted.
+- [x] Actual51533→228562 creates two29264 wolves that deal positive damage to their owner's training-dummy victim without fabricated wolf AP; native owner-power changes affect subsequent damage. Source classification and stat/attack consumption must be proved separately from Summon event delivery.
 
 ### Source-backed Darkglare attack
 - [x] Native205180 effect28's103673 actor casts205231, explicitly named in the local root description, with native2000ms cast time and20000ms actor lifetime; an empty archive binding table must not disable this named binding.
