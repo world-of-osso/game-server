@@ -254,6 +254,22 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
         }
     }
     if !arrived {
+        let world = h.app.world();
+        if let Some(crate::creature_ai::CreatureState::Pursuing { target }) =
+            world.get::<crate::creature_ai::CreatureState>(disciple)
+        {
+            let target = Entity::from_bits(*target);
+            println!(
+                "stalled actor={disciple:?} unrelated={unrelated:?} target={target:?}: npc={:?} health={:?} map={:?} state={:?} react={:?} dead={} castercombat={:?}",
+                world.get::<Npc>(target),
+                world.get::<Health>(target),
+                world.get::<InMap>(target),
+                world.get::<crate::creature_ai::CreatureState>(target),
+                world.get::<ReactState>(target),
+                world.get::<crate::combat::DeathState>(target).is_some(),
+                world.get::<CombatStatus>(disciple)
+            );
+        }
         let (x, y, z): (f32, f32, f32) = conn.query_row(
             "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=367801 AND NodeId=2",
             [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
