@@ -99,7 +99,16 @@ fn encounter_coverage_wailing_awakening_aura_then_three_source_moccasins() {
     );
     h.advance(0.8);
     let births = &h.app.world().resource::<MoccasinBirths>().0;
-    assert_eq!(births.len(), 3, "actual group2 consists of three Moccasins");
+    assert_eq!(
+        births.len(),
+        3,
+        "actual group2 consists of three Moccasins; state={:?}, combat={:?}, cast={:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(disciple),
+        h.app.world().get::<CombatStatus>(disciple),
+        h.app.world().get::<CastState>(disciple)
+    );
     let rows: Vec<(f32,f32,f32)> = conn.prepare("SELECT position_x,position_y,position_z FROM tdb_creature_summon_groups WHERE summonerId=3678 AND summonerType=0 AND groupId=2 ORDER BY position_x")
         .unwrap().query_map([],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))).unwrap().map(Result::unwrap).collect();
     let mut actual: Vec<_> = births
