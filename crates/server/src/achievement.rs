@@ -1550,3 +1550,6 @@ mod creature_type_tests;
 #[cfg(test)]
 #[path = "achievement_tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "achievement_unknown_spell_tests.rs"]
+mod unknown_spell_tests;
