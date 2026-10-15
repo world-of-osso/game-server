@@ -273,6 +273,306 @@ fn housing_plot_purchase_waits_for_fifo_and_uses_an_earlier_wallet() {
     );
 }
 
+fn house_editor_fixture() -> (Eater, u64, Entity) {
+    use crate::persistence::housing_store as store;
+    use shared::protocol::{HouseAccess, HousingReply, HousingRequest};
+    let mut eater = eater_with_spells(&[245259], 1, &[1238340], MAGE).expect("decor item data");
+    let catalog = crate::housing_catalog::HousingCatalog::read(
+        &crate::housing_acquisition::tests::collection_fixture(),
+    )
+    .unwrap();
+    let db = &eater.h.app.world().resource::<GameDatabase>().db;
+    let mut inventory = persistence::load_inventory(db, eater.character_id);
+    inventory.gold = 20_000_000;
+    persistence::save_inventory(db, eater.character_id, &inventory);
+    let context = store::Actor {
+        account_id: 1,
+        character_id: eater.character_id,
+        neighborhood_id: Some(1),
+        inside_house: None,
+    };
+    let house = store::purchase(db, context, &catalog.plot(417).unwrap()).unwrap();
+    store::redeem(
+        db,
+        context,
+        inventory.items[0].item_guid,
+        &store::RedemptionRule {
+            item_id: 245259,
+            decor_id: 1693,
+        },
+    )
+    .unwrap();
+    store::set_access(
+        db,
+        context,
+        house.house_id,
+        HouseAccess {
+            anyone: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let visitor_character = persistence::create_character(db, 2, "Visitor", 1, MAGE)
+        .unwrap()
+        .0;
+    let conn = rusqlite::Connection::open_with_flags(
+        world_db(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let mut manager = crate::maps::InstanceManager::default();
+    let copy = manager
+        .authorize_housing_entry(&maps, 2783, house.house_id, eater.character_id)
+        .unwrap()
+        .map;
+    let visitor_copy = manager
+        .authorize_housing_entry(&maps, 2783, house.house_id, visitor_character)
+        .unwrap()
+        .map;
+    assert_eq!(copy, visitor_copy);
+    eater.h.app.insert_resource(maps);
+    eater.h.app.insert_resource(manager);
+    eater
+        .h
+        .app
+        .insert_resource(crate::housing::HousingAvailability(Ok(catalog)));
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(eater.h.caster)
+        .insert(copy);
+    let visitor = spawn_player(&mut eater.h.app, MAGE, 0.0);
+    eater.h.app.world_mut().entity_mut(visitor).insert(copy);
+    let visitor_connection = spawn_peer_connection(&mut eater.h.app, visitor, 2);
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(visitor_connection)
+        .insert((
+            Authenticated { account_id: 2 },
+            crate::auth::InWorld {
+                character_id: visitor_character,
+            },
+        ));
+    for connection in [eater.h.connection, visitor_connection] {
+        eater.h.app.world_mut().entity_mut(connection).insert((
+            MessageSender::<HousingReply>::default(),
+            MessageReceiver::<HousingReply>::default(),
+            MessageSender::<HousingRequest>::default(),
+            MessageReceiver::<HousingRequest>::default(),
+        ));
+    }
+    eater
+        .h
+        .app
+        .add_systems(Update, crate::housing::process_requests);
+    (eater, house.house_id, visitor_connection)
+}
+
+#[test]
+fn housing_layout_waits_for_fifo_and_conserves_one_stored_copy() {
+    assert_housing_layout_fifo(false);
+}
+
+#[test]
+fn housing_layout_commit_reaches_visitors_after_editor_leaves() {
+    assert_housing_layout_fifo(true);
+}
+
+fn assert_housing_layout_fifo(editor_leaves: bool) {
+    use shared::protocol::{
+        DecorTransform, HousingChannel, HousingCommand, HousingReply, HousingRequest,
+    };
+    use std::time::{Duration, Instant};
+    let (mut eater, house_id, visitor) = house_editor_fixture();
+    let held = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let owner = eater.h.connection;
+    for request_id in [71, 72] {
+        eater
+            .h
+            .app
+            .world_mut()
+            .get_mut::<MessageSender<HousingRequest>>(owner)
+            .unwrap()
+            .send::<HousingChannel>(HousingRequest {
+                request_id,
+                command: HousingCommand::PlaceDecor {
+                    house_id,
+                    decor_id: 1693,
+                    variant_id: None,
+                    transform: DecorTransform {
+                        position: [0.0, 0.0, 0.0],
+                        yaw: 0.0,
+                        pitch: 0.0,
+                        roll: 0.0,
+                        scale: 1.0,
+                    },
+                },
+            });
+    }
+    let started = Instant::now();
+    eater.h.advance(3);
+    let elapsed = started.elapsed();
+    let premature_owner = drain::<HousingReply>(&mut eater.h.app, owner);
+    let premature_visitor = drain::<HousingReply>(&mut eater.h.app, visitor);
+    if editor_leaves {
+        eater
+            .h
+            .app
+            .world_mut()
+            .entity_mut(owner)
+            .remove::<crate::auth::InWorld>();
+    }
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "housing layout tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature_owner.is_empty() && premature_visitor.is_empty(),
+        "layout reply/broadcast preceded durability"
+    );
+    let mut owner_replies = Vec::new();
+    let mut visitor_replies = Vec::new();
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while visitor_replies.is_empty() || (!editor_leaves && owner_replies.len() < 2) {
+        eater.h.advance(1);
+        owner_replies.extend(drain::<HousingReply>(&mut eater.h.app, owner));
+        visitor_replies.extend(drain::<HousingReply>(&mut eater.h.app, visitor));
+        assert!(
+            Instant::now() < deadline,
+            "committed layout did not converge to owner/visitor"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    if editor_leaves {
+        assert!(owner_replies.is_empty());
+    } else {
+        assert_eq!(owner_replies[0].request_id, 71);
+        assert_eq!(owner_replies[0].error, None);
+        assert_eq!(owner_replies[1].request_id, 72);
+        assert!(
+            owner_replies[1].error.is_some(),
+            "a second place consumed nonexistent storage"
+        );
+        assert!(owner_replies[1].state.stored.is_empty());
+        assert_eq!(
+            owner_replies[1].state.layout.as_ref().unwrap().decor.len(),
+            1
+        );
+    }
+    assert_eq!(visitor_replies[0].error, None);
+    assert_eq!(
+        visitor_replies[0]
+            .state
+            .layout
+            .as_ref()
+            .unwrap()
+            .decor
+            .len(),
+        1
+    );
+    assert!(!visitor_replies[0].state.layout.as_ref().unwrap().can_edit);
+    assert!(
+        visitor_replies[0].state.stored.is_empty(),
+        "visitor received owner storage"
+    );
+}
+
+#[test]
+fn housing_access_waits_for_fifo_and_revokes_visitor_layout_reads() {
+    use shared::protocol::{
+        HouseAccess, HousingChannel, HousingCommand, HousingReply, HousingRequest,
+    };
+    use std::time::{Duration, Instant};
+    let (mut eater, house_id, visitor) = house_editor_fixture();
+    let held = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let owner = eater.h.connection;
+    eater
+        .h
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<HousingRequest>>(owner)
+        .unwrap()
+        .send::<HousingChannel>(HousingRequest {
+            request_id: 81,
+            command: HousingCommand::SaveHouseAccess {
+                house_id,
+                access: HouseAccess::default(),
+            },
+        });
+    let started = Instant::now();
+    eater.h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = drain::<HousingReply>(&mut eater.h.app, owner);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "housing access tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty());
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let reply = loop {
+        eater.h.advance(1);
+        if let Some(reply) = drain::<HousingReply>(&mut eater.h.app, owner).pop() {
+            break reply;
+        }
+        assert!(Instant::now() < deadline, "no durable access reply");
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert_eq!(reply.request_id, 81);
+    assert_eq!(reply.error, None);
+    assert_eq!(
+        reply.state.owned_houses[0].house_access,
+        Some(HouseAccess::default())
+    );
+    eater
+        .h
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<HousingRequest>>(visitor)
+        .unwrap()
+        .send::<HousingChannel>(HousingRequest {
+            request_id: 82,
+            command: HousingCommand::ReloadLayout { house_id },
+        });
+    let denied = loop {
+        eater.h.advance(1);
+        if let Some(reply) = drain::<HousingReply>(&mut eater.h.app, visitor).pop() {
+            break reply;
+        }
+        assert!(Instant::now() < deadline, "no visitor access refusal");
+    };
+    assert_eq!(denied.request_id, 82);
+    assert!(denied.error.is_some());
+    assert!(denied.state.layout.is_none());
+}
+
 #[test]
 fn companion_item_learns_three_instances_and_keeps_fourth_item() {
     let mut eater = eater_with_spells(&[4401], 4, &[4055], MAGE)
