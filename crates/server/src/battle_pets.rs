@@ -16,6 +16,10 @@ use shared::components::{
 use shared::pet_battle::PetJournal;
 use shared::protocol::{CollectionChannel, CollectionStateUpdate, DismissPet, SummonPet};
 use std::collections::HashMap;
+#[path = "companion_learning.rs"]
+mod companion_learning;
+#[cfg(test)]
+pub(crate) use companion_learning::{learn_companion_fixture, persistence_pending};
 #[path = "pet_journal_details.rs"]
 mod journal_details;
 #[cfg(test)]
@@ -171,6 +175,7 @@ struct Companion {
 pub struct BattlePetPlugin;
 impl Plugin for BattlePetPlugin {
     fn build(&self, app: &mut App) {
+        companion_learning::install(app);
         app.add_systems(
             Startup,
             (load_catalog, crate::wild_pet_battles::load_wild_catalog),
@@ -300,51 +305,57 @@ pub(crate) fn send_pet_update(
     send_pet_details(world, connection, owner, error);
 }
 
+pub(crate) struct CompanionItem {
+    pub player: Entity,
+    pub character: u64,
+    pub location: shared::protocol::ItemLocation,
+    pub item: u32,
+    pub guid: u64,
+    pub spell: u32,
+    pub retail_item: Option<u32>,
+}
+
 /// ItemEffect's ITEM_SPELLTRIGGER_LEARN_SPELL identifies the species summon spell.
-pub(crate) fn learn_companion_from_item(
+pub(crate) fn learn_companion_item(
     world: &mut World,
-    owner: Entity,
-    spell: u32,
-    level: u8,
+    source: CompanionItem,
 ) -> Result<bool, String> {
     let Some(species) = world
         .get_resource::<PetCatalog>()
-        .and_then(|catalog| catalog.spells.get(&spell))
+        .and_then(|catalog| catalog.spells.get(&source.spell))
         .copied()
     else {
         return Ok(false);
     };
-    let state = world
-        .get::<AccountPetJournal>(owner)
-        .ok_or("account pet journal unavailable")?;
-    let account_id = state.account_id;
-    let mut journal = state.journal.clone();
-    let guid =
-        crate::persistence::next_id(&world.resource::<GameDatabase>().db, "battle_pet_instance");
-    journal
-        .add_with_guid(
-            species,
-            level,
-            shared::pet_battle::PetQuality::Common,
-            3,
-            guid,
-        )
-        .map_err(|reason| format!("cannot learn pet: {reason:?}"))?;
-    save_journal(&world.resource::<GameDatabase>().db, account_id, &journal);
-    world
-        .get_mut::<AccountPetJournal>(owner)
-        .expect("journal checked")
-        .journal = journal;
-    crate::achievement::record_learned_pet(world, owner, species);
-    refresh_catalog_snapshot(world, owner);
-    let mut connections = world.query::<(Entity, &PlayerLink)>();
+    let account = world
+        .get::<AccountPetJournal>(source.player)
+        .ok_or("account pet journal unavailable")?
+        .account_id;
+    let mut connections = world.query::<(Entity, &Authenticated, &InWorld, &PlayerLink)>();
     let connection = connections
         .iter(world)
-        .find(|(_, link)| link.0 == owner)
-        .map(|(connection, _)| connection);
-    if let Some(connection) = connection {
-        send_pet_update(world, connection, owner, None);
-    }
+        .find(|(_, auth, session, link)| {
+            auth.account_id == account
+                && session.character_id == source.character
+                && link.0 == source.player
+        })
+        .map(|(connection, _, _, _)| connection)
+        .ok_or("authenticated companion learner unavailable")?;
+    companion_learning::enqueue(
+        world,
+        companion_learning::LearningRequest {
+            connection,
+            player: source.player,
+            account,
+            character: source.character,
+            location: source.location,
+            item: source.item,
+            guid: source.guid,
+            species,
+            level: 1,
+            retail_item: source.retail_item,
+        },
+    );
     Ok(true)
 }
 
@@ -641,8 +652,8 @@ mod tests {
         app.world_mut()
             .entity_mut(first)
             .insert(crate::collection::default_collection_state());
-        assert!(learn_companion_from_item(app.world_mut(), first, 4055, 7).unwrap());
-        assert!(learn_companion_from_item(app.world_mut(), second, 4055, 1).unwrap());
+        assert!(learn_companion_fixture(app.world_mut(), first, 4055, 7).unwrap());
+        assert!(learn_companion_fixture(app.world_mut(), second, 4055, 1).unwrap());
         let db = &app.world().resource::<GameDatabase>().db;
         let first_journal = load_journal(db, 42);
         let second_journal = load_journal(db, 43);

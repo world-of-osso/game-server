@@ -1332,7 +1332,13 @@ fn use_slot(eater: &mut Eater, index: u8) {
         eater.errors.extend(errors);
         let pending = crate::toys::persistence_pending(eater.h.app.world())
             || crate::mount_journal::persistence_pending(eater.h.app.world())
-            || crate::housing::persistence_pending(eater.h.app.world());
+            || crate::housing::persistence_pending(eater.h.app.world())
+            || (eater
+                .h
+                .app
+                .world()
+                .contains_resource::<crate::battle_pets::PetCatalog>()
+                && crate::battle_pets::persistence_pending(eater.h.app.world()));
         if pending {
             delivered_frames = 0;
         } else {

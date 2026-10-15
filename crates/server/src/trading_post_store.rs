@@ -233,7 +233,7 @@ fn grant_pet(txn: &WriteTransaction, account: u64, species: u32) -> Result<Grant
         .get("battle_pet_instance")
         .expect("read pet GUID")
         .map_or(1, |row| row.value() + 1);
-    // Existing battle_pets::learn_companion_from_item semantics: level1, Common, balanced breed3.
+    // Companion teaching semantics: level1, Common, balanced breed3.
     journal
         .add_with_guid(species, 1, shared::pet_battle::PetQuality::Common, 3, guid)
         .map_err(|reason| format!("Cannot collect Trading Post pet: {reason:?}"))?;
