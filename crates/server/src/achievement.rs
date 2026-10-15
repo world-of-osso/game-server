@@ -1110,6 +1110,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
         level: world.get::<Level>(player)?.0,
         arena_team_size: arena.map(|(size, _)| size),
         in_ranked_arena: arena.is_some_and(|(_, ranked)| ranked),
+        controlled_node_counts: crate::pvp::player_controlled_node_counts(world, player),
         alive: world
             .get::<shared::components::Health>(player)
             .map(|health| {

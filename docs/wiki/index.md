@@ -11,6 +11,8 @@
 - [Cold population and FIFO catalog snapshots](investigations/server-tick-lag.md#cold-population-and-request-catalog-snapshots--2026-10-14) — dormant aura wake and owned catalog snapshot diagnostics; mount item FIFO/native proof, new release acceptance still open.
 
 - [Pressure-controlled login and FIFO reputation](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14) — login-only release zero tick commits/p99 proof; fresh durable NPC-kill reputation and gated owner replies, full gameplay remains open.
+- [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
+
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
 
 - [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.

@@ -1,6 +1,66 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_node_world_state_facts_require_live_count_authority() {
+    let catalog = catalog();
+    for (counts, qualifies) in [
+        (None, false),
+        (Some([0, 0]), false),
+        (Some([2, 0]), false),
+        (Some([3, 0]), true),
+        (Some([0, 3]), true),
+        (Some([5, 0]), false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                map: 761,
+                controlled_node_counts: counts,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::WinBattleground(761),
+            Some(761),
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&14943), qualifies.then_some(&1));
+    }
+    let conn = Connection::open_in_memory().unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(67, 999999)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(67, 8656), (67, 999999)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    let five = load_criteria_facts(&conn, &[(67, 5717)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (counts, qualifies) in [
+        (None, false),
+        (Some([3, 0]), false),
+        (Some([5, 0]), true),
+        (Some([0, 5]), true),
+    ] {
+        let player = ReferencePlayer {
+            controlled_node_counts: counts,
+            ..Default::default()
+        };
+        assert_eq!(
+            five[0].holds(&player, CriteriaEvent::WinAnyBattleground, &BTreeMap::new()),
+            qualifies
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_pet_level_species_requires_authored_species_and_exact_event_level() {
     let mut catalog = catalog();
     for (species, level, qualifies) in [
@@ -810,12 +870,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5490 + Overstuffed9070 behind actual earned pet species91.
+    // Installed70391: 5491 + FullCoverage5253 behind actual node-world-state67.
     // Structural union, not prerequisite acquisition or complete-content proof.
-    assert_eq!(union.len(), 5491);
+    assert_eq!(union.len(), 5492);
     for achievement in [
-        141, 291, 1699, 3559, 3579, 4436, 4437, 9070, 11154, 11298, 11419, 11665, 11666, 11667,
-        11668, 63640,
+        141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 9070, 11154, 11298, 11419, 11665, 11666,
+        11667, 11668, 63640,
     ] {
         assert!(union.contains(&achievement));
     }

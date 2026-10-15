@@ -57,6 +57,10 @@
 ## 2026-10-13 — Login/catalog/admission budget investigation
 
 [Tick lag](investigations/server-tick-lag.md#logincatalogadmission-investigation-verified-2026-10-13): achievement fact/index/publication, aura watchers, worker geometry, replication bootstrap, async credentials and owner-shared Toy presentation fixes have targeted proof.22 auth/admission and32 interest tests plus2 LOS/2 navigation preparation tests pass. Private debug live50ms acceptance remains unmet; synchronous durable writes and economy stalls retained explicitly.
+## 2026-10-14 — Native node-ownership expression credit
+
+[Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
+
 ## 2026-10-14 — Alterac captain source diagnosis
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
