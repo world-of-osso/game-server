@@ -5,8 +5,8 @@ use crate::persistence_writer::CommitReceipt;
 use std::collections::VecDeque;
 
 #[derive(Clone)]
-struct Transfer {
-    destination: WorldLocation,
+pub(crate) struct Transfer {
+    pub(crate) destination: WorldLocation,
     property: u64,
     neighborhood: Option<u32>,
 }
@@ -52,6 +52,15 @@ fn enqueue_transfer(
     actor: Actor,
     request: &HousingRequest,
 ) -> Result<(), String> {
+    if world
+        .resource::<GameDatabase>()
+        .housing_transfers
+        .lock()
+        .expect("pending housing transfers")
+        .contains_key(&actor.character)
+    {
+        return Err("Finish the current housing transfer first.".into());
+    }
     let source_map = world
         .get::<InMap>(actor.player)
         .copied()
@@ -69,6 +78,12 @@ fn enqueue_transfer(
         .enqueue("housing location", move |db| {
             persist_transfer(db, context, &command, &source, &party)
         });
+    world
+        .resource::<GameDatabase>()
+        .housing_transfers
+        .lock()
+        .expect("pending housing transfers")
+        .insert(actor.character, receipt.clone());
     world
         .resource_mut::<PendingTransfers>()
         .0
@@ -90,14 +105,14 @@ fn persist_transfer(
 ) -> Result<Transfer, String> {
     if let HousingCommand::EnterHouse { house_id } = command {
         let destination = source.home_entry()?;
-        store::save_house_location(db, actor, *house_id, party)?;
+        store::save_house_location(db, actor, *house_id, party, destination)?;
         return Ok(Transfer {
             destination,
             property: *house_id,
             neighborhood: None,
         });
     }
-    let transfer = resolve_neighborhood_transfer(db, actor, command, source, party)?;
+    let transfer = read_neighborhood_transfer(db, actor, command, source, party)?;
     store::save_neighborhood_location(
         db,
         actor.character_id,
@@ -107,11 +122,12 @@ fn persist_transfer(
                 .neighborhood
                 .expect("neighborhood transfer identity"),
         },
+        transfer.destination,
     )?;
     Ok(transfer)
 }
 
-fn resolve_neighborhood_transfer(
+fn read_neighborhood_transfer(
     db: &redb::Database,
     actor: store::Actor,
     command: &HousingCommand,
@@ -167,6 +183,12 @@ fn drain_completed(world: &mut World) -> Vec<(PendingTransfer, Result<Transfer, 
 
 fn publish_transfers(world: &mut World) {
     for (job, result) in drain_completed(world) {
+        world
+            .resource::<GameDatabase>()
+            .housing_transfers
+            .lock()
+            .expect("pending housing transfers")
+            .remove(&job.actor.character);
         if !persistence_actor::owns_housing_session(world, job.actor) {
             continue;
         }

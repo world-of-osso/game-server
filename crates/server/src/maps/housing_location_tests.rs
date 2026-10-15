@@ -77,6 +77,11 @@ fn assert_location_fifo(command: HousingCommand) {
                 map_id: 2736,
                 neighborhood_id: 2,
             },
+            crate::maps::WorldLocation {
+                map_id: 2736,
+                position: Vec3::new(10.0, 20.0, 30.0),
+                orientation: 0.0,
+            },
         )
     });
     let release = std::thread::spawn(move || {

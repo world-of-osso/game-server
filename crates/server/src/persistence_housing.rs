@@ -132,10 +132,12 @@ pub(crate) fn save_house_location(
     actor: Actor,
     house_id: u64,
     party: &[u64],
+    destination: crate::maps::WorldLocation,
 ) -> Result<(), String> {
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let state = read_in(&txn)?;
     access::require_visit_with_party(db, &state, actor, house_id, party)?;
+    write_character_destination(&txn, actor.character_id, destination)?;
     let bytes = serde_json::to_vec(&HouseLocation {
         house_id,
         account_id: actor.account_id,
@@ -184,9 +186,11 @@ pub(crate) fn save_neighborhood_location(
     db: &Database,
     character_id: u64,
     location: &NeighborhoodLocation,
+    destination: crate::maps::WorldLocation,
 ) -> Result<(), String> {
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     read_in(&txn)?;
+    write_character_destination(&txn, character_id, destination)?;
     let bytes = serde_json::to_vec(location)
         .map_err(|error| format!("Encode housing admission: {error}"))?;
     txn.open_table(NEIGHBORHOOD_LOCATIONS)
@@ -196,6 +200,36 @@ pub(crate) fn save_neighborhood_location(
     crate::persistence_commit::commit(txn).map_err(|error| {
         format!("Persist neighborhood admission for character {character_id}: {error}")
     })
+}
+
+fn write_character_destination(
+    txn: &WriteTransaction,
+    character_id: u64,
+    destination: crate::maps::WorldLocation,
+) -> Result<(), String> {
+    let mut characters = txn
+        .open_table(crate::persistence::CHARACTERS)
+        .map_err(|error| format!("Open housing destination character: {error}"))?;
+    let mut character = {
+        let row = characters
+            .get(character_id)
+            .map_err(|error| error.to_string())?
+            .ok_or("Housing destination character is missing.")?;
+        crate::persistence::CharacterData::decode_compatible(row.value())
+            .map_err(|error| format!("Read housing destination character: {error}"))?
+    };
+    character.x = destination.position.x;
+    character.y = destination.position.y;
+    character.z = destination.position.z;
+    let bytes = character.encode_stored();
+    characters
+        .insert(character_id, bytes.as_slice())
+        .map_err(|error| error.to_string())?;
+    txn.open_table(crate::maps::persistence::CHARACTER_MAPS)
+        .map_err(|error| error.to_string())?
+        .insert(character_id, destination.map_id)
+        .map_err(|error| error.to_string())?;
+    Ok(())
 }
 
 pub(crate) fn load_neighborhood_location(

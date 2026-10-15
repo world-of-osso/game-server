@@ -17,6 +17,8 @@ mod dye_requests;
 mod persistence_actor;
 #[path = "housing_transfers.rs"]
 mod transfers;
+pub(crate) type HousingTransferReceipt =
+    crate::persistence_writer::CommitReceipt<transfers::Transfer>;
 pub(crate) use persistence_actor::HousingPersistencePlugin;
 #[cfg(test)]
 pub(crate) fn persistence_pending(world: &World) -> bool {

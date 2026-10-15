@@ -1157,6 +1157,22 @@ impl Harness {
                 ),
             ))
             .id();
+        if self
+            .app
+            .world()
+            .contains_resource::<crate::housing::HousingAvailability>()
+        {
+            let world = self.app.world();
+            crate::persistence::save_live_character(
+                &world.resource::<crate::persistence::GameDatabase>().db,
+                character_id,
+                world.get::<Player>(player).unwrap(),
+                world.get::<Position>(player).unwrap(),
+                world.get::<Health>(player).unwrap(),
+                None,
+                map.map_id,
+            );
+        }
         self.app.update();
         Traveler { player, connection }
     }

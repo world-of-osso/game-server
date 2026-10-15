@@ -99,7 +99,18 @@ fn housing_access_settings_survive_reopen_and_check_owner_friends_not_visitor_cl
     );
     let view = house(&db, friend, property.house_id, None).unwrap();
     assert!(!view.can_edit);
-    save_house_location(&db, friend, property.house_id, &[]).unwrap();
+    save_house_location(
+        &db,
+        friend,
+        property.house_id,
+        &[],
+        crate::maps::WorldLocation {
+            map_id: 2783,
+            position: bevy::prelude::Vec3::new(-1000.0, -1000.0, 0.1),
+            orientation: 0.0,
+        },
+    )
+    .unwrap();
     assert!(house(&db, visitor, property.house_id, None).is_err());
     drop(db);
     let db = Database::open(&path).unwrap();
@@ -235,6 +246,11 @@ fn housing_limited_access_rechecks_neighbors_guild_and_current_party() {
         visitor,
         property.house_id,
         &groups.group_members(visitor_id),
+        crate::maps::WorldLocation {
+            map_id: 2783,
+            position: bevy::prelude::Vec3::new(-1000.0, -1000.0, 0.1),
+            orientation: 0.0,
+        },
     )
     .unwrap();
     assert!(load_house_location(&db, visitor_id, Some(&groups)).is_ok());

@@ -267,6 +267,8 @@ pub struct GameDatabase {
     pub(crate) accounts: crate::achievement::AccountProgressCache,
     pub(crate) departing_characters:
         std::sync::Mutex<std::collections::HashMap<u64, crate::persistence_writer::CommitReceipt>>,
+    pub(crate) housing_transfers:
+        std::sync::Mutex<std::collections::HashMap<u64, crate::housing::HousingTransferReceipt>>,
 }
 
 impl GameDatabase {
@@ -277,6 +279,7 @@ impl GameDatabase {
             writer,
             accounts,
             departing_characters: _,
+            housing_transfers: _,
         } = self;
         drop(writer);
         drop(accounts);
@@ -291,6 +294,7 @@ impl GameDatabase {
             db,
             accounts: Default::default(),
             departing_characters: Default::default(),
+            housing_transfers: Default::default(),
         }
     }
 }

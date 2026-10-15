@@ -99,6 +99,7 @@ struct LiveCharacter {
     health: Health,
     death: Option<PlayerDeathState>,
     map_id: u32,
+    housing_transfer: Option<crate::housing::HousingTransferReceipt>,
 }
 
 fn live_character<'a>(
@@ -111,6 +112,7 @@ fn live_character<'a>(
         health: *health,
         death: death.cloned(),
         map_id: crate::maps::saved_map_id(map, transfer),
+        housing_transfer: None,
     }
 }
 
@@ -134,6 +136,7 @@ pub fn save_live_character(
             health: *health,
             death: death.cloned(),
             map_id,
+            housing_transfer: None,
         }],
     );
 }
@@ -155,6 +158,12 @@ pub(crate) fn enqueue_live_character(
         health: *health,
         death: death.cloned(),
         map_id,
+        housing_transfer: db
+            .housing_transfers
+            .lock()
+            .expect("pending housing transfers")
+            .get(&character_id)
+            .cloned(),
     };
     let receipt = db
         .writer
@@ -174,8 +183,17 @@ pub(crate) fn enqueue_live_character(
 
 fn enqueue_live_characters(
     db: &GameDatabase,
-    characters: Vec<LiveCharacter>,
+    mut characters: Vec<LiveCharacter>,
 ) -> crate::persistence_writer::CommitReceipt {
+    {
+        let housing = db
+            .housing_transfers
+            .lock()
+            .expect("pending housing transfers");
+        for character in &mut characters {
+            character.housing_transfer = housing.get(&character.character_id).cloned();
+        }
+    }
     db.writer.enqueue("live character snapshots", move |db| {
         save_live_characters(db, &characters);
         Ok(())
@@ -198,7 +216,8 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
             .expect("Failed to open corpse table");
         for character in characters {
             let id = character.character_id;
-            maps.insert(id, character.map_id)
+            let (map_id, position) = snapshot_destination(character);
+            maps.insert(id, map_id)
                 .expect("Failed to save character map");
             let mut data = rows
                 .get(id)
@@ -214,7 +233,7 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
                         &character.health,
                     )
                 });
-            data.sync_live_components(&character.player, &character.position, &character.health);
+            data.sync_live_components(&character.player, &position, &character.health);
             if character
                 .death
                 .as_ref()
@@ -238,6 +257,24 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
         }
     }
     crate::persistence_commit::commit(txn).expect("Failed to commit live character save");
+}
+
+// A snapshot captured during a pending admission follows it on the same FIFO.
+// Merge its outcome rather than restoring the pre-transfer character location.
+fn snapshot_destination(character: &LiveCharacter) -> (u32, Position) {
+    let Some(receipt) = &character.housing_transfer else {
+        return (character.map_id, character.position);
+    };
+    match receipt
+        .result()
+        .expect("housing receipt precedes its queued character snapshot")
+    {
+        Ok(transfer) => (
+            transfer.destination.map_id,
+            transfer.destination.bevy_position(),
+        ),
+        Err(_) => (character.map_id, character.position),
+    }
 }
 
 fn save_death_state(
