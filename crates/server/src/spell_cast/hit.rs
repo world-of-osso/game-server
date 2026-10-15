@@ -159,7 +159,7 @@ fn roll_defense(
 }
 
 /// Unit.cpp2622–2743: one uniform integer roll, cumulative truncated buckets.
-/// NPC dodge, parry and baseline hit statistics remain gaps.
+/// Parry and baseline hit statistics remain gaps.
 fn roll_weapon_spell_defense(
     world: &World,
     caster: Entity,
@@ -185,7 +185,7 @@ fn roll_weapon_spell_defense(
     if roll < threshold {
         return Some(MissKind::Deflect);
     }
-    threshold += spell_chance_units(player_spell_dodge_chance(
+    threshold += spell_chance_units(weapon_spell_dodge_chance(
         world, caster, spell, unit, defense,
     ));
     if roll < threshold {
@@ -250,29 +250,36 @@ fn weapon_spell_miss_chance(
     }
 }
 
-/// Live player DodgePercentage, caster251 and non-player caster expertise,
-/// Unit.cpp2750–2785. Player expertise/248 and NPC dodge remain gaps.
-fn player_spell_dodge_chance(
+/// Unit.cpp2750–2785: player DodgePercentage or NPC baseline/49/level bonus,
+/// then caster251 and non-player expertise. Player expertise/248 remain gaps.
+fn weapon_spell_dodge_chance(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     unit: Entity,
     defense: u32,
 ) -> f32 {
-    if defense != DEFENSE_MELEE || world.get::<shared::components::Player>(unit).is_none() {
+    if defense != DEFENSE_MELEE {
         return 0.0;
     }
     let disabled = attributes(spell, 7) & ATTR7_NO_ATTACK_DODGE != 0
         || caster_ignores_combat_result(world, caster, spell, MELEE_HIT_DODGE);
     let auras = world.get::<ActiveAuras>(unit);
-    if disabled || !can_defend_from_front(world, caster, unit, auras) {
+    let is_player = world.get::<shared::components::Player>(unit).is_some();
+    let direction_allowed = !is_player || can_deflect_from(world, caster, unit, auras);
+    let can_dodge = direction_allowed && can_avoid_weapon_spell(world, unit, auras);
+    if disabled || !can_dodge {
         return 0.0;
     }
-    let dodge = world
-        .get::<crate::stats::CharacterStats>(unit)
-        .expect("player retains native dodge percentage")
-        .defense
-        .dodge;
+    let dodge = if is_player {
+        world
+            .get::<crate::stats::CharacterStats>(unit)
+            .expect("player retains native dodge percentage")
+            .defense
+            .dodge
+    } else {
+        creature_spell_dodge_chance(world, caster, unit, auras)
+    };
     let caster_auras = world.get::<ActiveAuras>(caster);
     let enemy_dodge = caster_auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE));
     let expertise = if world.get::<shared::components::Player>(caster).is_some() {
@@ -285,16 +292,41 @@ fn player_spell_dodge_chance(
     (dodge + enemy_dodge - expertise).max(0.0)
 }
 
+/// Specialized Totem/Lightwell summons remain unsupported, as in NPC block.
+fn creature_spell_dodge_chance(
+    world: &World,
+    caster: Entity,
+    unit: Entity,
+    auras: Option<&ActiveAuras>,
+) -> f32 {
+    const CREATURE_DODGE_CHANCE: f32 = 3.0;
+    const DODGE_CHANCE_PER_LEVEL: f32 = 1.5;
+    if world.get::<shared::components::Npc>(unit).is_none() {
+        return 0.0;
+    }
+    let attacker = crate::level_scaling::UnitScaling::of(world, caster);
+    let victim = crate::level_scaling::UnitScaling::of(world, unit);
+    let level_difference = victim
+        .level_against(&attacker)
+        .saturating_sub(attacker.level_against(&victim));
+    let modifier = auras.map_or(0.0, |auras| auras.modifier(handlers::MOD_DODGE_PERCENT));
+    CREATURE_DODGE_CHANCE + modifier + DODGE_CHANCE_PER_LEVEL * f32::from(level_difference)
+}
+
+fn can_avoid_weapon_spell(world: &World, unit: Entity, auras: Option<&ActiveAuras>) -> bool {
+    let controlled =
+        auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared());
+    let casting = world.get::<shared::casting::CastState>(unit).is_some();
+    !controlled && !casting
+}
+
 fn can_defend_from_front(
     world: &World,
     caster: Entity,
     unit: Entity,
     auras: Option<&ActiveAuras>,
 ) -> bool {
-    let controlled =
-        auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared());
-    let casting = world.get::<shared::casting::CastState>(unit).is_some();
-    !controlled && !casting && can_deflect_from(world, caster, unit, auras)
+    can_avoid_weapon_spell(world, unit, auras) && can_deflect_from(world, caster, unit, auras)
 }
 
 fn spell_chance_units(chance: f32) -> u32 {

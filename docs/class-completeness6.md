@@ -2,6 +2,12 @@
 
 Verified: 2026-10-12. [Contract](specs/class-completeness.md), [prior batches](class-completeness2.md), [implementation](wiki/systems/spell-casting.md#level80-class-completeness).
 
+## NPC physical-spell dodge — native slice in progress, 2026-10-15
+
+TC a352b1fa `Unit.cpp2647–2717/2750–2785` supplies ordinary NPC dodge3%, victim aura49 and1.5% per positive effective-level difference. NPCs can dodge rear melee spells; player rear restrictions, controlled/casting states, ranged exclusion, native attributes and spell-masked ignore-combat-result guards remain. Existing signed attacker251 and nonplayer expertise240 apply afterward, before final nonnegative clamp. Specialized Totem/Lightwell summons, player expertise/248, parry and whole hit-table acceptance remain unsupported/unproved.
+
+Published70391 Cloak of Darkness70188 effect0 supplies native49/100. All898 imported values across six selected tables match that authority. Fixture uses actual hostile Kobold40 faction/maximum level, native StatsPlugin Rogue inputs, and isolates only effect0, not the whole ability. At54952cdc `npc-dodge-native-red` confirms live victim49=100 then actual Strike38598 deals28 and blocks11 (health5000→4972) instead of dodging. Genuine behavioral RED, exit101/261.451s total/30.58s tests. Consumer implementation and native front/rear GREEN plus disjoint controls are pending; bounded proof does not certify legal NPC loadouts.
+
 ## cw162 scripted-AI player stat initialization — native fixture repair, 2026-10-14
 
 Lead gatecw162 finds four required native-dodge reads on scripted-AI fixture players without `CharacterStats`. Current d9caeb0e `cw162-scripted-native-red` reproduces all four panics (exit101/19.777s). TC a352b1fa `Unit.cpp2755–2756` reads a player's existing `ActivePlayerData.DodgePercentage`; no missing-player-stat fallback exists there. Runtime registers `StatsPlugin` (`main.rs284`) and character entry supplies Level/UnitStats/CombatRatings/DerivedStats (`auth_character.rs571–575`). Stockade fixture omitted that producer and all four inputs, supplying only UnitLevel.
