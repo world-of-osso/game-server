@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::Arc;
 
-mod summon_levels;
+pub(crate) mod summon_levels;
 
 use crate::creature_aggro::AggroMode;
 use crate::level_scaling::{
