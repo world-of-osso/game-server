@@ -107,7 +107,7 @@ Bounded low-count batch only: offspec Crusader's Might cooldown variants, Judgme
 
 ### Twelfth-batch actor/resource/snapshot consumers
 
-- [x] Feral Spirit51533 summons228562's native two29264 Spirit Wolves, using only imported guardian_spells bindings. Summon duration/owner cleanup use native lifecycle; wolf melee, movement immunity, buff/Maelstrom and elemental variants remain uncertified.
+- [x] Feral Spirit51533 summons228562's native two29264 Spirit Wolves, using only imported guardian_spells bindings. Count belongs to the native child summon effect; the parent must not multiply it again. Summon duration/owner cleanup use native lifecycle; wolf melee, movement immunity, buff/Maelstrom and elemental variants remain uncertified.
 - [x] The actual49206 Gargoyle's bound51963 always critically strikes with1242147. Successful owner Runic Power costs increase its native211947 damage aura by1% per displayed point (49206s4), using PowerType's display modifier. Refused/triggered casts do not empower it; other owners/actors are excluded. Non-demon stat inheritance and Army-of-the-Dead entry are not certified.
 - [x] Dispatch2098 and Eviscerate196819 scale their native damage by the actual combo points paid at successful launch; later pool changes cannot alter hits. Optional6/7-point variants remain uncertified.
 - [x] Rake1822's named155722 bleed snapshots the231052-or405834 stealth damage bonus at application; later stealth/rank removal does not reduce its ticks. Reapplication recomputes the snapshot.
