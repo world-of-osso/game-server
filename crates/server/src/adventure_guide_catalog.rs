@@ -356,6 +356,14 @@ mod tests {
     }
 
     #[test]
+    fn suggested_provider_missing_csv_fails_without_an_alternate_source() {
+        let directory = tempfile::tempdir().unwrap();
+        let missing = directory.path().join("AdventureJournal.csv");
+        let error = load_suggestions(&missing).unwrap_err();
+        assert!(error.contains(&missing.display().to_string()));
+    }
+
+    #[test]
     fn suggested_provider_follows_installed_csv_instead_of_old_sqlite_payloads() {
         let path = crate::test_data::world_db_path();
         let conn =
