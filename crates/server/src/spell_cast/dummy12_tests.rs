@@ -395,7 +395,9 @@ fn dummy12_gargoyle_foreign_owner_spend_and_triggered_cast_do_not_empower() {
 #[test]
 fn dummy12_butchery_talent_bleeds_hit_enemies_only() {
     for talented in [false, true] {
-        let mut h = harness(Vec::new(), &[212436, 459868, 459870], 3).unwrap();
+        let mut h =
+            harness_with_native_enemy_dodge_reduction(Vec::new(), &[212436, 459868, 459870], 3)
+                .unwrap();
         if !talented {
             h.app.world_mut().entity_mut(h.caster).insert(
                 crate::class_progression::KnownSpells::fixture(vec![212436, 459870]),
