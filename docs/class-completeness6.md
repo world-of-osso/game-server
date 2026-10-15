@@ -10,9 +10,9 @@ Adarogg failed before gameplay while `VACUUM INTO` wrote its isolated snapshot (
 
 ## Non-player expertise to player weapon-spell dodge — in progress
 
-Pinned TC a352b1fa `Unit.cpp2750–2785` subtracts a non-player caster's own aura240 total divided by4 from dodge, then clamps at zero (`SpellAuraDefines.h327`). Published70391/source-equal NPC Hit Buffs62627 has native expertise10000/hit100/crit−100; Strike38598 supplies real flat damage without invented NPC AP. Native Evasion5277's actual amount is200, produced by the real receiver StatsPlugin. `npc-expertise-native-red` atf0fcf71d: foreign ownership control PASS, actual buffed NPC Strike admits zero hits instead of one, exit101/63.870s (7.12s tests). This is a genuine cast/health boundary RED, not compilation or fixture initialization.
+Pinned TC a352b1fa `Unit.cpp2750–2785` subtracts a non-player caster's own aura240 total divided by4 from dodge, then clamps at zero (`SpellAuraDefines.h327`). Published70391/source-equal NPC Hit Buffs62627 has native expertise10000/hit100/crit−100; Strike38598 supplies real flat damage without invented NPC AP. Native Evasion5277's actual amount is200, produced by the real receiver StatsPlugin. Initial `npc-expertise-native-red` atf0fcf71d and ce967102's first attempted GREEN observed no receipts on an unrelated caster connection; these are NOT valid feature REDs. `log_event` delivers NPC/player receipts to the player target's actual owner. The fixture now initializes that peer connection; restore the pre-expertise consumer and establish a genuine RED before retaining implementation.
 
-Implementation consumes the non-player caster's active240 amount only at the existing player melee-dodge boundary. Targeted GREEN/check/fmt/independent acceptance remain pending. Player expertise,248/251, NPC dodge/parry, mechanic117, full probability ordering, generic handler/census and whole abilities remain open.
+Planned implementation consumes the non-player caster's active240 amount only at the existing player melee-dodge boundary. Corrected native RED, targeted GREEN/check/fmt/independent acceptance remain pending. Player expertise,248/251, NPC dodge/parry, mechanic117, full probability ordering, generic handler/census and whole abilities remain open.
 
 ## Native form admission — batch28
 

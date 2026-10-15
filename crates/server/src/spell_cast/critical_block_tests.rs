@@ -680,6 +680,8 @@ fn class_completeness_native_ranged_deflection_and_block_share_one_hit_table() {
 
 fn npc_evasion_duel() -> (Harness, Entity) {
     let (mut h, defender) = evasion_duel(1);
+    // NPC/player receipts are delivered to the actual player target's owner.
+    h.connection = spawn_peer_connection(&mut h.app, defender, 2);
     h.app
         .world_mut()
         .get_mut::<shared::components::Position>(h.npc)
