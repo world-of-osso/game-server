@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [PvP talent FIFO and Honor publication](investigations/server-tick-lag.md#pvp-talent-preferences-and-honor-publication--2026-10-15) — fresh slot/cooldown checks and ordered preference-only publication preserve later Honor;17 controls plus2 repaired wire controls pass separately; check pending, release/full-session open.
+- [PvP talent FIFO and Honor publication](investigations/server-tick-lag.md#pvp-talent-preferences-and-honor-publication--2026-10-15) — fresh slot/cooldown checks and ordered preference-only publication preserve later Honor; merged21 controls and warning-free check pass; release/full-session open.
 
 - [War Mode preference FIFO](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15) — three authentic territory/wire held-writer REDs→five controls; fresh honor and receipt-bound current-instance/departure effects; merged runtime/format pass, release pending.
 - [Titan's Grip FIFO merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) — owned dual-wield/Titan subclass capability snapshot without synchronous inventory writes;19 merged controls,2 protocol wire controls and warning-free runtime/format checks pass; full branch gate pending.

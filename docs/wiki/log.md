@@ -1,6 +1,6 @@
 ## 2026-10-15 — PvP talent FIFO and Honor overlap
 
-[Preference publication](investigations/server-tick-lag.md#pvp-talent-preferences-and-honor-publication--2026-10-15): fresh durable slot/cooldown/duplicate checks share War Mode's ordered receipt queue. Real later Honor spend exposed stale1000 replacing777; preference-only publication now preserves current durable statistics.17 native controls plus2 repaired per-frame wire controls pass separately; runtime check pending capacity, no release/full-session/HOL claim.
+[Preference publication](investigations/server-tick-lag.md#pvp-talent-preferences-and-honor-publication--2026-10-15): fresh durable slot/cooldown/duplicate checks share War Mode's ordered receipt queue. Real later Honor spend exposed stale1000 replacing777; preference-only publication now preserves current durable statistics.Initial17 native controls plus2 repaired per-frame wire controls pass separately; after masterc819a6fd,21 intersecting controls pass and runtime check passes4m48s without warnings. No release/full-session/HOL claim.
 
 ## 2026-10-15 — War Mode FIFO and Titan's Grip merge
 
