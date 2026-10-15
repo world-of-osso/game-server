@@ -7,11 +7,12 @@ fn spawn_level_achievement_fixture(
 ) -> (App, Entity, Entity, Entity, u64) {
     let (character_id, _) =
         crate::persistence::create_character(&database, 42, "Petleveler", 1, 1).unwrap();
+    let catalog = super::tests::catalog();
     let mut journal = PetJournal::default();
     journal
         .add_with_guid(carried_species, 24, PetQuality::Rare, 3, 41)
         .unwrap();
-    journal.pets[0].xp = shared::pet_battle::xp_to_next_level(24) - 1;
+    journal.pets[0].xp = catalog.next_level_xp[&24] - 1;
     journal
         .add_with_guid(39, 25, PetQuality::Rare, 3, 42)
         .unwrap();
@@ -26,7 +27,7 @@ fn spawn_level_achievement_fixture(
     app.cleanup();
     app.insert_resource(GameDatabase { db: database });
     app.insert_resource(crate::battle_pets::load_test_catalog());
-    app.insert_resource(super::tests::catalog());
+    app.insert_resource(catalog);
     app.init_resource::<BattleIds>();
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
