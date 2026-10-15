@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — genuine normal item-use rejection reproduced; deployment/fuse implementation awaiting GREEN and disarm proof.
+- [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — owned normal/huge pickup→deployment→ten-second25%/60% one-shot/copy isolation and disarm GREEN5; BG team relations and NPC/arena controls checked, native activation still pending.
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
 
 - [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.
