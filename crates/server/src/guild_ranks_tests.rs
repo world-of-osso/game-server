@@ -17,6 +17,39 @@ fn members(db: &redb::Database) -> (u64, u64, u64) {
 }
 
 #[test]
+fn guild_member_notes_are_filtered_per_authenticated_snapshot_recipient() {
+    let db = temp_database();
+    let (master, _, member) = members(&db);
+    crate::persistence_character::save_guild_public_note(&db, member, "Alchemy");
+    crate::persistence_character::save_guild_member_note(
+        &db,
+        member,
+        &crate::persistence_types::GuildMemberNoteData {
+            officer_note: "Raid healer".into(),
+        },
+    );
+    let mut world = World::new();
+    let mut queries = bevy::ecs::system::SystemState::<OnlinePlayers>::new(&mut world);
+    let online = queries.get(&world);
+    let guild = shared::components::GuildMembership {
+        guild_id: 7,
+        guild_name: "Bank Testers".into(),
+    };
+    for (viewer, private) in [(master, "Raid healer"), (member, "")] {
+        let snapshot = visible_guild_snapshot(&db, &guild, &online, viewer);
+        let target = snapshot
+            .members
+            .iter()
+            .find(|m| m.character_name == "Member")
+            .unwrap();
+        assert_eq!(target.public_note, "Alchemy");
+        assert_eq!(target.officer_note, private);
+        assert_eq!(target.is_self, viewer == member);
+        assert_eq!(snapshot.members.iter().filter(|m| m.is_self).count(), 1);
+    }
+}
+
+#[test]
 fn guild_member_notes_preserve_legacy_officer_data_and_public_notes_across_restart() {
     use crate::persistence_character::{
         load_guild_member_note, load_guild_public_note, save_guild_member_note,
