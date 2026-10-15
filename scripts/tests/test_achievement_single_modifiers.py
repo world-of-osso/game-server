@@ -67,6 +67,10 @@ class SingleModifierPredicates(unittest.TestCase):
                 criteria[25123]['Type'] = kind
                 self.assertEqual(single_modifiers.qualified_single_modifiers(criteria, modifiers),
                                  {25123: (15698, 1426)})
+        for level in ('0', '26'):
+            criteria[25123].update(Type='160', Asset=level)
+            self.assertEqual(single_modifiers.qualified_single_modifiers(criteria, modifiers), {})
+        criteria[25123]['Asset'] = '25'
         for kind in ('157', '158', '96'):
             criteria[25123]['Type'] = kind
             self.assertEqual(single_modifiers.qualified_single_modifiers(criteria, modifiers), {})
