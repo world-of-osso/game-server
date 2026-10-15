@@ -597,7 +597,7 @@ fn init_player_progression(
         };
         let stored = load_progression(&db.db, client_id.0);
         let requested = stored.as_ref().map_or(0, |data| data.spec_id);
-        let configs = match load_level_trait_configs(
+        let configs = match refresh_starter_trait_configs(
             &classes,
             player,
             level.0,
@@ -839,7 +839,7 @@ fn process_set_specialization(
                 );
                 continue;
             }
-            let configs = match load_level_trait_configs(
+            let configs = match refresh_starter_trait_configs(
                 &classes,
                 entry.0,
                 entry.1.0,
@@ -1166,7 +1166,7 @@ fn commit_purchases(
 
 /// Rebuild the active built-in allocation from authored rows at the current level.
 /// Named allocations and their persistent wire/storage format remain untouched.
-fn load_level_trait_configs(
+fn refresh_starter_trait_configs(
     classes: &ClassSpells,
     player: &Player,
     level: u8,
@@ -1207,7 +1207,7 @@ fn sync_level_changes(
             continue;
         };
         let current_spec = entry.3.0;
-        let configs = match load_level_trait_configs(
+        let configs = match refresh_starter_trait_configs(
             &classes,
             entry.0,
             entry.1.0,
