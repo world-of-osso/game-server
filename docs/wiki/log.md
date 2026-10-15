@@ -33,6 +33,10 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-14 — Native node-ownership expression credit
+
+[Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
+
 ## 2026-10-14 — Alterac captain source diagnosis
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.

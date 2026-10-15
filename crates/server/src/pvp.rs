@@ -169,8 +169,8 @@ impl PlayerPvpState {
     }
 }
 
-/// TC Player::GetBattleground: current accepted arena copy, not queued preference.
-pub(crate) fn player_arena_conditions(world: &World, player: Entity) -> Option<(u8, bool)> {
+/// TC Player::GetBattleground: current accepted copy, not queued preference.
+fn read_player_battleground(world: &World, player: Entity) -> Option<&InvitedBattleground> {
     let character = world.get::<crate::persistence::ClientId>(player)?.0;
     let map = *world.get::<crate::maps::InMap>(player)?;
     let snapshot = world.get::<PlayerPvpState>(player)?.battleground.as_ref()?;
@@ -181,8 +181,23 @@ pub(crate) fn player_arena_conditions(world: &World, player: Entity) -> Option<(
     if matched.map != Some(map) || !matched.accepted.contains(&character) {
         return None;
     }
-    let arena = matched.arena.as_ref()?;
+    Some(matched)
+}
+
+pub(crate) fn player_arena_conditions(world: &World, player: Entity) -> Option<(u8, bool)> {
+    let arena = read_player_battleground(world, player)?.arena.as_ref()?;
     Some((arena::team_size(arena.mode)?, arena.rated.is_some()))
+}
+
+/// Source occupied-base world states, read from the live node ledger before win credit.
+pub(crate) fn player_controlled_node_counts(world: &World, player: Entity) -> Option<[u8; 2]> {
+    let matched = read_player_battleground(world, player)?;
+    let states = matched.nodes.as_ref()?.world_states(&matched.instance);
+    let count = |state| {
+        let (_, value) = states.iter().find(|(id, _)| *id == state)?;
+        u8::try_from(*value).ok()
+    };
+    Some([count(1779)?, count(1778)?])
 }
 
 pub(crate) fn sync_progress_currencies_from_wallet(
