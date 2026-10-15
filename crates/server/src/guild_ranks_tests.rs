@@ -124,6 +124,34 @@ fn guild_member_notes_preserve_legacy_officer_data_and_public_notes_across_resta
         load_guild_member_note(&db, officer).officer_note,
         "Bank organizer"
     );
+    let guild = shared::components::GuildMembership {
+        guild_id: 7,
+        guild_name: "Bank Testers".into(),
+    };
+    assert!(
+        update_officer_note(
+            &db,
+            &guild,
+            SetGuildOfficerNote {
+                character_name: "Officer".into(),
+                note: "x".repeat(32),
+            }
+        )
+        .is_err()
+    );
+    update_officer_note(
+        &db,
+        &guild,
+        SetGuildOfficerNote {
+            character_name: "Officer".into(),
+            note: "  Raid healer  ".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        load_guild_member_note(&db, officer).officer_note,
+        "  Raid healer  "
+    );
     apply_rank_request(&db, 7, member, GuildRankRequest::Leave).unwrap();
     set_character_guild_by_id(&db, member, 7, "Bank Testers").unwrap();
     assert_eq!(load_guild_public_note(&db, member), "");
