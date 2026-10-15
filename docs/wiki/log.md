@@ -1,6 +1,6 @@
 ## 2026-10-15 — Breakable CC target protection
 
-[Source boundary](investigations/follower-data.md#breakable-cc-targeting--2026-10-15): follower hold/retarget and unfinished hostile cast/swing stop; Attr6 `0x100` implicit chain/area exclusion. Native118/profile/31935/176017 RED8 plus explicit-player positive control; GREEN/build/live proof tracked separately. Stats, CC budgets and launched missiles unchanged; Stockade0/3 remains open.
+[Source boundary](investigations/follower-data.md#breakable-cc-targeting--2026-10-15): follower hold/retarget and unfinished hostile cast/swing stop; Attr6 `0x100` implicit chain/area exclusion. Native118/profile/31935/176017 RED8 plus explicit-player positive control; GREEN/build/live proof tracked separately. Stats, CC budgets and launched missiles unchanged; Stockade0/3 remains open. Subsequent native9/9 and integrated13/13/check/builds pass. Stockccguard52 observes zero NPC interference across three real118 intervals but loses Garrick; separate diagnostic stop/cast same-Update race replay RED1→GREEN3, repaired live proof pending.
 
 ## 2026-10-14 — Source-correct proximity distance
 
