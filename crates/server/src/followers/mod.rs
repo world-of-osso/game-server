@@ -118,9 +118,9 @@ impl Plugin for FollowerPlugin {
 }
 
 #[cfg(test)]
-mod cc_tests;
-#[cfg(test)]
 mod catalog_tests;
+#[cfg(test)]
+mod cc_tests;
 #[cfg(test)]
 mod defensive_tests;
 #[cfg(test)]
