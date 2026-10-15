@@ -18,6 +18,10 @@ use crate::persistence_character::{
 use crate::persistence_types::{GuildMemberNoteData, GuildProfileData};
 use shared::components::Level;
 
+#[cfg(test)]
+#[path = "guild_profile_fifo_tests.rs"]
+mod profile_fifo_tests;
+
 type NewConnections<'w, 's> = Query<
     'w,
     's,
