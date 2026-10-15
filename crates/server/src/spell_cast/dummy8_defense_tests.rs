@@ -4,6 +4,12 @@ use shared::components::Health;
 
 #[test]
 fn dummy8_breath_burn_reduces_only_damage_to_the_owning_monk_and_expires() {
+    for trial in 0..32 {
+        prove_breath_burn(trial);
+    }
+}
+
+fn prove_breath_burn(trial: u32) {
     let mut h = harness(Vec::new(), &[115181, 123725, 121253, 108853], 10).unwrap();
     let caster = h.caster;
     let npc = h.npc;
@@ -23,7 +29,13 @@ fn dummy8_breath_burn_reduces_only_damage_to_the_owning_monk_and_expires() {
     let before = h.health(caster);
     super::cast_triggered(h.app.world_mut(), npc, 108853, Some(caster), 1);
     h.advance(5);
-    assert!(varied(187.3875).contains(&(before - h.health(caster))));
+    assert!(
+        varied(187.3875).contains(&(before - h.health(caster))),
+        "trial {trial}, damage {}, burn {}, combat {:?}",
+        before - h.health(caster),
+        crate::auras::has_aura(h.app.world(), npc, 123725),
+        h.inbox.log
+    );
     let before = h.health(foreign);
     super::cast_triggered(h.app.world_mut(), npc, 108853, Some(foreign), 1);
     h.advance(5);
