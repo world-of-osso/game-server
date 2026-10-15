@@ -923,6 +923,7 @@ pub(crate) fn apply_aura_with_spell(
         crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
+        crate::vehicle::isle::on_applied(world, target, &aura);
         let stuns = aura
             .effects
             .iter()
@@ -1099,6 +1100,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     fixate::on_removed(world, aura);
     crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
+    crate::vehicle::isle::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
 
