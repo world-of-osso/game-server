@@ -7,7 +7,7 @@ fn toyfx32_wild_count_truncates_fractional_values_and_clamps_nonpositive_values(
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::Npc;
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -22,10 +22,8 @@ fn toyfx32_wild_count_truncates_fractional_values_and_clamps_nonpositive_values(
         h.app
             .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-        h.app
-            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
         h.app
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         learn_effect_toy(&mut h, character, 98552);
@@ -46,16 +44,14 @@ fn toyfx32_flute_learn_use_summons_source_snakes_at_one_destination_and_expires(
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Health, ModelDisplay, Npc, UnitIsPet, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("flute.redb"));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-    h.app
-        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     h.app

@@ -1,5 +1,6 @@
 # Wiki Index
 
+- [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
 - [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates, integrated native/catalog/pinned4/4; full ten-family grant unclaimed.
 
 - [Remaining source-only criteria boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) —44/58/64 lack executable rules;153 has no matching native action-set path;218 requires pinned hard-false Party Sync leaves.
