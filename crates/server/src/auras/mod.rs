@@ -1674,10 +1674,14 @@ pub fn interrupt_auras(
 
 // --- Systems ---
 
-/// Every unit (player or NPC) carries `ActiveAuras`, `UnitAuras` and `AuraStatMods`.
+/// Active units carry aura state; dormant spawns initialize in their waking step.
 fn init_unit_auras(world: &mut World) {
     let units: Vec<Entity> = world
-        .query_filtered::<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>()
+        .query_filtered::<Entity, (
+            Or<(With<Player>, With<Npc>)>,
+            Without<ActiveAuras>,
+            Without<GridDormant>,
+        )>()
         .iter(world)
         .collect();
     // Casts and summon cleanup mutate units immediately. Deferred defaults can

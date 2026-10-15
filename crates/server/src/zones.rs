@@ -602,10 +602,11 @@ fn insert_formation_members(
 #[derive(Component, Debug)]
 pub(crate) struct AddonAuras(pub Vec<u32>);
 
-/// Self-cast addon auras once the creature exists (Creature::LoadCreaturesAddon `AddAura`).
+/// Self-cast spawn auras in an active grid (Creature::LoadCreaturesAddon `AddAura`).
+/// Dormant creatures retain their pending addon until the grid wakes.
 pub(crate) fn apply_addon_auras(world: &mut World) {
     let pending: Vec<(Entity, Vec<u32>)> = world
-        .query::<(Entity, &AddonAuras)>()
+        .query_filtered::<(Entity, &AddonAuras), Without<crate::grid_activity::GridDormant>>()
         .iter(world)
         .map(|(entity, auras)| (entity, auras.0.clone()))
         .collect();

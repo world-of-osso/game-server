@@ -31,6 +31,118 @@ const HAMSTRING: u32 = 1715;
 /// MOD_ROOT_2 455.
 const FROST_NOVA: u32 = 122;
 
+/// The quiet release spawned 187770 continent creatures before its first tick.
+/// Dormant grids must not initialize every unit or apply their spawn auras there.
+#[test]
+fn cold_dormant_population_preserves_spawn_auras_until_wake() {
+    use std::time::{Duration, Instant};
+    // Cenarion Hold Infantry15184: authored addon Invisibility and Stealth Detection18950.
+    const ADDON: u32 = 18950;
+    let mut h = harness(Vec::new(), &[ADDON], 4).expect("authentic addon aura data");
+    let population = 187_770;
+    let mut waking = None;
+    for index in 0..population {
+        let mut unit = h.app.world_mut().spawn((
+            Npc {
+                template_id: 15184,
+                name: String::new(),
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            GridDormant,
+        ));
+        if index % 128 == 0 {
+            unit.insert(crate::zones::AddonAuras(vec![ADDON]));
+            waking = Some(unit.id());
+        }
+    }
+    let waking = waking.unwrap();
+    let started = Instant::now();
+    crate::zones::apply_addon_auras(h.app.world_mut());
+    init_unit_auras(h.app.world_mut());
+    let elapsed = started.elapsed();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "cold dormant aura work waited: {elapsed:?}"
+    );
+    assert!(auras_of(&h, waking, ADDON).is_empty());
+    h.app.world_mut().entity_mut(waking).remove::<GridDormant>();
+    crate::zones::apply_addon_auras(h.app.world_mut());
+    init_unit_auras(h.app.world_mut());
+    assert_eq!(auras_of(&h, waking, ADDON).len(), 1);
+    let applied = auras_of(&h, waking, ADDON).pop().unwrap();
+    crate::zones::apply_addon_auras(h.app.world_mut());
+    init_unit_auras(h.app.world_mut());
+    assert_eq!(
+        auras_of(&h, waking, ADDON),
+        vec![applied],
+        "initialization must not reset or reapply the waking aura"
+    );
+}
+
+#[test]
+fn cold_dormant_addon_applies_in_player_wake_fixed_step() {
+    const ADDON: u32 = 18950;
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        Vec::new(),
+        &[ADDON],
+        4,
+        false,
+        |app| {
+            app.add_plugins(crate::grid_activity::GridActivityPlugin);
+            app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
+        },
+    )
+    .expect("authentic addon aura data");
+    let home = Position {
+        x: 20_000.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let creature = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 15184,
+                name: "Cenarion Hold Infantry".into(),
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            home,
+            crate::maps::InMap::continent(0),
+            crate::creature_ai::SpawnPoint {
+                x: home.x,
+                y: home.y,
+                z: home.z,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 1.0,
+            },
+            crate::zones::AddonAuras(vec![ADDON]),
+        ))
+        .id();
+    h.advance(1);
+    assert!(
+        auras_of(&h, creature, ADDON).is_empty(),
+        "inactive grid applied its spawn aura"
+    );
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = home;
+    h.advance(1);
+    assert_eq!(
+        auras_of(&h, creature, ADDON).len(),
+        1,
+        "spawn aura must exist in the same fixed step that wakes the grid"
+    );
+    let applied = auras_of(&h, creature, ADDON).pop().unwrap();
+    h.advance(1);
+    assert_eq!(auras_of(&h, creature, ADDON), vec![applied]);
+}
+
 fn apply(app: &mut App, caster: Entity, target: Entity, spell_id: u32) {
     let spell = app
         .world()

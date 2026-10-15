@@ -17,6 +17,7 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [x] Toy presentation preflight is shared across owner snapshots and refreshed when source catalogs change; ownership/favourites remain account-specific.
 - [x] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
 - Owned FIFO item-catalog snapshots must not deep-copy the full catalog on the tick. A later catalog mutation must leave each captured request's definitions unchanged.
+- Dormant world populations must not initialize aura state or apply pending spawn-addon auras during cold ticks. Grid activation initializes them in the same fixed step, retaining pending addons and never resetting an already applied aura.
 
 ## Release acceptance (lead 2026-10-14)
 
