@@ -10,6 +10,7 @@ struct Fixture {
     players: [Entity; 3],
     connections: [Entity; 3],
     directory: tempfile::TempDir,
+    profile_errors: [Vec<GuildStateUpdate>; 3],
 }
 
 fn fixture() -> Fixture {
@@ -72,6 +73,8 @@ fn fixture() -> Fixture {
                 MessageReceiver::<GuildRankRequest>::default(),
                 MessageSender::<GuildRanksState>::default(),
                 MessageReceiver::<GuildRanksState>::default(),
+                MessageSender::<GuildStateUpdate>::default(),
+                MessageReceiver::<GuildStateUpdate>::default(),
             ))
             .id()
     });
@@ -81,6 +84,7 @@ fn fixture() -> Fixture {
         players,
         connections,
         directory,
+        profile_errors: std::array::from_fn(|_| Vec::new()),
     };
     collect_frames(&mut fixture, 6);
     fixture
@@ -95,6 +99,13 @@ fn collect_frames(f: &mut Fixture, frames: usize) -> [Vec<GuildRanksState>; 3] {
                 f.app
                     .world_mut()
                     .get_mut::<MessageReceiver<GuildRanksState>>(*connection)
+                    .unwrap()
+                    .receive(),
+            );
+            f.profile_errors[index].extend(
+                f.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<GuildStateUpdate>>(*connection)
                     .unwrap()
                     .receive(),
             );
@@ -118,6 +129,8 @@ enum Case {
     DepartedActor,
     RemoveMember,
     OrderedQuery,
+    ReboundActor,
+    StorageFailure,
 }
 
 #[test]
@@ -141,8 +154,31 @@ fn guild_rank_query_reads_the_preceding_queued_edit() {
     assert_fifo(Case::OrderedQuery);
 }
 
+#[test]
+fn guild_rank_rebound_account_receives_no_old_mutation_reply() {
+    assert_fifo(Case::ReboundActor);
+}
+#[test]
+fn guild_rank_storage_failure_is_counted_and_reported_without_success() {
+    assert_fifo(Case::StorageFailure);
+}
+
 fn assert_fifo(case: Case) {
     let mut f = fixture();
+    if matches!(case, Case::StorageFailure) {
+        let txn = f
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .db
+            .begin_write()
+            .unwrap();
+        txn.open_table(crate::persistence::banks::GUILDS)
+            .unwrap()
+            .insert(7, b"invalid guild".as_slice())
+            .unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
+    }
     let held = f
         .app
         .world()
@@ -208,6 +244,13 @@ fn assert_fifo(case: Case) {
             .entity_mut(f.connections[actor])
             .remove::<InWorld>();
     }
+    if matches!(case, Case::ReboundActor) {
+        f.app
+            .world_mut()
+            .get_mut::<Authenticated>(f.connections[actor])
+            .unwrap()
+            .account_id = 99;
+    }
     release.join().unwrap();
     assert!(
         elapsed < Duration::from_millis(50),
@@ -232,6 +275,35 @@ fn assert_fifo(case: Case) {
         });
     wait.recv().unwrap();
     let replies = collect_frames(&mut f, 6);
+    assert_publication(&f, case, actor, &replies);
+    assert_eq!(
+        f.app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .metrics
+            .failed
+            .load(std::sync::atomic::Ordering::Relaxed),
+        u64::from(matches!(case, Case::StorageFailure))
+    );
+    let member = f.characters[2];
+    drop(f.app);
+    let db = redb::Database::open(f.directory.path().join("ranks.redb")).unwrap();
+    match case {
+        Case::RemoveMember => assert!(persistence::load_character_guild(&db, member).is_none()),
+        Case::PublicNote | Case::DepartedActor | Case::ReboundActor => assert_eq!(
+            crate::persistence_character::load_guild_public_note(&db, member),
+            "Alchemy 100"
+        ),
+        Case::StorageFailure => assert_eq!(
+            crate::persistence_character::load_guild_public_note(&db, member),
+            ""
+        ),
+        _ => assert_eq!(load_guild(&db, 7).ranks[1].rights, 0),
+    }
+}
+
+fn assert_publication(f: &Fixture, case: Case, actor: usize, replies: &[Vec<GuildRanksState>; 3]) {
     let db = &f.app.world().resource::<GameDatabase>().db;
     match case {
         Case::RevokedPermission => {
@@ -259,36 +331,32 @@ fn assert_fifo(case: Case) {
                     .all(|reply| reply.error.is_none() && reply.ranks[1].rights == 0)
             );
         }
-        Case::PublicNote | Case::DepartedActor => {
+        Case::PublicNote | Case::DepartedActor | Case::ReboundActor => {
             assert_eq!(
                 crate::persistence_character::load_guild_public_note(db, f.characters[2]),
                 "Alchemy 100"
             );
             assert_eq!(replies[2].last().unwrap().error, None);
-            if matches!(case, Case::DepartedActor) {
+            if matches!(case, Case::DepartedActor | Case::ReboundActor) {
                 assert!(replies[actor].is_empty());
             }
         }
-    }
-    assert_eq!(
-        f.app
-            .world()
-            .resource::<GameDatabase>()
-            .writer
-            .metrics
-            .failed
-            .load(std::sync::atomic::Ordering::Relaxed),
-        0
-    );
-    let member = f.characters[2];
-    drop(f.app);
-    let db = redb::Database::open(f.directory.path().join("ranks.redb")).unwrap();
-    match case {
-        Case::RemoveMember => assert!(persistence::load_character_guild(&db, member).is_none()),
-        Case::PublicNote | Case::DepartedActor => assert_eq!(
-            crate::persistence_character::load_guild_public_note(&db, member),
-            "Alchemy 100"
-        ),
-        _ => assert_eq!(load_guild(&db, 7).ranks[1].rights, 0),
+        Case::StorageFailure => {
+            assert!(replies.iter().all(Vec::is_empty));
+            assert!(f.app.world().resource::<ChangedGuilds>().0.is_empty());
+            assert!(
+                f.profile_errors[actor]
+                    .last()
+                    .unwrap()
+                    .error
+                    .as_deref()
+                    .unwrap()
+                    .contains("decode bank row")
+            );
+            assert_eq!(
+                crate::persistence_character::load_guild_public_note(db, f.characters[2]),
+                ""
+            );
+        }
     }
 }
