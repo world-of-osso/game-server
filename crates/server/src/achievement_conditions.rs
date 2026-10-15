@@ -5,6 +5,7 @@
 // native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.
 // native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.
 // alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.
+// Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.
 // Native kill78 CreatureType30 preserves the actual eligible victim type.
 // Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.
 // Criteria SHA256 84f035906822bcb34048b1cfbbfc714fd1688b4742676c1ee7139c1280ace5b7.
@@ -7318,6 +7319,86 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (21359, 5537) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(25, 9)],
+        }),
+        (21360, 4129) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 8)],
+        }),
+        (21361, 4127) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 7)],
+        }),
+        (21362, 4121) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 4)],
+        }),
+        (21363, 4115) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 1)],
+        }),
+        (21364, 4125) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 6)],
+        }),
+        (21365, 4117) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 2)],
+        }),
+        (21366, 4113) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 0)],
+        }),
+        (21367, 4131) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 9)],
+        }),
+        (21368, 4123) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 5)],
+        }),
+        (21369, 4119) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 3)],
+        }),
+        (21370, 4129) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 8)],
+        }),
+        (21371, 4127) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 7)],
+        }),
+        (21372, 4121) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 4)],
+        }),
+        (21373, 4115) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 1)],
+        }),
+        (21374, 4125) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 6)],
+        }),
+        (21375, 4117) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 2)],
+        }),
+        (21376, 4113) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 0)],
+        }),
+        (21377, 4131) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 9)],
+        }),
+        (21378, 4123) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 5)],
+        }),
+        (21379, 4119) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(78, 3)],
         }),
         (21380, 5540) => Some(CompiledConditions::All {
             difficulty: None,

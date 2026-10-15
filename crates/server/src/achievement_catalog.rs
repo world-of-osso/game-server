@@ -529,6 +529,8 @@ enum CriteriaFact {
     KnownSpell(u32),
     EarnedAchievement(u32),
     BattlePetTeamLevel(u8),
+    /// Resolved species IDs whose authored PetTypeEnum matches the required type.
+    BattlePetSpeciesOfType(BTreeSet<u32>),
     /// Some8 requiring one of these complete, authenticated PlayerHasAura8 spells.
     PlayerAuras(BTreeSet<u32>),
     /// ItemId19 or item-template quality14/15 against this native receipt's itemID.
@@ -636,6 +638,9 @@ impl CriteriaFact {
                 player.group_size.is_some_and(|size| size < *limit as usize)
             }
             Self::NotInParty => player.group_size == Some(0),
+            Self::BattlePetSpeciesOfType(species) => {
+                matches!(event, CriteriaEvent::BattlePetReachedLevel { species: id, .. } if species.contains(&id))
+            }
             Self::KilledCreatureType(required) => {
                 matches!(event, CriteriaEvent::KillAnyCreature(Some(kind)) if kind == *required)
             }
@@ -1394,6 +1399,24 @@ fn load_zone_members(conn: &Connection, zone: u32) -> rusqlite::Result<BTreeSet<
         .collect())
 }
 
+/// TC BattlePetType2157–2164 resolves the actual event species' authored type.
+fn load_battle_pet_type_fact(
+    conn: &Connection,
+    required_type: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    if required_type > 9 {
+        return Ok(None);
+    }
+    let mut query = conn.prepare_cached(
+        "SELECT s.species_id FROM battle_pet_species s \
+         JOIN battle_pet_species_metadata m ON m.ID=s.species_id WHERE m.PetTypeEnum=?1",
+    )?;
+    let species = query
+        .query_map([required_type], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!species.is_empty()).then_some(CriteriaFact::BattlePetSpeciesOfType(species)))
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
@@ -1452,6 +1475,7 @@ fn load_criteria_facts(
                 .filter(|kind| (1..=15).contains(kind))
                 .map(CriteriaFact::KilledCreatureType),
             67 => node_counts::required_owned_nodes(asset).map(CriteriaFact::EitherTeamNodeCount),
+            78 => load_battle_pet_type_fact(conn, asset)?,
             46 => small
                 .filter(|percent| (1..=100).contains(percent))
                 .map(CriteriaFact::TargetHealthBelowPercent),
@@ -1468,7 +1492,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/87/104/122"
+                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
                 )
             }
         };
