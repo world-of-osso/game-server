@@ -16,6 +16,8 @@ pub(super) struct LearningRequest {
     pub mount: u32,
 }
 
+type LearningCompletion = Result<Result<(), InventoryError>, String>;
+
 struct PendingLearning {
     request: LearningRequest,
     receipt: CommitReceipt<Result<(), InventoryError>>,
@@ -89,9 +91,7 @@ fn publish_mount_learning(world: &mut World) {
     }
 }
 
-fn drain_completed_learning(
-    world: &mut World,
-) -> Vec<(LearningRequest, Result<Result<(), InventoryError>, String>)> {
+fn drain_completed_learning(world: &mut World) -> Vec<(LearningRequest, LearningCompletion)> {
     let mut pending = world.resource_mut::<PendingMountLearning>();
     let mut completed = Vec::new();
     while let Some(result) = pending.0.front().and_then(|job| job.receipt.result()) {
@@ -120,7 +120,7 @@ fn owns_learning_session(world: &World, request: &LearningRequest) -> bool {
 fn publish_learning_result(
     world: &mut World,
     request: LearningRequest,
-    completion: Result<Result<(), InventoryError>, String>,
+    completion: LearningCompletion,
 ) {
     let current_session = owns_learning_session(world, &request);
     let result = completion.unwrap_or_else(|detail| {
@@ -139,12 +139,17 @@ fn publish_learning_result(
             // Ownership belongs to every current account character, even if the learner left.
             broadcast_account(world, request.account);
         }
-        Err(error) => send_learning_error(world, &request, error),
+        Err(error) => send_learning_error(world, &request, error, current_session),
     }
 }
 
-fn send_learning_error(world: &mut World, request: &LearningRequest, error: InventoryError) {
-    if owns_learning_session(world, request) {
+fn send_learning_error(
+    world: &mut World,
+    request: &LearningRequest,
+    error: InventoryError,
+    current_session: bool,
+) {
+    if current_session {
         if let Some(mut sender) = world.get_mut::<MessageSender<InventoryError>>(request.connection)
         {
             sender.send::<InventoryChannel>(error);

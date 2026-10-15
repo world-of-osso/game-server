@@ -453,48 +453,14 @@ pub(crate) fn learn_item(
     player: Entity,
     location: ItemLocation,
 ) -> Result<bool, shared::protocol::InventoryError> {
-    let fail = |detail: String| shared::protocol::InventoryError {
-        reason: shared::protocol::InventoryErrorReason::CantDoRightNow,
-        detail: Some(detail),
-    };
-    let (db, templates) = crate::inventory::use_store(world)?;
-    let record = crate::persistence::inventory_store::load_inventory_record(db, character)
-        .ok_or_else(|| fail("Character inventory missing.".into()))?;
-    let model = crate::inventory::inventory_model::InventoryModel::from_record(
-        record,
-        templates,
-        &mut || crate::persistence::next_id(db, "item_instance"),
-    );
-    let item = model.existing(location)?;
-    if model.definition_source(item.item_guid) != shared::item_data::ItemDefinitionSource::Retail {
-        return Ok(false);
-    }
-    let Some(id) = world
-        .get_resource::<MountCatalog>()
-        .and_then(|catalog| catalog.learn_items.get(&item.item_id))
-        .copied()
-    else {
+    let Some(item) = load_mount_teaching_item(world, character, location)? else {
         return Ok(false);
     };
-    let item_id = item.item_id;
-    let guid = item.item_guid;
-    let template = &templates.retail[&item_id];
-    let rider = world
-        .get::<shared::components::Player>(player)
-        .ok_or_else(|| fail("Player missing.".into()))?;
-    if !template.allows(rider.class, rider.race) {
-        return Err(fail("Mount item race/class restriction.".into()));
-    }
-    let level = world
-        .get::<shared::components::Level>(player)
-        .map_or(0, |level| level.0);
-    if u16::from(level) < template.required_level {
-        return Err(fail("Level too low to learn this mount.".into()));
-    }
+    require_mount_item_eligibility(world, player, &item.template)?;
     let (connection, account, _) = connections(world)
         .into_iter()
         .find(|(_, _, owner)| *owner == player)
-        .ok_or_else(|| fail("Mount learner not authenticated.".into()))?;
+        .ok_or_else(|| mount_learning_error("Mount learner not authenticated."))?;
     learning::enqueue_mount_learning(
         world,
         learning::LearningRequest {
@@ -503,12 +469,78 @@ pub(crate) fn learn_item(
             account,
             character,
             location,
-            item: item_id,
-            guid,
-            mount: id,
+            item: item.item,
+            guid: item.guid,
+            mount: item.mount,
         },
     );
     Ok(true)
+}
+
+struct MountTeachingItem {
+    item: u32,
+    guid: u64,
+    mount: u32,
+    template: crate::item_templates::ItemTemplate,
+}
+
+fn mount_learning_error(detail: &str) -> shared::protocol::InventoryError {
+    shared::protocol::InventoryError {
+        reason: shared::protocol::InventoryErrorReason::CantDoRightNow,
+        detail: Some(detail.into()),
+    }
+}
+
+fn load_mount_teaching_item(
+    world: &World,
+    character: u64,
+    location: ItemLocation,
+) -> Result<Option<MountTeachingItem>, shared::protocol::InventoryError> {
+    let (db, templates) = crate::inventory::use_store(world)?;
+    let record = crate::persistence::inventory_store::load_inventory_record(db, character)
+        .ok_or_else(|| mount_learning_error("Character inventory missing."))?;
+    let model = crate::inventory::inventory_model::InventoryModel::from_record(
+        record,
+        templates,
+        &mut || crate::persistence::next_id(db, "item_instance"),
+    );
+    let item = model.existing(location)?;
+    if model.definition_source(item.item_guid) != shared::item_data::ItemDefinitionSource::Retail {
+        return Ok(None);
+    }
+    let Some(id) = world
+        .get_resource::<MountCatalog>()
+        .and_then(|catalog| catalog.learn_items.get(&item.item_id))
+        .copied()
+    else {
+        return Ok(None);
+    };
+    Ok(Some(MountTeachingItem {
+        item: item.item_id,
+        guid: item.item_guid,
+        mount: id,
+        template: templates.retail[&item.item_id],
+    }))
+}
+
+fn require_mount_item_eligibility(
+    world: &World,
+    player: Entity,
+    template: &crate::item_templates::ItemTemplate,
+) -> Result<(), shared::protocol::InventoryError> {
+    let rider = world
+        .get::<shared::components::Player>(player)
+        .ok_or_else(|| mount_learning_error("Player missing."))?;
+    if !template.allows(rider.class, rider.race) {
+        return Err(mount_learning_error("Mount item race/class restriction."));
+    }
+    let level = world
+        .get::<shared::components::Level>(player)
+        .map_or(0, |level| level.0);
+    if u16::from(level) < template.required_level {
+        return Err(mount_learning_error("Level too low to learn this mount."));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
