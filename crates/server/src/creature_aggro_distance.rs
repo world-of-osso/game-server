@@ -72,6 +72,7 @@ type UnitGeometry<'w, 's> = Query<
         Option<&'static ModelDisplay>,
         Option<&'static UnitScale>,
         Option<&'static ActiveAuras>,
+        Option<&'static crate::zones::CreatureDifficulty>,
     ),
 >;
 
@@ -90,28 +91,15 @@ impl AggroDistance<'_, '_> {
         creature_level: u8,
         target_level: u8,
     ) -> Option<f32> {
-        let (_, npc, _, _, auras) = self.units.get(creature).ok()?;
-        let npc = npc?;
-        let template = self
-            .data
-            .as_deref()
-            .and_then(|data| data.templates.get(&npc.template_id));
-        let Some(template) = template else {
-            error!(
-                ?creature,
-                entry = npc.template_id,
-                "Cannot evaluate creature aggro: authored template is missing"
-            );
-            return None;
-        };
-        let (_, _, _, _, target_auras) = self.units.get(target).ok()?;
+        let (_, _, _, _, auras, _) = self.units.get(creature).ok()?;
+        let (_, _, _, _, target_auras, _) = self.units.get(target).ok()?;
         Some(
             AttackDistance {
                 creature_level,
                 target_level,
                 creature_reach: self.combat_reach(creature)?,
                 target_reach: self.combat_reach(target)?,
-                expansion_max_level: expansion_max_level(template.health_scaling_expansion),
+                expansion_max_level: self.expansion_max_level(creature)?,
                 detect_range: aura_range(auras, MOD_DETECT_RANGE),
                 detected_range: aura_range(target_auras, MOD_DETECTED_RANGE),
             }
@@ -119,8 +107,28 @@ impl AggroDistance<'_, '_> {
         )
     }
 
+    fn expansion_max_level(&self, creature: Entity) -> Option<u8> {
+        let (_, npc, _, _, _, difficulty) = self.units.get(creature).ok()?;
+        let npc = npc?;
+        let difficulty = difficulty.map_or(0, |difficulty| difficulty.0);
+        let template = self
+            .data
+            .as_deref()
+            .and_then(|data| data.template_for(npc.template_id, difficulty));
+        let Some(template) = template else {
+            error!(
+                ?creature,
+                entry = npc.template_id,
+                difficulty,
+                "Cannot evaluate creature aggro: authored difficulty template is missing"
+            );
+            return None;
+        };
+        Some(expansion_max_level(template.health_scaling_expansion))
+    }
+
     pub(crate) fn combat_reach(&self, unit: Entity) -> Option<f32> {
-        let (player, _, display, scale, _) = self.units.get(unit).ok()?;
+        let (player, _, display, scale, _, _) = self.units.get(unit).ok()?;
         let scale = scale.map_or(1.0, |scale| scale.0);
         if player {
             return Some(PLAYER_COMBAT_REACH * scale);
