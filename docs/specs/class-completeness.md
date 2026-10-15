@@ -99,6 +99,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 ## Dual wield and parry knowledge
 
 - [x] Knowing a native SPELL_EFFECT_DUAL_WIELD (40) spell permits one-hand and off-hand weapons in the off hand; without it they fail with CantDualWield, and auto-equip offers only the main hand. One-hand polearms never fit the off hand.
+- [x] Learned native Titan's Grip effect155 permits two-hand weapon hand placement with native subclass masks; the off hand additionally needs Dual Wield40. Explicit and auto-equip preserve the permitted main/off-hand pair. This does not establish acquisition or whole-Fury acceptance. See [inventory](inventory.md).
 - [ ] When a player stops knowing Dual Wield (spec/talent change), TC moves the off-hand weapon to the bags or mails it (OffhandCheckAtSpellUnlearn defaults on). Not yet modelled.
 - [x] Knowing any of the six native SPELL_EFFECT_PARRY (22) spells enables parry; without one, parry chance never applies.
 
@@ -180,6 +181,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `crates/server/src/spell_cast/resistance_pct_tests.rs`: native Armor Specialization/Reinforced Plates player armor with aura466, removal, and level-scaled creature mitigation.
 - `crates/server/src/spell_cast/portal_tests.rs`: all29 class trans-door spawns and absent-template admission failure.
 - `crates/server/src/inventory_tests.rs`: native Dual Wield off-hand admission, rejection and auto-equip.
+- `crates/server/src/inventory_titans_grip_tests.rs`: native46917/120553 two-hand placement, both ordering directions, auto-equip, subclass and missing/unlearned capability controls.
 - `crates/server/src/auras/defensives_tests.rs`: six native Parry spells versus none.
 - `crates/server/src/spell_cast/attack_speed_tests.rs`: native Ruthless Aggression/Swift as a Coursing River creature swing intervals and unchanged Fireball cast time.
 - `crates/server/src/auras/tiger_dash_tests.rs`: native Tiger Dash per-tick decay and expiry.

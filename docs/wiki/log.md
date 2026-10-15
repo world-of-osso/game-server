@@ -1,6 +1,37 @@
+## 2026-10-15 — Installed race/class source
+
+[Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Installed283-pair/missing-source/actual admin kit+persistence regressions pass3/3; post-master race/mask/start/Forever controls10/10 and scoped check/fmt pass. Source95/96 contracts, start-level and visage policy remain separate and unchanged; rendered Dwarf login is not claimed. No realm5000 operation or stat tuning.
+
+## 2026-10-15 — Follower passive-derived stat recomputation
+
+[Source boundary](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15): NPC bridge passives stored modifiers but the player-only query never recomputed them. Native spec66 RED2 proves7840 versus sourced10584/8232 without stat overrides; same production query now accepts follower profile identity and ordinary modifier changes. GREEN/build/live proof remain separate; Stockade0/3 stays open.
+
+## 2026-10-15 — Breakable CC target protection
+
+[Source boundary](investigations/follower-data.md#breakable-cc-targeting--2026-10-15): follower hold/retarget and unfinished hostile cast/swing stop; Attr6 `0x100` implicit chain/area exclusion. Native118/profile/31935/176017 RED8 plus explicit-player positive control; GREEN/build/live proof tracked separately. Stats, CC budgets and launched missiles unchanged; Stockade0/3 remains open. Subsequent native9/9 and integrated13/13/check/builds pass. Stockccguard52 observes zero NPC interference across three real118 intervals but loses Garrick; separate diagnostic stop/cast same-Update race replay RED1→GREEN3. Next native run completes3/3 Polymorphs and14 trash with full party, then reproduces an authored ramp-lip wall-ray block; same-ramp analytical detour prepared. Next normal-ADD native run reaches that landing but loses Garrick; the global waypoint also altered the initial approach, so further route changes await a scoped lead decision. Stockade0/3 remains open.
+
+## 2026-10-14 — Source-correct proximity distance
+
+[Creature aggro](systems/creature-aggro.md#aggro-on-sight) replaces the pet-style detection radius with TC a352b1fa GetAttackDistance, level/expansion and detect-aura rules, authored scaled combat reaches and strict distance. Stockade30vs32 native player/companion regressions RED2→GREEN34, including positive boundary and scaled cross-cell controls. Check/build/live rerun remain separate gates; no claim that radius alone caused the prior over-pull.
+## 2026-10-15 — Flute follow source adjudication
+
+[Wild/default route](systems/toys.md#flute-follow-source-adjudication-2026-10-15): current70391 effect142917→property64 Control0/Title0/Slot0/Flags0 selects TempSummon and no follow-on-spawn in pinned TC. Preserve source non-follow; no descriptive-text AI/distance. Independent Retail observation and fresh native source-model pixels remain unproved.
+## 2026-10-15 — Unearned-achievement cast guard
+
+[Bounded SingleFalse87](systems/dungeon-achievements.md#unearned-achievement-cast-guard) on CastSpell29 uses existing scoped earned state and requires authored metadata. Final native/catalog/prior-positive87/pinned9dfe04b9 GREEN6/6(45.26s), compiler40/40/generated5737; actual twenty1217637 casts grant account41707 then stop, preserving dates/counters across DB/auth reopen and account boundaries. Census5495ordinary/1824statistics adds only41707; no general negation or gear acquisition/encounter/UI certificate.
+
+## 2026-10-15 — Full native pet-family grants
+## 2026-10-15 — Spell-created unit ownership logs
+
+[Combat log ownership](systems/spell-casting.md#messages): actual effect28/effect56 creations emit Summon with the real spell and actor identities; temporary guardian ancestry delivers combat to its owner without changing gameplay credit. Login restoration emits no synthetic event. Bounded native gates tracked separately from DPS/balance acceptance.
+
 ## 2026-10-15 — Source Toy forward destination
 
 [Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
+## 2026-10-15 — Titan's Grip hand rules
+
+[Inventory](systems/inventory.md#titans-grip-hand-rules--2026-10-15) derives effect155 capability and weapon/armor subclass masks from learned native spells; type17 gains the off hand with Dual Wield and matching Grip. Explicit/auto-equip retain the permitted two-hand pair. Published70391 authentication:261 spell fields plus pinned TC hashes. Request/persistence RED: three missing-admission/auto-equip failures; two negative controls pass. At9593985e native five tests GREEN under four threads (73.94s); merged7ff7b5e4 native ranged plus three retained Dual Wield controls bring scoped proof to nine pass/zero fail (7.62s). Workspace/all-target check72.481s/fmt4.779s pass warning-free. Acquisition, unlearn-time eviction and whole-Fury acceptance remain open.
+
 ## 2026-10-15 — Ordinary NPC physical-spell dodge
 
 [Shared physical hit roll](systems/player-damage.md#shared-weapon-spell-defense-roll) consumes NPC3+aura49+positive effective-level bonus, allowing rear PvE dodge. Native70188/38598 genuine damage RED→4 native controls GREEN; actual tuning and separate nonlethal health buffer preserve guard proof. Block-only fixtures isolate dodge with source45769e1/251−20 and suitable caster level; repaired23 block/type/table controls pass. Final8fe095bc defense32/32 pass (95.39s tests); workspace/all-target check17.901s/fmt2.774s pass warning-free. Follow-up97592a1e native tuning/level chance assertions prove3/3/9/7.5 after49 removal across four native level cases; seven scoped controls pass64.20s tests. Sampled attack distribution, Totems, player expertise, full loadouts and independent acceptance remain unproved.
@@ -1329,6 +1360,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.
 
+- 2026-10-13: [Follower diagnostics](investigations/follower-data.md#stockade-diagnostic-attachment--2026-10-13) attach native companions to an existing Normal Stockade copy without Retail catalog/admission changes; full completion proof remains open.
+
+- 2026-10-13: Stockade diagnostic initial admission approved through sourced WorldSafeLoc3599 and real transfer/ACK; no in-dungeon repositioning or stat modifiers. Northshire world-walking cliff remains outside this slice.
 - 2026-10-13 — [Group-private runtime](systems/toys.md#source-group-private-runtime-2026-10-13): captured group identity, dynamic membership interest and inherited privacy; behavioral/capture gates tracked separately.
 - 2026-10-13: native aura7 fleeing — pinned timing/distance, Detour collision/routes, player control ownership and14 current controls; all-source TDB model geometry producer, lead-only canonical publication pending. See [batch53](../class-completeness6.md#native-fear-navmesh-fleeing--batch53).
 
@@ -1388,3 +1422,16 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-15: Wake/flight exit GREEN053915ae1/1 in31.22s, unchanged firstwave/fourdruid controls2PASS, all-target check14.62s/no warnings and scopedfmt/diff exit0. Corrected fixture instant-aura assumption using actual8153 five-second cast. Independent lead gate pending; natural/native clears still open.
 - 2026-10-15: Wailing Normal ritual-wave copy-only projection profile after process-boundary RED; source identity/stat fields preserved, canonical publication/balance separate.
 - 2026-10-15: Wailing copy-only Normal wave projection GREENb3cc6fed2/2 PASS7.421s, actual CLI/idempotency/identity-refusal and unchanged row hashes; canonical/runtime application and balance still separate.
+
+## 2026-10-15 — Typed location alternatives
+
+Replaced area-only Some projection with typed17/41 alternatives and strict complete-asset validation. Compiler/native genuine RED8984dbbd; generated5759; GREEN/census pending. [System](systems/dungeon-achievements.md#typed-areazone-alternatives).
+
+Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/8(59.21s), compiler41/41, census5506/1824 with all243/same7hashes. Native cached254 selfie27968/refused/outside/idle/reopen; no full grants/travel/acquisition/UI claim.
+
+- 2026-10-15: Feral Spirit owner-power RED and approved owner/weapon-only implementation; intrinsic AP remains named gap; GREEN pending.
+- 2026-10-15: Added bounded Login74 negative104 contract and native spell-completeness/initialization boundary; source TC HasSpell/SingleFalse. Focused proof pending.
+
+- 2026-10-15: Negative104 actual SelectCharacter RED724af71c exposed missing selection-to-knowledge edge; fix408f0a3b passes unchanged native handler plus8 scoped controls,43.44s. Census5509/1824, only3hidden character roots, all243/same7sourcehashes.
+
+- 2026-10-15: Feral Spirit owner/weapon-only repair f135c4a8+28859d64, merged afc0e5e5/protocol62865c23:24/24 scoped controls, check/fmt/readability clean; intrinsic AP and full-stat acceptance remain open.

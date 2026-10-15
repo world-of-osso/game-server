@@ -250,11 +250,12 @@ The caster's [[auras]] spell modifiers (107/108/218/219) adjust cast time (Chang
 | `CastFailed{reason, detail}` | caster owner | rejected request or failed completion |
 | `SpellCooldownUpdate` | caster owner | GCD start; cooldown start |
 | `SpellChargesUpdate` | caster owner | charge spent |
-| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune); aura events in [[auras]] |
+| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune), Summon; aura events in [[auras]] |
 
 - Other clients in range do not receive combat log events yet.
 - Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
 - Spell effects emit only `CombatLogEvent`.
+- Spell-created effect28 units and effect56 controlled pets emit `Summon` after creation: source=summoner, target=unit, spell_id=actual summoning spell (including triggered child spells). Existing-pet recall and login/script/journal restoration do not synthesize events. Temporary summon ancestry routes logs to the player's connection without altering meter/quest/PvP credit. See [guardian contract](../../specs/spell-guardians.md).
 - `log_event` stamps every event with server wall-clock Unix milliseconds before recording damage or sending to owners, including queued melee events. Constructors leave the timestamp unset until that boundary.
 - `Interrupt.extra_spell_id` identifies the interrupted cast; `Dispel.extra_spell_id` identifies the removed aura. Other kinds leave it `None`; `spell_id` remains the interrupting or dispelling spell.
 
@@ -697,3 +698,9 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 ## Druid automatic forms
 
 `druid_transform.rs` binds exactly five native BeforeCast scripts: Prowl/Tiger Dash→Cat768; Incapacitating Roar/Berserk/Stampeding Roar→Bear5487. It uses real triggered child effects, only when not already in that form, before completion/costs and after initial admission. Berserk alone runs its native AfterCast Mangle/Thrash/Growl spell/category reset, not charge restoration or GCD reset. Category-only cooldowns keep the native spell entry until category recovery (`SpellHistory.cpp:505`). Census emits observed `form_after` separately from form-prerequisite/warning receipts. [Source and behavior proof](../../class-completeness6.md#native-druid-beforecast-transformers--batch52), [contract](../../specs/class-completeness.md). Other form/aura/script gaps remain explicit.
+
+## Feral Spirit owner contribution — 2026-10-15
+
+[Contract](../../specs/spell-guardians.md#feral-spirit-owner-inheritance). Actual51533→228562 creates two29264 wolves. Pinned TC a352b1fa TemporarySummon.h:119 classifies only29264 as Spirit Wolf; StatSystem.cpp:1353/1423 supplies owner melee AP×0.31 (integer AP and bonus SP) and AP/3.5×attack seconds. Pet.cpp:1026 supplies weapon3–5×summon level; local template supplies1500ms. Both spell power and melee swings read live owner power. Other guardian formulas remain unchanged.
+
+Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.

@@ -4,8 +4,8 @@
 //! Item rules come from `content_item` (`ItemTemplates`): inventory type, stack
 //! size, required level, class/race masks, bonding and container size/type.
 //! Containers 1-4 and the reagent bag (5) are as large as the bag equipped in
-//! their bag slot. Gaps: dual wield and weapon/armor skills are not tracked
-//! (one-handers go to the main hand only). Non-visual paperdoll slots are stored
+//! their bag slot. Learned dual-wield and Titan's Grip effects govern hand slots;
+//! weapon/armor proficiencies remain untracked. Non-visual paperdoll slots are stored
 //! separately from visual equipment to preserve existing character encodings.
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -30,6 +30,15 @@ pub(crate) type InventoryView = BTreeMap<ItemLocation, ItemStack>;
 type OpResult = Result<(), InventoryError>;
 
 const TWO_HAND_TYPES: [u8; 4] = [15, 17, 25, 26];
+const TWO_HAND_WEAPON: u8 = 17;
+const EFFECT_TITAN_GRIP: u32 = 155;
+
+/// TC Player::SetCanTitanGrip keeps independent weapon/armor subclass masks.
+#[derive(Default)]
+struct TitanGrip {
+    weapon_subclasses: u32,
+    armor_subclasses: u32,
+}
 
 pub(crate) struct InventoryModel {
     bags: Vec<Vec<Option<InventoryItemData>>>,
@@ -50,6 +59,7 @@ pub(crate) struct InventoryModel {
     transmogs: HashMap<u64, crate::transmog_store::ItemTransmog>,
     /// `Player::CanDualWield`: the player knows a SPELL_EFFECT_DUAL_WIELD spell.
     can_dual_wield: bool,
+    titan_grip: Option<TitanGrip>,
 }
 
 pub(crate) fn error(reason: InventoryErrorReason, detail: impl Into<String>) -> InventoryError {
@@ -96,6 +106,7 @@ impl InventoryModel {
             appearance_grants: record.appearance_grants,
             transmogs: record.transmogs,
             can_dual_wield: false,
+            titan_grip: None,
         };
         for entry in record.equipped {
             model
@@ -630,6 +641,12 @@ impl InventoryModel {
         {
             return &[EquipmentSlot::ReagentBag];
         }
+        if self.inventory_type(item) == TWO_HAND_WEAPON
+            && self.can_dual_wield
+            && self.can_titan_grip(item)
+        {
+            return &[EquipmentSlot::MainHand, EquipmentSlot::OffHand];
+        }
         EquipmentSlot::for_inventory_type(self.inventory_type(item))
     }
 
@@ -859,13 +876,51 @@ impl InventoryModel {
         self.swap(from, ItemLocation::Equipment(*target))
     }
 
-    pub(crate) fn set_can_dual_wield(&mut self, can_dual_wield: bool) {
-        self.can_dual_wield = can_dual_wield;
+    pub(crate) fn set_weapon_skills(
+        &mut self,
+        known: Option<&crate::class_progression::KnownSpells>,
+        spells: Option<&crate::spell_info::SpellStore>,
+    ) {
+        self.can_dual_wield =
+            crate::stats::knows_effect(known, spells, crate::stats::EFFECT_DUAL_WIELD);
+        self.titan_grip = None;
+        let (Some(known), Some(spells)) = (known, spells) else {
+            return;
+        };
+        for spell in known.iter().filter_map(|id| spells.get(id)) {
+            if !spell
+                .effects
+                .iter()
+                .any(|effect| effect.effect == EFFECT_TITAN_GRIP)
+            {
+                continue;
+            }
+            let grip = self.titan_grip.get_or_insert_with(TitanGrip::default);
+            if let Some(required) = spell.equipped_items.as_deref() {
+                match required.item_class {
+                    2 => grip.weapon_subclasses = required.item_subclass,
+                    4 => grip.armor_subclasses = required.item_subclass,
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    /// TC Player.cpp13142–13163: zero mask means unrestricted, not no subclasses.
+    fn can_titan_grip(&self, item: &InventoryItemData) -> bool {
+        let (Some(grip), Some(template)) = (&self.titan_grip, self.template(item)) else {
+            return false;
+        };
+        let mask = match template.scaling.class_id {
+            2 => grip.weapon_subclasses,
+            4 => grip.armor_subclasses,
+            _ => 0,
+        };
+        mask == 0 || mask & (1 << template.scaling.subclass_id) != 0
     }
 
     /// TC a352b1fa `Player::CanEquipItem` off-hand weapons (Player.cpp:10866-10886).
-    /// No content off-hand weapon carries ITEM_FLAG3_ALWAYS_ALLOW_DUAL_WIELD and Titan's
-    /// Grip is unmodelled, so two-handers never fit the off hand.
+    /// No content off-hand weapon carries ITEM_FLAG3_ALWAYS_ALLOW_DUAL_WIELD.
     fn validate_off_hand_weapon(&self, item: &InventoryItemData, inventory_type: u8) -> OpResult {
         const WEAPON: u8 = 13;
         const WEAPON_OFF_HAND: u8 = 22;
@@ -1124,8 +1179,7 @@ impl InventoryModel {
         item: &InventoryItemData,
         slot: EquipmentSlot,
     ) -> Option<EquipmentSlot> {
-        let is_two_hand =
-            |item: &InventoryItemData| TWO_HAND_TYPES.contains(&self.inventory_type(item));
+        let is_two_hand = |item: &InventoryItemData| self.requires_both_hands(item);
         match slot {
             EquipmentSlot::MainHand
                 if is_two_hand(item) && self.equipped.contains_key(&EquipmentSlot::OffHand) =>
@@ -1584,7 +1638,13 @@ impl InventoryModel {
     fn two_hand_used(&self) -> bool {
         self.equipped
             .get(&EquipmentSlot::MainHand)
-            .is_some_and(|item| TWO_HAND_TYPES.contains(&self.inventory_type(item)))
+            .is_some_and(|item| self.requires_both_hands(item))
+    }
+
+    fn requires_both_hands(&self, item: &InventoryItemData) -> bool {
+        let inventory_type = self.inventory_type(item);
+        TWO_HAND_TYPES.contains(&inventory_type)
+            && (inventory_type != TWO_HAND_WEAPON || !self.can_titan_grip(item))
     }
 
     /// `Player::EquipNewItem` then `AutoUnequipOffhandIfNeed` (Player.cpp:26123-26167):

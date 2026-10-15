@@ -26,6 +26,65 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_login_unknown_spell_requires_plain_complete_negation(self):
+        criteria = {43205: dict(self.criteria[1], Type='74', Asset='0',
+                               ModifierTreeId='86619')}
+        mods = {86619: node(0, 4), 86620: node(86619, 3, 104, 264211)}
+        self.assertEqual(self.compile(mods, criteria), {43205: [None, ((-104, 264211),)]})
+        self.assertEqual(self.compile({**mods, 86622: node(86619, 2, 25, 1)}, criteria),
+                         {43205: [None, ((-104, 264211), (25, 1))]})
+        self.assertEqual(self.compile({**mods, 86622: node(86619, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '8', '29', '34', '110'):
+            criteria[43205]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[43205]['Type'] = '74'
+        for field, value in [('SecondaryAsset', '1'), ('TertiaryAsset', '1'), ('Asset', '0')]:
+            invalid = copy.deepcopy(mods)
+            invalid[86620][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+
+    def test_native_cast_unearned_achievement_keeps_complete_companions(self):
+        criteria = {103451: dict(self.criteria[1], Type='29', Asset='1217637',
+                                ModifierTreeId='392319')}
+        mods = {392319: node(0, 4), 392320: node(392319, 3, 87, 41707)}
+        self.assertEqual(self.compile(mods, criteria), {103451: [None, ((-87, 41707),)]})
+        self.assertEqual(self.compile({**mods, 392321: node(392319, 2, 25, 1)}, criteria),
+                         {103451: [None, ((-87, 41707), (25, 1))]})
+        self.assertEqual(self.compile({**mods, 392321: node(392319, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '8', '74', '110'):
+            criteria[103451]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[103451]['Type'] = '29'
+        mods[392320]['SecondaryAsset'] = '1'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[392320]['SecondaryAsset'] = '0'
+        mods[392320]['Asset'] = '0'
+        self.assertEqual(self.compile(mods, criteria), {})
+
+    def test_some_locations_preserve_area_and_zone_leaf_meanings(self):
+        criteria = {27968: dict(self.criteria[1], Type='29', Asset='181842',
+                               ModifierTreeId='20912')}
+        mods = {20912: node(0, 8, amount=1),
+                20913: node(20912, 2, 17, 1445),
+                20914: node(20912, 2, 17, 254),
+                20915: node(20912, 2, 41, 25)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {27968: [None, ((17, 254), (17, 1445), (41, 25))]})
+        mods[20913]['Type'] = '41'
+        mods[20914]['Type'] = '41'
+        self.assertEqual(self.compile(mods, criteria),
+                         {27968: [None, ((41, 25), (41, 254), (41, 1445))]})
+        for field, value in [('Type', '999'), ('Operator', '3'),
+                             ('SecondaryAsset', '1'), ('Asset', '0')]:
+            invalid = copy.deepcopy(mods)
+            invalid[20915][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+        mods[20912]['Amount'] = '2'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[20912]['Amount'] = '1'
+        mods[20916] = node(20915, 2, 17, 25)
+        self.assertEqual(self.compile(mods, criteria), {})
+
     def test_plain_empty_all_is_true_but_empty_some_and_single_are_false(self):
         self.assertEqual(self.compile({10: node(0, 4)}), {1: [None, ()]})
         self.assertEqual(self.compile({10: node(0, 8)}), {})
@@ -455,7 +514,7 @@ class Conditions(unittest.TestCase):
             rejected = copy.deepcopy(modifiers)
             rejected[10].update(change)
             self.assertEqual(self.compile(rejected), {})
-        for change in ({'Type': '41'}, {'Operator': '3'}, {'Asset': '0'},
+        for change in ({'Type': '999'}, {'Operator': '3'}, {'Asset': '0'},
                        {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
             rejected = copy.deepcopy(modifiers)
             rejected[12].update(change)

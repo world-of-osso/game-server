@@ -479,6 +479,16 @@ fn warlock_summon_imp_spawns_owned_pet_and_firebolt_bar() {
     let dir = tempfile::tempdir().unwrap();
     let mut h = ImpHarness::login(&dir.path().join("pets.redb"));
     let pet = h.summon();
+    let summons: Vec<_> =
+        h.h.inbox
+            .log
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Summon)
+            .collect();
+    assert_eq!(summons.len(), 1, "spell-created pet emits one summon");
+    assert_eq!(summons[0].source, Some(h.h.caster.to_bits()));
+    assert_eq!(summons[0].target, Some(pet.to_bits()));
+    assert_eq!(summons[0].spell_id, Some(SUMMON_IMP));
     let world = h.h.app.world();
     assert_eq!(world.get::<Npc>(pet).unwrap().template_id, IMP);
     assert_eq!(
@@ -614,6 +624,13 @@ fn warlock_imp_current_pet_returns_after_reopening_database() {
     }
     let h = ImpHarness::login(&path);
     let pet = h.pet().expect("permanent current imp restored at login");
+    assert!(
+        h.h.inbox
+            .log
+            .iter()
+            .all(|event| event.kind != CombatLogKind::Summon),
+        "login restoration is not a spell-driven summon"
+    );
     assert_eq!(h.h.app.world().get::<Npc>(pet).unwrap().template_id, IMP);
     assert_eq!(h.h.app.world().get::<UnitLevel>(pet), Some(&UnitLevel(3)));
     assert!(

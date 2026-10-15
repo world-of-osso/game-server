@@ -120,7 +120,7 @@ mod dummy_tests;
 pub mod effects;
 #[cfg(test)]
 mod fount_strength_tests;
-mod guardian;
+pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
@@ -815,8 +815,8 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
     }
 }
 
-/// Send to the owners of the event's source and target (once each), a hunter pet's
-/// being its owner's (`GetCharmerOrOwnerPlayerOrPlayerItself`), stamped with the server's
+/// Send to the owners of the event's source and target (once each), including
+/// guardian ancestry (`GetCharmerOrOwnerPlayerOrPlayerItself`), stamped with the server's
 /// wall clock; damage also counts on the damage meters.
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
@@ -841,13 +841,22 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
         .flatten()
         .filter_map(Entity::try_from_bits)
     {
-        let player = combat_event_owner(world, unit);
+        let player = combat_log_recipient(world, unit);
         if !players.contains(&player) {
             players.push(player);
         }
     }
     for player in players {
         send_to_owner(world, player, event.clone());
+    }
+}
+
+/// Spell constructors point to an already-existing caster, so ancestry is acyclic.
+/// Broaden log delivery only; quest, PvP and meter credit retain their own policies.
+fn combat_log_recipient(world: &World, unit: Entity) -> Entity {
+    match world.get::<summon::SummonedCreature>(unit) {
+        Some(summoned) => combat_log_recipient(world, summoned.owner),
+        None => combat_event_owner(world, unit),
     }
 }
 
@@ -909,6 +918,13 @@ fn hit_targets(plan: &TargetPlan) -> Vec<u64> {
         }
     }
     hits
+}
+
+pub(crate) fn log_summon(world: &mut World, caster: Entity, actor: Entity, spell: &SpellInfo) {
+    log_event(
+        world,
+        cast_event(caster, Some(actor), spell, CombatLogKind::Summon),
+    );
 }
 
 fn cast_event(

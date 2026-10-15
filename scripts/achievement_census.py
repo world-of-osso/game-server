@@ -121,7 +121,7 @@ def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
     if kind in item_facts:
         return asset in item_facts[kind]
-    if kind == 87:
+    if kind in (87, -87):
         return asset in achievement_ids
     if kind == 67:
         return asset in node_counts
@@ -129,7 +129,7 @@ def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_
         return 1 <= asset <= 15
     if kind == 78:
         return asset in pet_types
-    return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+    return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, -104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 35: asset == 0, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
