@@ -109,6 +109,14 @@ fn mount_special_uses_authoritative_actor_and_observer_set_without_chat_or_crite
         },
         visibility,
     ));
+    // Entering world produces Login/ReachLevel credit independently of emotes.
+    app.update();
+    let criteria_before = app
+        .world()
+        .get::<PlayerAchievementState>(player)
+        .unwrap()
+        .criteria_progress
+        .clone();
     mount_request(&mut app, connection);
     let owner_events = events(&mut app, connection);
     let peer_events = events(&mut app, visible);
@@ -160,12 +168,13 @@ fn mount_special_uses_authoritative_actor_and_observer_set_without_chat_or_crite
             .is_empty(),
         "no fabricated social line"
     );
-    assert!(
+    assert_eq!(
         app.world()
             .get::<PlayerAchievementState>(player)
             .unwrap()
-            .criteria_progress
-            .is_empty()
+            .criteria_progress,
+        criteria_before,
+        "MountSpecial must not fabricate emote achievement credit"
     );
 }
 
