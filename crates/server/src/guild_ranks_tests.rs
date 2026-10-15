@@ -17,6 +17,87 @@ fn members(db: &redb::Database) -> (u64, u64, u64) {
 }
 
 #[test]
+fn guild_member_notes_preserve_legacy_officer_data_and_public_notes_across_restart() {
+    use crate::persistence_character::{
+        load_guild_member_note, load_guild_public_note, save_guild_member_note,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("notes.redb");
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    let (master, officer, member) = members(&db);
+    save_guild_member_note(
+        &db,
+        member,
+        &crate::persistence_types::GuildMemberNoteData {
+            officer_note: "Raid healer".into(),
+        },
+    );
+    let write = |actor, name: &str, note: &str, officer| {
+        apply_rank_request(
+            &db,
+            7,
+            actor,
+            GuildRankRequest::SetMemberNote {
+                character_name: name.into(),
+                note: note.into(),
+                officer,
+            },
+        )
+    };
+    // Mainline permits self-public editing without the general public edit right.
+    write(member, "Member", "Alchemy 100", false).unwrap();
+    assert_eq!(
+        write(member, "Officer", "forbidden", false),
+        Err(GuildRankError::Permissions)
+    );
+    assert_eq!(
+        write(member, "Member", "forbidden", true),
+        Err(GuildRankError::Permissions)
+    );
+    assert_eq!(
+        write(master, "Member", &"界".repeat(32), false),
+        Err(GuildRankError::NoteTooLong)
+    );
+    assert_eq!(
+        write(master, "Member", "line\nbreak", false),
+        Err(GuildRankError::NoteTooLong)
+    );
+    write(master, "Member", &"界".repeat(31), false).unwrap();
+    assert_eq!(
+        load_guild_member_note(&db, member).officer_note,
+        "Raid healer"
+    );
+    write(master, "Officer", "Bank organizer", true).unwrap();
+    let outsider = create_character(&db, 2, "Outsider", 1, 1).unwrap().0;
+    set_character_guild_by_id(&db, outsider, 8, "Other Guild").unwrap();
+    assert_eq!(
+        write(master, "Outsider", "forbidden", false),
+        Err(GuildRankError::MemberNotFound)
+    );
+    assert_eq!(
+        write(outsider, "Member", "forbidden", false),
+        Err(GuildRankError::NotInGuild)
+    );
+    drop(db);
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    assert_eq!(load_guild_public_note(&db, member), "界".repeat(31));
+    assert_eq!(
+        load_guild_member_note(&db, member).officer_note,
+        "Raid healer"
+    );
+    assert_eq!(
+        load_guild_member_note(&db, officer).officer_note,
+        "Bank organizer"
+    );
+    apply_rank_request(&db, 7, member, GuildRankRequest::Leave).unwrap();
+    set_character_guild_by_id(&db, member, 7, "Bank Testers").unwrap();
+    assert_eq!(load_guild_public_note(&db, member), "");
+    assert_eq!(load_guild_member_note(&db, member).officer_note, "");
+}
+
+#[test]
 fn guild_lifecycle_leave_and_remove_enforce_hierarchy_and_survive_restart() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("lifecycle.redb");

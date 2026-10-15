@@ -513,6 +513,11 @@ fn visible_guild_snapshot(
     viewer: u64,
 ) -> GuildSnapshot {
     let mut snapshot = build_guild_snapshot(db, guild, online);
+    for member in &mut snapshot.members {
+        member.is_self =
+            crate::persistence_character::find_character_id_by_name(db, &member.character_name)
+                == Some(viewer);
+    }
     if !character_has_right(
         db,
         viewer,
@@ -569,6 +574,8 @@ fn build_member_snapshot(
         rank_name: guild.ranks[usize::from(rank)].name.clone(),
         is_online: online_state.is_some(),
         officer_note,
+        public_note: crate::persistence_character::load_guild_public_note(db, member.character_id),
+        is_self: false,
         last_online: if online_state.is_some() {
             "Online".into()
         } else {
