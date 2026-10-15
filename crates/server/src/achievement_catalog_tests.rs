@@ -44,21 +44,14 @@ fn achievements_criteria_pet_level_species_requires_authored_species_and_exact_e
     )
     .unwrap();
     load_criteria(&conn, &mut catalog).unwrap();
-    let mut unknown = PlayerAchievementState::default();
-    for event in [
-        CriteriaEvent::BattlePetReachedLevel {
-            species: 1426,
-            level: 25,
-        },
-        CriteriaEvent::ActivelyEarnedPetLevel {
-            species: 1974,
-            level: 25,
-        },
-    ] {
-        catalog.update_at(&mut unknown, event, None, 1, &PlayerConditions::default());
-    }
-    assert!(!unknown.criteria_progress.contains_key(&25123));
-    assert!(!unknown.criteria_progress.contains_key(&34667));
+    assert!(
+        catalog
+            .snapshot(&PlayerAchievementState::default(), 1)
+            .progress
+            .iter()
+            .all(|progress| progress.achievement_id != 9070),
+        "missing authored species must remove9070 from the supported catalog"
+    );
 }
 
 #[test]
