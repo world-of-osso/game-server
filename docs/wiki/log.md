@@ -1,6 +1,6 @@
 ## 2026-10-15 — Wailing targeted Say
 
-[Source engagement speech](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) adds30% group10 with Player/Npc `$n`, preserving nearby Say listeners. Corrected host-boundary RED→5/5 GREEN68.79s/check/fmt onfd2b8856 includes unchanged combat and real wake/flight exit controls. No protocol/data mutation or natural/native-clear claim; lead independent gate pending.
+[Source engagement speech](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) adds30% group10 with Player/Npc `$n`, preserving nearby Say listeners. Corrected host-boundary RED→5/5 GREEN79.17s/check18.26s/fmt ond6aa7d3e includes source schedule-before-roll order, unchanged combat and real wake/flight exit controls. No protocol/data mutation or natural/native-clear claim; lead independent gate pending.
 
 ## 2026-10-14 — Wailing later ritual waves
 
