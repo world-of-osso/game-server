@@ -374,7 +374,7 @@ fn enter_isle_bomb_match() -> EnteredMatch {
         );
         assert!(crate::persistence::inventory_store::load_inventory_record(db, owner).is_some());
         let mut character = crate::persistence::load_character(db, owner).unwrap();
-        character.level = TRAVELER_LEVEL;
+        character.level = u16::from(TRAVELER_LEVEL);
         crate::persistence::save_character(db, owner, &character);
         let path = crate::test_data::world_db_path();
         let source = rusqlite::Connection::open_with_flags(
