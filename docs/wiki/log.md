@@ -1,3 +1,7 @@
+## 2026-10-15 — Flute follow source adjudication
+
+[Wild/default route](systems/toys.md#flute-follow-source-adjudication-2026-10-15): current70391 effect142917→property64 Control0/Title0/Slot0/Flags0 selects TempSummon and no follow-on-spawn in pinned TC. Preserve source non-follow; no descriptive-text AI/distance. Independent Retail observation and fresh native source-model pixels remain unproved.
+
 ## 2026-10-15 — Source Toy forward destination
 
 [Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
