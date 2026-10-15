@@ -279,4 +279,8 @@ Wild/default E28 rolls source CalcValue variance before int32 truncation and min
 
 Flute98552 is the concrete zero-primary-radius case; native6122 proves nonzero primary scatter. Guardian/ally count and Scarab2301 are not implemented by this wild-only slice. [Source, behavioral evidence and pending native scope](../../toy-effects14-coverage.md#xantishs-flute--wild-variable-count-slice-2026-10-14); [contract](../../specs/toys.md).
 
+### Initial random destination radius (2026-10-14)
+
+Pinned TC `SpellInfo.cpp`822–825 randomizes `CalcRadius.Max` for targets72/74/86 as `(Max-Min)*sqrt(rand_norm())`; `Spell.cpp` destination callers only consume that result. The implemented72/86 selectors previously randomized direction alone, placing Flute and class summons on rings. They now sample radius too, preserving target91's fixed-distance/random-direction contract. This is not secondary `GetRandomPoint` scatter: that separate function adds Min, while `CalcRadius` does not. Concrete native Flute142917 and class1276452/123904 destination regressions cover disk interior/area, nonzero-Min span, and target91 isolation. Unsupported74 remains unsupported; broader radius modifiers are not added here.
+
 Flute Retail text explicitly promises following. Current TC wild64/title0/flags0 does not satisfy `CreatureAI::ShouldFollowOnSpawn`; count and initial-placement proofs must not be called a complete Flute/follower certificate. No follow distance or script binding is inferred.
