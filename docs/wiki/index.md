@@ -1,6 +1,8 @@
 # Wiki Index
 
-- [Creature-type kill statistics](systems/dungeon-achievements.md#creature-type-kill-statistics) — actual killed-NPC type30/78, source40/299 lethal casts and reopened counters;107sum/1336max native,1337distinct scalar still unsupported.
+- [Started-child statistics](systems/dungeon-achievements.md#started-child-statistic-projection) — native40/299/94 kills prove107sum3/1336max2/1337distinct2; zero/refused/dead/idle/reopen controls.
+
+- [Creature-type kill statistics](systems/dungeon-achievements.md#creature-type-kill-statistics) — actual killed-NPC type30/78, source40/299 lethal casts and reopened counters.
 
 - [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
 
