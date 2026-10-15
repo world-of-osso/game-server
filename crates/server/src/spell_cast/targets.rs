@@ -28,7 +28,7 @@ use shared::components::{Health, Player, Position, Rotation, UnitFactionTemplate
 
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
-use crate::spell_info::{SpellEffect, SpellInfo};
+use crate::spell_info::{SpellEffect, SpellInfo, SpellRadius};
 
 const MELEE_RANGE: f32 = 5.0;
 /// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
@@ -56,9 +56,9 @@ enum Selector {
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
     ExistingDest,
-    ///72: random direction at this slot's radius around the caster.
+    ///72: random point in this slot's radius span around the caster.
     CasterRandom,
-    ///86/91: destination moved in a random direction by this slot's native radius.
+    ///86/91: random direction;86 samples the radius span,91 keeps the radius.
     DestRandom,
     /// Destination moved backward by this target slot's DB2 radius (79).
     DestBack,
@@ -336,13 +336,16 @@ pub fn spell_range(spell: &SpellInfo, hostile: bool) -> (f32, f32) {
 
 /// Radius for target slot `slot` (TrinityCore `CalcRadius`: TargetB prefers
 /// the second radius entry).
-pub(super) fn radius(effect: &SpellEffect, slot: usize) -> f32 {
-    let entry = if slot == 1 {
+fn radius_entry(effect: &SpellEffect, slot: usize) -> Option<SpellRadius> {
+    if slot == 1 {
         effect.radius[1].or(effect.radius[0])
     } else {
         effect.radius[0]
-    };
-    entry.map_or(0.0, |radius| {
+    }
+}
+
+pub(super) fn radius(effect: &SpellEffect, slot: usize) -> f32 {
+    radius_entry(effect, slot).map_or(0.0, |radius| {
         if radius.radius > 0.0 {
             radius.radius
         } else {
@@ -427,11 +430,11 @@ pub fn select_targets(
                 center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
             }
             Selector::CasterRandom => {
-                center = Some(random_destination(caster_pos, radius(effect, slot)));
+                center = Some(random_destination(caster_pos, effect, slot));
             }
             Selector::DestRandom => {
                 let origin = center.unwrap_or(caster_pos);
-                center = Some(random_destination(origin, radius(effect, slot)));
+                center = Some(random_destination(origin, effect, slot));
             }
             Selector::DestBack => {
                 center = center.map(|point| {
@@ -960,10 +963,19 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
     ))
 }
 
-///TC a352b1fa SpellInfo.cpp:128/339 and Spell.cpp:1690-1736:
-///targets72/86/91 use TARGET_DIR_RANDOM and this slot's authored CalcRadius.
-fn random_destination(point: Vec3, distance: f32) -> Vec3 {
-    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
+/// TC a352b1fa SpellInfo.cpp CalcRadius:72/86 sample (Max-Min)*sqrt(rand_norm());
+///91 only randomizes direction. Unlike GetRandomPoint, CalcRadius does not add Min.
+fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
+    let mut rng = rand::thread_rng();
+    let angle = rand::Rng::gen_range(&mut rng, 0.0..std::f32::consts::TAU);
+    let maximum = radius(effect, slot);
+    let distance = if matches!(effect.implicit_targets[slot], 72 | 86) {
+        let minimum = radius_entry(effect, slot).map_or(0.0, |entry| entry.radius_min);
+        let area_fraction = rand::Rng::gen_range(&mut rng, 0.0_f32..1.0);
+        (maximum - minimum) * area_fraction.sqrt()
+    } else {
+        maximum
+    };
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
 }
 
@@ -1006,10 +1018,10 @@ pub fn effect_dest(
                 .map(|dest: Dest| dest.position)
                 .or_else(|| position(world, caster)),
             Selector::CasterRandom => {
-                position(world, caster).map(|point| random_destination(point, radius(effect, slot)))
+                position(world, caster).map(|point| random_destination(point, effect, slot))
             }
             Selector::DestRandom => {
-                dest.map(|dest: Dest| random_destination(dest.position, radius(effect, slot)))
+                dest.map(|dest: Dest| random_destination(dest.position, effect, slot))
             }
             Selector::DestBack => dest.map(|dest: Dest| {
                 offset_destination_back(dest.position, dest.orientation, radius(effect, slot))

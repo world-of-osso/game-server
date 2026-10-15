@@ -1,3 +1,7 @@
+## 2026-10-14 — Initial random summon destination
+
+[CalcRadius boundary](systems/toys.md#initial-random-destination-radius-2026-10-14): native72/86 require random radius as well as direction; preserve91 and separate secondary scatter. Flute follow and broader radius modifiers remain open.
+
 ## 2026-10-13 — Startup-owned generated Toy casting data
 
 [Runtime data](../toy-runtime-data.md): removed production area/facing JSON from server source; current canonical export build is mandatory producer input. Generator4/4, loader3/3 and four private process cases verify missing-file refusal and two builds without binary rebuild. Historical69-area and single-radius test fixtures stay test-only. DB2 apply/deploy commands coordinated through lead-inbox-db2.md; canonical data remains lead-owned.
