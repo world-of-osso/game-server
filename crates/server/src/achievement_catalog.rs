@@ -28,7 +28,8 @@ const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
-    KillAnyCreature,
+    /// Actual native NPC victim type; None cannot satisfy a typed predicate.
+    KillAnyCreature(Option<u8>),
     ReachLevel(u8),
     ActivelyReachLevel(u8),
     ReachMaxLevel(u8),
@@ -165,7 +166,7 @@ impl CriteriaEvent {
     fn kind(self) -> u32 {
         match self {
             Self::KillCreature(_) => 0,
-            Self::KillAnyCreature => 78,
+            Self::KillAnyCreature(_) => 78,
             Self::WinAnyRankedArena(_) => 37,
             Self::PersonalArenaRating { .. } => 39,
             Self::WinArena(_) => 32,
@@ -306,7 +307,7 @@ impl CriteriaEvent {
             Self::LearnedNewPet(species) => {
                 criteria.asset == 0 && criteria.modifier_asset == Some(species)
             }
-            Self::KillAnyCreature
+            Self::KillAnyCreature(_)
             | Self::DeliveredKillingBlow
             | Self::TotalExaltedFactions(_)
             | Self::TotalReveredFactions(_)
@@ -534,6 +535,8 @@ enum CriteriaFact {
     EventItems(BTreeSet<u32>),
     /// TargetCreatureId4: actual text-emote target or pre-effect spell-hit NPC entry.
     TargetCreature(u32),
+    /// CreatureType30 on kill78 reads the actual rewarded NPC victim.
+    KilledCreatureType(u8),
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
     TargetIsPlayer,
@@ -633,6 +636,9 @@ impl CriteriaFact {
                 player.group_size.is_some_and(|size| size < *limit as usize)
             }
             Self::NotInParty => player.group_size == Some(0),
+            Self::KilledCreatureType(required) => {
+                matches!(event, CriteriaEvent::KillAnyCreature(Some(kind)) if kind == *required)
+            }
             Self::EitherTeamNodeCount(required) => player
                 .controlled_node_counts
                 .is_some_and(|counts| counts.contains(required)),
@@ -1440,6 +1446,9 @@ fn load_criteria_facts(
                 .filter(|level| (1..=shared::pet_battle::MAX_PET_LEVEL).contains(level))
                 .map(CriteriaFact::BattlePetTeamLevel),
             35 => Some(CriteriaFact::NotInParty),
+            30 => small
+                .filter(|kind| (1..=15).contains(kind))
+                .map(CriteriaFact::KilledCreatureType),
             67 => node_counts::required_owned_nodes(asset).map(CriteriaFact::EitherTeamNodeCount),
             46 => small
                 .filter(|percent| (1..=100).contains(percent))
@@ -1457,7 +1466,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/46/60/67/69/71/87/104/122"
+                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/87/104/122"
                 )
             }
         };

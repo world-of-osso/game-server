@@ -169,6 +169,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         elif criteria_type == 110 and kind == 46 and operator == SINGLE_TRUE and 1 <= int(node['Asset']) <= 100:
             # TC TargetHealthBelowPercent1998–2001 is inclusive and reads the hit unit.
             facts.append((kind, int(node['Asset'])))
+        elif criteria_type == 78 and kind == 30 and operator == SINGLE_TRUE and 1 <= int(node['Asset']) <= 15:
+            # TC CreatureType1906–1912 / SharedDefines5016–5032: exact killed NPC type.
+            facts.append((kind, int(node['Asset'])))
         elif criteria_type in (1, 130) and kind == 67 and operator == SINGLE_TRUE and int(node['Asset']) > 0:
             # Loader admits only the sourced two-team occupied-node equality OR subset.
             facts.append((kind, int(node['Asset'])))
@@ -247,6 +250,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.',
         '// native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.',
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
+        '// Native kill78 CreatureType30 preserves the actual eligible victim type.',
         '// Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
