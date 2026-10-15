@@ -712,9 +712,23 @@ fn class_completeness_native_npc_expertise_overcomes_evasion_until_removed() {
         .expect("native NPC Hit Buffs self-cast");
     h.advance(2);
     assert!(crate::auras::has_aura(h.app.world(), h.npc, 62627));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(h.npc)
+            .unwrap()
+            .modifier(240),
+        10000.0,
+        "native NPC expertise amount must reach its consumer"
+    );
     let before = h.health(defender);
     let hits = cast_npc_strike(&mut h, defender);
-    assert_eq!(hits.len(), 1, "native expertise must overcome Evasion");
+    assert_eq!(
+        hits.len(),
+        1,
+        "native expertise must overcome Evasion; receipts: {:?}",
+        h.inbox.log
+    );
     assert!(hits[0].amount > 0);
     assert_eq!(before - h.health(defender), hits[0].amount as f32);
     assert!(crate::auras::has_aura(h.app.world(), defender, 5277));
