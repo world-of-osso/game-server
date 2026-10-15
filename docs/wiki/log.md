@@ -17,6 +17,13 @@
 ## 2026-10-14 — Authored goober spell dispatch
 
 [Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) retains Data10/23 and source caster selection after normal use validation. Persistent-owner/free-space source Workshop fixture RED6 reaches owned46847 count0 versus1; implementation34d32065 committed before corrected GREEN1/1 (26.43s), with helper-resolved leased protocol/transport provenance. Direct-Cargo API-drift compile failure is retained separately. Native render, timed traps and siege victory remain separate gates.
+## 2026-10-14 — Pet-level species compiler
+
+[Species91](systems/dungeon-achievements.md#pet-level-species-qualifiers) compilerb6aaad84 qualifies sole160/162 species with authored level1–25;5/5 compiler tests and149 generated predicates. Runtime693218ca preserves actual species/level; native/catalog90220bb0 GREEN2/2(11.08s) proves real9070 grant, negatives and reopened counters. Actual census5491/1821 adds only account9070; all243 rows/pinned membership reconcile. Initial fixture used legacy XP;34411d29 switches to imported1979/1980. Qualified162 positive is catalog-only because1974–1977 lack combat states. Required workspace four-thread filter182/0/1ignored(255.20s), site-export1/1, server/engine checks and three-repo fmt pass without warnings at9610ef81 source scope. No capture/win species, native-qualified162, acquisition/UI or independent-provider claim.
+
+## 2026-10-14 — Honor-family and legacy challenge source audit
+
+[Source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) traces31/35/52/53/113 through actual pinned callers: creature-only tappers and BG XP's honor-skip flag leave player-victim count dispatch unestablished. Scoreboard/type70 and wallet are not substitutes.19/22/71 have explicit no-op evaluators;204 lacks executable progress. Follow-up38/132/207/213 source rules remain unimplemented (38 explicitly rejects);194 is one per HonorLevel transition, not level or wallet, and195 lacks a prestige caller. Pinned8800 HonorXP threshold is placeholder logic, not current-build certification. No behavior or census change; native honor/content proof remains open.
 
 ## 2026-10-14 — Disciple second escort camp
 
