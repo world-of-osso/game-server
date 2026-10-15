@@ -69,7 +69,9 @@ fn assert_buffed_hit(h: &mut Harness, spell_id: u32, multiplier: f32) {
 #[test]
 fn dummy10_blade_flurry_initial_strike_caps_five_or_eight_with_rank() {
     for rank in [false, true] {
-        let mut h = harness(Vec::new(), &[13877, 331850, 272026], 4).unwrap();
+        let mut h =
+            harness_with_native_enemy_dodge_reduction(Vec::new(), &[13877, 331850, 272026], 4)
+                .unwrap();
         if rank {
             apply(&mut h, 272026);
         } else {
@@ -93,7 +95,12 @@ fn dummy10_blade_flurry_initial_strike_caps_five_or_eight_with_rank() {
 #[test]
 fn dummy10_blade_flurry_generates_combo_points_only_with_deft_maneuvers() {
     for talent in [false, true] {
-        let mut h = harness(Vec::new(), &[13877, 331850, 381878, 272026], 4).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[13877, 331850, 381878, 272026],
+            4,
+        )
+        .unwrap();
         h.set_power(PowerType::ComboPoints, 0.0);
         spawn_npc(&mut h.app, 2.0);
         spawn_npc(&mut h.app, 3.0);
@@ -137,7 +144,8 @@ fn dummy10_consecration_stays_at_cast_position_pulses_and_expires() {
 }
 #[test]
 fn dummy10_feral_lunge_launches_named_bite_only_at_hit_enemy() {
-    let mut h = harness(Vec::new(), &[196884, 215802], 7).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[196884, 215802], 7).unwrap();
     h.app.world_mut().entity_mut(h.npc).insert(Position {
         x: 10.0,
         y: 0.0,

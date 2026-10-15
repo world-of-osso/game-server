@@ -21,7 +21,7 @@ fn free_udp_port() -> u16 {
 /// world.db), so `../game-engine/data` does not exist from it.
 fn start_server(cwd: &Path, ground_dir: Option<&Path>) -> Child {
     let server_data = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data");
-    // Deployment ships world.db, economy config and installed-build DB2, not slot-local CASC exports.
+    // Stage deployed startup data, not slot-local CASC exports.
     std::fs::create_dir(cwd.join("data")).unwrap();
     std::os::unix::fs::symlink(
         server_data.join("world.db").canonicalize().unwrap(),
@@ -39,6 +39,13 @@ fn start_server(cwd: &Path, ground_dir: Option<&Path>) -> Child {
         cwd.join("data/db2"),
     )
     .unwrap();
+    for name in ["toy_required_areas.json", "toy_facing_requirements.json"] {
+        std::os::unix::fs::symlink(
+            server_data.join(name).canonicalize().unwrap(),
+            cwd.join("data").join(name),
+        )
+        .unwrap();
+    }
     let mut command = Command::new(env!("CARGO_BIN_EXE_game-server"));
     command
         .current_dir(cwd)

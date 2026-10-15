@@ -38,7 +38,7 @@ struct Condition {
     negative: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpawnGroup {
     pub despawn_on_failure: bool,
     /// Content creature spawn guids.
@@ -61,7 +61,7 @@ pub struct GroupedObject(pub u32);
 #[derive(Resource, Debug, Default)]
 pub(crate) struct InactiveGroupedSpawns(pub HashMap<crate::maps::InMap, BTreeSet<u32>>);
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct SpawnGroups {
     groups: Vec<SpawnGroup>,
     creature_members: HashSet<u32>,

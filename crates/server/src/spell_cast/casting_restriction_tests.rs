@@ -198,7 +198,8 @@ fn class_completeness_native_family_exception_uses_caster_class_not_cast_family(
         .as_ref()
         .unwrap()
         .spell_class_set;
-    let mut warrior = harness(vec![spell], &[BLADESTORM], 1).unwrap();
+    let mut warrior =
+        harness_with_native_enemy_dodge_reduction(vec![spell], &[BLADESTORM], 1).unwrap();
     warrior.set_power(PowerType::Rage, 1000.0);
     apply_restriction(&mut warrior);
     warrior.cast_and_deliver(MORTAL_STRIKE, Some(warrior.npc));

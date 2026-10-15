@@ -248,9 +248,19 @@ fn dummy18_improved_conflagrate_grants_two_uses_and_native_cap_four() {
 fn dummy18_obliterate_selects_native_physical_and_frost_weapon_children() {
     for dual in [false, true] {
         let mut h = fixture(
-            &[49020, 222024, 66198, 325461, 1264082, 1264083, 1264084],
+            &[
+                49020,
+                222024,
+                66198,
+                325461,
+                1264082,
+                1264083,
+                1264084,
+                SUNWELL_RADIANCE,
+            ],
             6,
         );
+        apply_native_enemy_dodge_reduction(&mut h);
         if dual {
             h.app
                 .world_mut()

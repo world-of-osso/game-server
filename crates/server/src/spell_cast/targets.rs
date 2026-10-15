@@ -56,12 +56,12 @@ enum Selector {
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
     ExistingDest,
-    ///72: random direction at this slot's radius around the caster.
+    ///72: random point in this slot's radius span around the caster.
     CasterRandom,
-    ///86/91: destination moved in a random direction by this slot's native radius.
+    ///86/91: random direction;86 samples the radius span,91 keeps the radius.
     DestRandom,
-    /// Destination moved backward by this target slot's DB2 radius (79).
-    DestBack,
+    /// Destination moved forward (78) or backward (79) by this slot's DB2 radius.
+    DestOffset(f32),
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
     ForwardLeap,
     /// Area center = explicit target (DEST_TARGET_*).
@@ -116,7 +116,8 @@ fn selector(id: u32) -> Option<Selector> {
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
         87 | 138 | 148 => Selector::ExistingDest,
-        79 => Selector::DestBack,
+        78 => Selector::DestOffset(0.0),
+        79 => Selector::DestOffset(std::f32::consts::PI),
         72 => Selector::CasterRandom,
         86 | 91 => Selector::DestRandom,
         55 => Selector::ForwardLeap,
@@ -151,9 +152,9 @@ pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
             && (effect.effect == super::disenchant::EFFECT_DISENCHANT
                 || super::open_lock::is_item_effect(effect));
         let gathering_target = id == 23 && effect.effect == 33;
-        let unsupported_back =
-            id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
-        unsupported_back || (selector(id).is_none() && !item_target && !gathering_target)
+        let unsupported_offset =
+            matches!(id, 78 | 79) && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
+        unsupported_offset || (selector(id).is_none() && !item_target && !gathering_target)
     })
 }
 
@@ -336,13 +337,13 @@ pub fn spell_range(spell: &SpellInfo, hostile: bool) -> (f32, f32) {
 
 /// Radius for target slot `slot` (TrinityCore `CalcRadius`: TargetB prefers
 /// the second radius entry).
+/// TC CalcRadius inherits both TargetA's entry and target identity when B has no entry.
+fn radius_slot(effect: &SpellEffect, slot: usize) -> usize {
+    usize::from(slot == 1 && effect.radius[1].is_some())
+}
+
 pub(super) fn radius(effect: &SpellEffect, slot: usize) -> f32 {
-    let entry = if slot == 1 {
-        effect.radius[1].or(effect.radius[0])
-    } else {
-        effect.radius[0]
-    };
-    entry.map_or(0.0, |radius| {
+    effect.radius[radius_slot(effect, slot)].map_or(0.0, |radius| {
         if radius.radius > 0.0 {
             radius.radius
         } else {
@@ -427,15 +428,19 @@ pub fn select_targets(
                 center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
             }
             Selector::CasterRandom => {
-                center = Some(random_destination(caster_pos, radius(effect, slot)));
+                center = Some(random_destination(caster_pos, effect, slot));
             }
             Selector::DestRandom => {
                 let origin = center.unwrap_or(caster_pos);
-                center = Some(random_destination(origin, radius(effect, slot)));
+                center = Some(random_destination(origin, effect, slot));
             }
-            Selector::DestBack => {
+            Selector::DestOffset(angle) => {
                 center = center.map(|point| {
-                    offset_destination_back(point, orientation(world, caster), radius(effect, slot))
+                    offset_destination(
+                        point,
+                        orientation(world, caster) + angle,
+                        radius(effect, slot),
+                    )
                 });
             }
             Selector::ChannelTarget => {
@@ -960,17 +965,26 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
     ))
 }
 
-///TC a352b1fa SpellInfo.cpp:128/339 and Spell.cpp:1690-1736:
-///targets72/86/91 use TARGET_DIR_RANDOM and this slot's authored CalcRadius.
-fn random_destination(point: Vec3, distance: f32) -> Vec3 {
-    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
+/// TC a352b1fa SpellInfo.cpp CalcRadius:72/86 sample (Max-Min)*sqrt(rand_norm());
+///91 only randomizes direction. Unlike GetRandomPoint, CalcRadius does not add Min.
+fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
+    let mut rng = rand::thread_rng();
+    let angle = rand::Rng::gen_range(&mut rng, 0.0..std::f32::consts::TAU);
+    let source_slot = radius_slot(effect, slot);
+    let maximum = radius(effect, source_slot);
+    let distance = if matches!(effect.implicit_targets[source_slot], 72 | 86) {
+        let minimum = effect.radius[source_slot].map_or(0.0, |entry| entry.radius_min);
+        let area_fraction = rand::Rng::gen_range(&mut rng, 0.0_f32..1.0);
+        (maximum - minimum) * area_fraction.sqrt()
+    } else {
+        maximum
+    };
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
 }
 
-/// TC SelectImplicitDestDestTargets: TARGET_DEST_DEST_BACK uses the destination's
-/// facing +pi and this slot's CalcRadius. Gnoll/Market/Expedition Tent uses2yd.
-fn offset_destination_back(point: Vec3, facing: f32, distance: f32) -> Vec3 {
-    let angle = facing + std::f32::consts::PI;
+/// TC SelectImplicitDestDestTargets: destination facing plus the selector's
+/// direction, moved by this slot's CalcRadius. Terrain/collision is not modelled.
+fn offset_destination(point: Vec3, angle: f32, distance: f32) -> Vec3 {
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
 }
 
@@ -1006,13 +1020,24 @@ pub fn effect_dest(
                 .map(|dest: Dest| dest.position)
                 .or_else(|| position(world, caster)),
             Selector::CasterRandom => {
-                position(world, caster).map(|point| random_destination(point, radius(effect, slot)))
+                position(world, caster).map(|point| random_destination(point, effect, slot))
             }
             Selector::DestRandom => {
-                dest.map(|dest: Dest| random_destination(dest.position, radius(effect, slot)))
+                // Native CheckDst initializes an absent destination before applying the offset.
+                if dest.is_none() {
+                    dest = Some(Dest {
+                        position: position(world, caster)?,
+                        orientation: orientation(world, caster),
+                    });
+                }
+                dest.map(|dest: Dest| random_destination(dest.position, effect, slot))
             }
-            Selector::DestBack => dest.map(|dest: Dest| {
-                offset_destination_back(dest.position, dest.orientation, radius(effect, slot))
+            Selector::DestOffset(angle) => dest.map(|dest: Dest| {
+                offset_destination(
+                    dest.position,
+                    dest.orientation + angle,
+                    radius(effect, slot),
+                )
             }),
             Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
             Selector::DestTargetBack => {
@@ -1024,6 +1049,11 @@ pub fn effect_dest(
             _ => continue,
         };
         let facing = match selector {
+            Selector::CenterCaster
+            | Selector::ForwardLeap
+            | Selector::CasterRandom
+            | Selector::CasterOffset(_) => orientation(world, caster),
+            Selector::DestRandom | Selector::DestOffset(_) => dest?.orientation,
             Selector::ExistingDest => {
                 dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
             }

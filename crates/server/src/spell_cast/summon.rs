@@ -11,12 +11,16 @@ use lightyear::prelude::*;
 use rusqlite::Connection;
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
-    Position, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy, Zone,
+    Player, Position, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy, Zone,
 };
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
 
 pub const EFFECT_SUMMON: u32 = 28;
+#[cfg(test)]
+#[path = "summon_property_tests.rs"]
+mod property_tests;
+
 const CONTROL_WILD: u32 = 0;
 const CONTROL_ALLY: u32 = 1;
 const CONTROL_PET: u32 = 2;
@@ -31,6 +35,9 @@ const RUNE_WEAPON_PARRY: u32 = 81256;
 /// TC a352b1fa DBCEnums.h / Spell::EffectSummonType private owner selection.
 const ONLY_VISIBLE_TO_SUMMONER: u32 = 0x10;
 const ONLY_VISIBLE_TO_SUMMONER_GROUP: u32 = 0x10000;
+const JOIN_SUMMONER_SPAWN_GROUP: u32 = 0x200;
+/// TC Spell::SummonGuardian scatters secondary actors within5yd of destTarget.
+const GUARDIAN_SCATTER_RADIUS: f32 = 5.0;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SummonProperties {
@@ -50,14 +57,32 @@ impl SummonProperties {
 
     fn follows_owner(self) -> bool {
         self.control == CONTROL_PET
+            || self.joins_summoner_spawn_group()
             || matches!(
                 self.title,
                 TITLE_PET | TITLE_GUARDIAN | TITLE_MINION | TITLE_COMPANION | TITLE_RUNEBLADE
             )
     }
 
+    fn joins_summoner_spawn_group(self) -> bool {
+        self.flags & JOIN_SUMMONER_SPAWN_GROUP != 0
+    }
+
     pub(super) fn is_guardian(self) -> bool {
         matches!(self.title, TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE)
+            || (self.title == 0 && self.joins_summoner_spawn_group())
+    }
+
+    /// TC Map::SummonCreature: Guardian and Companion masks inherit Minion ownership.
+    fn is_minion(self) -> bool {
+        match self.control {
+            CONTROL_PET => true,
+            CONTROL_WILD | CONTROL_ALLY => match self.title {
+                TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE | TITLE_COMPANION => true,
+                _ => self.joins_summoner_spawn_group(),
+            },
+            _ => false,
+        }
     }
 
     pub(crate) fn is_supported(self) -> bool {
@@ -141,10 +166,10 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
             properties.control, properties.title
         ));
     }
-    if properties.flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0 {
-        return Some(format!(
-            "summon {properties_id} requires private group visibility"
-        ));
+    if properties.flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0
+        && !world.contains_resource::<crate::group::GroupRegistry>()
+    {
+        return Some(format!("summon {properties_id} requires group registry"));
     }
     let entry = effect.misc_values[0] as u32;
     let exists = world
@@ -179,17 +204,124 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         return;
     };
     let entry = effect.misc_values[0] as u32;
-    if properties.control == CONTROL_WILD && properties.title == 0 {
-        spawn_wild_summon(world, ctx, properties_id, properties, entry, dest);
+    if properties.control == CONTROL_WILD && properties.title == 0 && !properties.is_guardian() {
+        let count = roll_summon_count(world, ctx, effect, properties_id);
+        for index in 0..count {
+            let destination = if index == 0 {
+                dest
+            } else {
+                scatter_wild_destination(world, ctx.caster, effect, dest)
+            };
+            spawn_wild_summon(world, ctx, properties_id, properties, entry, destination);
+        }
         return;
     }
+    spawn_owned_summons(world, ctx, effect, properties_id, properties, entry, dest);
+}
+
+fn spawn_owned_summons(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    properties_id: u32,
+    properties: SummonProperties,
+    entry: u32,
+    dest: super::targets::Dest,
+) {
+    let count = if properties.is_guardian() {
+        roll_summon_count(world, ctx, effect, properties_id)
+    } else {
+        1
+    };
     let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
-    let Some(template) = read_summon_template(world, entry, level) else {
-        warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
+    for index in 0..count {
+        let Some(template) = read_summon_template(world, entry, level) else {
+            warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
+            return;
+        };
+        let destination = if index == 0 {
+            replace_slotted_summon(world, ctx.caster, properties);
+            dest
+        } else {
+            scatter_summon_destination(world, ctx.caster, dest, 0.0, GUARDIAN_SCATTER_RADIUS)
+        };
+        spawn_summon(
+            world,
+            ctx,
+            properties_id,
+            properties,
+            &template,
+            destination,
+        );
+    }
+}
+
+/// TC EffectSummonType's explicit MiscValueB list, not all positive values.
+fn roll_summon_count(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    properties_id: u32,
+) -> usize {
+    let uses_effect_count = matches!(
+        properties_id,
+        64 | 61 | 1101 | 66 | 648 | 2301 | 1061 | 1261 | 629 | 181 | 715 | 1562 | 833 | 1161 | 713
+    );
+    if !uses_effect_count {
+        return 1;
+    }
+    let value = super::effects::roll_base_points(world, ctx.caster, ctx.spell, effect);
+    (value as i32).max(1) as usize
+}
+
+/// TC GetRandomPoint: disk distribution in the primary radius, caster facing.
+/// TargetB's radius selects the initial destination, not additional scatter.
+fn scatter_wild_destination(
+    world: &mut World,
+    caster: Entity,
+    effect: &SpellEffect,
+    destination: super::targets::Dest,
+) -> super::targets::Dest {
+    let maximum = super::targets::radius(effect, 0);
+    let minimum = effect.radius[0].map_or(0.0, |radius| radius.radius_min);
+    scatter_summon_destination(world, caster, destination, minimum, maximum)
+}
+
+fn scatter_summon_destination(
+    world: &mut World,
+    caster: Entity,
+    mut destination: super::targets::Dest,
+    minimum: f32,
+    maximum: f32,
+) -> super::targets::Dest {
+    if maximum > 0.0 {
+        let angle = rand::random::<f32>() * std::f32::consts::TAU;
+        let distance = minimum + (maximum - minimum) * rand::random::<f32>().sqrt();
+        destination.position.x += distance * angle.cos();
+        destination.position.z -= distance * angle.sin();
+        update_scattered_ground_height(world, caster, &mut destination);
+    }
+    destination.orientation = super::targets::orientation(world, caster);
+    destination
+}
+
+/// Native UpdateGroundPositionZ retains the source Z when map height is invalid.
+fn update_scattered_ground_height(
+    world: &mut World,
+    caster: Entity,
+    destination: &mut super::targets::Dest,
+) {
+    let Some(map) = world.get::<InMap>(caster).copied() else {
         return;
     };
-    replace_slotted_summon(world, ctx.caster, properties);
-    spawn_summon(world, ctx, properties_id, properties, &template, dest);
+    let Some(mut ground) = world.get_resource_mut::<crate::ground::GroundMap>() else {
+        return;
+    };
+    if let crate::ground::GroundProbe::Supported(height) =
+        ground.ground_in(map, destination.position)
+    {
+        destination.position.y = height;
+    }
 }
 
 /// TC EffectSummonType's wild/default branch uses Map::SummonCreature,
@@ -230,9 +362,7 @@ fn spawn_wild_summon(
     if properties.faction != 0 {
         entity.insert(UnitFactionTemplate(properties.faction));
     }
-    if let Some(owner) = private_owner {
-        entity.insert(crate::interest::PrivateObjectOwner(owner));
-    }
+    insert_summon_privacy(&mut entity, private_owner);
     drop(entity);
     crate::auras::auras_changed(world, actor);
 }
@@ -328,6 +458,22 @@ fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTe
     })
 }
 
+/// TC Unit::SetMinion sets PLAYER_CONTROLLED only for player owners.
+/// Companion immunity augments ownership flags instead of replacing them.
+fn calculate_summon_unit_flags(owner_is_player: bool, properties: SummonProperties) -> u32 {
+    let ownership = if owner_is_player && properties.is_minion() {
+        crate::faction::UNIT_FLAG_PLAYER_CONTROLLED
+    } else {
+        0
+    };
+    let immunity = if properties.title == TITLE_COMPANION {
+        IMMUNE_TO_PC_AND_NPC | UnitFlags::NON_ATTACKABLE_2
+    } else {
+        0
+    };
+    ownership | immunity
+}
+
 fn spawn_summon(
     world: &mut World,
     ctx: &EffectCtx,
@@ -362,6 +508,7 @@ fn spawn_summon(
     let replicate = world.get::<Replicate>(owner).is_some();
     let display_id = template.display_id;
     let private_owner = private_summon_owner(world, owner, properties.flags);
+    let unit_flags = calculate_summon_unit_flags(world.get::<Player>(owner).is_some(), properties);
     let mut entity = world.spawn((
         (
             Position {
@@ -408,22 +555,17 @@ fn spawn_summon(
             super::cast_triggered(world, owner, RUNE_WEAPON_PARRY, Some(owner), ctx.depth + 1);
         }
     });
-    if properties.control == CONTROL_ALLY || properties.control == CONTROL_PET {
-        entity.insert(UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED));
+    if unit_flags != 0 {
+        entity.insert(UnitFlags(unit_flags));
+    }
+    if properties.is_pet() {
+        entity.insert(shared::components::UnitIsPet(true));
     }
     if properties.follows_owner() {
         entity.insert(crate::creature_ai::FollowOwner::new(owner));
     }
 
-    if properties.title == TITLE_COMPANION {
-        // TC EffectSummonType: companions are minions immune to both players and NPCs.
-        entity.insert(UnitFlags(
-            IMMUNE_TO_PC_AND_NPC | UnitFlags::NON_ATTACKABLE_2,
-        ));
-    }
-    if let Some(owner) = private_owner {
-        entity.insert(crate::interest::PrivateObjectOwner(owner));
-    }
+    insert_summon_privacy(&mut entity, private_owner);
     if replicate {
         entity.insert((
             Replicate::to_clients(NetworkTarget::All),
@@ -432,18 +574,50 @@ fn spawn_summon(
     }
 }
 
-fn private_summon_owner(world: &World, caster: Entity, flags: u32) -> Option<Entity> {
-    // Group-private summons remain an explicit toy preflight gap; do not reinterpret
-    // their group GUID as owner-only. Other class summon behavior is not changed here.
-    if flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0 || flags & ONLY_VISIBLE_TO_SUMMONER == 0 {
+#[derive(Clone, Copy)]
+enum PrivateSummonOwner {
+    Player(Entity),
+    Group(crate::group::GroupId),
+}
+
+fn private_summon_owner(world: &World, caster: Entity, flags: u32) -> Option<PrivateSummonOwner> {
+    if flags & (ONLY_VISIBLE_TO_SUMMONER | ONLY_VISIBLE_TO_SUMMONER_GROUP) == 0 {
         return None;
     }
-    // TC: an already-private caster passes its actual private owner to the child.
-    let owner = match world.get::<crate::interest::PrivateObjectOwner>(caster) {
-        Some(owner) => owner.0,
-        None => caster,
-    };
-    Some(owner)
+    // TC EffectSummonType: inherited privacy precedes either requested flag.
+    if let Some(group) = world.get::<crate::interest::PrivateObjectGroup>(caster) {
+        return Some(PrivateSummonOwner::Group(group.0));
+    }
+    if let Some(owner) = world.get::<crate::interest::PrivateObjectOwner>(caster) {
+        return Some(PrivateSummonOwner::Player(owner.0));
+    }
+    if flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0
+        && let Some(group) = read_caster_group(world, caster)
+    {
+        return Some(PrivateSummonOwner::Group(group));
+    }
+    // Authored ungrouped case is the caster GUID, never public visibility.
+    Some(PrivateSummonOwner::Player(caster))
+}
+
+fn read_caster_group(world: &World, caster: Entity) -> Option<crate::group::GroupId> {
+    world.get::<shared::components::Player>(caster)?;
+    let character = world.get::<crate::persistence::ClientId>(caster)?;
+    world
+        .resource::<crate::group::GroupRegistry>()
+        .group_id(character.0)
+}
+
+fn insert_summon_privacy(entity: &mut EntityWorldMut<'_>, owner: Option<PrivateSummonOwner>) {
+    match owner {
+        Some(PrivateSummonOwner::Player(owner)) => {
+            entity.insert(crate::interest::PrivateObjectOwner(owner));
+        }
+        Some(PrivateSummonOwner::Group(group)) => {
+            entity.insert(crate::interest::PrivateObjectGroup(group));
+        }
+        None => {}
+    }
 }
 
 pub(super) fn expire_summons(world: &mut World) {
