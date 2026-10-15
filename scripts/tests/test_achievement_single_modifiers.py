@@ -56,6 +56,21 @@ class SingleModifierPredicates(unittest.TestCase):
                 swapped[20773]['Type'] = modifier_type
                 self.assertEqual(single_modifiers.qualified_single_modifiers(crossed, swapped), {})
 
+    def test_overstuffed_species_is_qualified_only_for_actual_pet_levels(self):
+        criteria = {25123: dict(self.criteria[64625], Type='160', Asset='25', ModifierTreeId='15698')}
+        modifiers = {
+            15698: dict(self.modifiers[300]),
+            15699: dict(self.modifiers[301], Parent='15698', Type='91', Asset='1426'),
+        }
+        for kind in ('160', '162'):
+            with self.subTest(kind=kind):
+                criteria[25123]['Type'] = kind
+                self.assertEqual(single_modifiers.qualified_single_modifiers(criteria, modifiers),
+                                 {25123: (15698, 1426)})
+        for kind in ('157', '158', '96'):
+            criteria[25123]['Type'] = kind
+            self.assertEqual(single_modifiers.qualified_single_modifiers(criteria, modifiers), {})
+
     def test_unknown_sibling_and_nested_leaf_do_not_get_discarded(self):
         for parent in ('300', '301'):
             with self.subTest(parent=parent):
