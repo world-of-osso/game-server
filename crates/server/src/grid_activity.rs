@@ -142,7 +142,9 @@ fn register_creatures(
     creatures: CreatureHomes,
     world_data: Option<Res<WorldData>>,
 ) {
-    for creature in std::mem::take(&mut index.pending) {
+    let pending = std::mem::take(&mut index.pending);
+    let mut dormant = Vec::with_capacity(pending.len());
+    for creature in pending {
         let Ok(home) = creatures.get(creature) else {
             continue;
         };
@@ -156,9 +158,10 @@ fn register_creatures(
         }
         index.home_grids.insert(creature, grids);
         if !index.is_active(creature) {
-            commands.entity(creature).insert(GridDormant);
+            dormant.push((creature, GridDormant));
         }
     }
+    commands.insert_batch(dormant);
 }
 
 fn home_grids(
