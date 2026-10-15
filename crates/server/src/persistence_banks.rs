@@ -204,7 +204,11 @@ pub fn load_account_bank(db: &Database, account_id: u64) -> BankData {
 }
 
 pub fn load_guild(db: &Database, guild_id: u32) -> GuildData {
-    read(db, GUILDS, guild_id)
+    let mut guild: GuildData = read(db, GUILDS, guild_id);
+    // TC a352b1fa Guild::RankInfo::LoadFromDB: never lose Guild Master rights.
+    // Monetary rights have separate authoritative booleans; do not change those.
+    guild.ranks[0].rights |= default_social_rights(true);
+    guild
 }
 
 pub fn load_guild_bank_usage(db: &Database, character_id: u64) -> GuildBankUsage {

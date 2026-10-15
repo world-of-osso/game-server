@@ -44,6 +44,14 @@ pub(super) fn apply_rank_request(
     if matches!(request, GuildRankRequest::Query) {
         return Ok(());
     }
+    if let GuildRankRequest::SetMemberNote {
+        character_name,
+        note,
+        officer,
+    } = &request
+    {
+        return set_member_note(db, guild_id, actor, character_name, note, *officer);
+    }
     let mut guild = load_guild(db, guild_id);
     let actor_rank = load_guild_member_rank(db, &guild, actor);
     if matches!(
@@ -78,6 +86,45 @@ pub(super) fn apply_rank_request(
         .map(|(id, _, rank)| (id, rank))
         .collect();
     save_guild_ranks(db, guild_id, &guild, &positions);
+    Ok(())
+}
+
+/// Retail GuildRoster.lua permits a member to edit their own public note.
+fn set_member_note(
+    db: &redb::Database,
+    guild_id: u32,
+    actor: u64,
+    name: &str,
+    note: &str,
+    officer: bool,
+) -> Result<(), GuildRankError> {
+    let target = list_guild_members(db, guild_id)
+        .into_iter()
+        .find(|member| member.name.eq_ignore_ascii_case(name))
+        .ok_or(GuildRankError::MemberNotFound)?;
+    let right = if officer {
+        GUILD_RIGHT_EDIT_OFFICER_NOTE
+    } else {
+        GUILD_RIGHT_EDIT_PUBLIC_NOTE
+    };
+    if (officer || target.character_id != actor) && !character_has_right(db, actor, guild_id, right)
+    {
+        return Err(GuildRankError::Permissions);
+    }
+    if !valid_guild_member_note(note) {
+        return Err(GuildRankError::NoteTooLong);
+    }
+    if officer {
+        crate::persistence_character::save_guild_member_note(
+            db,
+            target.character_id,
+            &crate::persistence_types::GuildMemberNoteData {
+                officer_note: note.to_owned(),
+            },
+        );
+    } else {
+        crate::persistence_character::save_guild_public_note(db, target.character_id, note);
+    }
     Ok(())
 }
 
@@ -243,7 +290,9 @@ fn edit_rank(
             return Err(GuildRankError::Permissions);
         }
         GuildRankRequest::Query => {}
-        GuildRankRequest::Promote { .. } | GuildRankRequest::Demote { .. } => {
+        GuildRankRequest::Promote { .. }
+        | GuildRankRequest::Demote { .. }
+        | GuildRankRequest::SetMemberNote { .. } => {
             unreachable!("handled before rank editing")
         }
     }

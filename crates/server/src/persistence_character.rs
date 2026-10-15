@@ -189,6 +189,10 @@ pub fn remove_character_guild(db: &Database, character_id: u64) {
         .expect("open notes")
         .remove(character_id)
         .expect("remove note");
+    txn.open_table(crate::persistence::GUILD_PUBLIC_NOTES)
+        .expect("open public notes")
+        .remove(character_id)
+        .expect("remove public note");
     txn.open_table(PENDING_GUILD_INVITES)
         .expect("open invites")
         .remove(character_id)
@@ -356,6 +360,30 @@ pub fn save_guild_member_note(db: &Database, character_id: u64, note: &GuildMemb
             .expect("insert guild member note");
     }
     crate::persistence_commit::commit(write).expect("Failed to commit guild member note");
+}
+
+pub fn load_guild_public_note(db: &Database, character_id: u64) -> String {
+    let read = db.begin_read().expect("read public guild note");
+    let table = match read.open_table(crate::persistence::GUILD_PUBLIC_NOTES) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return String::new(),
+        Err(error) => panic!("open public guild notes: {error}"),
+    };
+    table
+        .get(character_id)
+        .expect("read public guild note")
+        .map(|value| value.value().to_owned())
+        .unwrap_or_default()
+}
+
+pub fn save_guild_public_note(db: &Database, character_id: u64, note: &str) {
+    let write = db.begin_write().expect("write public guild note");
+    write
+        .open_table(crate::persistence::GUILD_PUBLIC_NOTES)
+        .expect("open public guild notes")
+        .insert(character_id, note)
+        .expect("save public guild note");
+    write.commit().expect("commit public guild note");
 }
 
 pub fn list_guild_members(db: &Database, guild_id: u32) -> Vec<GuildMemberRecord> {
