@@ -254,6 +254,94 @@ impl CatalogData {
 mod tests {
     use super::*;
 
+    fn installed_suggestions(ids: &[u32]) -> Vec<Suggestion> {
+        let path = crate::test_data::world_db_path()
+            .parent()
+            .unwrap()
+            .join("db2/active/AdventureJournal.csv");
+        csv::Reader::from_path(path)
+            .unwrap()
+            .deserialize::<Suggestion>()
+            .map(Result::unwrap)
+            .filter(|row| ids.contains(&row.id))
+            .collect()
+    }
+
+    fn suggestion_catalog(
+        suggestions: Vec<Suggestion>,
+        conditions: BTreeMap<u32, ConditionRule>,
+    ) -> CatalogData {
+        CatalogData {
+            activities: vec![],
+            thresholds: vec![],
+            supported_indices: vec![],
+            supported_roots: BTreeSet::new(),
+            suggestions,
+            tags: vec![],
+            activity_tags: BTreeMap::new(),
+            conditions,
+            activity_conditions: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn suggested_provider_follows_installed_csv_instead_of_old_sqlite_payloads() {
+        let path = crate::test_data::world_db_path();
+        let conn =
+            Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let criteria = crate::achievement::load_achievement_catalog(&conn).unwrap();
+        let catalog = CatalogData::load(&conn, &criteria).unwrap();
+        let csv_path = path
+            .parent()
+            .unwrap()
+            .join("db2/active/AdventureJournal.csv");
+        let source_count = csv::Reader::from_path(csv_path)
+            .unwrap()
+            .records()
+            .map(Result::unwrap)
+            .count();
+        assert_eq!(catalog.suggestions(80).1.source_rows as usize, source_count);
+    }
+
+    #[test]
+    fn suggested_provider_orders_equal_base_priorities_by_evaluated_authored_bonus() {
+        // Actual AdventureJournal7/8 both have base250; their first bonus is1.
+        let catalog = suggestion_catalog(
+            installed_suggestions(&[7, 8]),
+            BTreeMap::from([
+                (33200, ConditionRule::Always),
+                (33201, ConditionRule::Always),
+                (33600, ConditionRule::Level { min: 90, max: 0 }),
+                (33636, ConditionRule::Always),
+            ]),
+        );
+        let (rows, census) = catalog.suggestions(80);
+        assert_eq!(
+            rows.iter().map(|row| row.id).collect::<Vec<_>>(),
+            vec![8, 7]
+        );
+        assert_eq!(census.unsupported_conditions, 0);
+        assert!(rows.iter().all(|row| row.button_text.is_empty()));
+    }
+
+    #[test]
+    fn suggested_provider_zero_value_bonus_does_not_hide_base_eligible_record() {
+        // Actual Wailing Caverns9 bonus conditions have authored value0.
+        let catalog = suggestion_catalog(
+            installed_suggestions(&[9]),
+            BTreeMap::from([
+                (33956, ConditionRule::Always),
+                (
+                    33955,
+                    ConditionRule::Unsupported("Unevaluated bonus predicate".into()),
+                ),
+            ]),
+        );
+        let (rows, census) = catalog.suggestions(20);
+        assert_eq!(rows.iter().map(|row| row.id).collect::<Vec<_>>(), vec![9]);
+        assert_eq!(census.unsupported_conditions, 0);
+    }
+
     #[test]
     fn eligible_authored_suggestion_keeps_card_without_unsupported_activation() {
         // Authored AdventureJournal7; all three condition results are test inputs.
