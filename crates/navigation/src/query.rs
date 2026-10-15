@@ -4,6 +4,15 @@ use recastnavigation_sys::*;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+#[path = "smooth.rs"]
+mod smooth;
+
+struct Corridor {
+    start: [f32; 3],
+    end: [f32; 3],
+    polygons: Vec<dtPolyRef>,
+}
+
 const MAX_PATH: usize = 2048;
 const MAX_NODES: i32 = 8192;
 // TC a352b1fa PathGenerator.cpp:141 nominal Y5; no Y50 retry or shortcuts.
@@ -94,6 +103,17 @@ impl NavigationMap {
     }
 
     pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
+        let corridor = self.query_corridor(start, end)?;
+        self.pull_corners(&corridor.start, &corridor.end, &corridor.polygons)
+    }
+
+    /// TC a352b1fa default PathGenerator surface stepping, only for C++ waypoints.
+    pub fn smooth_waypoint_path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
+        let corridor = self.query_corridor(start, end)?;
+        self.find_smooth_path(start, end, corridor.polygons)
+    }
+
+    fn query_corridor(&mut self, start: Vec3, end: Vec3) -> Result<Corridor, String> {
         if !start.is_finite() || !end.is_finite() {
             return Err("non-finite path endpoint".into());
         }
@@ -123,7 +143,11 @@ impl NavigationMap {
         {
             return Err("unreachable target (incomplete corridor)".into());
         }
-        self.pull_corners(&start_pos, &end_pos, &corridor[..count as usize])
+        Ok(Corridor {
+            start: start_pos,
+            end: end_pos,
+            polygons: corridor[..count as usize].to_vec(),
+        })
     }
 
     fn nearest(
