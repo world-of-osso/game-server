@@ -30,12 +30,32 @@ fn achievements_criteria_unearned_snapshot_rejects_missing_earned_component() {
         !state.criteria_progress.contains_key(&103451),
         "a missing earned-state component is unknown, not an empty known-unearned set"
     );
+    world
+        .entity_mut(actor)
+        .insert(PlayerAchievementState::default());
+    let catalog = world.remove_resource::<AchievementCatalog>().unwrap();
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    catalog.update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "a missing catalog also cannot authorize known-unearned credit"
+    );
 }
 
 #[test]
 fn achievements_criteria_unearned_cast_requires_reference_and_authored_award() {
     let catalog = catalog();
-    for (player, expected) in [(None, None), (Some(ReferencePlayer::default()), Some(1))] {
+    for (player, expected) in [
+        (None, None),
+        (Some(ReferencePlayer::default()), None),
+        (
+            Some(ReferencePlayer {
+                earned_achievements: Some(BTreeSet::new()),
+                ..Default::default()
+            }),
+            Some(1),
+        ),
+    ] {
         let mut state = PlayerAchievementState::default();
         let conditions = PlayerConditions {
             player,
@@ -328,10 +348,10 @@ fn achievements_criteria_earned_prerequisite_requires_known_id_and_scoped_player
             ..Default::default()
         };
         let player = ReferencePlayer {
-            earned_achievements: catalog.iter_earned_achievement_ids(&state).collect(),
+            earned_achievements: Some(catalog.iter_earned_achievement_ids(&state).collect()),
             ..Default::default()
         };
-        assert!(player.earned_achievements.contains(&291));
+        assert!(player.earned_achievements.as_ref().unwrap().contains(&291));
         assert_eq!(
             facts[0].holds(&player, CriteriaEvent::KillPlayer, &BTreeMap::new()),
             qualifies,

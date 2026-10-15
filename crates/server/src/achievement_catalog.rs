@@ -501,8 +501,8 @@ pub(crate) struct ReferencePlayer {
     pub auras: BTreeSet<u32>,
     /// IDs in existing class/profession knowledge and the owning mount journal.
     pub known_spells: BTreeSet<u32>,
-    /// This character's earned IDs plus its existing account-wide awards.
-    pub earned_achievements: BTreeSet<u32>,
+    /// This character's earned IDs plus account-wide awards; None when state/catalog is unknown.
+    pub earned_achievements: Option<BTreeSet<u32>>,
     /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
     pub battle_pet_team_min_level: Option<u8>,
     /// Current terrain area (TC Player::GetAreaId).
@@ -596,12 +596,14 @@ impl CriteriaFact {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
-            Self::EarnedAchievement(achievement) => {
-                player.earned_achievements.contains(achievement)
-            }
-            Self::NotEarnedAchievement(achievement) => {
-                !player.earned_achievements.contains(achievement)
-            }
+            Self::EarnedAchievement(achievement) => player
+                .earned_achievements
+                .as_ref()
+                .is_some_and(|earned| earned.contains(achievement)),
+            Self::NotEarnedAchievement(achievement) => player
+                .earned_achievements
+                .as_ref()
+                .is_some_and(|earned| !earned.contains(achievement)),
             Self::BattlePetTeamLevel(level) => player
                 .battle_pet_team_min_level
                 .is_some_and(|minimum| minimum >= *level),
