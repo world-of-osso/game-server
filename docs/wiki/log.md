@@ -1275,3 +1275,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Pre-effect spell-hit target creature entries
 
 [TargetCreatureId4](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) and complete Some selectors use actual hit NPC.template_id for native110, retaining DoEmote54 and every companion. Source165 actualdamage/bonus-exclusion/zero-hit boundary passes before valid predicate RED12660Nonevs3. Generated5621/census5483+1821 adds account4436/4437 only. Native GREEN4091b81b2/2(18.30s) proves both factions’ actual leader grants, wrong NPC/Player/missing/depth/idle rejection and durable counters/grant dates after reopen/re-entry. All243 matrix/pinned5483 and readability pass; required workspace filter178/0/1ignored(269.99s) +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b source scope. Independent verifier unavailable; no content/acquisition/UI certificate.
+
+- 2026-10-15: Wailing source21–27 wake-up/flight exit port after actual Sleep→Stand RED; existing flight policy unchanged, behavioral GREEN/native proof still pending.

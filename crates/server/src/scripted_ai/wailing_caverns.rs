@@ -1,9 +1,11 @@
 //! TC a352b1fa instance_wailing_caverns.cpp four-druid DONE notification and
-//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–20. Gossip,
-//! wake-up/exit and targeted random aggro speech remain unported. Escort
+//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–27. Gossip
+//! and targeted random aggro speech remain unported. Escort
 //! events use their separate out-of-combat clock.
 use bevy::prelude::*;
-use shared::components::{CombatStatus, Health, Npc, Rotation};
+use shared::components::{
+    CombatStatus, Health, Npc, Rotation, StandState, UnitFactionTemplate, UnitPose,
+};
 
 use super::event_map::EventMap;
 
@@ -82,6 +84,21 @@ const NARALEX: u32 = 3679;
 const EMOTE_NARALEX_RESTLESS: u8 = 0;
 const EMOTE_NARALEX_AGONY: u8 = 1;
 const EMOTE_NARALEX_VISION: u8 = 2;
+const EVENT_WAKE_NARALEX: u32 = 21;
+const EVENT_END_AWAKENING: u32 = 22;
+const EVENT_NARALEX_THANKS: u32 = 23;
+const EVENT_NARALEX_FAREWELL: u32 = 24;
+const EVENT_OWL_FORM: u32 = 25;
+const EVENT_FLIGHT: u32 = 26;
+const EVENT_DESPAWN: u32 = 27;
+const SAY_NARALEX_AWAKE: u8 = 3;
+const SAY_NARALEX_THANKS: u8 = 4;
+const SAY_NARALEX_FAREWELL: u8 = 5;
+const SAY_AWAKENED: u8 = 9;
+const OWL_FORM: u32 = 8153;
+const FACTION_FRIENDLY: u32 = 35;
+const PATH_DISCIPLE_EXIT: u32 = 367804;
+const PATH_NARALEX_EXIT: u32 = 367900;
 
 impl Disciple {
     fn advance_escort(&mut self, ctx: &mut Ctx, diff_ms: u32) {
@@ -104,6 +121,11 @@ impl Disciple {
                 | EVENT_SUMMON_ECTOPLASMS
                 | EVENT_NARALEX_AGONY
                 | EVENT_SUMMON_MUTANUS => self.run_later_ritual_event(ctx, event),
+                EVENT_WAKE_NARALEX
+                | EVENT_END_AWAKENING
+                | EVENT_NARALEX_THANKS
+                | EVENT_NARALEX_FAREWELL => self.run_wake_up_event(ctx, event),
+                EVENT_OWL_FORM | EVENT_FLIGHT | EVENT_DESPAWN => self.run_exit_event(ctx, event),
                 _ => unreachable!("Disciple escort event {event}"),
             }
         }
@@ -126,9 +148,60 @@ impl Disciple {
             EVENT_SUMMON_MUTANUS => {
                 talk_naralex(ctx, EMOTE_NARALEX_VISION);
                 ctx.summon_creature_group(MUTANUS_GROUP);
-                // Source event21 (+25s) belongs to the unported wake-up/exit.
+                self.escort_events.schedule(EVENT_WAKE_NARALEX, 25_000);
             }
             _ => unreachable!("Disciple later ritual event {event}"),
+        }
+    }
+
+    fn run_wake_up_event(&mut self, ctx: &mut Ctx, event: u32) {
+        match event {
+            EVENT_WAKE_NARALEX => {
+                wake_naralex(ctx);
+                self.escort_events.schedule(EVENT_END_AWAKENING, 3_000);
+            }
+            EVENT_END_AWAKENING => {
+                crate::auras::remove_auras(
+                    ctx.world,
+                    ctx.me,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == NARALEXS_AWAKENING,
+                );
+                ctx.talk(SAY_AWAKENED);
+                self.escort_events.schedule(EVENT_NARALEX_THANKS, 3_000);
+            }
+            EVENT_NARALEX_THANKS => {
+                talk_naralex(ctx, SAY_NARALEX_THANKS);
+                self.escort_events.schedule(EVENT_NARALEX_FAREWELL, 6_000);
+            }
+            EVENT_NARALEX_FAREWELL => {
+                talk_naralex(ctx, SAY_NARALEX_FAREWELL);
+                self.escort_events.schedule(EVENT_OWL_FORM, 3_000);
+            }
+            _ => unreachable!("Disciple wake-up event {event}"),
+        }
+    }
+
+    fn run_exit_event(&mut self, ctx: &mut Ctx, event: u32) {
+        let naralex = find_naralex(ctx);
+        match event {
+            EVENT_OWL_FORM => {
+                cast_departure_forms(ctx, naralex);
+                self.escort_events.schedule(EVENT_FLIGHT, 8_000);
+            }
+            EVENT_FLIGHT => {
+                if let Some(naralex) = naralex {
+                    start_exit_flight(ctx.world, naralex, PATH_NARALEX_EXIT);
+                }
+                start_exit_flight(ctx.world, ctx.me, PATH_DISCIPLE_EXIT);
+            }
+            EVENT_DESPAWN => {
+                if let Some(naralex) = naralex {
+                    super::smart_ai::lifetimes::despawn_creature(ctx.world, naralex, 0);
+                }
+                super::smart_ai::lifetimes::despawn_creature(ctx.world, ctx.me, 0);
+            }
+            _ => unreachable!("Disciple exit event {event}"),
         }
     }
 
@@ -210,13 +283,56 @@ impl Disciple {
     }
 }
 
-fn talk_naralex(ctx: &mut Ctx, group: u8) {
+fn find_naralex(ctx: &Ctx) -> Option<Entity> {
     let map = *ctx
         .world
         .get::<InMap>(ctx.me)
         .expect("Disciple instance map");
-    if let Some(naralex) = find_instance_creature(ctx.world, map, NARALEX) {
+    find_instance_creature(ctx.world, map, NARALEX)
+}
+
+fn talk_naralex(ctx: &mut Ctx, group: u8) {
+    if let Some(naralex) = find_naralex(ctx) {
         super::creature_text::talk(ctx.world, naralex, group);
+    }
+}
+
+fn wake_naralex(ctx: &mut Ctx) {
+    if let Some(naralex) = find_naralex(ctx) {
+        ctx.world
+            .get_mut::<UnitPose>(naralex)
+            .expect("Naralex unit pose")
+            .stand_state = StandState::Stand;
+        mark_replication_dirty(ctx.world, naralex);
+        super::creature_text::talk(ctx.world, naralex, SAY_NARALEX_AWAKE);
+    }
+}
+
+fn cast_departure_forms(ctx: &mut Ctx, naralex: Option<Entity>) {
+    ctx.do_cast_self(OWL_FORM);
+    if let Some(naralex) = naralex {
+        Ctx {
+            world: ctx.world,
+            me: naralex,
+        }
+        .do_cast_self(OWL_FORM);
+    }
+    ctx.world
+        .entity_mut(ctx.me)
+        .insert(UnitFactionTemplate(FACTION_FRIENDLY));
+    mark_replication_dirty(ctx.world, ctx.me);
+}
+
+fn start_exit_flight(world: &mut World, actor: Entity, path: u32) {
+    world
+        .entity_mut(actor)
+        .insert(super::waypoint_path::GravityDisabled);
+    super::waypoint_path::move_path(world, actor, path);
+}
+
+fn mark_replication_dirty(world: &World, actor: Entity) {
+    if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
+        queue.mark(actor);
     }
 }
 
@@ -250,6 +366,7 @@ impl CreatureAi for Disciple {
             PATH_SECOND_CAMP => self.escort_events.schedule(EVENT_SECOND_CAMP_CLEANSING, 0),
             PATH_NARALEX_CHAMBER => self.escort_events.schedule(EVENT_CHAMBER_SPEECH, 1_000),
             PATH_APPROACH_NARALEX => self.escort_events.schedule(EVENT_RITUAL_SPEECH, 1_000),
+            PATH_DISCIPLE_EXIT => self.escort_events.schedule(EVENT_DESPAWN, 0),
             _ => {}
         }
     }
