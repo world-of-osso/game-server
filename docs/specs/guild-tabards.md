@@ -4,11 +4,11 @@ Guild tabard registration follows TrinityCore a352b1fa `Guild.cpp:51,749–753,1
 
 ## What it must do
 
-- [ ] Existing guilds migrate to no registered design without changing bank contents, ranks, rights or allowances. A registered design survives reopen.
-- [ ] An authenticated living player must retain a valid interaction with a guild tabard vendor. Only the guild leader may register a design.
-- [ ] Each successful registration charges100000c from personal gold. Insufficient funds and rejected registration change neither gold nor design. Charge and design persist atomically.
-- [ ] Colors are validated against installed GuildColorBackground/Border/Emblem rows; selectable designs use installed GuildEmblem and GuildTabard texture data.
-- [ ] Guild snapshots, character-selection roster entries and equipped guild tabards expose the authoritative appearance, including subsequent design changes. Registration never rewrites character customization or owned equipment.
+- [x] Existing guilds migrate to no registered design without changing bank contents, ranks, rights or allowances. A registered design survives reopen.
+- [x] An authenticated living player must retain a valid interaction with a guild tabard vendor. Only the guild leader may register a design.
+- [x] Each successful registration charges100000c from personal gold. Insufficient funds and rejected registration change neither gold nor design. Charge and design persist atomically.
+- [x] Colors are validated against installed GuildColorBackground/Border/Emblem rows; selectable designs use installed GuildEmblem and GuildTabard texture data.
+- [x] Guild snapshots, character-selection roster entries and equipped guild tabards expose the authoritative appearance, including subsequent design changes. Registration never rewrites character customization or owned equipment.
 
 ## How it works
 
@@ -28,7 +28,7 @@ Guild tabard registration follows TrinityCore a352b1fa `Guild.cpp:51,749–753,1
 
 ## Proof boundaries (2026-10-14)
 
-Four focused server tests cover durable design/payment, persisted roster projection and authenticated live-NPC service validation. Client rendering uses separate offline native fixtures, not a connected client/server acceptance run. Final merged checks and lead protocol gate remain pending.
+Four focused server tests cover durable design/payment, persisted roster projection and authenticated live-NPC service validation. Client rendering uses separate offline native fixtures, not a connected client/server acceptance run. Final merged all-target checks, formatting and the four focused tests pass. Lead owns the full protocol landing gate.
 
 ## Out of scope
 
