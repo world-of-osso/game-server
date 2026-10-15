@@ -773,6 +773,310 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_location_some_credits_real_selfie_cast_in_area_alternative() {
+    const SPELL: u32 = 181842;
+    const CRITERION: u32 = 27968;
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Photoproof", 1, 1).unwrap();
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[SPELL], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<InWorld>();
+    h.app.world_mut().entity_mut(h.connection).insert((
+        InWorld {
+            character_id: character,
+        },
+        Authenticated { account_id: 1 },
+    ));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    // Controlled cached authoritative area, not a terrain-travel/acquisition claim.
+    h.app
+        .world_mut()
+        .get_mut::<AchievementTracker>(h.caster)
+        .unwrap()
+        .last_processed_area = Some(1519);
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&CRITERION)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<AchievementTracker>(h.caster)
+        .unwrap()
+        .last_processed_area = Some(254);
+    assert!(!crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        u8::MAX
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&CRITERION)
+    );
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0
+    ));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&CRITERION),
+        Some(&1),
+        "actual selfie cast must accept the area17 alternative even though Zone41(25) is false in area254"
+    );
+    h.advance(10);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&CRITERION),
+        Some(&1)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&CRITERION),
+        Some(&1)
+    );
+}
+
+fn spawn_saved_gear_cast_fixture(
+    db: redb::Database,
+    character: u64,
+    account_id: u64,
+) -> crate::spell_cast::test_harness::Harness {
+    let saved = persistence::load_achievements(&db, character);
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        vec![],
+        &[1217637],
+        1,
+        false,
+        |app| {
+            app.add_plugins(AchievementPlugin);
+        },
+    )
+    .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app.insert_resource(GameDatabase { db });
+    // Authentication inserts InWorld; changing its ID alone cannot replay Added<InWorld>.
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<InWorld>();
+    h.app.world_mut().entity_mut(h.connection).insert(InWorld {
+        character_id: character,
+    });
+    h.app
+        .world_mut()
+        .get_mut::<crate::auth::Authenticated>(h.connection)
+        .unwrap()
+        .account_id = account_id;
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((persistence::ClientId(character), saved));
+    h.app.update();
+    h
+}
+
+#[test]
+fn achievements_criteria_native_unearned_self_guard_stops_after_real_twenty_cast_grant() {
+    const SPELL: u32 = 1217637;
+    const CRITERION: u32 = 103451;
+    const AWARD: u32 = 41707;
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Gearproof", 1, 1).unwrap();
+    let (sibling, _) = persistence::create_character(&db, 1, "Gearsibling", 1, 1).unwrap();
+    let (foreign, _) = persistence::create_character(&db, 2, "Gearforeign", 1, 1).unwrap();
+    let mut h = spawn_saved_gear_cast_fixture(db, character, 1);
+    let started = h.app.world().resource::<crate::maps::ServerClock>().unix();
+    assert!(!crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        u8::MAX,
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&CRITERION)
+    );
+    for casts in 1..=20 {
+        assert!(crate::spell_cast::try_cast_triggered(
+            h.app.world_mut(),
+            h.caster,
+            SPELL,
+            Some(h.caster),
+            0,
+        ));
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap();
+        assert_eq!(
+            state.criteria_progress.get(&CRITERION),
+            Some(&casts),
+            "genuine accepted source spell must credit before its self-guard award"
+        );
+        assert_eq!(
+            state
+                .account
+                .as_ref()
+                .is_some_and(|account| account.earned_ids.contains(&AWARD)),
+            casts == 20,
+            "all twenty authored gear casts are required"
+        );
+    }
+    let earned_at = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap()
+        .account
+        .as_ref()
+        .unwrap()
+        .earned_at[&AWARD];
+    assert!(
+        (started..=h.app.world().resource::<crate::maps::ServerClock>().unix())
+            .contains(&earned_at)
+    );
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0,
+    ));
+    h.advance(20);
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    assert_eq!(
+        state.criteria_progress.get(&CRITERION),
+        Some(&20),
+        "earned self-guard and idle updates must stop further progress"
+    );
+    assert_eq!(state.account.as_ref().unwrap().earned_at[&AWARD], earned_at);
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&CRITERION), Some(&20));
+    let mut h = spawn_saved_gear_cast_fixture(db, character, 1);
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    assert!(state.account.as_ref().unwrap().earned_ids.contains(&AWARD));
+    assert_eq!(state.account.as_ref().unwrap().earned_at[&AWARD], earned_at);
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0,
+    ));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&CRITERION),
+        Some(&20)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let mut h = spawn_saved_gear_cast_fixture(db, sibling, 1);
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0,
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&CRITERION),
+        "account-wide earned metadata must stop the sibling's self-guard too"
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let mut h = spawn_saved_gear_cast_fixture(db, foreign, 2);
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0,
+    ));
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    assert_eq!(state.criteria_progress.get(&CRITERION), Some(&1));
+    assert!(!state.account.as_ref().unwrap().earned_ids.contains(&AWARD));
+}
+
+#[test]
 fn achievements_criteria_native_target_aura_reads_food_hit_not_caster() {
     let mut h = crate::spell_cast::test_harness::harness_with_plugins(
         vec![],

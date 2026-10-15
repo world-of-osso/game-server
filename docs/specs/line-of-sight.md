@@ -66,6 +66,20 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   segment describes the start). Casts the server starts for a player without a request (item use,
   game objects, profession crafts) carry no witness, so at another unit they fail.
 
+## Area hits
+- Source-area, destination-area, conditioned area and living raid-area unit selections
+  require LOS from each recipient to the selected area center, after the authored target cap.
+  An area hit does not reuse a caster-to-target witness or substitute the caster for a destination.
+- `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT` bypasses this check. Spell Attr5 AlwaysAoeLineOfSight
+  or effect AlwaysAoeLineOfSight additionally requires caster-to-recipient visibility.
+- Reference: TrinityCore `a352b1fa` `Spell::SelectImplicitAreaTargets` passes `center` to
+  `AddUnitTarget`, then `CheckEffectTarget` checks `IsWithinLOS(target, *losPosition)`.
+  `WorldObject::IsWithinLOS(point)` raises the destination by the recipient's collision height;
+  this project's eye-geometry contract uses the recipient's baked eye height instead.
+- Native Arcane Explosion1449 wall/visible-recipient damage regression and destination/flag
+  selection controls cover this boundary. Chain, cone and persistent-area-aura LOS are not
+  certified by those tests.
+
 ## Auto-attacks
 - Player and creature auto-attack swings require LOS before they land, using the same
   server eye-to-eyes/chest/feet search as creature casts (no client witness).
