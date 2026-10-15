@@ -1,6 +1,6 @@
 ## 2026-10-14 — Honor-family and legacy challenge source audit
 
-[Source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) traces31/35/52/53/113 through actual pinned callers: creature-only tappers and BG XP's honor-skip flag leave player-victim count dispatch unestablished. Scoreboard/type70 and wallet are not substitutes.19/22/71 have explicit no-op evaluators;204 lacks executable progress. No behavior or census change; native honor/content proof remains open.
+[Source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) traces31/35/52/53/113 through actual pinned callers: creature-only tappers and BG XP's honor-skip flag leave player-victim count dispatch unestablished. Scoreboard/type70 and wallet are not substitutes.19/22/71 have explicit no-op evaluators;204 lacks executable progress. Follow-up38/132/207/213 source rules remain unimplemented (38 explicitly rejects);194 is one per HonorLevel transition, not level or wallet, and195 lacks a prestige caller. Pinned8800 HonorXP threshold is placeholder logic, not current-build certification. No behavior or census change; native honor/content proof remains open.
 
 ## 2026-10-14 — Disciple second escort camp
 
