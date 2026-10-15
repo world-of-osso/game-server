@@ -11,6 +11,10 @@ use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::protocol::*;
 
+#[cfg(test)]
+#[path = "guild_ranks_fifo_tests.rs"]
+mod fifo_tests;
+
 pub(crate) fn character_has_right(
     db: &redb::Database,
     character: u64,
