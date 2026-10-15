@@ -2,6 +2,7 @@
 
 - [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
 - [Wailing later ritual waves](systems/boss-scripts.md#wailing-later-ritual-waves--2026-10-14) — same-copy Naralex emotes, seven Ectoplasms and actual timed Mutanus; controlled deaths, wake-up/exit still open.
+- [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
 
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
 
