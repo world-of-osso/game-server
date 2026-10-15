@@ -4,6 +4,9 @@ use crate::spell_cast::test_harness::Harness;
 use shared::protocol::{PvpChannel, PvpStateUpdate, SetWarModeDesired};
 use std::time::{Duration, Instant};
 
+#[path = "pvp_currency_publication_tests.rs"]
+mod currency_publication;
+
 #[derive(Clone, Copy)]
 enum SelectionCase {
     Fresh,
