@@ -2,6 +2,12 @@
 
 Verified: 2026-10-12. [Contract](specs/class-completeness.md), [prior batches](class-completeness2.md), [implementation](wiki/systems/spell-casting.md#level80-class-completeness).
 
+## Signed attacker enemy-dodge modifier — native slice, 2026-10-14
+
+Pinned TC a352b1fa `Unit.cpp2775–2785` adds the attacker's aura251 total before expertise subtraction and final max0. Native namespace is `SPELL_AURA_MOD_ENEMY_DODGE=251` (`SpellAuraDefines.h338`);248 remains a different selector-based modifier. Consumer is bounded to the existing live-player melee-dodge path and preserves its direction/control/attribute/ranged gates. No NPC dodge baseline or full251/ability promotion.
+
+Published70391 source-equal Risky Feint48250 effect2 supplies+20, Word of Sha: Doubt110294 effect0 supplies−25. Native effect masks isolate those effects, not entire abilities. Actual hostile Kobold40 under native Dust Cloud26072 yields verified90miss; real StatsPlugin Rogue inputs produce native0dodge. Per-trial refresh respects finite native aura lifetimes. Test-only24fb3cb5 `enemy-dodge-native-red` verifies caster25120 then records actual native Strike38598 damage37 atdraw9 (health1110→1073): genuineRED1, negative-total and recipient-ownership controlsPASS2, exit101/121.973s total/22.39s tests. Implementation follows this RED; current GREEN/check/fmt pending.
+
 ## Physical mechanic resistance — native slice, 2026-10-14
 
 Pinned TC a352b1fa `Unit.cpp2571–2592,2631–2635` adds victim aura117 resistance after miss and before NoActiveDefense on the same physical integer roll. `SpellInfo.cpp2682–2690` selects the effect mechanic when nonzero, otherwise the category; maximum of applicable mechanic totals wins, not their sum. Consumer must retain signed amounts/stacks and clamp the maximum at zero. Implementation follows the receiver/hostility-corrected RED below; magic hit behavior remains unchanged.

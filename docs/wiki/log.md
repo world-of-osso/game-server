@@ -1,3 +1,7 @@
+## 2026-10-14 — Signed attacker enemy dodge
+
+[Existing player dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) now adds actual caster aura251's signed total before expertise/final clamp. Native48250e2+20/110294e0−25 are authenticated;24fb3cb5 native Strike damage37 despite verified90miss/+20 reproduces genuine RED. Negative-total/recipient controls pass; GREEN/check/fmt pending, whole251/abilities and broader hit system remain open.
+
 ## 2026-10-14 — Physical mechanic resistance
 
 [Native physical hit table](systems/player-damage.md#shared-weapon-spell-defense-roll) requires recipient aura117 after miss and before NoActiveDefense. Initial cd651cb7 full-table RED invalid: neutralNPC6 omits baseline5, actual85+10. Corrected hostileNPC40/pre117 consumer at2c4a7ecb records genuine native1833 stun RED atdraw10; foreign and silence-selector controls pass. Implementation follows corrected RED. Corrected c31715af native3/3 GREEN:256 miss/resist draws, no stun/control, removal/ownership/mismatch controls; retain27 source-identical defense controls. Workspace/all-target check130.216s/fmt4.316s pass warning-free; independent/full117/magic/ability acceptance open.
