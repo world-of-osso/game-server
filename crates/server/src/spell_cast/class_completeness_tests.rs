@@ -235,15 +235,14 @@ fn toyfx38_native_flute_destination_samples_area_not_ring_or_uniform_distance() 
     let h = harness(Vec::new(), &[142917], 8).unwrap();
     let spell = world_db().unwrap().store.get(142917).unwrap();
     let mut effect = spell.effects[0].clone();
-    // The second case distinguishes the source Max-Min span from a shifted annulus.
-    for minimum in [0.0, 2.0] {
+    let native_radius = effect.radius[1].unwrap();
+    // Real Flute first; a nonzero minimum distinguishes a span from a shifted annulus.
+    for minimum in [native_radius.radius_min, 1.0] {
         effect.radius[1] = Some(crate::spell_info::SpellRadius {
-            radius: 6.0,
             radius_min: minimum,
-            radius_max: 6.0,
-            ..default()
+            ..native_radius
         });
-        let maximum_distance = 6.0 - minimum;
+        let maximum_distance = native_radius.radius - minimum;
         let squared_distances: Vec<_> = (0..512)
             .map(|_| {
                 let destination =
