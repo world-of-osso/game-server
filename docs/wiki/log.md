@@ -1,3 +1,7 @@
+## 2026-10-15 — Companion teaching-item FIFO
+
+[Companion items](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15): held-writer RED261.814ms becomes nonwaiting atomic item/GUID/journal learning; fresh prior wallet/pet, species cap/item conservation, native achievement and departed-session/current-peer controls pass across separate invocations. Latest merged check pending; pet battles/abilities and release gameplay remain separate.
+
 ## 2026-10-15 — st210 toy fixture clock
 
 [Clock/completion boundary](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15): diagnostic RED proves pending=false and committed=1 while repeated multi-minute steps trip the old pump deadline. Restore original clock after expiry and signal fixture FIFO completion deterministically;21 targeted controls plus3 MountSpecial consumers pass; current check passes29.59s without warnings. No production timing change or release/full-suite claim.

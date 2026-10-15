@@ -5,6 +5,8 @@ use redb::ReadableTable;
 use shared::protocol::{InventoryChannel, InventoryError, InventoryErrorReason, ItemLocation};
 use std::collections::VecDeque;
 
+const BALANCED_BREED: u8 = 3;
+
 #[cfg(test)]
 #[path = "companion_learning_fixture.rs"]
 mod fixture;
@@ -89,7 +91,7 @@ fn persist_learning(
             request.species,
             request.level,
             shared::pet_battle::PetQuality::Common,
-            3,
+            BALANCED_BREED,
             guid,
         )
         .map_err(|reason| format!("cannot learn pet: {reason:?}"))?;

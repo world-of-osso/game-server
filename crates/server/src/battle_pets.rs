@@ -327,20 +327,7 @@ pub(crate) fn learn_companion_item(
     else {
         return Ok(false);
     };
-    let account = world
-        .get::<AccountPetJournal>(source.player)
-        .ok_or("account pet journal unavailable")?
-        .account_id;
-    let mut connections = world.query::<(Entity, &Authenticated, &InWorld, &PlayerLink)>();
-    let connection = connections
-        .iter(world)
-        .find(|(_, auth, session, link)| {
-            auth.account_id == account
-                && session.character_id == source.character
-                && link.0 == source.player
-        })
-        .map(|(connection, _, _, _)| connection)
-        .ok_or("authenticated companion learner unavailable")?;
+    let (connection, account) = find_companion_learner(world, &source)?;
     companion_learning::enqueue(
         world,
         companion_learning::LearningRequest {
@@ -357,6 +344,27 @@ pub(crate) fn learn_companion_item(
         },
     );
     Ok(true)
+}
+
+fn find_companion_learner(
+    world: &mut World,
+    source: &CompanionItem,
+) -> Result<(Entity, u64), String> {
+    let account = world
+        .get::<AccountPetJournal>(source.player)
+        .ok_or("account pet journal unavailable")?
+        .account_id;
+    let mut connections = world.query::<(Entity, &Authenticated, &InWorld, &PlayerLink)>();
+    let connection = connections
+        .iter(world)
+        .find(|(_, auth, session, link)| {
+            auth.account_id == account
+                && session.character_id == source.character
+                && link.0 == source.player
+        })
+        .map(|(connection, _, _, _)| connection)
+        .ok_or("authenticated companion learner unavailable")?;
+    Ok((connection, account))
 }
 
 fn summon_companion(world: &mut World, owner: Entity, id: u64) -> Result<Entity, String> {
