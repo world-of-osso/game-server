@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — planned native240/4 caster-only reduction; source62627/38598 authenticated, receiver-connection fixture correction and genuine RED/GREEN pending.
+- [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — native240/4 caster-only reduction; receiver-corrected62627/38598 Strike/Evasion genuine dodge RED, GREEN/integration pending.
 
 - [Live player weapon-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — real Rogue Evasion and receiver stat producer; six direction/control/flag/ranged/lifecycle controls, NPC/attacker-modifier/full hit-system gaps retained.
 
