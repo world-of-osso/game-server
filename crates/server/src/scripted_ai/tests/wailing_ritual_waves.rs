@@ -90,8 +90,8 @@ fn encounter_coverage_wailing_naralex_emotes_then_ectoplasms_and_mutanus() {
         "first sourced ritual wave is the prerequisite"
     );
     kill_ritual_wave(&mut h, &moccasins);
-    let heard = |h: &Harness, copy, phrase: &str| {
-        h.inbox(copy)
+    let heard = |h: &Harness, player, phrase: &str| {
+        h.inbox(player)
             .chat
             .iter()
             .any(|m| m.content.contains(phrase))
@@ -123,7 +123,7 @@ fn encounter_coverage_wailing_naralex_emotes_then_ectoplasms_and_mutanus() {
             .world()
             .get::<crate::creature_ai::CreatureState>(*actor);
         assert!(
-            matches!(state,Some(crate::creature_ai::CreatureState::Pursuing{target}) if *target==disciple.to_bits()),
+            matches!(state, Some(crate::creature_ai::CreatureState::Pursuing { target }) if *target == disciple.to_bits()),
             "source JustSummoned targets Disciple"
         );
     }

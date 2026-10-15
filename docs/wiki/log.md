@@ -1,3 +1,7 @@
+## 2026-10-14 — Wailing later ritual waves
+
+[Events17–20](systems/boss-scripts.md#wailing-later-ritual-waves--2026-10-14) add same-copy Naralex emotes and timed group3/group4 summons (seven Ectoplasms, Mutanus). Source combat-paused15/25/20/30s sequence passes3/3 in69.88s with first-wave/notification regressions; check/fmt pass. Controlled deaths, runtimebase stats and prior arrival are not ordinary fights or native clears; wake-up/exit21+ remain open.
+
 ## 2026-10-14 — Wailing first awakening wave
 
 [Source events14–16](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) add1s Talk7/+5s self6271/Talk8/+4s three Moccasins. Actual aura/birth coordinates/target/copy/timers pass after retaining the runtime template in the fixture (not changing summons); merged25/25 gate184.24s/check/fmt pass. Normal difficulty stats, later awakening and native clears remain open.
