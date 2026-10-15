@@ -579,6 +579,22 @@ fn isle_channel_workshop_demolisher_spellclick_boards_its_source_driver_seat() {
             npc: demolisher.to_bits(),
         });
     h.receive_pvp_updates(5);
+    let source_aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(demolisher)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 66245 && aura.caster == actor.player)
+        })
+        .expect("the actual spellclick must apply the rider's source aura to the vehicle");
+    assert!(
+        source_aura
+            .effects
+            .iter()
+            .any(|effect| effect.aura_type == 236)
+    );
     let rider = h
         .app
         .world()
