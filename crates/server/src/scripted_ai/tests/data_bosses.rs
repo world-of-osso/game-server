@@ -17,6 +17,8 @@ mod wailing_escort;
 mod wailing_physical;
 #[path = "wailing_progress.rs"]
 mod wailing_progress;
+#[path = "wailing_ritual_waves.rs"]
+mod wailing_ritual_waves;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
@@ -215,7 +217,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
-            || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762].contains(id))
+            || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
