@@ -1,4 +1,6 @@
-//! Match teams, not racial factions, define arena attack/assist relationships.
+//! Accepted battleground/arena teams, not racial factions, define match relationships.
+//! TC a352b1fa Object.cpp:2470-2478 allows PvP for affecting players; match entry
+//! establishes their teams. Open-world players retain the ordinary faction rules.
 use super::PlayerPvpState;
 use crate::maps::InMap;
 use bevy::prelude::*;
@@ -18,8 +20,8 @@ pub(crate) fn relation_between(
     attacker_map: Option<InMap>,
     victim_map: Option<InMap>,
 ) -> Option<ArenaRelation> {
-    let attacker = arena_state(attacker);
-    let victim = arena_state(victim);
+    let attacker = match_state(attacker);
+    let victim = match_state(victim);
     if attacker.is_none() && victim.is_none() {
         return None;
     }
@@ -30,6 +32,7 @@ pub(crate) fn relation_between(
         || map.map_id != attacker.map_id
         || map.map_id != victim.map_id
         || attacker.match_id != victim.match_id
+        || attacker.phase != victim.phase
         || !attacker.accepted
         || !victim.accepted
     {
@@ -44,15 +47,14 @@ pub(crate) fn relation_between(
         }
     })
 }
-fn arena_state(state: Option<&PlayerPvpState>) -> Option<&shared::protocol::BattlegroundSnapshot> {
-    state
-        .and_then(|state| state.battleground.as_ref())
-        .filter(|bg| bg.arena.is_some())
+fn match_state(state: Option<&PlayerPvpState>) -> Option<&shared::protocol::BattlegroundSnapshot> {
+    state.and_then(|state| state.battleground.as_ref())
 }
 pub(crate) fn relation(world: &World, attacker: Entity, victim: Entity) -> Option<ArenaRelation> {
     let controller = |entity| match world.get::<UnitSummonedBy>(entity) {
         Some(owner) => Entity::try_from_bits(owner.0).expect("server-owned summon controller"),
-        None => entity,
+        None => crate::game_objects::seaforium_bombs::find_caster_controller(world, entity)
+            .unwrap_or(entity),
     };
     relation_between(
         world.get::<PlayerPvpState>(controller(attacker)),
