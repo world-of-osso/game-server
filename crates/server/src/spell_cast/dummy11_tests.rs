@@ -119,7 +119,9 @@ fn dummy11_shred_doubles_modified_crit_chance() {
 
 #[test]
 fn dummy11_lashing_flames_excludes_foreign_caster_and_ends_on_expiry() {
-    let mut h = harness(Vec::new(), &[60103, 334046, 334168, 188389], 7).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[60103, 334046, 334168, 188389], 7)
+            .unwrap();
     h.cast_and_deliver(60103, Some(h.npc));
     h.advance(3);
     landed(&h);
@@ -162,7 +164,7 @@ fn dummy11_sinister_strike_uses_authored_level_curve() {
         (20, 1.0),
         (80, 1.0),
     ] {
-        let mut h = harness(Vec::new(), &[193315], 4).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[193315], 4).unwrap();
         h.app.world_mut().entity_mut(h.caster).insert(Level(level));
         let spell = world_db().unwrap().store.get(193315).unwrap();
         let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
@@ -262,7 +264,12 @@ fn dummy11_hammer_wave_requires_caster_in_owned_consecration() {
         (true, false, 20.0),
         (true, true, 0.0),
     ] {
-        let mut h = harness(Vec::new(), &[53595, 88263, 26573, 81297, 1302139], 2).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[53595, 88263, 26573, 81297, 1302139],
+            2,
+        )
+        .unwrap();
         h.app.insert_resource(load_native_creature_world(&[6]));
         let near = spawn_npc(&mut h.app, 4.0);
         let far = spawn_npc(&mut h.app, 13.0);
@@ -292,7 +299,12 @@ fn dummy11_hammer_wave_requires_caster_in_owned_consecration() {
 #[test]
 fn dummy11_shred_stealth_rank_grants_damage_and_combo_point() {
     for (rank, stealth) in [(false, true), (true, false), (true, true)] {
-        let mut h = harness(Vec::new(), &[5221, 768, 5215, 343232, 405834], 11).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[5221, 768, 5215, 343232, 405834],
+            11,
+        )
+        .unwrap();
         cat(&mut h);
         if !rank {
             no_rank(&mut h, 343232);
@@ -321,7 +333,8 @@ fn dummy11_shred_stealth_rank_grants_damage_and_combo_point() {
 }
 #[test]
 fn dummy11_thrash_applies_named_bleed_only_to_hit_enemies_and_expires() {
-    let mut h = harness(Vec::new(), &[106830, 405233, 768], 11).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[106830, 405233, 768], 11).unwrap();
     cat(&mut h);
     let near = spawn_npc(&mut h.app, 4.0);
     let far = spawn_npc(&mut h.app, 20.0);
@@ -343,7 +356,7 @@ fn dummy11_thrash_applies_named_bleed_only_to_hit_enemies_and_expires() {
 #[test]
 fn dummy11_lava_lash_applies_owned_lashing_flames_only_with_rank() {
     for rank in [false, true] {
-        let mut h = harness(
+        let mut h = harness_with_native_enemy_dodge_reduction(
             Vec::new(),
             &[60103, 334046, 334168, 188389, 188196, 343725],
             7,

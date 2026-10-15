@@ -155,7 +155,8 @@ fn advance_actor_logs(h: &mut Harness, connection: Entity, frames: usize) {
 fn dummy12_dispatch_and_eviscerate_damage_use_combo_spent_not_left() {
     for spell_id in [2098, 196819] {
         for points in [1.0, 3.0, 5.0] {
-            let mut h = harness(Vec::new(), &[spell_id], 4).unwrap();
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(Vec::new(), &[spell_id], 4).unwrap();
             h.set_power(PowerType::ComboPoints, points);
             h.set_power(PowerType::Energy, 100.0);
             let spell = world_db().unwrap().store.get(spell_id).unwrap();
@@ -176,7 +177,12 @@ fn dummy12_dispatch_and_eviscerate_damage_use_combo_spent_not_left() {
 #[test]
 fn dummy12_rake_bleed_snapshots_stealth_bonus_across_later_rank_removal() {
     for empowered in [false, true] {
-        let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[1822, 155722, 231052, 5215, 768, 163505],
+            11,
+        )
+        .unwrap();
         let caster = h.caster;
         apply(&mut h, caster, caster, 768, u32::MAX);
         apply(&mut h, caster, caster, 231052, u32::MAX);
@@ -304,7 +310,12 @@ fn dummy12_shield_cone_excludes_rear_side_far_and_ally_and_buffs_empty_cast() {
 
 #[test]
 fn dummy12_rake_reapplication_replaces_stealth_snapshot_without_retroactive_bonus() {
-    let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[1822, 155722, 231052, 5215, 768, 163505],
+        11,
+    )
+    .unwrap();
     let caster = h.caster;
     apply(&mut h, caster, caster, 768, u32::MAX);
     apply(&mut h, caster, caster, 231052, u32::MAX);
