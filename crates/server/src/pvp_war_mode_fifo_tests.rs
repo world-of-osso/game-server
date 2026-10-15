@@ -27,7 +27,11 @@ fn war_mode_committed_preference_uses_current_instance_before_applying_enlisted(
 }
 
 fn city_harness() -> (Harness, u64) {
-    let mut h = harness(Vec::new(), &[282559, 269083], 2).unwrap();
+    city_harness_with_spells(&[282559, 269083])
+}
+
+pub(in crate::pvp) fn city_harness_with_spells(spells: &[u32]) -> (Harness, u64) {
+    let mut h = harness(Vec::new(), spells, 2).unwrap();
     let db = persistence::temp_database();
     let (character, _) = persistence::create_character(&db, 41, "Warmodeproof", 1, 2).unwrap();
     let source = rusqlite::Connection::open_with_flags(

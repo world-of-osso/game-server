@@ -407,6 +407,10 @@ fn update_grants(
     }
 }
 #[cfg(test)]
+#[path = "pvp_talents_fifo_tests.rs"]
+mod fifo_tests;
+
+#[cfg(test)]
 impl Catalog {
     fn fixture() -> Self {
         let conn = Connection::open_in_memory().unwrap();

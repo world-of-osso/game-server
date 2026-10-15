@@ -213,6 +213,8 @@ fn sync_enlisted_aura(world: &mut World, player: Entity, spell: Option<u32>) {
 #[cfg(test)]
 #[path = "pvp_war_mode_fifo_tests.rs"]
 mod fifo_tests;
+#[cfg(test)]
+pub(super) use fifo_tests::city_harness_with_spells;
 
 #[cfg(test)]
 mod tests {
