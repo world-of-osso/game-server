@@ -6,7 +6,7 @@ use shared::components::{Mana, PowerType};
 #[test]
 fn spellmech_optional_combo_cost_snapshots_rupture_duration() {
     for points in [1.0, 3.0, 5.0] {
-        let mut h = harness(Vec::new(), &[1943], 4).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[1943], 4).unwrap();
         h.set_power(PowerType::ComboPoints, points);
         h.set_power(PowerType::Energy, 100.0);
         super::cast_granted(h.app.world_mut(), h.caster, 1943, Some(h.npc)).unwrap();

@@ -99,7 +99,8 @@ fn chaos_strike_spends_40_fury_and_hits_twice() {
     let mut refund = world_db().unwrap().store.get(197_125).unwrap().clone();
     // This test isolates gross cost and weapon hits; dummy5 covers refund endpoints.
     refund.aura_options.as_mut().unwrap().proc_chance = 0;
-    let Some(mut h) = harness(vec![refund], &ids, DEMON_HUNTER) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(vec![refund], &ids, DEMON_HUNTER)
+    else {
         return;
     };
     h.set_power(PowerType::Fury, 50.0);

@@ -82,7 +82,12 @@ fn dummy13_execute_refunds_actual_optional_rage_only_with_rank_and_survivor() {
         (true, 900.0, 240.0),
         (true, 1.0, 200.0),
     ] {
-        let mut h = harness(Vec::new(), &[163201, 260798, 316405, 137049], 1).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[163201, 260798, 316405, 137049],
+            1,
+        )
+        .unwrap();
         let caster = h.caster;
         let target = h.npc;
         // Active SpellPower9491 requires the real Arms specialization aura.

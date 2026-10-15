@@ -782,7 +782,8 @@ fn a_spell_crit_doubles_the_damage() {
 
 #[test]
 fn physical_spell_damage_takes_the_creatures_armor() {
-    let Some(mut h) = harness(Vec::new(), &[MORTAL_STRIKE], 1) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(Vec::new(), &[MORTAL_STRIKE], 1)
+    else {
         return;
     };
     // A level 10 caster against armor 90: ArmorConstant(10) 210 stops 30%.
