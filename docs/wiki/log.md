@@ -1,3 +1,23 @@
+## 2026-10-14 — Alterac captain source diagnosis
+
+[AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
+
+## 2026-10-14 — Native IoC pickup retake
+
+[Retakes78/79](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) prove actual normal pickup+return with both skins after private-only receipt/cache reconciliation. All eighteen new captures inspected; local textured model/portrait and source bomb/bags visible, animation/151 meshes and no prior duplicate/v5 errors. Peer particle art, timing and origin framing remain open; no deployment/victory claim. Admission77 failed before native startup and is not render evidence.
+
+## 2026-10-14 — Native IoC pickup, bounded visual result
+
+[Goober pickup](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) completes normal Workshop capture,195237 use and46847 count+1 in Modern75/Forever76, then normal return/save. Inspected eighteen captures show banners/bomb/bags, but private duplicate receipts and missingv5 cache prevent player/portrait acceptance. Private-only reconciliation is prepared; retake pending. Both pressure peaks exclude timing certification; no deployment/victory claim.
+
+## 2026-10-14 — Matched-protocol goober adjacency
+
+[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) passes source Workshop pickup1/1 on server22ba4903/protocol492ee28. Object fixtures now supply the native45490 summon dependencies rather than skip authored effects; adjacent quest objectives7/7 and scoped binary check pass, assertions unchanged. Historical compile/fixture failures remain separate; no deployed/native pickup or timed-siege acceptance.
+
+## 2026-10-14 — Authored goober spell dispatch
+
+[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) retains Data10/23 and source caster selection after normal use validation. Persistent-owner/free-space source Workshop fixture RED6 reaches owned46847 count0 versus1; implementation34d32065 committed before corrected GREEN1/1 (26.43s), with helper-resolved leased protocol/transport provenance. Direct-Cargo API-drift compile failure is retained separately. Native render, timed traps and siege victory remain separate gates.
+
 ## 2026-10-14 — Disciple second escort camp
 
 [Second camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) ports events8–11 without a cast-state guard or replacement buff. RED→GREEN proves real30s6270, three source Adders appearing at18s while casting, combat pause and12s resumed speech. Exact birth positions are observed before chase; physical onward path/native clear remain open.
