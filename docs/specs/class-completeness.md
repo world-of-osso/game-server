@@ -4,7 +4,9 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
-- [ ] Existing live player DodgePercentage feeds melee weapon-spell hit resolution before block on the same cumulative native roll. Native Evasion5277 self-cast must prevent frontal melee damage; behind-player attacks, controlled/casting states, NoAttackDodge/NoActiveDefense and ranged attacks retain source exclusions. Removal/expiry restore the live value. NPC dodge, attacker expertise/248/251 modifiers and complete hit probabilities remain distinct unproved boundaries.
+- [ ] Non-player attacker native aura240 expertise reduces live player melee weapon-spell dodge by one percentage point per four expertise, clamped at zero. Only the actual caster's active expertise contributes; removal restores native avoidance. Real NPC Hit Buffs62627 and native Strike38598 against a Rogue's real Evasion exercise the boundary without fake AP/dodge values. Player expertise, NPC dodge, parry, generic aura-handler/census and whole-spell certification remain separate requirements.
+
+- [ ] Existing live player DodgePercentage feeds melee weapon-spell hit resolution before block on the same cumulative native roll. Native Evasion5277 self-cast must prevent frontal melee damage; behind-player attacks, controlled/casting states, NoAttackDodge/NoActiveDefense and ranged attacks retain source exclusions. Removal/expiry restore the live value. NPC dodge, player expertise/248/251 modifiers and complete hit probabilities remain distinct unproved boundaries.
 
 - [ ] Implemented weapon-spell miss, ranged deflection and block chances share one native integer roll0..9999 with cumulative probabilities truncated to hundredths of a percent. NativeNoAttackMiss/NoActiveDefense and existing target guards retain their ordering. Magic hit behavior remains separate. Missing dodge/parry, mechanic resistance and player baseline hit statistics remain explicit gaps; this bounded table does not certify the full source hit system.
 
