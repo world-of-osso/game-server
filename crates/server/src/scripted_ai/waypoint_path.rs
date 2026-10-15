@@ -1,7 +1,7 @@
 //! `MotionMaster::MovePath` for C++ scripts: TC a352b1fa WaypointMovementGenerator
 //! on MoveSplineInit/MoveSpline/Spline, for the path shapes scripts use today.
 //! Unported (rejected by `move_path`): node delays/orientations, backwards paths and
-//! repeating paths. Ground non-exact nodes use the existing baked navigation;
+//! repeating paths. Ground non-exact nodes use TC smooth-surface baked controls;
 //! gravity-disabled units retain the source PathGenerator shortcut.
 
 use bevy::prelude::*;
@@ -31,8 +31,6 @@ const STEPS_PER_SEGMENT: u32 = 3;
 const MINIMAL_DURATION_MS: i32 = 1;
 /// `MoveSplineInitArgs::_checkPathLengths` minimum segment.
 const MIN_SEGMENT_LENGTH: f32 = 0.1;
-/// Float-rounded collinear Detour portals may be coalesced, never terrain/turn corners.
-const PORTAL_COLLINEAR_EPSILON: f32 = 0.0001;
 
 /// `WaypointMoveType`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -233,10 +231,7 @@ fn catmull_rom(p: &[Vec3], t: f32) -> Vec3 {
 fn launch(controls: Vec<Vec3>, smooth: bool, orientation: f32, velocity: f32) -> Option<Spline> {
     // TC _checkPathLengths exempts the first crossing from the actual owner
     // position. Two-point paths are permitted, including an already-reached node.
-    let short = controls
-        .windows(2)
-        .skip(1)
-        .any(|pair| pair[0].distance(pair[1]) < MIN_SEGMENT_LENGTH);
+    let short = find_short_interior_segment(&controls).is_some();
     if controls.len() < 2 || short {
         return None;
     }
@@ -292,7 +287,7 @@ fn path_velocity(path: &ScriptPath, spawn: &SpawnPoint, walking: bool, flying: b
 }
 
 struct Launch<'a> {
-    map_id: u32,
+    map: crate::maps::InMap,
     position: Vec3,
     orientation: f32,
     spawn: &'a SpawnPoint,
@@ -305,6 +300,7 @@ fn start_move(
     movement: &mut PathMovement,
     launch_from: &Launch,
     navigation: Option<&crate::navigation::Navigation>,
+    ground: Option<&mut crate::ground::GroundMap>,
 ) -> Result<Option<u32>, String> {
     let path = movement.path.clone();
     if movement.started {
@@ -316,7 +312,7 @@ fn start_move(
     }
     movement.started = true;
     let exact = path.exact_spline();
-    let controls = query_path_controls(&path, movement.node, launch_from, navigation)?;
+    let controls = query_path_controls(&path, movement.node, launch_from, navigation, ground)?;
     let smooth = exact && controls.len() > 2 && launch_from.flying;
     let velocity = path_velocity(
         &path,
@@ -324,8 +320,10 @@ fn start_move(
         launch_from.walking,
         launch_from.flying,
     );
+    let short_segment = find_short_interior_segment(&controls);
+    let node_id = path.nodes[movement.node].0;
     let mut spline = launch(controls, smooth, launch_from.orientation, velocity)
-        .ok_or("spline controls rejected")?;
+        .ok_or_else(|| format!("spline controls rejected at authored node {node_id}: short segment {short_segment:?}"))?;
     spline.last_node = if exact {
         movement.node + spline.last_node - 1
     } else {
@@ -343,6 +341,17 @@ fn start_move(
     Ok(None)
 }
 
+fn find_short_interior_segment(controls: &[Vec3]) -> Option<(usize, f32)> {
+    controls
+        .windows(2)
+        .enumerate()
+        .skip(1)
+        .find_map(|(index, pair)| {
+            let distance = pair[0].distance(pair[1]);
+            (distance < MIN_SEGMENT_LENGTH).then_some((index, distance))
+        })
+}
+
 /// TC CreateSingularPointPath: owner position, then calculated path after its first
 /// point. Never reinterpret Detour corners as authored waypoint node indices.
 fn query_path_controls(
@@ -350,6 +359,7 @@ fn query_path_controls(
     node: usize,
     launch_from: &Launch,
     navigation: Option<&crate::navigation::Navigation>,
+    ground: Option<&mut crate::ground::GroundMap>,
 ) -> Result<Vec<Vec3>, String> {
     if path.exact_spline() || launch_from.flying {
         let targets = if path.exact_spline() {
@@ -362,80 +372,46 @@ fn query_path_controls(
             .collect());
     }
     let navigation = navigation.ok_or("ground path has no navigation resource")?;
-    let route = query_ground_waypoints(navigation, launch_from, path.nodes[node].1)?;
-    let controls = std::iter::once(launch_from.position).chain(route).collect();
-    Ok(coalesce_collinear_crossings(controls))
-}
-
-/// Ramer-Douglas-Peucker at float rounding precision, not a route shortcut.
-/// Every original crossing stays on the resulting segments within that precision.
-fn coalesce_collinear_crossings(points: Vec<Vec3>) -> Vec<Vec3> {
-    if points.len() < 3 {
-        return points;
-    }
-    let last = points.len() - 1;
-    let mut keep = vec![false; points.len()];
-    keep[0] = true;
-    keep[last] = true;
-    let mut ranges = vec![(0, last)];
-    while let Some((start, end)) = ranges.pop() {
-        let farthest = (start + 1..end)
-            .map(|index| {
-                (
-                    index,
-                    segment_distance_squared(points[index], points[start], points[end]),
-                )
-            })
-            .max_by(|a, b| a.1.total_cmp(&b.1));
-        if let Some((index, distance)) = farthest
-            && distance > PORTAL_COLLINEAR_EPSILON * PORTAL_COLLINEAR_EPSILON
-        {
-            keep[index] = true;
-            ranges.extend([(start, index), (index, end)]);
-        }
-    }
-    points
-        .into_iter()
-        .zip(keep)
-        .filter_map(|(point, keep)| keep.then_some(point))
-        .collect()
-}
-
-fn segment_distance_squared(point: Vec3, start: Vec3, end: Vec3) -> f32 {
-    let delta = end - start;
-    let length_squared = delta.length_squared();
-    if length_squared == 0.0 {
-        return point.distance_squared(start);
-    }
-    let fraction = ((point - start).dot(delta) / length_squared).clamp(0.0, 1.0);
-    point.distance_squared(start + delta * fraction)
+    let ground = ground.ok_or("ground path requires collision geometry")?;
+    let route = query_ground_waypoints(navigation, ground, launch_from, path.nodes[node].1)?;
+    Ok(std::iter::once(launch_from.position).chain(route).collect())
 }
 
 fn query_ground_waypoints(
     navigation: &crate::navigation::Navigation,
+    ground: &mut crate::ground::GroundMap,
     launch_from: &Launch,
     target: Vec3,
 ) -> Result<Vec<Vec3>, String> {
     let target = bevy(target);
     let from = bevy(launch_from.position);
     let route = navigation
-        .query_path(
-            launch_from.map_id,
+        .query_waypoint_path(
+            launch_from.map.map_id,
             Vec3::new(from.x, from.y, from.z),
             Vec3::new(target.x, target.y, target.z),
         )?
         .ok_or("ground path map has no navigation bake")?;
-    Ok(route
+    route
         .into_iter()
         .skip(1)
-        .map(|point| {
-            wow(&Position {
+        .map(|mut point| {
+            let crate::ground::GroundProbe::Supported(height) =
+                ground.creature_ground_in(launch_from.map, point)
+            else {
+                return Err(format!(
+                    "ground waypoint lacks collision support at {point:?}"
+                ));
+            };
+            // PathGenerator::NormalizePath -> non-flying UpdateAllowedPositionZ.
+            point.y = height;
+            Ok(wow(&Position {
                 x: point.x,
                 y: point.y,
                 z: point.z,
-            })
+            }))
         })
-        .collect())
+        .collect()
 }
 
 fn wow(position: &Position) -> Vec3 {
@@ -453,6 +429,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
     let dt_ms = world.resource::<Time>().delta().as_millis() as i32;
     // Exclusive system: keep the navigation cache out of World's mutable query borrow.
     let navigation = world.remove_resource::<crate::navigation::Navigation>();
+    let mut ground = world.remove_resource::<crate::ground::GroundMap>();
     let mut ended = Vec::new();
     let mut failed = Vec::new();
     let mut moved = Vec::new();
@@ -500,7 +477,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         }
         if movement.spline.is_none() && movement.wait_ms <= 0 {
             let launch_from = Launch {
-                map_id: map.map_id,
+                map: *map,
                 position: wow(&position),
                 orientation: rotation
                     .as_ref()
@@ -509,7 +486,12 @@ pub(crate) fn path_movement_system(world: &mut World) {
                 walking,
                 flying,
             };
-            match start_move(&mut movement, &launch_from, navigation.as_ref()) {
+            match start_move(
+                &mut movement,
+                &launch_from,
+                navigation.as_ref(),
+                ground.as_mut(),
+            ) {
                 Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
                 Ok(None) => {}
                 Err(error) => failed.push((entity, movement.path.id, error)),
@@ -547,6 +529,9 @@ pub(crate) fn path_movement_system(world: &mut World) {
     }
     if let Some(navigation) = navigation {
         world.insert_resource(navigation);
+    }
+    if let Some(ground) = ground {
+        world.insert_resource(ground);
     }
     for (entity, walking) in walking_modes {
         super::movement::set_walk(world, entity, walking);
