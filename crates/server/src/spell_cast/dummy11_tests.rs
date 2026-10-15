@@ -93,7 +93,9 @@ fn dummy11_cancelled_voidform_never_launches_volley() {
 
 #[test]
 fn dummy11_shred_doubles_modified_crit_chance() {
-    let mut h = harness(Vec::new(), &[5221, 768, 5215, 343232], 11).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[5221, 768, 5215, 343232], 11)
+            .unwrap();
     cat(&mut h);
     h.app
         .world_mut()
