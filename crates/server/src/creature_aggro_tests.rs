@@ -205,6 +205,56 @@ fn aggro_radius_follows_level_difference_with_clamps() {
     );
 }
 
+/// Recorded Stockade cell geometry is 15.70 yd from the level32 tank.
+/// TC GetAttackDistance (Creature.cpp:2165) gives a 14.5 yd center boundary
+/// for level30 vs32 and source combat reaches1.5, not detection_range20−2.
+#[test]
+fn stockade_level30_does_not_body_pull_a_level32_player_at_15_7_yards() {
+    let mut app = aggro_app();
+    let criminal = spawn_creature(
+        &mut app,
+        &CreatureFixture {
+            level: 30,
+            ..FOREST_SPIDER
+        },
+        at(0.0, 0.0),
+    );
+    app.world_mut()
+        .entity_mut(criminal)
+        .insert(AggroRange(20.0));
+    spawn_player(&mut app, at(15.7, 0.0), 32);
+    run(&mut app, 1);
+    assert_eq!(state(&app, criminal), Some(CreatureState::Idle));
+}
+
+#[test]
+fn stockade_level30_does_not_body_pull_a_level32_companion_at_15_7_yards() {
+    let mut app = aggro_app();
+    let criminal = spawn_creature(
+        &mut app,
+        &CreatureFixture {
+            level: 30,
+            ..FOREST_SPIDER
+        },
+        at(0.0, 0.0),
+    );
+    app.world_mut()
+        .entity_mut(criminal)
+        .insert(AggroRange(20.0));
+    spawn_creature(
+        &mut app,
+        &CreatureFixture {
+            faction: HUMAN,
+            level: 32,
+            mode: AggroMode::Reactive,
+            health: 7840.0,
+        },
+        at(15.7, 0.0),
+    );
+    run(&mut app, 24);
+    assert_eq!(state(&app, criminal), Some(CreatureState::Idle));
+}
+
 #[test]
 fn aggro_mode_follows_template_flags() {
     assert_eq!(AggroMode::for_template(1, 0, 0, ""), AggroMode::Aggressive);
