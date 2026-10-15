@@ -211,3 +211,80 @@ fn achievements_criteria_unknown_spell_rejects_each_incomplete_authority() {
         }
     }
 }
+
+#[test]
+fn achievements_criteria_unknown_spell_real_select_character_does_not_lose_login_credit() {
+    use lightyear::connection::host::HostClient;
+    use lightyear::prelude::*;
+    use shared::protocol::{AuthChannel, EnterWorldResponse, LoadTerrain, SelectCharacter};
+    use std::time::Duration;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let db = persistence::temp_database();
+    let (character, _) = persistence::create_character(&db, 17, "Selectproof", 1, 1).unwrap();
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<SelectCharacter>();
+    app.register_message::<EnterWorldResponse>();
+    app.register_message::<LoadTerrain>();
+    app.add_message::<crate::death::PlayerDeathTransition>();
+    app.insert_resource(GameDatabase { db });
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(crate::spell_info::load_class_spells(&conn).unwrap());
+    app.insert_resource(crate::mount_journal::load(&conn).unwrap());
+    app.insert_resource(crate::maps::MapStore::continents());
+    app.init_resource::<crate::maps::InstanceManager>();
+    app.add_plugins((AchievementPlugin, ClassProgressionPlugin));
+    app.add_systems(
+        Update,
+        crate::auth::process_select_character.before(send_initial_achievement_snapshot),
+    );
+    app.finish();
+    app.cleanup();
+    app.update();
+    // As in mount_journal_tests, the fixture installs the authentic loaded catalog after Startup.
+    Plugin::build(&MountJournalPlugin, &mut app);
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(17)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 17 },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter {
+            character_id: character,
+        });
+    for _ in 0..4 {
+        app.update();
+    }
+    let player = app
+        .world()
+        .get::<PlayerLink>(connection)
+        .expect("actual select must enter world")
+        .0;
+    assert!(app.world().get::<KnownSpells>(player).is_some());
+    assert!(app.world().get::<AccountMounts>(player).is_some());
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    for (award, criterion, _) in REPAIRS {
+        assert_eq!(
+            state.criteria_progress.get(&criterion),
+            Some(&1),
+            "deferred real selection must not consume Login74 before complete knowledge for {criterion}"
+        );
+        assert!(state.earned_ids.contains(&award));
+    }
+}
