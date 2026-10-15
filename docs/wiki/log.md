@@ -1,6 +1,6 @@
 ## 2026-10-14 — FIFO housing plot payment
 
-[Tick lag](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14): authentic cornerstone purchase queues fresh atomic wallet/ownership on FIFO; owner gold/success/error publication follows durability. Held-writer RED254ms becomes GREEN with prior payment funds preserved;26 native controls pass. Latest-master intersection and release gameplay proof remain open.
+[Tick lag](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14): authentic cornerstone purchase queues fresh atomic wallet/ownership on FIFO; owner gold/success/error publication follows durability. Held-writer RED254ms becomes GREEN with prior payment funds preserved;26 native controls pass. Latest-master intersection35/35 and warning-free runtime check pass after correcting the incoming native pet fixture constructor. Release gameplay proof remains open.
 
 ## 2026-10-14 — FIFO housing decor collection
 
