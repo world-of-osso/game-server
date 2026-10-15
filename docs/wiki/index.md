@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Typed area/zone alternatives](systems/dungeon-achievements.md#typed-areazone-alternatives) — complete root Some17/41 preserves distinct ancestry/zone semantics; native selfie RED reproduced, acceptance pending.
+- [Typed area/zone alternatives](systems/dungeon-achievements.md#typed-areazone-alternatives) — complete root Some17/41 preserves distinct ancestry/zone semantics; actual selfie RED→GREEN and strict missing-zone controls, integrated8/8; full grants/travel unclaimed.
 
 - [Unearned-achievement cast guard](systems/dungeon-achievements.md#unearned-achievement-cast-guard) — complete SingleFalse87 on native CastSpell29; twenty real1217637 casts/account41707, self-guard/sibling/reopen/date and unknown/partial-account controls, final6/6; no gear acquisition/UI claim.
 
