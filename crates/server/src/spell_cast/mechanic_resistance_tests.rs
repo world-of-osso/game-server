@@ -105,11 +105,23 @@ fn class_completeness_native_physical_mechanic_resistance_precedes_no_active_def
     let health = h.health(victim);
     let mut resisted = 0;
     for attempt in 0..256 {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<ActiveAuras>(victim)
+                .unwrap()
+                .modifier(117),
+            10.0,
+            "before trial {attempt}: {:?}",
+            h.app.world().get::<ActiveAuras>(victim)
+        );
         cast_dusted_cheap_shot(&mut h);
         assert!(
             !crate::auras::has_aura(h.app.world(), victim, CHEAP_SHOT),
-            "native 90 miss +10 mechanic resistance admitted Cheap Shot at {attempt}: {:?}",
-            h.inbox.log
+            "native 90 miss +10 mechanic resistance admitted Cheap Shot at {attempt}: {:?}; victim auras {:?}; spell {:?}",
+            h.inbox.log,
+            h.app.world().get::<ActiveAuras>(victim),
+            world_db().unwrap().store.get(CHEAP_SHOT)
         );
         assert!(
             !h.app
