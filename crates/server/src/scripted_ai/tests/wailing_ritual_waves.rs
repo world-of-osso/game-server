@@ -157,6 +157,170 @@ fn encounter_coverage_wailing_naralex_emotes_then_ectoplasms_and_mutanus() {
     assert_eq!(h.app.world().get::<InMap>(mutanus[0]), Some(&map));
     assert!(
         h.has_aura(disciple, 6271),
-        "awakening persists until the later unported cleanup"
+        "awakening persists until source wake-up cleanup"
     );
+    kill_ritual_wave(&mut h, &mutanus);
+    assert_wailing_wake_up(&mut h, disciple, naralex, decoy);
+    assert_wailing_owl_departure(&mut h, disciple, naralex, decoy);
+    assert_wailing_real_flight_exit(&mut h, &conn, disciple, naralex, decoy);
+}
+
+fn heard_ritual_line(h: &Harness, player: usize, phrase: &str) -> bool {
+    h.inbox(player)
+        .chat
+        .iter()
+        .any(|m| m.content.contains(phrase))
+}
+
+fn naralex_stand_state(h: &Harness, actor: Entity) -> shared::components::StandState {
+    h.app
+        .world()
+        .get::<shared::components::UnitPose>(actor)
+        .unwrap()
+        .stand_state
+}
+
+fn assert_wailing_wake_up(h: &mut Harness, disciple: Entity, naralex: Entity, decoy: Entity) {
+    use shared::components::StandState;
+    assert_eq!(naralex_stand_state(h, naralex), StandState::Sleep);
+    h.advance(24.2);
+    assert_eq!(
+        naralex_stand_state(h, naralex),
+        StandState::Sleep,
+        "source25s after Mutanus, not death"
+    );
+    assert!(!heard_ritual_line(h, 0, "I AM AWAKE"));
+    h.advance(0.8);
+    assert_eq!(
+        naralex_stand_state(h, naralex),
+        StandState::Stand,
+        "source21 wakes real same-copy Naralex"
+    );
+    assert!(heard_ritual_line(h, 0, "I AM AWAKE"));
+    assert_eq!(naralex_stand_state(h, decoy), StandState::Sleep);
+    assert!(!heard_ritual_line(h, 1, "I AM AWAKE"));
+    assert!(h.has_aura(disciple, 6271));
+    h.advance(2.3);
+    assert!(
+        h.has_aura(disciple, 6271),
+        "source3s before awakening removal"
+    );
+    assert!(!heard_ritual_line(h, 0, "At last!"));
+    h.advance(0.7);
+    assert!(!h.has_aura(disciple, 6271));
+    assert!(heard_ritual_line(h, 0, "At last!"));
+    h.advance(2.3);
+    assert!(!heard_ritual_line(h, 0, "dreaded nightmare"));
+    h.advance(0.7);
+    assert!(heard_ritual_line(h, 0, "dreaded nightmare"));
+    h.advance(5.3);
+    assert!(!heard_ritual_line(h, 0, "Farewell, brave souls"));
+    h.advance(0.7);
+    assert!(heard_ritual_line(h, 0, "Farewell, brave souls"));
+    for phrase in ["At last!", "dreaded nightmare", "Farewell, brave souls"] {
+        assert!(
+            !heard_ritual_line(h, 1, phrase),
+            "copy-isolated departure speech"
+        );
+    }
+}
+
+fn assert_wailing_owl_departure(h: &mut Harness, disciple: Entity, naralex: Entity, decoy: Entity) {
+    use super::super::super::waypoint_path::GravityDisabled;
+    h.advance(2.3);
+    for actor in [disciple, naralex] {
+        assert!(!h.has_aura(actor, 8153), "source3s after farewell");
+    }
+    h.advance(0.7);
+    for actor in [disciple, naralex] {
+        assert!(h.has_aura(actor, 8153), "ordinary source Owl Form cast");
+        assert!(h.app.world().get::<GravityDisabled>(actor).is_none());
+    }
+    assert_eq!(
+        h.app.world().get::<UnitFactionTemplate>(disciple),
+        Some(&UnitFactionTemplate(35))
+    );
+    assert!(!h.has_aura(decoy, 8153));
+    h.advance(7.3);
+    for actor in [disciple, naralex] {
+        assert!(
+            h.app.world().get::<GravityDisabled>(actor).is_none(),
+            "source8s before flight"
+        );
+    }
+    h.advance(0.7);
+    for actor in [disciple, naralex] {
+        assert!(
+            h.app.world().get::<GravityDisabled>(actor).is_some(),
+            "source26 disables gravity for both"
+        );
+    }
+    assert!(h.app.world().get::<GravityDisabled>(decoy).is_none());
+}
+
+fn ritual_position(h: &Harness, actor: Entity) -> Vec3 {
+    let position = h.app.world().get::<Position>(actor).unwrap();
+    Vec3::new(position.x, position.y, position.z)
+}
+
+fn ritual_actor_retired(h: &Harness, actor: Entity) -> bool {
+    h.app.world().get_entity(actor).is_err()
+        || h.app
+            .world()
+            .get::<crate::combat::DeathState>(actor)
+            .is_some()
+}
+
+fn assert_wailing_real_flight_exit(
+    h: &mut Harness,
+    conn: &Connection,
+    disciple: Entity,
+    naralex: Entity,
+    decoy: Entity,
+) {
+    let endpoint: (f32, f32, f32) = conn.query_row(
+        "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=367804 ORDER BY NodeId DESC LIMIT 1",
+        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    ).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(endpoint.0, endpoint.1, endpoint.2);
+    let endpoint = Vec3::new(x, y, z);
+    let origins = [ritual_position(h, disciple), ritual_position(h, naralex)];
+    let decoy_origin = ritual_position(h, decoy);
+    let mut moved = [false; 2];
+    for _ in 0..2400 {
+        if ritual_actor_retired(h, disciple) {
+            break;
+        }
+        h.advance(0.05);
+        for (index, actor) in [disciple, naralex].into_iter().enumerate() {
+            if let Some(position) = h.app.world().get::<Position>(actor) {
+                let position = Vec3::new(position.x, position.y, position.z);
+                assert!(position.is_finite());
+                moved[index] |= position.distance(origins[index]) > 1.0;
+            }
+        }
+        if ritual_actor_retired(h, disciple) {
+            let position = ritual_position(h, disciple);
+            assert!(
+                position.distance(endpoint) < 0.001,
+                "despawn follows real authored final flight endpoint: {position:?} vs {endpoint:?}"
+            );
+            break;
+        }
+    }
+    assert_eq!(
+        moved,
+        [true, true],
+        "both real flight paths move, no injected arrival"
+    );
+    assert!(
+        ritual_actor_retired(h, disciple),
+        "source367804-end retires ordinary-spawn Disciple"
+    );
+    assert!(
+        ritual_actor_retired(h, naralex),
+        "same callback retires Naralex"
+    );
+    assert!(!ritual_actor_retired(h, decoy));
+    assert_eq!(ritual_position(h, decoy), decoy_origin);
 }
