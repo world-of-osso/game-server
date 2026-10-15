@@ -1033,6 +1033,17 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
     ))
 }
 
+/// TC caster-front47 clamps player offsets to authored scaled reach.
+/// Creature reach selection is outside this player Toy boundary.
+fn clamp_player_front_distance(world: &World, caster: Entity, target: u32, distance: f32) -> f32 {
+    if target != 47 || world.get::<shared::components::Player>(caster).is_none() {
+        return distance;
+    }
+    let reach = crate::scripted_ai::model_reach::combat_reach(world, caster)
+        .expect("player combat reach is always available");
+    distance.max(reach)
+}
+
 /// TC a352b1fa SpellInfo.cpp CalcRadius:72/86 sample (Max-Min)*sqrt(rand_norm());
 ///91 only randomizes direction. Unlike GetRandomPoint, CalcRadius does not add Min.
 fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
@@ -1113,16 +1124,7 @@ pub fn effect_dest(
             }
             Selector::CasterOffset(angle) => {
                 let distance = radius(effect, slot);
-                // TC caster-front targets cannot be closer than the player's scaled reach.
-                // Creature reach selection is outside this player Toy boundary.
-                let distance =
-                    if id == 47 && world.get::<shared::components::Player>(caster).is_some() {
-                        let reach = crate::scripted_ai::model_reach::combat_reach(world, caster)
-                            .expect("player combat reach is always available");
-                        distance.max(reach)
-                    } else {
-                        distance
-                    };
+                let distance = clamp_player_front_distance(world, caster, id, distance);
                 caster_offset(world, caster, angle, distance)
             }
             _ => continue,
