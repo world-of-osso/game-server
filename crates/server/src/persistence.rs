@@ -12,6 +12,8 @@ pub(crate) mod banks;
 pub(crate) mod charters;
 #[path = "persistence_equipment.rs"]
 pub(crate) mod equipment;
+#[path = "persistence_guild_tabards.rs"]
+pub(crate) mod guild_tabards;
 #[path = "persistence_housing.rs"]
 pub(crate) mod housing_store;
 #[path = "persistence_inventory.rs"]
@@ -34,6 +36,9 @@ pub(crate) mod toy_store;
 #[cfg(test)]
 #[path = "persistence_charters_tests.rs"]
 mod charter_tests;
+#[cfg(test)]
+#[path = "persistence_guild_tabards_tests.rs"]
+mod guild_tabard_tests;
 
 pub use self::persistence_runtime::{ClientId, save_live_character};
 use self::persistence_runtime::{flush_all_characters_on_exit, save_dirty_characters};
@@ -354,6 +359,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_FLIGHT_STYLE);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_REST);
     banks::create_bank_tables(&txn);
+    txn.open_table(guild_tabards::DESIGNS)
+        .expect("migrate legacy guilds to optional tabard designs");
     appearance_store::create_appearance_tables(&txn);
     toy_store::create_tables(&txn);
     housing_store::create_tables(&txn);
