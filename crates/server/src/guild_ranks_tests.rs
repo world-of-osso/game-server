@@ -78,6 +78,33 @@ fn guild_member_notes_preserve_legacy_officer_data_and_public_notes_across_resta
             },
         )
     };
+    for rights in [GUILD_RIGHT_CHAT_LISTEN, GUILD_RIGHT_EDIT_PUBLIC_NOTE] {
+        apply_rank_request(
+            &db,
+            7,
+            master,
+            GuildRankRequest::SetPermissions {
+                rank: 1,
+                rights,
+                gold_per_day: 0,
+            },
+        )
+        .unwrap();
+        let result = write(officer, "Member", "Officer assigned alchemist", false);
+        if rights == GUILD_RIGHT_EDIT_PUBLIC_NOTE {
+            result.unwrap();
+            assert_eq!(
+                load_guild_public_note(&db, member),
+                "Officer assigned alchemist"
+            );
+        } else {
+            assert_eq!(result, Err(GuildRankError::Permissions));
+        }
+        assert_eq!(
+            write(officer, "Member", "private without right", true),
+            Err(GuildRankError::Permissions)
+        );
+    }
     // Mainline permits self-public editing without the general public edit right.
     write(member, "Member", "Alchemy 100", false).unwrap();
     assert_eq!(
