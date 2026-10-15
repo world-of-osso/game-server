@@ -1,0 +1,200 @@
+use super::*;
+use shared::components::{Mounted, PlayerMotion};
+
+#[derive(Resource, Default)]
+struct MountReceipts(Vec<(Entity, EmoteEvent)>);
+
+fn collect_events(
+    mut receivers: Query<(Entity, &mut MessageReceiver<EmoteEvent>)>,
+    mut receipts: ResMut<MountReceipts>,
+) {
+    for (connection, mut receiver) in &mut receivers {
+        receipts
+            .0
+            .extend(receiver.receive().map(|event| (connection, event)));
+    }
+}
+
+fn mount_app() -> (tempfile::NamedTempFile, App, Entity, Entity, u64) {
+    let (file, mut app, player, connection, character) = emote_app();
+    app.init_resource::<MountReceipts>();
+    // Lightyear clears receivers in Last, then delivers HostClient messages.
+    // Save real delivery in First rather than sampling after arbitrary updates.
+    app.add_systems(First, collect_events);
+    (file, app, player, connection, character)
+}
+
+fn observer(app: &mut App, network_id: u64, name: &str, map: crate::maps::InMap) -> Entity {
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: name.into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            Position {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            map,
+        ))
+        .id();
+    app.world_mut()
+        .spawn((
+            PlayerLink(player),
+            Authenticated {
+                account_id: network_id,
+            },
+            InWorld {
+                character_id: network_id,
+            },
+            RemoteId(PeerId::Netcode(network_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+            MessageSender::<EmoteEvent>::default(),
+            MessageReceiver::<EmoteEvent>::default(),
+        ))
+        .id()
+}
+
+fn mount_request(app: &mut App, connection: Entity) {
+    app.world_mut()
+        .get_mut::<MessageSender<ChatMessage>>(connection)
+        .unwrap()
+        .send::<ChatChannel>(ChatMessage {
+            sender: "spoofed actor".into(),
+            content: "/mountspecial".into(),
+            channel: ChatType::Say,
+        });
+    for _ in 0..3 {
+        app.update();
+    }
+}
+
+fn events(app: &mut App, connection: Entity) -> Vec<EmoteEvent> {
+    app.world_mut()
+        .resource_mut::<MountReceipts>()
+        .0
+        .extract_if(.., |(recipient, _)| *recipient == connection)
+        .map(|(_, event)| event)
+        .collect()
+}
+
+#[test]
+fn mount_special_uses_authoritative_actor_and_observer_set_without_chat_or_criteria() {
+    let (_file, mut app, player, connection, character) = mount_app();
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    let visible = observer(&mut app, 42, "Witness", crate::maps::InMap::continent(0));
+    let hidden = observer(&mut app, 43, "Hidden", crate::maps::InMap::continent(0));
+    let foreign = observer(&mut app, 44, "Foreign", crate::maps::InMap::continent(1));
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(visible);
+    app.world_mut().entity_mut(player).insert((
+        Mounted {
+            mount_display_id: 2404,
+            ..Default::default()
+        },
+        PlayerMotion::default(),
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        visibility,
+    ));
+    // Entering world produces Login/ReachLevel credit independently of emotes.
+    app.update();
+    let criteria_before = app
+        .world()
+        .get::<PlayerAchievementState>(player)
+        .unwrap()
+        .criteria_progress
+        .clone();
+    mount_request(&mut app, connection);
+    let owner_events = events(&mut app, connection);
+    let peer_events = events(&mut app, visible);
+    assert_eq!(
+        owner_events.len(),
+        1,
+        "one owner action, not an unknown slash chat"
+    );
+    assert_eq!(
+        peer_events.len(),
+        1,
+        "visible peer observes the same action"
+    );
+    for event in owner_events.iter().chain(&peer_events) {
+        assert_eq!(event.player_entity, player.to_bits());
+        assert_eq!(event.sender, "Danceproof");
+        assert_eq!(event.emote, EmoteKind::MountSpecial);
+    }
+    app.world_mut()
+        .get_mut::<MessageSender<EmoteIntent>>(connection)
+        .unwrap()
+        .send::<ChatChannel>(EmoteIntent {
+            emote: EmoteKind::MountSpecial,
+            target_entity: Some(foreign.to_bits()),
+        });
+    for _ in 0..3 {
+        app.update();
+    }
+    for peer in [connection, visible] {
+        let repeated = events(&mut app, peer);
+        assert_eq!(
+            repeated.len(),
+            1,
+            "intent uses the same action as slash input"
+        );
+        assert_eq!(
+            repeated[0].player_entity,
+            player.to_bits(),
+            "target cannot spoof actor"
+        );
+        assert_eq!(repeated[0].emote, owner_events[0].emote);
+    }
+    assert!(events(&mut app, hidden).is_empty());
+    assert!(events(&mut app, foreign).is_empty());
+    assert!(
+        app.world()
+            .resource::<ChatHistoryBuffer>()
+            .entries
+            .is_empty(),
+        "no fabricated social line"
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress,
+        criteria_before,
+        "MountSpecial must not fabricate emote achievement credit"
+    );
+}
+
+#[test]
+fn mount_special_refuses_unmounted_and_not_entered_senders() {
+    let (_file, mut app, player, connection, character) = mount_app();
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    app.world_mut().entity_mut(player).insert((
+        PlayerMotion::default(),
+        crate::interest::NetworkVisibility::default(),
+    ));
+    mount_request(&mut app, connection);
+    assert!(events(&mut app, connection).is_empty());
+    app.world_mut().entity_mut(player).insert(Mounted {
+        mount_display_id: 2404,
+        ..Default::default()
+    });
+    app.world_mut().entity_mut(connection).remove::<InWorld>();
+    mount_request(&mut app, connection);
+    assert!(events(&mut app, connection).is_empty());
+}
