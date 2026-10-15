@@ -13,6 +13,11 @@ fn toyfx44_bashiok_source_destination_uses_secondary_radius_and_caster_facing() 
         .unwrap()
         .clone();
     let origin = Vec3::new(13.0, 7.0, -11.0);
+    h.app.world_mut().entity_mut(h.npc).insert(Rotation {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    });
     for facing in [0.0, std::f32::consts::FRAC_PI_2, std::f32::consts::PI] {
         h.app.world_mut().entity_mut(h.caster).insert((
             Position {
@@ -26,24 +31,26 @@ fn toyfx44_bashiok_source_destination_uses_secondary_radius_and_caster_facing() 
                 z: 0.0,
             },
         ));
-        let destination = crate::spell_cast::targets::effect_dest(
-            h.app.world(),
-            h.caster,
-            None,
-            &spell.effects[0],
-            None,
-        )
-        .expect("authored18/78 must select a destination");
         let expected = origin + Vec3::new(5.0 * facing.cos(), 0.0, -5.0 * facing.sin());
-        assert!(
-            destination.position.distance(expected) < 0.001,
-            "source five-yard front position: {:?} != {expected:?}",
-            destination.position
-        );
-        assert!(
-            (destination.orientation - facing).abs() < 0.001,
-            "effect-facing pi is inactive without USE_FACING_FROM_SPELL"
-        );
+        for explicit in [None, Some(h.npc)] {
+            let destination = crate::spell_cast::targets::effect_dest(
+                h.app.world(),
+                h.caster,
+                explicit,
+                &spell.effects[0],
+                None,
+            )
+            .expect("authored18/78 must select a destination");
+            assert!(
+                destination.position.distance(expected) < 0.001,
+                "source five-yard front position ignores unrelated selected unit: {:?} != {expected:?}",
+                destination.position
+            );
+            assert!(
+                (destination.orientation - facing).abs() < 0.001,
+                "effect-facing pi is inactive without USE_FACING_FROM_SPELL"
+            );
+        }
     }
 }
 
