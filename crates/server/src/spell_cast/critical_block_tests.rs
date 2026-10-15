@@ -694,23 +694,24 @@ fn evasion_duel(class: u8) -> (Harness, Entity) {
         .world_mut()
         .entity_mut(h.caster)
         .insert((crate::duel::DuelOpponent(defender), UnitLevel(10)));
-    h.app.world_mut().entity_mut(defender).insert((
-        crate::duel::DuelOpponent(h.caster),
-        UnitLevel(10),
-        Rotation {
-            x: 0.0,
-            y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
-            z: 0.0,
-        },
-        crate::class_progression::KnownSpells::fixture(vec![5277]),
-        // Native stat-producer inputs; only the receiver is recomputed.
-        shared::components::UnitStats {
-            stamina: 100.0,
-            ..default()
-        },
-        shared::components::CombatRatings::default(),
-        shared::components::DerivedStats::default(),
-    ));
+    h.app
+        .world_mut()
+        .entity_mut(defender)
+        .remove::<CharacterStats>()
+        .insert((
+            crate::duel::DuelOpponent(h.caster),
+            UnitLevel(10),
+            Rotation {
+                x: 0.0,
+                y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+            crate::class_progression::KnownSpells::fixture(vec![5277]),
+            // StatsPlugin derives the receiver's stats from native class/level inputs.
+            shared::components::UnitStats::default(),
+            shared::components::CombatRatings::default(),
+            shared::components::DerivedStats::default(),
+        ));
     // Actual Rogue self-cast, not a synthetic dodge amount or fake NPC profile.
     let spell = world_db().unwrap().store.get(5277).unwrap();
     super::execute_cast(h.app.world_mut(), defender, spell, Some(defender)).unwrap();
