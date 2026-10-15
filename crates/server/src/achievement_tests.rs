@@ -772,6 +772,116 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
     );
 }
 
+#[test]
+fn achievements_criteria_native_location_some_credits_real_selfie_cast_in_area_alternative() {
+    const SPELL: u32 = 181842;
+    const CRITERION: u32 = 27968;
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Photoproof", 1, 1).unwrap();
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[SPELL], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<InWorld>();
+    h.app.world_mut().entity_mut(h.connection).insert((
+        InWorld {
+            character_id: character,
+        },
+        Authenticated { account_id: 1 },
+    ));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    h.app.update();
+    // Controlled cached authoritative area, not a terrain-travel/acquisition claim.
+    h.app
+        .world_mut()
+        .get_mut::<AchievementTracker>(h.caster)
+        .unwrap()
+        .last_processed_area = Some(1519);
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&CRITERION)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<AchievementTracker>(h.caster)
+        .unwrap()
+        .last_processed_area = Some(254);
+    assert!(!crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        u8::MAX
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&CRITERION)
+    );
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SPELL,
+        Some(h.caster),
+        0
+    ));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&CRITERION),
+        Some(&1),
+        "actual selfie cast must accept the area17 alternative even though Zone41(25) is false in area254"
+    );
+    h.advance(10);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&CRITERION),
+        Some(&1)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&CRITERION),
+        Some(&1)
+    );
+}
+
 fn spawn_saved_gear_cast_fixture(
     db: redb::Database,
     character: u64,
