@@ -1,3 +1,7 @@
+## 2026-10-14 — Spawn-group guardian count
+
+[Scarab2301 source boundary](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14): preserve flag-directed default-title guardian routing and source count/scatter without inventing attacks or a pet frame; native visuals and other count routes remain open.
+
 ## 2026-10-14 — Initial random summon destination
 
 [CalcRadius boundary](systems/toys.md#initial-random-destination-radius-2026-10-14): native72/86 require random radius as well as direction; preserve91 and separate secondary scatter. Flute follow and broader radius modifiers remain open.

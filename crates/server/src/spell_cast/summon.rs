@@ -35,6 +35,9 @@ const RUNE_WEAPON_PARRY: u32 = 81256;
 /// TC a352b1fa DBCEnums.h / Spell::EffectSummonType private owner selection.
 const ONLY_VISIBLE_TO_SUMMONER: u32 = 0x10;
 const ONLY_VISIBLE_TO_SUMMONER_GROUP: u32 = 0x10000;
+const JOIN_SUMMONER_SPAWN_GROUP: u32 = 0x200;
+/// TC Spell::SummonGuardian scatters secondary actors within5yd of destTarget.
+const GUARDIAN_SCATTER_RADIUS: f32 = 5.0;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SummonProperties {
@@ -54,14 +57,20 @@ impl SummonProperties {
 
     fn follows_owner(self) -> bool {
         self.control == CONTROL_PET
+            || self.joins_summoner_spawn_group()
             || matches!(
                 self.title,
                 TITLE_PET | TITLE_GUARDIAN | TITLE_MINION | TITLE_COMPANION | TITLE_RUNEBLADE
             )
     }
 
+    fn joins_summoner_spawn_group(self) -> bool {
+        self.flags & JOIN_SUMMONER_SPAWN_GROUP != 0
+    }
+
     pub(super) fn is_guardian(self) -> bool {
         matches!(self.title, TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE)
+            || (self.title == 0 && self.joins_summoner_spawn_group())
     }
 
     pub(crate) fn is_supported(self) -> bool {
@@ -183,8 +192,8 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         return;
     };
     let entry = effect.misc_values[0] as u32;
-    if properties.control == CONTROL_WILD && properties.title == 0 {
-        let count = roll_wild_summon_count(world, ctx, effect, properties_id);
+    if properties.control == CONTROL_WILD && properties.title == 0 && !properties.is_guardian() {
+        let count = roll_summon_count(world, ctx, effect, properties_id);
         for index in 0..count {
             let destination = if index == 0 {
                 dest
@@ -195,17 +204,48 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         }
         return;
     }
-    let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
-    let Some(template) = read_summon_template(world, entry, level) else {
-        warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
-        return;
+    spawn_owned_summons(world, ctx, effect, properties_id, properties, entry, dest);
+}
+
+fn spawn_owned_summons(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    properties_id: u32,
+    properties: SummonProperties,
+    entry: u32,
+    dest: super::targets::Dest,
+) {
+    let count = if properties.is_guardian() {
+        roll_summon_count(world, ctx, effect, properties_id)
+    } else {
+        1
     };
-    replace_slotted_summon(world, ctx.caster, properties);
-    spawn_summon(world, ctx, properties_id, properties, &template, dest);
+    let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
+    for index in 0..count {
+        let Some(template) = read_summon_template(world, entry, level) else {
+            warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
+            return;
+        };
+        let destination = if index == 0 {
+            replace_slotted_summon(world, ctx.caster, properties);
+            dest
+        } else {
+            scatter_summon_destination(world, ctx.caster, dest, 0.0, GUARDIAN_SCATTER_RADIUS)
+        };
+        spawn_summon(
+            world,
+            ctx,
+            properties_id,
+            properties,
+            &template,
+            destination,
+        );
+    }
 }
 
 /// TC EffectSummonType's explicit MiscValueB list, not all positive values.
-fn roll_wild_summon_count(
+fn roll_summon_count(
     world: &World,
     ctx: &EffectCtx,
     effect: &SpellEffect,
@@ -228,10 +268,20 @@ fn scatter_wild_destination(
     world: &mut World,
     caster: Entity,
     effect: &SpellEffect,
-    mut destination: super::targets::Dest,
+    destination: super::targets::Dest,
 ) -> super::targets::Dest {
     let maximum = super::targets::radius(effect, 0);
     let minimum = effect.radius[0].map_or(0.0, |radius| radius.radius_min);
+    scatter_summon_destination(world, caster, destination, minimum, maximum)
+}
+
+fn scatter_summon_destination(
+    world: &mut World,
+    caster: Entity,
+    mut destination: super::targets::Dest,
+    minimum: f32,
+    maximum: f32,
+) -> super::targets::Dest {
     if maximum > 0.0 {
         let angle = rand::random::<f32>() * std::f32::consts::TAU;
         let distance = minimum + (maximum - minimum) * rand::random::<f32>().sqrt();
