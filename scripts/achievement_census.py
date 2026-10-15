@@ -58,8 +58,9 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
         if kind == 221 and row_id in single_modifiers:
             supported.add(row_id)
             continue
-        if kind == 155:
-            if row_id in single_modifiers and single_modifiers[row_id][1] in pet_species:
+        if kind == 155 or (kind in (160, 162) and row_id in single_modifiers):
+            level_valid = kind == 155 or 1 <= asset <= 25
+            if level_valid and row_id in single_modifiers and single_modifiers[row_id][1] in pet_species:
                 supported.add(row_id)
             continue
         # A compiled difficulty (20/68) or holdable player-fact tree may be the only condition.
