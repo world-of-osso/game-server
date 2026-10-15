@@ -82,21 +82,16 @@ fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step:
         step.from,
         step.to
     );
-    // Detour's WALK_FLAG ray stays on the bake's AGENT_SLOPE/AGENT_CLIMB
-    // surface, not an invented slope bound on floor-snapped 3D displacement.
-    let surface = h
-        .app
+    // Corridor admission filters both endpoint polygons and every traversed
+    // polygon by WALK_FLAG, under the bake's AGENT_SLOPE/AGENT_CLIMB profile.
+    // MovePositionToFirstCollision's extra0.5yd placement pullback is not a
+    // walkability predicate, and a frame may span a spline corner.
+    h.app
         .world()
         .resource::<crate::navigation::Navigation>()
-        .first_collision(map.map_id, from, to)
+        .query_path(map.map_id, from, to)
         .unwrap()
-        .expect("baked walkable surface");
-    let off_surface = (surface.x - to.x).hypot(surface.z - to.z);
-    assert!(
-        off_surface <= NAV_FLOAT_TOLERANCE,
-        "movement left the walkable nav surface tick{}: {from:?}->{to:?}; clipped={surface:?}",
-        step.tick
-    );
+        .expect("complete baked walkable corridor");
 }
 
 #[test]

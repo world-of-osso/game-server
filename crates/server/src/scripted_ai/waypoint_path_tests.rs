@@ -352,10 +352,14 @@ fn waypoint_chase_owns_tick_then_path_resumes_from_real_position_without_replayi
         });
     let target = *world.get::<Position>(target).unwrap();
     let target = Vec3::new(target.x, target.y, target.z);
-    for _ in 0..20 {
+    for active_tick in 0..20 {
         let before = *world.get::<Position>(actor).unwrap();
         let before = Vec3::new(before.x, before.y, before.z);
-        let expected = before + (target - before).normalize() * (7.0 * 0.05);
+        let expected = if active_tick == 0 {
+            before // MotionMaster initializes a newly selected top with diff0.
+        } else {
+            before + (target - before).normalize() * (7.0 * 0.05)
+        };
         tick_owned_motion(&mut world);
         let actual = *world.get::<Position>(actor).unwrap();
         let actual = Vec3::new(actual.x, actual.y, actual.z);
@@ -567,6 +571,49 @@ fn waypoint_missing_support_stops_actual_motion_without_reporting_arrival() {
         Some(&CreatureMotion::Still)
     );
     assert!(world.resource::<ArrivalReceipts>().0.is_empty());
+}
+
+#[test]
+fn waypoint_active_chase_to_home_switch_initializes_new_top_without_second_step() {
+    let (mut world, actor, target) = motion_ownership_world();
+    for _ in 0..80 {
+        tick_owned_motion(&mut world);
+    }
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Pursuing {
+            target: target.to_bits(),
+        });
+    tick_owned_motion(&mut world);
+    tick_owned_motion(&mut world);
+    let after_chase = *world.get::<Position>(actor).unwrap();
+    // Same active-slot transition as a queued evade after the chase update.
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Returning);
+    world
+        .run_system_once(crate::creature_ai::return_to_spawn_system)
+        .unwrap();
+    assert_eq!(
+        *world.get::<Position>(actor).unwrap(),
+        after_chase,
+        "home is a new top generator; it cannot add a step after chase"
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(50));
+    path_movement_system(&mut world);
+    world
+        .run_system_once(crate::creature_ai::return_to_spawn_system)
+        .unwrap();
+    let actual = *world.get::<Position>(actor).unwrap();
+    let distance = Vec3::new(
+        actual.x - after_chase.x,
+        actual.y - after_chase.y,
+        actual.z - after_chase.z,
+    )
+    .length();
+    assert!((distance - 0.35).abs() < 0.0001);
 }
 
 #[derive(Resource, Default)]
