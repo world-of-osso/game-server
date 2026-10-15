@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native GREEN pending, controlled boss identities are not full encounters.
+- [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native/catalog5/5, controlled boss identities and counters are not full encounter/map grants.
 
 - [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 
