@@ -1,3 +1,6 @@
+## 2026-10-15 — Source Toy forward destination
+
+[Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
 ## 2026-10-14 — Pet-level type qualifiers, native proof
 
 [BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); other native types/level10/all-ten-family grants remain unclaimed.
