@@ -1042,6 +1042,11 @@ pub fn effect_dest(
             _ => continue,
         };
         let facing = match selector {
+            Selector::CenterCaster
+            | Selector::ForwardLeap
+            | Selector::CasterRandom
+            | Selector::CasterOffset(_) => orientation(world, caster),
+            Selector::DestRandom | Selector::DestOffset(_) => dest?.orientation,
             Selector::ExistingDest => {
                 dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
             }
