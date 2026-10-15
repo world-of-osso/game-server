@@ -1,3 +1,7 @@
+## 2026-10-14 — Source-correct proximity distance
+
+[Creature aggro](systems/creature-aggro.md#aggro-on-sight) replaces the pet-style detection radius with TC a352b1fa GetAttackDistance, level/expansion and detect-aura rules, authored scaled combat reaches and strict distance. Stockade30vs32 native player/companion regressions RED2→GREEN34, including positive boundary and scaled cross-cell controls. Check/build/live rerun remain separate gates; no claim that radius alone caused the prior over-pull.
+
 ## 2026-10-14 — Alterac captain source diagnosis
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
