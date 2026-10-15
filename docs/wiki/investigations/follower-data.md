@@ -2,6 +2,14 @@
 
 Verified: 2026-10-13. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
 
+## Breakable CC targeting — 2026-10-15
+
+Pinned TrinityCore a352b1fa `AI/CoreAI/CombatAI.cpp:166–177` interrupts non-melee casting and holds when the current victim has breakable-by-damage CC. `Entities/Unit/Unit.cpp:783–801` deliberately checks harmful aura + `SpellAuraInterruptFlags::AnyDamageMask`, not aura type; `Spells/SpellDefines.h:114` defines the mask as `0x09000002`. The shared native aura predicate uses that same mask. Installed Polymorph118 has interrupt flags `0x08080000`, including the scripted damage-break bit. No damage budget or aura duration changes are involved.
+
+Follower enemy selection skips protected targets, stops unfinished hostile casts/swings, and can choose another engaged enemy. If all candidates are protected it holds instead of calling `combat_stop`/regroup, preserving combat references and threat. Healing remains available. Launched missiles are not revisited. This is approved shared AI policy, not recovered Retail follower scripting.
+
+`Spells/SpellInfo.cpp:2458–2460` says “check this flag only for implicit targets (chain and area)”. Attr6 `0x100` excludes protected implicit candidates before capping/searching, while explicit unit selection stays legal. Native Shield31935 has Attr6 `0x00200100`; Shadow Bolt Volley176017 has `0x4100`; Arcane Explosion1449 has no such flag. Selection and actual Shield damage controls live in `followers/cc_tests.rs`, alongside actual profile/Polymorph casts and combat-hold controls. The first valid RED at cce75801 reproduced eight failures while the explicit-player damage control passed. Initial b81ed94b failed fixture authority (missing native CreatureType6), not the intended behavior; it is not counted as RED proof. Stockade remains0/3 until the separate controlled live rerun proves boss credit, loot/rewards and inspected native pixels.
+
 ## NPC Felguard utility source — 2026-10-13
 
 Demonology summon30146 resolves to real creature17252/Felguard. Its CreatureFamily29 exposes SkillLine761; SkillLineAbility23475 teaches89766/Axe Toss through AcquireMethod2 at native SpellLevel17. Local SpellEffect89766 index0/effect64 triggers347008, whose index0/effect68 is the actual interrupt; index1 is its stun aura. The bridge checks the pet's actual learned action bar, never assigns Spell Lock19647 (Felhunter) or invents an early-level kick. Ordinary cast readiness applies to the pet, not the companion owner, and active hostile-field escape takes priority.

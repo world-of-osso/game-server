@@ -33,6 +33,14 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 const MELEE_RANGE: f32 = 5.0;
 /// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
 const SPELL_ATTR1_EXCLUDE_CASTER: u32 = 0x0008_0000;
+/// TC a352b1fa SharedDefines.h:666; SpellInfo.cpp:2458–2460.
+const SPELL_ATTR6_DO_NOT_CHAIN_TO_CROWD_CONTROLLED_TARGETS: u32 = 0x0000_0100;
+
+fn implicit_target_allowed(world: &World, spell: &SpellInfo, unit: Entity) -> bool {
+    let excludes_cc =
+        super::attributes(spell, 6) & SPELL_ATTR6_DO_NOT_CHAIN_TO_CROWD_CONTROLLED_TARGETS != 0;
+    !excludes_cc || !crate::auras::has_breakable_by_damage_cc(world, unit)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Relation {
@@ -406,7 +414,8 @@ pub fn select_targets(
                     0,
                 );
                 candidates.retain(|&unit| shares_raid(world, caster, unit));
-                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                let candidates =
+                    limit_implicit_targets(world, spell, caster, candidates, max_targets);
                 units.extend(filter_area_sight(
                     world, caster, spell, effect, caster_pos, candidates,
                 ));
@@ -466,7 +475,8 @@ pub fn select_targets(
                 selected_any = true;
                 let src = center.unwrap_or(caster_pos);
                 let candidates = area_units(world, caster, src, radius(effect, slot), relation, 0);
-                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                let candidates =
+                    limit_implicit_targets(world, spell, caster, candidates, max_targets);
                 units.extend(filter_area_sight(
                     world, caster, spell, effect, src, candidates,
                 ));
@@ -504,7 +514,8 @@ pub fn select_targets(
                 };
                 let candidates =
                     entry_area_units(world, caster, spell, effect, origin, radius(effect, slot));
-                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                let candidates =
+                    limit_implicit_targets(world, spell, caster, candidates, max_targets);
                 units.extend(filter_area_sight(
                     world, caster, spell, effect, origin, candidates,
                 ));
@@ -530,7 +541,8 @@ pub fn select_targets(
                     .or_else(|| explicit.and_then(|target| position(world, target)))
                     .unwrap_or(caster_pos);
                 let candidates = area_units(world, caster, dest, radius(effect, slot), relation, 0);
-                let candidates = limit_spell_targets(spell, caster, candidates, max_targets);
+                let candidates =
+                    limit_implicit_targets(world, spell, caster, candidates, max_targets);
                 units.extend(filter_area_sight(
                     world, caster, spell, effect, dest, candidates,
                 ));
@@ -609,7 +621,7 @@ fn nearby_entry_unit(
     let origin = position(world, caster)?;
     let candidates = area_units(world, caster, origin, range, Relation::Any, 0);
     let qualifying = filter_entry_targets(world, candidates, spell.id, effect.index);
-    limit_spell_targets(spell, caster, qualifying, 1)
+    limit_implicit_targets(world, spell, caster, qualifying, 1)
         .into_iter()
         .next()
 }
@@ -635,7 +647,18 @@ pub(super) fn excludes_caster(spell: &SpellInfo) -> bool {
         .is_some_and(|misc| misc.attributes[1] & SPELL_ATTR1_EXCLUDE_CASTER != 0)
 }
 
-/// TC CheckTarget filters candidates before SelectImplicitAreaTargets caps them.
+/// TC CheckTarget filters implicit candidates before area/nearby target caps.
+fn limit_implicit_targets(
+    world: &World,
+    spell: &SpellInfo,
+    caster: Entity,
+    mut units: Vec<Entity>,
+    cap: u32,
+) -> Vec<Entity> {
+    units.retain(|&unit| implicit_target_allowed(world, spell, unit));
+    limit_spell_targets(spell, caster, units, cap)
+}
+
 fn limit_spell_targets(
     spell: &SpellInfo,
     caster: Entity,
@@ -773,7 +796,7 @@ fn directed_units(
             half_arc,
         )
     });
-    Ok(limit_spell_targets(spell, caster, units, cap))
+    Ok(limit_implicit_targets(world, spell, caster, units, cap))
 }
 
 fn direction_to_destination(origin: Vec3, destination: Option<Vec3>, facing: f32) -> Vec3 {
@@ -872,6 +895,7 @@ fn cone_entry_units(
     in_cone
         .into_iter()
         .filter(|&unit| conditions.target_meets(world, spell.id, effect.index, unit))
+        .filter(|&unit| implicit_target_allowed(world, spell, unit))
         .collect()
 }
 
@@ -929,6 +953,7 @@ pub fn chain_targets(
         area_units(world, caster, search_center, search_radius, relation, 0)
             .into_iter()
             .filter(|&unit| unit != target && (unit != caster || !excludes_caster(spell)))
+            .filter(|&unit| implicit_target_allowed(world, spell, unit))
             .collect();
     let mut chain = Vec::new();
     while chain.len() < jumps {
