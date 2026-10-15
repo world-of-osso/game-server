@@ -528,6 +528,10 @@ pub(crate) struct AdminInstances<'w, 's> {
             &'static InMap,
             Option<&'static shared::components::UnitLevel>,
             Option<&'static crate::zones::CreatureDifficulty>,
+            Option<&'static crate::stats::CharacterStats>,
+            Option<&'static crate::level_scaling::CreatureArmor>,
+            Option<&'static crate::networking::CombatTarget>,
+            Option<&'static shared::components::ThreatTable>,
         ),
     >,
 }
@@ -623,20 +627,32 @@ impl AdminInstances<'_, '_> {
                 let lines = self
                     .creatures
                     .iter()
-                    .filter(|(_, npc, _, in_map, _, _)| {
-                        **in_map == map && npc.template_id == *entry
-                    })
-                    .map(|(entity, npc, health, _, level, difficulty)| {
-                        format!(
-                            "{} (entity {}) level {} health {}/{} difficulty {}",
-                            npc.name,
-                            entity.to_bits(),
-                            level.map_or(0, |level| level.0),
-                            health.current,
-                            health.max,
-                            difficulty.map_or(0, |difficulty| difficulty.0)
-                        )
-                    })
+                    .filter(|(_, npc, _, in_map, ..)| **in_map == map && npc.template_id == *entry)
+                    .map(
+                        |(
+                            entity,
+                            npc,
+                            health,
+                            _,
+                            level,
+                            difficulty,
+                            stats,
+                            armor,
+                            target,
+                            threat,
+                        )| {
+                            format!(
+                                "{} (entity {}) level {} health {}/{} difficulty {} combat={}",
+                                npc.name,
+                                entity.to_bits(),
+                                level.map_or(0, |level| level.0),
+                                health.current,
+                                health.max,
+                                difficulty.map_or(0, |difficulty| difficulty.0),
+                                npc_combat_metrics(stats, armor, target, threat)
+                            )
+                        },
+                    )
                     .collect();
                 AdminResponse::NpcInfoList { lines }
             }
@@ -678,6 +694,39 @@ impl AdminInstances<'_, '_> {
             _ => return None,
         })
     }
+}
+
+fn npc_combat_metrics(
+    stats: Option<&crate::stats::CharacterStats>,
+    armor: Option<&crate::level_scaling::CreatureArmor>,
+    target: Option<&crate::networking::CombatTarget>,
+    threat: Option<&shared::components::ThreatTable>,
+) -> serde_json::Value {
+    let stats = stats.map(|stats| {
+        serde_json::json!({
+            "strength": stats.primary.strength,
+            "intellect": stats.primary.intellect,
+            "spell_power": stats.spell_power,
+            "healing_power": stats.healing_power,
+            "attack_power": stats.attack_power,
+            "crit_pct": stats.crit_pct,
+            "haste_pct": stats.haste_pct,
+            "versatility_pct": stats.versatility_pct,
+        })
+    });
+    let threat = threat.map(|table| {
+        table
+            .entries()
+            .iter()
+            .map(|entry| serde_json::json!({"entity": entry.entity, "amount": entry.threat}))
+            .collect::<Vec<_>>()
+    });
+    serde_json::json!({
+        "stats": stats,
+        "creature_armor": armor.map(|armor| armor.0),
+        "victim": target.and_then(|target| target.0).map(Entity::to_bits),
+        "threat": threat,
+    })
 }
 
 #[cfg(test)]
