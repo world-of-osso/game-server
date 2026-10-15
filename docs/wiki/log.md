@@ -1,3 +1,7 @@
+## 2026-10-15 — Target population GREEN; authentic grid deferred RED
+
+[Tick lag](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15): initial target storage292→16ms plus four lifecycle controls pass. Authentic187770-creature grid deferred application reproduces324ms; sparse marker storage is local, budget/wake/leave proof pending capacity. No release/global acceptance claim.
+
 ## 2026-10-15 — Initial target population RED
 
 [Tick lag](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15): actual spawn path187770 NPCs reproduces292ms of empty-target insertion after spawn. Local fix initializes the value with creation; GREEN/release proof pending live reservation. Merged30cffd30/cac6080 has current warning-free runtime check and both format checks, with64-control proof retained.

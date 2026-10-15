@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Initial target population regression](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15) — real187770-NPC spawn path RED292ms; initial empty-target fix awaits GREEN/release proof.
+- [Initial target population regression](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15) — real187770-NPC target RED292→GREEN16ms; authentic grid application RED324ms, sparse storage awaiting proof/release.
 
 - [st157 FIFO fixture integration](investigations/server-tick-lag.md#st157-fixture-integration-follow-up--2026-10-15) — explicit housing publishers and reply/initial-inventory fences;22 controls+5 repaired wires pass, full gate pending.
 
