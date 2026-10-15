@@ -75,7 +75,11 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
         crate::persistence::ClientId(character),
         PlayerAchievementState::default(),
     ));
-    for (entry, kind, criterion, total) in [(40, 7, 4953, 1), (299, 1, 4948, 2)] {
+    for (entry, kind, criterion, total, typed) in [
+        (40, 7, 4953, 1, 1),
+        (299, 1, 4948, 2, 1),
+        (94, 7, 4953, 3, 2),
+    ] {
         let target = spawn_source_kill_target(&mut h, entry);
         assert_eq!(crate::unit_creature_type::get(h.app.world(), target), kind);
         assert!(!crate::spell_cast::try_cast_triggered(
@@ -106,7 +110,7 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
         assert_eq!(state.criteria_progress.get(&4944), Some(&total));
         assert_eq!(
             state.criteria_progress.get(&criterion),
-            Some(&1),
+            Some(&typed),
             "actual victim type must qualify its statistic"
         );
         assert!(
@@ -132,7 +136,7 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
         .world()
         .get::<PlayerAchievementState>(h.caster)
         .unwrap();
-    for (achievement, value) in [(107, 2), (1336, 1)] {
+    for (achievement, value) in [(107, 3), (1336, 2), (1337, 2)] {
         let AchievementCatalogPage::Statistics { achievements, .. } = catalog.page(
             state,
             QueryAchievementCatalog::Statistics {
@@ -152,8 +156,8 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
     let reopened = redb::Database::open(file.path()).unwrap();
     let saved = persistence::load_achievements(&reopened, character);
     assert_eq!(saved.criteria_progress.get(&4948), Some(&1));
-    assert_eq!(saved.criteria_progress.get(&4953), Some(&1));
-    assert_eq!(saved.criteria_progress.get(&4944), Some(&2));
+    assert_eq!(saved.criteria_progress.get(&4953), Some(&2));
+    assert_eq!(saved.criteria_progress.get(&4944), Some(&3));
     assert!(
         persistence::load_achievements(&reopened, other)
             .criteria_progress
