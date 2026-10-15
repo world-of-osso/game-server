@@ -1,6 +1,6 @@
 //! TC a352b1fa instance_wailing_caverns.cpp four-druid DONE notification and
 //! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–27. Gossip
-//! and targeted random aggro speech remain unported. Escort
+//! remains unported. Targeted aggro Say preserves the nearby audience. Escort
 //! events use their separate out-of-combat clock.
 use bevy::prelude::*;
 use shared::components::{
@@ -18,6 +18,8 @@ const DISCIPLE: u32 = 3678;
 const SCRIPT: &str = "npc_disciple_of_naralex";
 const ACTION_ALL_DONE: i32 = 0;
 const SAY_ALL_DONE: u8 = 0;
+const SAY_AGGRO: u8 = 10;
+const AGGRO_SPEECH_CHANCE: u32 = 30;
 const SLEEP: u32 = 1090;
 const DRUIDS_POTION: u32 = 8141;
 const EVENT_SLEEP: u32 = 1;
@@ -353,7 +355,11 @@ impl CreatureAi for Disciple {
         self.combat_events.reset();
     }
 
-    fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, who: Entity) {
+        let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+        if roll < AGGRO_SPEECH_CHANCE {
+            super::creature_text::talk_with_target(ctx.world, ctx.me, SAY_AGGRO, Some(who));
+        }
         self.combat_events
             .schedule_range(EVENT_SLEEP, 5_000, 10_000);
         self.combat_events
