@@ -61,14 +61,14 @@ impl SummonLevels {
             });
         }
         Some(GuardianLevelRange {
-            range: self.range(tuning)?,
-            delta: self.delta(template.entry, difficulty),
+            range: *self.ranges.get(&tuning)?,
+            delta: self.delta(template.entry, difficulty)?,
         })
     }
 
     /// Creature::ApplyLevelScaling: template, then map, then actual area ancestry.
     /// Critters never acquire regional tuning. Missing terrain remains unknown.
-    pub(crate) fn content_tuning(
+    fn content_tuning(
         &self,
         template: &CreatureTemplate,
         map: u32,
@@ -99,17 +99,12 @@ impl SummonLevels {
         None
     }
 
-    pub(crate) fn range(&self, tuning: u32) -> Option<(u8, u8)> {
-        self.ranges.get(&tuning).copied()
-    }
-
     /// Difficulty rows replace base rows, including their deltas when tuning is regional.
-    pub(crate) fn delta(&self, entry: u32, difficulty: u32) -> (i8, i8) {
+    fn delta(&self, entry: u32, difficulty: u32) -> Option<(i8, i8)> {
         self.deltas
             .get(&(entry, difficulty))
             .or_else(|| self.deltas.get(&(entry, 0)))
             .copied()
-            .unwrap_or((0, 0))
     }
 }
 
@@ -161,6 +156,15 @@ mod tests {
             "known ancestry without tuning preserves source zero bounds"
         );
         assert_eq!(untuned.delta, (0, 0));
+        conn.execute("DELETE FROM content_creature_template", [])
+            .unwrap();
+        let missing_base_delta = SummonLevels::load(&conn).unwrap();
+        assert!(
+            missing_base_delta
+                .guardian_range(&template, 0, 0, Some(9))
+                .is_none(),
+            "missing authored delta is not fabricated zero"
+        );
         template.creature_type = CREATURE_TYPE_CRITTER;
         assert_eq!(
             levels
@@ -173,16 +177,25 @@ mod tests {
 }
 
 fn load_deltas(conn: &Connection) -> rusqlite::Result<HashMap<(u32, u32), (i8, i8)>> {
-    // UNION ALL preserves the existing template_for precedence: difficulty 0 replaces base.
-    conn.prepare(
-        "SELECT entry, 0, LevelScalingDeltaMin, LevelScalingDeltaMax
-         FROM content_creature_template
-         UNION ALL
-         SELECT entry, DifficultyID, LevelScalingDeltaMin, LevelScalingDeltaMax
+    let mut deltas: HashMap<_, _> = conn
+        .prepare(
+            "SELECT entry, 0, LevelScalingDeltaMin, LevelScalingDeltaMax
+         FROM content_creature_template",
+        )?
+        .query_map([], |row| {
+            Ok(((row.get(0)?, row.get(1)?), (row.get(2)?, row.get(3)?)))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    // Extend explicitly: difficulty 0 must replace base regardless of SQL row order.
+    let difficulty_deltas = conn
+        .prepare(
+            "SELECT entry, DifficultyID, LevelScalingDeltaMin, LevelScalingDeltaMax
          FROM content_creature_template_difficulty",
-    )?
-    .query_map([], |row| {
-        Ok(((row.get(0)?, row.get(1)?), (row.get(2)?, row.get(3)?)))
-    })?
-    .collect()
+        )?
+        .query_map([], |row| {
+            Ok(((row.get(0)?, row.get(1)?), (row.get(2)?, row.get(3)?)))
+        })?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    deltas.extend(difficulty_deltas);
+    Ok(deltas)
 }
