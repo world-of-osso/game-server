@@ -12,6 +12,7 @@ from import_achievement_modifiers import qualified_mythic_criteria
 from import_achievement_single_modifiers import qualified_single_modifiers
 from import_achievement_conditions import load_identity_condition_ids, legacy_difficulties, qualified_conditions
 import db2_casc
+from import_achievement_node_counts import qualified_node_counts
 
 BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 24, 26, 27, 28, 29, 30, 32, 33, 34, 36, 37, 39, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 70, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 90, 91, 96, 97, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
@@ -116,12 +117,14 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
     return supported
 
 
-def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievement_ids):
+def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievement_ids, node_counts):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
     if kind in item_facts:
         return asset in item_facts[kind]
     if kind == 87:
         return asset in achievement_ids
+    if kind == 67:
+        return asset in node_counts
     return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 35: asset == 0, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
@@ -162,6 +165,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     criteria = read_rows(db2 / 'Criteria.csv')
     trees = read_rows(db2 / 'CriteriaTree.csv')
     modifiers = read_rows(modifiers_path)
+    node_counts = qualified_node_counts(read_rows(db2 / 'WorldStateExpression.csv'))
     children, modifier_children = index_children(trees), index_children(modifiers)
     with sqlite3.connect(f'{world_db.resolve().as_uri()}?mode=ro', uri=True) as db:
         spells = {row[0] for row in db.execute('SELECT ID FROM spell')}
@@ -189,7 +193,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     condition_trees = {
         row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv')).items()
         if row_id not in single_modifiers
-        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievements) for kind, asset in facts)
+        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievements, node_counts) for kind, asset in facts)
     }
     supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, condition_trees)
     by_type = collections.defaultdict(set)
@@ -242,7 +246,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
                             potential_gain=gain))
     ranking.sort(key=lambda row: (-row['achievements'], -row['statistics'], row['type']))
     paths = [db2 / (name + '.csv') for name in ('Achievement', 'CriteriaTree', 'Criteria', 'Difficulty')]
-    paths.extend([modifiers_path, overlays_path])
+    paths.extend([modifiers_path, overlays_path, db2 / 'WorldStateExpression.csv'])
     return dict(
         build=db2.name, enabled_types=sorted(types),
         raw_types=raw_type_inventory(criteria, trees, records, supported),

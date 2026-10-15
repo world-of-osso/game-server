@@ -1,6 +1,9 @@
 ## 2026-10-15 — Owned IoC bomb lifecycle channel proof
 
 [Timed Seaforium](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14): normal/huge real pickup→owned item→UseItem, ten-second25%/60% one-shot/copy isolation and acknowledged normal disarm/cancellation pass5/5. Authoritative BG team relation regression passes1/1 across racial factions; reproduced/fixed NPC-path regression passes existing AV captain1/1 without changing stats, arena lifecycle remains1/1. Native activation, siege and victory remain pending. Earlier too-early/transient-reply fixture observations are not genuine disarm RED; corrected pre-fix replay is retained separately.
+## 2026-10-14 — Native node-ownership expression credit
+
+[Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
 
 ## 2026-10-14 — Alterac captain source diagnosis
 
