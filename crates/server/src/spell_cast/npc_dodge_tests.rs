@@ -8,7 +8,7 @@ use shared::protocol::{CombatLogKind, MissKind};
 const STRIKE: u32 = 38598;
 const CLOAK_OF_DARKNESS: u32 = 70188;
 
-fn spawn_native_dodge_target(facing: f32) -> Harness {
+pub(super) fn spawn_native_dodge_target(entry: u32, facing: f32) -> Harness {
     let mut h = harness_with(
         Vec::new(),
         &[STRIKE, CLOAK_OF_DARKNESS, 853, 7384, 51723, 19434],
@@ -16,11 +16,11 @@ fn spawn_native_dodge_target(facing: f32) -> Harness {
         true,
     )
     .unwrap();
-    let native = load_native_creature_world(&[40]);
-    let template = &native.templates[&40];
+    let native = load_native_creature_world(&[entry]);
+    let template = &native.templates[&entry];
     h.app.world_mut().entity_mut(h.npc).insert((
         Npc {
-            template_id: 40,
+            template_id: entry,
             name: template.name.clone(),
         },
         UnitFactionTemplate(u32::from(template.faction)),
@@ -83,7 +83,7 @@ fn spawn_native_dodge_target(facing: f32) -> Harness {
 fn class_completeness_native_npc_dodge_defends_front_and_rear_weapon_spells() {
     // Target at +X faces the caster with pi, or away with zero.
     for facing in [std::f32::consts::PI, 0.0] {
-        let mut h = spawn_native_dodge_target(facing);
+        let mut h = spawn_native_dodge_target(40, facing);
         let before = h.health(h.npc);
         h.inbox.log.clear();
         let (caster, target) = (h.caster, h.npc);
@@ -137,7 +137,7 @@ fn assert_native_damage(h: &mut Harness, spell: u32, frames: usize) {
 
 #[test]
 fn class_completeness_native_npc_dodge_removal_restores_possible_weapon_damage() {
-    let mut h = spawn_native_dodge_target(0.0);
+    let mut h = spawn_native_dodge_target(40, 0.0);
     let target = h.npc;
     crate::auras::remove_auras(h.app.world_mut(), target, RemoveReason::Cancelled, |aura| {
         aura.spell_id == CLOAK_OF_DARKNESS
@@ -180,7 +180,7 @@ fn class_completeness_native_npc_dodge_removal_restores_possible_weapon_damage()
 
 #[test]
 fn class_completeness_native_npc_dodge_stun_retains_native_exclusion() {
-    let mut h = spawn_native_dodge_target(std::f32::consts::PI);
+    let mut h = spawn_native_dodge_target(40, std::f32::consts::PI);
     let (caster, target) = (h.caster, h.npc);
     crate::auras::apply_aura(
         h.app.world_mut(),
@@ -210,7 +210,7 @@ fn class_completeness_native_npc_dodge_stun_retains_native_exclusion() {
 #[test]
 fn class_completeness_native_npc_dodge_attributes_and_ranged_retain_exclusions() {
     for (spell, frames) in [(7384, 3), (51723, 3), (19434, 65)] {
-        let mut h = spawn_native_dodge_target(0.0);
+        let mut h = spawn_native_dodge_target(40, 0.0);
         assert_native_damage(&mut h, spell, frames);
         assert!(
             crate::auras::has_aura(h.app.world(), h.npc, CLOAK_OF_DARKNESS),
