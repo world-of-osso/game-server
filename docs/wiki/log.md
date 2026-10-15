@@ -1,6 +1,6 @@
 ## 2026-10-15 — st210 toy fixture clock
 
-[Clock/completion boundary](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15): diagnostic RED proves pending=false and committed=1 while repeated multi-minute steps trip the old pump deadline. Restore original clock after expiry and signal fixture FIFO completion deterministically;21 targeted controls pass, current check pending. No production timing change or release/full-suite claim.
+[Clock/completion boundary](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15): diagnostic RED proves pending=false and committed=1 while repeated multi-minute steps trip the old pump deadline. Restore original clock after expiry and signal fixture FIFO completion deterministically;21 targeted controls plus3 MountSpecial consumers pass; current check passes29.59s without warnings. No production timing change or release/full-suite claim.
 
 ## 2026-10-15 — War Mode FIFO and Titan's Grip merge
 
