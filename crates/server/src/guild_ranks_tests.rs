@@ -30,7 +30,7 @@ fn guild_member_notes_are_filtered_per_authenticated_snapshot_recipient() {
     );
     let mut world = World::new();
     let mut queries = bevy::ecs::system::SystemState::<OnlinePlayers>::new(&mut world);
-    let online = queries.get(&world);
+    let online = queries.get(&world).expect("read guild online query");
     let guild = shared::components::GuildMembership {
         guild_id: 7,
         guild_name: "Bank Testers".into(),
