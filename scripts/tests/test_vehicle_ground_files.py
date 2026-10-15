@@ -64,6 +64,7 @@ class VehicleGroundFilesTest(unittest.TestCase):
 
     def test_isle_demolisher_driver_model_ships_alongside_passenger_mounts(self):
         self.db.executescript("""
+            INSERT INTO map VALUES (628, 821811, 3);
             INSERT INTO content_creature VALUES (628, 34775);
             INSERT INTO content_creature_template VALUES (34775, 509);
             INSERT INTO content_creature_template_model VALUES (34775, 27658);
@@ -71,9 +72,15 @@ class VehicleGroundFilesTest(unittest.TestCase):
             INSERT INTO creature_model_data VALUES (2797, 123367);
         """)
         self.db.commit()
+        (self.cache / "terrain").mkdir()
+        # An empty MAID fixture isolates model closure from terrain dependencies.
+        (self.cache / "terrain/821811.wdt").write_bytes(b"DIAM" + struct.pack("<I", 32) + bytes(32))
         (self.cache / "models/234720.m2").write_bytes(b"mount bind pose")
         (self.cache / "models/123367.m2").write_bytes(b"Demolisher bind pose")
-        self.assertCountEqual(self.list_files(), ["models/123367.m2", "models/234720.m2"])
+        self.assertCountEqual(
+            self.list_files(),
+            ["terrain/821811.wdt", "models/123367.m2", "models/234720.m2"],
+        )
         (self.cache / "models/123367.m2").unlink()
         self.assertEqual(self.list_files("--missing"), ["vehicle 509\tmodels/123367.m2"])
 
