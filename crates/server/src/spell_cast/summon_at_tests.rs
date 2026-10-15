@@ -36,6 +36,51 @@ fn summon_at_rune_weapon_is_owned_and_expires() {
     assert!(h.app.world().get_entity(summon).is_err());
 }
 
+#[test]
+fn toyfx32_native_wild_count_scatters_secondary_actors_in_primary_radius() {
+    let mut h = harness(Vec::new(), &[6122], 8).unwrap();
+    let db = world_db().unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &db.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&db.powers_db));
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+    h.cast_and_deliver(6122, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 6122));
+    let world = h.app.world_mut();
+    let positions: Vec<_> = world
+        .query::<(&Npc, &Position, &super::summon::SummonedCreature)>()
+        .iter(world)
+        .filter(|(npc, _, summon)| npc.template_id == 15622 && summon.spell_id == 6122)
+        .map(|(_, position, _)| *position)
+        .collect();
+    // Native value15 with variance.5: truncate the 11.25..18.75 roll.
+    assert!(
+        (11..=18).contains(&positions.len()),
+        "{} actors",
+        positions.len()
+    );
+    let first = positions[0];
+    let horizontal_distance =
+        |point: &Position| Vec2::new(point.x - first.x, point.z - first.z).length();
+    assert!(
+        positions
+            .iter()
+            .all(|point| horizontal_distance(point) <= 5.001)
+    );
+    assert!(
+        positions
+            .iter()
+            .any(|point| horizontal_distance(point) > 0.01),
+        "primary5yd radius must scatter subsequent actors"
+    );
+}
+
 fn install_summon_properties(h: &mut Harness) {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch(include_str!(

@@ -248,6 +248,9 @@ fn make_state_and_conn() -> (NetworkVisibility, Entity) {
     (NetworkVisibility::default(), Entity::from_bits(1))
 }
 
+#[path = "interest_group_tests.rs"]
+mod group_private;
+
 fn setup_interest_app() -> App {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
