@@ -1,6 +1,6 @@
 ## 2026-10-15 — Guild lifecycle query boundary
 
-[Lifecycle history](systems/guild-lifecycle.md): additive history table and authenticated actor-guild query; same-transaction six-action/founder producer wiring and100-row insertion-order retention implemented. Actual six-action RED observed an empty history; sequence/abort/reopen/native acceptance remain pending. No fabricated/backfilled history or bank/news reuse.
+[Lifecycle history](systems/guild-lifecycle.md): additive history table and authenticated actor-guild query; same-transaction six-action/founder producer wiring and100-row insertion-order retention implemented. Actual six-action RED observed an empty history; targeted4/4 now passes six-action/refusal/privacy/reopen, founder join labels,100-row tied-order retention and abort. Actual UDP/native/server-process restart acceptance remains pending. No fabricated/backfilled history or bank/news reuse.
 
 ## 2026-10-15 — Installed race/class source
 
