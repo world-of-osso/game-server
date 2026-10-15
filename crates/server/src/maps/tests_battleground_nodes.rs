@@ -1328,6 +1328,96 @@ fn gilneas_channel_objectives_scoreboard_victory_and_origin_return() {
     node_match(shared::battleground::battle_for_gilneas());
 }
 
+#[test]
+fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_state() {
+    use crate::achievement::PlayerAchievementState;
+    let template = shared::battleground::battle_for_gilneas();
+    let rules = node_rules(template.map_id).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let database = redb::Database::create(file.path()).unwrap();
+    crate::persistence::create_tables(&database);
+    let count = u64::from(template.min_players_per_team) * 2;
+    for id in 1..=count {
+        let name = format!("Node{}", char::from(b'a' + (id - 1) as u8));
+        let (created, mut data) =
+            crate::persistence::create_character(&database, id, &name, 1, 1).unwrap();
+        assert_eq!(created, id);
+        data.level = template.bracket.min_level;
+        crate::persistence::save_character(&database, id, &data);
+    }
+    let mut entered = enter_source_match_with(&template, rules.starts, |app| {
+        app.insert_resource(crate::persistence::GameDatabase { db: database });
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(crate::achievement::AchievementPlugin);
+    });
+    let actor = &entered.players[0];
+    let (h, copy) = (&mut entered.h, entered.copy);
+    for point in source_battleground_objects(template.map_id).0 {
+        let (object, _) = objects_in(h, copy, point.info.entry)[0];
+        h.walk_to(actor, point.position);
+        use_object(h, actor, object);
+    }
+    let before = battleground(h, actor);
+    assert_eq!(before.phase, BgPhase::InProgress);
+    assert_eq!(
+        before.score_a, 0,
+        "assault requests are not earned captures or victory"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(actor.player)
+            .unwrap()
+            .criteria_progress
+            .get(&14943)
+            .is_none()
+    );
+    use_second_frames(h);
+    h.advance(120);
+    let result = battleground(h, actor);
+    assert_eq!(result.phase, BgPhase::Ended);
+    assert_eq!(result.outcome, Some(BgOutcome::Winner(BgTeam::A)));
+    assert_eq!(result.score_a, 1500, "source node clocks, not seeded score");
+    assert!(
+        result.world_states.contains(&(1779, 3)),
+        "all three nodes are actually owned"
+    );
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(actor.player)
+        .unwrap();
+    assert_eq!(
+        state.criteria_progress.get(&14943),
+        Some(&1),
+        "native Gilneas win with all three owned nodes must satisfy expression8656"
+    );
+    assert!(state.account.as_ref().unwrap().earned_ids.contains(&5253));
+    h.advance(3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(actor.player)
+            .unwrap()
+            .criteria_progress
+            .get(&14943),
+        Some(&1)
+    );
+    drop(entered);
+    let database = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::persistence::load_achievements(&database, 1)
+            .criteria_progress
+            .get(&14943),
+        Some(&1)
+    );
+}
+
 fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
     let conn = Connection::open_with_flags(
         crate::test_data::world_db_path(),
