@@ -791,7 +791,7 @@ fn spawn_saved_gear_cast_fixture(
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(load_achievement_catalog(&conn).unwrap());
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     // Authentication inserts InWorld; changing its ID alone cannot replay Added<InWorld>.
     h.app
         .world_mut()
