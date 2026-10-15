@@ -28,6 +28,17 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[entry]);
+    if let Some(mut data) = h
+        .app
+        .world_mut()
+        .get_resource_mut::<crate::world_data::WorldData>()
+    {
+        data.templates.extend(native.templates);
+        data.expected_stats = native.expected_stats;
+    } else {
+        h.app.insert_resource(native);
+    }
     let unit = spawn_npc(&mut h.app, 0.0);
     h.app.world_mut().entity_mut(unit).insert((
         Npc {
@@ -43,6 +54,41 @@ pub(super) fn spawn_profile_fixture_with_plugins(
         .unwrap()
         .0 = Some(h.npc);
     (h, unit, profile)
+}
+
+/// The real summon starts at the authored template's level, then the bridge
+/// promotes the NPC to its owner's level. Its combat armor must use that level.
+#[test]
+fn follower_garrick_level32_uses_installed_level32_creature_armor() {
+    let (mut h, original, profile) = spawn_profile_fixture(209057);
+    h.app.world_mut().despawn(original);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        shared::components::Level(32),
+        shared::components::UnitLevel(32),
+    ));
+    let data = crate::world_data::load_world_data(&world_db().unwrap().powers_db);
+    h.app.insert_resource(data);
+    let unit = spawning::spawn(h.app.world_mut(), h.caster, profile).unwrap();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitLevel>(unit)
+            .unwrap()
+            .0,
+        32
+    );
+    let armor = h
+        .app
+        .world()
+        .get::<crate::level_scaling::CreatureArmor>(unit)
+        .unwrap()
+        .0;
+    // Installed70391 ExpectedStat32: CreatureArmor159, class-mod2=1 and
+    // Garrick's authored ArmorModifier=1. TC GetBaseArmorForLevel uses these.
+    assert_eq!(
+        armor, 159.0,
+        "owner-level32 follower retained template-level1 armor"
+    );
 }
 
 fn assert_profile_combat(entry: u32) {
