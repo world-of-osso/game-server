@@ -158,7 +158,7 @@ fn roll_defense(
 }
 
 /// Unit.cpp2622–2743: one uniform integer roll, cumulative truncated buckets.
-/// NPC dodge, parry and baseline hit statistics remain gaps.
+/// NPC dodge, parry, mechanic resistance and baseline hit statistics remain gaps.
 fn roll_weapon_spell_defense(
     world: &World,
     caster: Entity,
@@ -172,10 +172,6 @@ fn roll_weapon_spell_defense(
     let mut threshold = spell_chance_units(miss);
     if roll < threshold {
         return Some(MissKind::Miss);
-    }
-    threshold += spell_chance_units(physical_mechanic_resistance(spell, auras));
-    if roll < threshold {
-        return Some(MissKind::Resist);
     }
     if attributes(spell, 0) & ATTR0_NO_ACTIVE_DEFENSE != 0 {
         return None;
@@ -192,47 +188,6 @@ fn roll_weapon_spell_defense(
     }
     threshold += spell_chance_units(spell_block_chance(world, caster, spell, unit, auras));
     (roll < threshold).then_some(MissKind::Block)
-}
-
-/// Unit::GetMechanicResistChance: maximum aura total over selected mechanics.
-fn physical_mechanic_resistance(spell: &SpellInfo, auras: Option<&ActiveAuras>) -> f32 {
-    let Some(auras) = auras else {
-        return 0.0;
-    };
-    let category = spell.categories.as_ref().map_or(0, |row| row.mechanic);
-    spell
-        .effects
-        .iter()
-        .take_while(|effect| effect.effect != 0)
-        .map(|effect| {
-            let mechanic = if effect.mechanic != 0 {
-                effect.mechanic
-            } else {
-                category
-            };
-            mechanic_resistance_total(auras, mechanic)
-        })
-        .fold(0.0, f32::max)
-}
-
-fn mechanic_resistance_total(auras: &ActiveAuras, mechanic: u32) -> f32 {
-    const MOD_MECHANIC_RESISTANCE: u32 = 117;
-    if mechanic == 0 {
-        return 0.0;
-    }
-    auras
-        .iter()
-        .map(|aura| {
-            aura.effects
-                .iter()
-                .filter(|effect| {
-                    effect.aura_type == MOD_MECHANIC_RESISTANCE
-                        && effect.misc_values[0] as u32 == mechanic
-                })
-                .map(|effect| effect.amount * aura.stack_multiplier())
-                .sum::<f32>()
-        })
-        .sum()
 }
 
 fn weapon_spell_miss_chance(
