@@ -179,11 +179,13 @@ fn publish_committed(
     progress: PlayerPvpProgress,
     mode: Option<WarModeSnapshot>,
 ) {
+    let latest =
+        crate::persistence::load_pvp(&world.resource::<GameDatabase>().db, owner.character);
     {
         let Some(mut state) = world.get_mut::<PlayerPvpState>(owner.player) else {
             return;
         };
-        state.progress = progress;
+        state.progress = merge_published_preferences(latest, &state.progress, progress, change);
         if matches!(change, Change::WarMode) {
             state.war_mode = mode.clone();
         }
@@ -193,6 +195,27 @@ fn publish_committed(
         Change::Talents => pvp_talents::sync_player(world, owner.connection, owner.player),
     }
     send_state(world, owner.connection, owner.player, None);
+}
+
+// Currency may already have published a later commit in Update. Refresh unrelated
+// fields without advancing either preference ahead of its own FIFO publication.
+fn merge_published_preferences(
+    mut latest: PlayerPvpProgress,
+    published: &PlayerPvpProgress,
+    committed: PlayerPvpProgress,
+    change: Change,
+) -> PlayerPvpProgress {
+    match change {
+        Change::WarMode => {
+            latest.war_mode_desired = committed.war_mode_desired;
+            latest.pvp_talents = published.pvp_talents.clone();
+        }
+        Change::Talents => {
+            latest.war_mode_desired = published.war_mode_desired;
+            latest.pvp_talents = committed.pvp_talents;
+        }
+    }
+    latest
 }
 
 fn publish_war_mode_effect(world: &mut World, owner: Owner, mode: Option<WarModeSnapshot>) {
