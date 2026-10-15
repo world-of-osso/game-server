@@ -216,3 +216,7 @@ Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast s
 ### Distinct owner attack powers
 
 The replicated owner stats carry distinct melee and ranged attack power. Ranged-defense spell coefficient text uses ranged power, matching native damage selection; other spells and explicit `$AP` tokens retain melee power. Missing owner stats must not synthesize either value from the other.
+
+### Ordinary NPC physical-spell dodge
+
+Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per positive effective-level difference. Rear attacks may be dodged in PvE. Controlled/casting victims, ranged attacks and native avoidance/ignore-result attributes retain their exclusions. Signed attacker251 and nonplayer expertise240 apply before the final nonnegative clamp. Specialized Totem/Lightwell spawning and player expertise/248 remain separate gaps; template creature type must not impersonate runtime IsTotem.
