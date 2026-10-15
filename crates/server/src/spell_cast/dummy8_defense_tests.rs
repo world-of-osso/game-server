@@ -23,12 +23,12 @@ fn dummy8_breath_burn_reduces_only_damage_to_the_owning_monk_and_expires() {
         });
     let foreign = spawn_player(&mut h.app, 10, 0.0);
     h.cast_and_deliver(121253, Some(npc));
+    h.advance(35);
     assert!(
         crate::auras::has_aura(h.app.world(), npc, 121253),
         "Keg Smash must land before Breath of Fire: {:?}",
         h.inbox.log
     );
-    h.advance(35);
     h.cast_and_deliver(115181, Some(npc));
     h.advance(5);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
