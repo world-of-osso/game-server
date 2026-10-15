@@ -31,6 +31,23 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_creature_type_kill_requires_complete_positive_companions(self):
+        criteria = {4953: dict(self.criteria[1], Type='78', ModifierTreeId='72')}
+        mods = {72: node(0, 4), 73: node(72, 2, 30, 7)}
+        self.assertEqual(self.compile(mods, criteria), {4953: [None, ((30, 7),)]})
+        self.assertEqual(self.compile({**mods, 74: node(72, 2, 32, 0)}, criteria),
+                         {4953: [None, ((30, 7), (32, 0))]})
+        self.assertEqual(self.compile({**mods, 74: node(72, 2, 999, 1)}, criteria), {})
+        mods[73]['Operator'] = '3'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[73]['Operator'] = '2'
+        mods[73]['Asset'] = '0'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[73]['Asset'] = '7'
+        for kind in ('0', '70', '110'):
+            criteria[4953]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+
     def test_node_world_state_win_requires_complete_positive_companions(self):
         criteria = {14943: dict(self.criteria[1], Type='1', ModifierTreeId='2061')}
         mods = {2061: node(0, 4), 2062: node(2061, 2, 67, 8656)}
