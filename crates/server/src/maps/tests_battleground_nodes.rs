@@ -586,18 +586,43 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
 /// TC EffectTransmitted50: normal item46847 use casts66268 and owns trap195235.
 #[test]
 fn isle_channel_normal_seaforium_use_arms_then_detonates_once_in_its_copy() {
-    assert_normal_isle_bomb_lifecycle(false);
+    assert_isle_bomb_lifecycle(false, false);
 }
 
 #[test]
 fn isle_channel_normal_seaforium_disarm_cancels_the_owned_fuse_only_in_its_copy() {
-    assert_normal_isle_bomb_lifecycle(true);
+    assert_isle_bomb_lifecycle(false, true);
 }
 
-fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
+#[test]
+fn isle_channel_huge_seaforium_use_arms_then_detonates_once_in_its_copy() {
+    assert_isle_bomb_lifecycle(true, false);
+}
+
+#[test]
+fn isle_channel_huge_seaforium_disarm_cancels_the_owned_fuse_only_in_its_copy() {
+    assert_isle_bomb_lifecycle(true, true);
+}
+
+fn assert_isle_bomb_lifecycle(huge: bool, disarm: bool) {
     let mut entered = enter_isle_bomb_match();
     let actor = &entered.players[0];
     let owner_team = entered.teams[0];
+    let (item_id, pickup_entry, bomb_entry, deployment_spell, damage_percent) = if huge {
+        (
+            47030,
+            if owner_team == BgTeam::A {
+                195332
+            } else {
+                195333
+            },
+            195331,
+            66674,
+            60.0,
+        )
+    } else {
+        (46847, 195237, 195235, 66268, 25.0)
+    };
     let mut opponents = entered
         .players
         .iter()
@@ -611,7 +636,7 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
     use_object(&mut entered.h, actor, banner);
     entered.h.advance(8);
     entered.h.advance(60);
-    let (pickup, position) = objects_in(&mut entered.h, entered.copy, 195237)[0];
+    let (pickup, position) = objects_in(&mut entered.h, entered.copy, pickup_entry)[0];
     entered.h.walk_to(actor, position);
     use_object(&mut entered.h, actor, pickup);
     let h = &mut entered.h;
@@ -640,13 +665,13 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
         .find_map(|bag| {
             bag.items
                 .iter()
-                .find(|slot| slot.item.item_id == 46847)
+                .find(|slot| slot.item.item_id == item_id)
                 .map(|slot| ItemLocation::Bag {
                     bag: bag.bag,
                     slot: slot.slot,
                 })
         })
-        .expect("normal Workshop pickup creates the owned bomb used below");
+        .expect("authored pile pickup creates the owned bomb used below");
     h.app.world_mut().entity_mut(actor.connection).insert((
         pair::<UseItem>(),
         pair::<InventoryError>(),
@@ -680,7 +705,7 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                 .unwrap()
                 .receive(),
         );
-        if !objects_in(h, entered.copy, 195235).is_empty() {
+        if !objects_in(h, entered.copy, bomb_entry).is_empty() {
             break;
         }
     }
@@ -701,18 +726,18 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
     )
     .items
     .iter()
-    .filter(|item| item.item_id == 46847)
+    .filter(|item| item.item_id == item_id)
     .map(|item| item.stack_count)
     .sum::<u32>();
     assert_eq!(
         remaining, 0,
         "the authored expendable item is consumed by normal use"
     );
-    let bombs = objects_in(h, entered.copy, 195235);
+    let bombs = objects_in(h, entered.copy, bomb_entry);
     assert_eq!(
         bombs.len(),
         1,
-        "normal owned46847 use must deploy one authored195235"
+        "normal owned item use must deploy one authored bomb"
     );
     let summoned = h
         .app
@@ -720,7 +745,7 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
         .get::<crate::game_objects::summoned::SummonedObject>(bombs[0].0)
         .unwrap();
     assert_eq!(summoned.owner, Some(actor.player));
-    assert_eq!(summoned.spell_id, 66268);
+    assert_eq!(summoned.spell_id, deployment_spell);
     assert_eq!(
         h.app.world().get::<Health>(victim.player).unwrap().current,
         before,
@@ -760,7 +785,7 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                     shared::protocol::InteractionError::InvalidTarget
                 );
                 assert_eq!(
-                    objects_in(h, entered.copy, 195235).len(),
+                    objects_in(h, entered.copy, bomb_entry).len(),
                     1,
                     "another copy cannot disarm the bomb"
                 );
@@ -772,7 +797,7 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
             }
         }
         assert!(
-            objects_in(h, entered.copy, 195235).is_empty(),
+            objects_in(h, entered.copy, bomb_entry).is_empty(),
             "normal in-copy bomb use must run source disarm during the arming period"
         );
         h.advance(12);
@@ -789,7 +814,7 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
     }
     h.advance(9);
     assert_eq!(
-        objects_in(h, entered.copy, 195235).len(),
+        objects_in(h, entered.copy, bomb_entry).len(),
         1,
         "no detonation before ten seconds"
     );
@@ -799,14 +824,14 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
     );
     h.advance(1);
     assert!(
-        objects_in(h, entered.copy, 195235).is_empty(),
+        objects_in(h, entered.copy, bomb_entry).is_empty(),
         "authored bomb deactivates after detonation"
     );
-    // Native66676 effect165 is25% max health (variance0.001 rounds to25 at100HP).
+    // Native effect165 is25%/60% max health; its0.001 variance rounds at100HP.
     let after = h.app.world().get::<Health>(victim.player).unwrap().current;
     assert_eq!(
         after,
-        before * 0.75,
+        before * (100.0 - damage_percent) / 100.0,
         "normal timed source explosion damages the actual enemy"
     );
     assert_eq!(
