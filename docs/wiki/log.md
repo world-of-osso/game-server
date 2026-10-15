@@ -1,6 +1,6 @@
-## 2026-10-14 — Node-ownership expression source boundary
+## 2026-10-14 — Native node-ownership expression credit
 
-[Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions-native-proof-pending) traces exact8656/5717 bytecode and actual occupied-base producer ordering. Pure decoder2d7cd5a2 passes3/3; generated source is unlinked. Compiler RED is valid, native fixture corrections are recorded but native RED/implementation remain pending. No census activation or generic world-state claim.
+[Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
 
 ## 2026-10-14 — Alterac captain source diagnosis
 
