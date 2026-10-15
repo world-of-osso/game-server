@@ -48,7 +48,7 @@ fn spellmech_surge_spends_native_optional_current_mana() {
 #[test]
 fn spellmech_envenom_spends_all_combo_points_and_scales_damage() {
     for points in [1.0, 3.0, 5.0] {
-        let mut h = harness(Vec::new(), &[32645], 4).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[32645], 4).unwrap();
         h.set_power(PowerType::ComboPoints, points);
         h.set_power(PowerType::Energy, 100.0);
         let spell = world_db().unwrap().store.get(32645).unwrap();

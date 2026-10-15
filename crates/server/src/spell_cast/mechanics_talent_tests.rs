@@ -77,7 +77,7 @@ fn spellmech_missing_required_combo_points_refuses_before_any_cost() {
 #[test]
 fn spellmech_rip_native_duration_and_optional_cost_use_same_snapshot() {
     for points in [1.0, 5.0] {
-        let mut h = harness(Vec::new(), &[1079], 11).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[1079], 11).unwrap();
         h.set_power(PowerType::ComboPoints, points);
         h.set_power(PowerType::Energy, 100.0);
         super::execute_cast(
