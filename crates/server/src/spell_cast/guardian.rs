@@ -9,7 +9,25 @@ use shared::components::{Npc, PowerType};
 use super::summon::SummonedCreature;
 
 #[derive(Resource, Default)]
-pub struct GuardianSpells(pub HashMap<u32, Vec<u32>>);
+pub struct GuardianSpells {
+    pub spells: HashMap<u32, Vec<u32>>,
+    spirit_wolf_attack_time: Option<f32>,
+}
+
+/// TC TemporarySummon.h:119 / Pet.cpp:1026: Spirit Wolf29264 only.
+/// Intrinsic AP needs absent pet_levelstats; never substitute fake Strength22.
+#[derive(Component)]
+pub(crate) struct SpiritWolf {
+    pub owner: Entity,
+    pub weapon: crate::item_stats::WeaponDamage,
+}
+
+impl SpiritWolf {
+    /// StatSystem.cpp:1353: owner contribution, with native integer AP/SP storage.
+    pub fn owner_power(attack_power: f32) -> f32 {
+        (attack_power * 0.31) as i32 as f32
+    }
+}
 
 pub fn load_guardian_spells(conn: &Connection) -> rusqlite::Result<GuardianSpells> {
     let mut statement = conn
@@ -18,10 +36,18 @@ pub fn load_guardian_spells(conn: &Connection) -> rusqlite::Result<GuardianSpell
     let mut result = GuardianSpells::default();
     for row in rows {
         let (entry, spell) = row?;
-        let spells = result.0.entry(entry).or_default();
+        let spells = result.spells.entry(entry).or_default();
         if !spells.contains(&spell) {
             spells.push(spell);
         }
+    }
+    if result.spells.contains_key(&29264) {
+        let attack_time: u32 = conn.query_row(
+            "SELECT BaseAttackTime FROM creature_template WHERE entry = 29264",
+            [],
+            |row| row.get(0),
+        )?;
+        result.spirit_wolf_attack_time = Some(attack_time as f32 / 1000.0);
     }
     Ok(result)
 }
@@ -61,13 +87,18 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
         return;
     }
     let entry = world.get::<Npc>(actor).unwrap().template_id;
+    let owner = summon.owner;
+    if entry == 29264 {
+        initialize_spirit_wolf(world, actor, owner);
+    }
+    let summon = world.get::<SummonedCreature>(actor).unwrap();
     let spells = match (summon.spell_id, entry) {
         // Native205180 description explicitly names $205231s1. TDB1210 has
         // no103673 creature spell row; this is not an Imp/Firebolt substitute.
         (205180, 103673) => vec![205231],
         _ => world
             .resource::<GuardianSpells>()
-            .0
+            .spells
             .get(&entry)
             .cloned()
             .unwrap_or_default(),
@@ -95,6 +126,24 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
             .entity_mut(actor)
             .insert(crate::hunter_pet::SummonedDemon);
     }
+}
+
+fn initialize_spirit_wolf(world: &mut World, actor: Entity, owner: Entity) {
+    let speed = world
+        .resource::<GuardianSpells>()
+        .spirit_wolf_attack_time
+        .expect("Spirit Wolf requires sourced creature_template.BaseAttackTime");
+    assert!(speed > 0.0, "Spirit Wolf BaseAttackTime must be positive");
+    let level = f32::from(world.get::<shared::components::UnitLevel>(actor).unwrap().0);
+    world.entity_mut(actor).insert(SpiritWolf {
+        owner,
+        weapon: crate::item_stats::WeaponDamage {
+            min: 3.0 * level,
+            max: 5.0 * level,
+            speed,
+            kind: shared::components::WeaponType::OneHand,
+        },
+    });
 }
 
 fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers::PowerPools {

@@ -4,6 +4,36 @@ use crate::persistence::create_tables;
 use shared::protocol::*;
 
 #[test]
+fn guild_master_load_restores_new_social_rights_without_granting_officer_or_bank_rights() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("guild-master-existing-layout3.redb");
+    let db = Database::create(&path).unwrap();
+    create_tables(&db);
+    let mut old = GuildData::default();
+    old.ranks[0].rights &= !GUILD_RIGHT_EDIT_PUBLIC_NOTE;
+    old.ranks[0].withdraw_gold = false;
+    old.ranks[0].withdraw_repair = false;
+    old.ranks[0].gold_per_day = 123_456;
+    old.ranks[1].rights = GUILD_RIGHT_CHAT_LISTEN;
+    old.money = 987_654;
+    save_guild(&db, 7, &old);
+    drop(db);
+
+    let mut expected = old;
+    expected.ranks[0].rights |= GUILD_RIGHT_EDIT_PUBLIC_NOTE;
+    for _ in 0..2 {
+        let db = Database::create(&path).unwrap();
+        create_tables(&db);
+        let loaded = load_guild(&db, 7);
+        assert_eq!(loaded, expected);
+        assert_eq!(loaded.ranks[1].rights & GUILD_RIGHT_EDIT_PUBLIC_NOTE, 0);
+        assert!(!loaded.ranks[0].withdraw_gold);
+        assert!(!loaded.ranks[0].withdraw_repair);
+        drop(db);
+    }
+}
+
+#[test]
 fn guild_ranks_layout_two_preserves_each_capability_and_bank_data_across_restart() {
     // Compact layout 2 bits 0..11; expected a352b1fa GuildRankRights values.
     let rights = [

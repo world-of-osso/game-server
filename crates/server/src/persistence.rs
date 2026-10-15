@@ -183,6 +183,10 @@ pub(crate) const GUILD_PROFILES: TableDefinition<u32, &[u8]> =
 pub(crate) const GUILD_MEMBER_NOTES: TableDefinition<u64, &[u8]> =
     TableDefinition::new("guild_member_notes");
 
+/// Public guild notes stay separate from the existing bitcode officer-note records.
+pub(crate) const GUILD_PUBLIC_NOTES: TableDefinition<u64, &str> =
+    TableDefinition::new("guild_public_notes");
+
 /// Password hashes: account_id (u64) -> argon2 hash string (bytes).
 pub(crate) const PASSWORDS: TableDefinition<u64, &[u8]> = TableDefinition::new("passwords");
 

@@ -216,6 +216,13 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
 
 /// `(spell power, attack power)` of `unit`; `healing` selects its healing power.
 pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
+    if let Some(wolf) = world.get::<super::guardian::SpiritWolf>(unit) {
+        let owner = world
+            .get::<CharacterStats>(wolf.owner)
+            .expect("Spirit Wolf owner requires CharacterStats for inherited power");
+        let power = super::guardian::SpiritWolf::owner_power(owner.attack_power);
+        return (power, power);
+    }
     if let Some(summon) = world.get::<super::summon::SummonedCreature>(unit) {
         if world
             .get::<crate::hunter_pet::SummonedDemon>(unit)

@@ -535,6 +535,8 @@ impl SwingSight<'_, '_> {
 pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
+    spirit_wolves: Query<'w, 's, &'static crate::spell_cast::guardian::SpiritWolf>,
+    owner_stats: Query<'w, 's, &'static CharacterStats>,
     summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     sight: SwingSight<'w, 's>,
     invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
@@ -596,6 +598,16 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             stats: snapshot.stats.as_ref(),
             haste_pct: snapshot.haste_pct,
             creature: snapshot.creature,
+            spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
+                let owner = params
+                    .owner_stats
+                    .get(wolf.owner)
+                    .expect("Spirit Wolf owner requires CharacterStats for inherited power");
+                (
+                    wolf,
+                    crate::spell_cast::guardian::SpiritWolf::owner_power(owner.attack_power),
+                )
+            }),
         };
         for hand in [Hand::Main, Hand::Off] {
             let Some(outcome) = try_swing(
@@ -758,10 +770,14 @@ pub(crate) struct Attacker<'a> {
     pub haste_pct: f32,
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,
+    pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
 }
 
 impl Attacker<'_> {
     fn weapon(&self, hand: Hand) -> Option<WeaponDamage> {
+        if let Some((wolf, _)) = self.spirit_wolf {
+            return matches!(hand, Hand::Main).then_some(wolf.weapon);
+        }
         match hand {
             Hand::Main => Some(
                 self.stats
@@ -778,6 +794,9 @@ impl Attacker<'_> {
         let slow = self.mods.map_or(1.0, |mods| {
             mods.attack_cast_time_mult * mods.attack_time_mult
         });
+        if self.spirit_wolf.is_some() {
+            return weapon.speed / (1.0 + self.haste_pct / 100.0).max(0.01) * slow;
+        }
         self.stats.map_or(
             AUTO_ATTACK_INTERVAL / (1.0 + self.haste_pct / 100.0).max(0.01),
             |stats| melee::swing_time(weapon.speed, stats.haste_pct),
@@ -809,12 +828,19 @@ fn swing_damage(
 ) -> f32 {
     const PHYSICAL: u32 = 1;
     let mut rng = rand::thread_rng();
-    let base = match attacker.stats {
-        Some(stats) => melee::roll_weapon_damage(
-            melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
-            rand::Rng::r#gen(&mut rng),
-        ),
-        None => creature_weapon_damage(scaling),
+    let base = if let Some((_, attack_power)) = attacker.spirit_wolf {
+        // Guardian::UpdateDamagePhysical, StatSystem.cpp:1423. Only owner AP
+        // is sourced; intrinsic AP remains the named pet_levelstats gap.
+        let bonus = attack_power / 3.5 * weapon.speed;
+        rand::Rng::gen_range(&mut rng, weapon.min + bonus..=weapon.max + bonus)
+    } else {
+        match attacker.stats {
+            Some(stats) => melee::roll_weapon_damage(
+                melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
+                rand::Rng::r#gen(&mut rng),
+            ),
+            None => creature_weapon_damage(scaling),
+        }
     };
     let done = attacker.mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
