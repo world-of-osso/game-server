@@ -1,3 +1,7 @@
+## 2026-10-15 — Cold deferred producers identified; toy-master integration
+
+[Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): actual release command spans name target-sync215.5ms and grid-registration280.3ms, distinct from startup population and preparation. Source initialization/wake regression remains open. Toy-master merge retains detection geometry plus private-group authority and Toy Box cache plus incoming modules;64 intersecting controls pass, current gate publication/check pending shared live window.
+
 ## 2026-10-15 — Attributed release phases and st157 fixture repairs
 
 [Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): release346 bounds first218ms frame to PostUpdate201ms and next352ms frame to FixedPreUpdate337ms, not schedule preparation; inner cost remains open and IO pressure prevents isolated timing claims. [Fixture follow-up](investigations/server-tick-lag.md#st157-fixture-integration-follow-up--2026-10-15): explicit housing consumers, continuous reply collection and initial bank normalization fence;22 controls+5 repaired wire tests pass after latest-master integration, not a full gate.
