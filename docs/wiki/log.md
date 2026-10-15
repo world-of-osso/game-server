@@ -1,3 +1,7 @@
+## 2026-10-15 — Spell-created unit ownership logs
+
+[Combat log ownership](systems/spell-casting.md#messages): actual effect28/effect56 creations emit Summon with the real spell and actor identities; temporary guardian ancestry delivers combat to its owner without changing gameplay credit. Login restoration emits no synthetic event. Bounded native gates tracked separately from DPS/balance acceptance.
+
 ## 2026-10-15 — Source Toy forward destination
 
 [Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
