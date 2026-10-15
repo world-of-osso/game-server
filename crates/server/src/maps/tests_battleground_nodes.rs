@@ -1376,6 +1376,71 @@ fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -
     entered
 }
 
+fn probe_node_count_authority(world: &mut World, player: Entity, expected: [u8; 2]) {
+    use crate::pvp::{PlayerPvpState, player_controlled_node_counts};
+    assert_eq!(player_controlled_node_counts(world, player), Some(expected));
+    let character = world.get::<ClientId>(player).unwrap().0;
+    world.entity_mut(player).insert(ClientId(character + 1000));
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "unaccepted identity cannot borrow counts"
+    );
+    world.entity_mut(player).insert(ClientId(character));
+    let map = *world.get::<InMap>(player).unwrap();
+    world
+        .entity_mut(player)
+        .insert(InMap::continent(map.map_id));
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "same map ID in another copy is not the match"
+    );
+    world.entity_mut(player).insert(map);
+    let mut snapshot = world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground
+        .take()
+        .unwrap();
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "missing battleground context is unknown"
+    );
+    let match_id = snapshot.match_id;
+    let states = std::mem::take(&mut snapshot.world_states);
+    snapshot.match_id = u64::MAX;
+    world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground = Some(snapshot);
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        None,
+        "stale match identity is not authority"
+    );
+    world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground
+        .as_mut()
+        .unwrap()
+        .match_id = match_id;
+    assert_eq!(
+        player_controlled_node_counts(world, player),
+        Some(expected),
+        "wire-cache contents are not the native node ledger"
+    );
+    world
+        .get_mut::<PlayerPvpState>(player)
+        .unwrap()
+        .battleground
+        .as_mut()
+        .unwrap()
+        .world_states = states;
+}
+
 fn assert_node_win_progress(
     entered: &EnteredMatch,
     expected: [(u64, u64); 2],
@@ -1492,6 +1557,9 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
         };
         assert_eq!(score, 1500, "source node clocks, not seeded scores");
         assert!(result.world_states.contains(&(state_id, held as i32)));
+        if round == 1 {
+            probe_node_count_authority(h.app.world_mut(), actor.player, [3, 0]);
+        }
         let expected = [
             (round.min(10), round.min(10) + u64::from(round == 12)),
             (u64::from(round >= 11), u64::from(round >= 11)),
@@ -1512,6 +1580,14 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
             );
         }
     }
+    let template = shared::battleground::warsong_gulch();
+    let rules = shared::battleground::flag_rules(template.map_id).unwrap();
+    let entered = enter_source_match(&template, rules.starts);
+    assert_eq!(
+        crate::pvp::player_controlled_node_counts(entered.h.app.world(), entered.players[0].player),
+        None,
+        "an actual accepted flag match has no node-count authority"
+    );
 }
 
 fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
