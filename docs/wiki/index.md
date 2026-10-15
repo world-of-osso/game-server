@@ -11,7 +11,7 @@
 
 - [Spawn-group guardian count](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14) — Scarab2301 flag routing, variable count and independent native5yd secondary scatter; other count paths remain open.
 
-- [Toy initial random destination radius](systems/toys.md#initial-random-destination-radius-2026-10-14) — native72/86 disk area versus91 fixed distance; independent of secondary scatter and unresolved Flute following.
+- [Toy initial random destination radius](systems/toys.md#initial-random-destination-radius-2026-10-14) — native72/86 disk area versus91 fixed distance; independent of secondary scatter and the [Flute source adjudication](systems/toys.md#flute-follow-source-adjudication-2026-10-15).
 
 - [Source Toy facing](systems/toys.md#source-facing-boundary-2026-10-13) — two roots, inclusive180° arc and strict exact3D target-radius exemption; no CombatReach substitution.
 
@@ -371,4 +371,4 @@ Debug logs and root cause analyses.
 - [Group-private summon runtime](systems/toys.md#source-group-private-runtime-2026-10-13) — source group identity and roster-driven interest transitions.
 - [Installed item projection](systems/content-import.md#installed-item-projection) — installed Item/ItemSparse definitions, retained SourceEntry, private-copy refresh; older references no longer exclude new gear.
 
-- [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the unresolved Flute follow promise.
+- [Wild variable-count summons](systems/toys.md#wild-variable-count-summons-2026-10-14) — native variance/truncation, TargetA scatter and the [Flute source adjudication](systems/toys.md#flute-follow-source-adjudication-2026-10-15).
