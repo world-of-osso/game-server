@@ -304,7 +304,8 @@ fn creature_aggro_search_includes_scaled_bodies_beyond_the_forty_five_yard_cells
 #[test]
 fn creature_attack_distance_uses_the_spawned_difficulty_expansion() {
     let mut app = aggro_app();
-    let mut difficulty = app.world().resource::<WorldData>().templates[&30].clone();
+    let mut native = crate::spell_cast::test_harness::load_native_creature_world(&[30]);
+    let mut difficulty = native.templates.remove(&30).unwrap();
     difficulty.health_scaling_expansion = 0;
     {
         let mut data = app.world_mut().resource_mut::<WorldData>();
