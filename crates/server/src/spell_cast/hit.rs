@@ -259,13 +259,14 @@ fn weapon_spell_dodge_chance(
     unit: Entity,
     defense: u32,
 ) -> f32 {
-    if defense != DEFENSE_MELEE {
+    let is_player = world.get::<shared::components::Player>(unit).is_some();
+    let is_unit = is_player || world.get::<shared::components::Npc>(unit).is_some();
+    if defense != DEFENSE_MELEE || !is_unit {
         return 0.0;
     }
     let disabled = attributes(spell, 7) & ATTR7_NO_ATTACK_DODGE != 0
         || caster_ignores_combat_result(world, caster, spell, MELEE_HIT_DODGE);
     let auras = world.get::<ActiveAuras>(unit);
-    let is_player = world.get::<shared::components::Player>(unit).is_some();
     let direction_allowed = !is_player || can_deflect_from(world, caster, unit, auras);
     let can_dodge = direction_allowed && can_avoid_weapon_spell(world, unit, auras);
     if disabled || !can_dodge {
@@ -280,6 +281,10 @@ fn weapon_spell_dodge_chance(
     } else {
         creature_spell_dodge_chance(world, caster, unit, auras)
     };
+    apply_caster_dodge_modifiers(world, caster, dodge)
+}
+
+fn apply_caster_dodge_modifiers(world: &World, caster: Entity, dodge: f32) -> f32 {
     let caster_auras = world.get::<ActiveAuras>(caster);
     let enemy_dodge = caster_auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE));
     let expertise = if world.get::<shared::components::Player>(caster).is_some() {
