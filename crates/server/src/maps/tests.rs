@@ -446,6 +446,7 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
                 .receive(),
         );
     }
+    h.finish_housing_writes();
     assert!(errors.is_empty(), "normal bookcase use refused: {errors:?}");
     let db = &h
         .app
@@ -482,6 +483,7 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         .unwrap()
         .send::<InventoryChannel>(use_item);
     h.advance(5);
+    h.finish_housing_writes();
     let db = &h
         .app
         .world()
@@ -505,6 +507,7 @@ fn housing_harness(db: redb::Database) -> Harness {
         app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::housing::HousingAvailability(Ok(catalog)));
         app.init_resource::<crate::gold::GoldUpdateQueue>();
+        crate::housing::HousingPersistencePlugin::install(app);
         // Production world startup replaces the generic population through Commands.
         // Housing must survive that replacement without fixture-injected map objects.
         app.add_systems(Startup, |mut commands: Commands| {
@@ -1035,6 +1038,18 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
 const TRAVELER_LEVEL: u8 = 80;
 
 impl Harness {
+    fn finish_housing_writes(&mut self) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        while crate::housing::persistence_pending(self.app.world()) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "housing receipt timeout"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+            self.advance(1);
+        }
+    }
+
     fn housing_request(&mut self, who: &Traveler, command: HousingCommand) -> HousingReply {
         self.app
             .world_mut()
@@ -1044,6 +1059,8 @@ impl Harness {
                 request_id: 1,
                 command,
             });
+        self.advance(3);
+        self.finish_housing_writes();
         let mut replies = Vec::new();
         for _ in 0..6 {
             self.advance(1);

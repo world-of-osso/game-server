@@ -138,6 +138,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             .chain(),
     );
     ToyPersistencePlugin::install(&mut h.app);
+    crate::housing::HousingPersistencePlugin::install(&mut h.app);
     h.app.add_systems(PostUpdate, send_initial);
     h.app
         .world_mut()
