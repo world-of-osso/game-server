@@ -1,5 +1,5 @@
 //! Real guild lifecycle history, distinct from bank logs and guild news.
-use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 use shared::protocol::{
     GUILD_EVENT_LOG_MAX_RECORDS, GuildEvent, GuildEventKind, GuildEventLog, GuildRankError,
 };
