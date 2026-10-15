@@ -586,6 +586,15 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
 /// TC EffectTransmitted50: normal item46847 use casts66268 and owns trap195235.
 #[test]
 fn isle_channel_normal_seaforium_use_arms_then_detonates_once_in_its_copy() {
+    assert_normal_isle_bomb_lifecycle(false);
+}
+
+#[test]
+fn isle_channel_normal_seaforium_disarm_cancels_the_owned_fuse_only_in_its_copy() {
+    assert_normal_isle_bomb_lifecycle(true);
+}
+
+fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
     let mut entered = enter_isle_bomb_match();
     let actor = &entered.players[0];
     let owner_team = entered.teams[0];
@@ -717,6 +726,41 @@ fn isle_channel_normal_seaforium_use_arms_then_detonates_once_in_its_copy() {
         before,
         "planting does not detonate immediately"
     );
+    if disarm {
+        let object = bombs[0].0;
+        for user in [foreign, victim] {
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<UseGameObject>>(user.connection)
+                .unwrap()
+                .send::<InteractionChannel>(UseGameObject {
+                    object: object.to_bits(),
+                });
+            h.advance(1);
+            if user.player == foreign.player {
+                assert_eq!(
+                    objects_in(h, entered.copy, 195235).len(),
+                    1,
+                    "another copy cannot disarm the bomb"
+                );
+            }
+        }
+        assert!(
+            objects_in(h, entered.copy, 195235).is_empty(),
+            "normal in-copy bomb use must run source disarm during the arming period"
+        );
+        h.advance(12);
+        assert_eq!(
+            h.app.world().get::<Health>(victim.player).unwrap().current,
+            before,
+            "disarm cancels the pending explosion, not only its model"
+        );
+        assert_eq!(
+            h.app.world().get::<Health>(foreign.player).unwrap().current,
+            foreign_before
+        );
+        return;
+    }
     h.advance(9);
     assert_eq!(
         objects_in(h, entered.copy, 195235).len(),
