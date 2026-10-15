@@ -48,6 +48,7 @@ pub(crate) struct HousingPersistencePlugin;
 
 impl HousingPersistencePlugin {
     pub(crate) fn install(app: &mut App) {
+        transfers::install(app);
         app.init_resource::<PendingHousingWrites>()
             .add_systems(PostUpdate, publish_writes);
     }
@@ -274,7 +275,7 @@ fn drain_completed(world: &mut World) -> Vec<(PendingHousingWrite, Result<bool, 
     completed
 }
 
-fn owns_housing_session(world: &World, actor: Actor) -> bool {
+pub(super) fn owns_housing_session(world: &World, actor: Actor) -> bool {
     let authenticated = world
         .get::<Authenticated>(actor.connection)
         .is_some_and(|auth| auth.account_id == actor.account);

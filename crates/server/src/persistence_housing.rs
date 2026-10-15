@@ -131,11 +131,11 @@ pub(crate) fn save_house_location(
     db: &Database,
     actor: Actor,
     house_id: u64,
-    groups: Option<&GroupRegistry>,
+    party: &[u64],
 ) -> Result<(), String> {
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let state = read_in(&txn)?;
-    require_visit(db, &state, actor, house_id, groups)?;
+    access::require_visit_with_party(db, &state, actor, house_id, party)?;
     let bytes = serde_json::to_vec(&HouseLocation {
         house_id,
         account_id: actor.account_id,
@@ -445,9 +445,21 @@ pub(crate) fn house(
     house_id: u64,
     groups: Option<&GroupRegistry>,
 ) -> Result<HousingHouse, String> {
+    let party = groups
+        .map(|groups| groups.group_members(actor.character_id))
+        .unwrap_or_default();
+    read_house_with_party(db, actor, house_id, &party)
+}
+
+pub(crate) fn read_house_with_party(
+    db: &Database,
+    actor: Actor,
+    house_id: u64,
+    party: &[u64],
+) -> Result<HousingHouse, String> {
     let txn = db.begin_read().map_err(|error| error.to_string())?;
     let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
-    require_visit(db, &state, actor, house_id, groups)?;
+    access::require_visit_with_party(db, &state, actor, house_id, party)?;
     Ok(house_view(&state.houses[&house_id], actor))
 }
 

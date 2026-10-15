@@ -15,9 +15,13 @@ use shared::protocol::{
 mod dye_requests;
 #[path = "housing_persistence.rs"]
 mod persistence_actor;
+#[path = "housing_transfers.rs"]
+mod transfers;
 pub(crate) use persistence_actor::HousingPersistencePlugin;
 #[cfg(test)]
-pub(crate) use persistence_actor::persistence_pending;
+pub(crate) fn persistence_pending(world: &World) -> bool {
+    persistence_actor::persistence_pending(world) || transfers::pending(world)
+}
 
 #[derive(Resource)]
 pub(crate) struct HousingAvailability(pub(crate) Result<HousingCatalog, String>);
@@ -109,7 +113,9 @@ fn receive_requests(world: &mut World) -> Vec<(Actor, HousingRequest)> {
 
 pub(crate) fn process_requests(world: &mut World) {
     for (actor, request) in receive_requests(world) {
-        if persistence_actor::enqueue_request(world, actor, &request) {
+        if transfers::enqueue_request(world, actor, &request)
+            || persistence_actor::enqueue_request(world, actor, &request)
+        {
             continue;
         }
         let result = execute(world, actor, &request.command);
@@ -185,12 +191,8 @@ fn execute(
             catalog(world)?.neighborhood(*neighborhood_id)?;
             return Ok(Some(*neighborhood_id));
         }
-        HousingCommand::EnterNeighborhood { neighborhood_id } => {
-            enter_neighborhood(world, actor, *neighborhood_id)?;
-            return Ok(Some(*neighborhood_id));
-        }
-        HousingCommand::VisitPlot { plot_id } => {
-            return visit_plot(world, actor, *plot_id).map(Some);
+        HousingCommand::EnterNeighborhood { .. } | HousingCommand::VisitPlot { .. } => {
+            unreachable!("location requests are queued before synchronous commands")
         }
         _ => apply_house_command(world, actor, context, command)?,
     }
@@ -215,8 +217,9 @@ fn apply_house_command(
         | HousingCommand::RemoveDecor { .. } => {
             unreachable!("durable mutations are queued before synchronous house commands")
         }
-        HousingCommand::EnterHouse { house_id } => enter_house(world, actor, context, *house_id)?,
-        HousingCommand::LeaveHouse => leave_house(world, actor, context)?,
+        HousingCommand::EnterHouse { .. } | HousingCommand::LeaveHouse => {
+            unreachable!("location requests are queued before synchronous commands")
+        }
         HousingCommand::PreviewDecorDyes {
             house_id,
             instance_id,
@@ -265,61 +268,6 @@ pub(crate) fn collect_authenticated_item(
     )
 }
 
-fn enter_house(
-    world: &mut World,
-    actor: Actor,
-    context: store::Actor,
-    house_id: u64,
-) -> Result<(), String> {
-    store::house(
-        &world.resource::<GameDatabase>().db,
-        context,
-        house_id,
-        world.get_resource::<crate::group::GroupRegistry>(),
-    )?;
-    let entry = catalog(world)?.home_entry()?;
-    transfer_property(world, actor, entry, house_id)?;
-    store::save_house_location(
-        &world.resource::<GameDatabase>().db,
-        context,
-        house_id,
-        world.get_resource::<crate::group::GroupRegistry>(),
-    )
-}
-
-fn leave_house(world: &mut World, actor: Actor, context: store::Actor) -> Result<(), String> {
-    let house_id = context
-        .inside_house
-        .ok_or("Enter a house before leaving it.")?;
-    let house = store::house(
-        &world.resource::<GameDatabase>().db,
-        context,
-        house_id,
-        world.get_resource::<crate::group::GroupRegistry>(),
-    )?;
-    visit_plot(world, actor, house.plot_id).map(|_| ())
-}
-
-fn visit_plot(world: &mut World, actor: Actor, plot_id: u32) -> Result<u32, String> {
-    let plot = catalog(world)?.plot(plot_id)?.clone();
-    let neighborhood = catalog(world)?.neighborhood(plot.neighborhood_id)?.clone();
-    let destination = crate::maps::WorldLocation {
-        map_id: neighborhood.entry.map_id,
-        position: Vec3::from_array(plot.teleport),
-        orientation: neighborhood.entry.orientation,
-    };
-    transfer_property(world, actor, destination, u64::from(plot.neighborhood_id))?;
-    store::save_neighborhood_location(
-        &world.resource::<GameDatabase>().db,
-        actor.character,
-        &store::NeighborhoodLocation {
-            map_id: destination.map_id,
-            neighborhood_id: plot.neighborhood_id,
-        },
-    )?;
-    Ok(plot.neighborhood_id)
-}
-
 fn transfer_property(
     world: &mut World,
     actor: Actor,
@@ -345,44 +293,6 @@ fn transfer_property(
             .revoke_housing_entry(actor.character);
         return Err("Housing transfer was refused.".into());
     }
-    Ok(())
-}
-
-fn enter_neighborhood(world: &mut World, actor: Actor, neighborhood_id: u32) -> Result<(), String> {
-    if world.get::<InMap>(actor.player).is_none() {
-        return Err("Finish the current map transfer first.".into());
-    }
-    let neighborhood = catalog(world)?.neighborhood(neighborhood_id)?.clone();
-    world
-        .resource_scope(|world, mut manager: Mut<InstanceManager>| {
-            manager.authorize_housing_entry(
-                world.resource::<MapStore>(),
-                neighborhood.entry.map_id,
-                u64::from(neighborhood.id),
-                actor.character,
-            )
-        })
-        .map_err(|reason| format!("Neighborhood admission refused: {reason:?}"))?;
-    let accepted = crate::maps::teleport_to(
-        world,
-        actor.player,
-        neighborhood.entry,
-        TeleportOptions::default(),
-    );
-    if !accepted {
-        world
-            .resource_mut::<InstanceManager>()
-            .revoke_housing_entry(actor.character);
-        return Err("Neighborhood transfer was refused.".into());
-    }
-    store::save_neighborhood_location(
-        &world.resource::<GameDatabase>().db,
-        actor.character,
-        &store::NeighborhoodLocation {
-            map_id: neighborhood.entry.map_id,
-            neighborhood_id: neighborhood.id,
-        },
-    )?;
     Ok(())
 }
 

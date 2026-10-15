@@ -11,6 +11,19 @@ pub(super) fn require_visit(
     house_id: u64,
     groups: Option<&GroupRegistry>,
 ) -> Result<(), String> {
+    let party = groups
+        .map(|groups| groups.group_members(actor.character_id))
+        .unwrap_or_default();
+    require_visit_with_party(db, state, actor, house_id, &party)
+}
+
+pub(super) fn require_visit_with_party(
+    db: &Database,
+    state: &State,
+    actor: Actor,
+    house_id: u64,
+    party: &[u64],
+) -> Result<(), String> {
     let house = state.houses.get(&house_id).ok_or("House not found.")?;
     if house.account_id == actor.account_id {
         return Ok(());
@@ -25,10 +38,7 @@ pub(super) fn require_visit(
                     && read_same_guild(&txn, house.owner_character_id, actor.character_id)?)
                 || (access.friends
                     && read_owner_friend(&txn, house.owner_character_id, actor.character_id)?)
-                || (access.party
-                    && groups.is_some_and(|groups| {
-                        groups.is_in_same_group(house.owner_character_id, actor.character_id)
-                    }))
+                || (access.party && party.contains(&house.owner_character_id))
         }
     };
     if allowed {
