@@ -474,4 +474,4 @@ fn read_mount_attachment(data: &[u8], seat_enum: i32) -> Result<Vec3, String> {
 
 #[cfg(test)]
 #[path = "vehicle_tests.rs"]
-mod tests;
+pub(crate) mod tests;
