@@ -177,7 +177,7 @@ fn handle_login(
     }
 
     let chars = persistence::list_characters_for_account(&db.db, account_id);
-    let entries = chars_to_entries(&chars);
+    let entries = load_roster_entries(&db.db, &chars);
     send_login_success(entity, senders, &token, entries);
     commands
         .entity(entity)
@@ -211,7 +211,10 @@ pub(crate) fn clear_connected_account(
     }
 }
 
-fn chars_to_entries(chars: &[(u64, CharacterData)]) -> Vec<shared::protocol::CharacterListEntry> {
+fn load_roster_entries(
+    db: &redb::Database,
+    chars: &[(u64, CharacterData)],
+) -> Vec<shared::protocol::CharacterListEntry> {
     chars
         .iter()
         .map(|(id, data)| shared::protocol::CharacterListEntry {
@@ -222,6 +225,7 @@ fn chars_to_entries(chars: &[(u64, CharacterData)]) -> Vec<shared::protocol::Cha
             class: data.class,
             appearance: data.appearance.clone(),
             equipment_appearance: data.equipment_appearance.clone(),
+            tabard: persistence::guild_tabards::load_character_design(db, *id),
         })
         .collect()
 }
@@ -377,10 +381,47 @@ mod tests {
         let data = crate::persistence::load_character(&db, id).unwrap();
         assert_eq!(data.appearance, appearance);
         crate::persistence::save_character(&db, id, &data);
-        let entries = chars_to_entries(&crate::persistence::list_characters_for_account(&db, 17));
+        let entries = load_roster_entries(
+            &db,
+            &crate::persistence::list_characters_for_account(&db, 17),
+        );
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].character_id, id);
         assert_eq!(entries[0].appearance, appearance);
+    }
+
+    #[test]
+    fn guild_tabard_roster_exposes_durable_design_without_changing_character_appearance() {
+        use shared::guild_creation::{GuildTabardDesign, TABARD_COST};
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("tabard-roster.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (character, data) =
+            persistence::create_character(&db, 17, "Tabardmaster", 1, 2).unwrap();
+        persistence::set_character_guild_by_id(&db, character, 7, "Raid Team").unwrap();
+        persistence::banks::save_guild_member_rank(&db, character, 0);
+        let mut inventory =
+            persistence::inventory_store::load_inventory_record(&db, character).unwrap();
+        inventory.inventory.gold = u64::from(TABARD_COST);
+        persistence::inventory_store::save_inventory_record(&db, character, &inventory);
+        let initial = load_roster_entries(&db, &persistence::list_characters_for_account(&db, 17));
+        assert_eq!(initial[0].tabard, None);
+        let design = GuildTabardDesign {
+            icon: 1,
+            icon_color: 2,
+            border: 3,
+            border_color: 4,
+            background_color: 5,
+        };
+        persistence::guild_tabards::register(&db, character, design).unwrap();
+        drop(db);
+        let db = redb::Database::open(&path).unwrap();
+        persistence::create_tables(&db);
+        let entries = load_roster_entries(&db, &persistence::list_characters_for_account(&db, 17));
+        assert_eq!(entries[0].tabard, Some(design));
+        assert_eq!(entries[0].appearance, data.appearance);
+        assert_eq!(entries[0].equipment_appearance, data.equipment_appearance);
     }
 
     #[test]
