@@ -428,6 +428,30 @@ fn isle_channel_match_team_hostility_overrides_race_without_changing_open_world(
             .unwrap()
             .accepted = false;
         assert!(!relation_matches(world, actor, enemy, Relation::Enemy));
+        world.entity_mut(enemy).insert(snapshot.clone());
+        world
+            .get_mut::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .phase = BgPhase::Waiting;
+        assert!(
+            !relation_matches(world, actor, enemy, Relation::Enemy),
+            "a player outside the active phase is not attackable"
+        );
+        world.entity_mut(enemy).insert(snapshot.clone());
+        world
+            .get_mut::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .match_id += 1;
+        assert!(
+            !relation_matches(world, actor, enemy, Relation::Enemy),
+            "different matches cannot attack even with matching physical map IDs"
+        );
         world.entity_mut(enemy).insert(snapshot);
     }
     let first = entered.h.spawn(9001, STORMWIND, entered.origin);
@@ -703,35 +727,6 @@ fn isle_channel_normal_seaforium_use_arms_then_detonates_once_in_its_copy() {
         h.app.world().get::<Health>(victim.player).unwrap().current,
         before
     );
-    let bomb = bombs[0].0;
-    let explosion = h
-        .app
-        .world()
-        .resource::<crate::spell_info::SpellStore>()
-        .get(66676)
-        .unwrap()
-        .clone();
-    eprintln!(
-        "Seaforium diagnostic bomb={:?} victim={:?} hostile={} spell={explosion:?}",
-        h.app.world().get::<Position>(bomb),
-        h.app.world().get::<Position>(victim.player),
-        crate::spell_cast::targets::is_hostile(h.app.world(), bomb, victim.player)
-    );
-    for effect in &explosion.effects {
-        let selected = crate::spell_cast::targets::select_targets(
-            h.app.world_mut(),
-            bomb,
-            None,
-            &explosion,
-            effect,
-            0,
-            true,
-        );
-        eprintln!(
-            "Seaforium effect {} selected={selected:?} victim={:?}",
-            effect.effect, victim.player
-        );
-    }
     h.advance(1);
     assert!(
         objects_in(h, entered.copy, 195235).is_empty(),
