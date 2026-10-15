@@ -247,7 +247,8 @@ fn advance_actor_logs(h: &mut Harness, connection: Entity, frames: usize) {
 fn dummy12_dispatch_and_eviscerate_damage_use_combo_spent_not_left() {
     for spell_id in [2098, 196819] {
         for points in [1.0, 3.0, 5.0] {
-            let mut h = harness(Vec::new(), &[spell_id], 4).unwrap();
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(Vec::new(), &[spell_id], 4).unwrap();
             h.set_power(PowerType::ComboPoints, points);
             h.set_power(PowerType::Energy, 100.0);
             let spell = world_db().unwrap().store.get(spell_id).unwrap();
@@ -268,7 +269,12 @@ fn dummy12_dispatch_and_eviscerate_damage_use_combo_spent_not_left() {
 #[test]
 fn dummy12_rake_bleed_snapshots_stealth_bonus_across_later_rank_removal() {
     for empowered in [false, true] {
-        let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[1822, 155722, 231052, 5215, 768, 163505],
+            11,
+        )
+        .unwrap();
         let caster = h.caster;
         apply(&mut h, caster, caster, 768, u32::MAX);
         apply(&mut h, caster, caster, 231052, u32::MAX);
@@ -355,7 +361,9 @@ fn dummy12_shield_of_righteous_applies_native_armor_buff_and_expires() {
 
 #[test]
 fn dummy12_shield_cone_excludes_rear_side_far_and_ally_and_buffs_empty_cast() {
-    let mut h = harness(Vec::new(), &[53600, 132403, 403460, 407467], 2).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[53600, 132403, 403460, 407467], 2)
+            .unwrap();
     let rear = spawn_npc(&mut h.app, -3.0);
     let side = spawn_npc(&mut h.app, 2.0);
     h.app
@@ -394,7 +402,12 @@ fn dummy12_shield_cone_excludes_rear_side_far_and_ally_and_buffs_empty_cast() {
 
 #[test]
 fn dummy12_rake_reapplication_replaces_stealth_snapshot_without_retroactive_bonus() {
-    let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[1822, 155722, 231052, 5215, 768, 163505],
+        11,
+    )
+    .unwrap();
     let caster = h.caster;
     apply(&mut h, caster, caster, 768, u32::MAX);
     apply(&mut h, caster, caster, 231052, u32::MAX);
@@ -474,7 +487,9 @@ fn dummy12_gargoyle_foreign_owner_spend_and_triggered_cast_do_not_empower() {
 #[test]
 fn dummy12_butchery_talent_bleeds_hit_enemies_only() {
     for talented in [false, true] {
-        let mut h = harness(Vec::new(), &[212436, 459868, 459870], 3).unwrap();
+        let mut h =
+            harness_with_native_enemy_dodge_reduction(Vec::new(), &[212436, 459868, 459870], 3)
+                .unwrap();
         if !talented {
             h.app.world_mut().entity_mut(h.caster).insert(
                 crate::class_progression::KnownSpells::fixture(vec![212436, 459870]),
