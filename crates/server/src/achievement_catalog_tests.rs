@@ -1,6 +1,38 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_unearned_snapshot_rejects_missing_earned_component() {
+    let mut world = World::new();
+    world.insert_resource(catalog());
+    let actor = world
+        .spawn((
+            shared::components::Player {
+                name: "Noearned".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            shared::components::Level(1),
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    let event = CriteriaEvent::CastSpell(1217637);
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    assert!(
+        conditions.player.is_some(),
+        "other reference-player facts are available"
+    );
+    let mut state = PlayerAchievementState::default();
+    world
+        .resource::<AchievementCatalog>()
+        .update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "a missing earned-state component is unknown, not an empty known-unearned set"
+    );
+}
+
+#[test]
 fn achievements_criteria_unearned_cast_requires_reference_and_authored_award() {
     let catalog = catalog();
     for (player, expected) in [(None, None), (Some(ReferencePlayer::default()), Some(1))] {
