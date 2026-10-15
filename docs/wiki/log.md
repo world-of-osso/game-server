@@ -2,6 +2,10 @@
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
 
+## 2026-10-14 — Source Seaforium deployment RED
+
+[Timed lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) begins with actual owned46847 UseItem rejecting custom-script195235, while normal pickup remains passing. Commit e06cb017 reads source charges/spell, owns the ten-second one-shot GO cast and reads owner reaction without rewriting raw faction0. GREEN/disarm/new native activation remain pending; compile-width failure is separate from the genuine behavioral RED.
+
 ## 2026-10-14 — Native IoC pickup retake
 
 [Retakes78/79](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) prove actual normal pickup+return with both skins after private-only receipt/cache reconciliation. All eighteen new captures inspected; local textured model/portrait and source bomb/bags visible, animation/151 meshes and no prior duplicate/v5 errors. Peer particle art, timing and origin framing remain open; no deployment/victory claim. Admission77 failed before native startup and is not render evidence.

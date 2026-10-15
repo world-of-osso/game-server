@@ -42,7 +42,7 @@ The implementation retains trap Data3 explosion spell and Data4 charges for `go_
 ## Sources
 
 - [Quest contract](../../specs/quests.md) and [loot contract](../../specs/loot.md).
-- `game_objects.rs`, `game_objects/quest_object.rs`, `game_objects/locks.rs`, `quest_objectives_tests.rs`, `scripts/import_game_object_locks.py`.
+- `game_objects.rs`, `game_objects/quest_object.rs`, `game_objects/locks.rs`, `game_objects/seaforium_bombs.rs`, `game_objects/summoned.rs`, `quest_objectives_tests.rs`, `scripts/import_game_object_locks.py`.
 - TrinityCore a352b1fa `GameObject::Use`, `Player::KillCreditGO`, `Spell::EffectKillCreditPersonal`/`EffectKillCredit`; WoWDBDefs `Lock.dbd` layoutDA418152 and local CASC1343608.
 
 ## See Also

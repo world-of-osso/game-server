@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — genuine normal item-use rejection reproduced; deployment/fuse implementation awaiting GREEN and disarm proof.
+
 - [Alterac captain combat](investigations/alterac-captain-combat.md) — AV25 source stat budget and incomplete normal combat driver; missing script is not a proven wipe cause.
 
 - [Authored goober spell dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) — native persistent-owner Workshop pickup RED6→GREEN1/1 with leased dependency provenance; timed siege activation remains separate.
