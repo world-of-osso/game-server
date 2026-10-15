@@ -1,6 +1,8 @@
 # Wiki Index
 
-- [Schedule/deferred attribution](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15) — inclusive schedule/preparation diagnostics; root system-span boundary reproduced, corrected instrumentation passes3/3; release capture pending.
+- [st157 FIFO fixture integration](investigations/server-tick-lag.md#st157-fixture-integration-follow-up--2026-10-15) — explicit housing publishers and reply/initial-inventory fences;22 controls+5 repaired wires pass, full gate pending.
+
+- [Schedule/deferred attribution](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15) — inclusive schedule/preparation diagnostics; root system-span boundary reproduced, corrected instrumentation passes3/3; release bounds slow PostUpdate/FixedPreUpdate phases, inner cause remains open.
 
 - [Cold-login percentile follow-up](investigations/server-tick-lag.md#low-pressure-cold-login-follow-up--2026-10-14) — release cold online p9932.8ms/zero tick commits under recorded memory+IO pressure; startup209.6ms and coldmax288ms remain visible, full gameplay open.
 

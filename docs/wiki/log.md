@@ -1,3 +1,7 @@
+## 2026-10-15 — Attributed release phases and st157 fixture repairs
+
+[Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): release346 bounds first218ms frame to PostUpdate201ms and next352ms frame to FixedPreUpdate337ms, not schedule preparation; inner cost remains open and IO pressure prevents isolated timing claims. [Fixture follow-up](investigations/server-tick-lag.md#st157-fixture-integration-follow-up--2026-10-15): explicit housing consumers, continuous reply collection and initial bank normalization fence;22 controls+5 repaired wire tests pass after latest-master integration, not a full gate.
+
 ## 2026-10-15 — Schedule/deferred attribution diagnostics
 
 [Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): enclosing schedule/preparation measurements leave frame accounting unchanged. Actual deferred-command test exposed Bevy's root system spans defeating ancestry; active per-thread schedule tracking passes3/3, warning-free feature check and workspace formatting; release capture pending. Startup209.6ms/cold288ms attribution remains open.

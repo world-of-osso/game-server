@@ -182,6 +182,16 @@ The remaining startup209.6ms/cold288ms costs need schedule-level evidence before
 
 Bevy0.19 `SystemMeta::new` explicitly creates system spans with `parent: None`. Span ancestry therefore cannot recover enclosing schedules: the real deferred-command regression logged an Update stall but an empty Main phase list (`schedule-attribution-green-89a6327e.log`, FAILED1/3). `6609d15f`/`2e2aa040` track active schedule IDs per thread instead. Targeted tests pass3/3: actual deferred work over two updates, slow Local initialization and immediate system attribution (`schedule-attribution-green-final.log`); feature-enabled runtime check passes1m29s without warnings and workspace format check passes. The attributed release capture remains pending; this is not an established explanation for the measured startup/cold frames.
 
+Release `346fea6a`/protocol `4135e69`, tag `release-346fea6a-attributed-012852`, now records the previously unbounded phases: first measured frame218.2ms contains PostUpdate201.4ms (preparation0.923ms); the next351.8ms frame contains FixedPreUpdate337.1ms (preparation0.146ms). No individual system span explains those inclusive costs. Deferred commands remain the next measurement boundary, not an established cause. Startup/PostStartup loaders precede the frame timer and account for31.6s of the outer Main31.8s; do not confuse that outer duration with measured frame work.
+
+Admission1089.4ms, three achievement updates, cold onlinep9934.4ms and later9.7/10.6/9.3/8.7/9.5ms retain zero tick commits and84 successful jobs/zero failed/pending. Memoryfullavg60=[0.12,0.36]%, swap18→18GiB, pswpin+7913/pswpout+0. Admission passed both memory/IO fullavg10<1%; IO fullavg10 subsequently rose0.30→11.26%, avg60=[2.45,6.36]%. Keep this as attributed observations, not isolated timing or a claimed IO cause. Metadata, pressure and attribution logs retain exact values; owned runtime stopped.
+
+### st157 fixture integration follow-up — 2026-10-15
+
+The full gate at `0c9fc639` exposed three housing apps without their shared persistence consumer. Direct map/housing and toy item-use fixtures now install it explicitly. Housing requests collect wire replies on every update while awaiting receipts; advancing before collection expired immediate replies (reproduced5/5, then repaired5/5). All original gameplay assertions remain. Initial bank inventory normalization is also fenced before fixture-only direct DB seeds and character switching, avoiding a direct-seed/FIFO overlap. The three guild failures were not reproduced in the unchanged isolated16-test bank scope, so full-gate confirmation is still required.
+
+Latest-master `ad0b8a80` merges at `5e45d432`; new Gilneas direct DB fixture also needs `GameDatabase::new` (`6a54a648`). Intersecting native run passes22 controls, including all16 guild tests, actual bag collection, node authority/native Gilneas, and isolated world-map discovery with its unchanged50ms assertion; the remaining five housing wire tests pass after reply collection repair (`st157-fixture-and-master-controls-6a54a648.log`, `st157-housing-five-repaired-24500ddb.log`). This is not a full-suite pass.
+
 ## Sources
 
 - [crates/server/src/frame_stats.rs](../../../crates/server/src/frame_stats.rs) — frame work and fixed-step report
