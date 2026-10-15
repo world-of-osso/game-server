@@ -202,10 +202,11 @@ fn class_completeness_native_npc_dodge_attributes_and_ranged_retain_exclusions()
     for (spell, frames) in [(7384, 3), (51723, 3), (19434, 65)] {
         let mut h = spawn_native_dodge_target(0.0);
         assert_native_damage(&mut h, spell, frames);
-        assert!(crate::auras::has_aura(
-            h.app.world(),
-            h.npc,
-            CLOAK_OF_DARKNESS
-        ));
+        assert!(
+            crate::auras::has_aura(h.app.world(), h.npc, CLOAK_OF_DARKNESS),
+            "cloak absent after native spell{spell}, health{}, receipts{:?}",
+            h.health(h.npc),
+            h.inbox.log
+        );
     }
 }
