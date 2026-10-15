@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Vehicle movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) — exact installed Flags/TurnSpeed, observed seat-only-catalog omission and explicit upgrade without defaults; importer GREEN/publication/driving still pending.
+
 - [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — driver boarding/source pose/exit/death/departure GREEN3 and deploy closure GREEN4; independent-occupant stacking RED→GREEN1 retains seats0/2/3 and refuses overfill; native vehicle path open.
 
 - [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, verification and driver boarding pending.
