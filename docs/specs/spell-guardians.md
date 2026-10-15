@@ -12,6 +12,9 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - [x] Import exact local TDB creature spell rows atomically; preserve prior bindings on duplicate-key failure and reject absent source data rather than synthesizing bindings.
 - [x] Named49206's temporary Gargoyle uses its native pet-title3238 and authentic27829/51963 binding without enabling generic pet-title actors; [batch12 contract](spell-dummy-scripts.md#twelfth-batch-actorresourcesnapshot-consumers).
 
+### Feral Spirit owner inheritance
+- [ ] Actual51533→228562 creates two29264 wolves that deal positive damage to their owner's training-dummy victim without fabricated wolf AP; native owner-power changes affect subsequent damage. Source classification and stat/attack consumption must be proved separately from Summon event delivery.
+
 ### Source-backed Darkglare attack
 - [x] Native205180 effect28's103673 actor casts205231, explicitly named in the local root description, with native2000ms cast time and20000ms actor lifetime; an empty archive binding table must not disable this named binding.
 - [x] Reuse existing demon SP contribution live: changed owner spell power affects subsequent Eye Beams. This is not new Retail inheritance-percentage proof.

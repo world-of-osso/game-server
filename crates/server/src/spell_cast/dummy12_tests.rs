@@ -82,6 +82,51 @@ fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
 }
 
 #[test]
+fn class_completeness_native_feral_spirit_wolves_damage_the_owners_training_dummy() {
+    let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
+    actor_data(&mut h);
+    let caster = h.caster;
+    let dummy =
+        crate::zones::summon_creature(h.app.world_mut(), caster, 44548, [3.0, 0.0, 0.0, 0.0])
+            .expect("native Training Dummy template");
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_scripts::TrainingDummy>(dummy)
+            .is_some()
+    );
+    h.select(Some(dummy));
+    h.attack(dummy);
+    h.advance(4);
+    h.cast_and_deliver(51533, Some(dummy));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let wolves = actors(&mut h, 29264);
+    assert_eq!(wolves.len(), 2);
+    h.advance(200);
+    for wolf in wolves {
+        let damage: i32 = h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.source == Some(wolf.to_bits())
+                    && event.target == Some(dummy.to_bits())
+                    && event.kind == CombatLogKind::Damage
+            })
+            .map(|event| event.amount)
+            .sum();
+        assert!(
+            damage > 0,
+            "wolf {wolf:?} dealt {damage}; native power {:?}, melee {:?}; combat {:?}",
+            super::effects::power_stats(h.app.world(), wolf, false),
+            h.app.world().get::<crate::combat::AutoAttack>(wolf),
+            h.inbox.log
+        );
+    }
+}
+
+#[test]
 fn dummy12_feral_spirit_child_logs_two_short_lived_wolves_to_owner() {
     let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
     actor_data(&mut h);
