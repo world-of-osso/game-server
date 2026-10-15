@@ -458,7 +458,11 @@ fn read_summon_template(
     dest: super::targets::Dest,
 ) -> Option<SummonTemplate> {
     let map = *world.get::<InMap>(owner)?;
-    let difficulty = crate::zones::map_difficulty_id(world, map);
+    let difficulty = if properties.is_guardian() {
+        crate::zones::map_difficulty_id(world, map)
+    } else {
+        0
+    };
     let area = if properties.is_guardian() {
         world
             .get_resource_mut::<crate::ground::GroundMap>()
@@ -470,20 +474,10 @@ fn read_summon_template(
     let template = data.template_for(entry, difficulty)?;
     let owner_level = world.get::<Level>(owner).map_or(1, |level| level.0);
     let level = if properties.is_guardian() {
-        let tuning = data
+        let range = data
             .summon_levels
-            .content_tuning(template, map.map_id, difficulty, area)?;
-        let range = if tuning == 0 {
-            (0, 0)
-        } else {
-            data.summon_levels.range(tuning)?
-        };
-        let delta = if tuning == 0 {
-            (0, 0)
-        } else {
-            data.summon_levels.delta(entry, difficulty)
-        };
-        roll_guardian_level(owner_level, range, delta, properties.flags)
+            .guardian_range(template, map.map_id, difficulty, area)?;
+        roll_guardian_level(owner_level, range, properties.flags)
     } else {
         owner_level
     };
@@ -503,9 +497,18 @@ fn read_summon_template(
 }
 
 /// Creature::SelectLevel precedes TempSummon::InitStats and Guardian::InitStats.
-fn roll_guardian_level(owner: u8, range: (u8, u8), delta: (i8, i8), flags: u32) -> u8 {
+fn roll_guardian_level(
+    owner: u8,
+    inputs: crate::world_data::summon_levels::GuardianLevelRange,
+    flags: u32,
+) -> u8 {
     use rand::Rng;
-    let delta = rand::thread_rng().gen_range(delta.0.min(delta.1)..=delta.0.max(delta.1));
+    let (range, delta) = (inputs.range, inputs.delta);
+    let delta = if delta.0 == delta.1 {
+        delta.0
+    } else {
+        rand::thread_rng().gen_range(delta.0.min(delta.1)..=delta.0.max(delta.1))
+    };
     let minimum = i32::from(range.0) + i32::from(delta);
     let maximum = i32::from(range.1) + i32::from(delta);
     if flags & USE_CREATURE_LEVEL != 0 {

@@ -26,6 +26,9 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             unit_flags2 INTEGER NOT NULL DEFAULT 0, RegenHealth INTEGER NOT NULL DEFAULT 1,
             family INTEGER NOT NULL DEFAULT 0, type_flags INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER);
+        CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
+        CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER, ContentTuningID INTEGER);
         CREATE TABLE expected_stat (
             ID INTEGER PRIMARY KEY, ExpansionID INTEGER, CreatureHealth REAL,
             CreatureAutoAttackDps REAL, CreatureArmor REAL, ArmorConstant REAL, Lvl INTEGER

@@ -15,6 +15,7 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
     let spell = store.get(92146).unwrap();
     assert_eq!(spell.effects[0].base_points, 25.0);
     let (mut h, character) = setup(&directory.path().join("scarab.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let destination = crate::spell_cast::targets::effect_dest(
         h.app.world(),
         h.caster,
@@ -142,12 +143,12 @@ fn toyfx51_scarab_level_clamps_source_region_before_guardian_initialization() {
         .unwrap();
     assert_eq!(bounds, (1, 30));
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    for (owner_level, expected_level) in [(20, 20), (80, 30)] {
-        let (mut h, character) = setup(
-            &directory
-                .path()
-                .join(format!("scarab-level-{owner_level}.redb")),
-        );
+    for (owner_level, expected_level, use_creature_level) in
+        [(20, 20, false), (80, 30, false), (20, 30, true)]
+    {
+        let (mut h, character) = setup(&directory.path().join(format!(
+            "scarab-level-{owner_level}-{use_creature_level}.redb"
+        )));
         place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app
             .world_mut()
@@ -157,8 +158,11 @@ fn toyfx51_scarab_level_clamps_source_region_before_guardian_initialization() {
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
-        h.app
-            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        let mut properties = crate::spell_cast::summon::load_summon_properties(&conn).unwrap();
+        if use_creature_level {
+            properties.0.get_mut(&2301).unwrap().flags |= 0x100; // Source UseCreatureLevel control.
+        }
+        h.app.insert_resource(properties);
         learn_effect_toy(&mut h, character, 64881);
         assert_eq!(activate(&mut h, 64881)[0].error, None);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
