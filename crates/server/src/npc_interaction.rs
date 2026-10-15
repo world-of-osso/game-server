@@ -142,6 +142,14 @@ fn validate_npc_view(
     Ok(())
 }
 
+pub(crate) fn find_interactable_tabard_vendor(
+    world: &World,
+    player: Entity,
+    npc: Entity,
+) -> Result<&Npc, InteractionError> {
+    find_interactable_flag(world, player, npc, NpcFlags::TABARD_DESIGNER)
+}
+
 /// Repeat the normal live-NPC checks on every registrar purchase/turn-in request.
 pub(crate) fn find_interactable_petitioner(
     world: &World,
