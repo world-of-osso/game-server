@@ -850,6 +850,7 @@ fn send_character_list_update(
             class: data.class,
             appearance: data.appearance.clone(),
             equipment_appearance: data.equipment_appearance.clone(),
+            tabard: persistence::guild_tabards::load_character_design(&db.db, character_id),
         },
     };
     for (entity, authenticated) in authenticated_query.iter() {
