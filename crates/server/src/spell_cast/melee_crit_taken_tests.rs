@@ -12,7 +12,7 @@ const SLAM: u32 = 1464;
 const NATIVE_CRIT_REDUCTION: f32 = 60.0;
 
 fn protected_target() -> Harness {
-    let mut h = harness(
+    let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
         &[
             HARDENED_BATTLELYNX,
@@ -136,7 +136,7 @@ fn class_completeness_native_boulder_uses_melee_crit_taken_despite_ranged_defens
 
 #[test]
 fn class_completeness_native_shred_script_crit_precedes_victim_reduction() {
-    let mut h = harness(
+    let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
         &[5221, 768, 5215, 343232, HARDENED_BATTLELYNX],
         11,

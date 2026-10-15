@@ -1600,6 +1600,9 @@ fn query_comparison_target(
 }
 
 #[cfg(test)]
+#[path = "achievement_creature_type_tests.rs"]
+mod creature_type_tests;
+#[cfg(test)]
 #[path = "achievement_tests.rs"]
 mod tests;
 

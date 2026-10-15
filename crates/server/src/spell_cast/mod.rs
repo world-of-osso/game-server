@@ -129,9 +129,13 @@ mod warrior_stun_tests;
 mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
+mod enemy_dodge_tests;
+#[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
+#[cfg(test)]
+mod mechanic_resistance_tests;
 #[cfg(test)]
 mod melee_crit_taken_tests;
 #[cfg(test)]
@@ -139,6 +143,8 @@ mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;
 mod missiles;
+#[cfg(test)]
+mod npc_dodge_tests;
 mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
@@ -1273,7 +1279,7 @@ fn request_cast(
     spell.cast_destination = request.destination;
     spell.cast_target_item_guid = request.target_item_guid;
     let delay = cast_queue_delay(world, caster, &spell);
-    // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
+    // Compare at CastState's precision: a widened f32 window can exceed its f64 value.
     if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
         world.entity_mut(caster).insert(QueuedSpellCast {
             spell: requested_spell,
@@ -1290,8 +1296,9 @@ fn request_cast(
         .map_err(|failure| (spell.id, failure))
 }
 
-/// TrinityCore a352b1fa Player.cpp:31545-31559: one request in the last 400 ms.
-const SPELL_QUEUE_WINDOW_SECS: f32 = 0.4;
+/// One request in the last 750 ms. TrinityCore a352b1fa Player.cpp:31545-31559 and Retail
+/// use 400 ms; World of Osso widens it to the 750 ms hasted-GCD floor (user, 2026-10-15).
+const SPELL_QUEUE_WINDOW_SECS: f32 = 0.75;
 
 /// Player-request slot, distinct from the snapshot belonging to the active cast bar.
 #[derive(Component)]

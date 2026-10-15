@@ -28,7 +28,11 @@ fn prepare(h: &mut Harness, now: i64) {
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let criteria = crate::achievement::load_achievement_catalog(&conn).unwrap();
-    let activities = crate::adventure_guide::load_catalog(&conn, &criteria);
+    let journal_csv = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("db2/active/AdventureJournal.csv");
+    let activities = crate::adventure_guide::load_catalog(&conn, &criteria, &journal_csv);
     h.app
         .insert_resource(criteria)
         .insert_resource(activities)

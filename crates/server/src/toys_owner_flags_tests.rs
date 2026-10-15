@@ -27,7 +27,7 @@ fn assert_source_actor_flags(title: i32, flags: u32, owner_is_player: bool, cont
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Npc, Player, UnitFlags, UnitIsPet, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -35,8 +35,7 @@ fn assert_source_actor_flags(title: i32, flags: u32, owner_is_player: bool, cont
     let spell = store.get(92146).unwrap().clone();
     let (mut h, _) = setup(&directory.path().join("owner-flags.redb"));
     h.app.insert_resource(store);
-    h.app
-        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app.insert_resource(shared_world_data(&path));
     let mut properties = crate::spell_cast::summon::load_summon_properties(&conn).unwrap();
     let property = properties.0.get_mut(&2301).unwrap();
     property.title = title;
