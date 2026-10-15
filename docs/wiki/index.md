@@ -4,7 +4,8 @@
 
 - [Honor-family source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) — pinned player-victim reward dispatch missing; scoreboard/type70 cannot supply31/35/52/53/113.19/22/71/204 remain source gaps.
 
-- [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
+- [C++ waypoint source generation/ownership](systems/navigation.md#current-controlled-physical-proof) — smooth controls, active-owner reset and exact moving feet; controlled three-path/two-camp traversal passes, natural/native clear open.
+- [Wailing chamber approach](systems/boss-scripts.md#wailing-chamber-approach--2026-10-14) — source1s speech/+5s launch; actual fourth-path78.6692yd with floor/budget/corridor/LOS proof.
 
 - [Alterac captain combat](investigations/alterac-captain-combat.md) — AV25 source stat budget and incomplete normal combat driver; missing script is not a proven wipe cause.
 
