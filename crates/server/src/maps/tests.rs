@@ -355,6 +355,8 @@ fn housing_wire_home_map_admission_restores_visited_identity_without_component_g
 mod housing_dye_wire_tests;
 #[path = "housing_editor_tests.rs"]
 mod housing_editor_tests;
+#[path = "housing_location_race_tests.rs"]
+mod housing_location_race_tests;
 #[path = "housing_location_tests.rs"]
 mod housing_location_tests;
 
