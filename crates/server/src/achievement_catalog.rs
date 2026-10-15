@@ -432,6 +432,8 @@ impl MythicRequirements {
 mod conditions;
 #[path = "achievement_mythic_predicates.rs"]
 mod mythic_predicates;
+#[path = "achievement_node_counts.rs"]
+mod node_counts;
 #[path = "achievement_overlays.rs"]
 mod overlays;
 #[path = "achievement_single_modifiers.rs"]
@@ -511,6 +513,8 @@ pub(crate) struct ReferencePlayer {
     pub group_size: Option<usize>,
     pub arena_team_size: Option<u8>,
     pub in_ranked_arena: bool,
+    /// Live accepted node-copy Alliance/Horde counts; None is missing authority, not zero.
+    pub controlled_node_counts: Option<[u8; 2]>,
     /// None when health authority is absent; positive health and native life state agree.
     pub alive: Option<bool>,
 }
@@ -547,6 +551,7 @@ enum CriteriaFact {
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
     LessThanGroupMembers(u32),
     NotInParty,
+    EitherTeamNodeCount(u8),
     /// Accepted current areas: descendants for17, one flagged parent for Zone41.
     Area(BTreeSet<u32>),
     Race(u8),
@@ -628,6 +633,9 @@ impl CriteriaFact {
                 player.group_size.is_some_and(|size| size < *limit as usize)
             }
             Self::NotInParty => player.group_size == Some(0),
+            Self::EitherTeamNodeCount(required) => player
+                .controlled_node_counts
+                .is_some_and(|counts| counts.contains(required)),
             Self::Map(map) => player.map == *map,
             Self::PlayerMaps(maps) => maps.contains(&player.map),
             Self::MapInstanceType(maps) => maps.contains(&player.map),
@@ -1432,6 +1440,7 @@ fn load_criteria_facts(
                 .filter(|level| (1..=shared::pet_battle::MAX_PET_LEVEL).contains(level))
                 .map(CriteriaFact::BattlePetTeamLevel),
             35 => Some(CriteriaFact::NotInParty),
+            67 => node_counts::required_owned_nodes(asset).map(CriteriaFact::EitherTeamNodeCount),
             46 => small
                 .filter(|percent| (1..=100).contains(percent))
                 .map(CriteriaFact::TargetHealthBelowPercent),
