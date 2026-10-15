@@ -247,7 +247,8 @@ fn shred_damage(rank: bool, bleeding: bool) -> f32 {
     if rank {
         ids.push(231063);
     }
-    let mut h = harness(Vec::new(), &ids, 11).expect("real world.db");
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 11).expect("real world.db");
     h.cast_and_deliver(768, Some(h.caster));
     h.advance(35);
     if bleeding {
