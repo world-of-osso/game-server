@@ -38,7 +38,6 @@ type MountedEmoteQuery<'w, 's> = Query<
     's,
     (
         &'static shared::components::Mounted,
-        &'static shared::components::PlayerMotion,
         &'static crate::interest::NetworkVisibility,
     ),
 >;
@@ -154,26 +153,15 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
     route_emote_events(&emotes, &mut q.emote_senders, &q.ignore_lists, &q.mounted);
 }
 
-/// The source action is mounted and stationary, never a jump/flight request.
+/// The client selects stationary jump; TC's relay does not reclassify movement.
 fn accepts_mount_special(q: &ChatSystemQueries, emote: &CollectedEmote) -> bool {
-    use shared::components::PlayerMotion as Motion;
     if emote.event.emote != EmoteKind::MountSpecial {
         return true;
     }
     if !q.entered.iter().any(|link| link.0 == emote.player_entity) {
         return false;
     }
-    let Ok((_, motion, _)) = q.mounted.get(emote.player_entity) else {
-        return false;
-    };
-    const MOVING_OR_AIRBORNE: u64 = Motion::FORWARD
-        | Motion::BACKWARD
-        | Motion::STRAFE_LEFT
-        | Motion::STRAFE_RIGHT
-        | Motion::FALLING
-        | Motion::FLYING
-        | Motion::SWIMMING;
-    motion.0 & MOVING_OR_AIRBORNE == 0
+    q.mounted.contains(emote.player_entity)
 }
 
 fn mark_activity(q: &mut ChatSystemQueries, player: Entity, activity_at: std::time::Duration) {
@@ -578,7 +566,7 @@ fn route_emote_events(
             let accepts = if emote.event.emote == EmoteKind::MountSpecial {
                 mounted
                     .get(emote.player_entity)
-                    .is_ok_and(|(_, _, visibility)| {
+                    .is_ok_and(|(_, visibility)| {
                         link.0 == emote.player_entity
                             || visibility.visible_senders().any(|peer| peer == connection)
                     })

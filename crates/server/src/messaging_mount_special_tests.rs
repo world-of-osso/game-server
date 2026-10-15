@@ -156,7 +156,7 @@ fn mount_special_uses_authoritative_actor_and_observer_set_without_chat_or_crite
 }
 
 #[test]
-fn mount_special_refuses_unmounted_moving_and_airborne_senders() {
+fn mount_special_refuses_unmounted_and_not_entered_senders() {
     let (_file, mut app, player, connection, character) = emote_app();
     app.world_mut().entity_mut(connection).insert(InWorld {
         character_id: character,
@@ -171,17 +171,7 @@ fn mount_special_refuses_unmounted_moving_and_airborne_senders() {
         mount_display_id: 2404,
         ..Default::default()
     });
-    for flags in [
-        PlayerMotion::FORWARD,
-        PlayerMotion::STRAFE_LEFT,
-        PlayerMotion::FALLING,
-        PlayerMotion::FLYING,
-        PlayerMotion::SWIMMING,
-    ] {
-        app.world_mut()
-            .entity_mut(player)
-            .insert(PlayerMotion(flags));
-        mount_request(&mut app, connection);
-        assert!(events(&mut app, connection).is_empty(), "flags {flags:#x}");
-    }
+    app.world_mut().entity_mut(connection).remove::<InWorld>();
+    mount_request(&mut app, connection);
+    assert!(events(&mut app, connection).is_empty());
 }
