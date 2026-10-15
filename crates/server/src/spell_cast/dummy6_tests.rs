@@ -86,7 +86,7 @@ fn dummy6_sunfire_rank_spreads_only_dot_to_nearby_enemies() {
 
 #[test]
 fn dummy6_templars_verdict_resolves_named_damage_child() {
-    let mut h = harness(Vec::new(), &[85256, 224266], 2).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[85256, 224266], 2).unwrap();
     h.set_power(PowerType::HolyPower, 5.0);
     h.cast_and_deliver(85256, Some(h.npc));
     h.advance(8);
@@ -120,7 +120,7 @@ fn dummy6_starfire_primary_full_secondary_seventy_percent() {
 }
 #[test]
 fn dummy6_keg_smash_primary_bonus_keeps_area_damage_and_slow() {
-    let mut h = harness(Vec::new(), &[121253], 10).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[121253], 10).unwrap();
     let near = spawn_npc(&mut h.app, 4.0);
     let far = spawn_npc(&mut h.app, 40.0);
     let ally = spawn_player(&mut h.app, 10, 4.0);
@@ -160,7 +160,7 @@ fn butchery(rank: bool, targets: usize) {
     if rank {
         ids.push(294029);
     }
-    let mut h = harness(Vec::new(), &ids, 3).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 3).unwrap();
     let c = h.caster;
     if rank {
         apply(&mut h, c, c, 294029, u32::MAX);

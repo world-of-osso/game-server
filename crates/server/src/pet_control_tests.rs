@@ -389,6 +389,10 @@ fn a_called_wolf_sends_its_owner_the_retail_pet_bar() {
     );
     let world = p.h.app.world();
     assert_eq!(
+        world.get::<shared::components::UnitIsPet>(p.pet),
+        Some(&shared::components::UnitIsPet(true))
+    );
+    assert_eq!(
         world.get::<UnitSummonedBy>(p.pet),
         Some(&UnitSummonedBy(p.h.caster.to_bits()))
     );

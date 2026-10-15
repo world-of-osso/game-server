@@ -9,12 +9,18 @@ mod ragefire_completion;
 
 #[path = "shadowfang_keep.rs"]
 mod shadowfang_keep;
+#[path = "wailing_aggro.rs"]
+mod wailing_aggro;
+#[path = "wailing_awakening.rs"]
+mod wailing_awakening;
 #[path = "wailing_escort.rs"]
 mod wailing_escort;
 #[path = "wailing_physical.rs"]
 mod wailing_physical;
 #[path = "wailing_progress.rs"]
 mod wailing_progress;
+#[path = "wailing_ritual_waves.rs"]
+mod wailing_ritual_waves;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
@@ -33,7 +39,12 @@ fn bound_boss_with_catalog(
 /// Use the production importer on a consistent isolated snapshot, never
 /// canonical data. The TempDir stays alive until all fixture resources are loaded.
 fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path::PathBuf) {
-    let directory = tempfile::tempdir().expect("isolated encounter fixture directory");
+    // Concurrent full-world snapshots must not consume the shared /tmp tmpfs.
+    let fixture_root =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/encounter-fixtures");
+    std::fs::create_dir_all(&fixture_root).expect("disk-backed encounter fixture root");
+    let directory =
+        tempfile::tempdir_in(fixture_root).expect("isolated encounter fixture directory");
     let path = directory.path().join("encounter-mirror.sqlite");
     let source = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("read-only encounter source database");
@@ -213,7 +224,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
-            || (map_id == 43 && [3636, 3654, 3678, 3679, 5048].contains(id))
+            || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);

@@ -42,7 +42,8 @@ fn damaged_by(h: &mut Harness, spell_id: u32) -> Vec<u64> {
 
 #[test]
 fn tiger_palm_spends_50_energy_and_hits() {
-    let Some(mut h) = harness(Vec::new(), &[TIGER_PALM], MONK) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(Vec::new(), &[TIGER_PALM], MONK)
+    else {
         return;
     };
     h.set_power(PowerType::Energy, 100.0);
@@ -58,7 +59,7 @@ fn tiger_palm_spends_50_energy_and_hits() {
 #[test]
 fn windwalker_tiger_palm_generates_2_chi_and_blackout_kick_spends_3() {
     let ids = [TIGER_PALM, BLACKOUT_KICK, WINDWALKER_MONK, WINDWALKER_CHI];
-    let Some(mut h) = harness(Vec::new(), &ids, MONK) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, MONK) else {
         return;
     };
     h.advance(1);
@@ -79,7 +80,11 @@ fn windwalker_tiger_palm_generates_2_chi_and_blackout_kick_spends_3() {
 /// Demon's Bite 344859 triggers 162243: damage and 25 Fury ± 20% (Variance 0.4).
 #[test]
 fn demons_bite_generates_fury() {
-    let Some(mut h) = harness(Vec::new(), &[DEMONS_BITE_INITIAL, 162_243], DEMON_HUNTER) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[DEMONS_BITE_INITIAL, 162_243],
+        DEMON_HUNTER,
+    ) else {
         return;
     };
     h.set_power(PowerType::Fury, 0.0);
@@ -99,7 +104,8 @@ fn chaos_strike_spends_40_fury_and_hits_twice() {
     let mut refund = world_db().unwrap().store.get(197_125).unwrap().clone();
     // This test isolates gross cost and weapon hits; dummy5 covers refund endpoints.
     refund.aura_options.as_mut().unwrap().proc_chance = 0;
-    let Some(mut h) = harness(vec![refund], &ids, DEMON_HUNTER) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(vec![refund], &ids, DEMON_HUNTER)
+    else {
         return;
     };
     h.set_power(PowerType::Fury, 50.0);
