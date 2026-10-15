@@ -154,6 +154,12 @@ The same quiet window measured `send_initial_inventory`45.199ms despite its asyn
 
 These are native functional/diagnostic proofs, not a new release p99 result. The previous55.310ms grid-registration span and other cold work remain visible; only a new pressure-controlled release run can establish the new cold percentile. Full gameplay/all-writer/HOL acceptance remains open.
 
+### Decor collection FIFO — 2026-10-14
+
+`4ae5696c` moves both normal bag collection and authenticated `HousingRequest::RedeemDecor` to the serial writer. Tick-side preflight preserves the existing authenticated actor, same-build item/decor linkage and item eligibility checks; the worker revalidates the actual Retail bag GUID and atomically consumes it while merging storage and preserving current inventory gold. Bag deltas, owned-storage snapshots and request errors publish only after the receipt and only to the same authenticated account/character/player session. Full housing and direct item-use fixtures install the same persistence consumer; no runtime resource fallback exists.
+
+A real HostClient bag-use held-writer RED252.067ms becomes GREEN; bag and HousingRequest controls both preserve earlier queued gold777, consume exactly one245259 and publish stored1693 quantity1 with the correct request identity. Changed item-use, housing-rule, purchase-presence and durable storage controls pass26/26 (`housing-collection-fifo-green-4ae5696c.log`). This does not convert housing purchase/layout/access/dyes/location writers or establish release gameplay coverage. [Housing acquisition contract](../../specs/housing-catalog.md#atomic-ownership-and-basic-storage).
+
 Contract: [server tick budget](../../specs/server-tick-budget.md). Existing [persistence](../systems/persistence.md) boundaries remain authoritative.
 
 ## Sources

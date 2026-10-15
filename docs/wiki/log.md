@@ -1,3 +1,7 @@
+## 2026-10-14 — FIFO housing decor collection
+
+[Tick lag](investigations/server-tick-lag.md#decor-collection-fifo--2026-10-14): bag use and authenticated redemption consume fresh inventory on FIFO; owned-storage/inventory/error publication follows same-session receipts. Held-writer RED252ms becomes GREEN with prior wallet state preserved;26 focused native controls pass. Other housing writers and release gameplay remain open.
+
 ## 2026-10-14 — Cold aura population, shared snapshots and mount item FIFO
 
 [Tick lag](investigations/server-tick-lag.md#cold-population-and-request-catalog-snapshots--2026-10-14): dormant initialization/wake and owned catalog snapshot RED/GREEN; mount consumption preserves earlier FIFO wallet state. Native36/36 plus vendor control pass; latest departure/merge scopes5/5 and catalog30/30 pass. Runtime check is warning-free; new release acceptance remains open.
