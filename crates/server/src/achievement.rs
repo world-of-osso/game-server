@@ -1109,6 +1109,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .into_iter()
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
+        auras_known: world.get::<crate::auras::ActiveAuras>(player).is_some(),
         known_spells: known_player_spell_ids(world, player),
         spell_knowledge_complete: spell_knowledge_complete(world, player),
         earned_achievements: earned_player_achievement_ids(world, player),
