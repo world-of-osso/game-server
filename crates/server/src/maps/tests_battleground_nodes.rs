@@ -1465,9 +1465,13 @@ fn assert_node_win_progress(
                 (qualified > 0).then_some(qualified)
             );
             assert_eq!(
-                state.criteria_progress.get(&14944).copied(),
+                state.criteria_progress.get(&16513).copied(),
                 (wins > 0).then_some(wins),
                 "ordinary wins still credit when ownership predicate fails"
+            );
+            assert!(
+                !state.criteria_progress.contains_key(&14944),
+                "timed/start/fail criterion stays disabled"
             );
             let account = state.account.as_ref().unwrap();
             assert_eq!(
@@ -1512,6 +1516,11 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
         )
         .unwrap();
     assert_eq!(required, 10, "installed authored Full Coverage threshold");
+    let ordinary: u32 = source.query_row("SELECT COUNT(*) FROM criteria WHERE ID=16513 AND Type=1 AND Asset=761 AND ModifierTreeId=0 AND StartEvent=0 AND StartTimer=0 AND FailEvent=0 AND EligibilityWorldStateID=0", [], |row| row.get(0)).unwrap();
+    assert_eq!(
+        ordinary, 1,
+        "the control must be a sourced unconditional Gilneas win"
+    );
     let file = tempfile::NamedTempFile::new().unwrap();
     create_node_achievement_characters(file.path(), &template);
     let mut dates = std::collections::BTreeMap::new();
