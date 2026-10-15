@@ -484,7 +484,36 @@ pub(crate) fn modded_base_points(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let base_points = calc_base_value(world, caster, spell, effect)
+    let base_points = calc_base_value(world, caster, spell, effect);
+    modify_base_points(world, caster, spell, effect, base_points)
+}
+
+/// TC CalcValue applies variance before level contributions and point modifiers.
+pub(super) fn roll_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
+    let base_points = calc_base_value(world, caster, spell, effect);
+    let delta = (effect.variance * 0.5).abs();
+    let rolled_points = if delta == 0.0 {
+        base_points
+    } else {
+        let roll = rand::Rng::gen_range(&mut rand::thread_rng(), -delta..=delta);
+        base_points + base_points * roll
+    };
+    modify_base_points(world, caster, spell, effect, rolled_points)
+}
+
+fn modify_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    base_points: f32,
+) -> f32 {
+    let base_points = base_points
         + level_scaled_points(world, caster, spell, effect)
         + crate::auras::mastery::effect_bonus(world, caster, spell, effect);
     let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, base_points);
