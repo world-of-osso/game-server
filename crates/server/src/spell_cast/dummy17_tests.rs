@@ -204,7 +204,8 @@ fn dummy17_blood_boil_applies_plague_to_hit_enemies_unless_rank_replaces_it() {
 
 #[test]
 fn dummy17_marrowrend_generates_three_bone_shield_stacks_up_to_native_cap() {
-    let mut h = fixture(&[195182, 195181], &[195182], 6);
+    let mut h = fixture(&[195182, 195181, SUNWELL_RADIANCE], &[195182], 6);
+    apply_native_enemy_dodge_reduction(&mut h);
     let npc = h.npc;
     for expected in [3, 6, 9, 10] {
         h.set_power(PowerType::Runes, 6.0);
