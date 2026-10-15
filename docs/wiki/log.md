@@ -1,3 +1,7 @@
+## 2026-10-15 — Normal Demolisher spellclick promotion
+
+[Demolisher source row](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): authentic copy/map628 promotion RED proves34775→66245 omitted. Exact source-row copy and missing-source rollback added inside normal population transaction; process GREEN pending, no canonical write. [Movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) importer3PASS retains source Flags/TurnSpeed; current driving/native gates remain open.
+
 ## 2026-10-15 — Authored vehicle movement metadata
 
 [Vehicle catalog](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15): actual source Flags/TurnSpeed omission RED, importer projection/seat-only schema upgrade added without synthetic defaults. Fresh/upgrade/idempotence/missing-source preflight controls pending; no canonical publication or movement/native claim.

@@ -36,9 +36,13 @@ Multiple occupants expose a separate stacking RED at5b2a0569: the second friendl
 
 ### Vehicle movement metadata — implementation2026-10-15
 
-The prior server catalog imported only Vehicle.ID/SeatID_0..7; normal Demolisher509 driving also needs the installed Flags and TurnSpeed. Current local CSV values1594726007/1.04719758 were dropped by the importer; the existing-seat-only upgrade regression reproduces missing Flags (`isle-vehicle-driving-metadata-red1.log`,b7aef39f). The importer now projects both fields, clears old rows inside its transaction before adding required columns without synthetic defaults, then inserts every authored value. Fresh imports and repeat imports use the same columns. Runtime driving and metadata GREEN are not yet proved.
+The prior server catalog imported only Vehicle.ID/SeatID_0..7; normal Demolisher509 driving also needs the installed Flags and TurnSpeed. Current local CSV values1594726007/1.04719758 were dropped by the importer; the existing-seat-only upgrade regression reproduces missing Flags (`isle-vehicle-driving-metadata-red1.log`,b7aef39f). The importer now projects both fields, clears old rows inside its transaction before adding required columns without synthetic defaults, then inserts every authored value. Fresh imports and repeat imports use the same columns. Fresh/seat-only-upgrade/repeat/unrelated-data and missing-TurnSpeed preflight tests pass3/3 at39f42801 (`isle-vehicle-driving-metadata-green1.log`). Runtime driving and canonical publication remain unproved.
 
 Lead-only publication after the importer gate: `python3 scripts/import-vehicles.py ../game-engine/data/db2/active data/world.db`. Agents use disposable databases; no canonical write accompanies this implementation. The movement consumer still needs its own input/control and native proof.
+
+### Demolisher spellclick publication — implementation2026-10-15
+
+Canonical content_npc_spellclick_spells lacks34775 despite TDB's authored66245/flags1/user0 row. Normal map628 promotion also omitted it, reproduced on an authentic private database copy (`isle-vehicle-spellclick-publication-red1.log`,3516720c). `promote_battlegrounds.py --maps 628` now copies those exact rows inside its existing population transaction, preserves other NPC entries and refuses missing source rows so the transaction rolls back. Positive/repeat/rollback verification is pending; no canonical application occurred. The diagnostic TDB-only runtime-fixture catalog must retire once this normal publication path is proved.
 
 ### Mounting (SPELL_AURA_MOUNTED 78)
 
