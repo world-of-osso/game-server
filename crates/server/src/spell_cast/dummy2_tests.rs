@@ -189,19 +189,38 @@ fn dummy2_rogue_backstab_deals_twenty_percent_more_from_behind() {
     assert_eq!(h.power(PowerType::ComboPoints), 1.0);
 }
 
-#[test]
-fn dummy2_rogue_backstab_from_front_keeps_base_damage() {
-    let mut h = harness(Vec::new(), &[53], 4).expect("real world.db required");
+fn frontal_backstab_harness(guaranteed_block: bool) -> Harness {
+    let mut h = harness(Vec::new(), &[53, 10021], 4).expect("real world.db required");
+    if guaranteed_block {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.npc,
+                target: h.npc,
+                spell_id: 10021,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
     h.app
         .world_mut()
         .get_mut::<shared::components::Position>(h.caster)
         .unwrap()
         .x = 5.0;
     h.set_power(PowerType::Energy, 100.0);
-    h.cast_and_deliver(53, Some(h.npc));
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(varied(107.31 * 260.0 / 370.0).contains(&(5000.0 - h.health(h.npc))));
-    assert_eq!(h.power(PowerType::ComboPoints), 1.0);
+    h
+}
+
+#[test]
+fn dummy2_rogue_backstab_from_front_keeps_base_damage() {
+    for guaranteed_block in [false, true] {
+        let mut h = frontal_backstab_harness(guaranteed_block);
+        h.cast_and_deliver(53, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(varied(107.31 * 260.0 / 370.0).contains(&(5000.0 - h.health(h.npc))));
+        assert_eq!(h.power(PowerType::ComboPoints), 1.0);
+    }
 }
 
 #[test]
@@ -597,19 +616,18 @@ fn dummy2_hunter_cobra_shot_level_curve_reaches_unity_at_twenty() {
 
 #[test]
 fn dummy2_rogue_backstab_level_curve_reaches_unity_at_twenty() {
-    for (level, multiplier) in [(19, 359.0 / 370.0), (20, 1.0), (80, 1.0)] {
-        let mut h = harness(Vec::new(), &[53], 4).expect("real world.db required");
+    for (level, multiplier, guaranteed_block) in [
+        (19, 359.0 / 370.0, false),
+        (20, 1.0, false),
+        (80, 1.0, false),
+        (20, 1.0, true),
+    ] {
+        let mut h = frontal_backstab_harness(guaranteed_block);
         h.app
             .world_mut()
             .get_mut::<shared::components::Level>(h.caster)
             .unwrap()
             .0 = level;
-        h.app
-            .world_mut()
-            .get_mut::<shared::components::Position>(h.caster)
-            .unwrap()
-            .x = 5.0;
-        h.set_power(PowerType::Energy, 100.0);
         h.cast_and_deliver(53, Some(h.npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert!(varied(107.31 * multiplier).contains(&(5000.0 - h.health(h.npc))));
