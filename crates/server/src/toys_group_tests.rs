@@ -71,6 +71,14 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
         assert!(world.get::<ModelDisplay>(*actor).unwrap().display_id > 0);
         // Native properties3535/4799 carry JoinSummonerSpawnGroup0x200.
         if matches!(item, 112324 | 120857 | 142536 | 151877 | 229828) {
+            assert!(
+                world
+                    .get::<shared::components::UnitFlags>(*actor)
+                    .is_some_and(
+                        |flags| flags.0 & crate::faction::UNIT_FLAG_PLAYER_CONTROLLED != 0
+                    ),
+                "native player-owned spawn-group minion flag for {item}"
+            );
             assert_eq!(
                 world
                     .get::<crate::creature_ai::FollowOwner>(*actor)
