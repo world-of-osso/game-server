@@ -92,6 +92,83 @@ fn dormant(app: &App, entity: Entity) -> bool {
 }
 
 #[test]
+fn cold_world_registration_applies_dormancy_without_rebuilding_creature_tables() {
+    use bevy::ecs::system::{IntoSystem, System};
+    use shared::components::{Health, Npc};
+    use std::time::{Duration, Instant};
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_plugins(GridActivityPlugin);
+    app.insert_resource(crate::world_data::load_world_data(
+        &crate::test_data::world_db_path(),
+    ));
+    app.add_systems(
+        PostStartup,
+        |mut commands: Commands, data: Res<WorldData>| {
+            for map in crate::maps::HOSTED_CONTINENTS {
+                crate::zones::spawn_map_creatures(
+                    &mut commands,
+                    &data,
+                    crate::zones::MapContent::continent(map),
+                    false,
+                );
+            }
+        },
+    );
+    app.world_mut().run_schedule(PostStartup);
+    let world = app.world_mut();
+    let population = world.query::<&Npc>().iter(world).count();
+    assert!(
+        population > 180_000,
+        "cold proof needs the actual hosted population"
+    );
+    let mut static_creatures = world.query_filtered::<(Entity, &Position, &InMap, &Health),
+        (With<Npc>, Without<WaypointState>, Without<FormationMember>)>();
+    let (creature, position, map, health) = static_creatures.iter(world).next().unwrap();
+    let (creature, position, map, health) = (creature, *position, *map, health.current);
+    let mut registration = IntoSystem::into_system(register_creatures);
+    registration.initialize(world);
+    registration
+        .run_without_applying_deferred((), world)
+        .unwrap();
+    let started = Instant::now();
+    registration.apply_deferred(world);
+    let elapsed = started.elapsed();
+    let dormant_population = world
+        .query_filtered::<&Npc, With<GridDormant>>()
+        .iter(world)
+        .count();
+    assert_eq!(dormant_population, population);
+    eprintln!("cold {population} creature dormancy application: {elapsed:?}");
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "dormancy registration rebuilt creature tables: {elapsed:?}"
+    );
+    let player = world
+        .spawn((
+            map,
+            position,
+            Player {
+                name: "ColdWake".into(),
+                race: 1,
+                class: 1,
+                appearance: default(),
+            },
+        ))
+        .id();
+    app.world_mut().run_schedule(FixedPreUpdate);
+    assert!(
+        !dormant(&app, creature),
+        "nearby player must wake the real creature"
+    );
+    assert_eq!(app.world().get::<Health>(creature).unwrap().current, health);
+    app.world_mut().despawn(player);
+    app.world_mut().run_schedule(FixedPreUpdate);
+    assert!(dormant(&app, creature), "leaving must restore dormancy");
+    assert_eq!(app.world().get::<Health>(creature).unwrap().current, health);
+}
+
+#[test]
 fn grid_of_matches_azerothcore_grid_boundaries() {
     let map = InMap::continent(0);
     let (x, _, z) = wow_to_bevy(533.0, -1.0, 0.0);
