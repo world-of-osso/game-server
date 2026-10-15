@@ -10,7 +10,7 @@ How world creatures decide to fight: `crates/server/src/creature_aggro.rs` (`Cre
 |------|-----------|------------|
 | `Passive` | critters (type 8), non-combat pets (12), triggers (flags_extra 0x80), `IMMUNE_TO_PC` (unit_flags 0x100), `npc_training_dummy` | none |
 | `Reactive` | civilians (flags_extra 0x2) | `ThreatTable`, `CreatureState::Idle` |
-| `Aggressive` | everything else | + `AggroRange(detection_range)` |
+| `Aggressive` | everything else | + `AggroRange` proximity marker |
 
 Without a `ThreatTable` a creature never engages: `add_threat` ignores it. Hostility is not part of the mode: an aggressive creature that is neutral to the player (Stonetusk Boar, template 189) never passes the on-sight reaction check, matching AzerothCore where `MoveInLineOfSight` tests `IsHostileTo`.
 
@@ -18,9 +18,9 @@ Measured on world.db (2026-09-25): many Elwynn low-level templates are civilian 
 
 ## Aggro on sight
 
-`aggro_on_sight_system`: for each idle, alive, non-dormant creature with `AggroRange`, the nearest player that is inside `aggro_radius(detection_range, creature level, player level)`, whose FactionTemplate reaction from the creature is Hostile, and who is a valid victim, is engaged via `attack_start`.
+`aggro_on_sight_system`: each idle, alive, non-dormant AggroRange creature engages the nearest valid hostile player inside the source-derived center-distance boundary and server LOS. Creature relocation perception uses the same calculation for NPC targets, including followers.
 
-`aggro_radius` is `Creature::GetAggroRange`: `detection_range − (player level − creature level)`. A tuned creature's level here is its level against that player ([[level-scaling]]), the difference capped at −25, clamped to 5..45; below 1 yard it is 0. No line-of-sight or Z test (no collision data, creature Y is not kept on the ground while moving).
+`creature_aggro_distance.rs` implements pinned TC a352b1fa Creature.cpp:2165–2206 GetAttackDistance:15 minus own reach, level difference, detect modifiers below the max-player-level gate, and HealthScalingExpansion cap; clamp5..45 before adding both combat reaches. Defaults are Rate.Creature.Aggro1 and MaxPlayerLevel90. Model reach comes from encounter_creature_model_info and UnitScale; missing authority reports an error, without guessed reach. The old detection_range formula was the wrong pet-style boundary. At level30 versus32 with1.5yd reaches, the center boundary is14.5yd rather than18. The NPC grid covers post-clamp reaches with a conservative per-copy maximum, including display/scale changes. LOS remains unchanged; the separate Z attack gate remains unimplemented.
 
 Valid victim (`valid_victim`, used for on-sight and engaged targets): health above 0, no NPC `DeathState`, `PlayerDeathState` Alive (or absent), not on a `TaxiFlight`, and `FactionTemplates::can_attack(creature, victim)`.
 
