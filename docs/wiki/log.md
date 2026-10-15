@@ -1,3 +1,7 @@
+## 2026-10-15 — Winner's Podium source placement
+
+[Podium54](systems/toys.md#winners-podium-source-placement-2026-10-15): real-source RED3 for missing240220, scaled player-front minimum and destination138 airborne height; minimal source fix GREEN6/6 at3c2d0bb6, with real learning/use/20min simulation expiry and retained62/Bashiok/Shrine87 controls. Native/importer/final gates pending; no runtime clock or cooldown changes.
+
 ## 2026-10-15 — Source guardian level selection
 
 [Guardian51](systems/toys.md#source-guardian-level-selection-2026-10-15): actual UseToy owner80 Scarabs RED80→GREEN30, owner20 retained20; template/map/destination-area tuning and difficulty delta precede guardian initialization, explicit UseCreatureLevel. Thirteen final controls pass at0e2c24e8, including retained class/count/follow/expiry/startup fixtures. Merged check/format/build gates pass; fresh private UDP bag-learning/UseToy receives29/26 own Scarabs at20/30 for owners20/80. Exact binary/source ledger linked from the system page. Complete guardian-stat/AI parity remains open.
