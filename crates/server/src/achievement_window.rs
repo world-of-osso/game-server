@@ -468,6 +468,7 @@ impl AchievementCatalog {
             TreeOperator::SumChildren => Some(self.sum_counters(id, state, false)),
             TreeOperator::SumChildrenWeight => Some(self.sum_counters(id, state, true)),
             TreeOperator::MaxChild => Some(self.max_counter(id, state)),
+            TreeOperator::CountDirectChildren => Some(self.count_started_children(id, state)),
             TreeOperator::All => {
                 let children = self.children.get(&id)?;
                 if children.len() == 1 {
