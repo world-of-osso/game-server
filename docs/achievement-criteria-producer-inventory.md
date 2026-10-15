@@ -6,9 +6,11 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5509 ordinary (3491 account/2018 character),1824 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5511 ordinary (3491 account/2020 character),1824 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Native KillCreature0 plain SingleFalse PlayerHasAura8 uses signed -8, authored spell metadata and known actor ActiveAuras; missing authority rejects. Every alive16/difficulty68 companion remains required; no generic negation. Compiler43/43/generated5765(+2); genuine native REDb4656bd9 accepts lethal686 on controlled58739 but leaves20693 absent. Native GREEN is pending. Census adds only character7257/10458, no removals or source-hash changes; controlled identities/HP do not certify source boss encounters. [Details](wiki/systems/dungeon-achievements.md#absent-player-aura-kill-guard).
 
 - Complete plain root Some1 area17/zone41 alternatives retain typed leaves and validate every authored asset before unioning accepted current areas.17 follows recursive ancestry;41 uses only the flagged immediate-parent zone. Compiler41/41/generated5759(+22); genuine native selfie181842 RED at8984dbbd has27968None despite a successful cast at controlled cached254. Integrated995acc3c native/catalog/prior17/41/pinned GREEN8/8(59.21s): actual181842/cached254, wrong1519/refused/idle/persisted reopen; typed-member and missing-zone controls. Census5506ordinary(3491account/2015character)/1824statistics adds exactly1785/3557/6558/6559/6560/9248/9264/9463/9487/9630/9924, with no removals or input-hash changes. No full achievement, terrain-travel, acquisition or UI proof. [Details](wiki/systems/dungeon-achievements.md#typed-areazone-alternatives).
 
@@ -90,7 +92,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 
 | Type | Pinned source name | Raw | Current roots | Orphans | State / producer evidence |
 |---:|---|---:|---:|---:|---|
-| 0 | KillCreature | 7403/10169 | 3487/4429 | 3916 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 0 | KillCreature | 7405/10169 | 3489/4429 | 3916 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 1 | WinBattleground | 29/212 | 27/160 | 2 | Native completed-map wins; positive67 loads only exact occupied-node equality OR5717/8656, read from current accepted NodeBattle copy. Native twelve-match5253 ten-win grant passes; other world states/conditions remain disabled. |
 | 3 | CompleteAnyResearchProject | 0/12 | 0/12 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 4 | FindResearchObject | 0/12 | 0/0 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
