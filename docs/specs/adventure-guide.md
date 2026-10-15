@@ -15,7 +15,7 @@ Authoritative Suggested Content and Traveler's Log snapshots for the [client con
 - Evaluate authored bonus values separately from primary eligibility; zero-valued bonuses cannot affect rank. Reuse existing earned character/account achievement IDs for the single-achievement predicate (including33559/39935); missing authority is not an unmet or fulfilled condition.
 - Current source has equal PriorityMin/Max. Reject an unverified range rather than invent its weight. **Named ordering inference:** descending fixed authored priority plus met bonuses, then ascending ID; Retail Lua3159 forwards opaque C_AdventureJournal output without a client sort. This is not a claim about its hidden rotation/selection algorithm.
 - Return the ranked eligible vector; the existing client maps its first three records to lower/upper/large source panes. Unknown nonzero bonuses and AdventureJournal flags remain censused and excluded; do not fill slots by bypassing gates. Type/LFG/quest/battleground metadata grants no activation.
-- Frame and provider require joint both-skin native proof with all three panes populated; provider verification is pending.
+- Frame and provider require joint both-skin native proof with all three panes populated. Current bounded proof, source/binary identities and remaining gaps are recorded in the linked runtime page; it does not certify opaque Retail rotation or unsupported predicates.
 
 ## Journeys watched faction
 
