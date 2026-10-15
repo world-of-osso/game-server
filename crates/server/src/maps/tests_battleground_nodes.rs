@@ -1444,7 +1444,7 @@ fn probe_node_count_authority(world: &mut World, player: Entity, expected: [u8; 
 fn assert_node_win_progress(
     entered: &EnteredMatch,
     expected: [(u64, u64); 2],
-    dates: &mut std::collections::BTreeMap<u64, u64>,
+    dates: &mut std::collections::BTreeMap<u64, i64>,
 ) -> Vec<(u64, u64)> {
     use crate::achievement::PlayerAchievementState;
     entered
@@ -1481,7 +1481,9 @@ fn assert_node_win_progress(
                     .get(&5253)
                     .expect("native grant has a date");
                 assert_eq!(
-                    *dates.entry(character).or_insert(date),
+                    *dates
+                        .entry(character)
+                        .or_insert_with(|| world.resource::<ServerClock>().unix()),
                     date,
                     "later wins retain original award date"
                 );
@@ -1497,14 +1499,37 @@ fn assert_node_win_progress(
 fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_state() {
     use crate::achievement::PlayerAchievementState;
     let template = shared::battleground::battle_for_gilneas();
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let required: u64 = source
+        .query_row(
+            "SELECT Amount FROM criteria_tree WHERE ID=15057 AND CriteriaID=14943",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(required, 10, "installed authored Full Coverage threshold");
     let file = tempfile::NamedTempFile::new().unwrap();
     create_node_achievement_characters(file.path(), &template);
     let mut dates = std::collections::BTreeMap::new();
     // Ten source-qualified Alliance wins, one Horde win, then an unqualified two-base win.
-    for round in 1_u64..=12 {
-        let winner = if round == 11 { BgTeam::B } else { BgTeam::A };
-        let held = if round == 12 { 2 } else { 3 };
+    for round in 1_u64..=required + 2 {
+        let winner = if round == required + 1 {
+            BgTeam::B
+        } else {
+            BgTeam::A
+        };
+        let held = if round == required + 2 { 2 } else { 3 };
         let mut entered = enter_achievement_node_match(file.path(), &template);
+        entered
+            .h
+            .app
+            .world_mut()
+            .resource_mut::<ServerClock>()
+            .offset_secs = i64::try_from(round).unwrap();
         let actor_index = entered
             .teams
             .iter()
@@ -1561,8 +1586,11 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
             probe_node_count_authority(h.app.world_mut(), actor.player, [3, 0]);
         }
         let expected = [
-            (round.min(10), round.min(10) + u64::from(round == 12)),
-            (u64::from(round >= 11), u64::from(round >= 11)),
+            (
+                round.min(required),
+                round.min(required) + u64::from(round == required + 2),
+            ),
+            (u64::from(round > required), u64::from(round > required)),
         ];
         assert_node_win_progress(&entered, expected, &mut dates);
         entered.h.advance(3);
