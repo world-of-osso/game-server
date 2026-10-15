@@ -18,59 +18,84 @@ pub(super) struct NpcVehicle {
     seats: [Option<Occupant>; 8],
 }
 
+/// One checked row from the shared source-model query.
+struct SeatModel {
+    display: u32,
+    vehicle: u32,
+    fdid: u32,
+    scale: f32,
+}
+
 pub(super) fn load_catalog(
     root: &std::path::Path,
     conn: &rusqlite::Connection,
     store: &mut VehicleStore,
 ) -> Result<(), String> {
-    let attachments: HashMap<u32, i32> =
-        load_catalog_ids(conn, "SELECT ID,AttachmentID FROM vehicle_seat")?;
+    let attachments = load_catalog_ids(conn, "SELECT ID,AttachmentID FROM vehicle_seat")?;
+    for model in query_models(conn)? {
+        load_model_seats(root, store, &model, &attachments)?;
+        store.npc_vehicles.insert(DEMOLISHER, model.vehicle);
+    }
+    Ok(())
+}
+
+fn query_models(conn: &rusqlite::Connection) -> Result<Vec<SeatModel>, String> {
     let mut query = conn
         .prepare(include_str!("../../../../scripts/isle_vehicle_models.sql"))
         .map_err(|error| format!("IoC Demolisher source models: {error}"))?;
     let rows = query
         .query_map([], |row| {
-            Ok((
-                row.get::<_, u32>(0)?,
-                row.get::<_, u32>(1)?,
-                row.get::<_, Option<u32>>(4)?,
-                row.get::<_, Option<f32>>(3)?,
-            ))
+            Ok(SeatModel {
+                display: row.get(0)?,
+                vehicle: row.get(1)?,
+                fdid: row.get(4)?,
+                scale: row.get(3)?,
+            })
         })
-        .map_err(|error| error.to_string())?;
-    for row in rows {
-        let (display, vehicle, fdid, scale) = row.map_err(|error| error.to_string())?;
-        let fdid =
-            fdid.ok_or_else(|| format!("Demolisher display {display} lacks source model"))?;
-        let scale =
-            scale.ok_or_else(|| format!("Demolisher display {display} lacks source scale"))?;
-        let path = root.join(format!("models/{fdid}.m2"));
-        let data = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-        let seats = *store
-            .vehicles
-            .get(&vehicle)
-            .ok_or_else(|| format!("Demolisher display {display} lacks Vehicle {vehicle}"))?;
-        for seat in seats {
-            if seat == 0 {
-                continue;
-            }
-            let definition = store
-                .seats
-                .get(&seat)
-                .ok_or_else(|| format!("Demolisher lacks VehicleSeat {seat}"))?;
-            if definition.flags & CAN_ENTER_OR_EXIT == 0 {
-                continue;
-            }
-            let attachment = attachments
-                .get(&seat)
-                .ok_or_else(|| format!("Demolisher lacks VehicleSeat {seat} attachment"))?;
-            let point = read_mount_attachment(&data, *attachment)
-                .map_err(|error| format!("Demolisher display {display} seat {seat}: {error}"))?;
-            let alignment = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
-            let offset = alignment * ((point + definition.offset) * scale);
-            store.seat_offsets.insert((display, seat), offset);
+        .map_err(|error| format!("IoC Demolisher source models: {error}"))?;
+    rows.collect::<Result<_, _>>()
+        .map_err(|error| format!("IoC Demolisher source model metadata: {error}"))
+}
+
+fn select_source_seats(store: &VehicleStore, vehicle: u32) -> Result<Vec<(u32, Seat)>, String> {
+    let records = store
+        .vehicles
+        .get(&vehicle)
+        .ok_or_else(|| format!("Demolisher lacks Vehicle {vehicle}"))?;
+    let mut seats = Vec::new();
+    for &seat in records {
+        if seat == 0 {
+            continue;
         }
-        store.npc_vehicles.insert(DEMOLISHER, vehicle);
+        let definition = *store
+            .seats
+            .get(&seat)
+            .ok_or_else(|| format!("Demolisher lacks VehicleSeat {seat}"))?;
+        if definition.flags & CAN_ENTER_OR_EXIT != 0 {
+            seats.push((seat, definition));
+        }
+    }
+    Ok(seats)
+}
+
+fn load_model_seats(
+    root: &std::path::Path,
+    store: &mut VehicleStore,
+    model: &SeatModel,
+    attachments: &HashMap<u32, i32>,
+) -> Result<(), String> {
+    let path = root.join(format!("models/{}.m2", model.fdid));
+    let data = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    for (seat, definition) in select_source_seats(store, model.vehicle)? {
+        let attachment = attachments
+            .get(&seat)
+            .ok_or_else(|| format!("Demolisher lacks VehicleSeat {seat} attachment"))?;
+        let point = read_mount_attachment(&data, *attachment).map_err(|error| {
+            format!("Demolisher display {} seat {seat}: {error}", model.display)
+        })?;
+        let alignment = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
+        let offset = alignment * ((point + definition.offset) * model.scale);
+        store.seat_offsets.insert((model.display, seat), offset);
     }
     Ok(())
 }
@@ -110,13 +135,11 @@ pub(crate) fn on_applied(world: &mut World, vehicle: Entity, aura: &AuraInstance
     }
 }
 
-fn board(
-    world: &mut World,
+fn validate_rider(
+    world: &World,
     passenger: Entity,
     vehicle: Entity,
-    aura_id: u32,
-    requested_seat: i32,
-) -> Result<(), String> {
+) -> Result<PassengerOrigin, String> {
     if passenger == vehicle || !alive(world, passenger) {
         return Err("Rider must be a living player".into());
     }
@@ -138,11 +161,21 @@ fn board(
         .get::<ModelDisplay>(vehicle)
         .ok_or("Vehicle model absent")?
         .display_id;
-    let (index, seat_id) = select_seat(world, vehicle, display, requested_seat)?;
-    let origin = PassengerOrigin {
+    Ok(PassengerOrigin {
         map: *world.get::<InMap>(vehicle).unwrap(),
         display,
-    };
+    })
+}
+
+fn board(
+    world: &mut World,
+    passenger: Entity,
+    vehicle: Entity,
+    aura_id: u32,
+    requested_seat: i32,
+) -> Result<(), String> {
+    let origin = validate_rider(world, passenger, vehicle)?;
+    let (index, seat_id) = select_seat(world, vehicle, origin.display, requested_seat)?;
     let seat = VehiclePassenger {
         driver: vehicle.to_bits(),
         seat_index: index as u8,
@@ -212,13 +245,16 @@ pub(super) fn valid_seat(
             .get::<ModelDisplay>(vehicle)
             .is_some_and(|model| model.display_id == origin.display)
         && occupant.is_some_and(|occupant| {
-            occupant.passenger == passenger
-                && world.get::<ActiveAuras>(vehicle).is_some_and(|auras| {
-                    auras.iter().any(|aura| {
-                        aura.instance_id == occupant.aura_id && aura.caster == passenger
-                    })
-                })
+            occupant.passenger == passenger && has_control_aura(world, vehicle, occupant)
         })
+}
+
+fn has_control_aura(world: &World, vehicle: Entity, occupant: Occupant) -> bool {
+    world.get::<ActiveAuras>(vehicle).is_some_and(|auras| {
+        auras
+            .iter()
+            .any(|aura| aura.instance_id == occupant.aura_id && aura.caster == occupant.passenger)
+    })
 }
 
 pub(crate) fn on_removed(world: &mut World, vehicle: Entity, aura: &AuraInstance) {
@@ -263,12 +299,7 @@ pub(super) fn clear_departed_passengers(world: &mut World) {
                 .enumerate()
                 .filter_map(|(index, occupant)| {
                     let occupant = occupant.as_ref()?;
-                    let seated = world
-                        .get::<VehiclePassenger>(occupant.passenger)
-                        .is_some_and(|seat| {
-                            seat.driver == vehicle.to_bits()
-                                && usize::from(seat.seat_index) == index
-                        });
+                    let seated = is_current_passenger(world, occupant.passenger, vehicle, index);
                     (!seated).then_some((vehicle, index, occupant.aura_id))
                 })
                 .collect::<Vec<_>>()
