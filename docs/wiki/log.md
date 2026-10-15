@@ -1,6 +1,37 @@
 ## 2026-10-15 — Source Toy forward destination
 
 [Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
+## 2026-10-15 — Ordinary NPC physical-spell dodge
+
+[Shared physical hit roll](systems/player-damage.md#shared-weapon-spell-defense-roll) consumes NPC3+aura49+positive effective-level bonus, allowing rear PvE dodge. Native70188/38598 genuine damage RED→4 native controls GREEN; actual tuning and separate nonlethal health buffer preserve guard proof. Block-only fixtures isolate dodge with source45769e1/251−20 and suitable caster level; repaired23 block/type/table controls pass. Final8fe095bc defense32/32 pass (95.39s tests); workspace/all-target check17.901s/fmt2.774s pass warning-free. Follow-up97592a1e native tuning/level chance assertions prove3/3/9/7.5 after49 removal across four native level cases; seven scoped controls pass64.20s tests. Sampled attack distribution, Totems, player expertise, full loadouts and independent acceptance remain unproved.
+
+## 2026-10-14 — Signed attacker enemy dodge
+
+[Existing player dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) now adds actual caster aura251's signed total before expertise/final clamp. Native48250e2+20/110294e0−25 are authenticated;24fb3cb5 native Strike damage37 despite verified90miss/+20 reproduces genuine RED. Merged18274ca5 native11/11 GREEN (17.48s tests), check16.844s/fmt2.490s pass warning-free:256 miss/dodge draws, removal/negative-total/recipient controls plus Evasion/expertise controls. Whole251/abilities and broader hit system remain open.
+
+## 2026-10-14 — Physical mechanic resistance
+
+[Native physical hit table](systems/player-damage.md#shared-weapon-spell-defense-roll) requires recipient aura117 after miss and before NoActiveDefense. Initial cd651cb7 full-table RED invalid: neutralNPC6 omits baseline5, actual85+10. Corrected hostileNPC40/pre117 consumer at2c4a7ecb records genuine native1833 stun RED atdraw10; foreign and silence-selector controls pass. Implementation follows corrected RED. Corrected c31715af native3/3 GREEN:256 miss/resist draws, no stun/control, removal/ownership/mismatch controls; retain27 source-identical defense controls. Workspace/all-target check130.216s/fmt4.316s pass warning-free; independent/full117/magic/ability acceptance open.
+
+## 2026-10-14 — Non-player expertise dodge consumer
+
+[Native player dodge boundary](systems/player-damage.md#shared-weapon-spell-defense-roll) subtracts the non-player caster's own active240 total/4. Published70391 NPC Hit Buffs62627/Strike38598 are authenticated; the first alleged RED listened on an unrelated connection and is invalid. Receiver-corrected ae251a10 now records actual Strike `Miss(Dodge)` with caster expertise10000: genuine RED1/foreign-controlPASS1. Native caster240/4 implementation follows that RED; current merged31 controls/check/fmt pass, including native removal/foreign ownership and all four cw150 cases. Independent acceptance remains pending. Player expertise, NPC dodge/parry and global hit certification remain gaps.
+
+## 2026-10-14 — Live player weapon-spell dodge
+
+[Live player field](systems/player-damage.md#shared-weapon-spell-defense-roll) feeds melee dodge before block. Native Rogue Evasion/receiver stat producer gives genuine Slam301 RED then six GREEN controls for direction/stun/flags/ranged/removal/expiry. NPC dodge, attacker modifiers, full probabilities and independent acceptance remain gaps.
+
+## 2026-10-14 — Wildfire primary variance master red
+
+[Native variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) re-sources coefficient/primary bonus without widening tolerance or changing runtime math. Actual292 upper draw reproduces the stale interval;256 primary draws plus owned six-tick/expiry and AP37/RAP100 controls pass within merged76 tests/check/fmt. Cone/secondary and whole-class certification remain gaps.
+
+## 2026-10-14 — Shared weapon-spell defense roll
+
+[Implemented physical defenses](systems/player-damage.md#shared-weapon-spell-defense-roll) share one quantized cumulative roll. Native Sling Mud/Improved Blocking produces genuine unblocked-hit RED;60 Slam and60 Aimed Shot/Veil trials now pass with retained controls (19 total). 45 adjacent controls/check/fmt also pass. Missing dodge/parry, mechanic resistance, player baseline and independent acceptance remain explicit.
+
+## 2026-10-14 — Ordinary NPC weapon-spell blocks
+
+[Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
 ## 2026-10-14 — Pet-level type qualifiers, native proof
 
 [BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); other native types/level10/all-ten-family grants remain unclaimed.

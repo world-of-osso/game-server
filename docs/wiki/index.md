@@ -1,6 +1,21 @@
 # Wiki Index
 
 - [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
+- [Ordinary NPC physical-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native49 front/rear RED→GREEN, source tuning and separate health buffer; exact chance3/3/9/7.5 component proof, not sampled attack distribution/full NPC loadouts.
+
+- [Signed attacker enemy dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native251 before expertise/clamp; authenticated Strike damage RED→GREEN11 with signed/clamp/removal/ownership and Evasion/expertise controls; full251/abilities remain open.
+
+- [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; neutral-NPC RED invalidated; corrected hostile40 genuine stun RED→GREEN3,256 miss/resist outcomes; full hit/ability acceptance open.
+
+- [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — native240/4 caster-only reduction; receiver-corrected62627/38598 Strike/Evasion RED→GREEN, removal/ownership and merged31 controls/check/fmt pass; wider hit system remains open.
+
+- [Live player weapon-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — real Rogue Evasion and receiver stat producer; six direction/control/flag/ranged/lifecycle controls, NPC/attacker-modifier/full hit-system gaps retained.
+
+- [Wildfire primary variance fixture](systems/spell-casting.md#wildfire-primary-variance-fixture) — reproduced valid upper draw292, source-aligned interval and distinct AP/RAP; merged76 controls/check/fmt pass, no runtime coefficient change.
+
+- [Shared weapon-spell defense roll](systems/player-damage.md#shared-weapon-spell-defense-roll) — native cumulative miss/deflect/block and quantization,19 bounded controls; other hit-system outcomes remain gaps.
+
+- [Ordinary NPC weapon-spell blocks](systems/player-damage.md#native-player-criticalblock-hit-state) — authenticated NO_BLOCK16 versus NO_XP64, native30%/critical60% damage and facing/stun; four NPC plus eleven player controls pass, Totem runtime/full probability order remain gaps.
 - [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates, integrated native/catalog/pinned4/4; full ten-family grant unclaimed.
 
 - [Remaining source-only criteria boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) —44/58/64 lack executable rules;153 has no matching native action-set path;218 requires pinned hard-false Party Sync leaves.
