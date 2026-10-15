@@ -302,6 +302,38 @@ fn creature_aggro_search_includes_scaled_bodies_beyond_the_forty_five_yard_cells
 }
 
 #[test]
+fn creature_attack_distance_uses_the_spawned_difficulty_expansion() {
+    let mut app = aggro_app();
+    let mut difficulty = app.world().resource::<WorldData>().templates[&30].clone();
+    difficulty.health_scaling_expansion = 0;
+    {
+        let mut data = app.world_mut().resource_mut::<WorldData>();
+        data.templates
+            .get_mut(&30)
+            .unwrap()
+            .health_scaling_expansion = 11;
+        data.difficulty_templates.insert((30, 1), difficulty);
+    }
+    let criminal = spawn_creature(
+        &mut app,
+        &CreatureFixture {
+            level: 33,
+            ..FOREST_SPIDER
+        },
+        at(0.0, 0.0),
+    );
+    app.world_mut()
+        .entity_mut(criminal)
+        .insert(crate::zones::CreatureDifficulty(1));
+    let player = spawn_player(&mut app, at(15.7, 0.0), 32);
+    run(&mut app, 1);
+    assert_eq!(state(&app, criminal), Some(CreatureState::Idle));
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(14.49, 0.0);
+    run(&mut app, 1);
+    assert_eq!(state(&app, criminal), pursuing(player));
+}
+
+#[test]
 fn aggro_mode_follows_template_flags() {
     assert_eq!(AggroMode::for_template(1, 0, 0, ""), AggroMode::Aggressive);
     assert_eq!(AggroMode::for_template(1, 0x2, 0, ""), AggroMode::Reactive);
