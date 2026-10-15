@@ -319,6 +319,7 @@ pub(crate) fn spawn_creature(
             map,
             NativeObjectScale(display_scale),
             shared::components::UnitScale(display_scale),
+            shared::components::UnitTarget(None),
             crate::creature_ai::HomeOrientation(spawn.orientation + std::f32::consts::FRAC_PI_2),
         ));
         let source_guid = spawn.guid;
