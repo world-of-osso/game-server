@@ -1,3 +1,7 @@
+## 2026-10-15 — st210 toy fixture clock
+
+[Clock/completion boundary](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15): diagnostic RED proves pending=false and committed=1 while repeated multi-minute steps trip the old pump deadline. Restore original clock after expiry and signal fixture FIFO completion deterministically;21 targeted controls pass, current check pending. No production timing change or release/full-suite claim.
+
 ## 2026-10-15 — War Mode FIFO and Titan's Grip merge
 
 [War Mode](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15): three real-territory/wire held-writer REDs become5/5 controls, preserving earlier honor and current-instance/departed-session effect boundaries. [Titan merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) keeps effect40/155 metadata in owned requests and preserves fresh FIFO inventory writes; 19 merged capability/receipt/Summon controls plus2 protocol wire controls pass; warning-free merged runtime/format checks pass; full-branch gate and release coverage remain pending.

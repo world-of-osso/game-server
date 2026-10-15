@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [st210 toy fixture clock](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15) — expired summon jump leaked into later network pumping; jobs already committed. Restore one-shot clock, deterministic fixture barriers;21 controls pass, runtime check pending.
+
 - [War Mode preference FIFO](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15) — three authentic territory/wire held-writer REDs→five controls; fresh honor and receipt-bound current-instance/departure effects; merged runtime/format pass, release pending.
 - [Titan's Grip FIFO merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) — owned dual-wield/Titan subclass capability snapshot without synchronous inventory writes;19 merged controls,2 protocol wire controls and warning-free runtime/format checks pass; full branch gate pending.
 
