@@ -1,4 +1,4 @@
-//! Mount favourites and dependent random reads retain durable FIFO ordering.
+//! Spell-derived mount grants, favourites and dependent reads share durable FIFO order.
 use super::*;
 use crate::persistence_writer::CommitReceipt;
 use std::collections::VecDeque;
@@ -20,10 +20,19 @@ struct PendingRandom {
     receipt: CommitReceipt<mount_store::AccountMounts>,
 }
 
+struct PendingSpellLearning {
+    account: u64,
+    mounts: Vec<u32>,
+    receipt: CommitReceipt,
+}
+
 #[derive(Resource, Default)]
 pub(super) struct PendingMountRequests {
     favourites: VecDeque<PendingFavourite>,
     randoms: VecDeque<PendingRandom>,
+    learning: VecDeque<PendingSpellLearning>,
+    // Failed source grants remain submitted until restart instead of retrying every frame.
+    submitted_mounts: BTreeMap<u64, BTreeSet<u32>>,
 }
 
 pub(super) fn enqueue_mount_favourite(
@@ -65,6 +74,29 @@ pub(super) fn enqueue_random_mount(
         .push_back(PendingRandom { session, receipt });
 }
 
+pub(super) fn enqueue_mount_spell_learning(world: &mut World, account: u64, mounts: Vec<u32>) {
+    let owned = mounts.clone();
+    let receipt =
+        world
+            .resource::<GameDatabase>()
+            .writer
+            .enqueue("mount spell learning", move |db| {
+                mount_store::learn_spells(db, account, &owned);
+                Ok(())
+            });
+    let mut pending = world.resource_mut::<PendingMountRequests>();
+    pending
+        .submitted_mounts
+        .entry(account)
+        .or_default()
+        .extend(mounts.iter().copied());
+    pending.learning.push_back(PendingSpellLearning {
+        account,
+        mounts,
+        receipt,
+    });
+}
+
 fn capture_mount_session(
     world: &World,
     connection: Entity,
@@ -84,6 +116,37 @@ fn capture_mount_session(
 }
 
 impl PendingMountRequests {
+    pub(super) fn mount_submitted(&self, account: u64, mount: u32) -> bool {
+        self.submitted_mounts
+            .get(&account)
+            .is_some_and(|mounts| mounts.contains(&mount))
+    }
+
+    fn drain_learning(&mut self) -> Vec<(PendingSpellLearning, Result<(), String>)> {
+        let mut completed = Vec::new();
+        while let Some(result) = self.learning.front().and_then(|job| job.receipt.result()) {
+            let job = self
+                .learning
+                .pop_front()
+                .expect("completed mount learning receipt");
+            completed.push((job, result));
+        }
+        completed
+    }
+
+    fn retire_learned_mounts(&mut self, account: u64, mounts: &[u32]) {
+        let submitted = self
+            .submitted_mounts
+            .get_mut(&account)
+            .expect("submitted mount ids");
+        for mount in mounts {
+            submitted.remove(mount);
+        }
+        if submitted.is_empty() {
+            self.submitted_mounts.remove(&account);
+        }
+    }
+
     fn drain_favourites(&mut self) -> Vec<(MountSession, Result<(), String>)> {
         let mut completed = Vec::new();
         while let Some(result) = self.favourites.front().and_then(|job| job.receipt.result()) {
@@ -110,7 +173,26 @@ impl PendingMountRequests {
 
     #[cfg(test)]
     pub(super) fn is_empty(&self) -> bool {
-        self.favourites.is_empty() && self.randoms.is_empty()
+        self.favourites.is_empty() && self.randoms.is_empty() && self.learning.is_empty()
+    }
+}
+
+pub(super) fn publish_mount_spell_learning(world: &mut World) {
+    let completed = world
+        .resource_mut::<PendingMountRequests>()
+        .drain_learning();
+    for (job, result) in completed {
+        match result {
+            Ok(()) => {
+                world
+                    .resource_mut::<PendingMountRequests>()
+                    .retire_learned_mounts(job.account, &job.mounts);
+                broadcast_account(world, job.account);
+            }
+            Err(error) => {
+                error!(account = job.account, %error, "Mount spell ownership commit failed")
+            }
+        }
     }
 }
 

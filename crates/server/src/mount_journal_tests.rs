@@ -160,6 +160,81 @@ fn mount_random_request_after_favourite_waits_for_the_committed_choice() {
 }
 
 #[test]
+fn learned_mount_spells_wait_for_fifo_and_keep_an_earlier_favourite() {
+    use std::time::{Duration, Instant};
+    let mut h = setup();
+    h.advance(3);
+    drain::<MountJournalUpdate>(&mut h.app, h.connection);
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let prior = h.app.world().resource::<GameDatabase>().writer.enqueue(
+        "earlier account mount favourite",
+        |db| {
+            mount_store::learn_spells(db, 1, &[18]);
+            mount_store::favourite(db, 1, 18, true)?;
+            Ok(())
+        },
+    );
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    h.app
+        .world_mut()
+        .get_mut::<crate::profession::PlayerProfessions>(h.caster)
+        .unwrap()
+        .spells
+        .push(6648);
+    let started = Instant::now();
+    h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = drain::<MountJournalUpdate>(&mut h.app, h.connection);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "mount spell-learning tick waited: {elapsed:?}"
+    );
+    assert!(
+        premature.is_empty(),
+        "mount ownership snapshot precedes commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        h.advance(1);
+        let replies = drain::<MountJournalUpdate>(&mut h.app, h.connection);
+        if replies.iter().any(|reply| {
+            reply
+                .mounts
+                .iter()
+                .any(|mount| mount.mount_id == 18 && mount.collected && mount.favourite)
+        }) {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "no committed learned-mount snapshot"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(prior.result(), Some(Ok(())));
+    assert!(knows_spell(h.app.world(), h.caster, 6648));
+    assert_eq!(
+        mount_store::load(&h.app.world().resource::<GameDatabase>().db, 1),
+        [(18, true)].into()
+    );
+    finish_mount_request_receipts(&mut h);
+    assert!(
+        drain::<MountJournalUpdate>(&mut h.app, h.connection).is_empty(),
+        "unchanged in-flight spell source produced duplicate ownership publications"
+    );
+}
+
+#[test]
 fn mount_favourite_waits_for_fifo_and_preserves_other_queued_mounts() {
     use std::time::{Duration, Instant};
     let mut h = setup();
@@ -461,7 +536,7 @@ fn mount_journal_spell_learning_and_favourites_publish_only_to_same_account() {
         .unwrap()
         .spells
         .push(6648);
-    h.advance(4);
+    finish_mount_request_receipts(&mut h);
     assert!(knows_spell(h.app.world(), same_player, 6648));
     assert!(!knows_spell(h.app.world(), foreign_player, 6648));
     h.app

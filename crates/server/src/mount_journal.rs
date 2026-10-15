@@ -26,7 +26,8 @@ pub(crate) struct AccountMounts(pub mount_store::AccountMounts);
 
 mod actor;
 use actor::{
-    PendingMountRequests, enqueue_mount_favourite, enqueue_random_mount, publish_mount_favourites,
+    PendingMountRequests, enqueue_mount_favourite, enqueue_mount_spell_learning,
+    enqueue_random_mount, publish_mount_favourites, publish_mount_spell_learning,
     publish_random_mounts,
 };
 
@@ -42,6 +43,7 @@ impl Plugin for MountJournalPlugin {
 // Auth may enter world before or after this exclusive step. Every reader sees
 // account state initialized first; replies are queued before Lightyear's send cycle.
 fn update_mount_journal(world: &mut World) {
+    publish_mount_spell_learning(world);
     publish_mount_favourites(world);
     publish_random_mounts(world);
     sync_accounts(world);
@@ -199,15 +201,15 @@ fn sync_accounts(world: &mut World) {
         let owned = &world.get::<AccountMounts>(player).expect("loaded mounts").0;
         let newly_learned: Vec<_> = learned_mount_ids(world, player)
             .into_iter()
-            .filter(|id| !owned.contains_key(id))
+            .filter(|id| {
+                !owned.contains_key(id)
+                    && !world
+                        .resource::<PendingMountRequests>()
+                        .mount_submitted(account, *id)
+            })
             .collect();
         if !newly_learned.is_empty() {
-            mount_store::learn_spells(
-                &world.resource::<GameDatabase>().db,
-                account,
-                &newly_learned,
-            );
-            broadcast_account(world, account);
+            enqueue_mount_spell_learning(world, account, newly_learned);
         }
     }
 }
