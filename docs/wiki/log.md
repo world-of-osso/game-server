@@ -1,3 +1,7 @@
+## 2026-10-15 — IoC authored spawn-faction regression
+
+[Source per-spawn faction](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15): actual Workshop/Demolisher35→expected1732 RED; existing CreatureStringIds join retained, only TC OnCreatureCreate mapping added. No content schema/import or fixture-only faction. Verification pending; processed66245/aura236 missing-boarding RED remains separate. [Both-skin bomb proof](../../../game-engine/docs/wiki/systems/battlegrounds.md#forever88-functional-bomb-chain--2026-10-15) is complete only at its four-phase/return boundary, not vehicle/siege/victory.
+
 ## 2026-10-15 — Modern native activation boundary
 
 [Client-owned native evidence](../../../game-engine/docs/wiki/systems/battlegrounds.md#modern83-functional-bomb-chain--2026-10-15) records normal/huge typed hits, real picked-model disarm and20-player return/save on007/da6/a438/4135 components. Forever and explicit renderer/framing/timing gaps remain; no vehicle/siege/victory certification.

@@ -32,6 +32,8 @@ Retail queue1/map30 admits10–40/team, levels20–90, with source world-space s
 
 ### Isle of Conquest — active implementation
 
+- [ ] Apply TC's map628 OnCreatureCreate faction behavior from existing CreatureStringIds: bg_ioc_faction_1732 selects Alliance1732, bg_ioc_faction_1735 selects Horde1735; preserve untagged and other-map template factions. Normal authored spellclick66245/aura236 must board Demolisher34775's Vehicle509 driver seat5766; source publication, movement/control, siege firing and native proof remain separate gates.
+
 - [x] Normal Workshop195133 Opening/capture exposes TDB group1227/1230 pickup195237; authored goober Data10 spell66265 creates owned Retail item46847 for its user. Preserve life, copy, reach, lock, quest and reuse checks; Data23 chooses the caster. This pickup boundary does not certify deployment, arming/disarm, vehicles or complete native-render parity.
 - [ ] Normal owned Seaforium item use consumes one item and deploys its authored bomb in the caster's map copy. Charges2 arms for ten seconds, then resolves the authored explosion once and despawns; no early damage or cross-copy effects. A valid normal disarm before detonation prevents the explosion, preserving life/copy/reach checks. No item, hitpoint or outcome injection substitutes for the normal chain.
 - [ ] Initialize all six authored type33 gates from TDB HealthRec28/32. Source object-area damage87/target52 must reduce those hitpoints only in the active map copy; destruction opens the corresponding keep doors, releases its banner and broadcasts source gate WorldStates. Normal bomb/vehicle activation and native destroyed-stage visuals require separate proof; no health/score injection substitutes for siege.
