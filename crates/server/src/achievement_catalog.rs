@@ -464,7 +464,7 @@ enum CompiledConditions {
     },
     TargetCreatures(&'static [u32]),
     PlayerMaps(&'static [u32]),
-    PlayerAreas(&'static [u32]),
+    PlayerLocations(&'static [(i32, u32)]),
     PlayerAuras(&'static [u32]),
     EventItems(&'static [u32]),
 }
@@ -1567,21 +1567,20 @@ fn load_player_map_alternatives(
     )))
 }
 
-/// Reuse complete17 validation/ancestry, then union their accepted area members.
-fn load_player_area_alternatives(
+/// Validate every typed area17/zone41 leaf before unioning their accepted current areas.
+fn load_player_location_alternatives(
     conn: &Connection,
-    areas: &[u32],
+    leaves: &[(i32, u32)],
     area_children: &HashMap<u32, Vec<u32>>,
 ) -> rusqlite::Result<Option<CriteriaFact>> {
-    let leaves: Vec<_> = areas.iter().map(|area| (17, *area)).collect();
-    let Some(facts) = load_criteria_facts(conn, &leaves, area_children)? else {
+    let Some(facts) = load_criteria_facts(conn, leaves, area_children)? else {
         return Ok(None);
     };
     let members = facts
         .into_iter()
         .flat_map(|fact| match fact {
             CriteriaFact::Area(members) => members,
-            _ => unreachable!("validated17 leaves produce only Area facts"),
+            _ => unreachable!("validated17/41 leaves produce only Area facts"),
         })
         .collect();
     Ok(Some(CriteriaFact::Area(members)))
@@ -1657,8 +1656,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             Some(CompiledConditions::PlayerMaps(maps)) => {
                 load_player_map_alternatives(conn, maps)?.map(|fact| (None, vec![fact]))
             }
-            Some(CompiledConditions::PlayerAreas(areas)) => {
-                load_player_area_alternatives(conn, areas, &area_children)?.map(|fact| (None, vec![fact]))
+            Some(CompiledConditions::PlayerLocations(leaves)) => {
+                load_player_location_alternatives(conn, leaves, &area_children)?.map(|fact| (None, vec![fact]))
             }
             Some(CompiledConditions::PlayerAuras(spells)) => {
                 load_player_aura_alternatives(conn, spells)?.map(|fact| (None, vec![fact]))

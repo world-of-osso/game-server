@@ -122,6 +122,12 @@ TC a352b1fa CriteriaHandler1922–1925 compares the reference player's actual ma
 
 Plain Some8 Amount0/1 over complete SingleTrue PlayerHasAura8 leaves compiles to `CompiledConditions::PlayerAuras`. Existing spell validation rejects a missing alternative; `CriteriaFact::PlayerAuras` tests nonempty intersection with the reference player's current `ActiveAuras` snapshot. TC a352b1fa CriteriaHandler1738–1750/1798–1801. Native fixture casts sourced Jaguar136775/136777/136778 buffs, then Mighty Loa136749; target-hit credit28 is evaluated before effect dispatch (spell_cast/mod.rs2164–2166), not from stored historical aura possession. Cancellation/refusal/idle/reopen boundaries are exercised without synthetic credit. Boss/form acquisition and full8111 remain unclaimed. [Contract](../../specs/dungeon-achievements.md).
 
+## Typed area/zone alternatives
+
+Plain root Some8 requiring one of complete positive17/41 leaves now compiles typed `(kind, asset)` pairs in `CompiledConditions::PlayerLocations`; this replaces the area-only variant. Catalog loading reuses each leaf's existing validation and member projection before unioning `CriteriaFact::Area` sets. Area17 follows recursive authored parents; Zone41 follows only the flagged immediate-parent rule. Requiring every asset prevents a missing OR branch from silently broadening admission. No generic OR interpreter, nested Some, timing or negative predicate support added.
+
+Primary source: TC a352b1fa CriteriaHandler1738–1750 (Some),1842–1846 (area),1964–1974 (zone). Genuine compiler RED8984dbbd rejects actual20912; native RED accepts181842 at controlled cached254 but leaves27968 absent. Generated5759 predicates (+22); native/catalog GREEN and exact structural census pending. This is not a terrain-travel, selfie-camera acquisition, full9924 or pet/holiday/PvP completion certificate. [Contract](../../specs/dungeon-achievements.md).
+
 ## Player-area alternatives
 
 Plain Some8 Amount0/1 over complete SingleTrue PlayerIsInArea17 leaves compiles to `CompiledConditions::PlayerAreas`. Loader reuses existing area validation/recursive ancestry, then unions complete member sets into `CriteriaFact::Area`; one missing source area disables the entire predicate. TC a352b1fa CriteriaHandler1738–1750/1842–1847 and DB2Stores1985–1999 define one-of and recursive parent membership. Native queued death fixture exercises109755/character61456 from controlled cached area snapshots; this is not actual terrain travel or every holiday/NPC content lifecycle. [Contract](../../specs/dungeon-achievements.md).
