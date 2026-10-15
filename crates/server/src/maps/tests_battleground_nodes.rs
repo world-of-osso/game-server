@@ -714,6 +714,152 @@ fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_re
 }
 
 #[test]
+fn isle_channel_workshop_demolisher_seats_keep_independent_riders_and_refuse_overfill() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let team = entered.teams[0];
+    let allies: Vec<_> = entered
+        .teams
+        .iter()
+        .enumerate()
+        .filter(|(index, candidate)| *index != 0 && **candidate == team)
+        .take(3)
+        .map(|(index, _)| index)
+        .collect();
+    assert_eq!(allies.len(), 3);
+    let driver = &entered.players[0];
+    let h = &mut entered.h;
+    let position = wow(h.app.world().get::<Position>(demolisher).unwrap());
+    for (index, expected_seat) in [(allies[0], 2), (allies[1], 3)] {
+        let rider = &entered.players[index];
+        h.walk_to(rider, position);
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::InteractNpc>>(rider.connection)
+            .unwrap()
+            .send::<InteractionChannel>(shared::protocol::InteractNpc {
+                npc: demolisher.to_bits(),
+            });
+        h.receive_pvp_updates(5);
+        let seated = h
+            .app
+            .world()
+            .get::<shared::components::VehiclePassenger>(rider.player)
+            .expect("another friendly rider must occupy the next source seat");
+        assert_eq!(seated.driver, demolisher.to_bits());
+        assert_eq!(seated.seat_index, expected_seat);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::VehiclePassenger>(driver.player)
+                .unwrap()
+                .seat_index,
+            0
+        );
+    }
+    let overflow = &entered.players[allies[2]];
+    h.walk_to(overflow, position);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(overflow.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(overflow.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(overflow.player)
+            .unwrap()
+            .controlled
+    );
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(demolisher)
+        .unwrap();
+    assert_eq!(
+        auras.iter().filter(|aura| aura.spell_id == 66245).count(),
+        3
+    );
+    assert!(
+        !auras
+            .iter()
+            .any(|aura| aura.spell_id == 66245 && aura.caster == overflow.player)
+    );
+
+    let leaving = &entered.players[allies[0]];
+    h.app
+        .world_mut()
+        .entity_mut(leaving.connection)
+        .insert(pair::<shared::protocol::ExitVehicle>());
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::ExitVehicle>>(leaving.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::ExitVehicle);
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(leaving.player)
+            .is_none()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(driver.player)
+            .unwrap()
+            .seat_index,
+        0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(overflow.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(overflow.player)
+            .unwrap()
+            .seat_index,
+        2
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(entered.players[allies[1]].player)
+            .unwrap()
+            .seat_index,
+        3
+    );
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(demolisher)
+        .unwrap();
+    assert_eq!(
+        auras.iter().filter(|aura| aura.spell_id == 66245).count(),
+        3
+    );
+    assert!(
+        !auras
+            .iter()
+            .any(|aura| aura.spell_id == 66245 && aura.caster == leaving.player)
+    );
+}
+
+#[test]
 fn isle_channel_workshop_demolisher_death_releases_its_living_driver() {
     let (mut entered, demolisher) = enter_and_board_isle_demolisher();
     let enemy_index = entered
