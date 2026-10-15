@@ -5,7 +5,7 @@ The existing emote transport carries one MountSpecial action. [Client contract a
 ## What it must do
 
 - [ ] Mount aura application publishes the exact Mount.db2 identity with the selected display; NPC/taxi mounts without a catalog row retain identity0.
-- [ ] `/mountspecial` and `EmoteIntent::MountSpecial` identify only the authenticated, entered-world sender, requiring a stationary grounded mounted actor.
+- [ ] `/mountspecial` and `EmoteIntent::MountSpecial` identify only the authenticated, entered-world sender, requiring an entered-world mounted actor. The native client selects stationary versus moving jump; the relay does not reclassify input from a separately delivered movement stream.
 - [ ] Deliver one action to the owner and current replicated observer set; hidden/foreign players receive none. Do not fabricate a social chat line or achievement TextEmote ID.
 
 ## How it works
@@ -21,7 +21,7 @@ The existing emote transport carries one MountSpecial action. [Client contract a
 ## Tests asserting this spec
 
 - `crates/server/src/auras/mount_tests.rs::mount_special_identity_comes_from_the_authoritative_mount_aura` — real Golden Gryphon cast publishes Mount129.
-- `crates/server/src/messaging_mount_special_tests.rs` — native Lightyear HostClient request/event, actor identity, owner/observer audience, no chat/criteria and invalid movement refusal.
+- `crates/server/src/messaging_mount_special_tests.rs` — native Lightyear HostClient request/event, actor identity, owner/observer audience, no chat/criteria and unmounted/not-entered refusal.
 
 ## Known gaps (current cycle)
 
