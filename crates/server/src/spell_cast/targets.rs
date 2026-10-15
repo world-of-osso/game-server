@@ -62,7 +62,7 @@ enum Selector {
     RaidArea,
     /// Area center = caster (SRC/DEST_CASTER).
     CenterCaster,
-    /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
+    /// Already selected destination;138 resolves terrain height in the mutable cast-plan step.
     ExistingDest,
     ///72: random point in this slot's radius span around the caster.
     CasterRandom,
@@ -1112,7 +1112,18 @@ pub fn effect_dest(
                 explicit.and_then(|target| behind(world, target, radius(effect, slot)))
             }
             Selector::CasterOffset(angle) => {
-                caster_offset(world, caster, angle, radius(effect, slot))
+                let distance = radius(effect, slot);
+                // TC caster-front targets cannot be closer than the player's scaled reach.
+                // Creature reach selection is outside this player Toy boundary.
+                let distance =
+                    if id == 47 && world.get::<shared::components::Player>(caster).is_some() {
+                        let reach = crate::scripted_ai::model_reach::combat_reach(world, caster)
+                            .expect("player combat reach is always available");
+                        distance.max(reach)
+                    } else {
+                        distance
+                    };
+                caster_offset(world, caster, angle, distance)
             }
             _ => continue,
         };
@@ -1150,8 +1161,8 @@ pub fn effect_dest(
     dest
 }
 
-///TC TARGET_DEST_CASTER_GROUND resolves map height (`Map::GetHeight`, including enabled
-///GO floors in the caster's copy) when the cast plan owns mutable ground access.
+///TC caster-ground62 and destination-ground138 resolve map height (`Map::GetHeight`,
+///including enabled GO floors in the caster's copy) with mutable ground access.
 ///Destination selection remains independent of ground-cache mutation.
 pub(super) fn ground_destination(
     world: &mut World,
@@ -1159,7 +1170,11 @@ pub(super) fn ground_destination(
     effect: &SpellEffect,
     destination: Option<Dest>,
 ) -> Result<Option<Dest>, super::CastFailure> {
-    if !effect.implicit_targets.contains(&62) {
+    let requires_ground = effect
+        .implicit_targets
+        .iter()
+        .any(|id| matches!(id, 62 | 138));
+    if !requires_ground {
         return Ok(destination);
     }
     let mut destination = destination.ok_or(super::CastFailure::InvalidTarget)?;
@@ -1170,7 +1185,7 @@ pub(super) fn ground_destination(
     let mut ground = world
         .get_resource_mut::<crate::ground::GroundMap>()
         .ok_or_else(|| {
-            super::CastFailure::Unsupported("caster-ground destination requires ground data".into())
+            super::CastFailure::Unsupported("ground destination requires ground data".into())
         })?;
     let crate::ground::GroundProbe::Supported(height) = ground.ground_in(map, destination.position)
     else {
