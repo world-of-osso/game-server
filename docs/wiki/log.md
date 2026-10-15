@@ -1,6 +1,6 @@
 ## 2026-10-15 — Titan's Grip hand rules
 
-[Inventory](systems/inventory.md#titans-grip-hand-rules--2026-10-15) derives effect155 capability and weapon/armor subclass masks from learned native spells; type17 gains the off hand with Dual Wield and matching Grip. Explicit/auto-equip retain the permitted two-hand pair. Published70391 authentication:261 spell fields plus pinned TC hashes. Request/persistence RED: three missing-admission/auto-equip failures; two negative controls pass. GREEN pending. Acquisition, unlearn-time eviction and whole-Fury acceptance remain open.
+[Inventory](systems/inventory.md#titans-grip-hand-rules--2026-10-15) derives effect155 capability and weapon/armor subclass masks from learned native spells; type17 gains the off hand with Dual Wield and matching Grip. Explicit/auto-equip retain the permitted two-hand pair. Published70391 authentication:261 spell fields plus pinned TC hashes. Request/persistence RED: three missing-admission/auto-equip failures; two negative controls pass. At9593985e native five tests GREEN under four threads (73.94s); ranged/final integration gates pending. Acquisition, unlearn-time eviction and whole-Fury acceptance remain open.
 
 ## 2026-10-15 — Ordinary NPC physical-spell dodge
 

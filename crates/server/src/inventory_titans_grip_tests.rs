@@ -117,6 +117,21 @@ fn titans_grip_honors_native_subclass_restrictions() {
 }
 
 #[test]
+fn titans_grip_never_offers_a_ranged_weapon_to_the_off_hand() {
+    const WORN_SHORTBOW: u32 = 2504;
+    let (mut app, client) = grip_inventory(&[DUAL_WIELD, TITANS_GRIP], &[WORN_SHORTBOW]);
+    let before = persistence::load_inventory(db(&app), client.character_id);
+    let errors = equip_off_hand(&mut app, &client, bag(3));
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].reason, InventoryErrorReason::WrongSlot);
+    assert_eq!(off_hand_item(&app, client.character_id), None);
+    assert_eq!(
+        persistence::load_inventory(db(&app), client.character_id),
+        before
+    );
+}
+
+#[test]
 fn titans_grip_unlearning_is_observed_by_the_next_request() {
     let (mut app, client) = grip_inventory(&[DUAL_WIELD, TITANS_GRIP], &[BATTLEAXE, BATTLEAXE]);
     equip_main_hand(&mut app, &client, bag(3));
