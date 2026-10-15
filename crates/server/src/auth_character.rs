@@ -93,6 +93,7 @@ pub fn process_create_character(
                 class: data.class,
                 appearance: data.appearance,
                 equipment_appearance: data.equipment_appearance,
+                tabard: None,
             })
         });
         pending.push(PendingCreation {

@@ -15,6 +15,8 @@ use super::*;
 use crate::faction::world_db_faction_templates;
 use crate::gold::GoldUpdateQueue;
 
+#[path = "npc_interaction/guild_tabard_tests.rs"]
+mod guild_tabard_tests;
 #[path = "transmog_tests.rs"]
 mod transmog_tests;
 
