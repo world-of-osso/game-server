@@ -133,3 +133,31 @@ fn toyfx44_bashiok_real_learn_use_preserves_source_actor_and_natural_lifetime() 
     h.advance(1);
     assert!(h.app.world().get_entity(actor).is_err());
 }
+
+#[test]
+fn toyfx44_folly_direct_radius_initializes_source_destination_before_offset() {
+    let h = harness(Vec::new(), &[388259], 8).unwrap();
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(388259)
+        .unwrap();
+    let owner = h.app.world().get::<Position>(h.caster).unwrap();
+    let origin = Vec3::new(owner.x, owner.y, owner.z);
+    for _ in 0..32 {
+        let destination = crate::spell_cast::targets::effect_dest(
+            h.app.world(),
+            h.caster,
+            None,
+            &spell.effects[0],
+            None,
+        )
+        .expect("native CheckDst initializes direct91 from the caster");
+        assert!(
+            (destination.position.distance(origin) - 2.0).abs() < 0.001,
+            "Folly requires its authored2yd ring, not a guessed caster-feet destination"
+        );
+        assert_eq!(destination.position.y, origin.y);
+    }
+}
