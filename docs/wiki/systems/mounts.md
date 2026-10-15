@@ -42,7 +42,9 @@ Lead-only publication after the importer gate: `python3 scripts/import-vehicles.
 
 ### Demolisher spellclick publication — implementation2026-10-15
 
-Canonical content_npc_spellclick_spells lacks34775 despite TDB's authored66245/flags1/user0 row. Normal map628 promotion also omitted it, reproduced on an authentic private database copy (`isle-vehicle-spellclick-publication-red1.log`,3516720c). `promote_battlegrounds.py --maps 628` now copies those exact rows inside its existing population transaction, preserves other NPC entries and refuses missing source rows so the transaction rolls back. Positive/repeat/rollback verification is pending; no canonical application occurred. The diagnostic TDB-only runtime-fixture catalog must retire once this normal publication path is proved.
+Normal promotion omitted authored spellclicks. The first34775-only fix was rejected by lead13:17: promotion must copy all source spellclick rows for every entry spawned on the promoted maps. An authentic map628+559 process RED (`isle-general-spellclick-publication-red1.log`,d3414920) expects nine source rows across seven NPC entries but gets only34775. `promote_battlegrounds.py` now deletes/reinserts the complete target-entry set from `tdb_npc_spellclick_spells` in the population transaction, preserves other entries and rolls back when the source table is absent. Empty per-entry source sets remove stale rows; no NPC-specific defaults or row requirement. Generalized GREEN pending. The diagnostic TDB-only runtime-fixture catalog must retire once publication is proved.
+
+Process tests require `WORLD_POPULATION_SOURCE=/absolute/path/to/authentic/world.db`; without it they skip. Run `env WORLD_POPULATION_SOURCE=/absolute/path/to/authentic/world.db python3 -m unittest scripts.tests.test_battleground_population`. Lead-only apply: `python3 scripts/promote_battlegrounds.py --db data/world.db --maps 628 --report data/diagnostics/isle-spellclick-publication.json`.
 
 ### Mounting (SPELL_AURA_MOUNTED 78)
 
