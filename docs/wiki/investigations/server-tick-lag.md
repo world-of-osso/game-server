@@ -180,7 +180,7 @@ Contract: [server tick budget](../../specs/server-tick-budget.md). Existing [per
 
 The remaining startup209.6ms/cold288ms costs need schedule-level evidence before another optimization. Diagnostic `system-timings` now measures inclusive schedules and the `ScheduleBuilt` preparation boundary, emitting named stalls immediately and inclusive `Main` phase rows. Preparation ends before executor initialization; phase rows overlap and must not be summed. Frame accounting and execution order are unchanged.
 
-Bevy0.19 `SystemMeta::new` explicitly creates system spans with `parent: None`. Span ancestry therefore cannot recover enclosing schedules: the real deferred-command regression logged an Update stall but an empty Main phase list (`schedule-attribution-green-89a6327e.log`, FAILED1/3). `6609d15f` tracks active schedule IDs per thread instead. Its targeted proof and attributed release capture are pending capacity; this is not an established explanation for the measured startup/cold frames.
+Bevy0.19 `SystemMeta::new` explicitly creates system spans with `parent: None`. Span ancestry therefore cannot recover enclosing schedules: the real deferred-command regression logged an Update stall but an empty Main phase list (`schedule-attribution-green-89a6327e.log`, FAILED1/3). `6609d15f`/`2e2aa040` track active schedule IDs per thread instead. Targeted tests pass3/3: actual deferred work over two updates, slow Local initialization and immediate system attribution (`schedule-attribution-green-final.log`); feature-enabled runtime check passes1m29s without warnings and workspace format check passes. The attributed release capture remains pending; this is not an established explanation for the measured startup/cold frames.
 
 ## Sources
 

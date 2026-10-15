@@ -1,6 +1,6 @@
 ## 2026-10-15 — Schedule/deferred attribution diagnostics
 
-[Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): enclosing schedule/preparation measurements leave frame accounting unchanged. Actual deferred-command test exposed Bevy's root system spans defeating ancestry; active per-thread schedule tracking is committed, targeted proof/capture pending. Startup209.6ms/cold288ms attribution remains open.
+[Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): enclosing schedule/preparation measurements leave frame accounting unchanged. Actual deferred-command test exposed Bevy's root system spans defeating ancestry; active per-thread schedule tracking passes3/3, warning-free feature check and workspace formatting; release capture pending. Startup209.6ms/cold288ms attribution remains open.
 
 ## 2026-10-14 — Low-pressure cold-login percentile proof
 
