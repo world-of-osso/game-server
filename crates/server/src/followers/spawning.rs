@@ -70,11 +70,15 @@ pub(super) fn initialize(
         max: stats.max_health,
     };
     let form = profile.form_spell;
+    // The ordinary StatsPlugin query owns derived-stat refresh after passive
+    // StatModifiers change, just as for players. SheetOwner remains absent.
+    let stat_fields = (stats.primary, stats.ratings, stats.derived());
     world
         .entity_mut(unit)
         .remove::<crate::creature_aggro::AggroRange>()
         .insert((
             Follower { owner, profile },
+            stat_fields,
             stats,
             pools,
             mana,

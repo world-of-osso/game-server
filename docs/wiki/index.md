@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
+
 - [Breakable CC targeting](investigations/follower-data.md#breakable-cc-targeting--2026-10-15) — shared follower hold/retarget/cast-stop and authored Attr6 implicit filtering; native118/31935 regressions, dungeon completion still open.
 - [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
 
