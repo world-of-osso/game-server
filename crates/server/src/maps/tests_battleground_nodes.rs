@@ -604,6 +604,75 @@ fn isle_channel_huge_seaforium_disarm_cancels_the_owned_fuse_only_in_its_copy() 
     assert_isle_bomb_lifecycle(true, true);
 }
 
+fn assert_isle_bomb_disarm(
+    h: &mut Harness,
+    copy: InMap,
+    bomb: (u32, Entity),
+    victim: (&Traveler, f32),
+    foreign: (&Traveler, f32),
+) {
+    let (bomb_entry, object) = bomb;
+    let (victim, before) = victim;
+    let (foreign, foreign_before) = foreign;
+    for user in [foreign, victim] {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<UseGameObject>>(user.connection)
+            .unwrap()
+            .send::<InteractionChannel>(UseGameObject {
+                object: object.to_bits(),
+            });
+        let mut errors = Vec::new();
+        for _ in 0..3 {
+            h.advance(1);
+            errors.extend(
+                h.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<shared::protocol::InteractionFailed>>(
+                        user.connection,
+                    )
+                    .unwrap()
+                    .receive(),
+            );
+        }
+        if user.player == foreign.player {
+            assert_eq!(
+                errors.len(),
+                1,
+                "the foreign request must actually be processed before the control is accepted"
+            );
+            assert_eq!(
+                errors[0].error,
+                shared::protocol::InteractionError::InvalidTarget
+            );
+            assert_eq!(
+                objects_in(h, copy, bomb_entry).len(),
+                1,
+                "another copy cannot disarm the bomb"
+            );
+        } else {
+            assert!(
+                errors.is_empty(),
+                "normal in-copy disarm rejected: {errors:?}"
+            );
+        }
+    }
+    assert!(
+        objects_in(h, copy, bomb_entry).is_empty(),
+        "normal in-copy bomb use must run source disarm during the arming period"
+    );
+    h.advance(12);
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        before,
+        "disarm cancels the pending explosion, not only its model"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(foreign.player).unwrap().current,
+        foreign_before
+    );
+}
+
 fn assert_isle_bomb_lifecycle(huge: bool, disarm: bool) {
     let mut entered = enter_isle_bomb_match();
     let actor = &entered.players[0];
@@ -752,63 +821,12 @@ fn assert_isle_bomb_lifecycle(huge: bool, disarm: bool) {
         "planting does not detonate immediately"
     );
     if disarm {
-        let object = bombs[0].0;
-        for user in [foreign, victim] {
-            h.app
-                .world_mut()
-                .get_mut::<MessageSender<UseGameObject>>(user.connection)
-                .unwrap()
-                .send::<InteractionChannel>(UseGameObject {
-                    object: object.to_bits(),
-                });
-            let mut errors = Vec::new();
-            for _ in 0..3 {
-                h.advance(1);
-                errors.extend(
-                    h.app
-                        .world_mut()
-                        .get_mut::<MessageReceiver<shared::protocol::InteractionFailed>>(
-                            user.connection,
-                        )
-                        .unwrap()
-                        .receive(),
-                );
-            }
-            if user.player == foreign.player {
-                assert_eq!(
-                    errors.len(),
-                    1,
-                    "the foreign request must actually be processed before the control is accepted"
-                );
-                assert_eq!(
-                    errors[0].error,
-                    shared::protocol::InteractionError::InvalidTarget
-                );
-                assert_eq!(
-                    objects_in(h, entered.copy, bomb_entry).len(),
-                    1,
-                    "another copy cannot disarm the bomb"
-                );
-            } else {
-                assert!(
-                    errors.is_empty(),
-                    "normal in-copy disarm rejected: {errors:?}"
-                );
-            }
-        }
-        assert!(
-            objects_in(h, entered.copy, bomb_entry).is_empty(),
-            "normal in-copy bomb use must run source disarm during the arming period"
-        );
-        h.advance(12);
-        assert_eq!(
-            h.app.world().get::<Health>(victim.player).unwrap().current,
-            before,
-            "disarm cancels the pending explosion, not only its model"
-        );
-        assert_eq!(
-            h.app.world().get::<Health>(foreign.player).unwrap().current,
-            foreign_before
+        assert_isle_bomb_disarm(
+            h,
+            entered.copy,
+            (bomb_entry, bombs[0].0),
+            (victim, before),
+            (foreign, foreign_before),
         );
         return;
     }
