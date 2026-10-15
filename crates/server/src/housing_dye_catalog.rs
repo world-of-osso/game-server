@@ -4,25 +4,30 @@ use super::{number, read_build_key, read_rows};
 use rusqlite::Connection;
 use shared::protocol::DecorDye;
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub(crate) struct DyeCatalog {
-    slots: BTreeMap<u32, u32>,
-    colors: BTreeMap<u32, u32>,
+    slots: Arc<BTreeMap<u32, u32>>,
+    colors: Arc<BTreeMap<u32, u32>>,
 }
 
 impl DyeCatalog {
     pub(crate) fn read(db: &Connection) -> Result<Self, String> {
         read_build_key(db)?;
         Ok(Self {
-            slots: read_rows(db, "DecorDyeSlot")?
-                .into_iter()
-                .map(|(id, fields)| Ok((id, number(&fields, "HouseDecorID")?)))
-                .collect::<Result<_, String>>()?,
-            colors: read_rows(db, "DyeColor")?
-                .into_iter()
-                .map(|(id, fields)| Ok((id, number(&fields, "ItemID")?)))
-                .collect::<Result<_, String>>()?,
+            slots: Arc::new(
+                read_rows(db, "DecorDyeSlot")?
+                    .into_iter()
+                    .map(|(id, fields)| Ok((id, number(&fields, "HouseDecorID")?)))
+                    .collect::<Result<_, String>>()?,
+            ),
+            colors: Arc::new(
+                read_rows(db, "DyeColor")?
+                    .into_iter()
+                    .map(|(id, fields)| Ok((id, number(&fields, "ItemID")?)))
+                    .collect::<Result<_, String>>()?,
+            ),
         })
     }
 

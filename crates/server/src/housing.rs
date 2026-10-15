@@ -113,9 +113,6 @@ pub(crate) fn process_requests(world: &mut World) {
             continue;
         }
         let result = execute(world, actor, &request.command);
-        if result.is_ok() && matches!(request.command, HousingCommand::CommitDecorDyes { .. }) {
-            publish_layout_to_observers(world, actor);
-        }
         let (neighborhood, error) = match result {
             Ok(neighborhood) => (neighborhood, None),
             Err(message) => (None, Some(message)),
@@ -126,13 +123,6 @@ pub(crate) fn process_requests(world: &mut World) {
         };
         send_snapshot(world, actor, request.request_id, neighborhood, house, error);
     }
-}
-
-fn publish_layout_to_observers(world: &mut World, editor: Actor) {
-    let map = *world
-        .get::<InMap>(editor.player)
-        .expect("accepted house edit requires an admitted map");
-    publish_layout_at(world, map, Some(editor.connection));
 }
 
 fn publish_layout_at(world: &mut World, map: InMap, excluded: Option<Entity>) {
@@ -217,6 +207,7 @@ fn apply_house_command(
         HousingCommand::PurchasePlot { .. }
         | HousingCommand::RedeemDecor { .. }
         | HousingCommand::SaveHouseAccess { .. }
+        | HousingCommand::CommitDecorDyes { .. }
         | HousingCommand::PlaceDecor { .. }
         | HousingCommand::TransformDecor { .. }
         | HousingCommand::MoveDecor { .. }
@@ -231,10 +222,6 @@ fn apply_house_command(
             instance_id,
             changes,
         } => dye_requests::preview(world, actor, context, *house_id, *instance_id, changes)?,
-        HousingCommand::CommitDecorDyes {
-            house_id,
-            instance_id,
-        } => dye_requests::commit_preview(world, actor, context, *house_id, *instance_id)?,
         HousingCommand::CancelDecorDyes => dye_requests::cancel(world, actor),
         HousingCommand::ReloadLayout { house_id } => {
             store::house(

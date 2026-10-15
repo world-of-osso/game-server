@@ -1,7 +1,7 @@
 //! Fresh FIFO housing writes; inventory and owner replies follow commit receipts.
 use super::*;
 use crate::persistence_writer::CommitReceipt;
-use shared::protocol::{InventoryChannel, InventoryError, InventoryErrorReason};
+use shared::protocol::{DecorDyePreview, InventoryChannel, InventoryError, InventoryErrorReason};
 use std::collections::VecDeque;
 
 #[derive(Clone, Copy)]
@@ -16,13 +16,29 @@ enum InventoryPublication {
     Gold,
 }
 
+enum HousingReceipt {
+    Mutation(CommitReceipt),
+    Dye(CommitReceipt<bool>),
+}
+
+impl HousingReceipt {
+    // Unit receipts publish their configured effect; dye no-ops suppress inventory updates.
+    fn result(&self) -> Option<Result<bool, String>> {
+        match self {
+            Self::Mutation(receipt) => receipt.result().map(|result| result.map(|()| true)),
+            Self::Dye(receipt) => receipt.result(),
+        }
+    }
+}
+
 struct PendingHousingWrite {
     actor: Actor,
     origin: ReplyOrigin,
     inventory: InventoryPublication,
     // Layout observers stay bound to the request map after its editor leaves.
     observer_map: Option<InMap>,
-    receipt: CommitReceipt,
+    dye_preview: Option<DecorDyePreview>,
+    receipt: HousingReceipt,
 }
 
 #[derive(Resource, Default)]
@@ -51,6 +67,10 @@ pub(super) fn enqueue_request(world: &mut World, actor: Actor, request: &Housing
         HousingCommand::PurchasePlot { plot_id } => {
             enqueue_purchase(world, actor, *plot_id, request.request_id)
         }
+        HousingCommand::CommitDecorDyes {
+            house_id,
+            instance_id,
+        } => enqueue_dye_commit(world, actor, *house_id, *instance_id, request.request_id),
         HousingCommand::SaveHouseAccess { .. }
         | HousingCommand::PlaceDecor { .. }
         | HousingCommand::TransformDecor { .. }
@@ -82,7 +102,8 @@ pub(super) fn enqueue_collection(
             origin,
             inventory: InventoryPublication::Items,
             observer_map: None,
-            receipt,
+            dye_preview: None,
+            receipt: HousingReceipt::Mutation(receipt),
         });
     Ok(())
 }
@@ -113,7 +134,8 @@ pub(super) fn enqueue_purchase(
             origin: ReplyOrigin::Request(request_id),
             inventory: InventoryPublication::Gold,
             observer_map: None,
-            receipt,
+            dye_preview: None,
+            receipt: HousingReceipt::Mutation(receipt),
         });
     Ok(())
 }
@@ -144,7 +166,40 @@ fn enqueue_house_mutation(
             origin: ReplyOrigin::Request(request.request_id),
             inventory: InventoryPublication::Unchanged,
             observer_map,
-            receipt,
+            dye_preview: None,
+            receipt: HousingReceipt::Mutation(receipt),
+        });
+    Ok(())
+}
+
+fn enqueue_dye_commit(
+    world: &mut World,
+    actor: Actor,
+    house_id: u64,
+    instance_id: u64,
+    request_id: u64,
+) -> Result<(), String> {
+    let dyes = catalog(world)?.dyes.clone();
+    let context = actor_context(world, actor)?;
+    let preview = dye_requests::staged_preview(world, actor, house_id, instance_id)?;
+    let selection = preview.clone();
+    let observer_map = world.get::<InMap>(actor.player).copied();
+    let receipt = world
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("housing dye commit", move |db| {
+            store::commit_dyes(db, context, &selection, &dyes)
+        });
+    world
+        .resource_mut::<PendingHousingWrites>()
+        .0
+        .push_back(PendingHousingWrite {
+            actor,
+            origin: ReplyOrigin::Request(request_id),
+            inventory: InventoryPublication::Items,
+            observer_map,
+            dye_preview: Some(preview),
+            receipt: HousingReceipt::Dye(receipt),
         });
     Ok(())
 }
@@ -206,7 +261,7 @@ fn read_placed_decor_id(
         .ok_or_else(|| "Placed decor not found in this house.".into())
 }
 
-fn drain_completed(world: &mut World) -> Vec<(PendingHousingWrite, Result<(), String>)> {
+fn drain_completed(world: &mut World) -> Vec<(PendingHousingWrite, Result<bool, String>)> {
     let mut pending = world.resource_mut::<PendingHousingWrites>();
     let mut completed = Vec::new();
     while let Some(result) = pending.0.front().and_then(|job| job.receipt.result()) {
@@ -265,15 +320,23 @@ fn publish_inventory(world: &mut World, actor: Actor, publication: InventoryPubl
     }
 }
 
-fn publish_write_result(world: &mut World, job: PendingHousingWrite, result: Result<(), String>) {
-    if result.is_ok() {
+fn publish_write_result(world: &mut World, job: PendingHousingWrite, result: Result<bool, String>) {
+    if result.is_ok()
+        && let Some(preview) = &job.dye_preview
+    {
+        dye_requests::clear_committed_preview(world, job.actor, preview);
+    }
+    if result
+        .as_ref()
+        .is_ok_and(|publish_inventory| *publish_inventory)
+    {
         publish_inventory(world, job.actor, job.inventory);
     }
     match (job.origin, result) {
         (ReplyOrigin::Request(id), result) => {
             send_snapshot(world, job.actor, id, None, None, result.err())
         }
-        (ReplyOrigin::ItemUse, Ok(())) => send_snapshot(world, job.actor, 0, None, None, None),
+        (ReplyOrigin::ItemUse, Ok(_)) => send_snapshot(world, job.actor, 0, None, None, None),
         (ReplyOrigin::ItemUse, Err(detail)) => send_item_use_error(world, job.actor, detail),
     }
 }

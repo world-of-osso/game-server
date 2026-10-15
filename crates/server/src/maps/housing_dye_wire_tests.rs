@@ -117,17 +117,29 @@ fn dye_editor(db: redb::Database) -> (Harness, Traveler, u64) {
     (h, owner, house.house_id)
 }
 
+#[derive(Clone, Copy)]
+enum PriorDyeState {
+    Available,
+    Removed,
+    Applied,
+}
+
 #[test]
 fn housing_dye_commit_waits_for_fifo_and_preserves_earlier_wallet() {
-    assert_dye_commit_fifo(true);
+    assert_dye_commit_fifo(PriorDyeState::Available);
 }
 
 #[test]
 fn housing_dye_failed_fifo_commit_keeps_preview_and_consumes_nothing() {
-    assert_dye_commit_fifo(false);
+    assert_dye_commit_fifo(PriorDyeState::Removed);
 }
 
-fn assert_dye_commit_fifo(dye_available: bool) {
+#[test]
+fn housing_dye_fifo_commit_treats_an_earlier_color_change_as_noop() {
+    assert_dye_commit_fifo(PriorDyeState::Applied);
+}
+
+fn assert_dye_commit_fifo(prior_state: PriorDyeState) {
     use std::time::{Duration, Instant};
     let dir = tempfile::tempdir().unwrap();
     let db = redb::Database::create(dir.path().join("fifo-dyes.redb")).unwrap();
@@ -144,16 +156,41 @@ fn assert_dye_commit_fifo(dye_available: bool) {
         },
     );
     assert_eq!(staged.error, None);
+    let prior_preview = staged.state.dye_preview.clone().unwrap();
+    let prior_dyes = h
+        .app
+        .world()
+        .resource::<crate::housing::HousingAvailability>()
+        .0
+        .as_ref()
+        .unwrap()
+        .dyes
+        .clone();
     let database = h.app.world().resource::<GameDatabase>();
     let held = database.db.begin_write().unwrap();
     let prior = database.writer.enqueue("earlier dye wallet", move |db| {
         let mut inventory = crate::persistence::load_inventory(db, 30);
         inventory.gold = 777;
-        if !dye_available {
+        if matches!(prior_state, PriorDyeState::Removed) {
             inventory.items.clear();
         }
         crate::persistence::save_inventory(db, 30, &inventory);
-        Ok(())
+        let changed = if matches!(prior_state, PriorDyeState::Applied) {
+            store::commit_dyes(
+                db,
+                store::Actor {
+                    account_id: 30,
+                    character_id: 30,
+                    neighborhood_id: None,
+                    inside_house: Some(house_id),
+                },
+                &prior_preview,
+                &prior_dyes,
+            )?
+        } else {
+            false
+        };
+        Ok(changed)
     });
     let release = std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(250));
@@ -202,9 +239,12 @@ fn assert_dye_commit_fifo(dye_available: bool) {
         assert!(Instant::now() < deadline, "no durable dye result");
         std::thread::sleep(Duration::from_millis(1));
     };
-    assert_eq!(prior.result(), Some(Ok(())));
+    assert_eq!(
+        prior.result(),
+        Some(Ok(matches!(prior_state, PriorDyeState::Applied)))
+    );
     assert_eq!(saved.request_id, 91);
-    if dye_available {
+    if !matches!(prior_state, PriorDyeState::Removed) {
         assert_eq!(saved.error, None);
         assert!(saved.state.dye_preview.is_none());
         assert_eq!(

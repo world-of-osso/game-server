@@ -31,14 +31,13 @@ pub(super) fn preview(
     Ok(())
 }
 
-pub(super) fn commit_preview(
-    world: &mut World,
+pub(super) fn staged_preview(
+    world: &World,
     actor: Actor,
-    context: store::Actor,
     house_id: u64,
     instance_id: u64,
-) -> Result<(), String> {
-    let staged = world
+) -> Result<DecorDyePreview, String> {
+    Ok(world
         .get::<DyePreview>(actor.connection)
         .filter(|preview| {
             preview.player == actor.player
@@ -47,20 +46,20 @@ pub(super) fn commit_preview(
         })
         .ok_or("No active dye preview for this current player and decor.")?
         .selection
-        .clone();
-    let changed = store::commit_dyes(
-        &world.resource::<GameDatabase>().db,
-        context,
-        &staged,
-        &catalog(world)?.dyes,
-    )?;
-    world.entity_mut(actor.connection).remove::<DyePreview>();
-    if changed {
-        world
-            .resource_mut::<crate::gold::GoldUpdateQueue>()
-            .record_items(actor.character);
+        .clone())
+}
+
+pub(super) fn clear_committed_preview(
+    world: &mut World,
+    actor: Actor,
+    selection: &DecorDyePreview,
+) {
+    let matches = world
+        .get::<DyePreview>(actor.connection)
+        .is_some_and(|preview| preview.player == actor.player && &preview.selection == selection);
+    if matches {
+        world.entity_mut(actor.connection).remove::<DyePreview>();
     }
-    Ok(())
 }
 
 pub(super) fn cancel(world: &mut World, actor: Actor) {
