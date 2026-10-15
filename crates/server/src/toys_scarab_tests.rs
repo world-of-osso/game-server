@@ -3,7 +3,7 @@
 use super::*;
 
 #[test]
-fn toyfx39_scarab_storm_preserves_source_guardian_count_scatter_and_lifetime() {
+fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Npc, UnitIsPet, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
@@ -89,6 +89,21 @@ fn toyfx39_scarab_storm_preserves_source_guardian_count_scatter_and_lifetime() {
             .all(|point| point.distance(destination) <= 5.001)
     );
     assert!(points.iter().any(|point| point.distance(destination) > 0.1));
+
+    // Exercise the existing authoritative follow system, not only its marker.
+    h.app
+        .init_resource::<lightyear::prelude::ReplicationDirtyQueue>();
+    h.app.init_resource::<crate::interest::InterestDirtyQueue>();
+    crate::creature_ai::install_follow_fixture(&mut h.app);
+    h.app.world_mut().get_mut::<Position>(caster).unwrap().x += 20.0;
+    let owner = h.app.world().get::<Position>(caster).unwrap();
+    let owner_position = Vec3::new(owner.x, owner.y, owner.z);
+    h.advance(10);
+    for ((actor, _), before) in actors.iter().zip(&points) {
+        let position = h.app.world().get::<Position>(*actor).unwrap();
+        let after = Vec3::new(position.x, position.y, position.z);
+        assert!(after.distance(owner_position) < before.distance(owner_position));
+    }
     h.app
         .world_mut()
         .resource_mut::<Time<Virtual>>()
