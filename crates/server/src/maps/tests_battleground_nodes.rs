@@ -360,6 +360,100 @@ fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
     assert_eq!(creatures_in(h, copy, 13359), 16, "flag-0 tower guards stay");
 }
 
+#[test]
+fn isle_channel_match_team_hostility_overrides_race_without_changing_open_world() {
+    use crate::spell_cast::targets::{Relation, relation_matches};
+    use shared::components::UnitFactionTemplate;
+    let mut entered = enter_source_match_with(
+        &shared::battleground::isle_of_conquest(),
+        [1299, 1245],
+        |app| {
+            app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        },
+    );
+    for team in [BgTeam::A, BgTeam::B] {
+        let mut allies = entered
+            .players
+            .iter()
+            .zip(&entered.teams)
+            .filter(|(_, assigned)| **assigned == team)
+            .map(|(player, _)| player.player);
+        let actor = allies.next().unwrap();
+        let ally = allies.next().unwrap();
+        let enemy = entered
+            .players
+            .iter()
+            .zip(&entered.teams)
+            .find(|(_, assigned)| **assigned != team)
+            .unwrap()
+            .0
+            .player;
+        for actor_race in [1, 2] {
+            for target_race in [1, 2] {
+                let world = entered.h.app.world_mut();
+                world.entity_mut(actor).insert(UnitFactionTemplate(
+                    crate::faction::faction_template_for_race(actor_race),
+                ));
+                for target in [ally, enemy] {
+                    world.entity_mut(target).insert(UnitFactionTemplate(
+                        crate::faction::faction_template_for_race(target_race),
+                    ));
+                }
+                assert!(
+                    relation_matches(world, actor, enemy, Relation::Enemy),
+                    "accepted opposing team is attackable: {team:?}, races{actor_race}/{target_race}"
+                );
+                assert!(!relation_matches(world, actor, ally, Relation::Enemy));
+                assert!(relation_matches(world, actor, ally, Relation::Ally));
+                assert!(!relation_matches(world, actor, enemy, Relation::Ally));
+            }
+        }
+        let foreign = InMap {
+            instance_id: entered.copy.instance_id + 1,
+            ..entered.copy
+        };
+        let world = entered.h.app.world_mut();
+        world.entity_mut(enemy).insert(foreign);
+        assert!(!relation_matches(world, actor, enemy, Relation::Enemy));
+        world.entity_mut(enemy).insert(entered.copy);
+        let snapshot = world
+            .get::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .clone();
+        world
+            .get_mut::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .accepted = false;
+        assert!(!relation_matches(world, actor, enemy, Relation::Enemy));
+        world.entity_mut(enemy).insert(snapshot);
+    }
+    let first = entered.h.spawn(9001, STORMWIND, entered.origin);
+    let second = entered.h.spawn(9002, STORMWIND, entered.origin);
+    let world = entered.h.app.world_mut();
+    world
+        .entity_mut(first.player)
+        .insert(UnitFactionTemplate(1));
+    world
+        .entity_mut(second.player)
+        .insert(UnitFactionTemplate(2));
+    assert!(
+        !relation_matches(world, first.player, second.player, Relation::Enemy),
+        "existing unflagged open-world player PvP stays rejected"
+    );
+    world
+        .entity_mut(second.player)
+        .insert(UnitFactionTemplate(1));
+    assert!(relation_matches(
+        world,
+        first.player,
+        second.player,
+        Relation::Ally
+    ));
+}
+
 fn enter_isle_bomb_match() -> EnteredMatch {
     let template = shared::battleground::isle_of_conquest();
     enter_source_match_with(&template, [1299, 1245], |app| {
