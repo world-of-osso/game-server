@@ -60,7 +60,7 @@ impl Plugin for CreatureSightPlugin {
             .add_observer(notify_woken)
             .add_systems(
                 FixedUpdate,
-                (relocate_npcs, creature_sight_system)
+                (resize_npcs, relocate_npcs, creature_sight_system)
                     .chain()
                     .before(crate::creature_aggro::update_victim_system),
             );
@@ -87,10 +87,13 @@ fn cell_of(map: InMap, position: &Position) -> Cell {
 pub(crate) struct NpcGrid {
     cells: HashMap<Cell, Vec<Entity>>,
     cell_of: EntityHashMap<Cell>,
+    max_reach: HashMap<InMap, f32>,
 }
 
 impl NpcGrid {
-    fn place(&mut self, npc: Entity, cell: Cell) {
+    fn place(&mut self, npc: Entity, cell: Cell, reach: f32) {
+        let maximum = self.max_reach.entry(cell.0).or_default();
+        *maximum = maximum.max(reach);
         match self.cell_of.insert(npc, cell) {
             Some(previous) if previous == cell => return,
             Some(previous) => self.remove_from_cell(npc, previous),
@@ -114,12 +117,16 @@ impl NpcGrid {
         }
     }
 
-    /// Creatures in the 3x3 cells around `position`: every creature within
-    /// `MAX_AGGRO_RADIUS` of it, and some farther.
+    /// GetAttackDistance clamps before IsWithinDist adds both model reaches.
+    /// A conservative per-copy maximum keeps large/scaled bodies in the search.
     fn near(&self, map: InMap, position: &Position) -> impl Iterator<Item = Entity> + '_ {
-        let (map, x, z) = cell_of(map, position);
-        (-1..=1)
-            .flat_map(move |dx| (-1..=1).map(move |dz| (map, x + dx, z + dz)))
+        let radius = MAX_AGGRO_RADIUS + 2.0 * self.max_reach.get(&map).copied().unwrap_or(0.0);
+        let min_x = ((position.x - radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        let max_x = ((position.x + radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        let min_z = ((position.z - radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        let max_z = ((position.z + radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        (min_x..=max_x)
+            .flat_map(move |x| (min_z..=max_z).map(move |z| (map, x, z)))
             .filter_map(|cell| self.cells.get(&cell))
             .flatten()
             .copied()
@@ -138,12 +145,15 @@ struct SightPass {
 fn index_new_npc(
     trigger: On<Add, Npc>,
     units: Query<(&Position, &InMap)>,
+    attack_distance: crate::creature_aggro::AggroDistance,
     mut grid: ResMut<NpcGrid>,
     mut pass: ResMut<SightPass>,
 ) {
     let npc = trigger.entity;
-    if let Ok((position, map)) = units.get(npc) {
-        grid.place(npc, cell_of(*map, position));
+    if let Ok((position, map)) = units.get(npc)
+        && let Some(reach) = attack_distance.combat_reach(npc)
+    {
+        grid.place(npc, cell_of(*map, position), reach);
         pass.pending.insert(npc);
     }
 }
@@ -159,16 +169,43 @@ fn notify_woken(trigger: On<Remove, GridDormant>, mut pass: ResMut<SightPass>) {
     pass.pending.insert(trigger.entity);
 }
 
+/// Display/scale changes (including Polymorph) change reach without movement.
+fn resize_npcs(
+    units: Query<
+        (Entity, &Position, &InMap),
+        (
+            With<Npc>,
+            Or<(
+                Changed<shared::components::ModelDisplay>,
+                Changed<shared::components::UnitScale>,
+            )>,
+        ),
+    >,
+    attack_distance: crate::creature_aggro::AggroDistance,
+    mut grid: ResMut<NpcGrid>,
+    mut pass: ResMut<SightPass>,
+) {
+    for (unit, position, map) in &units {
+        if let Some(reach) = attack_distance.combat_reach(unit) {
+            grid.place(unit, cell_of(*map, position), reach);
+            pass.pending.insert(unit);
+        }
+    }
+}
+
 /// Each tick: creatures that moved take their new cell and wait for the next notify.
 fn relocate_npcs(
     queue: Res<InterestDirtyQueue>,
     npcs: Query<(&Position, &InMap), With<Npc>>,
+    attack_distance: crate::creature_aggro::AggroDistance,
     mut grid: ResMut<NpcGrid>,
     mut pass: ResMut<SightPass>,
 ) {
     for unit in queue.drain_relocated() {
-        if let Ok((position, map)) = npcs.get(unit) {
-            grid.place(unit, cell_of(*map, position));
+        if let Ok((position, map)) = npcs.get(unit)
+            && let Some(reach) = attack_distance.combat_reach(unit)
+        {
+            grid.place(unit, cell_of(*map, position), reach);
             pass.pending.insert(unit);
         }
     }
@@ -212,6 +249,7 @@ struct SightParams<'w, 's> {
     watchers: Watchers<'w, 's>,
     units: Units<'w, 's>,
     templates: Res<'w, FactionTemplates>,
+    attack_distance: crate::creature_aggro::AggroDistance<'w, 's>,
     world_data: Option<Res<'w, WorldData>>,
     maps: Option<Res<'w, crate::maps::MapStore>>,
     time: Res<'w, Time>,
@@ -286,14 +324,14 @@ impl SightParams<'_, '_> {
     /// `CreatureAI::MoveInLineOfSight(who)` of creature `watcher` (seen as `me`) for a
     /// creature `who` `distance` yards away: whether `watcher` attacks it.
     fn sight(&self, watcher: Entity, me: &UnitView, who: &UnitView, distance: f32) -> bool {
-        let Ok((range, state, react, home, last_damaged)) = self.watchers.get(watcher) else {
+        let Ok((_, state, react, home, last_damaged)) = self.watchers.get(watcher) else {
             return false;
         };
         // `me->IsEngaged()`, `HasReactState(REACT_AGGRESSIVE)`.
         if !state.is_idle() || react.is_some_and(|react| *react != ReactState::Aggressive) {
             return false;
         }
-        self.can_start_attack(me, who, range.0, distance)
+        self.can_start_attack(me, who, distance)
             && crate::creature_aggro::within_reach_of_home(
                 home,
                 last_damaged,
@@ -317,13 +355,7 @@ impl SightParams<'_, '_> {
     /// `Creature::CanStartAttack(who, force = false)` for a creature `who`, with the
     /// faction, evade and map parts of `CanCreatureAttack`. The caller checked the home
     /// distance.
-    fn can_start_attack(
-        &self,
-        me: &UnitView,
-        who: &UnitView,
-        detection: f32,
-        distance: f32,
-    ) -> bool {
+    fn can_start_attack(&self, me: &UnitView, who: &UnitView, distance: f32) -> bool {
         // IsImmuneToNPC (who is not player-controlled); no non-combat pets.
         if me.flags & UNIT_FLAG_IMMUNE_TO_NPC != 0 || self.non_combat_pet(who.template) {
             return false;
@@ -347,11 +379,16 @@ impl SightParams<'_, '_> {
         // GetAttackDistance: each level against the other.
         let my_level = level_for_viewer(me.level, me.scaling, who.level.0);
         let its_level = level_for_viewer(who.level, who.scaling, me.level.0);
-        let radius = crate::creature_aggro::aggro_radius(detection, my_level, its_level);
+        let Some(radius) = self
+            .attack_distance
+            .center_radius(me.entity, who.entity, my_level, its_level)
+        else {
+            return false;
+        };
         hostile
             && attackable
             && me.map == who.map
-            && distance <= radius
+            && distance < radius
             && !Self::evading(me)
             && !Self::evading(who)
     }
@@ -390,11 +427,7 @@ fn creature_sight_system(
             let Some(seen) = params.view(other) else {
                 continue;
             };
-            // No aggro radius exceeds `MAX_AGGRO_RADIUS`.
             let gap = distance(mover.position, seen.position);
-            if gap > MAX_AGGRO_RADIUS {
-                continue;
-            }
             if params.sight(moved, &mover, &seen, gap) {
                 offer(moved, other, gap);
             }

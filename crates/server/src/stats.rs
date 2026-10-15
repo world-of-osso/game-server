@@ -1,4 +1,4 @@
-//! Player character stats (retail 12.x model).
+//! Player and approved follower-bridge character stats (retail 12.x model).
 //!
 //! `compute_character_stats` turns class/race/level base stats, gear and
 //! optional aura `StatModifiers` into `CharacterStats`. `update_character_stats`
@@ -539,10 +539,10 @@ fn class_info(classes: Option<&ClassSpells>, class: u8) -> Option<&ClassInfo> {
 /// class main stat and no mastery.
 fn spec_inputs(
     class: Option<&ClassInfo>,
-    spec: Option<&ActiveSpec>,
+    spec: Option<u32>,
     spells: Option<&SpellStore>,
 ) -> (Option<PrimaryStat>, f32) {
-    let Some(spec) = spec.and_then(|spec| class?.specs.iter().find(|info| info.spec_id == spec.0))
+    let Some(spec) = spec.and_then(|spec| class?.specs.iter().find(|info| info.spec_id == spec))
     else {
         let class_stat = class.map(|class| PrimaryStat::from_priority(class.primary_stat_priority));
         return (class_stat, 0.0);
@@ -667,7 +667,8 @@ fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
 
 type StatsQuery = (
     Entity,
-    &'static Player,
+    Option<&'static Player>,
+    Option<&'static crate::followers::Follower>,
     &'static Level,
     Option<&'static ActiveSpec>,
     Option<&'static EquippedItems>,
@@ -680,19 +681,40 @@ type StatsQuery = (
     Option<&'static mut Mana>,
 );
 
-type StatsFilter = Or<(
-    Added<Player>,
-    Changed<Level>,
-    Changed<ActiveSpec>,
-    Changed<EquippedItems>,
-    Changed<KnownSpells>,
-    Changed<StatModifiers>,
-)>;
+type StatsFilter = (
+    Or<(With<Player>, With<crate::followers::Follower>)>,
+    Or<(
+        Added<Player>,
+        Changed<crate::followers::Follower>,
+        Changed<Level>,
+        Changed<ActiveSpec>,
+        Changed<EquippedItems>,
+        Changed<KnownSpells>,
+        Changed<StatModifiers>,
+    )>,
+);
 
-/// Recompute `CharacterStats` and write stats, health and mana maxima.
+/// Followers retain the bridge's source-neutral race0 and labelled spec. They
+/// remain NPCs; no synthetic Player or persistent-character identity is inserted.
+fn stat_identity(
+    player: Option<&Player>,
+    follower: Option<&crate::followers::Follower>,
+    spec: Option<&ActiveSpec>,
+) -> Option<(u8, u8, Option<u32>)> {
+    match (player, follower) {
+        (Some(player), _) => Some((player.class, player.race, spec.map(|spec| spec.0))),
+        (None, Some(follower)) => {
+            Some((follower.profile.class_id, 0, Some(follower.profile.spec_id)))
+        }
+        (None, None) => None,
+    }
+}
+
+/// Recompute `CharacterStats` and write stats, health and mana maxima for
+/// players and approved NPC followers through the same modifier/ratio path.
 pub(crate) fn update_character_stats(
     mut commands: Commands,
-    mut players: Query<StatsQuery, StatsFilter>,
+    mut characters: Query<StatsQuery, StatsFilter>,
     classes: Option<Res<ClassSpells>>,
     spells: Option<Res<SpellStore>>,
     items: ItemData,
@@ -701,6 +723,7 @@ pub(crate) fn update_character_stats(
     for (
         entity,
         player,
+        follower,
         level,
         spec,
         equipped,
@@ -711,15 +734,18 @@ pub(crate) fn update_character_stats(
         mut derived,
         mut health,
         mana,
-    ) in &mut players
+    ) in &mut characters
     {
-        let class = class_info(classes.as_deref(), player.class);
-        let (primary_stat, mastery_coefficient) = spec_inputs(class, spec, spells.as_deref());
+        let Some((class_id, race, spec_id)) = stat_identity(player, follower, spec) else {
+            continue;
+        };
+        let class = class_info(classes.as_deref(), class_id);
+        let (primary_stat, mastery_coefficient) = spec_inputs(class, spec_id, spells.as_deref());
         let gear = items.gear(equipped);
         let (gear_primary, gear_ratings) = sum_equipment_stats(&gear.blocks);
         let input = StatInputs {
-            class: player.class,
-            race: player.race,
+            class: class_id,
+            race,
             level: level.0,
             primary_stat,
             mastery_coefficient,
@@ -733,7 +759,7 @@ pub(crate) fn update_character_stats(
         let Some(mut stats) = compute_character_stats(&input, mods) else {
             warn!(
                 "no stat data for class {} level {}; stats unchanged",
-                player.class, level.0
+                class_id, level.0
             );
             continue;
         };
@@ -741,7 +767,7 @@ pub(crate) fn update_character_stats(
         stats.off_hand = gear.off_hand;
         stats.health_regen = gear.health_regen;
         stats.defense = player_defense(
-            player.class,
+            class_id,
             level.0,
             &stats.ratings,
             DefenseInputs {

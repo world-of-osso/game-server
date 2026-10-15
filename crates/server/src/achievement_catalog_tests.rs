@@ -1,6 +1,103 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_unearned_snapshot_rejects_missing_earned_component() {
+    let mut world = World::new();
+    world.insert_resource(catalog());
+    let actor = world
+        .spawn((
+            shared::components::Player {
+                name: "Noearned".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            shared::components::Level(1),
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    let event = CriteriaEvent::CastSpell(1217637);
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    assert!(
+        conditions.player.is_some(),
+        "other reference-player facts are available"
+    );
+    let mut state = PlayerAchievementState::default();
+    world
+        .resource::<AchievementCatalog>()
+        .update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "a missing earned-state component is unknown, not an empty known-unearned set"
+    );
+    world
+        .entity_mut(actor)
+        .insert(PlayerAchievementState::default());
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    world
+        .resource::<AchievementCatalog>()
+        .update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "character state without its account aggregate is incomplete earned authority"
+    );
+    world.entity_mut(actor).insert(PlayerAchievementState {
+        account: Some(Box::default()),
+        ..Default::default()
+    });
+    let catalog = world.remove_resource::<AchievementCatalog>().unwrap();
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    catalog.update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "a missing catalog also cannot authorize known-unearned credit"
+    );
+}
+
+#[test]
+fn achievements_criteria_unearned_cast_requires_reference_and_authored_award() {
+    let catalog = catalog();
+    for (player, expected) in [
+        (None, None),
+        (Some(ReferencePlayer::default()), None),
+        (
+            Some(ReferencePlayer {
+                earned_achievements: Some(BTreeSet::new()),
+                account_achievements_known: true,
+                ..Default::default()
+            }),
+            Some(1),
+        ),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player,
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::CastSpell(1217637),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&103451).copied(), expected);
+    }
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(-87, 41707)], &HashMap::new())
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(-87, u32::MAX)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "unknown authored metadata is not known-unearned authority"
+    );
+}
+
+#[test]
 fn achievements_criteria_pet_type_level_resolves_species_and_preserves_zero_type() {
     let catalog = catalog();
     let conditions = PlayerConditions {
@@ -264,10 +361,10 @@ fn achievements_criteria_earned_prerequisite_requires_known_id_and_scoped_player
             ..Default::default()
         };
         let player = ReferencePlayer {
-            earned_achievements: catalog.iter_earned_achievement_ids(&state).collect(),
+            earned_achievements: Some(catalog.iter_earned_achievement_ids(&state).collect()),
             ..Default::default()
         };
-        assert!(player.earned_achievements.contains(&291));
+        assert!(player.earned_achievements.as_ref().unwrap().contains(&291));
         assert_eq!(
             facts[0].holds(&player, CriteriaEvent::KillPlayer, &BTreeMap::new()),
             qualifies,
@@ -534,6 +631,108 @@ fn achievements_criteria_player_aura_some_rejects_a_missing_spell_alternative_at
     assert!(
         !state.criteria_progress.contains_key(&22840),
         "missing spell cannot be silently removed"
+    );
+}
+
+#[test]
+fn achievements_criteria_location_some_keeps_distinct_area_and_zone_members() {
+    let catalog = catalog();
+    for (area, qualifies) in [
+        (Some(254), true),
+        (Some(1445), true),
+        (Some(25), true),
+        (Some(1519), false),
+        (None, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                area,
+                map: 0,
+                race: 1,
+                class: 1,
+                level: 30,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::CastSpell(181842),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&27968),
+            qualifies.then_some(&1),
+            "area {area:?}"
+        );
+    }
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            area: Some(7004),
+            map: 1116,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::WinPetBattle,
+        None,
+        1,
+        &conditions,
+    );
+    assert_eq!(
+        state.criteria_progress.get(&25818),
+        Some(&1),
+        "Frostwall is an explicit area17 alternative"
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&25418),
+        "unflagged Frostwall must not satisfy Zone41(Frostfire) merely through ancestry"
+    );
+}
+
+#[test]
+fn achievements_criteria_location_some_rejects_missing_zone_even_when_area_leaf_matches() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("location-some.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let conn = Connection::open(&path).unwrap();
+    conn.execute("DELETE FROM area_table WHERE ID = 25", [])
+        .unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            area: Some(254),
+            map: 0,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::CastSpell(181842),
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&27968),
+        "missing zone cannot be dropped from the OR"
     );
 }
 
@@ -994,12 +1193,20 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5492 + pet-type78 roots NoFavorites6609/AllPetsAllowed6610.
-    // Structural union, not prerequisite acquisition or complete-content proof.
-    assert_eq!(union.len(), 5494);
+    // Installed70391: 5495 + eleven complete root area17/zone41 Some definitions.
+    // Structural union, not full achievements, terrain travel or acquisition proof.
+    assert_eq!(union.len(), 5506);
+    for achievement in [
+        1785, 3557, 6558, 6559, 6560, 9248, 9264, 9463, 9487, 9630, 9924,
+    ] {
+        assert!(
+            union.contains(&achievement),
+            "location alternative {achievement}"
+        );
+    }
     for achievement in [
         141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 6609, 6610, 9070, 11154, 11298, 11419, 11665,
-        11666, 11667, 11668, 63640,
+        11666, 11667, 11668, 41707, 63640,
     ] {
         assert!(union.contains(&achievement));
     }

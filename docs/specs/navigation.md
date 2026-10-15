@@ -62,3 +62,6 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 ## Out of scope
 
 Dynamic doors/game objects, flying, transports, crowds, ordinary pet/wander/formation movement, per-display agent profiles and swim-capability policy. Explicit dungeon-follower follow/chase requirements now live in [follower dungeons](follower-dungeons.md); they require baked routes without unbaked compatibility. Lead owns shipping data and deploying to sakuin.
+
+### Diagnostic route export
+`cargo run -p navigation --example follower_route -- NAV_DIRECTORY START_X START_Y START_Z END_X END_Y END_Z` prints the complete baked route as Bevy-coordinate x,y,z CSV. It uses the same strict query and fails on an incomplete corridor; output is input for physical walking, not a movement or teleport operation. Concrete Stockade coordinate parsing is tested.
