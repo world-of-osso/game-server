@@ -191,6 +191,7 @@ fn dummy2_rogue_backstab_deals_twenty_percent_more_from_behind() {
 
 fn frontal_backstab_harness(guaranteed_block: bool) -> Harness {
     let mut h = harness(Vec::new(), &[53, 10021], 4).expect("real world.db required");
+    h.app.insert_resource(load_native_creature_world(&[6]));
     if guaranteed_block {
         crate::auras::apply_aura(
             h.app.world_mut(),

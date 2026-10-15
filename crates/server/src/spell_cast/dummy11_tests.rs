@@ -261,6 +261,7 @@ fn dummy11_hammer_wave_requires_caster_in_owned_consecration() {
         (true, true, 0.0),
     ] {
         let mut h = harness(Vec::new(), &[53595, 88263, 26573, 81297, 1302139], 2).unwrap();
+        h.app.insert_resource(load_native_creature_world(&[6]));
         let near = spawn_npc(&mut h.app, 4.0);
         let far = spawn_npc(&mut h.app, 13.0);
         if field {

@@ -350,8 +350,6 @@ pub(crate) fn harness_with_plugins(
     app.insert_resource(crate::unit_creature_type::load_race_types(&conn).unwrap());
     app.insert_resource(class_spells(data));
     app.insert_resource(crate::faction::world_db_faction_templates()?);
-    // Frontal native weapon hits read the target's real template defense flags.
-    app.insert_resource(load_native_creature_world(&[6]));
     let caster = spawn_player(&mut app, class, 0.0);
     if computed_stats {
         app.world_mut()
