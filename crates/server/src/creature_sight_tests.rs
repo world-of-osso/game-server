@@ -52,7 +52,15 @@ fn sight_app() -> App {
     app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
         50,
     )));
-    app.insert_resource(crate::world_data::WorldData::default());
+    app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+        &[30],
+    ));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(faction_templates());
     app.add_plugins((CombatPlugin, CreatureAiPlugin, CreatureAggroPlugin));
     app.update();
@@ -67,7 +75,6 @@ struct Fixture {
     name: &'static str,
     faction: u32,
     mode: AggroMode,
-    detection: f32,
     health: f32,
 }
 
@@ -75,7 +82,6 @@ const SOLDIER: Fixture = Fixture {
     name: "Stormwind Infantry",
     faction: INFANTRY,
     mode: AggroMode::Aggressive,
-    detection: 20.0,
     health: 60.0,
 };
 
@@ -83,7 +89,6 @@ const ORC: Fixture = Fixture {
     name: "Blackrock Invader",
     faction: INVADER,
     mode: AggroMode::Aggressive,
-    detection: 20.0,
     health: 60.0,
 };
 
@@ -97,22 +102,23 @@ const WORG_FIXTURE: Fixture = Fixture {
     name: "Blackrock Worg",
     faction: WORG,
     mode: AggroMode::Reactive,
-    detection: 20.0,
     health: 60.0,
 };
 
 /// A level 10 creature spawned through the world spawn component path, its swings
 /// never missing.
 fn spawn(app: &mut App, fixture: &Fixture, position: Position) -> Entity {
+    let display_id = app.world().resource::<WorldData>().templates[&30].models[0].display_id;
     let world = app.world_mut();
     let mut commands = world.commands();
     let mut entity = commands.spawn((
         position,
         InMap::continent(0),
         Npc {
-            template_id: 1,
+            template_id: 30,
             name: fixture.name.into(),
         },
+        shared::components::ModelDisplay { display_id },
         Health {
             current: fixture.health,
             max: fixture.health,
@@ -134,7 +140,7 @@ fn spawn(app: &mut App, fixture: &Fixture, position: Position) -> Entity {
         // A corpse stays a corpse while the test watches it.
         crate::combat::RespawnDelay(600.0),
     ));
-    insert_aggro_components(&mut entity, fixture.mode, fixture.detection);
+    insert_aggro_components(&mut entity, fixture.mode);
     let id = entity.id();
     world.flush();
     id
@@ -280,7 +286,11 @@ fn an_orc_beyond_the_aggro_radius_is_attacked_once_it_walks_in() {
     let orc = spawn(&mut app, &CIVILIAN_ORC, at(25.0));
 
     run(&mut app, 2 * NOTIFY_TICKS);
-    assert_eq!(state(&app, soldier), CreatureState::Idle, "20 yd radius");
+    assert_eq!(
+        state(&app, soldier),
+        CreatureState::Idle,
+        "outside TC GetAttackDistance"
+    );
 
     move_to(&mut app, orc, at(15.0));
     run(&mut app, NOTIFY_TICKS + 1);
@@ -346,7 +356,6 @@ fn a_player_hitting_an_orc_that_fights_a_soldier_keeps_swinging_until_it_dies() 
         &mut app,
         &Fixture {
             health: 400.0,
-            detection: 1.0,
             ..CIVILIAN_ORC
         },
         at(3.0),

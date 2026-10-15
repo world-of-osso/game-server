@@ -419,7 +419,6 @@ fn shout_harness() -> Harness {
     crate::creature_aggro::insert_aggro_components(
         &mut entity,
         crate::creature_aggro::AggroMode::Reactive,
-        0.0,
     );
     h.app.world_mut().flush();
     h.advance(1);

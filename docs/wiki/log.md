@@ -1,3 +1,14 @@
+## 2026-10-15 — Follower passive-derived stat recomputation
+
+[Source boundary](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15): NPC bridge passives stored modifiers but the player-only query never recomputed them. Native spec66 RED2 proves7840 versus sourced10584/8232 without stat overrides; same production query now accepts follower profile identity and ordinary modifier changes. GREEN/build/live proof remain separate; Stockade0/3 stays open.
+
+## 2026-10-15 — Breakable CC target protection
+
+[Source boundary](investigations/follower-data.md#breakable-cc-targeting--2026-10-15): follower hold/retarget and unfinished hostile cast/swing stop; Attr6 `0x100` implicit chain/area exclusion. Native118/profile/31935/176017 RED8 plus explicit-player positive control; GREEN/build/live proof tracked separately. Stats, CC budgets and launched missiles unchanged; Stockade0/3 remains open. Subsequent native9/9 and integrated13/13/check/builds pass. Stockccguard52 observes zero NPC interference across three real118 intervals but loses Garrick; separate diagnostic stop/cast same-Update race replay RED1→GREEN3. Next native run completes3/3 Polymorphs and14 trash with full party, then reproduces an authored ramp-lip wall-ray block; same-ramp analytical detour prepared. Next normal-ADD native run reaches that landing but loses Garrick; the global waypoint also altered the initial approach, so further route changes await a scoped lead decision. Stockade0/3 remains open.
+
+## 2026-10-14 — Source-correct proximity distance
+
+[Creature aggro](systems/creature-aggro.md#aggro-on-sight) replaces the pet-style detection radius with TC a352b1fa GetAttackDistance, level/expansion and detect-aura rules, authored scaled combat reaches and strict distance. Stockade30vs32 native player/companion regressions RED2→GREEN34, including positive boundary and scaled cross-cell controls. Check/build/live rerun remain separate gates; no claim that radius alone caused the prior over-pull.
 ## 2026-10-15 — Flute follow source adjudication
 
 [Wild/default route](systems/toys.md#flute-follow-source-adjudication-2026-10-15): current70391 effect142917→property64 Control0/Title0/Slot0/Flags0 selects TempSummon and no follow-on-spawn in pinned TC. Preserve source non-follow; no descriptive-text AI/distance. Independent Retail observation and fresh native source-model pixels remain unproved.
@@ -1345,6 +1356,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.
 
+- 2026-10-13: [Follower diagnostics](investigations/follower-data.md#stockade-diagnostic-attachment--2026-10-13) attach native companions to an existing Normal Stockade copy without Retail catalog/admission changes; full completion proof remains open.
+
+- 2026-10-13: Stockade diagnostic initial admission approved through sourced WorldSafeLoc3599 and real transfer/ACK; no in-dungeon repositioning or stat modifiers. Northshire world-walking cliff remains outside this slice.
 - 2026-10-13 — [Group-private runtime](systems/toys.md#source-group-private-runtime-2026-10-13): captured group identity, dynamic membership interest and inherited privacy; behavioral/capture gates tracked separately.
 - 2026-10-13: native aura7 fleeing — pinned timing/distance, Detour collision/routes, player control ownership and14 current controls; all-source TDB model geometry producer, lead-only canonical publication pending. See [batch53](../class-completeness6.md#native-fear-navmesh-fleeing--batch53).
 

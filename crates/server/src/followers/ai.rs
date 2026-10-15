@@ -30,8 +30,13 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     if super::hazards::escape(world, unit) {
         return;
     }
+    stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
-    let enemy = select_enemy(world, follower, unit, &party);
+    let selection = select_enemy(world, follower, unit, &party);
+    let enemy = match selection {
+        EnemySelection::Attack(enemy) => Some(enemy),
+        _ => None,
+    };
     if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
         return;
     }
@@ -48,10 +53,43 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         return;
     }
     let Some(enemy) = enemy else {
-        regroup(world, unit, follower.owner);
+        if matches!(selection, EnemySelection::Hold) {
+            hold_combat(world, unit);
+        } else {
+            regroup(world, unit, follower.owner);
+        }
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+/// TC a352b1fa CasterAI::UpdateAI, CombatAI.cpp:166–177. Stop a cast
+/// before completion, not missiles that have already left the caster.
+fn stop_attacking_cc(world: &mut World, unit: Entity) {
+    let protected_cast = world.get::<CastState>(unit).is_some_and(|cast| {
+        Entity::try_from_bits(cast.target).is_some_and(|target| {
+            crate::spell_cast::targets::is_hostile(world, unit, target)
+                && crate::auras::has_breakable_by_damage_cc(world, target)
+        })
+    });
+    if protected_cast {
+        crate::spell_cast::cancel_cast(world, unit);
+    }
+    let protected_swing = world
+        .get::<crate::combat::AutoAttack>(unit)
+        .is_some_and(|attack| crate::auras::has_breakable_by_damage_cc(world, attack.victim));
+    if protected_swing {
+        crate::combat::attack_stop(world, unit);
+    }
+}
+
+fn hold_combat(world: &mut World, unit: Entity) {
+    // A controlled enemy is still engaged: never combat_stop or reset its threat.
+    world
+        .entity_mut(unit)
+        .remove::<FollowOwner>()
+        .insert((CreatureState::Idle, CombatTarget(None)));
+    crate::pet_control::order_companion_pet(world, unit, None);
 }
 
 fn escape_pet_hazard(world: &mut World, unit: Entity) {
@@ -162,13 +200,21 @@ fn lowest_health(world: &World, party: &[Entity], healer: Entity) -> Option<Enti
         .map(|(unit, _)| unit)
 }
 
+enum EnemySelection {
+    Attack(Entity),
+    Hold,
+    None,
+}
+
 fn select_enemy(
     world: &mut World,
     follower: &Follower,
     unit: Entity,
     party: &[Entity],
-) -> Option<Entity> {
-    let map = *world.get::<InMap>(unit)?;
+) -> EnemySelection {
+    let Some(&map) = world.get::<InMap>(unit) else {
+        return EnemySelection::None;
+    };
     let selected = world
         .get::<CombatTarget>(follower.owner)
         .and_then(|target| target.0);
@@ -197,7 +243,14 @@ fn select_enemy(
             follower.profile.role == GroupRole::Tank && victim.is_some_and(|victim| victim != unit);
         (!lost_threat, selected != Some(*enemy), enemy.to_bits())
     });
-    enemies.first().map(|(enemy, _)| *enemy)
+    let attackable = enemies
+        .iter()
+        .find(|(enemy, _)| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
+    match attackable {
+        Some(&(enemy, _)) => EnemySelection::Attack(enemy),
+        None if enemies.is_empty() => EnemySelection::None,
+        None => EnemySelection::Hold,
+    }
 }
 
 /// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
