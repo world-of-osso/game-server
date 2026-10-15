@@ -569,6 +569,15 @@ fn isle_channel_workshop_demolisher_spellclick_boards_its_source_driver_seat() {
     h.advance(8);
     h.advance(60);
     let (demolisher, _) = find_alterac_source_npc(h, entered.copy, 34775);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(demolisher)
+            .unwrap()
+            .0,
+        1732,
+        "TC OnCreatureCreate must apply this Alliance spawn's authored StringId faction"
+    );
     let position = wow(h.app.world().get::<Position>(demolisher).unwrap());
     h.walk_to(actor, position);
     h.app
