@@ -171,7 +171,10 @@ fn assert_toggle_fifo(completion: CompletionContext) {
                 .unwrap()
                 .receive(),
         );
-        if frames >= 6 && fence.result().is_some() {
+        let received_expected_reply =
+            matches!(completion, CompletionContext::Departed) || !replies.is_empty();
+        let committed = fence.result().is_some();
+        if frames >= 6 && committed && received_expected_reply {
             break;
         }
         assert!(Instant::now() < deadline, "War Mode FIFO did not complete");
