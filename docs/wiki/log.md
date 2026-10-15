@@ -1,6 +1,10 @@
+## 2026-10-14 — Raw StartedAtLeast statistic projection
+
+[Operator7](systems/dungeon-achievements.md#started-child-statistic-projection) now shares the existing direct-positive-child count without ordinary target clamping. Genuine three-kill REDa2fb7631 reaches107sum3/1336max2 but1337Nonevs2. GREEN2325ef39 passes2/2(25.37s): native zero→one→two→repeat-type behavior, existing raw-statistic regression and persistence controls. Census/qualification unchanged; no rendered UI claim.
+
 ## 2026-10-14 — Native creature-type kill statistics
 
-[CreatureType30](systems/dungeon-achievements.md#creature-type-kill-statistics) preserves actual killed NPC template type for existing eligible78 recipients. Valid native RED8e2fe0df and GREENae25b634 use normal source40/299 spawns and lethal686 casts, with typed/wrong/refused/dead/idle/account/reopen controls. Native3198504f proves107sum2/1336max1 and pinned ordinary5492;1337distinct scalar remains unsupported. Compiler38/38, census5492ordinary/1824statistics adds only107/1336/1337 structurally; no grant/acquisition/rendered-UI claim.
+[CreatureType30](systems/dungeon-achievements.md#creature-type-kill-statistics) preserves actual killed NPC template type for existing eligible78 recipients. Valid native RED8e2fe0df and GREENae25b634 use normal source40/299 spawns and lethal686 casts, with typed/wrong/refused/dead/idle/account/reopen controls. Native3198504f proves107sum2/1336max1 and pinned ordinary5492; its initial1337 scalar gap is closed by the operator7 follow-up above. Compiler38/38, census5492ordinary/1824statistics adds only107/1336/1337 structurally; no grant/acquisition/rendered-UI claim.
 
 ## 2026-10-14 — Native node-ownership expression credit
 
