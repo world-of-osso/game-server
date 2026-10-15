@@ -8,24 +8,29 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 const VISUAL_ONLY_SPELLS: &[u32] = &[
     45416, 45418,  // Dancing Insoles, Fire Festival Batons
     71909,  // The Heartbreaker's authored sob animations/heart attachment
+    91743,  // Fountain of Knowledge: source10s ordinary ground model253570.
     128327, // Iron Belly Spirits (friendly-target mug/refreshment visual)
     128328, // Ken-Ken's Mask (friendly-target attachment)
     131317, 131318, // Alliance / Horde fireworks
     148538, // Blackflame Daggers
+    171352, // Blazing Diamond Pendant: source120s ground magma, area group4031.
     171761, // Brewfest Banner
     176457, // Fruit Basket
     176594, // Touch of the Naaru
     // Gladiator back banners: existing native race/sex condition selection proven.
     176899, 176900, 185712, // Seafarer's Slidewhistle
+    187146, // Tome of Secrets: source5min ordinary attachment1097945.
     193333, // Death's Door Charm's Helheim ghost-state attachment
     196783, // Darkshard Fragment (crystal growth attachments)
     203657, // Noble's Eternal Elementium Signet
     217708, // Gravil Goldbraid's Famous Sausage Hat
-    231129, 231142, 231143, 231144,  // Falcosaur accessories
-    239560,  // Akazamzarak's Spare Hat (hat/rabbit visual models, not a summon)
-    254513,  // Barrier Generator (channeled shield visual, not an absorb)
-    261981,  // Spitzy
-    286277,  // Worn Cloak
+    223143, // Prismatic Bauble: source20s ordinary rainbow attachment1417024.
+    231129, 231142, 231143, 231144, // Falcosaur accessories
+    239560, // Akazamzarak's Spare Hat (hat/rabbit visual models, not a summon)
+    254513, // Barrier Generator (channeled shield visual, not an absorb)
+    261981, // Spitzy
+    286277, // Worn Cloak
+    300104, 300144,  // War Banner: source CurrentPvpFaction condition and combat interrupts
     302273,  // Heart of a Champion
     318452,  // Aqir Egg Cluster's missile-triggered swarm attachments
     302730,  // Brewfest Chowdown Trophy's champion animation aura (visual88525)

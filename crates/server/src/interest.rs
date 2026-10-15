@@ -26,6 +26,10 @@ type InterestBucket = (InMap, i32, i32);
 #[derive(Component, Clone, Copy)]
 pub(crate) struct PrivateObjectOwner(pub Entity);
 
+/// TC private group GUID captured when the summon is created.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct PrivateObjectGroup(pub crate::group::GroupId);
+
 #[derive(Component, Default)]
 pub(crate) struct NetworkVisibility {
     visible_senders: EntityHashSet,
@@ -156,6 +160,7 @@ struct InterestObserver {
     /// `None` while the player is in a map transfer: it sees only itself.
     map: Option<InMap>,
     visible: EntityHashSet,
+    group: Option<crate::group::GroupId>,
 }
 
 impl InterestObserver {
@@ -184,6 +189,7 @@ pub(crate) struct InterestIndex {
     hidden: EntityHashSet,
     life_states: EntityHashMap<DeathState>,
     private_owners: EntityHashMap<Entity>,
+    private_groups: EntityHashMap<crate::group::GroupId>,
 }
 
 impl InterestIndex {
@@ -212,6 +218,10 @@ impl InterestIndex {
                         self.private_owners.get(&entity).copied(),
                         observer.player,
                     )
+                    && self
+                        .private_groups
+                        .get(&entity)
+                        .is_none_or(|group| Some(*group) == observer.group)
                     && self
                         .invisibility
                         .get(&observer.player)
@@ -262,6 +272,7 @@ impl InterestIndex {
     fn remove_target(&mut self, entity: Entity) {
         self.life_states.remove(&entity);
         self.private_owners.remove(&entity);
+        self.private_groups.remove(&entity);
         self.invisibility.remove(&entity);
         self.stealth.remove(&entity);
         self.detection_geometry.remove(&entity);
@@ -296,6 +307,7 @@ impl InterestIndex {
                 position,
                 map,
                 visible: EntityHashSet::default(),
+                group: None,
             },
         );
         self.dirty_observers.insert(connection);
@@ -377,6 +389,7 @@ impl Plugin for InterestPlugin {
             .init_resource::<InterestIndex>()
             .add_observer(on_network_visibility_added)
             .add_observer(on_private_object_owner_added)
+            .add_observer(on_private_object_group_added)
             .add_observer(on_replication_client_added)
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
@@ -384,7 +397,11 @@ impl Plugin for InterestPlugin {
             .add_observer(on_detection_geometry_woken)
             .add_systems(
                 FixedUpdate,
-                (sync_detection_geometry, update_interest)
+                (
+                    sync_detection_geometry,
+                    sync_observer_groups,
+                    update_interest,
+                )
                     .chain()
                     .in_set(InterestUpdate),
             )
@@ -411,6 +428,16 @@ fn on_private_object_owner_added(
     index.dirty_targets.insert(trigger.entity);
 }
 
+fn on_private_object_group_added(
+    trigger: On<Add, PrivateObjectGroup>,
+    groups: Query<&PrivateObjectGroup>,
+    mut index: ResMut<InterestIndex>,
+) {
+    let group = groups.get(trigger.entity).expect("added private group");
+    index.private_groups.insert(trigger.entity, group.0);
+    index.dirty_targets.insert(trigger.entity);
+}
+
 fn on_network_visibility_added(
     trigger: On<Add, NetworkVisibility>,
     positions: Query<(
@@ -424,6 +451,7 @@ fn on_network_visibility_added(
         Has<Player>,
         Has<Npc>,
         Option<&shared::protocol::GameObjectInfo>,
+        Option<&PrivateObjectGroup>,
     )>,
     connections: Query<Entity, With<ClientVisibility>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
@@ -441,6 +469,7 @@ fn on_network_visibility_added(
         player,
         npc,
         object,
+        private_group,
     )) = positions.get(trigger.entity)
     {
         index.detection_geometry.insert(
@@ -449,6 +478,9 @@ fn on_network_visibility_added(
         );
         if let Some(owner) = private_owner {
             index.private_owners.insert(trigger.entity, owner.0);
+        }
+        if let Some(group) = private_group {
+            index.private_groups.insert(trigger.entity, group.0);
         }
         if let Some(state) = life_state {
             index.update_life_state(trigger.entity, *state);
@@ -623,6 +655,30 @@ type VisibilityTargets<'w, 's> = Query<
         &'static mut NetworkVisibility,
     ),
 >;
+
+/// Group changes alter privacy even when neither viewer nor target moved.
+fn sync_observer_groups(
+    groups: Option<Res<crate::group::GroupRegistry>>,
+    characters: Query<&crate::persistence::ClientId>,
+    mut index: ResMut<InterestIndex>,
+) {
+    let InterestIndex {
+        observers,
+        dirty_observers,
+        ..
+    } = &mut *index;
+    for (connection, observer) in observers {
+        let group = characters.get(observer.player).ok().and_then(|character| {
+            groups
+                .as_ref()
+                .and_then(|groups| groups.group_id(character.0))
+        });
+        if observer.group != group {
+            observer.group = group;
+            dirty_observers.insert(*connection);
+        }
+    }
+}
 
 fn update_interest(
     positions: Query<(&Position, Option<&InMap>)>,

@@ -337,6 +337,30 @@ fn queued_gold_updates_coalesce_and_skip_equal_or_offline_players() {
 }
 
 #[test]
+fn toyfx20_login_initializes_source_racial_pvp_faction() {
+    for (race, expected) in [
+        (1, 2),
+        (2, 1),
+        (52, 2),
+        (70, 1),
+        (84, 1),
+        (85, 2),
+        (86, 2),
+        (91, 1),
+    ] {
+        let db = test_db();
+        let (id, _) = persistence::create_character(&db.db, 1, "Pvpidentity", race, 1).unwrap();
+        let (app, player) = select_character_in_world(db, 1, id);
+        assert_eq!(
+            app.world()
+                .get::<shared::components::CurrentPvpFaction>(player),
+            Some(&shared::components::CurrentPvpFaction(expected)),
+            "race {race}"
+        );
+    }
+}
+
+#[test]
 fn fresh_login_initializes_noncombat_state_for_pvp_context() {
     let db = test_db();
     let (id, _) = persistence::create_character(&db.db, 1, "Pvpfresh", 1, 2).unwrap();

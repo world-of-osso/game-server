@@ -819,6 +819,7 @@ fn spawn_pet(
             HunterPet { owner, slot },
             FollowOwner::new(owner),
             UnitSummonedBy(owner.to_bits()),
+            shared::components::UnitIsPet(true),
             pools,
             CombatTarget::default(),
         ),

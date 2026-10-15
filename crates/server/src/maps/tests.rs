@@ -1909,6 +1909,7 @@ fn exercise_arena_channel_with_reconnect(
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
             crate::death::PlayerDeathState::default(),
+            shared::components::CurrentPvpFaction(2),
             crate::achievement::PlayerAchievementState::default(),
             crate::spell_cast::powers::PowerPools {
                 order: vec![shared::components::PowerType::Rage],
@@ -2015,6 +2016,13 @@ fn exercise_arena_channel_with_reconnect(
     for (who, invite) in players.iter().zip(&invitations) {
         assert_eq!(invite.map_id, map_id);
         assert_eq!(invite.match_id, match_id);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::CurrentPvpFaction>(who.player),
+            Some(&shared::components::CurrentPvpFaction(2)),
+            "arena invitation keeps racial faction"
+        );
         h.app
             .world_mut()
             .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
@@ -2026,6 +2034,18 @@ fn exercise_arena_channel_with_reconnect(
     }
     h.receive_pvp_updates(5);
     for (who, invite) in players.iter().zip(&invitations) {
+        let expected = if invite.team == shared::battleground::BgTeam::A {
+            2
+        } else {
+            1
+        };
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::CurrentPvpFaction>(who.player),
+            Some(&shared::components::CurrentPvpFaction(expected)),
+            "arena uses entered team, not race"
+        );
         assert_eq!(h.map_of(who), None);
         let travel = h.new_worlds(who);
         assert_eq!(travel.len(), 1);
@@ -2483,6 +2503,13 @@ fn exercise_arena_channel_with_reconnect(
     }
     h.receive_pvp_updates(5);
     for (who, origin) in players.iter().zip(&origins) {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::CurrentPvpFaction>(who.player),
+            Some(&shared::components::CurrentPvpFaction(2)),
+            "arena return restores race"
+        );
         h.ack(who);
         assert_eq!(h.map_of(who), Some(STORMWIND));
         assert!(close(
