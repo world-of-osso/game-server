@@ -212,7 +212,8 @@ fn dummy8_demonbolt_generates_two_whole_shards_once_on_landed_damage() {
 }
 #[test]
 fn dummy8_crash_lightning_uses_destination_cone_and_grants_authored_enhancement() {
-    let mut h = harness(Vec::new(), &[187874, 187878, 195592], 7).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[187874, 187878, 195592], 7)
+        .unwrap();
     let forward = at(&mut h, 5.0, 2.0);
     let side = at(&mut h, 0.0, 6.0);
     let back = at(&mut h, -4.0, 0.0);

@@ -129,9 +129,13 @@ mod warrior_stun_tests;
 mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
+mod enemy_dodge_tests;
+#[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
+#[cfg(test)]
+mod mechanic_resistance_tests;
 #[cfg(test)]
 mod melee_crit_taken_tests;
 #[cfg(test)]
@@ -139,6 +143,8 @@ mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;
 mod missiles;
+#[cfg(test)]
+mod npc_dodge_tests;
 mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;

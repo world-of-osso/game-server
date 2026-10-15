@@ -79,7 +79,7 @@ pub(super) fn command_pet(world: &mut World, caster: Entity, target: Entity, dep
     }
 }
 
-///259495s3 adds80% to the named primary hit. The179 cone actor/cap remains open;
+///259495s3 adds its authored percentage to the named primary hit. The179 cone actor/cap remains open;
 ///this bridge does not create synthetic cone geometry or unbound actors.
 pub(super) fn bomb_primary(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     let child = world
