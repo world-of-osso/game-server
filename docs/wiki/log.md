@@ -1,3 +1,7 @@
+## 2026-10-14 — Spell-derived mount FIFO and quiet cold-budget failure
+
+[Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): derived mount grants preserve fresh favourites with held-writer proof. Quiet release records zero tick commits and later online p99<8ms, but cold online p9973ms still fails; full gameplay acceptance remains open.
+
 ## 2026-10-14 — Mount favourite ordering and st138 integration repair
 
 [Tick lag](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14): favourite writes and dependent random ownership reads follow FIFO; direct item-use fixtures install their shared persistence consumer. Watched reputation and atomic multi-item Trading Post checkout survive master integration. Intersecting native scopes pass; full writer/release acceptance remains open.
