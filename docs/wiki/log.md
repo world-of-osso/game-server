@@ -1,3 +1,7 @@
+## 2026-10-15 — Housing layout/access FIFO native proof
+
+[Tick lag](investigations/server-tick-lag.md#housing-layout-and-access-fifo--2026-10-15): fresh queued layout/access mutations with immutable scale metadata, receipt-gated owner replies and current-map visitor publication after editor departure. Three real blocked-writer REDs become19/19 native controls; current check/release and broader writer/HOL/full-session goals remain open.
+
 ## 2026-10-15 — Target population GREEN; authentic grid deferred RED
 
 [Tick lag](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15): initial target storage292→16ms plus four lifecycle controls pass. Authentic187770-creature grid deferred application reproduces324ms; sparse marker storage is local, budget/wake/leave proof pending capacity. No release/global acceptance claim.

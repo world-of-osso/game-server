@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Housing layout/access FIFO](investigations/server-tick-lag.md#housing-layout-and-access-fifo--2026-10-15) — three held-writer REDs→19 native controls, one-copy conservation and visitor publication after editor departure; current check/release pending.
+
 - [Initial target population regression](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15) — real187770-NPC target RED292→GREEN16ms; authentic grid application RED324ms, sparse storage awaiting proof/release.
 
 - [st157 FIFO fixture integration](investigations/server-tick-lag.md#st157-fixture-integration-follow-up--2026-10-15) — explicit housing publishers and reply/initial-inventory fences;22 controls+5 repaired wires pass, full gate pending.
@@ -8,7 +10,7 @@
 
 - [Cold-login percentile follow-up](investigations/server-tick-lag.md#low-pressure-cold-login-follow-up--2026-10-14) — release cold online p9932.8ms/zero tick commits under recorded memory+IO pressure; startup209.6ms and coldmax288ms remain visible, full gameplay open.
 
-- [FIFO plot payment](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14) — held-writer native purchase, fresh payment funds and durability-gated ownership; layout/access/dyes/location remain open.
+- [FIFO plot payment](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14) — held-writer native purchase, fresh payment funds and durability-gated ownership; layout/access follow-up is separate, dyes/location remain open.
 
 - [FIFO decor collection](investigations/server-tick-lag.md#decor-collection-fifo--2026-10-14) — bag/HousingRequest held-writer proof with fresh wallet and commit-gated storage replies; other housing writers remain open.
 
