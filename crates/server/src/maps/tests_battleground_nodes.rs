@@ -523,8 +523,7 @@ fn enter_isle_bomb_match() -> EnteredMatch {
 
 /// TC npc_four_car_garage / source34775 spellclick66245: aura236 boards the
 /// Demolisher's Vehicle509 driver seat5766 after normal Workshop capture.
-#[test]
-fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_requests() {
+fn enter_and_board_isle_demolisher() -> (EnteredMatch, Entity) {
     let template = shared::battleground::isle_of_conquest();
     let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
         let source = Connection::open_with_flags(
@@ -612,6 +611,15 @@ fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_re
     assert_eq!(rider.driver, demolisher.to_bits());
     assert_eq!(rider.seat_index, 0);
     assert_eq!(rider.seat_id, 5766);
+    (entered, demolisher)
+}
+
+#[test]
+fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_requests() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let actor = &entered.players[0];
+    let h = &mut entered.h;
+    let position = wow(h.app.world().get::<Position>(demolisher).unwrap());
     assert!(
         h.app
             .world()
@@ -689,6 +697,80 @@ fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_re
     h.receive_pvp_updates(5);
     assert_eq!(h.map_of(actor), Some(STORMWIND));
     assert!(close(h.position(actor), entered.origin));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
+}
+
+#[test]
+fn isle_channel_workshop_demolisher_death_releases_its_living_driver() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let enemy_index = entered
+        .teams
+        .iter()
+        .position(|team| *team != entered.teams[0])
+        .unwrap();
+    let actor = &entered.players[0];
+    let enemy = &entered.players[enemy_index];
+    let h = &mut entered.h;
+    let health = h.app.world().get::<Health>(demolisher).unwrap().current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), enemy.player, demolisher, health + 1.0);
+    h.advance(2);
+    assert_eq!(
+        h.app.world().get::<Health>(demolisher).unwrap().current,
+        0.0
+    );
+    assert!(h.app.world().get::<Health>(actor.player).unwrap().current > 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
+}
+
+#[test]
+fn isle_channel_workshop_demolisher_driver_death_releases_the_living_vehicle() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let enemy_index = entered
+        .teams
+        .iter()
+        .position(|team| *team != entered.teams[0])
+        .unwrap();
+    let actor = &entered.players[0];
+    let enemy = &entered.players[enemy_index];
+    let h = &mut entered.h;
+    let health = h.app.world().get::<Health>(actor.player).unwrap().current;
+    let vehicle_health = h.app.world().get::<Health>(demolisher).unwrap().current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), enemy.player, actor.player, health + 1.0);
+    h.advance(2);
+    assert_eq!(
+        h.app.world().get::<Health>(actor.player).unwrap().current,
+        0.0
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(demolisher).unwrap().current,
+        vehicle_health
+    );
     assert!(
         h.app
             .world()
