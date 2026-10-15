@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Ordinary NPC physical-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native49 front/rear RED→GREEN, source tuning and separate health buffer; exact baseline/level slope and full NPC loadouts remain unproved.
+
 - [Signed attacker enemy dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native251 before expertise/clamp; authenticated Strike damage RED→GREEN11 with signed/clamp/removal/ownership and Evasion/expertise controls; full251/abilities remain open.
 
 - [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; neutral-NPC RED invalidated; corrected hostile40 genuine stun RED→GREEN3,256 miss/resist outcomes; full hit/ability acceptance open.
