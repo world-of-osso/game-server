@@ -21,6 +21,8 @@ mod wailing_physical;
 mod wailing_progress;
 #[path = "wailing_ritual_waves.rs"]
 mod wailing_ritual_waves;
+#[path = "wailing_start.rs"]
+mod wailing_start;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
@@ -169,12 +171,12 @@ fn encounter_fixture(
     let data = data().expect("world.db fixture");
     let mut app = stockade_app_with(data, |app| {
         app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
+        app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
         if populate {
             let connection =
                 Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
                     .unwrap();
             app.insert_resource(crate::gathering::load_data(&connection).unwrap());
-            app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
             app.insert_resource(
                 crate::faction::world_db_faction_templates().expect("world.db faction templates"),
             );
