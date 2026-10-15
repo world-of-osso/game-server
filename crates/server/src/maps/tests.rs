@@ -1059,11 +1059,12 @@ impl Harness {
                 request_id: 1,
                 command,
             });
-        self.advance(3);
-        self.finish_housing_writes();
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
         let mut replies = Vec::new();
-        for _ in 0..6 {
+        let mut frames = 0;
+        loop {
             self.advance(1);
+            frames += 1;
             replies.extend(
                 self.app
                     .world_mut()
@@ -1071,6 +1072,16 @@ impl Harness {
                     .unwrap()
                     .receive(),
             );
+            let complete =
+                !crate::housing::persistence_pending(self.app.world()) && !replies.is_empty();
+            if frames >= 6 && complete {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "housing reply timeout"
+            );
+            std::thread::sleep(Duration::from_millis(1));
         }
         assert_eq!(
             replies.len(),
