@@ -628,6 +628,117 @@ fn enter_and_board_isle_demolisher() -> (EnteredMatch, Entity) {
     (entered, demolisher)
 }
 
+fn install_isle_input_sender(h: &mut Harness, actor: &Traveler) {
+    let position = *h.app.world().get::<Position>(actor.player).unwrap();
+    h.app.world_mut().entity_mut(actor.player).insert((
+        shared::components::MovementSpeed(0.0),
+        shared::components::PlayerMotion::default(),
+        crate::networking::FallTracker::grounded(position.y),
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(actor.connection)
+        .insert(pair::<PlayerInput>());
+}
+
+fn send_isle_mover_input(h: &mut Harness, actor: &Traveler, position: Position) {
+    let epoch = h
+        .app
+        .world()
+        .get::<MovementControl>(actor.player)
+        .unwrap()
+        .epoch;
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<PlayerInput>>(actor.connection)
+        .unwrap()
+        .send::<InputChannel>(PlayerInput {
+            transport: None,
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: std::f32::consts::FRAC_PI_2,
+            jumping: false,
+            running: true,
+            swimming: false,
+            flying: false,
+            position: [position.x, position.y, position.z],
+            epoch,
+        });
+    h.advance(5);
+}
+
+#[test]
+fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let actor = &entered.players[0];
+    let ordinary = &entered.players[1];
+    let h = &mut entered.h;
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_millis(50),
+        ));
+    h.app.init_resource::<crate::friends::AutoAfkScheduler>();
+    h.app
+        .add_systems(Update, crate::networking::process_player_inputs);
+    install_isle_input_sender(h, actor);
+    install_isle_input_sender(h, ordinary);
+    let ordinary_start = *h.app.world().get::<Position>(ordinary.player).unwrap();
+    send_isle_mover_input(
+        h,
+        ordinary,
+        Position {
+            x: ordinary_start.x + 0.25,
+            ..ordinary_start
+        },
+    );
+    let ordinary_after = *h.app.world().get::<Position>(ordinary.player).unwrap();
+    assert!(
+        (ordinary_after.x - ordinary_start.x - 0.25).abs() < 0.001,
+        "the same real InputChannel must move an ordinary player's complete login movement bundle"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    let vehicle_start = *h.app.world().get::<Position>(demolisher).unwrap();
+    let rider_start = *h.app.world().get::<Position>(actor.player).unwrap();
+    let relative = Vec3::new(
+        rider_start.x - vehicle_start.x,
+        rider_start.y - vehicle_start.y,
+        rider_start.z - vehicle_start.z,
+    );
+    let initial_facing =
+        Quat::from_rotation_y(h.app.world().get::<Rotation>(demolisher).unwrap().y);
+    let local_seat = initial_facing.inverse() * relative;
+    send_isle_mover_input(
+        h,
+        actor,
+        Position {
+            x: vehicle_start.x + 0.25,
+            ..vehicle_start
+        },
+    );
+    let vehicle_after = *h.app.world().get::<Position>(demolisher).unwrap();
+    assert!(
+        vehicle_after.x > vehicle_start.x + 0.15,
+        "source seat5766 controlling input was processed, but the Demolisher did not move: {vehicle_start:?} -> {vehicle_after:?}"
+    );
+    let rider_after = *h.app.world().get::<Position>(actor.player).unwrap();
+    let expected = Vec3::new(vehicle_after.x, vehicle_after.y, vehicle_after.z)
+        + Quat::from_rotation_y(h.app.world().get::<Rotation>(demolisher).unwrap().y) * local_seat;
+    assert!(
+        (rider_after.y - vehicle_after.y - relative.y).abs() < 0.001,
+        "driver retains the authored seat height, not the NPC floor height"
+    );
+    let actual = Vec3::new(rider_after.x, rider_after.y, rider_after.z);
+    assert!(
+        actual.distance(expected) < 0.001,
+        "driver follows the moved vehicle instead of applying its report as body position: {actual:?} vs {expected:?}"
+    );
+}
+
 #[test]
 fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_requests() {
     let (mut entered, demolisher) = enter_and_board_isle_demolisher();
