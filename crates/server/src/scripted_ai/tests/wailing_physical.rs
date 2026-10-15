@@ -365,9 +365,8 @@ fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
     // no claim that this is a naturally engaged encounter.
     h.app
         .world_mut()
-        .get_mut::<CombatStatus>(disciple)
-        .unwrap()
-        .0 = true;
+        .entity_mut(disciple)
+        .insert(CombatStatus(true));
     dispatch(h.app.world_mut(), disciple, Hook::UpdateAi(10_000));
     assert!(
         !h.inbox(0)
@@ -377,9 +376,8 @@ fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
     );
     h.app
         .world_mut()
-        .get_mut::<CombatStatus>(disciple)
-        .unwrap()
-        .0 = false;
+        .entity_mut(disciple)
+        .insert(CombatStatus(false));
     h.advance(0.8);
     assert!(
         !h.inbox(0)
