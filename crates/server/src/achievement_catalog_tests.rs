@@ -33,6 +33,14 @@ fn achievements_criteria_unearned_snapshot_rejects_missing_earned_component() {
     world
         .entity_mut(actor)
         .insert(PlayerAchievementState::default());
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    world
+        .resource::<AchievementCatalog>()
+        .update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "character state without its account aggregate is incomplete earned authority"
+    );
     let catalog = world.remove_resource::<AchievementCatalog>().unwrap();
     let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
     catalog.update_at(&mut state, event, None, 1, &conditions);
