@@ -9,6 +9,8 @@ mod ragefire_completion;
 
 #[path = "shadowfang_keep.rs"]
 mod shadowfang_keep;
+#[path = "wailing_aggro.rs"]
+mod wailing_aggro;
 #[path = "wailing_awakening.rs"]
 mod wailing_awakening;
 #[path = "wailing_escort.rs"]
