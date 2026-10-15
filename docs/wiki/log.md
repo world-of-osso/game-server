@@ -1,3 +1,7 @@
+## 2026-10-14 — Physical mechanic resistance
+
+[Native physical hit table](systems/player-damage.md#shared-weapon-spell-defense-roll) now consumes recipient aura117 after miss and before NoActiveDefense. Native1833/26072/40386 real stun RED atcd651cb7; foreign and silence-selector controls pass. Bounded GREEN/check/fmt pending; full117/magic/ability acceptance open.
+
 ## 2026-10-14 — Non-player expertise dodge consumer
 
 [Native player dodge boundary](systems/player-damage.md#shared-weapon-spell-defense-roll) subtracts the non-player caster's own active240 total/4. Published70391 NPC Hit Buffs62627/Strike38598 are authenticated; the first alleged RED listened on an unrelated connection and is invalid. Receiver-corrected ae251a10 now records actual Strike `Miss(Dodge)` with caster expertise10000: genuine RED1/foreign-controlPASS1. Native caster240/4 implementation follows that RED; current merged31 controls/check/fmt pass, including native removal/foreign ownership and all four cw150 cases. Independent acceptance remains pending. Player expertise, NPC dodge/parry and global hit certification remain gaps.
