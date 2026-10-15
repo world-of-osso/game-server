@@ -1,3 +1,7 @@
+## 2026-10-14 — FIFO housing plot payment
+
+[Tick lag](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14): authentic cornerstone purchase queues fresh atomic wallet/ownership on FIFO; owner gold/success/error publication follows durability. Held-writer RED254ms becomes GREEN with prior payment funds preserved;26 native controls pass. Latest-master intersection and release gameplay proof remain open.
+
 ## 2026-10-14 — FIFO housing decor collection
 
 [Tick lag](investigations/server-tick-lag.md#decor-collection-fifo--2026-10-14): bag use and authenticated redemption consume fresh inventory on FIFO; owned-storage/inventory/error publication follows same-session receipts. Held-writer RED252ms becomes GREEN with prior wallet state preserved;26 focused native controls pass. Other housing writers and release gameplay remain open.

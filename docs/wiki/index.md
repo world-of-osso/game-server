@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [FIFO plot payment](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14) — held-writer native purchase, fresh payment funds and durability-gated ownership; layout/access/dyes/location remain open.
+
 - [FIFO decor collection](investigations/server-tick-lag.md#decor-collection-fifo--2026-10-14) — bag/HousingRequest held-writer proof with fresh wallet and commit-gated storage replies; other housing writers remain open.
 
 - [Cold population and FIFO catalog snapshots](investigations/server-tick-lag.md#cold-population-and-request-catalog-snapshots--2026-10-14) — dormant aura wake and owned catalog snapshot diagnostics; mount item FIFO/native proof, new release acceptance still open.
