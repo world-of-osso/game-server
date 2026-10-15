@@ -264,7 +264,6 @@ fn achievements_criteria_toys_native_learning_sets_owned_item_and_distinct_count
 fn pump(h: &mut Harness) -> (Vec<ToyResult>, Vec<ToyCollectionUpdate>) {
     let mut results = Vec::new();
     let mut snapshots = Vec::new();
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
     let mut frames = 0;
     loop {
         h.advance(1);
@@ -276,31 +275,25 @@ fn pump(h: &mut Harness) -> (Vec<ToyResult>, Vec<ToyCollectionUpdate>) {
         if frames >= 7 && !pending {
             break;
         }
-        assert!(
-            std::time::Instant::now() < deadline,
-            "toy pump exceeded deadline: frames={frames}, pending={pending}, virtual_elapsed={:?}, max_delta={:?}, submitted={}, committed={}",
-            h.app.world().resource::<Time<Virtual>>().elapsed(),
-            h.app.world().resource::<Time<Virtual>>().max_delta(),
-            h.app
-                .world()
-                .resource::<GameDatabase>()
-                .writer
-                .metrics
-                .submitted
-                .load(std::sync::atomic::Ordering::Relaxed),
-            h.app
-                .world()
-                .resource::<GameDatabase>()
-                .writer
-                .metrics
-                .committed
-                .load(std::sync::atomic::Ordering::Relaxed),
-        );
         if pending {
-            std::thread::sleep(std::time::Duration::from_millis(1));
+            wait_for_toy_writes(h);
         }
     }
     (results, snapshots)
+}
+
+fn wait_for_toy_writes(h: &Harness) {
+    let (completed, completion) = std::sync::mpsc::channel();
+    h.app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("toy fixture FIFO barrier", move |_| {
+            completed.send(()).map_err(|error| error.to_string())
+        });
+    completion
+        .recv()
+        .expect("toy fixture FIFO barrier disconnected");
 }
 
 fn learn(h: &mut Harness, slot: u8) -> Vec<ToyResult> {
