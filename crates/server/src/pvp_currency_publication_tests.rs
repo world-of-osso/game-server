@@ -3,8 +3,23 @@ use shared::currency::{CurrencyWallet, HONOR_CURRENCY_ID, currency_by_id};
 use shared::protocol::{CurrencyChannel, CurrencyStateUpdate, SpendCurrency};
 use std::time::{Duration, Instant};
 
+#[derive(Clone, Copy)]
+enum Preference {
+    Talent,
+    WarMode,
+}
+
 #[test]
 fn pvp_talent_receipt_does_not_restore_honor_older_than_a_later_currency_publication() {
+    assert_later_currency_publication(Preference::Talent);
+}
+
+#[test]
+fn war_mode_receipt_does_not_restore_honor_older_than_a_later_currency_publication() {
+    assert_later_currency_publication(Preference::WarMode);
+}
+
+fn assert_later_currency_publication(preference: Preference) {
     let (mut h, character) = selection_harness(SelectionCase::Fresh);
     let mut wallet = CurrencyWallet::default();
     wallet
@@ -53,7 +68,16 @@ fn pvp_talent_receipt_does_not_restore_honor_older_than_a_later_currency_publica
         std::thread::sleep(Duration::from_millis(250));
         held.abort().unwrap();
     });
-    send_selection(&mut h, 752);
+    match preference {
+        Preference::Talent => send_selection(&mut h, 752),
+        Preference::WarMode => {
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<SetWarModeDesired>>(h.connection)
+                .unwrap()
+                .send::<PvpChannel>(SetWarModeDesired { enabled: true });
+        }
+    }
     let started = Instant::now();
     h.advance(3);
     h.app
@@ -99,13 +123,19 @@ fn pvp_talent_receipt_does_not_restore_honor_older_than_a_later_currency_publica
     );
     let durable = persistence::load_pvp(&h.app.world().resource::<GameDatabase>().db, character);
     assert_eq!(durable.honor, 777);
-    assert_eq!(durable.pvp_talents[&70][&1], 752);
+    match preference {
+        Preference::Talent => assert_eq!(durable.pvp_talents[&70][&1], 752),
+        Preference::WarMode => assert!(durable.war_mode_desired),
+    }
     let live = h.app.world().get::<PlayerPvpState>(h.caster).unwrap();
     assert_eq!(
         live.progress.honor, 777,
         "older PvP receipt regressed the later currency publication"
     );
-    assert_eq!(live.progress.pvp_talents[&70][&1], 752);
+    match preference {
+        Preference::Talent => assert_eq!(live.progress.pvp_talents[&70][&1], 752),
+        Preference::WarMode => assert!(live.progress.war_mode_desired),
+    }
     let replies: Vec<_> = h
         .app
         .world_mut()
