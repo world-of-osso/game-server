@@ -4,10 +4,10 @@ Authoritative Mainline invite/join/promote/demote/remove/quit history, separate 
 
 ## What it must do
 
-- [ ] Record only successful actual invitations, joins, promotions, demotions, removals and quits; commit each event with its corresponding durable mutation. Refused/repeated-invalid actions and administrative setup create no historical rows.
-- [ ] Retain the latest100 actual events in insertion order, including tied timestamps, with event-time actor/member/rank names and Unix seconds. History and current membership/rank state survive database reopen together.
+- [x] Record only successful actual invitations, joins, promotions, demotions, removals and quits; commit each event with its corresponding durable mutation. Refused/repeated-invalid actions and administrative setup create no historical rows.
+- [x] Retain the latest100 actual events in insertion order, including tied timestamps, with event-time actor/member/rank names and Unix seconds. History and current membership/rank state survive database reopen together.
 - [ ] Query only the authenticated in-world actor's current guild. Members need no elevated rank; nonmembers receive NotInGuild and no history. Never accept a packet-supplied actor/guild ID.
-- [ ] Empty real history stays empty. Do not backfill from the present roster or substitute guild bank/news history.
+- [x] Empty real history stays empty. Do not backfill from the present roster or substitute guild bank/news history.
 - [ ] Native Modern and Forever View Log renders the same source dialog, newest first, with real scroll and restart/relog proof.
 
 ## How it works
@@ -34,7 +34,7 @@ Authoritative Mainline invite/join/promote/demote/remove/quit history, separate 
 
 ## Known gaps (current cycle)
 
-- [ ] Atomic lifecycle producers, bounded writes and real sequence/restart acceptance.
+- [x] Backend targeted4/4 atc317745f/protocol4fad8c7: real six-action RED→GREEN, founder joins,103→100 tied-order retention, abort and durable reopen. Actual server-process/native restart remains separate.
 - [ ] Native source dialog and UDP/both-skin acceptance.
 
 ## Out of scope
