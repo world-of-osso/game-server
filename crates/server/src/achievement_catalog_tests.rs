@@ -1,6 +1,43 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_killed_creature_type_requires_actual_known_victim() {
+    let catalog = catalog();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer::default()),
+        ..Default::default()
+    };
+    for kind in [None, Some(0), Some(1), Some(7), Some(16)] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::KillAnyCreature(kind),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&4944), Some(&1));
+        assert_eq!(
+            state.criteria_progress.get(&4948),
+            (kind == Some(1)).then_some(&1)
+        );
+        assert_eq!(
+            state.criteria_progress.get(&4953),
+            (kind == Some(7)).then_some(&1)
+        );
+        assert!(!state.criteria_progress.contains_key(&4950));
+    }
+    let conn = Connection::open_in_memory().unwrap();
+    for kind in [0, 16, u32::MAX] {
+        assert!(
+            load_criteria_facts(&conn, &[(30, kind)], &HashMap::new())
+                .unwrap()
+                .is_none()
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_node_world_state_facts_require_live_count_authority() {
     let catalog = catalog();
     for (counts, qualifies) in [
