@@ -1232,6 +1232,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-14: TargetHealth46 final integrated acceptance at30a6e515:175/0/1ignored +site-export1/1; server/engine checks and three-repo fmt pass, census5480/1821. Native authentic bandage item-level context and finite-maximum rejection retain pre-effect inclusive semantics.
 
+- 2026-10-14: C++ ground waypoint generation ports pinned TC smooth-surface controls and collision normalization; real Wailing node2 RED retained, GREEN pending. Generic navigation/exact/flying unchanged.
+
+- 2026-10-14: Smooth-source gate05062d71 passes15/15,49 Wailing nodes collision-clear/node2 RED-GREEN, actual Ragefire+Golden controls and strict rejection preserved; check/format/independent artifact verification PASS. Full escort remains RED in unchanged generic movement after path1 arrival.
 - 2026-10-14: Distinct native melee/RAP percentages, owner wire and DefenseType-selected tooltip powers; bounded9 leaves5partial. See [[systems/character-stats]] and docs/class-completeness6.md.
 
 - 2026-10-14: Native player autoattack/weapon-spell critical block and launch/impact hit-state proof; NPC/probability/638 boundaries remain open. See [[systems/player-damage]] and docs/class-completeness6.md.
@@ -1242,6 +1245,10 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Maximum-health percent effect165
 
 [Effect165](systems/player-damage.md#maximum-health-percent-effect165) supplies the actual67531 hit producer needed by BB King. Native RED9e862790 accepts authentic cast but health50000 does not become49990. Implementation preserves integer max-health percentage and common mitigation while omitting direct caster/target bonuses; native GREEN4091b81b proves actual damage10, Enrage/Barkskin exclusions and zero truncation. TargetCreatureId4 compiler RED→GREEN35/35; required integrated filter178/0/1ignored +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b.
+
+## 2026-10-14 — Earned-player prerequisite qualifiers
+
+[Positive87](systems/dungeon-achievements.md#earned-player-prerequisite-qualifiers) requires authored prerequisite IDs. Valid native REDb5ab795c uses the existing full App: actual220737 self-hit grants10460, then accepted Warsong player kill leaves32961Nonevs1. Initial NPC fixture used wrong event and bare World lacked cast resources; those failures are not credit proof. Actor-scope REDf94bd699 reproduces another character's10460 leaking through raw account aggregates into32961. The reader now shares the snapshot's scoped earned-ID iterator; account contribution storage is unchanged. Compiler/policy38/38; native/catalog GREEN35ef2818 passes2/2(25.17s), same-account isolation and reopened counter2. Generated5693/census5490+1821/all243/pinned membership reconciled. Required workspace four-thread filter180/0/1ignored(302.66s) +site-export1/1 at77832266, server/engine checks and three-repo fmt pass; independent artifact verification found no correctness defects. Later Python assertion has separate38/38 proof; no Rust changes. No artifact acquisition/challenge/full1000-kill/UI certification.
 
 ## 2026-10-14 — Pre-effect spell-hit target creature entries
 
