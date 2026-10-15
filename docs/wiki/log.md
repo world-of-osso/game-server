@@ -1,4 +1,9 @@
 ## 2026-10-15 — Follower passive-derived stat recomputation
+## 2026-10-15 — Authored vehicle movement metadata
+
+[Vehicle catalog](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15): actual source Flags/TurnSpeed omission RED, importer projection/seat-only schema upgrade added without synthetic defaults. Fresh/upgrade/idempotence/missing-source preflight controls pending; no canonical publication or movement/native claim.
+
+## 2026-10-15 — Independent vehicle control-aura ownership
 
 [Source boundary](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15): NPC bridge passives stored modifiers but the player-only query never recomputed them. Native spec66 RED2 proves7840 versus sourced10584/8232 without stat overrides; same production query now accepts follower profile identity and ordinary modifier changes. GREEN/build/live proof remain separate; Stockade0/3 stays open.
 
