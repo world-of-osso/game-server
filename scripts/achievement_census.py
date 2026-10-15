@@ -117,14 +117,18 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
     return supported
 
 
-def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievement_ids, node_counts):
+def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievement_ids, node_counts, pet_types):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
     if kind in item_facts:
         return asset in item_facts[kind]
-    if kind == 87:
+    if kind in (87, -87):
         return asset in achievement_ids
     if kind == 67:
         return asset in node_counts
+    if kind == 30:
+        return 1 <= asset <= 15
+    if kind == 78:
+        return asset in pet_types
     return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 35: asset == 0, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
@@ -172,6 +176,9 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         skills = {row[0] for row in db.execute('SELECT ID FROM skill_line')}
         pet_creatures = {row[0] for row in db.execute('SELECT creature_id FROM battle_pet_species WHERE creature_id != 0')}
         pet_species = {row[0] for row in db.execute('SELECT species_id FROM battle_pet_species')}
+        pet_types = {row[0] for row in db.execute(
+            'SELECT DISTINCT m.PetTypeEnum FROM battle_pet_species s '
+            'JOIN battle_pet_species_metadata m ON m.ID=s.species_id WHERE m.PetTypeEnum BETWEEN 0 AND 9')}
         toy_items = {row[0] for row in db.execute('SELECT ItemID FROM toy')}
         areas = {row[0] for row in db.execute('SELECT ID FROM area_table WHERE ID != 0 AND AreaBit >= 0')}
         taxi_nodes = {row[0] for row in db.execute('SELECT ID FROM taxi_nodes')}
@@ -193,7 +200,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     condition_trees = {
         row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv')).items()
         if row_id not in single_modifiers
-        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievements, node_counts) for kind, asset in facts)
+        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievements, node_counts, pet_types) for kind, asset in facts)
     }
     supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, condition_trees)
     by_type = collections.defaultdict(set)

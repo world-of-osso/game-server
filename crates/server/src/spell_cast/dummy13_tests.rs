@@ -37,7 +37,8 @@ fn damage(h: &Harness, spell_id: u32, target: Entity) -> Vec<i32> {
 
 #[test]
 fn dummy13_mortal_strike_wound_reduces_real_healing_and_expires() {
-    let mut h = harness(Vec::new(), &[12294, 115804, 2061], 1).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[12294, 115804, 2061], 1).unwrap();
     let target = h.npc;
     h.set_power(PowerType::Rage, 1000.0);
     execute(&mut h, 12294, Some(target));
@@ -62,7 +63,7 @@ fn dummy13_mortal_strike_wound_reduces_real_healing_and_expires() {
 
 #[test]
 fn dummy13_rend_applies_owned_native_bleed_and_ticks() {
-    let mut h = harness(Vec::new(), &[772, 388539], 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[772, 388539], 1).unwrap();
     let target = h.npc;
     h.set_power(PowerType::Rage, 1000.0);
     execute(&mut h, 772, Some(target));
@@ -82,7 +83,12 @@ fn dummy13_execute_refunds_actual_optional_rage_only_with_rank_and_survivor() {
         (true, 900.0, 240.0),
         (true, 1.0, 200.0),
     ] {
-        let mut h = harness(Vec::new(), &[163201, 260798, 316405, 137049], 1).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[163201, 260798, 316405, 137049],
+            1,
+        )
+        .unwrap();
         let caster = h.caster;
         let target = h.npc;
         // Active SpellPower9491 requires the real Arms specialization aura.
@@ -104,7 +110,9 @@ fn dummy13_execute_refunds_actual_optional_rage_only_with_rank_and_survivor() {
 
 #[test]
 fn dummy13_execute_partial_optional_spend_refusal_and_trigger_do_not_invent_refunds() {
-    let mut h = harness(Vec::new(), &[163201, 260798, 316405, 137049], 1).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[163201, 260798, 316405, 137049], 1)
+            .unwrap();
     let caster = h.caster;
     let target = h.npc;
     // Active SpellPower9491 requires the real Arms specialization aura.

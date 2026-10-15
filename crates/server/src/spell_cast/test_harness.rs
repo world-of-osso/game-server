@@ -289,6 +289,46 @@ pub(crate) fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<H
     harness_with(extra, ids, class, false)
 }
 
+pub(crate) const SUNWELL_RADIANCE: u32 = 45769;
+
+/// Opt-in coefficient/admission fixture, not a legal class loadout. Native
+/// Sunwell Radiance45769 effect1 supplies permanent enemy-dodge reduction20
+/// (published70391 SpellEffect37781, SpellDuration21). Keep ordinary NPC dodge
+/// active in all other fixtures; never change RNG or spell defense attributes.
+pub(crate) fn harness_with_native_enemy_dodge_reduction(
+    extra: Vec<SpellInfo>,
+    ids: &[u32],
+    class: u8,
+) -> Option<Harness> {
+    let mut spells = ids.to_vec();
+    spells.push(SUNWELL_RADIANCE);
+    let mut h = harness(extra, &spells, class)?;
+    apply_native_enemy_dodge_reduction(&mut h);
+    Some(h)
+}
+
+/// Custom coefficient fixtures load SUNWELL_RADIANCE explicitly before opting in.
+pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: SUNWELL_RADIANCE,
+            effect_mask: 1 << 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .modifier(251),
+        -20.0
+    );
+}
+
 /// `computed_stats`: run `StatsPlugin` on a fresh caster (100/100 health,
 /// 0/0 mana, as spawned on world entry) instead of the fixed stats.
 pub(crate) fn harness_with(

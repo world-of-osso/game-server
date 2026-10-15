@@ -259,6 +259,19 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     # only; no TDB AI/script/spell/click/npcflag binding. Attraction Sign90335 is
     # excluded: its arrow display41343 has TDB probability0 (invisible11686 spawns).
     194793, 203158,
+    # Source group-private summons; preserve TDB identity/models without inventing
+    # click scripts or interaction payloads. See docs/toy-effects14-coverage.md.
+    80682, 125119, 99535, 116213, 125120, 139198, 139204, 143703,
+    149954, 163441, 199054, 231372,
+    # Sea-Blessed Shrine: source cursor placement, no click/AI/script payload.
+    246037,
+    # Xan'tish's Flute: preserve all four weighted native Snake display choices.
+    # Source wild/default count is separate from template publication.
+    71500,
+    # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
+    51113,
+    # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.
+    86916,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,

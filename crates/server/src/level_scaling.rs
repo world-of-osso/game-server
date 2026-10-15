@@ -59,7 +59,7 @@ impl CreatureStats {
 }
 
 /// ExpectedStat, ExpectedStatMod and ContentTuningXExpected from world.db.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ExpectedStats {
     /// Keyed by `(Lvl, ExpansionID)`; a later ID replaces an earlier one
     /// (DB2Manager::LoadStores `_expectedStatsByLevel`, DB2Stores.cpp:1324-1325).
