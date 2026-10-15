@@ -151,7 +151,12 @@ fn dummy12_guardian_damage_reaches_owner_without_guardian_connection() {
                 && event.target == Some(h.npc.to_bits())
                 && event.amount > 0
         })
-        .expect("owner receives actual guardian damage without a guardian client");
+        .unwrap_or_else(|| {
+            panic!(
+                "owner receives actual guardian damage without a guardian client: {:?}",
+                h.inbox.log
+            )
+        });
     assert!(
         summon_index < damage_index,
         "ownership arrives before guardian damage"
