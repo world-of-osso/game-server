@@ -218,6 +218,88 @@ fn mount_item_learning_waits_for_fifo_and_preserves_an_earlier_wallet() {
 }
 
 #[test]
+fn mount_item_commit_updates_other_account_character_after_learner_leaves() {
+    let mut eater = eater_with_spells(&[5655], 1, &[6648], MAGE).expect("Chestnut Mare data");
+    let conn = rusqlite::Connection::open_with_flags(
+        world_db(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::mount_journal::load(&conn).unwrap());
+    let character = persistence::create_character(
+        &eater.h.app.world().resource::<GameDatabase>().db,
+        1,
+        "Other",
+        1,
+        MAGE,
+    )
+    .unwrap()
+    .0;
+    let other = spawn_player(&mut eater.h.app, MAGE, 0.0);
+    let peer = spawn_peer_connection(&mut eater.h.app, other, 2);
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(peer)
+        .insert(crate::auth::InWorld {
+            character_id: character,
+        });
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(other)
+        .insert(crate::mount_journal::AccountMounts::default());
+    let held = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    eater
+        .h
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(eater.h.connection)
+        .unwrap()
+        .send::<InventoryChannel>(UseItem {
+            location: slot(0),
+            target: None,
+        });
+    eater.h.advance(3);
+    assert!(crate::mount_journal::persistence_pending(
+        eater.h.app.world()
+    ));
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(eater.h.connection)
+        .remove::<crate::auth::InWorld>();
+    held.abort().unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    while crate::mount_journal::persistence_pending(eater.h.app.world()) {
+        eater.h.advance(1);
+        assert!(
+            std::time::Instant::now() < deadline,
+            "mount commit receipt never arrived"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert_eq!(count_of(&eater, 5655), 0);
+    assert!(
+        crate::mount_journal::knows_spell(eater.h.app.world(), other, 6648),
+        "another authenticated account character retained stale mount authority after the learner left"
+    );
+}
+
+#[test]
 fn mount_journal_item_learning_consumes_once_and_rejects_duplicate() {
     let mut eater = eater_with_spells(&[5655], 2, &[6648], MAGE).expect("Chestnut Mare data");
     let conn = rusqlite::Connection::open_with_flags(

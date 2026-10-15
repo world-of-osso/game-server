@@ -85,9 +85,7 @@ fn commit_mount_learning(
 fn publish_mount_learning(world: &mut World) {
     let completed = drain_completed_learning(world);
     for (request, completion) in completed {
-        if owns_learning_session(world, &request) {
-            publish_learning_result(world, request, completion);
-        }
+        publish_learning_result(world, request, completion);
     }
 }
 
@@ -124,6 +122,7 @@ fn publish_learning_result(
     request: LearningRequest,
     completion: Result<Result<(), InventoryError>, String>,
 ) {
+    let current_session = owns_learning_session(world, &request);
     let result = completion.unwrap_or_else(|detail| {
         Err(InventoryError {
             reason: InventoryErrorReason::InternalBagError,
@@ -132,17 +131,25 @@ fn publish_learning_result(
     });
     match result {
         Ok(()) => {
-            world
-                .resource_mut::<crate::gold::GoldUpdateQueue>()
-                .record_items(request.character);
+            if current_session {
+                world
+                    .resource_mut::<crate::gold::GoldUpdateQueue>()
+                    .record_items(request.character);
+            }
+            // Ownership belongs to every current account character, even if the learner left.
             broadcast_account(world, request.account);
         }
-        Err(error) => {
+        Err(error) if current_session => {
             if let Some(mut sender) =
                 world.get_mut::<MessageSender<InventoryError>>(request.connection)
             {
                 sender.send::<InventoryChannel>(error);
             }
         }
+        Err(error) => debug!(
+            account = request.account,
+            ?error,
+            "Mount learning requester left before error publication"
+        ),
     }
 }
