@@ -383,7 +383,7 @@ pub fn save_guild_public_note(db: &Database, character_id: u64, note: &str) {
         .expect("open public guild notes")
         .insert(character_id, note)
         .expect("save public guild note");
-    write.commit().expect("commit public guild note");
+    crate::persistence_commit::commit(write).expect("commit public guild note");
 }
 
 pub fn list_guild_members(db: &Database, guild_id: u32) -> Vec<GuildMemberRecord> {

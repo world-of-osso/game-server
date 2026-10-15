@@ -42,6 +42,7 @@ fn fixture() -> Fixture {
     });
     app.add_plugins(shared::ProtocolPlugin);
     app.init_resource::<ChangedGuilds>();
+    install_persistence(&mut app);
     app.add_systems(Update, process_rank_requests);
     app.finish();
     app.cleanup();

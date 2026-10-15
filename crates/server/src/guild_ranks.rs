@@ -14,6 +14,9 @@ use shared::protocol::*;
 #[cfg(test)]
 #[path = "guild_ranks_fifo_tests.rs"]
 mod fifo_tests;
+#[path = "guild_rank_persistence.rs"]
+mod persistence_actor;
+pub(super) use persistence_actor::install as install_persistence;
 
 pub(crate) fn character_has_right(
     db: &redb::Database,
@@ -396,71 +399,27 @@ type Receivers<'w, 's> = Query<
     's,
     (
         Entity,
-        &'static InWorld,
-        &'static mut MessageReceiver<GuildRankRequest>,
-    ),
-    With<Authenticated>,
->;
-type Connections<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
+        &'static Authenticated,
         &'static InWorld,
         &'static crate::networking::PlayerLink,
+        &'static mut MessageReceiver<GuildRankRequest>,
     ),
-    With<Authenticated>,
 >;
 
 pub(super) fn process_rank_requests(
     db: Res<GameDatabase>,
     mut receivers: Receivers,
-    connections: Connections,
-    mut senders: Query<&mut MessageSender<GuildRanksState>>,
-    mut changed: ResMut<ChangedGuilds>,
-    mut commands: Commands,
+    mut pending: ResMut<persistence_actor::PendingGuildRankWrites>,
 ) {
-    for (connection, world, mut receiver) in &mut receivers {
+    for (connection, auth, session, link, mut receiver) in &mut receivers {
+        let owner = persistence_actor::Owner {
+            connection,
+            player: link.0,
+            account: auth.account_id,
+            character: session.character_id,
+        };
         for request in receiver.receive() {
-            let membership = persistence::load_character_guild(&db.db, world.character_id);
-            let query = matches!(request, GuildRankRequest::Query);
-            let previous_members = membership
-                .as_ref()
-                .map(|g| list_guild_members(&db.db, g.guild_id))
-                .unwrap_or_default();
-            let result = membership
-                .as_ref()
-                .ok_or(GuildRankError::NotInGuild)
-                .and_then(|g| apply_rank_request(&db.db, g.guild_id, world.character_id, request));
-            if query || result.is_err() {
-                if let Ok(mut sender) = senders.get_mut(connection) {
-                    sender.send::<GuildChannel>(snapshot(&db.db, world.character_id, result.err()));
-                }
-                continue;
-            }
-            let guild_id = membership.expect("successful guild request").guild_id;
-            changed.0.push(guild_id);
-            for (recipient, recipient_world, link) in &connections {
-                if previous_members
-                    .iter()
-                    .any(|member| member.character_id == recipient_world.character_id)
-                {
-                    if persistence::load_character_guild(&db.db, recipient_world.character_id)
-                        .is_none()
-                    {
-                        commands
-                            .entity(link.0)
-                            .remove::<shared::components::GuildMembership>();
-                    }
-                    if let Ok(mut sender) = senders.get_mut(recipient) {
-                        sender.send::<GuildChannel>(snapshot(
-                            &db.db,
-                            recipient_world.character_id,
-                            None,
-                        ));
-                    }
-                }
-            }
+            persistence_actor::enqueue(&db, &mut pending, owner, request);
         }
     }
 }
