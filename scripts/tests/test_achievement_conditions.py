@@ -497,7 +497,7 @@ class Conditions(unittest.TestCase):
             rejected = copy.deepcopy(modifiers)
             rejected[10].update(change)
             self.assertEqual(self.compile(rejected), {})
-        for change in ({'Type': '41'}, {'Operator': '3'}, {'Asset': '0'},
+        for change in ({'Type': '999'}, {'Operator': '3'}, {'Asset': '0'},
                        {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
             rejected = copy.deepcopy(modifiers)
             rejected[12].update(change)
