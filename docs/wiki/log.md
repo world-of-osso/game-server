@@ -1,3 +1,7 @@
+## 2026-10-14 — Non-player expertise dodge consumer (in progress)
+
+[Native player dodge boundary](systems/player-damage.md#shared-weapon-spell-defense-roll) now subtracts the non-player caster's own active240 total/4. Published70391 NPC Hit Buffs62627/Strike38598 against real Evasion reproduces missing landed damage; ownership control passes. GREEN/check/fmt remain pending; player expertise, NPC dodge/parry and global hit certification remain gaps.
+
 ## 2026-10-14 — Live player weapon-spell dodge
 
 [Live player field](systems/player-damage.md#shared-weapon-spell-defense-roll) feeds melee dodge before block. Native Rogue Evasion/receiver stat producer gives genuine Slam301 RED then six GREEN controls for direction/stun/flags/ranged/removal/expiry. NPC dodge, attacker modifiers, full probabilities and independent acceptance remain gaps.
