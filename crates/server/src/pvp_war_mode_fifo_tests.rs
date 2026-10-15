@@ -87,7 +87,15 @@ fn city_harness() -> (Harness, u64) {
             .is_resting()
     );
     install_persistence(&mut h.app);
-    h.app.add_systems(Update, receive_requests);
+    h.app
+        .add_systems(Update, (receive_requests, sync_state).chain());
+    h.advance(6);
+    h.app
+        .world_mut()
+        .get_mut::<MessageReceiver<PvpStateUpdate>>(h.connection)
+        .unwrap()
+        .receive()
+        .for_each(drop);
     (h, character)
 }
 
@@ -175,8 +183,15 @@ fn assert_toggle_fifo(completion: CompletionContext) {
                 .unwrap()
                 .receive(),
         );
+        let committed_preference_received = replies.iter().any(|reply: &PvpStateUpdate| {
+            reply
+                .snapshot
+                .as_ref()
+                .and_then(|snapshot| snapshot.war_mode.as_ref())
+                .is_some_and(|mode| mode.desired)
+        });
         let received_expected_reply =
-            matches!(completion, CompletionContext::Departed) || !replies.is_empty();
+            matches!(completion, CompletionContext::Departed) || committed_preference_received;
         let committed = fence.result().is_some();
         if frames >= 6 && committed && received_expected_reply {
             break;
@@ -195,10 +210,17 @@ fn assert_toggle_fifo(completion: CompletionContext) {
     } else {
         assert_eq!(state.progress.honor, 777);
         assert!(state.progress.war_mode_desired);
-        assert_eq!(replies.len(), 1);
-        assert_eq!(replies[0].error, None);
+        // Instance entry reports the old preference's new context before the committed toggle.
+        let expected_replies = if matches!(completion, CompletionContext::Instance) {
+            2
+        } else {
+            1
+        };
+        assert_eq!(replies.len(), expected_replies);
+        let committed_reply = replies.last().unwrap();
+        assert_eq!(committed_reply.error, None);
         assert!(
-            replies[0]
+            committed_reply
                 .snapshot
                 .as_ref()
                 .unwrap()
