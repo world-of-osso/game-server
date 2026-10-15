@@ -521,6 +521,74 @@ fn enter_isle_bomb_match() -> EnteredMatch {
     })
 }
 
+/// TC npc_four_car_garage / source34775 spellclick66245: aura236 boards the
+/// Demolisher's Vehicle509 driver seat5766 after normal Workshop capture.
+#[test]
+fn isle_channel_workshop_demolisher_spellclick_boards_its_source_driver_seat() {
+    let template = shared::battleground::isle_of_conquest();
+    let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
+        let source = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let click: (u32, u8, u16) = source
+            .query_row(
+                "SELECT spell_id,cast_flags,user_type FROM tdb_npc_spellclick_spells WHERE npc_entry=34775",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(click, (66245, 1, 0));
+        // Isolate the runtime aura boundary from the separately missing publication.
+        let fixture = Connection::open_in_memory().unwrap();
+        fixture.execute_batch("CREATE TABLE content_npc_spellclick_spells (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER)").unwrap();
+        fixture
+            .execute(
+                "INSERT INTO content_npc_spellclick_spells VALUES (34775,?1,?2,?3)",
+                rusqlite::params![click.0, click.1, click.2],
+            )
+            .unwrap();
+        app.insert_resource(crate::npc_interaction::load_spellclick_catalog(&fixture).unwrap());
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        let data = crate::spell_cast::test_harness::world_db().unwrap();
+        app.insert_resource(crate::spell_info::SpellStore::fixture(
+            [21651, 66245]
+                .into_iter()
+                .map(|id| data.store.get(id).unwrap().clone())
+                .collect(),
+        ));
+        app.add_plugins(crate::vehicle::VehiclePlugin);
+    });
+    let actor = &entered.players[0];
+    let h = &mut entered.h;
+    use_second_frames(h);
+    let (banner, position) = objects_in(h, entered.copy, 195133)[0];
+    h.walk_to(actor, position);
+    use_object(h, actor, banner);
+    h.advance(8);
+    h.advance(60);
+    let (demolisher, _) = find_alterac_source_npc(h, entered.copy, 34775);
+    let position = wow(h.app.world().get::<Position>(demolisher).unwrap());
+    h.walk_to(actor, position);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    let rider = h
+        .app
+        .world()
+        .get::<shared::components::VehiclePassenger>(actor.player)
+        .expect("normal authored Demolisher spellclick must board its driver seat");
+    assert_eq!(rider.driver, demolisher.to_bits());
+    assert_eq!(rider.seat_index, 0);
+    assert_eq!(rider.seat_id, 5766);
+}
+
 /// TC a352b1fa GameObject::Use goober Data10 spell (GameObject.cpp:2930-2932, 3563-3567):
 /// a captured Workshop's TDB group1227/1230 Seaforium Bombs195237 cast66265, which creates
 /// item46847 for the user in that battleground copy only.
