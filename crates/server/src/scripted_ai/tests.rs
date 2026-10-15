@@ -176,6 +176,7 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     app.add_plugins(ProtocolPlugin);
     app.add_plugins((
         crate::combat::CombatPlugin,
+        crate::stats::StatsPlugin,
         crate::spell_cast::SpellCastPlugin,
         crate::auras::AuraPlugin,
         crate::creature_ai::CreatureAiPlugin,
@@ -195,6 +196,7 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     let all = crate::spell_cast::test_harness::world_db().unwrap();
     app.insert_resource(SpellStore::fixture(data.spells.clone()));
     app.insert_resource(crate::spell_cast::test_harness::power_table(all));
+    app.insert_resource(crate::spell_cast::test_harness::class_spells(all));
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
     app.insert_resource(WorldData {
         templates: stockade_templates(),
@@ -232,7 +234,7 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     app
 }
 
-/// A level 30 Human with 1,000,000 health at WoW `(x, y, z)` in `map`, facing `o`.
+/// A level30 Human at WoW `(x, y, z)`, facing `o`; StatsPlugin derives native stats.
 fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, Entity) {
     let (x, y, z) = crate::terrain_height::wow_to_bevy(wow[0], wow[1], wow[2]);
     let player = app
@@ -255,6 +257,11 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
                 current: 1_000_000.0,
                 max: 1_000_000.0,
             },
+            // Same empty stat inputs as native character entry; never fabricate dodge.
+            shared::components::Level(30),
+            shared::components::UnitStats::default(),
+            shared::components::CombatRatings::default(),
+            shared::components::DerivedStats::default(),
             UnitLevel(30),
             UnitFactionTemplate(1),
             CombatStatus(false),
@@ -819,7 +826,10 @@ fn hogger_wipe_resets_the_encounter_and_a_new_pull_starts_it_again() {
     assert!(h.health(hogger).current < h.health(hogger).max);
     // Revive and pull again: the pull yell, the encounter start and Maddening
     // Call's first timer come back once.
-    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1_000_000.0;
+    {
+        let mut health = h.app.world_mut().get_mut::<Health>(player).unwrap();
+        health.current = health.max;
+    }
     h.advance(12.0);
     h.engage(hogger);
     h.advance(4.7);
