@@ -78,6 +78,7 @@ fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
             .iter()
             .all(|wolf| h.app.world().get_entity(*wolf).is_err())
     );
+    assert_wolf_summon_events(&h, &wolves);
 }
 
 #[test]
@@ -102,6 +103,10 @@ fn dummy12_feral_spirit_child_logs_two_short_lived_wolves_to_owner() {
             .iter()
             .all(|wolf| h.app.world().get_entity(*wolf).is_err())
     );
+    assert_wolf_summon_events(&h, &wolves);
+}
+
+fn assert_wolf_summon_events(h: &Harness, wolves: &[Entity]) {
     let summons: Vec<_> = h
         .inbox
         .log
