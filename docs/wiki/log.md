@@ -1,3 +1,7 @@
+## 2026-10-15 — Modern native activation boundary
+
+[Client-owned native evidence](../../../game-engine/docs/wiki/systems/battlegrounds.md#modern83-functional-bomb-chain--2026-10-15) records normal/huge typed hits, real picked-model disarm and20-player return/save on007/da6/a438/4135 components. Forever and explicit renderer/framing/timing gaps remain; no vehicle/siege/victory certification.
+
 ## 2026-10-15 — Owned IoC bomb lifecycle channel proof
 
 [Timed Seaforium](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14): normal/huge real pickup→owned item→UseItem, ten-second25%/60% one-shot/copy isolation and acknowledged normal disarm/cancellation pass5/5. Authoritative BG team relation regression passes1/1 across racial factions; reproduced/fixed NPC-path regression passes existing AV captain1/1 without changing stats, arena lifecycle remains1/1. Native activation, siege and victory remain pending. Earlier too-early/transient-reply fixture observations are not genuine disarm RED; corrected pre-fix replay is retained separately.
