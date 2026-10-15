@@ -1,6 +1,103 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_unearned_snapshot_rejects_missing_earned_component() {
+    let mut world = World::new();
+    world.insert_resource(catalog());
+    let actor = world
+        .spawn((
+            shared::components::Player {
+                name: "Noearned".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            shared::components::Level(1),
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    let event = CriteriaEvent::CastSpell(1217637);
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    assert!(
+        conditions.player.is_some(),
+        "other reference-player facts are available"
+    );
+    let mut state = PlayerAchievementState::default();
+    world
+        .resource::<AchievementCatalog>()
+        .update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "a missing earned-state component is unknown, not an empty known-unearned set"
+    );
+    world
+        .entity_mut(actor)
+        .insert(PlayerAchievementState::default());
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    world
+        .resource::<AchievementCatalog>()
+        .update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "character state without its account aggregate is incomplete earned authority"
+    );
+    world.entity_mut(actor).insert(PlayerAchievementState {
+        account: Some(Box::default()),
+        ..Default::default()
+    });
+    let catalog = world.remove_resource::<AchievementCatalog>().unwrap();
+    let conditions = crate::achievement::event_conditions(&world, actor, &[event]);
+    catalog.update_at(&mut state, event, None, 1, &conditions);
+    assert!(
+        !state.criteria_progress.contains_key(&103451),
+        "a missing catalog also cannot authorize known-unearned credit"
+    );
+}
+
+#[test]
+fn achievements_criteria_unearned_cast_requires_reference_and_authored_award() {
+    let catalog = catalog();
+    for (player, expected) in [
+        (None, None),
+        (Some(ReferencePlayer::default()), None),
+        (
+            Some(ReferencePlayer {
+                earned_achievements: Some(BTreeSet::new()),
+                account_achievements_known: true,
+                ..Default::default()
+            }),
+            Some(1),
+        ),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player,
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::CastSpell(1217637),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&103451).copied(), expected);
+    }
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(-87, 41707)], &HashMap::new())
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(-87, u32::MAX)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "unknown authored metadata is not known-unearned authority"
+    );
+}
+
+#[test]
 fn achievements_criteria_pet_type_level_resolves_species_and_preserves_zero_type() {
     let catalog = catalog();
     let conditions = PlayerConditions {
@@ -264,10 +361,10 @@ fn achievements_criteria_earned_prerequisite_requires_known_id_and_scoped_player
             ..Default::default()
         };
         let player = ReferencePlayer {
-            earned_achievements: catalog.iter_earned_achievement_ids(&state).collect(),
+            earned_achievements: Some(catalog.iter_earned_achievement_ids(&state).collect()),
             ..Default::default()
         };
-        assert!(player.earned_achievements.contains(&291));
+        assert!(player.earned_achievements.as_ref().unwrap().contains(&291));
         assert_eq!(
             facts[0].holds(&player, CriteriaEvent::KillPlayer, &BTreeMap::new()),
             qualifies,
@@ -994,12 +1091,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5492 + pet-type78 roots NoFavorites6609/AllPetsAllowed6610.
+    // Installed70391: 5494 + native CastSpell29 unearned-self guard Dastardly Devices41707.
     // Structural union, not prerequisite acquisition or complete-content proof.
-    assert_eq!(union.len(), 5494);
+    assert_eq!(union.len(), 5495);
     for achievement in [
         141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 6609, 6610, 9070, 11154, 11298, 11419, 11665,
-        11666, 11667, 11668, 63640,
+        11666, 11667, 11668, 41707, 63640,
     ] {
         assert!(union.contains(&achievement));
     }

@@ -135,6 +135,11 @@ pub(super) fn load_creature_texts_startup(mut commands: Commands) {
 
 /// `CreatureTextMgr::SendChat(source, textGroup)`.
 pub fn talk(world: &mut World, speaker: Entity, group: u8) {
+    talk_with_target(world, speaker, group, None);
+}
+
+/// The target supplies `$n`; Say still reaches the speaker's nearby listeners.
+pub fn talk_with_target(world: &mut World, speaker: Entity, group: u8, target: Option<Entity>) {
     let Some(npc) = world.get::<Npc>(speaker).cloned() else {
         return;
     };
@@ -161,6 +166,19 @@ pub fn talk(world: &mut World, speaker: Entity, group: u8) {
         text.female_text.clone()
     } else {
         text.male_text.clone()
+    };
+    let content = if let Some(target) = target {
+        let name = world
+            .get::<Player>(target)
+            .map(|player| player.name.as_str())
+            .or_else(|| world.get::<Npc>(target).map(|npc| npc.name.as_str()));
+        let Some(name) = name else {
+            error!("CreatureTextMgr: speech target {target:?} has no unit name");
+            return;
+        };
+        content.replace("$n", name)
+    } else {
+        content
     };
     let speaker_bits = speaker.to_bits();
     let (channel, listen_range) = match text.chat_type {

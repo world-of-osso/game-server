@@ -90,6 +90,10 @@ Sigil uses the existing destination-owned ground pulse lifecycle with period0: w
 
 Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood's last remaining Dummy root closes. Native238-row equivalence and exact previous40-spec ID sets checked. Targeted11/11 warning-free; single post-origin/master spell_cast gate360/360, fmt/check pass at6a56656. Detailed corrected RED and proof boundaries live in the coverage ledger. Guardian inheritance/melee and Eye Beam11-vs-tooltip10 discrepancy unchanged.
 
+## Wildfire primary variance fixture
+
+Current native source values replace stale golden constants, not runtime coefficients or variance tolerance. A legitimate upper primary draw reproduced the master red; bounded real casts now cover the full source interval while distinct AP/RAP preserve owned bleed and splash limits. [Source, exact failure and merged proof](../../class-completeness6.md#wildfire-primary-variance-master-red--batch61).
+
 ## Fourteenth batch: owned hits and native clocks
 
 [Contract](../../specs/spell-dummy-scripts.md#fourteenth-batch-local-hit-actor-and-periodic-consumers), [capabilities/proof/all40](../../spell-dummy14-coverage.md). `scripts/batch14.rs` binds Frozen Orb/Blizzard's distinct named hit slows, Survival Kill Command's actual persistent-pet caster, Wildfire's named primary hit/bleed, Deathmark's80 total Energy on its existing bleed clock, Eye Beam's named primary/ranked crit, Metamorphosis's8yd destination hit and player daze, and Consume's named Fury. These are eight bounded entries, not full class/talent parity. Frost child-hit tests are not root-cast A proofs; cone179/129 actors remain separate gaps.
@@ -246,11 +250,12 @@ The caster's [[auras]] spell modifiers (107/108/218/219) adjust cast time (Chang
 | `CastFailed{reason, detail}` | caster owner | rejected request or failed completion |
 | `SpellCooldownUpdate` | caster owner | GCD start; cooldown start |
 | `SpellChargesUpdate` | caster owner | charge spent |
-| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune); aura events in [[auras]] |
+| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune), Summon; aura events in [[auras]] |
 
 - Other clients in range do not receive combat log events yet.
 - Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
 - Spell effects emit only `CombatLogEvent`.
+- Spell-created effect28 units and effect56 controlled pets emit `Summon` after creation: source=summoner, target=unit, spell_id=actual summoning spell (including triggered child spells). Existing-pet recall and login/script/journal restoration do not synthesize events. Temporary summon ancestry routes logs to the player's connection without altering meter/quest/PvP credit. See [guardian contract](../../specs/spell-guardians.md).
 - `log_event` stamps every event with server wall-clock Unix milliseconds before recording damage or sending to owners, including queued melee events. Constructors leave the timestamp unset until that boundary.
 - `Interrupt.extra_spell_id` identifies the interrupted cast; `Dispel.extra_spell_id` identifies the removed aura. Other kinds leave it `None`; `spell_id` remains the interrupting or dispelling spell.
 

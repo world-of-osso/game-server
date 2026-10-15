@@ -5,8 +5,6 @@ fn spawn_level_achievement_fixture(
     database: redb::Database,
     carried_species: u32,
 ) -> (App, Entity, Entity, Entity, u64) {
-    let (character_id, _) =
-        crate::persistence::create_character(&database, 42, "Petleveler", 1, 1).unwrap();
     let catalog = super::tests::catalog();
     let mut journal = PetJournal::default();
     journal
@@ -16,7 +14,27 @@ fn spawn_level_achievement_fixture(
     journal
         .add_with_guid(39, 25, PetQuality::Rare, 3, 42)
         .unwrap();
+    spawn_owned_pet_achievement_fixture(database, journal, catalog)
+}
+
+fn spawn_owned_pet_achievement_fixture(
+    database: redb::Database,
+    journal: PetJournal,
+    catalog: WildCatalog,
+) -> (App, Entity, Entity, Entity, u64) {
+    let (character_id, _) =
+        crate::persistence::create_character(&database, 42, "Petleveler", 1, 1).unwrap();
     crate::battle_pets::save_journal(&database, 42, &journal);
+    spawn_saved_pet_achievement_fixture(database, catalog, character_id, 42)
+}
+
+fn spawn_saved_pet_achievement_fixture(
+    database: redb::Database,
+    catalog: WildCatalog,
+    character_id: u64,
+    account_id: u64,
+) -> (App, Entity, Entity, Entity, u64) {
+    let achievements = crate::persistence::load_achievements(&database, character_id);
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
@@ -49,7 +67,7 @@ fn spawn_level_achievement_fixture(
                 appearance: Default::default(),
             },
             shared::components::Level(1),
-            crate::achievement::PlayerAchievementState::default(),
+            achievements,
             position,
             crate::maps::InMap::continent(0),
             Health {
@@ -61,7 +79,7 @@ fn spawn_level_achievement_fixture(
     let connection = app
         .world_mut()
         .spawn((
-            Authenticated { account_id: 42 },
+            Authenticated { account_id },
             InWorld { character_id },
             PlayerLink(owner),
             lightyear::prelude::RemoteId(lightyear::prelude::PeerId::Local(1)),
@@ -304,3 +322,6 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
         assert_eq!(crate::battle_pets::load_journal(&database, 43).count(), 0);
     }
 }
+
+#[path = "wild_pet_family_grant_tests.rs"]
+mod family_grants;
