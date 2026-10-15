@@ -95,8 +95,14 @@ pub(crate) enum CriteriaEvent {
     LearnedNewPet(u32),
     /// TC BattlegroundScore::UpdatePvpStat: one native objective credit of this PvpStat.
     TrackedWorldStateUIModified(u32),
-    BattlePetReachedLevel(u8),
-    ActivelyEarnedPetLevel(u8),
+    BattlePetReachedLevel {
+        species: u32,
+        level: u8,
+    },
+    ActivelyEarnedPetLevel {
+        species: u32,
+        level: u8,
+    },
     Login,
     ExploreAreaBit(u32),
     EnterTopLevelArea(u32),
@@ -221,8 +227,8 @@ impl CriteriaEvent {
             Self::CaptureBattlePet => 157,
             Self::LearnedNewPet(_) => 155,
             Self::TrackedWorldStateUIModified(_) => 30,
-            Self::BattlePetReachedLevel(_) => 160,
-            Self::ActivelyEarnedPetLevel(_) => 162,
+            Self::BattlePetReachedLevel { .. } => 160,
+            Self::ActivelyEarnedPetLevel { .. } => 162,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
             Self::EnterTopLevelArea(_) => 225,
@@ -278,8 +284,13 @@ impl CriteriaEvent {
                 rating > 0 && criteria.asset == bracket
             }
             Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
-            Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
-                u32::from(level) == criteria.asset
+            Self::BattlePetReachedLevel { species, level }
+            | Self::ActivelyEarnedPetLevel { species, level } => {
+                species != 0
+                    && u32::from(level) == criteria.asset
+                    && criteria
+                        .modifier_asset
+                        .is_none_or(|required| required == species)
             }
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::EnterArea(area) => area != 0 && criteria.area_members.contains(&area),
@@ -486,6 +497,8 @@ pub(crate) struct ReferencePlayer {
     pub auras: BTreeSet<u32>,
     /// IDs in existing class/profession knowledge and the owning mount journal.
     pub known_spells: BTreeSet<u32>,
+    /// This character's earned IDs plus its existing account-wide awards.
+    pub earned_achievements: BTreeSet<u32>,
     /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
     pub battle_pet_team_min_level: Option<u8>,
     /// Current terrain area (TC Player::GetAreaId).
@@ -509,6 +522,7 @@ enum CriteriaFact {
     Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
     KnownSpell(u32),
+    EarnedAchievement(u32),
     BattlePetTeamLevel(u8),
     /// Some8 requiring one of these complete, authenticated PlayerHasAura8 spells.
     PlayerAuras(BTreeSet<u32>),
@@ -570,6 +584,9 @@ impl CriteriaFact {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
+            Self::EarnedAchievement(achievement) => {
+                player.earned_achievements.contains(achievement)
+            }
             Self::BattlePetTeamLevel(level) => player
                 .battle_pet_team_min_level
                 .is_some_and(|minimum| minimum >= *level),
@@ -856,21 +873,26 @@ impl AchievementCatalog {
             .collect()
     }
 
+    pub(crate) fn iter_earned_achievement_ids<'a>(
+        &'a self,
+        state: &'a PlayerAchievementState,
+    ) -> impl Iterator<Item = u32> + 'a {
+        let character = state
+            .earned_ids
+            .iter()
+            .filter(|id| !self.window.has_account_flag(**id))
+            .copied();
+        let account = state
+            .account
+            .iter()
+            .flat_map(|account| account.earned_ids.iter().copied())
+            .filter(|id| self.window.has_account_flag(*id));
+        character.chain(account)
+    }
+
     pub fn snapshot(&self, state: &PlayerAchievementState, race: u8) -> AchievementSnapshot {
         AchievementSnapshot {
-            earned_ids: state
-                .earned_ids
-                .iter()
-                .filter(|id| !self.window.has_account_flag(**id))
-                .copied()
-                .chain(
-                    state
-                        .account
-                        .iter()
-                        .flat_map(|account| account.earned_ids.iter().copied())
-                        .filter(|id| self.window.has_account_flag(*id)),
-                )
-                .collect(),
+            earned_ids: self.iter_earned_achievement_ids(state).collect(),
             progress: self.progress_snapshot(state, race),
         }
     }
@@ -1379,6 +1401,7 @@ fn load_criteria_facts(
             5 => Some(CriteriaFact::TargetIsPlayer),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
+            87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
@@ -1425,7 +1448,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/46/60/69/71/104/122"
+                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/32/34/35/41/46/60/69/71/87/104/122"
                 )
             }
         };
@@ -1552,9 +1575,14 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         } else {
             Vec::new()
         };
-        let modifier_asset = if matches!(kind, 155 | 221) && row.get::<_, i32>(2)? == 0 {
+        let accepts_single_modifier = match kind {
+            155 | 221 => row.get::<_, i32>(2)? == 0,
+            160 | 162 => (1..=25).contains(&row.get::<_, i32>(2)?),
+            _ => false,
+        };
+        let modifier_asset = if accepts_single_modifier {
             single_modifiers::single_modifier_asset(criteria_id, conditional[0])
-                .filter(|species| kind != 155 || catalog.pet_species.contains(species))
+                .filter(|species| kind == 221 || catalog.pet_species.contains(species))
         } else {
             None
         };

@@ -1,3 +1,30 @@
+## 2026-10-14 — Alterac captain source diagnosis
+
+[AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
+
+## 2026-10-14 — Native IoC pickup retake
+
+[Retakes78/79](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) prove actual normal pickup+return with both skins after private-only receipt/cache reconciliation. All eighteen new captures inspected; local textured model/portrait and source bomb/bags visible, animation/151 meshes and no prior duplicate/v5 errors. Peer particle art, timing and origin framing remain open; no deployment/victory claim. Admission77 failed before native startup and is not render evidence.
+
+## 2026-10-14 — Native IoC pickup, bounded visual result
+
+[Goober pickup](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) completes normal Workshop capture,195237 use and46847 count+1 in Modern75/Forever76, then normal return/save. Inspected eighteen captures show banners/bomb/bags, but private duplicate receipts and missingv5 cache prevent player/portrait acceptance. Private-only reconciliation is prepared; retake pending. Both pressure peaks exclude timing certification; no deployment/victory claim.
+
+## 2026-10-14 — Matched-protocol goober adjacency
+
+[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) passes source Workshop pickup1/1 on server22ba4903/protocol492ee28. Object fixtures now supply the native45490 summon dependencies rather than skip authored effects; adjacent quest objectives7/7 and scoped binary check pass, assertions unchanged. Historical compile/fixture failures remain separate; no deployed/native pickup or timed-siege acceptance.
+
+## 2026-10-14 — Authored goober spell dispatch
+
+[Goober dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) retains Data10/23 and source caster selection after normal use validation. Persistent-owner/free-space source Workshop fixture RED6 reaches owned46847 count0 versus1; implementation34d32065 committed before corrected GREEN1/1 (26.43s), with helper-resolved leased protocol/transport provenance. Direct-Cargo API-drift compile failure is retained separately. Native render, timed traps and siege victory remain separate gates.
+## 2026-10-14 — Pet-level species compiler
+
+[Species91](systems/dungeon-achievements.md#pet-level-species-qualifiers) compilerb6aaad84 qualifies sole160/162 species with authored level1–25;5/5 compiler tests and149 generated predicates. Runtime693218ca preserves actual species/level; native/catalog90220bb0 GREEN2/2(11.08s) proves real9070 grant, negatives and reopened counters. Actual census5491/1821 adds only account9070; all243 rows/pinned membership reconcile. Initial fixture used legacy XP;34411d29 switches to imported1979/1980. Qualified162 positive is catalog-only because1974–1977 lack combat states. Required workspace four-thread filter182/0/1ignored(255.20s), site-export1/1, server/engine checks and three-repo fmt pass without warnings at9610ef81 source scope. No capture/win species, native-qualified162, acquisition/UI or independent-provider claim.
+
+## 2026-10-14 — Honor-family and legacy challenge source audit
+
+[Source boundary](systems/dungeon-achievements.md#honor-family-source-boundary-verified-2026-10-14) traces31/35/52/53/113 through actual pinned callers: creature-only tappers and BG XP's honor-skip flag leave player-victim count dispatch unestablished. Scoreboard/type70 and wallet are not substitutes.19/22/71 have explicit no-op evaluators;204 lacks executable progress. Follow-up38/132/207/213 source rules remain unimplemented (38 explicitly rejects);194 is one per HonorLevel transition, not level or wallet, and195 lacks a prestige caller. Pinned8800 HonorXP threshold is placeholder logic, not current-build certification. No behavior or census change; native honor/content proof remains open.
+
 ## 2026-10-14 — Disciple second escort camp
 
 [Second camp](systems/boss-scripts.md#wailing-second-escort-camp-2026-10-14) ports events8–11 without a cast-state guard or replacement buff. RED→GREEN proves real30s6270, three source Adders appearing at18s while casting, combat pause and12s resumed speech. Exact birth positions are observed before chase; physical onward path/native clear remain open.
@@ -1215,6 +1242,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-14: TargetHealth46 final integrated acceptance at30a6e515:175/0/1ignored +site-export1/1; server/engine checks and three-repo fmt pass, census5480/1821. Native authentic bandage item-level context and finite-maximum rejection retain pre-effect inclusive semantics.
 
+- 2026-10-14: C++ ground waypoint generation ports pinned TC smooth-surface controls and collision normalization; real Wailing node2 RED retained, GREEN pending. Generic navigation/exact/flying unchanged.
+
+- 2026-10-14: Smooth-source gate05062d71 passes15/15,49 Wailing nodes collision-clear/node2 RED-GREEN, actual Ragefire+Golden controls and strict rejection preserved; check/format/independent artifact verification PASS. Full escort remains RED in unchanged generic movement after path1 arrival.
 - 2026-10-14: Distinct native melee/RAP percentages, owner wire and DefenseType-selected tooltip powers; bounded9 leaves5partial. See [[systems/character-stats]] and docs/class-completeness6.md.
 
 - 2026-10-14: Native player autoattack/weapon-spell critical block and launch/impact hit-state proof; NPC/probability/638 boundaries remain open. See [[systems/player-damage]] and docs/class-completeness6.md.
@@ -1225,6 +1255,10 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-14 — Maximum-health percent effect165
 
 [Effect165](systems/player-damage.md#maximum-health-percent-effect165) supplies the actual67531 hit producer needed by BB King. Native RED9e862790 accepts authentic cast but health50000 does not become49990. Implementation preserves integer max-health percentage and common mitigation while omitting direct caster/target bonuses; native GREEN4091b81b proves actual damage10, Enrage/Barkskin exclusions and zero truncation. TargetCreatureId4 compiler RED→GREEN35/35; required integrated filter178/0/1ignored +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b.
+
+## 2026-10-14 — Earned-player prerequisite qualifiers
+
+[Positive87](systems/dungeon-achievements.md#earned-player-prerequisite-qualifiers) requires authored prerequisite IDs. Valid native REDb5ab795c uses the existing full App: actual220737 self-hit grants10460, then accepted Warsong player kill leaves32961Nonevs1. Initial NPC fixture used wrong event and bare World lacked cast resources; those failures are not credit proof. Actor-scope REDf94bd699 reproduces another character's10460 leaking through raw account aggregates into32961. The reader now shares the snapshot's scoped earned-ID iterator; account contribution storage is unchanged. Compiler/policy38/38; native/catalog GREEN35ef2818 passes2/2(25.17s), same-account isolation and reopened counter2. Generated5693/census5490+1821/all243/pinned membership reconciled. Required workspace four-thread filter180/0/1ignored(302.66s) +site-export1/1 at77832266, server/engine checks and three-repo fmt pass; independent artifact verification found no correctness defects. Later Python assertion has separate38/38 proof; no Rust changes. No artifact acquisition/challenge/full1000-kill/UI certification.
 
 ## 2026-10-14 — Pre-effect spell-hit target creature entries
 

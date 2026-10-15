@@ -663,13 +663,17 @@ pub(crate) fn record_pet_level_changes(
         .filter_map(|pet| {
             let old = before.get(pet.id)?;
             let creature = catalog.creature_id(pet.species_id)?;
-            (creature != 0 && pet.level > old.level).then_some((old.level, pet.level))
+            (creature != 0 && pet.level > old.level).then_some((
+                pet.species_id,
+                old.level,
+                pet.level,
+            ))
         })
-        .flat_map(|(old, new)| {
-            ((old + 1)..=new).flat_map(|level| {
+        .flat_map(|(species, old, new)| {
+            ((old + 1)..=new).flat_map(move |level| {
                 [
-                    CriteriaEvent::BattlePetReachedLevel(level),
-                    CriteriaEvent::ActivelyEarnedPetLevel(level),
+                    CriteriaEvent::BattlePetReachedLevel { species, level },
+                    CriteriaEvent::ActivelyEarnedPetLevel { species, level },
                 ]
             })
         })
@@ -1065,6 +1069,16 @@ fn battle_pet_team_min_level(world: &World, player: Entity) -> Option<u8> {
         })
 }
 
+fn earned_player_achievement_ids(world: &World, player: Entity) -> BTreeSet<u32> {
+    let Some((state, catalog)) = world
+        .get::<PlayerAchievementState>(player)
+        .zip(world.get_resource::<AchievementCatalog>())
+    else {
+        return BTreeSet::new();
+    };
+    catalog.iter_earned_achievement_ids(state).collect()
+}
+
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
     let identity = world.get::<Player>(player)?;
     let arena = crate::pvp::player_arena_conditions(world, player);
@@ -1075,6 +1089,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
         known_spells: known_player_spell_ids(world, player),
+        earned_achievements: earned_player_achievement_ids(world, player),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         area: world
             .get::<AchievementTracker>(player)
