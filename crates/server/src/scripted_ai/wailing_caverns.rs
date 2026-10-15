@@ -283,7 +283,7 @@ impl Disciple {
     }
 }
 
-fn find_naralex(ctx: &Ctx) -> Option<Entity> {
+fn find_naralex(ctx: &mut Ctx) -> Option<Entity> {
     let map = *ctx
         .world
         .get::<InMap>(ctx.me)
