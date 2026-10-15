@@ -6,7 +6,9 @@ Verified: 2026-10-12. [Contract](specs/class-completeness.md), [prior batches](c
 
 Lead gatecw162 finds four required native-dodge reads on scripted-AI fixture players without `CharacterStats`. Current d9caeb0e `cw162-scripted-native-red` reproduces all four panics (exit101/19.777s). TC a352b1fa `Unit.cpp2755–2756` reads a player's existing `ActivePlayerData.DodgePercentage`; no missing-player-stat fallback exists there. Runtime registers `StatsPlugin` (`main.rs284`) and character entry supplies Level/UnitStats/CombatRatings/DerivedStats (`auth_character.rs571–575`). Stockade fixture omitted that producer and all four inputs, supplying only UnitLevel.
 
-Fixture now installs the real StatsPlugin/native class catalog and initializes the same empty native stat inputs. The first ordinary update derives the level30 Human's CharacterStats and health; no fabricated dodge value or runtime bypass. Wipe/re-pull restores the computed maximum instead of writing above it. GREEN/scripted_ai/check/fmt pending; independent class acceptance remains open.
+Initial a1101077 installs the real StatsPlugin/native inputs; all four lead cases pass (154.543s total/36.63s tests). Full `scripted_ai` filter then passes148/fails6/ignores6 in645.32s (646.083s total): Dire Maul cast effects, Anacondra repeat, Koranthal repeat, mirror reset, Pythas repeat and Verdan first root. The always-on producer resizes deliberately buffered encounter-player health; that broader fixture-state change was not required by dodge initialization.
+
+Shared player construction now runs `StatsPlugin`'s actual `update_character_stats` system once in an isolated native-input World, caching the level30 Human/unarmed output. Fixture players receive its real CharacterStats/primary/ratings/derived values immediately; explicit encounter health buffers remain independent and are not overwritten during timer tests. No hand-set dodge or runtime missing-stat fallback. Wipe/re-pull restores the fixture maximum. Corrected affected controls/fullfilter/check/fmt pending; independent class acceptance remains open.
 
 ## Signed attacker enemy-dodge modifier — native slice, 2026-10-14
 
