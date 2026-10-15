@@ -389,6 +389,7 @@ fn enter_isle_bomb_match() -> EnteredMatch {
         app.insert_resource(crate::quest_data::load_quest_db(&path).unwrap());
         app.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
         app.insert_resource(crate::toy_catalog::load(&source).unwrap());
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
         app.insert_resource(crate::game_objects::summoned::load_templates(&source).unwrap());
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.add_systems(Update, crate::inventory::process_use_requests);
@@ -466,9 +467,17 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
 
 /// TC EffectTransmitted50: normal item46847 use casts66268 and owns trap195235.
 #[test]
-fn isle_channel_normal_seaforium_use_deploys_owned_bomb_in_its_copy() {
+fn isle_channel_normal_seaforium_use_arms_then_detonates_once_in_its_copy() {
     let mut entered = enter_isle_bomb_match();
     let actor = &entered.players[0];
+    let owner_team = entered.teams[0];
+    let mut opponents = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .filter_map(|(player, team)| (*team != owner_team).then_some(player));
+    let victim = opponents.next().unwrap();
+    let foreign = opponents.next().unwrap();
     use_second_frames(&mut entered.h);
     let (banner, position) = objects_in(&mut entered.h, entered.copy, 195133)[0];
     entered.h.walk_to(actor, position);
@@ -479,6 +488,13 @@ fn isle_channel_normal_seaforium_use_deploys_owned_bomb_in_its_copy() {
     entered.h.walk_to(actor, position);
     use_object(&mut entered.h, actor, pickup);
     let h = &mut entered.h;
+    // Both targets stand inside the source blast radius before the item cast begins.
+    h.walk_to(victim, position);
+    h.walk_to(foreign, position);
+    h.app.world_mut().entity_mut(foreign.player).insert(InMap {
+        map_id: entered.copy.map_id,
+        instance_id: entered.copy.instance_id + 1,
+    });
     let inventory = crate::inventory::load_model(
         &h.app
             .world()
@@ -517,6 +533,8 @@ fn isle_channel_normal_seaforium_use_deploys_owned_bomb_in_its_copy() {
             location,
             target: None,
         });
+    let before = h.app.world().get::<Health>(victim.player).unwrap().current;
+    let foreign_before = h.app.world().get::<Health>(foreign.player).unwrap().current;
     let mut inventory_errors = Vec::new();
     let mut cast_errors = Vec::new();
     for _ in 0..5 {
@@ -535,6 +553,9 @@ fn isle_channel_normal_seaforium_use_deploys_owned_bomb_in_its_copy() {
                 .unwrap()
                 .receive(),
         );
+        if !objects_in(h, entered.copy, 195235).is_empty() {
+            break;
+        }
     }
     assert!(
         inventory_errors.is_empty(),
@@ -573,6 +594,44 @@ fn isle_channel_normal_seaforium_use_deploys_owned_bomb_in_its_copy() {
         .unwrap();
     assert_eq!(summoned.owner, Some(actor.player));
     assert_eq!(summoned.spell_id, 66268);
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        before,
+        "planting does not detonate immediately"
+    );
+    h.advance(9);
+    assert_eq!(
+        objects_in(h, entered.copy, 195235).len(),
+        1,
+        "no detonation before ten seconds"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        before
+    );
+    h.advance(1);
+    assert!(
+        objects_in(h, entered.copy, 195235).is_empty(),
+        "authored bomb deactivates after detonation"
+    );
+    // Native66676 effect165 is25% max health (variance0.001 rounds to25 at100HP).
+    let after = h.app.world().get::<Health>(victim.player).unwrap().current;
+    assert_eq!(
+        after,
+        before * 0.75,
+        "normal timed source explosion damages the actual enemy"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(foreign.player).unwrap().current,
+        foreign_before,
+        "another map copy is untouched"
+    );
+    h.advance(5);
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        after,
+        "explosion happens once"
+    );
 }
 
 /// Isle of Conquest (TC a352b1fa battleground_isle_of_conquest.cpp, TDB spawn groups
