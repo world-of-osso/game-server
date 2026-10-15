@@ -1528,6 +1528,8 @@ fn an_equipped_sword_dropped_on_an_empty_bag_slot_is_unequipped_there() {
 
 #[path = "inventory_bag_tests.rs"]
 mod bags;
+#[path = "inventory_titans_grip_tests.rs"]
+mod titans_grip;
 
 /// The character knows `spells`, resolved through native DB2 rows.
 fn learn_spells(app: &mut App, client: &Client, spells: &[u32]) {

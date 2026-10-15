@@ -459,7 +459,8 @@ impl DifficultyRule {
 enum CompiledConditions {
     All {
         difficulty: Option<DifficultyRule>,
-        facts: &'static [(u32, u32)],
+        // Negative compiled kind -87 denotes source SingleFalse87, never a raw DB2 type.
+        facts: &'static [(i32, u32)],
     },
     TargetCreatures(&'static [u32]),
     PlayerMaps(&'static [u32]),
@@ -500,8 +501,10 @@ pub(crate) struct ReferencePlayer {
     pub auras: BTreeSet<u32>,
     /// IDs in existing class/profession knowledge and the owning mount journal.
     pub known_spells: BTreeSet<u32>,
-    /// This character's earned IDs plus its existing account-wide awards.
-    pub earned_achievements: BTreeSet<u32>,
+    /// This character's earned IDs plus account-wide awards; None when state/catalog is unknown.
+    pub earned_achievements: Option<BTreeSet<u32>>,
+    /// Negative87 requires the account aggregate too; character-only state is incomplete.
+    pub account_achievements_known: bool,
     /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
     pub battle_pet_team_min_level: Option<u8>,
     /// Current terrain area (TC Player::GetAreaId).
@@ -528,6 +531,7 @@ enum CriteriaFact {
     Aura(u32),
     KnownSpell(u32),
     EarnedAchievement(u32),
+    NotEarnedAchievement(u32),
     BattlePetTeamLevel(u8),
     /// Resolved species IDs whose authored PetTypeEnum matches the required type.
     BattlePetSpeciesOfType(BTreeSet<u32>),
@@ -594,8 +598,16 @@ impl CriteriaFact {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
-            Self::EarnedAchievement(achievement) => {
-                player.earned_achievements.contains(achievement)
+            Self::EarnedAchievement(achievement) => player
+                .earned_achievements
+                .as_ref()
+                .is_some_and(|earned| earned.contains(achievement)),
+            Self::NotEarnedAchievement(achievement) => {
+                player.account_achievements_known
+                    && player
+                        .earned_achievements
+                        .as_ref()
+                        .is_some_and(|earned| !earned.contains(achievement))
             }
             Self::BattlePetTeamLevel(level) => player
                 .battle_pet_team_min_level
@@ -1502,7 +1514,7 @@ fn load_battle_pet_type_fact(
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
-    leaves: &[(u32, u32)],
+    leaves: &[(i32, u32)],
     area_children: &HashMap<u32, Vec<u32>>,
 ) -> rusqlite::Result<Option<Vec<CriteriaFact>>> {
     let mut facts = Vec::with_capacity(leaves.len());
@@ -1523,6 +1535,7 @@ fn load_criteria_facts(
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
             87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
+            -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
@@ -1574,7 +1587,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only 2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
+                    "generated facts use only -87/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
                 )
             }
         };
@@ -1589,7 +1602,7 @@ fn load_criteria_facts(
 /// TC item quality14/15 reads the actual item's canonical template, not its slot.
 fn load_item_quality_fact(
     conn: &Connection,
-    kind: u32,
+    kind: i32,
     quality: u32,
 ) -> rusqlite::Result<Option<CriteriaFact>> {
     let operator = if kind == 14 { ">=" } else { "=" };

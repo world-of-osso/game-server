@@ -26,6 +26,24 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_cast_unearned_achievement_keeps_complete_companions(self):
+        criteria = {103451: dict(self.criteria[1], Type='29', Asset='1217637',
+                                ModifierTreeId='392319')}
+        mods = {392319: node(0, 4), 392320: node(392319, 3, 87, 41707)}
+        self.assertEqual(self.compile(mods, criteria), {103451: [None, ((-87, 41707),)]})
+        self.assertEqual(self.compile({**mods, 392321: node(392319, 2, 25, 1)}, criteria),
+                         {103451: [None, ((-87, 41707), (25, 1))]})
+        self.assertEqual(self.compile({**mods, 392321: node(392319, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '8', '74', '110'):
+            criteria[103451]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[103451]['Type'] = '29'
+        mods[392320]['SecondaryAsset'] = '1'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[392320]['SecondaryAsset'] = '0'
+        mods[392320]['Asset'] = '0'
+        self.assertEqual(self.compile(mods, criteria), {})
+
     def test_plain_empty_all_is_true_but_empty_some_and_single_are_false(self):
         self.assertEqual(self.compile({10: node(0, 4)}), {1: [None, ()]})
         self.assertEqual(self.compile({10: node(0, 8)}), {})

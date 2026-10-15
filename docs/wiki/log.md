@@ -81,9 +81,22 @@
 ## 2026-10-13 — Login/catalog/admission budget investigation
 
 [Tick lag](investigations/server-tick-lag.md#logincatalogadmission-investigation-verified-2026-10-13): achievement fact/index/publication, aura watchers, worker geometry, replication bootstrap, async credentials and owner-shared Toy presentation fixes have targeted proof.22 auth/admission and32 interest tests plus2 LOS/2 navigation preparation tests pass. Private debug live50ms acceptance remains unmet; synchronous durable writes and economy stalls retained explicitly.
+## 2026-10-15 — Unearned-achievement cast guard
+
+[Bounded SingleFalse87](systems/dungeon-achievements.md#unearned-achievement-cast-guard) on CastSpell29 uses existing scoped earned state and requires authored metadata. Final native/catalog/prior-positive87/pinned9dfe04b9 GREEN6/6(45.26s), compiler40/40/generated5737; actual twenty1217637 casts grant account41707 then stop, preserving dates/counters across DB/auth reopen and account boundaries. Census5495ordinary/1824statistics adds only41707; no general negation or gear acquisition/encounter/UI certificate.
+
+## 2026-10-15 — Full native pet-family grants
+## 2026-10-15 — Spell-created unit ownership logs
+
+[Combat log ownership](systems/spell-casting.md#messages): actual effect28/effect56 creations emit Summon with the real spell and actor identities; temporary guardian ancestry delivers combat to its owner without changing gameplay credit. Login restoration emits no synthetic event. Bounded native gates tracked separately from DPS/balance acceptance.
+
 ## 2026-10-15 — Source Toy forward destination
 
 [Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
+## 2026-10-15 — Titan's Grip hand rules
+
+[Inventory](systems/inventory.md#titans-grip-hand-rules--2026-10-15) derives effect155 capability and weapon/armor subclass masks from learned native spells; type17 gains the off hand with Dual Wield and matching Grip. Explicit/auto-equip retain the permitted two-hand pair. Published70391 authentication:261 spell fields plus pinned TC hashes. Request/persistence RED: three missing-admission/auto-equip failures; two negative controls pass. At9593985e native five tests GREEN under four threads (73.94s); merged7ff7b5e4 native ranged plus three retained Dual Wield controls bring scoped proof to nine pass/zero fail (7.62s). Workspace/all-target check72.481s/fmt4.779s pass warning-free. Acquisition, unlearn-time eviction and whole-Fury acceptance remain open.
+
 ## 2026-10-15 — Ordinary NPC physical-spell dodge
 
 [Shared physical hit roll](systems/player-damage.md#shared-weapon-spell-defense-roll) consumes NPC3+aura49+positive effective-level bonus, allowing rear PvE dodge. Native70188/38598 genuine damage RED→4 native controls GREEN; actual tuning and separate nonlethal health buffer preserve guard proof. Block-only fixtures isolate dodge with source45769e1/251−20 and suitable caster level; repaired23 block/type/table controls pass. Final8fe095bc defense32/32 pass (95.39s tests); workspace/all-target check17.901s/fmt2.774s pass warning-free. Follow-up97592a1e native tuning/level chance assertions prove3/3/9/7.5 after49 removal across four native level cases; seven scoped controls pass64.20s tests. Sampled attack distribution, Totems, player expertise, full loadouts and independent acceptance remain unproved.

@@ -31,7 +31,7 @@ use crate::stats::EquippedItems;
 #[path = "inventory_model.rs"]
 pub(crate) mod inventory_model;
 
-use inventory_model::{InventoryModel, InventoryView, diff_views, error};
+use inventory_model::{InventoryModel, InventoryView, WeaponSkills, diff_views, error};
 
 /// Last inventory view sent to this connection; deltas diff against it.
 #[derive(Component, Debug, Default)]
@@ -92,18 +92,14 @@ struct InventoryStore<'w, 's> {
 }
 
 impl InventoryStore<'_, '_> {
-    /// SPELL_EFFECT_DUAL_WIELD sets `CanDualWield` (TC Spell::EffectDualWield).
-    fn can_dual_wield(&self, connection: Entity) -> bool {
+    /// Own both effect40/155 capabilities before handing the request to the FIFO.
+    fn weapon_skills(&self, connection: Entity) -> WeaponSkills {
         let known = self
             .links
             .get(connection)
             .ok()
             .and_then(|link| self.known.get(link.0).ok());
-        crate::stats::knows_effect(
-            known,
-            self.spells.as_deref(),
-            crate::stats::EFFECT_DUAL_WIELD,
-        )
+        WeaponSkills::from_spells(known, self.spells.as_deref())
     }
 }
 
@@ -227,12 +223,12 @@ fn process_requests<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, mut receiver) in receivers.iter_mut() {
         let character = in_world.character_id;
-        let can_dual_wield = store.can_dual_wield(connection);
         for request in receiver.receive() {
+            let weapon_skills = store.weapon_skills(connection);
             let templates = templates.clone();
             let receipt = db.writer.enqueue("inventory mutation", move |db| {
                 Ok(load_model(db, &templates, character).and_then(|mut model| {
-                    model.set_can_dual_wield(can_dual_wield);
+                    model.set_weapon_skills(weapon_skills);
                     apply(&mut model, request, db)?;
                     save_inventory_record(db, character, &model.into_record());
                     Ok(())
@@ -273,8 +269,8 @@ fn process_item_moves<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, interaction, mut receiver) in receivers.iter_mut() {
         let character = in_world.character_id;
-        let can_dual_wield = store.store.can_dual_wield(connection);
         for request in receiver.receive() {
+            let weapon_skills = store.store.weapon_skills(connection);
             let (from, to) = locations(&request);
             let bank_move = matches!(from, ItemLocation::Bank { .. })
                 || matches!(to, ItemLocation::Bank { .. });
@@ -289,7 +285,7 @@ fn process_item_moves<M: lightyear::prelude::Message>(
                     bank_move,
                     banker_open,
                     |model| {
-                        model.set_can_dual_wield(can_dual_wield);
+                        model.set_weapon_skills(weapon_skills);
                         apply(model, request, db)
                     },
                 ))
