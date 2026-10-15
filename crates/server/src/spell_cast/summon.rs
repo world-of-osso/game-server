@@ -364,6 +364,7 @@ fn spawn_wild_summon(
     }
     insert_summon_privacy(&mut entity, private_owner);
     drop(entity);
+    super::log_summon(world, ctx.caster, actor, ctx.spell);
     crate::auras::auras_changed(world, actor);
 }
 
@@ -572,6 +573,8 @@ fn spawn_summon(
             crate::interest::NetworkVisibility::default(),
         ));
     }
+    drop(entity);
+    super::log_summon(world, owner, actor, ctx.spell);
 }
 
 #[derive(Clone, Copy)]

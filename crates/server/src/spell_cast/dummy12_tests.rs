@@ -81,6 +81,84 @@ fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
 }
 
 #[test]
+fn dummy12_feral_spirit_child_logs_two_short_lived_wolves_to_owner() {
+    let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
+    actor_data(&mut h);
+    h.select(Some(h.npc));
+    h.advance(4);
+    let caster = h.caster;
+    let target = h.npc;
+    super::cast_triggered(h.app.world_mut(), caster, 228562, Some(target), 0);
+    h.advance(3);
+    let wolves = actors(&mut h, 29264);
+    assert_eq!(
+        wolves.len(),
+        2,
+        "one native child casts its authored two wolves"
+    );
+    h.advance(400);
+    assert!(
+        wolves
+            .iter()
+            .all(|wolf| h.app.world().get_entity(*wolf).is_err())
+    );
+    let summons: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Summon)
+        .collect();
+    assert_eq!(
+        summons.len(),
+        2,
+        "short-lived wolves need durable owner events"
+    );
+    for wolf in wolves {
+        let event = summons
+            .iter()
+            .find(|event| event.target == Some(wolf.to_bits()))
+            .expect("one event per actual wolf");
+        assert_eq!(event.source, Some(h.caster.to_bits()));
+        assert_eq!(event.spell_id, Some(228562), "actual child summoning spell");
+        assert!(event.timestamp_unix_ms > 0);
+    }
+}
+
+#[test]
+fn dummy12_guardian_damage_reaches_owner_without_guardian_connection() {
+    let mut h = harness(Vec::new(), &[49206, 51963, 61777, 1242147, 211947], 6).unwrap();
+    actor_data(&mut h);
+    h.select(Some(h.npc));
+    h.advance(4);
+    h.cast_and_deliver(49206, Some(h.npc));
+    let gargoyle = actors(&mut h, 27829)[0];
+    h.advance(100);
+    let summon_index = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::Summon && event.target == Some(gargoyle.to_bits())
+        })
+        .expect("owner receives gargoyle summon");
+    let damage_index = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(gargoyle.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.amount > 0
+        })
+        .expect("owner receives actual guardian damage without a guardian client");
+    assert!(
+        summon_index < damage_index,
+        "ownership arrives before guardian damage"
+    );
+}
+
+#[test]
 fn dummy12_gargoyle_native_attack_crit_and_successful_owner_spend() {
     let mut h = harness(
         Vec::new(),
