@@ -278,12 +278,8 @@ fn assert_wailing_real_flight_exit(
     naralex: Entity,
     decoy: Entity,
 ) {
-    let endpoint: (f32, f32, f32) = conn.query_row(
-        "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=367804 ORDER BY NodeId DESC LIMIT 1",
-        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-    ).unwrap();
-    let (x, y, z) = crate::terrain_height::wow_to_bevy(endpoint.0, endpoint.1, endpoint.2);
-    let endpoint = Vec3::new(x, y, z);
+    let endpoint = read_flight_endpoint(conn, 367804);
+    let naralex_endpoint = read_flight_endpoint(conn, 367900);
     let origins = [ritual_position(h, disciple), ritual_position(h, naralex)];
     let decoy_origin = ritual_position(h, decoy);
     let mut moved = [false; 2];
@@ -321,6 +317,19 @@ fn assert_wailing_real_flight_exit(
         ritual_actor_retired(h, naralex),
         "same callback retires Naralex"
     );
+    assert!(
+        ritual_position(h, naralex).distance(naralex_endpoint) < 0.001,
+        "Naralex follows his distinct exact flight spline before Disciple exits"
+    );
     assert!(!ritual_actor_retired(h, decoy));
     assert_eq!(ritual_position(h, decoy), decoy_origin);
+}
+
+fn read_flight_endpoint(conn: &Connection, path: u32) -> Vec3 {
+    let endpoint: (f32, f32, f32) = conn.query_row(
+        "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=? ORDER BY NodeId DESC LIMIT 1",
+        [path], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    ).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(endpoint.0, endpoint.1, endpoint.2);
+    Vec3::new(x, y, z)
 }
