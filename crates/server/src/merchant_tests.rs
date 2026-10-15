@@ -540,6 +540,7 @@ fn mount_journal_authentic_vendor_purchase_then_learn_preserves_appearance_colle
     let mut h = harness().expect("authentic Katie Hunter and mount data");
     let catalog = crate::mount_journal::load(&h.conn).unwrap();
     h.app.insert_resource(catalog);
+    crate::mount_journal::MountPersistencePlugin::install(&mut h.app);
     h.app.world_mut().entity_mut(h.player).insert(Level(60));
     h.app.world_mut().entity_mut(h.connection).insert((
         crate::auth::Authenticated { account_id: 1 },
@@ -587,6 +588,15 @@ fn mount_journal_authentic_vendor_purchase_then_learn_preserves_appearance_colle
         crate::mount_journal::learn_item(h.app.world_mut(), h.character_id, h.player, location)
             .unwrap()
     );
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    while crate::mount_journal::persistence_pending(h.app.world()) {
+        h.app.update();
+        assert!(
+            std::time::Instant::now() < deadline,
+            "mount item receipt did not complete"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
     assert!(h.count_of(5655).is_empty());
     let db = &h.app.world().resource::<GameDatabase>().db;
     assert_eq!(

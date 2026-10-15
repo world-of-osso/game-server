@@ -127,6 +127,97 @@ fn achievements_criteria_companion_item_learns_new_pet_species_through_native_us
 }
 
 #[test]
+fn mount_item_learning_waits_for_fifo_and_preserves_an_earlier_wallet() {
+    use std::time::{Duration, Instant};
+    let mut eater = eater_with_spells(&[5655], 2, &[6648], MAGE).expect("Chestnut Mare data");
+    let conn = rusqlite::Connection::open_with_flags(
+        world_db(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::mount_journal::load(&conn).unwrap());
+    let character = eater.character_id;
+    let held = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let prior = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("earlier mount learner wallet", move |db| {
+            let mut inventory = persistence::load_inventory(db, character);
+            inventory.gold = 777;
+            persistence::save_inventory(db, character, &inventory);
+            Ok(())
+        });
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let connection = eater.h.connection;
+    eater
+        .h
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(connection)
+        .unwrap()
+        .send::<InventoryChannel>(UseItem {
+            location: slot(0),
+            target: None,
+        });
+    let started = Instant::now();
+    eater.h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = crate::mount_journal::knows_spell(eater.h.app.world(), eater.h.caster, 6648);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "mount item-use tick waited: {elapsed:?}"
+    );
+    assert!(
+        !premature,
+        "mount cast authority published before ownership commit"
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while !crate::mount_journal::knows_spell(eater.h.app.world(), eater.h.caster, 6648) {
+        eater.h.advance(1);
+        assert!(
+            Instant::now() < deadline,
+            "no committed mount item ownership"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(prior.result(), Some(Ok(())));
+    assert_eq!(count_of(&eater, 5655), 1);
+    assert_eq!(
+        persistence::load_inventory(
+            &eater.h.app.world().resource::<GameDatabase>().db,
+            character
+        )
+        .gold,
+        777
+    );
+    assert_eq!(
+        crate::persistence::mount_store::load(
+            &eater.h.app.world().resource::<GameDatabase>().db,
+            1
+        )
+        .get(&18),
+        Some(&false)
+    );
+}
+
+#[test]
 fn mount_journal_item_learning_consumes_once_and_rejects_duplicate() {
     let mut eater = eater_with_spells(&[5655], 2, &[6648], MAGE).expect("Chestnut Mare data");
     let conn = rusqlite::Connection::open_with_flags(
@@ -417,6 +508,7 @@ fn eater_with_spells(items: &[u32], count: u32, spells: &[u32], class: u8) -> Op
     app.insert_resource(crate::toy_catalog::load(&conn).unwrap());
     app.init_resource::<crate::gold::GoldUpdateQueue>();
     crate::toys::ToyPersistencePlugin::install(app);
+    crate::mount_journal::MountPersistencePlugin::install(app);
     app.add_systems(Update, process_use_requests);
     app.world_mut().entity_mut(h.connection).insert((
         crate::auth::InWorld { character_id },
@@ -467,7 +559,8 @@ fn use_slot(eater: &mut Eater, index: u8) {
         frames += 1;
         let errors = drain::<InventoryError>(&mut eater.h.app, connection);
         eater.errors.extend(errors);
-        let pending = crate::toys::persistence_pending(eater.h.app.world());
+        let pending = crate::toys::persistence_pending(eater.h.app.world())
+            || crate::mount_journal::persistence_pending(eater.h.app.world());
         if pending {
             delivered_frames = 0;
         } else {
@@ -478,7 +571,7 @@ fn use_slot(eater: &mut Eater, index: u8) {
         }
         assert!(
             std::time::Instant::now() < deadline,
-            "item-use toy receipts did not complete"
+            "item-use collection receipts did not complete"
         );
         if pending {
             std::thread::sleep(std::time::Duration::from_millis(1));

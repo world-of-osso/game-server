@@ -25,15 +25,20 @@ pub(crate) struct MountCatalog {
 pub(crate) struct AccountMounts(pub mount_store::AccountMounts);
 
 mod actor;
+mod learning;
 use actor::{
     PendingMountRequests, enqueue_mount_favourite, enqueue_mount_spell_learning,
     enqueue_random_mount, publish_mount_favourites, publish_mount_spell_learning,
     publish_random_mounts,
 };
+pub(crate) use learning::MountPersistencePlugin;
+#[cfg(test)]
+pub(crate) use learning::persistence_pending;
 
 pub struct MountJournalPlugin;
 impl Plugin for MountJournalPlugin {
     fn build(&self, app: &mut App) {
+        MountPersistencePlugin::install(app);
         app.init_resource::<PendingMountRequests>()
             .add_systems(Startup, load_catalog)
             .add_systems(Update, update_mount_journal);
@@ -472,6 +477,7 @@ pub(crate) fn learn_item(
         return Ok(false);
     };
     let item_id = item.item_id;
+    let guid = item.item_guid;
     let template = &templates.retail[&item_id];
     let rider = world
         .get::<shared::components::Player>(player)
@@ -485,25 +491,23 @@ pub(crate) fn learn_item(
     if u16::from(level) < template.required_level {
         return Err(fail("Level too low to learn this mount.".into()));
     }
-    let account = connections(world)
+    let (connection, account, _) = connections(world)
         .into_iter()
         .find(|(_, _, owner)| *owner == player)
-        .map(|(_, account, _)| account)
         .ok_or_else(|| fail("Mount learner not authenticated.".into()))?;
-    let (db, templates) = crate::inventory::use_store(world)?;
-    let record = crate::persistence::inventory_store::load_inventory_record(db, character)
-        .ok_or_else(|| fail("Character inventory missing.".into()))?;
-    let mut model = crate::inventory::inventory_model::InventoryModel::from_record(
-        record,
-        templates,
-        &mut || crate::persistence::next_id(db, "item_instance"),
+    learning::enqueue_mount_learning(
+        world,
+        learning::LearningRequest {
+            connection,
+            player,
+            account,
+            character,
+            location,
+            item: item_id,
+            guid,
+            mount: id,
+        },
     );
-    model.destroy(location, 1)?;
-    mount_store::learn_item(db, account, character, id, &model.into_record()).map_err(fail)?;
-    world
-        .resource_mut::<crate::gold::GoldUpdateQueue>()
-        .record_items(character);
-    broadcast_account(world, account);
     Ok(true)
 }
 
