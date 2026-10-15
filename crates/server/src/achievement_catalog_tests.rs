@@ -1,6 +1,130 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_pet_type_level_resolves_species_and_preserves_zero_type() {
+    let catalog = catalog();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer::default()),
+        ..Default::default()
+    };
+    for (species, level, expected) in [
+        (39, 25, Some(21377)),
+        (83, 25, Some(21377)),
+        (1426, 25, Some(21378)),
+        (93, 25, Some(21378)),
+        (107, 25, Some(21376)),
+        (39, 10, Some(21367)),
+        (1426, 10, Some(21368)),
+        (107, 10, Some(21366)),
+        (39, 24, None),
+        (0, 25, None),
+        (999999, 25, None),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::BattlePetReachedLevel { species, level },
+            None,
+            1,
+            &conditions,
+        );
+        for criterion in [21366, 21367, 21368, 21376, 21377, 21378] {
+            assert_eq!(
+                state.criteria_progress.get(&criterion),
+                (expected == Some(criterion)).then_some(&1),
+                "species{species}/level{level} criterion{criterion}"
+            );
+        }
+    }
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::ActivelyEarnedPetLevel {
+            species: 39,
+            level: 25,
+        },
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&21377),
+        "type162 cannot impersonate160"
+    );
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "CREATE TABLE battle_pet_species(species_id INTEGER PRIMARY KEY);
+        CREATE TABLE battle_pet_species_metadata(ID INTEGER PRIMARY KEY,PetTypeEnum INTEGER);",
+    )
+    .unwrap();
+    assert!(load_battle_pet_type_fact(&conn, 10).unwrap().is_none());
+    assert!(load_battle_pet_type_fact(&conn, 9).unwrap().is_none());
+    conn.execute("INSERT INTO battle_pet_species_metadata VALUES(39,9)", [])
+        .unwrap();
+    assert!(
+        load_battle_pet_type_fact(&conn, 9).unwrap().is_none(),
+        "metadata alone cannot supply an authored species"
+    );
+    conn.execute("INSERT INTO battle_pet_species VALUES(39)", [])
+        .unwrap();
+    let fact = load_battle_pet_type_fact(&conn, 9).unwrap().unwrap();
+    let player = ReferencePlayer::default();
+    assert!(fact.holds(
+        &player,
+        CriteriaEvent::BattlePetReachedLevel {
+            species: 39,
+            level: 25
+        },
+        &BTreeMap::new()
+    ));
+    assert!(!fact.holds(
+        &player,
+        CriteriaEvent::BattlePetReachedLevel {
+            species: 1426,
+            level: 25
+        },
+        &BTreeMap::new()
+    ));
+}
+
+#[test]
+fn achievements_criteria_killed_creature_type_requires_actual_known_victim() {
+    let catalog = catalog();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer::default()),
+        ..Default::default()
+    };
+    for kind in [None, Some(0), Some(1), Some(7), Some(16)] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::KillAnyCreature(kind),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&4944), Some(&1));
+        assert_eq!(
+            state.criteria_progress.get(&4948),
+            (kind == Some(1)).then_some(&1)
+        );
+        assert_eq!(
+            state.criteria_progress.get(&4953),
+            (kind == Some(7)).then_some(&1)
+        );
+        assert!(!state.criteria_progress.contains_key(&4950));
+    }
+    let conn = Connection::open_in_memory().unwrap();
+    for kind in [0, 16, u32::MAX] {
+        assert!(
+            load_criteria_facts(&conn, &[(30, kind)], &HashMap::new())
+                .unwrap()
+                .is_none()
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_node_world_state_facts_require_live_count_authority() {
     let catalog = catalog();
     for (counts, qualifies) in [
@@ -870,12 +994,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5491 + FullCoverage5253 behind actual node-world-state67.
+    // Installed70391: 5492 + pet-type78 roots NoFavorites6609/AllPetsAllowed6610.
     // Structural union, not prerequisite acquisition or complete-content proof.
-    assert_eq!(union.len(), 5492);
+    assert_eq!(union.len(), 5494);
     for achievement in [
-        141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 9070, 11154, 11298, 11419, 11665, 11666,
-        11667, 11668, 63640,
+        141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 6609, 6610, 9070, 11154, 11298, 11419, 11665,
+        11666, 11667, 11668, 63640,
     ] {
         assert!(union.contains(&achievement));
     }
