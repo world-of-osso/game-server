@@ -39,6 +39,8 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({**mods, 12: node(10, 2, 999, 1)}), {})
         mods[10] = node(0, 8, amount=1)
         self.assertEqual(self.compile(mods), {1: [None, ((87, 10460),)]})
+        self.assertEqual(self.compile({**mods, 12: node(10, 2, 87, 11611)}), {},
+                         'multi-child earned87 Some is outside the bounded contract')
         mods[11]['Operator'] = '3'
         self.assertEqual(self.compile(mods), {})
         mods[11]['Operator'] = '2'
