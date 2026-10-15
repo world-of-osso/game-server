@@ -761,21 +761,21 @@ fn companion_item_departure_keeps_old_player_unchanged_and_refreshes_current_acc
         .h
         .app
         .world_mut()
-        .spawn((
-            crate::collection::default_collection_state(),
-            crate::battle_pets::AccountPetJournal {
-                account_id: account,
-                journal: Default::default(),
-                summoned: None,
-            },
-        ))
+        .spawn(crate::collection::default_collection_state())
         .id();
-    eater.h.app.world_mut().entity_mut(connection).insert((
-        PlayerLink(replacement),
-        InWorld {
-            character_id: sibling,
-        },
-    ));
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(connection)
+        .remove::<InWorld>()
+        .insert((
+            PlayerLink(replacement),
+            InWorld {
+                character_id: sibling,
+            },
+        ));
+    eater.h.advance(1);
     release.join().unwrap();
     let (done, wait) = std::sync::mpsc::channel();
     eater
