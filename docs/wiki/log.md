@@ -1,3 +1,7 @@
+## 2026-10-14 — Wailing first awakening wave
+
+[Source events14–16](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) add1s Talk7/+5s self6271/Talk8/+4s three Moccasins. Actual aura/birth coordinates/target/copy/timers pass after retaining the runtime template in the fixture (not changing summons); merged25/25 gate184.24s/check/fmt pass. Normal difficulty stats, later awakening and native clears remain open.
+
 ## 2026-10-14 — Wailing chamber continuation
 
 [Source events12–13](systems/boss-scripts.md#wailing-chamber-approach--2026-10-14) add1s speech and +5s path367803 launch. Controlled prior arrival then actual78.6692yd movement passes floor/budget/corridor/LOS and timing/copy checks; strengthened upper-bound proof and merged24/24 gate206.06s, check/fmt pass. Awakening/natural activation/native clears remain open.

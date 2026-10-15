@@ -1,3 +1,4 @@
+- [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
 # Wiki Index
 
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
