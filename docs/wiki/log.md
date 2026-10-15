@@ -1520,6 +1520,9 @@ Replaced area-only Some projection with typed17/41 alternatives and strict compl
 
 Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/8(59.21s), compiler41/41, census5506/1824 with all243/same7hashes. Native cached254 selfie27968/refused/outside/idle/reopen; no full grants/travel/acquisition/UI claim.
 
+- 2026-10-15: Feral Spirit owner-power RED and approved owner/weapon-only implementation; intrinsic AP remains named gap; GREEN pending.
 - 2026-10-15: Added bounded Login74 negative104 contract and native spell-completeness/initialization boundary; source TC HasSpell/SingleFalse. Focused proof pending.
 
 - 2026-10-15: Negative104 actual SelectCharacter RED724af71c exposed missing selection-to-knowledge edge; fix408f0a3b passes unchanged native handler plus8 scoped controls,43.44s. Census5509/1824, only3hidden character roots, all243/same7sourcehashes.
+
+- 2026-10-15: Feral Spirit owner/weapon-only repair f135c4a8+28859d64, merged afc0e5e5/protocol62865c23:24/24 scoped controls, check/fmt/readability clean; intrinsic AP and full-stat acceptance remain open.

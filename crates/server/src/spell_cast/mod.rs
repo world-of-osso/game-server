@@ -120,7 +120,7 @@ mod dummy_tests;
 pub mod effects;
 #[cfg(test)]
 mod fount_strength_tests;
-mod guardian;
+pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
