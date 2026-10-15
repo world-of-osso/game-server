@@ -54,6 +54,7 @@ pub(crate) struct Actor {
 }
 
 /// Server catalog evidence, never a client-supplied reward definition.
+#[derive(Clone, Copy)]
 pub(crate) struct RedemptionRule {
     pub item_id: u32,
     pub decor_id: u32,

@@ -109,11 +109,11 @@ fn require_item_eligibility(world: &World, player: Entity, item_id: u32) -> Resu
 }
 
 pub(crate) fn redeem(
-    world: &mut World,
+    world: &World,
     actor: crate::persistence::housing_store::Actor,
     player: Entity,
     guid: u64,
-) -> Result<(), String> {
+) -> Result<crate::persistence_writer::CommitReceipt, String> {
     let inventory = crate::persistence::load_inventory(
         &world.resource::<GameDatabase>().db,
         actor.character_id,
@@ -131,16 +131,13 @@ pub(crate) fn redeem(
         .get(&item.item_id)
         .ok_or("This item has no verified Retail decor collect chain.")?;
     require_item_eligibility(world, player, rule.item_id)?;
-    crate::persistence::housing_store::redeem(
-        &world.resource::<GameDatabase>().db,
-        actor,
-        guid,
-        rule,
-    )?;
-    world
-        .resource_mut::<crate::gold::GoldUpdateQueue>()
-        .record_items(actor.character_id);
-    Ok(())
+    let rule = *rule;
+    Ok(world
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("housing decor collection", move |db| {
+            crate::persistence::housing_store::redeem(db, actor, guid, &rule)
+        }))
 }
 
 #[cfg(test)]

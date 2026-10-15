@@ -11,8 +11,13 @@ use shared::protocol::{
     HousingChannel, HousingCommand, HousingReply, HousingRequest, HousingState,
 };
 
+#[path = "housing_collection.rs"]
+mod collection;
 #[path = "housing_dye_requests.rs"]
 mod dye_requests;
+pub(crate) use collection::HousingPersistencePlugin;
+#[cfg(test)]
+pub(crate) use collection::persistence_pending;
 
 #[derive(Resource)]
 pub(crate) struct HousingAvailability(pub(crate) Result<HousingCatalog, String>);
@@ -28,6 +33,7 @@ struct Actor {
 pub(crate) struct HousingPlugin;
 impl Plugin for HousingPlugin {
     fn build(&self, app: &mut App) {
+        HousingPersistencePlugin::install(app);
         app.add_systems(Startup, load_catalog)
             .add_systems(Update, process_requests);
     }
@@ -103,6 +109,9 @@ fn receive_requests(world: &mut World) -> Vec<(Actor, HousingRequest)> {
 
 pub(crate) fn process_requests(world: &mut World) {
     for (actor, request) in receive_requests(world) {
+        if collection::enqueue_request(world, actor, &request) {
+            continue;
+        }
         let result = execute(world, actor, &request.command);
         if result.is_ok()
             && matches!(
@@ -232,7 +241,9 @@ fn apply_house_command(
             instance_id,
         } => dye_requests::commit_preview(world, actor, context, *house_id, *instance_id)?,
         HousingCommand::CancelDecorDyes => dye_requests::cancel(world, actor),
-        HousingCommand::RedeemDecor { item_guid } => collect_decor(world, actor, *item_guid)?,
+        HousingCommand::RedeemDecor { .. } => {
+            unreachable!("collection is queued before synchronous house commands")
+        }
         HousingCommand::PlaceDecor {
             decor_id,
             transform,
@@ -284,12 +295,6 @@ fn apply_house_command(
     Ok(())
 }
 
-fn collect_decor(world: &mut World, actor: Actor, guid: u64) -> Result<(), String> {
-    catalog(world)?;
-    let context = actor_context(world, actor)?;
-    crate::housing_acquisition::redeem(world, context, actor.player, guid)
-}
-
 pub(crate) fn collect_authenticated_item(
     world: &mut World,
     character: u64,
@@ -307,9 +312,7 @@ pub(crate) fn collect_authenticated_item(
             player,
         })
         .ok_or("Housing collection requires an authenticated character.")?;
-    collect_decor(world, actor, guid)?;
-    send_snapshot(world, actor, 0, None, None, None);
-    Ok(())
+    collection::enqueue_collection(world, actor, guid, collection::CollectionOrigin::ItemUse)
 }
 
 fn enter_house(
