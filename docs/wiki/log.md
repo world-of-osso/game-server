@@ -29,6 +29,22 @@
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 
 [Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
+## 2026-10-14 — Pet-level type qualifiers, native proof
+
+[BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); other native types/level10/all-ten-family grants remain unclaimed.
+
+## 2026-10-14 — Post-count7 source audit
+
+[Remaining boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) pins44/58/64's missing progress rules,153's actual action-set dispatch with zero matching native portals/templates, and218's hard-false Party Sync companions. Follow-up208/222/229/230/234 likewise lacks executable progress/callers; existing scenario/item/spell/Mythic events cannot stand in. Source/data proof only; no runtime/census activation. Removed stale spec assertions that already-implemented BG70/objective30/rated37 had no producers; world honor and garrison gaps remain.
+
+## 2026-10-14 — Raw StartedAtLeast statistic projection
+
+[Operator7](systems/dungeon-achievements.md#started-child-statistic-projection) now shares the existing direct-positive-child count without ordinary target clamping. Genuine three-kill REDa2fb7631 reaches107sum3/1336max2 but1337Nonevs2. GREEN2325ef39 passes2/2(25.37s): native zero→one→two→repeat-type behavior, existing raw-statistic regression and persistence controls. Census/qualification unchanged; no rendered UI claim.
+
+## 2026-10-14 — Native creature-type kill statistics
+
+[CreatureType30](systems/dungeon-achievements.md#creature-type-kill-statistics) preserves actual killed NPC template type for existing eligible78 recipients. Valid native RED8e2fe0df and GREENae25b634 use normal source40/299 spawns and lethal686 casts, with typed/wrong/refused/dead/idle/account/reopen controls. Native3198504f proves107sum2/1336max1 and pinned ordinary5492; its initial1337 scalar gap is closed by the operator7 follow-up above. Compiler38/38, census5492ordinary/1824statistics adds only107/1336/1337 structurally; no grant/acquisition/rendered-UI claim.
+
 ## 2026-10-15 — Minion ownership flag composition
 
 [Source ownership](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14): native minion/player-owner rule replaces category-only player-control flags; companion immunity augments rather than overwrites ownership. Combat-pet designation, counts and captured privacy remain separate.
