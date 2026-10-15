@@ -34,6 +34,7 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
         .map;
     let mut world = World::new();
     world.insert_resource(GameDatabase::new(db));
+    world.init_resource::<persistence_actor::PendingHousingWrites>();
     world.insert_resource(manager);
     world.insert_resource(maps);
     world.insert_resource(HousingAvailability(Ok(catalog.clone())));
@@ -50,15 +51,22 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
             },
         ))
         .id();
+    let connection = world
+        .spawn((
+            Authenticated { account_id: 1 },
+            InWorld { character_id: 30 },
+            PlayerLink(player),
+            MessageSender::<HousingReply>::default(),
+        ))
+        .id();
     let actor = Actor {
-        connection: Entity::PLACEHOLDER,
+        connection,
         player,
         account: 1,
         character: 30,
     };
-    let command = HousingCommand::PurchasePlot { plot_id: 417 };
     assert!(
-        execute(&mut world, actor, &command)
+        persistence_actor::enqueue_purchase(&mut world, actor, 417, 1)
             .unwrap_err()
             .contains("cornerstone")
     );
@@ -71,12 +79,13 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
         y: 0.0,
         z: 0.0,
     });
-    assert!(execute(&mut world, actor, &command).is_err());
+    assert!(persistence_actor::enqueue_purchase(&mut world, actor, 417, 1).is_err());
     let plot = catalog.plot(417).unwrap();
     let [x, y, z] = plot.cornerstone;
     let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
     world.entity_mut(player).insert(Position { x, y, z });
-    execute(&mut world, actor, &command).unwrap();
+    persistence_actor::enqueue_purchase(&mut world, actor, 417, 1).unwrap();
+    finish_housing_writes(&mut world);
     let snapshot = read_snapshot(&world, actor, Some(1), None).unwrap();
     assert_eq!(snapshot.owned_houses.len(), 1);
     assert_eq!(
@@ -97,12 +106,24 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
     );
     assert!(world.get::<crate::maps::MapTransfer>(player).is_none());
     world.entity_mut(player).insert(InMap::continent(0));
-    assert!(execute(&mut world, actor, &command).is_err());
+    assert!(persistence_actor::enqueue_purchase(&mut world, actor, 417, 1).is_err());
     assert_eq!(
         persistence::load_inventory(&world.resource::<GameDatabase>().db, 30).gold,
         10_000_000
     );
     assert!(read_snapshot(&world, actor, Some(4), None).is_err());
+}
+
+fn finish_housing_writes(world: &mut World) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    while persistence_pending(world) {
+        persistence_actor::publish_writes(world);
+        assert!(
+            std::time::Instant::now() < deadline,
+            "housing write receipt did not complete"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
 }
 
 #[test]

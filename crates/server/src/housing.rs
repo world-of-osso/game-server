@@ -11,13 +11,13 @@ use shared::protocol::{
     HousingChannel, HousingCommand, HousingReply, HousingRequest, HousingState,
 };
 
-#[path = "housing_collection.rs"]
-mod collection;
 #[path = "housing_dye_requests.rs"]
 mod dye_requests;
-pub(crate) use collection::HousingPersistencePlugin;
+#[path = "housing_persistence.rs"]
+mod persistence_actor;
+pub(crate) use persistence_actor::HousingPersistencePlugin;
 #[cfg(test)]
-pub(crate) use collection::persistence_pending;
+pub(crate) use persistence_actor::persistence_pending;
 
 #[derive(Resource)]
 pub(crate) struct HousingAvailability(pub(crate) Result<HousingCatalog, String>);
@@ -109,7 +109,7 @@ fn receive_requests(world: &mut World) -> Vec<(Actor, HousingRequest)> {
 
 pub(crate) fn process_requests(world: &mut World) {
     for (actor, request) in receive_requests(world) {
-        if collection::enqueue_request(world, actor, &request) {
+        if persistence_actor::enqueue_request(world, actor, &request) {
             continue;
         }
         let result = execute(world, actor, &request.command);
@@ -220,7 +220,9 @@ fn apply_house_command(
     command: &HousingCommand,
 ) -> Result<(), String> {
     match command {
-        HousingCommand::PurchasePlot { plot_id } => purchase_plot(world, actor, context, *plot_id)?,
+        HousingCommand::PurchasePlot { .. } => {
+            unreachable!("purchase is queued before synchronous house commands")
+        }
         HousingCommand::EnterHouse { house_id } => enter_house(world, actor, context, *house_id)?,
         HousingCommand::LeaveHouse => leave_house(world, actor, context)?,
         HousingCommand::SaveHouseAccess { house_id, access } => {
@@ -312,7 +314,12 @@ pub(crate) fn collect_authenticated_item(
             player,
         })
         .ok_or("Housing collection requires an authenticated character.")?;
-    collection::enqueue_collection(world, actor, guid, collection::CollectionOrigin::ItemUse)
+    persistence_actor::enqueue_collection(
+        world,
+        actor,
+        guid,
+        persistence_actor::ReplyOrigin::ItemUse,
+    )
 }
 
 fn enter_house(
@@ -433,26 +440,6 @@ fn enter_neighborhood(world: &mut World, actor: Actor, neighborhood_id: u32) -> 
             neighborhood_id: neighborhood.id,
         },
     )?;
-    Ok(())
-}
-
-fn purchase_plot(
-    world: &mut World,
-    actor: Actor,
-    context: store::Actor,
-    plot_id: u32,
-) -> Result<(), String> {
-    let plot = catalog(world)?.plot(plot_id)?.clone();
-    if context.neighborhood_id != Some(plot.neighborhood_id) {
-        return Err("Enter this neighborhood before purchasing its plot.".into());
-    }
-    require_cornerstone_reach(world, actor.player, plot_id)?;
-    let db = &world.resource::<GameDatabase>().db;
-    store::purchase(db, context, &plot)?;
-    let gold = crate::persistence::load_inventory(db, actor.character).gold;
-    world
-        .resource_mut::<crate::gold::GoldUpdateQueue>()
-        .record(actor.character, gold);
     Ok(())
 }
 

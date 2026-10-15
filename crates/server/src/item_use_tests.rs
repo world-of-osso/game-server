@@ -155,6 +155,125 @@ fn assert_housing_collection_fifo(use_housing_request: bool) {
 }
 
 #[test]
+fn housing_plot_purchase_waits_for_fifo_and_uses_an_earlier_wallet() {
+    use shared::protocol::{HousingChannel, HousingCommand, HousingReply, HousingRequest};
+    use std::time::{Duration, Instant};
+    let mut eater = eater(&[], 0).expect("native character data");
+    let catalog = crate::housing_catalog::HousingCatalog::read(
+        &crate::housing_catalog::tests::catalog_fixture(),
+    )
+    .unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        world_db(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let mut manager = crate::maps::InstanceManager::default();
+    let copy = manager
+        .authorize_housing_entry(&maps, 2735, 1, eater.character_id)
+        .unwrap()
+        .map;
+    eater.h.app.insert_resource(maps);
+    eater.h.app.insert_resource(manager);
+    eater
+        .h
+        .app
+        .insert_resource(crate::housing::HousingAvailability(Ok(catalog.clone())));
+    eater
+        .h
+        .app
+        .init_resource::<crate::game_objects::GameObjectSpawns>();
+    crate::maps::transfer::spawn_map_content(eater.h.app.world_mut(), copy);
+    let [x, y, z] = catalog.plot(417).unwrap().cornerstone;
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(eater.h.caster)
+        .insert((copy, shared::components::Position { x, y, z }));
+    let connection = eater.h.connection;
+    eater.h.app.world_mut().entity_mut(connection).insert((
+        MessageSender::<HousingReply>::default(),
+        MessageReceiver::<HousingReply>::default(),
+        MessageSender::<HousingRequest>::default(),
+        MessageReceiver::<HousingRequest>::default(),
+    ));
+    eater
+        .h
+        .app
+        .add_systems(Update, crate::housing::process_requests);
+    let character = eater.character_id;
+    let held = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let prior = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("earlier plot buyer wallet", move |db| {
+            let mut inventory = persistence::load_inventory(db, character);
+            inventory.gold = 20_000_000;
+            persistence::save_inventory(db, character, &inventory);
+            Ok(())
+        });
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    eater
+        .h
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<HousingRequest>>(connection)
+        .unwrap()
+        .send::<HousingChannel>(HousingRequest {
+            request_id: 23,
+            command: HousingCommand::PurchasePlot { plot_id: 417 },
+        });
+    let started = Instant::now();
+    eater.h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = drain::<HousingReply>(&mut eater.h.app, connection);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "housing purchase tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "plot purchase reply preceded commit");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let reply = loop {
+        eater.h.advance(1);
+        if let Some(reply) = drain::<HousingReply>(&mut eater.h.app, connection).pop() {
+            break reply;
+        }
+        assert!(Instant::now() < deadline, "no durable plot purchase reply");
+        std::thread::sleep(Duration::from_millis(1));
+    };
+    assert_eq!(prior.result(), Some(Ok(())));
+    assert_eq!(reply.request_id, 23);
+    assert_eq!(reply.error, None);
+    assert_eq!(reply.state.owned_houses.len(), 1);
+    assert_eq!(reply.state.owned_houses[0].plot_id, 417);
+    assert_eq!(
+        persistence::load_inventory(
+            &eater.h.app.world().resource::<GameDatabase>().db,
+            character
+        )
+        .gold,
+        10_000_000
+    );
+}
+
+#[test]
 fn companion_item_learns_three_instances_and_keeps_fourth_item() {
     let mut eater = eater_with_spells(&[4401], 4, &[4055], MAGE)
         .expect("local Mechanical Squirrel item/spell data");
