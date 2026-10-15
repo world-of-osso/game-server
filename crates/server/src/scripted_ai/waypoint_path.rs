@@ -485,6 +485,40 @@ fn bevy(position: Vec3) -> Position {
     Position { x, y, z }
 }
 
+fn advance_path_generator(
+    movement: &mut PathMovement,
+    position: &mut Position,
+    launch_from: &Launch,
+    dt_ms: i32,
+    navigation: Option<&crate::navigation::Navigation>,
+    mut ground: Option<&mut crate::ground::GroundMap>,
+) -> Result<Option<u32>, String> {
+    let ground_path = !launch_from.flying && !movement.path.exact_spline();
+    if let Some(spline) = &mut movement.spline {
+        spline.elapsed_ms = (spline.elapsed_ms + dt_ms).min(spline.end_ms);
+        let candidate = bevy(spline.position(spline.elapsed_ms));
+        *position = if ground_path {
+            sample_script_ground(ground.as_deref_mut(), launch_from.map, candidate)?
+        } else {
+            candidate
+        };
+        if spline.elapsed_ms == spline.end_ms {
+            movement.node = spline.last_node;
+            movement.spline = None;
+        }
+    } else if movement.wait_ms > 0 {
+        movement.wait_ms -= dt_ms;
+    }
+    if movement.spline.is_none() && movement.wait_ms <= 0 {
+        let current = Launch {
+            position: wow(position),
+            ..*launch_from
+        };
+        return start_move(movement, &current, navigation, ground);
+    }
+    Ok(None)
+}
+
 /// Advance every script path; a finished path sets home and informs the AI.
 pub(crate) fn path_movement_system(world: &mut World) {
     let dt_ms = world.resource::<Time>().delta().as_millis() as i32;
@@ -547,50 +581,29 @@ pub(crate) fn path_movement_system(world: &mut World) {
         let update_ms = if reset { 0 } else { dt_ms };
         // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
         let before = *position;
-        let ground_path = !flying && !movement.path.exact_spline();
-        let path_id = movement.path.id;
-        if let Some(spline) = &mut movement.spline {
-            spline.elapsed_ms = (spline.elapsed_ms + update_ms).min(spline.end_ms);
-            let candidate = bevy(spline.position(spline.elapsed_ms));
-            let supported = if ground_path {
-                sample_script_ground(ground.as_mut(), *map, candidate)
-            } else {
-                Ok(candidate)
-            };
-            match supported {
-                Ok(next) => *position = next,
-                Err(error) => {
-                    failed.push((entity, path_id, error));
-                    continue;
-                }
-            }
-            if spline.elapsed_ms == spline.end_ms {
-                movement.node = spline.last_node;
+        let launch_from = Launch {
+            map: *map,
+            position: wow(&position),
+            orientation: rotation
+                .as_ref()
+                .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2),
+            spawn,
+            walking,
+            flying,
+        };
+        match advance_path_generator(
+            &mut movement,
+            &mut position,
+            &launch_from,
+            update_ms,
+            navigation.as_ref(),
+            ground.as_mut(),
+        ) {
+            Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
+            Ok(None) => {}
+            Err(error) => {
+                failed.push((entity, movement.path.id, error));
                 movement.spline = None;
-            }
-        } else if movement.wait_ms > 0 {
-            movement.wait_ms -= update_ms;
-        }
-        if movement.spline.is_none() && movement.wait_ms <= 0 {
-            let launch_from = Launch {
-                map: *map,
-                position: wow(&position),
-                orientation: rotation
-                    .as_ref()
-                    .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2),
-                spawn,
-                walking,
-                flying,
-            };
-            match start_move(
-                &mut movement,
-                &launch_from,
-                navigation.as_ref(),
-                ground.as_mut(),
-            ) {
-                Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
-                Ok(None) => {}
-                Err(error) => failed.push((entity, movement.path.id, error)),
             }
         }
         let path_walk = path_walk_mode(&movement.path, walking);
@@ -603,8 +616,6 @@ pub(crate) fn path_movement_system(world: &mut World) {
             (Some(_), false) => CreatureMotion::Run,
         };
         if *position != before {
-            debug!(?entity, from=?before, to=?*position, ?state, path=movement.path.id, node=movement.node,
-                driver="cpp_waypoint", "scripted path movement");
             moved.push(entity);
         }
         let facing = crate::creature_ai::facing_along(position.x - before.x, position.z - before.z);

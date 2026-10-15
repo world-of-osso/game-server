@@ -3,7 +3,9 @@ use super::*;
 
 // Existing exact-ground fixture tolerance (navigation_tests/followers tests).
 const GROUND_TOLERANCE: f32 = 0.05;
-const NAV_FLOAT_TOLERANCE: f32 = 0.0001;
+const POSITION_TOLERANCE: f32 = 0.0001;
+const BASE_WALK_SPEED: f32 = 2.5;
+const BASE_RUN_SPEED: f32 = 7.0;
 // TC MoveSpline cumulative lengths/durations are integer milliseconds.
 const SPLINE_CLOCK_PRECISION: f32 = 0.001;
 
@@ -19,24 +21,24 @@ fn physical_source_speed(h: &Harness, actor: Entity) -> f32 {
     let spawn = world.get::<crate::creature_ai::SpawnPoint>(actor).unwrap();
     match world.get::<CreatureMotion>(actor).unwrap() {
         CreatureMotion::Still => 0.0,
-        CreatureMotion::Walk => spawn.speed_walk * 2.5,
+        CreatureMotion::Walk => spawn.speed_walk * BASE_WALK_SPEED,
         CreatureMotion::Run => {
             let multiplier = world
                 .get::<crate::auras::AuraStatMods>(actor)
                 .map_or(1.0, |mods| mods.movement_speed);
-            spawn.speed_run * 7.0 * multiplier
+            spawn.speed_run * BASE_RUN_SPEED * multiplier
         }
     }
 }
 
-fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step: &PhysicalStep) {
+fn assert_source_step_budget(h: &Harness, actor: Entity, step: &PhysicalStep) -> f32 {
     let delta = h.app.world().resource::<Time<Fixed>>().delta_secs();
     // A handoff may change gait after the frame's sole position update.
     let speed = step.speed_before.max(physical_source_speed(h, actor));
     let horizontal = (step.to.x - step.from.x).hypot(step.to.y - step.from.y);
     let budget = speed * (delta + SPLINE_CLOCK_PRECISION);
     assert!(
-        horizontal <= budget + NAV_FLOAT_TOLERANCE,
+        horizontal <= budget + POSITION_TOLERANCE,
         "horizontal source budget exceeded tick{}: {}yd > {}yd, speed={} dt={}; {:?}->{:?}",
         step.tick,
         horizontal,
@@ -46,7 +48,12 @@ fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step:
         step.from,
         step.to
     );
-    if horizontal <= NAV_FLOAT_TOLERANCE {
+    horizontal
+}
+
+fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step: &PhysicalStep) {
+    let horizontal = assert_source_step_budget(h, actor, step);
+    if horizontal <= POSITION_TOLERANCE {
         assert!(
             (step.to.z - step.from.z).abs() <= GROUND_TOLERANCE,
             "vertical snap without horizontal travel tick{}: {:?}->{:?}",
@@ -56,8 +63,24 @@ fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step:
         );
         return;
     }
-    let from = Vec3::new(step.from.x, step.from.z, -step.from.y);
-    let to = Vec3::new(step.to.x, step.to.z, -step.to.y);
+    assert_floor_support(h, map, step);
+    // Corridor admission filters both endpoints and traversed polys by WALK_FLAG
+    // under the bake's AGENT_SLOPE/AGENT_CLIMB profile, not placement pullback.
+    h.app
+        .world()
+        .resource::<crate::navigation::Navigation>()
+        .query_path(map.map_id, nav_point(step.from), nav_point(step.to))
+        .unwrap()
+        .expect("complete baked walkable corridor");
+}
+
+fn nav_point(point: Vec3) -> Vec3 {
+    Vec3::new(point.x, point.z, -point.y)
+}
+
+fn assert_floor_support(h: &mut Harness, map: InMap, step: &PhysicalStep) {
+    let from = nav_point(step.from);
+    let to = nav_point(step.to);
     let floors = {
         let mut ground = h.app.world_mut().resource_mut::<crate::ground::GroundMap>();
         (
@@ -82,25 +105,13 @@ fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step:
         step.from,
         step.to
     );
-    // Corridor admission filters both endpoint polygons and every traversed
-    // polygon by WALK_FLAG, under the bake's AGENT_SLOPE/AGENT_CLIMB profile.
-    // MovePositionToFirstCollision's extra0.5yd placement pullback is not a
-    // walkability predicate, and a frame may span a spline corner.
-    h.app
-        .world()
-        .resource::<crate::navigation::Navigation>()
-        .query_path(map.map_id, from, to)
-        .unwrap()
-        .expect("complete baked walkable corridor");
 }
 
 #[test]
 #[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
 fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injection() {
     bevy::log::tracing_subscriber::fmt()
-        .with_env_filter(
-            "game_server::scripted_ai::waypoint_path=debug,game_server::creature_ai=debug",
-        )
+        .with_env_filter("game_server::scripted_ai::waypoint_path=error")
         .with_test_writer()
         .try_init()
         .expect("isolated physical fixture logger");
@@ -258,38 +269,13 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
             break;
         }
     }
-    if !arrived {
-        let world = h.app.world();
-        if let Some(crate::creature_ai::CreatureState::Pursuing { target }) =
-            world.get::<crate::creature_ai::CreatureState>(disciple)
-        {
-            let target = Entity::from_bits(*target);
-            println!(
-                "stalled actor={disciple:?} unrelated={unrelated:?} target={target:?}: npc={:?} health={:?} map={:?} state={:?} react={:?} dead={} castercombat={:?}",
-                world.get::<shared::components::Npc>(target),
-                world.get::<Health>(target),
-                world.get::<InMap>(target),
-                world.get::<crate::creature_ai::CreatureState>(target),
-                world.get::<ReactState>(target),
-                world.get::<crate::combat::DeathState>(target).is_some(),
-                world.get::<CombatStatus>(disciple)
-            );
-        }
-        let (x, y, z): (f32, f32, f32) = conn.query_row(
-            "SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=367801 AND NodeId=2",
-            [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        ).unwrap();
-        let from = Vec3::new(previous.x, previous.z, -previous.y);
-        let target = Vec3::new(x, z, -y);
-        let navigation = h.app.world().resource::<crate::navigation::Navigation>();
-        println!(
-            "stopped source route {from:?} -> {target:?}: {:?}",
-            navigation.query_path(43, from, target)
-        );
-    }
     assert!(
         arrived,
-        "source three-path walk did not reach final endpoint: start={start:?} last={previous:?} end={endpoint:?} waves={camp_counts:?} cleansing={saw_cleansing}"
+        "source three-path walk did not reach final endpoint: start={start:?} last={previous:?} end={endpoint:?} waves={camp_counts:?} cleansing={saw_cleansing} state={:?} combat={:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(disciple),
+        h.app.world().get::<CombatStatus>(disciple)
     );
     assert_eq!(camp_counts, [2, 3], "actual wave death boundaries both ran");
     assert!(saw_cleansing, "actual path1 arrival activated real6270");
