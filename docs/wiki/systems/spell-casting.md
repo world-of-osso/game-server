@@ -250,11 +250,12 @@ The caster's [[auras]] spell modifiers (107/108/218/219) adjust cast time (Chang
 | `CastFailed{reason, detail}` | caster owner | rejected request or failed completion |
 | `SpellCooldownUpdate` | caster owner | GCD start; cooldown start |
 | `SpellChargesUpdate` | caster owner | charge spent |
-| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune); aura events in [[auras]] |
+| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune), Summon; aura events in [[auras]] |
 
 - Other clients in range do not receive combat log events yet.
 - Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
 - Spell effects emit only `CombatLogEvent`.
+- Spell-created effect28 units and effect56 controlled pets emit `Summon` after creation: source=summoner, target=unit, spell_id=actual summoning spell (including triggered child spells). Existing-pet recall and login/script/journal restoration do not synthesize events. Temporary summon ancestry routes logs to the player's connection without altering meter/quest/PvP credit. See [guardian contract](../../specs/spell-guardians.md).
 - `log_event` stamps every event with server wall-clock Unix milliseconds before recording damage or sending to owners, including queued melee events. Constructors leave the timestamp unset until that boundary.
 - `Interrupt.extra_spell_id` identifies the interrupted cast; `Dispel.extra_spell_id` identifies the removed aura. Other kinds leave it `None`; `spell_id` remains the interrupting or dispelling spell.
 
