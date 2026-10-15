@@ -263,7 +263,9 @@ fn dummy12_shield_of_righteous_applies_native_armor_buff_and_expires() {
 
 #[test]
 fn dummy12_shield_cone_excludes_rear_side_far_and_ally_and_buffs_empty_cast() {
-    let mut h = harness(Vec::new(), &[53600, 132403, 403460, 407467], 2).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[53600, 132403, 403460, 407467], 2)
+            .unwrap();
     let rear = spawn_npc(&mut h.app, -3.0);
     let side = spawn_npc(&mut h.app, 2.0);
     h.app
