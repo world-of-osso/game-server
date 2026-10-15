@@ -94,11 +94,11 @@ fn achievements_criteria_absent_aura_native_marks_and_kills_persist() {
             .get_mut::<InWorld>(h.connection)
             .unwrap()
             .character_id = character;
-        let target = spawn_controlled_target(&mut h, entry);
         if let Some(spell) = mark {
             let player = h.caster;
             cast_mark(&mut h, spell, player);
         }
+        let target = spawn_controlled_target(&mut h, entry);
         assert!(!crate::spell_cast::try_cast_triggered(
             h.app.world_mut(),
             h.caster,
@@ -122,7 +122,10 @@ fn achievements_criteria_absent_aura_native_marks_and_kills_persist() {
             .unwrap()
             .earned_ids
             .contains(&achievement);
-        assert_eq!(earned, mark.is_none());
+        assert!(
+            !earned,
+            "ordinary kills cannot supply the required completed-map grant boundary"
+        );
         if let Some(spell) = mark {
             // Native aura removal must permit a later distinct kill, not replay the old one.
             let player = h.caster;
@@ -137,8 +140,19 @@ fn achievements_criteria_absent_aura_native_marks_and_kills_persist() {
             );
             assert!(!crate::auras::has_aura(h.app.world(), player, spell));
             let next = spawn_controlled_target(&mut h, entry);
-            // A victim's mark cannot disqualify the unmarked reference player.
-            cast_mark(&mut h, spell, next);
+            // Controlled victim aura avoids Swamp Smash's lethal damage on the 1HP fixture.
+            // Actor marks above use genuine casts; this control isolates aura ownership only.
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.npc,
+                    target: next,
+                    spell_id: spell,
+                    effect_mask: 1 << 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            assert!(crate::auras::has_aura(h.app.world(), next, spell));
             kill_with_shadow_bolt(&mut h, next);
             assert_eq!(
                 progress(&h, criterion),
@@ -219,6 +233,15 @@ fn achievements_criteria_absent_aura_authority_alive_and_difficulty() {
     let conditions = player_conditions(&world, actor);
     catalog.update_at(&mut state, event, None, 2, &conditions);
     assert_eq!(state.criteria_progress.get(&20693), Some(&1));
+    assert!(
+        !state.earned_ids.contains(&7257),
+        "map completion remains required"
+    );
+    catalog.update_at(&mut state, event, Some(1005), 2, &conditions);
+    assert!(
+        state.earned_ids.contains(&7257),
+        "catalog accepts the authored map boundary"
+    );
     for (difficulty, expected) in [(1, None), (2, None), (23, Some(1))] {
         let mut state = PlayerAchievementState::default();
         let mut conditions = player_conditions(&world, actor);
