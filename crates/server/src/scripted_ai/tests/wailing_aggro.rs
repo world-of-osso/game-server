@@ -38,6 +38,9 @@ fn encounter_coverage_wailing_aggro_speech_names_target_and_keeps_say_audience()
         .iter()
         .map(|text| text.male_text.replace("$n", &enemy_name))
         .collect();
+    for (_, _, inbox) in &mut h.players {
+        inbox.chat.clear();
+    }
     let mut spoken = 0;
     let mut quiet = 0;
     let mut named = false;
@@ -46,8 +49,9 @@ fn encounter_coverage_wailing_aggro_speech_names_target_and_keeps_say_audience()
     // exact probability test; source review owns the literal 30% threshold.
     for _ in 0..128 {
         dispatch(h.app.world_mut(), disciple, Hook::JustEngagedWith(enemy));
-        let messages = drain::<ChatMessage>(h.app.world_mut(), h.players[0].1);
-        let edge = drain::<ChatMessage>(h.app.world_mut(), h.players[2].1);
+        h.advance(0.1); // Host transport transfers MessageSender into MessageReceiver.
+        let messages = std::mem::take(&mut h.players[0].2.chat);
+        let edge = std::mem::take(&mut h.players[2].2.chat);
         let contents = |chat: &[ChatMessage]| {
             chat.iter()
                 .map(|message| {
@@ -64,8 +68,8 @@ fn encounter_coverage_wailing_aggro_speech_names_target_and_keeps_say_audience()
             contents(&messages),
             "25yd same-copy listener hears the Say"
         );
-        assert!(drain::<ChatMessage>(h.app.world_mut(), h.players[1].1).is_empty());
-        assert!(drain::<ChatMessage>(h.app.world_mut(), h.players[3].1).is_empty());
+        assert!(h.inbox(1).chat.is_empty(), "other copy cannot hear");
+        assert!(h.inbox(3).chat.is_empty(), "25.01yd cannot hear");
         assert!(messages.len() <= 1, "at most one Say per engagement");
         if messages.is_empty() {
             quiet += 1;
