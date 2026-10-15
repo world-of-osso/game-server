@@ -101,7 +101,31 @@ fn mount_special_uses_authoritative_actor_and_observer_set_without_chat_or_crite
     for event in owner_events.iter().chain(&peer_events) {
         assert_eq!(event.player_entity, player.to_bits());
         assert_eq!(event.sender, "Danceproof");
-        assert_eq!(format!("{:?}", event.emote), "MountSpecial");
+        assert_eq!(event.emote, EmoteKind::MountSpecial);
+    }
+    app.world_mut()
+        .get_mut::<MessageSender<EmoteIntent>>(connection)
+        .unwrap()
+        .send::<ChatChannel>(EmoteIntent {
+            emote: EmoteKind::MountSpecial,
+            target_entity: Some(foreign.to_bits()),
+        });
+    for _ in 0..3 {
+        app.update();
+    }
+    for peer in [connection, visible] {
+        let repeated = events(&mut app, peer);
+        assert_eq!(
+            repeated.len(),
+            1,
+            "intent uses the same action as slash input"
+        );
+        assert_eq!(
+            repeated[0].player_entity,
+            player.to_bits(),
+            "target cannot spoof actor"
+        );
+        assert_eq!(repeated[0].emote, owner_events[0].emote);
     }
     assert!(events(&mut app, hidden).is_empty());
     assert!(events(&mut app, foreign).is_empty());

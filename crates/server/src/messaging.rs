@@ -33,6 +33,16 @@ type ChatProfileQuery<'w, 's> = Query<
     ),
 >;
 
+type MountedEmoteQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static shared::components::Mounted,
+        &'static shared::components::PlayerMotion,
+        &'static crate::interest::NetworkVisibility,
+    ),
+>;
+
 #[derive(SystemParam)]
 pub(crate) struct ChatSystemQueries<'w, 's> {
     db: Option<Res<'w, GameDatabase>>,
@@ -72,7 +82,16 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
     >,
     ignore_lists: Query<'w, 's, Option<&'static PlayerIgnoreListState>>,
     chat_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<ChatMessage>)>,
-    emote_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<EmoteEvent>)>,
+    emote_senders: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static PlayerLink,
+            &'static mut MessageSender<EmoteEvent>,
+        ),
+    >,
+    mounted: MountedEmoteQuery<'w, 's>,
     history: ResMut<'w, ChatHistoryBuffer>,
     groups: Res<'w, GroupRegistry>,
     time: Res<'w, Time>,
@@ -92,24 +111,29 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
     let collected = collect_chat_messages(&mut q.receivers, &q.profiles);
     let (mut collected, mut emotes) = split_chat_emotes(collected);
     emotes.extend(collect_emote_messages(&mut q.emote_receivers, &q.profiles));
+    emotes.retain(|emote| accepts_mount_special(&q, emote));
     for chat in &collected {
         mark_activity(&mut q, chat.sender_entity, activity_at);
     }
     for emote in &emotes {
         mark_activity(&mut q, emote.player_entity, activity_at);
-        if q.entered.iter().any(|link| link.0 == emote.player_entity) {
+        if let Some(text_emote) = retail_text_emote(emote.event.emote)
+            && q.entered.iter().any(|link| link.0 == emote.player_entity)
+        {
             q.criteria.write(crate::achievement::CriteriaCredit {
                 player: emote.player_entity,
                 event: crate::achievement::CriteriaEvent::DoEmote(
-                    retail_text_emote(emote.event.emote),
+                    text_emote,
                     emote_target_entry(emote, &q.profiles, &q.emote_targets),
                 ),
             });
         }
     }
-    collected.extend(emotes.iter().map(|emote| CollectedChat {
-        msg: emote.chat.clone(),
-        sender_entity: emote.player_entity,
+    collected.extend(emotes.iter().filter_map(|emote| {
+        emote.chat.clone().map(|msg| CollectedChat {
+            msg,
+            sender_entity: emote.player_entity,
+        })
     }));
     let deliveries = {
         let online = online_participants(&q.chat_senders, &q.profiles);
@@ -127,7 +151,29 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
             .collect::<Vec<_>>()
     };
     send_deliveries(deliveries, &mut q.chat_senders);
-    route_emote_events(&emotes, &mut q.emote_senders, &q.ignore_lists);
+    route_emote_events(&emotes, &mut q.emote_senders, &q.ignore_lists, &q.mounted);
+}
+
+/// The source action is mounted and stationary, never a jump/flight request.
+fn accepts_mount_special(q: &ChatSystemQueries, emote: &CollectedEmote) -> bool {
+    use shared::components::PlayerMotion as Motion;
+    if emote.event.emote != EmoteKind::MountSpecial {
+        return true;
+    }
+    if !q.entered.iter().any(|link| link.0 == emote.player_entity) {
+        return false;
+    }
+    let Ok((_, motion, _)) = q.mounted.get(emote.player_entity) else {
+        return false;
+    };
+    const MOVING_OR_AIRBORNE: u64 = Motion::FORWARD
+        | Motion::BACKWARD
+        | Motion::STRAFE_LEFT
+        | Motion::STRAFE_RIGHT
+        | Motion::FALLING
+        | Motion::FLYING
+        | Motion::SWIMMING;
+    motion.0 & MOVING_OR_AIRBORNE == 0
 }
 
 fn mark_activity(q: &mut ChatSystemQueries, player: Entity, activity_at: std::time::Duration) {
@@ -182,7 +228,7 @@ struct CollectedChat {
 }
 
 struct CollectedEmote {
-    chat: ChatMessage,
+    chat: Option<ChatMessage>,
     event: EmoteEvent,
     player_entity: Entity,
     target_entity: Option<Entity>,
@@ -523,12 +569,23 @@ fn send_deliveries(
 
 fn route_emote_events(
     outgoing: &[CollectedEmote],
-    emote_senders: &mut Query<(&PlayerLink, &mut MessageSender<EmoteEvent>)>,
+    emote_senders: &mut Query<(Entity, &PlayerLink, &mut MessageSender<EmoteEvent>)>,
     ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
+    mounted: &MountedEmoteQuery<'_, '_>,
 ) {
     for emote in outgoing {
-        for (link, mut emote_sender) in emote_senders.iter_mut() {
-            if !recipient_accepts_message(link.0, &emote.event.sender, ignore_lists) {
+        for (connection, link, mut emote_sender) in emote_senders.iter_mut() {
+            let accepts = if emote.event.emote == EmoteKind::MountSpecial {
+                mounted
+                    .get(emote.player_entity)
+                    .is_ok_and(|(_, _, visibility)| {
+                        link.0 == emote.player_entity
+                            || visibility.visible_senders().any(|peer| peer == connection)
+                    })
+            } else {
+                recipient_accepts_message(link.0, &emote.event.sender, ignore_lists)
+            };
+            if !accepts {
                 continue;
             }
             emote_sender.send::<ChatChannel>(emote.event.clone());
@@ -581,35 +638,37 @@ fn sender_is_ignored(sender_name: &str, ignored_names: Option<&[String]>) -> boo
         .any(|ignored| ignored.eq_ignore_ascii_case(sender_name))
 }
 
-fn emote_chat_message(sender: &str, emote: EmoteKind) -> ChatMessage {
-    ChatMessage {
+fn emote_chat_message(sender: &str, emote: EmoteKind) -> Option<ChatMessage> {
+    Some(ChatMessage {
         sender: sender.into(),
-        content: emote_chat_text(emote).into(),
+        content: emote_chat_text(emote)?.into(),
         channel: ChatType::Emote,
-    }
+    })
 }
 
 /// Pinned TC a352b1fa SharedDefines.h TextEmotes; not animation Emotes IDs.
-fn retail_text_emote(emote: EmoteKind) -> u32 {
-    match emote {
+fn retail_text_emote(emote: EmoteKind) -> Option<u32> {
+    Some(match emote {
         EmoteKind::Dance => 34,
         EmoteKind::Wave => 101,
         EmoteKind::Sit => 86,
         EmoteKind::Sleep => 87,
         EmoteKind::Kneel => 59,
         EmoteKind::Love => 225,
-    }
+        EmoteKind::MountSpecial => return None,
+    })
 }
 
-fn emote_chat_text(emote: EmoteKind) -> &'static str {
-    match emote {
+fn emote_chat_text(emote: EmoteKind) -> Option<&'static str> {
+    Some(match emote {
         EmoteKind::Dance => "dances.",
         EmoteKind::Wave => "waves.",
         EmoteKind::Sit => "sits down.",
         EmoteKind::Sleep => "falls asleep.",
         EmoteKind::Kneel => "kneels.",
         EmoteKind::Love => "loves everyone.",
-    }
+        EmoteKind::MountSpecial => return None,
+    })
 }
 
 fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
@@ -623,6 +682,7 @@ fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
         "/sleep" => Some(EmoteKind::Sleep),
         "/kneel" => Some(EmoteKind::Kneel),
         "/love" => Some(EmoteKind::Love),
+        "/mountspecial" => Some(EmoteKind::MountSpecial),
         _ => None,
     }
 }
@@ -1514,21 +1574,21 @@ mod tests {
 
     #[test]
     fn emote_chat_message_uses_social_text() {
-        let dance = emote_chat_message("Alice", EmoteKind::Dance);
+        let dance = emote_chat_message("Alice", EmoteKind::Dance).unwrap();
         assert_eq!(dance.sender, "Alice");
         assert_eq!(dance.channel, ChatType::Emote);
         assert_eq!(dance.content, "dances.");
 
-        let wave = emote_chat_message("Bob", EmoteKind::Wave);
+        let wave = emote_chat_message("Bob", EmoteKind::Wave).unwrap();
         assert_eq!(wave.content, "waves.");
 
-        let sit = emote_chat_message("Cara", EmoteKind::Sit);
+        let sit = emote_chat_message("Cara", EmoteKind::Sit).unwrap();
         assert_eq!(sit.content, "sits down.");
 
-        let sleep = emote_chat_message("Dane", EmoteKind::Sleep);
+        let sleep = emote_chat_message("Dane", EmoteKind::Sleep).unwrap();
         assert_eq!(sleep.content, "falls asleep.");
 
-        let kneel = emote_chat_message("Eli", EmoteKind::Kneel);
+        let kneel = emote_chat_message("Eli", EmoteKind::Kneel).unwrap();
         assert_eq!(kneel.content, "kneels.");
     }
 
