@@ -149,3 +149,37 @@ fn supported_field(name: &str, value: &Value) -> bool {
     );
     *value == 0 && !zero_is_a_constraint
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn suggested_provider_client_executable_level_gate_is_not_unknown() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        // TC a352b1fa DBCEnums.h:2103; ConditionMgr.cpp:2806–2826,2923.
+        // Authored Wailing Caverns33956: ClientExecutable, PvPFaction0, tuning193(8–30).
+        let condition = load_condition(&conn, 33956).unwrap();
+        for (level, eligible) in [(7, false), (8, true), (30, true), (31, false)] {
+            assert_eq!(condition.evaluate(level), Ok(eligible), "level{level}");
+        }
+    }
+
+    #[test]
+    fn suggested_provider_zero_pvp_faction_is_no_predicate_not_missing_authority() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        // Existing Grim Batol115171: WithinOrAbove, PvPFaction0, tuning2720(80).
+        let condition = load_condition(&conn, 115171).unwrap();
+        assert_eq!(condition.evaluate(79), Ok(false));
+        assert_eq!(condition.evaluate(80), Ok(true));
+        assert_eq!(condition.evaluate(90), Ok(true));
+    }
+}
