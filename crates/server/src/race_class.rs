@@ -4,7 +4,7 @@
 //! unchanged. Separately contracted Forever95/96 gates retain their pinned source.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use serde::Deserialize;
@@ -135,10 +135,21 @@ fn load_playable_races(directory: &Path) -> Result<BTreeMap<u8, PlayableRace>, S
     Ok(races)
 }
 
+fn installed_db2_directory() -> PathBuf {
+    #[cfg(test)]
+    {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active")
+    }
+    #[cfg(not(test))]
+    {
+        PathBuf::from("data/db2/active")
+    }
+}
+
 fn read_installed_races() -> &'static BTreeMap<u8, PlayableRace> {
     static RACES: OnceLock<BTreeMap<u8, PlayableRace>> = OnceLock::new();
     RACES.get_or_init(|| {
-        load_playable_races(Path::new("data/db2/active"))
+        load_playable_races(&installed_db2_directory())
             .unwrap_or_else(|error| panic!("Unable to load installed race/class source: {error}"))
     })
 }

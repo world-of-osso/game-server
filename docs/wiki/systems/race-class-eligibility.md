@@ -4,7 +4,7 @@ Contract: [race/class eligibility](../../specs/race-class-eligibility.md). Sourc
 
 ## Source and lifetime
 
-`race_class.rs` reads `data/db2/active/ChrRaces.csv` and `CharBaseInfo.csv` once per process. Race metadata provides the race-mask bit; supported class memberships populate ordered class sets. Non-playable metadata and unconverted Adventurer14 do not become offered player pairs. The process retains that snapshot until restart. Deploy already ships the entire active DB2 publication; container test inputs also require both CSVs.
+`race_class.rs` reads `data/db2/active/ChrRaces.csv` and `CharBaseInfo.csv` once per process. Race metadata provides the race-mask bit; supported class memberships populate ordered class sets. Non-playable metadata and unconverted Adventurer14 do not become offered player pairs. The process retains that snapshot until restart. Deploy already ships the entire active DB2 publication; container test inputs also require both CSVs. Cargo tests execute from the crate directory, so test builds anchor the same installed publication to CARGO_MANIFEST_DIR/../../data rather than interpreting the service's working-directory path. Runtime uses only data/db2/active; neither environment probes an alternate source on failure.
 
 The old Retail permission slice is removed. Missing/invalid CSVs, unsupported mask bits, unknown playable-race references, duplicate race metadata and an empty Retail result fail catalog loading. There is no static Retail permission path after source failure.
 
