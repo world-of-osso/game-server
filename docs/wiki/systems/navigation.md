@@ -136,7 +136,7 @@ The same batch proves two active-slot lifecycle REDs: fresh chase selected befor
 
 ## Current controlled physical proof
 
-Final combined gate at server `c057a34ea09d37e6405a6ce57c37738417a735db`, protocol `4135e6975c1f298e9f4aabac4fef6162bf53c50d`: **23/23 PASS, 134.17s**, including both fresh-owner ordering regressions, callback ownership, reset timing, missing-support stopped gait, strict rejection, exact/flying, all49 authored nodes, Ragefire walk/meals and Golden flying intro. Physical run: **477.2578yd**, waves **[2,3]**, real6270, exact stopped endpoint. Run-to-run combat pursuit accounts for distance variation; neither receipt is a fixed authored route length.
+Final combined gate at server `c057a34ea09d37e6405a6ce57c37738417a735db`, protocol `4135e6975c1f298e9f4aabac4fef6162bf53c50d`: **23/23 PASS, 134.17s**, including both fresh-owner ordering regressions, callback ownership, reset timing, missing-support stopped gait, strict rejection, exact/flying, all49 authored nodes, Ragefire walk/meals and Golden flying intro. Physical run: **477.2578yd**, waves **[2,3]**, real6270, exact stopped endpoint. The two recorded runs have different total travel distances; neither receipt is a fixed authored route length.
 
 `ownership-final-command.json` records exact invocation/environment/revisions; `ownership-final.log`, `ownership-final-check.log`, `ownership-final-fmt.log` record tests, all-target check (**73s**, no warnings), scoped formatting/diff. Detached job records all exit0 and terminal value0. Evidence lives under `game-engine-s10/data/diagnostics/encounter-coverage-2026-10-12/wailing-physical-20261014/`. Independent primary-source/artifact verification is preserved in `ownership-independent-verifier.md`.
 
