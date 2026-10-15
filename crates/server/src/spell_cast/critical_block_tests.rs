@@ -5,7 +5,7 @@ use crate::melee::PlayerDefense;
 use crate::stats::CharacterStats;
 use bevy::prelude::*;
 use shared::components::{Rotation, UnitLevel};
-use shared::protocol::CombatLogKind;
+use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 const CRITICAL_BLOCK: u32 = 76857;
 
@@ -678,10 +678,75 @@ fn class_completeness_native_ranged_deflection_and_block_share_one_hit_table() {
     }
 }
 
+fn npc_evasion_duel() -> (Harness, Entity) {
+    let (mut h, defender) = evasion_duel(1);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.npc)
+        .unwrap()
+        .x = 0.0;
+    (h, defender)
+}
+
+fn cast_npc_strike(h: &mut Harness, defender: Entity) -> Vec<CombatLogEvent> {
+    h.inbox.log.clear();
+    super::creature_cast(h.app.world_mut(), h.npc, 38598, Some(defender), true)
+        .expect("native creature Strike cast");
+    h.advance(2);
+    h.inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(38598)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(defender.to_bits())
+        })
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn class_completeness_native_npc_expertise_overcomes_evasion_until_removed() {
+    let (mut h, defender) = npc_evasion_duel();
+    super::creature_cast(h.app.world_mut(), h.npc, 62627, Some(h.npc), true)
+        .expect("native NPC Hit Buffs self-cast");
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 62627));
+    let before = h.health(defender);
+    let hits = cast_npc_strike(&mut h, defender);
+    assert_eq!(hits.len(), 1, "native expertise must overcome Evasion");
+    assert!(hits[0].amount > 0);
+    assert_eq!(before - h.health(defender), hits[0].amount as f32);
+    assert!(crate::auras::has_aura(h.app.world(), defender, 5277));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.npc,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 62627,
+    );
+    h.advance(2);
+    let before = h.health(defender);
+    assert!(cast_npc_strike(&mut h, defender).is_empty());
+    assert_eq!(h.health(defender), before);
+}
+
+#[test]
+fn class_completeness_native_npc_expertise_on_foreign_actor_does_not_reduce_dodge() {
+    let (mut h, defender) = npc_evasion_duel();
+    let foreign = spawn_npc(&mut h.app, 1.0);
+    super::creature_cast(h.app.world_mut(), foreign, 62627, Some(foreign), true)
+        .expect("foreign native NPC Hit Buffs self-cast");
+    h.advance(2);
+    let before = h.health(defender);
+    assert!(cast_npc_strike(&mut h, defender).is_empty());
+    assert_eq!(h.health(defender), before);
+    assert!(crate::auras::has_aura(h.app.world(), foreign, 62627));
+}
+
 fn evasion_duel(class: u8) -> (Harness, Entity) {
     let mut h = harness_with_plugins(
         Vec::new(),
-        &[5277, 1464, 7384, 19434, 51723, 853],
+        &[5277, 1464, 7384, 19434, 51723, 853, 62627, 38598],
         class,
         false,
         |app| {
