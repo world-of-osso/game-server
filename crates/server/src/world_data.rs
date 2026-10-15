@@ -13,6 +13,7 @@ use crate::level_scaling::{
     ArmorConstants, CreatureStats, ExpectedStats, LevelStats, TuningInputs,
 };
 
+#[derive(Clone)]
 pub struct CreatureTemplate {
     pub entry: u32,
     pub name: String,
@@ -70,6 +71,7 @@ pub struct CreatureTemplate {
 
 /// A template with a `ContentTuningID`: `min_level`/`max_level` are its
 /// ContentTuning range (docs/specs/level-scaling.md).
+#[derive(Clone)]
 pub struct TemplateTuning {
     pub content_tuning_id: u32,
     /// `LevelScalingDeltaMin..=Max`, rolled per spawn (Creature::ApplyLevelScaling).
@@ -89,6 +91,7 @@ pub struct CreatureModelInfo {
     pub is_trigger: bool,
 }
 
+#[derive(Clone)]
 pub struct CreatureSpawn {
     pub guid: u32,
     pub template_entry: u32,
@@ -123,11 +126,12 @@ impl CreatureSpawn {
     }
 }
 
+#[derive(Clone)]
 pub struct WaypointPath {
     pub points: Vec<WaypointPoint>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct WaypointPoint {
     pub position_x: f32,
     pub position_y: f32,
@@ -178,7 +182,7 @@ pub struct FormationInfo {
 /// `GROUP_AI_FLAG_FOLLOW_LEADER`: the member moves with its patrolling leader.
 pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 
-#[derive(Resource, Default)]
+#[derive(Resource, Clone, Default)]
 pub struct WorldData {
     pub templates: HashMap<u32, CreatureTemplate>,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
