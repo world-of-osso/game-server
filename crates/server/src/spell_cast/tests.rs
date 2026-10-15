@@ -867,7 +867,9 @@ fn receive_spell_go(h: &mut Harness, connections: &[Entity], frames: usize) -> V
 
 #[test]
 fn spell_go_reaches_every_client_replicating_the_caster_with_its_hit_units() {
-    let Some(mut h) = harness(Vec::new(), &[SLAM, BATTLE_SHOUT], 1) else {
+    let Some(mut h) =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[SLAM, BATTLE_SHOUT], 1)
+    else {
         return;
     };
     h.set_power(PowerType::Rage, 1000.0);
