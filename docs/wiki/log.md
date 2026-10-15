@@ -1,3 +1,10 @@
+## 2026-10-15 — Spell-created unit ownership logs
+
+[Combat log ownership](systems/spell-casting.md#messages): actual effect28/effect56 creations emit Summon with the real spell and actor identities; temporary guardian ancestry delivers combat to its owner without changing gameplay credit. Login restoration emits no synthetic event. Bounded native gates tracked separately from DPS/balance acceptance.
+
+## 2026-10-15 — Source Toy forward destination
+
+[Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
 ## 2026-10-15 — Titan's Grip hand rules
 
 [Inventory](systems/inventory.md#titans-grip-hand-rules--2026-10-15) derives effect155 capability and weapon/armor subclass masks from learned native spells; type17 gains the off hand with Dual Wield and matching Grip. Explicit/auto-equip retain the permitted two-hand pair. Published70391 authentication:261 spell fields plus pinned TC hashes. Request/persistence RED: three missing-admission/auto-equip failures; two negative controls pass. At9593985e native five tests GREEN under four threads (73.94s); merged7ff7b5e4 native ranged plus three retained Dual Wield controls bring scoped proof to nine pass/zero fail (7.62s). Workspace/all-target check72.481s/fmt4.779s pass warning-free. Acquisition, unlearn-time eviction and whole-Fury acceptance remain open.
@@ -33,12 +40,13 @@
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 
 [Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
-## 2026-10-15 — Source Toy forward destination
+## 2026-10-14 — Full native pet-family grants
 
-[Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
+[Twenty real battles](systems/dungeon-achievements.md#full-family-earned-level-proof) at33782a95 pass1/1(37.10s), proving all0–9 families at10/25, actual6609/6610 grants only after every family, original dates, real Repair/persistent injuries, consumed targets, DB reopen/auth login and account43 isolation. No HP/XP/progress/earned-ID overrides after baseline. Source state161 guard stays intact; optional unsupported Extra Plating was not used. Predicate/census unchanged; acquisition/world population/rendered UI unclaimed.
+
 ## 2026-10-14 — Pet-level type qualifiers, native proof
 
-[BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); other native types/level10/all-ten-family grants remain unclaimed.
+[BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated native/catalog/prior91/pinned6a52bb57 passes4/4(21.37s); the subsequent twenty-battle follow-up proves all ten types/10-level/25-level grants; acquisition/rendered UI remain unclaimed.
 
 ## 2026-10-14 — Post-count7 source audit
 
@@ -87,6 +95,25 @@
 ## 2026-10-13 — Current PvP faction and War Banners
 
 [Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
+## 2026-10-15 — Wailing targeted Say
+
+[Source engagement speech](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) adds30% group10 with Player/Npc `$n`, preserving nearby Say listeners. Corrected host-boundary RED→5/5 GREEN79.17s/check18.26s/fmt ond6aa7d3e includes source schedule-before-roll order, unchanged combat and real wake/flight exit controls. No protocol/data mutation or natural/native-clear claim; lead independent gate pending.
+
+## 2026-10-14 — Wailing later ritual waves
+
+[Events17–20](systems/boss-scripts.md#wailing-later-ritual-waves--2026-10-14) add same-copy Naralex emotes and timed group3/group4 summons (seven Ectoplasms, Mutanus). Source combat-paused15/25/20/30s sequence passes3/3 in69.88s with first-wave/notification regressions; check/fmt pass. Controlled deaths, runtimebase stats and prior arrival are not ordinary fights or native clears; wake-up/exit21+ remain open.
+
+## 2026-10-14 — Wailing first awakening wave
+
+[Source events14–16](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) add1s Talk7/+5s self6271/Talk8/+4s three Moccasins. Actual aura/birth coordinates/target/copy/timers pass after retaining the runtime template in the fixture (not changing summons); merged25/25 gate184.24s/check/fmt pass. Normal difficulty stats, later awakening and native clears remain open.
+
+## 2026-10-14 — Wailing chamber continuation
+
+[Source events12–13](systems/boss-scripts.md#wailing-chamber-approach--2026-10-14) add1s speech and +5s path367803 launch. Controlled prior arrival then actual78.6692yd movement passes floor/budget/corridor/LOS and timing/copy checks; strengthened upper-bound proof and merged24/24 gate206.06s, check/fmt pass. Awakening/natural activation/native clears remain open.
+
+## 2026-10-14 — C++ waypoint motion ownership and physical escort
+
+[Ownership/support proof](systems/navigation.md#current-controlled-physical-proof): source default/active preemption, fresh-goal diff0, real-position resume, callback ownership and exact moving-foot support pass23/23 in134.17s; check/fmt pass. Controlled Wailing traversal reaches both camps and stopped endpoint (477.2578yd, waves[2,3], real6270). Natural activation, balance and native clears remain open.
 ## 2026-10-14 — Native node-ownership expression credit
 
 [Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
@@ -1364,3 +1391,8 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 [TargetCreatureId4](systems/dungeon-achievements.md#pre-effect-spell-hit-target-creature-entries) and complete Some selectors use actual hit NPC.template_id for native110, retaining DoEmote54 and every companion. Source165 actualdamage/bonus-exclusion/zero-hit boundary passes before valid predicate RED12660Nonevs3. Generated5621/census5483+1821 adds account4436/4437 only. Native GREEN4091b81b2/2(18.30s) proves both factions’ actual leader grants, wrong NPC/Player/missing/depth/idle rejection and durable counters/grant dates after reopen/re-entry. All243 matrix/pinned5483 and readability pass; required workspace filter178/0/1ignored(269.99s) +site-export1/1, server/engine checks and three-repo fmt pass at4091b81b source scope. Independent verifier unavailable; no content/acquisition/UI certificate.
 - 2026-10-15 — [Spell casting](systems/spell-casting.md): spell queue window widened from 400 ms to 750 ms, the hasted-GCD floor (user decision; Retail/TrinityCore use 400 ms). RED: `spellqueue_exact_750ms_boundary_is_inclusive` 9/1 with the 400 ms constant; GREEN 10/10.
+
+- 2026-10-15: Wailing source21–27 wake-up/flight exit port after actual Sleep→Stand RED; existing flight policy unchanged, behavioral GREEN/native proof still pending.
+- 2026-10-15: Wake/flight exit GREEN053915ae1/1 in31.22s, unchanged firstwave/fourdruid controls2PASS, all-target check14.62s/no warnings and scopedfmt/diff exit0. Corrected fixture instant-aura assumption using actual8153 five-second cast. Independent lead gate pending; natural/native clears still open.
+- 2026-10-15: Wailing Normal ritual-wave copy-only projection profile after process-boundary RED; source identity/stat fields preserved, canonical publication/balance separate.
+- 2026-10-15: Wailing copy-only Normal wave projection GREENb3cc6fed2/2 PASS7.421s, actual CLI/idempotency/identity-refusal and unchanged row hashes; canonical/runtime application and balance still separate.
