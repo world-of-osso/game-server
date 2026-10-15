@@ -736,14 +736,19 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                 .send::<InteractionChannel>(UseGameObject {
                     object: object.to_bits(),
                 });
-            h.advance(3);
-            let errors: Vec<_> = h
-                .app
-                .world_mut()
-                .get_mut::<MessageReceiver<shared::protocol::InteractionFailed>>(user.connection)
-                .unwrap()
-                .receive()
-                .collect();
+            let mut errors = Vec::new();
+            for _ in 0..3 {
+                h.advance(1);
+                errors.extend(
+                    h.app
+                        .world_mut()
+                        .get_mut::<MessageReceiver<shared::protocol::InteractionFailed>>(
+                            user.connection,
+                        )
+                        .unwrap()
+                        .receive(),
+                );
+            }
             if user.player == foreign.player {
                 assert_eq!(
                     errors.len(),
