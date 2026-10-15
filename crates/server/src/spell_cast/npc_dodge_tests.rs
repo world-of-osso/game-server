@@ -33,13 +33,23 @@ fn spawn_native_dodge_target(facing: f32) -> Harness {
     ));
     if let Some(tuning) = &template.tuning {
         assert_eq!(tuning.delta.0, tuning.delta.1);
+        let scaling = shared::level_scaling::LevelScaling {
+            content_tuning_id: tuning.content_tuning_id,
+            min_level: template.min_level,
+            max_level: template.max_level,
+            delta: tuning.delta.0,
+        };
+        let level = scaling.native_level();
+        // Keep native guard damage nonlethal; dodge inputs remain unchanged.
+        const HEALTH_BUFFER_MULTIPLIER: f32 = 16.0;
+        let health = tuning.stats.max_health(level) * HEALTH_BUFFER_MULTIPLIER;
         h.app.world_mut().entity_mut(h.npc).insert((
-            shared::level_scaling::LevelScaling {
-                content_tuning_id: tuning.content_tuning_id,
-                min_level: template.min_level,
-                max_level: template.max_level,
-                delta: tuning.delta.0,
+            UnitLevel(level),
+            shared::components::Health {
+                current: health,
+                max: health,
             },
+            scaling,
             crate::level_scaling::ScaledStats(tuning.stats.clone()),
         ));
     }
