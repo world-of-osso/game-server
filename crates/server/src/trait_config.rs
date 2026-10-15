@@ -129,7 +129,7 @@ pub fn build_config(
 
 /// TraitMgr::InitializeStarterBuildTraitConfig: visit authored OrderIndex rows,
 /// use the first node entry for ID zero, buy eligible cumulative ranks only.
-/// Normal eligibility is needed as zero-cost authored apex rows can precede level81.
+/// Normal eligibility is needed as authored apex rows can be affordable before level81.
 pub fn starter_purchases(tree: &TraitTree, ctx: TraitContext) -> Result<Vec<Purchase>, String> {
     let build = tree
         .starter_builds
@@ -165,7 +165,7 @@ pub fn starter_purchases(tree: &TraitTree, ctx: TraitContext) -> Result<Vec<Purc
                 ranks: row.ranks,
             });
         }
-        // An authored future-level row is not yet a legal purchase, even if free.
+        // Affordable authored future-level rows are not yet legal purchases.
         // This is the same eligibility check used for ordinary manual purchases.
         if build_config(tree, ctx, &candidate).is_ok() {
             purchases = candidate;

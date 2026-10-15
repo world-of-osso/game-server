@@ -1,6 +1,6 @@
 ## 2026-10-15 — Authored talent Starter builds
 
-[Starter Build](systems/talents.md#starter-build): DB2 OrderIndex/cumulative ranks and independent affordable currencies, built-in selection using existing redb encoding, login/spec/level refresh and accepted-edit deactivation. Targeted real-data/message RED→GREEN2. Installed-class check then found Arms zero-cost apex selected before81; normal per-step eligibility defers future-level rows. Updated GREEN/native proof pending.
+[Starter Build](systems/talents.md#starter-build): DB2 OrderIndex/cumulative ranks and independent affordable currencies, built-in selection using existing redb encoding, login/spec/level refresh and accepted-edit deactivation. Targeted real-data/message RED→GREEN2. Installed-class check then found Arms affordable apex selected before81; normal per-step eligibility defers future-level rows. Updated GREEN/native proof pending.
 
 ## 2026-10-15 — Installed race/class source
 
