@@ -12,14 +12,14 @@ World creatures attack players: hostile creatures aggro players that come near, 
 
 ### Aggro on sight (`CreatureAI::MoveInLineOfSight`, `Creature::CanStartAttack`)
 
-- [x] Aggro radius = `detection_range` + (creature level − player level), the level difference capped at 25 below the creature, clamped to 5..45 yards; a detection range under 1 yard never aggroes (`Creature::GetAggroRange`). Forest Spider (level 5, 18 yd): 13 yd against a level 10 player, 22 yd against a level 1 player.
+- [x] Player and creature proximity use pinned TC a352b1fa `Creature::GetAttackDistance` (Creature.cpp:2165–2206), not the pet-only GetAggroRange or legacy detection_range. Start at15 minus the creature's authored model combat reach; add both detect-range aura modifiers when creature level+5≤90, and add the level difference. Above the spawned difficulty's HealthScalingExpansion maximum level, use expansion maximum minus target level instead, without detect modifiers. Clamp attack distance to5..45, then add both scaled combat reaches for strict3D distance comparison (Object.cpp:408–428). Defaults: Rate.Creature.Aggro1, MaxPlayerLevel90 (World.cpp:1002,751; SharedDefines.h:109–140). Level30 versus32 with1.5yd reaches has a14.5yd center boundary:14.49 engages,14.5 and15.7 do not. Missing model/template authority reports an error and does not substitute guessed geometry.
 - [x] An idle, alive creature attacks the nearest hostile player inside its radius.
 - [x] Dead players, ghosts and players on a flight path are never aggroed.
 - [x] Aggro puts the creature and the player in combat, starts the creature's chase and its auto-attack on the player.
 
 ### Creature versus creature (`CreatureRelocationNotifier`, `Creature::CanStartAttack`): `crates/server/src/creature_sight.rs`
 
-- [x] Once a second, each creature that moved, spawned or woke is offered to the creatures in its 3x3 cells of 45 yards (`NpcGrid`) and they to it; no per-tick scan of all creatures.
+- [x] Once a second, each creature that moved, spawned, woke or changed model/scale is offered to nearby creatures and they to it. NpcGrid uses45yd cells with per-copy conservative maximum combat reach to cover the post-clamp body extents; no per-tick all-pairs scan.
 - [x] An idle aggressive creature attacks the nearest creature within its aggro radius (each side's level against the other) whose FactionTemplate reaction is Hostile and that it can attack; both enter combat, chase and swing. Stormwind Infantry (2321) and a Blackrock Invader (14) fight; the Infantry and the Blackrock Worg (32) are neutral and never do (the Northshire "fight" is emote 333).
 - [x] Creatures immune to NPCs (`unit_flags` 0x200) neither attack nor are attacked; civilians never start a fight but fight back.
 - [ ] Line of sight, the Z attack range, `IsNeutralToAll`, `CallAssistance` and GuardAI.

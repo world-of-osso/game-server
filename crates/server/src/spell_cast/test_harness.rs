@@ -102,6 +102,7 @@ pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::
     crate::world_data::load_template_models(&conn, &mut templates);
     crate::world_data::WorldData {
         templates,
+        expected_stats: expected,
         ..Default::default()
     }
 }
