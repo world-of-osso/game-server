@@ -38,7 +38,8 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 ### Authority and durability
 - [x] Rank list and affected member positions commit together and survive database reopen.
 - [x] Stored bank balances, tabs, limits, logs and repair permissions survive layout upgrades.
-- [x] Social and monetary wire masks use pinned TC `a352b1fa` GuildRankRights values. Layout 3 translates each old layout-2 compact right independently without granting/revoking capabilities; mixed officer permissions remain mixed. Layout 0/1 retain their existing grants; repeated startup never remaps already-migrated rights.
+- [x] Social and monetary wire masks use pinned TC `a352b1fa` GuildRankRights values. Layout 3 translates each old layout-2 compact right independently; mixed officer permissions remain mixed and do not acquire newly modeled public-note rights. Layout 0/1 retain their existing grants; repeated startup never remaps already-migrated rights.
+- [ ] Every guild load restores all modeled Guild Master social rights, including newly modeled rights on already-deployed layout3, without changing other ranks or bank booleans/allowances (TC a352b1fa Guild.cpp262–264,318–321). Targeted migration/reopen gate pending.
 - [ ] Only authenticated in-world connections can request controls; the actor comes from the connection, never the packet.
 - [ ] Success broadcasts recipient-specific state; errors use typed Retail GlobalStrings refusals.
 
@@ -82,4 +83,5 @@ Root: `~/.cache/wow-ui-sim/blizzard-ui/retail/AddOns/`.
 - `Blizzard_GuildControlUI/Blizzard_GuildControlUI.xml:7`: 15-letter rank names.
 - `Blizzard_GuildControlUI/Blizzard_GuildControlUI.lua:137–238,420–459`: tab view/deposit/stacks controls, flags and shared gold/repair allowance.
 - `Blizzard_Communities/GuildRoster.lua:137–141`: strict promotion/demotion hierarchy.
+- TrinityCore a352b1fa `Guild.cpp:262–264,318–321`: Guild Master LoadFromDB restores GR_RIGHT_ALL; SetRights forces it, preventing loss of leader rights. Other rank masks are not normalized.
 - `game-engine/data/GlobalStrings.csv`: Retail refusal strings.
