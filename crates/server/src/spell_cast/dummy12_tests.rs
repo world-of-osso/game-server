@@ -82,12 +82,14 @@ fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
 }
 
 #[test]
-fn class_completeness_native_feral_spirit_wolves_damage_the_owners_training_dummy() {
+fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits() {
     let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
     actor_data(&mut h);
     let caster = h.caster;
+    // Native guardian scatter stays within5yd; colocating the dummy keeps
+    // this inheritance fixture independent of chase/movement support.
     let dummy =
-        crate::zones::summon_creature(h.app.world_mut(), caster, 44548, [3.0, 0.0, 0.0, 0.0])
+        crate::zones::summon_creature(h.app.world_mut(), caster, 44548, [0.0, 0.0, 0.0, 0.0])
             .expect("native Training Dummy template");
     assert!(
         h.app
@@ -103,27 +105,43 @@ fn class_completeness_native_feral_spirit_wolves_damage_the_owners_training_dumm
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let wolves = actors(&mut h, 29264);
     assert_eq!(wolves.len(), 2);
-    h.advance(200);
-    for wolf in wolves {
-        let damage: i32 = h
-            .inbox
-            .log
-            .iter()
-            .filter(|event| {
-                event.source == Some(wolf.to_bits())
-                    && event.target == Some(dummy.to_bits())
-                    && event.kind == CombatLogKind::Damage
-            })
-            .map(|event| event.amount)
-            .sum();
+    h.advance(60);
+    let before: Vec<_> = wolves
+        .iter()
+        .map(|wolf| largest_wolf_hit(&h, *wolf, dummy))
+        .collect();
+    assert!(before.iter().all(|damage| *damage > 0), "{before:?}");
+    h.inbox.log.clear();
+    // Change only the real owner's melee AP, never actor stats or RNG. The
+    // hundredfold input change must dominate ordinary block/crit variance.
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .attack_power *= 100.0;
+    h.advance(80);
+    for (wolf, before) in wolves.into_iter().zip(before) {
+        let after = largest_wolf_hit(&h, wolf, dummy);
         assert!(
-            damage > 0,
-            "wolf {wolf:?} dealt {damage}; native power {:?}, melee {:?}; combat {:?}",
-            super::effects::power_stats(h.app.world(), wolf, false),
-            h.app.world().get::<crate::combat::AutoAttack>(wolf),
-            h.inbox.log
+            after > before * 10,
+            "wolf {wolf:?}: owner AP100→10000, hit {before}→{after}, power {:?}",
+            super::effects::power_stats(h.app.world(), wolf, false)
         );
     }
+}
+
+fn largest_wolf_hit(h: &Harness, wolf: Entity, dummy: Entity) -> i32 {
+    h.inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(wolf.to_bits())
+                && event.target == Some(dummy.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount)
+        .max()
+        .unwrap_or(0)
 }
 
 #[test]
