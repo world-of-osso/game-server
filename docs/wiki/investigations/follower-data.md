@@ -2,6 +2,16 @@
 
 Verified: 2026-10-13. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
 
+## Passive-derived stat refresh — 2026-10-15
+
+Lead09:02 approved recomputing the existing player-spec bridge from its actual passive modifiers, not a health override or NPC-budget change. The old initializer computed `CharacterStats` with `mods=None`, then applied spec passives. `auras_changed` correctly wrote `StatModifiers`, but the production `StatsQuery` required `Player`, excluding NPC followers. Thus native Aegis353367/Plate Specialization86102 stored30%+5% stamina without changing level32 Garrick's7840 maximum health.
+
+The shared `update_character_stats` query now accepts players or followers and uses the follower's literal profile class/spec plus existing race0 bridge input. Followers initialize `UnitStats`, `CombatRatings` and `DerivedStats` so the same computation, health/mana ratio rescaling and dirty tracking apply on modifier changes. They gain no `Player` or `SheetOwner` identity, gear or overridden stats; ordinary NPCs remain excluded. CreatureArmor remains separately sourced from the actual template/ExpectedStat rows.
+
+Native source: Aegis353367 aura137/MiscValueB4 is30%; Plate86102's applied aura137 is5%. Existing class2/level32 stamina980 and native gtHpPerSta32=8 derive10584HP; after actual Aegis removal the remaining5% derives8232HP. `followers/passive_stats_tests.rs` asserts those concrete values, stored primary stamina and real aura lifecycle without overriding fixture health or stats. Pinned TC a352b1fa `SpellAuraEffects.cpp:3894–3934` updates the selected stat mask and retains health percentage after stamina changes; the bridge deliberately reuses the existing player calculation documented in [character stats](../systems/character-stats.md).
+
+Valid RED at7121fb7b: both native tests fail with actual7840 versus sourced10584/8232. Initiald1b96ea4 failed fixture creature_classlevelstats authority, not the intended behavior, and is not counted as RED. GREEN/check/build/live proof remain separately gated; Stockade0/3 is not resolved by this source finding alone.
+
 ## Breakable CC targeting — 2026-10-15
 
 Pinned TrinityCore a352b1fa `AI/CoreAI/CombatAI.cpp:166–177` interrupts non-melee casting and holds when the current victim has breakable-by-damage CC. `Entities/Unit/Unit.cpp:783–801` deliberately checks harmful aura + `SpellAuraInterruptFlags::AnyDamageMask`, not aura type; `Spells/SpellDefines.h:114` defines the mask as `0x09000002`. The shared native aura predicate uses that same mask. Installed Polymorph118 has interrupt flags `0x08080000`, including the scripted damage-break bit. No damage budget or aura duration changes are involved.
