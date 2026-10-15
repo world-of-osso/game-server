@@ -121,12 +121,14 @@ pub(crate) struct PathMovement {
     node: usize,
     started: bool,
     deactivated: bool,
+    finalized: bool,
     wait_ms: i32,
     spline: Option<Spline>,
 }
 
 impl PathMovement {
     /// An active chase/home generator preempts this default-slot waypoint.
+    /// Returns whether it was current, so the new owner initializes with diff0.
     pub(crate) fn deactivate(&mut self) -> bool {
         let was_current = !self.deactivated;
         if let Some(spline) = self.spline.take() {
@@ -178,6 +180,7 @@ pub(crate) fn move_path(world: &mut World, unit: Entity, path_id: u32) -> bool {
         node: 0,
         started: false,
         deactivated: false,
+        finalized: false,
         wait_ms: INITIALIZE_WAIT_MS,
         spline: None,
     });
@@ -480,6 +483,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
     let navigation = world.remove_resource::<crate::navigation::Navigation>();
     let mut ground = world.remove_resource::<crate::ground::GroundMap>();
     let mut ended = Vec::new();
+    let mut retired = Vec::new();
     let mut failed = Vec::new();
     let mut moved = Vec::new();
     let mut changed = Vec::new();
@@ -514,6 +518,10 @@ pub(crate) fn path_movement_system(world: &mut World) {
         speed,
     ) in movers.iter_mut(world)
     {
+        if movement.finalized {
+            retired.push(entity);
+            continue;
+        }
         // MotionMaster updates only its top generator: active chase/home wins
         // over this default-slot MovePath; route generation is not changed.
         let reset = match state {
@@ -614,12 +622,21 @@ pub(crate) fn path_movement_system(world: &mut World) {
     if let Some(ground) = ground {
         world.insert_resource(ground);
     }
+    for entity in retired {
+        world.entity_mut(entity).remove::<PathMovement>();
+    }
     for (entity, walking) in walking_modes {
         super::movement::set_walk(world, entity, walking);
     }
     for (entity, path_id, error) in failed {
         error!("MovePath {path_id} for {entity:?}: {error}; stopped without arrival");
         world.entity_mut(entity).remove::<PathMovement>();
+        if world
+            .get_mut::<CreatureMotion>(entity)
+            .is_some_and(|mut motion| motion.set_if_neq(CreatureMotion::Still))
+        {
+            changed.push(entity);
+        }
     }
     if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
         for &entity in &changed {
@@ -632,10 +649,12 @@ pub(crate) fn path_movement_system(world: &mut World) {
         }
     }
     for (entity, node_id, path_id, home) in ended {
-        // `SetHomePosition` at the last node, then `WaypointPathEnded`.
+        // Keep finalized spline ownership through the callback/handoff. A new
+        // active generator gets diff0 even when this was the final path step;
+        // retire it at the next movement update, without a second end callback.
+        world.get_mut::<PathMovement>(entity).unwrap().finalized = true;
         world
             .entity_mut(entity)
-            .remove::<PathMovement>()
             .insert(super::movement::ScriptedPath { home });
         super::dispatch(world, entity, Hook::WaypointPathEnded { node_id, path_id });
     }
