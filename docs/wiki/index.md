@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — source aura236, NPC occupancy and M2 seat placement implemented; GREEN/controls, deploy closure and native vehicle proof pending.
+
 - [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, verification and driver boarding pending.
 
 - [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — owned normal/huge lifecycle/disarm GREEN5, BG/NPC/arena controls checked; Modern83/Forever88 native four-phase/20-player return pass; render/framing/timing remain separate.

@@ -26,6 +26,12 @@ Targeted HostClient tests: eight `merchant_mount_cost_tests.rs` tests passed at 
 
 `world.db` gets the Retail DB2 tables `mount`, `mount_capability`, `mount_type_x_capability` and `mount_x_display` (`scripts/db2.py`; run `python3 scripts/db2.py fetch && python3 scripts/db2.py import` to add them to an existing `world.db`). `MountStore` loads them at startup with the aura spell part of the PlayerConditions they name.
 
+### IoC Demolisher seats — implementation2026-10-15
+
+`vehicle/isle.rs` handles only source Demolisher34775 on map628. Its normal66245 control aura236 selects the first free authored Vehicle509 seat; driver seat5766 is not excluded by the passenger-mount non-control-seat rule. A server-only NPC occupancy component binds each rider to its exact control-aura instance. Existing VehiclePassenger carries the NPC's server identity and source seat; rider movement control and source VehicleSeat/M2 bind-pose placement follow the seat. Aura removal, exit and reconciliation release occupancy; player-owned mount boarding remains a separate unchanged request path.
+
+`isle_vehicle_models.sql` selects the authored display/VehicleId/M2 for the catalog. Source M2123367 exists locally; deploy asset closure still requires its own proof/update. Shared semantic epoch2 distinguishes NPC-driver identities from old mount-only consumers. Boarding GREEN, exit/death/copy/occupancy controls, client attachment, movement, vehicle action bar/fire and both-skin native proof remain pending. [IoC faction prerequisites](factions.md#isle-per-spawn-script-factions--implementation2026-10-15) retain source metadata, not fixture-only overrides.
+
 ### Mounting (SPELL_AURA_MOUNTED 78)
 
 `AuraEffect::HandleAuraMounted`: applying the aura inserts `Mounted { mount_display_id }` (a `MountXDisplay` of the spell's `Mount` row whose condition the rider meets, at random; `DISPLAYID_HIDDEN_MOUNT` 73200 for a self mount; else a model of the creature template in `EffectMiscValue_0`). The effect's amount stores the `MountCapability` the rider qualifies for (`Unit::GetMountCapability`, `MountTypeXCapability` in `OrderIndex` order: riding skill 762 rank ≥ `ReqRidingSkill`, GROUND flag out of water / UNDERWATER while swimming, `ReqMapID`, `ReqSpellAuraID`, `ReqSpellKnownID`, PlayerCondition aura spells). The rider then gets the capability's `ModSpellAuraID` aura. Removing the mount aura removes `Mounted` (Dismount interrupt flag 0x40 auras go too), every other mount aura and that speed aura.
