@@ -1,3 +1,7 @@
+## 2026-10-15 — Atomic housing destinations and retained cold failure
+
+[Destination boundary](investigations/server-tick-lag.md#housing-destination-transaction-boundary--2026-10-15): three reopened-redb relog REDs become GREEN by committing destination/map/admission together and merging pending FIFO snapshot outcomes. Four held-writer controls and repaired direct fixture pass; additional family tests, check/integration and release gameplay remain pending. [Cold repeatability](investigations/server-tick-lag.md#cold-release-repeatability-boundary--2026-10-15): startup55.8ms failure is not superseded by later same-artifact passing percentiles.
+
 ## 2026-10-15 — Housing layout/access FIFO native proof
 
 [Tick lag](investigations/server-tick-lag.md#housing-layout-and-access-fifo--2026-10-15): fresh queued layout/access mutations with immutable scale metadata, receipt-gated owner replies and current-map visitor publication after editor departure. Three real blocked-writer REDs become19/19 native controls; current check/release and broader writer/HOL/full-session goals remain open.

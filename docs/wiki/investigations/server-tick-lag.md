@@ -2,6 +2,22 @@
 
 The :5000 dev server ran its 20 Hz simulation at 55–70% of real time while players were online (2026-09-28/29). Cause: outer frames of the debug build took longer than the 50 ms tick, and under machine load they passed Bevy's 250 ms catch-up clamp, which discards the excess time ([[tick-loop-design]]). Frame cost was dominated by per-tick scans over all ~184 000 spawned creatures and by debug (opt-level 0) codegen of the server crate. Branch `ticklag` removes the scans; the debug build then holds 20 ticks/s with three clients at 15–29 ms per frame on a loaded machine, where the baseline reached 44–64 ms with up to 122 of 200 frames over budget per 10 s.
 
+## Housing destination transaction boundary — 2026-10-15
+
+Housing location requests now share the serial FIFO with layout, access, collection, purchase and dye writes. A location job owns its catalog/party snapshot and reads durable access at its FIFO position. `save_house_location` and `save_neighborhood_location` commit character coordinates, `CHARACTER_MAPS` and property admission in one transaction. A second location request cannot overtake an already pending admission. Successful receipts gate live transfer and owner reply; a departed/replaced session or changed source map is not teleported.
+
+The first queued implementation committed only admission. Three genuine REDs reopened redb and ran real `LoginMaps::resolve`: departure snapshots, changed-source snapshots and two requests from one source each left character map0 against neighborhood admission2735. The fix also captures the pending receipt when enqueueing a periodic/departing character snapshot, so that later FIFO snapshot merges the committed destination rather than restoring its pre-transfer position. A durable accepted transfer remains reloggable even if its original session leaves before live publication; no retry or compensating rollback is used.
+
+Proof: `housing-location-relog-race-red.log` has3 failures; `housing-atomic-location-green-faa0c68e.log` has73 passes/1 direct-fixture resource omission/3 ignored. The missing explicit transfer consumer resource was repaired; `housing-atomic-location-final-controls-9eee6893.log` has8/8 passes (three races, four blocked-writer location commands, cornerstone fixture). Additional house/leave/plot departure/relog tests are committed but pending execution. Runtime check and latest-master integration are pending. This is native persistence/lifecycle proof, not release gameplay coverage.
+
+Dye FIFO precedes this slice: real blocked-writer REDs253.674/251.602ms became22/22 controls atf91eee2d, preserving current previews on failure and treating already-applied colors as no-op without another item charge. The layout/access19-control proof remains separate. Evidence lives under `game-engine/data/diagnostics/server-tick-perf-2026-10-13/`; see [budget contract](../../specs/server-tick-budget.md).
+
+## Cold release repeatability boundary — 2026-10-15
+
+Matching frozen releasec7f889a9/protocolcac6080 capture054314 failed startup p9955.8ms; first-fixed grid registration70.002ms plus deferred application produced FixedPre119.456ms. Same-artifact capture054824 later reported startup18.1ms, cold-onlinep9941.2ms and steady9.3–10.7ms, with coldmax69.4ms. Both runs remain evidence: the later passing percentile does not erase the first failure or establish repeatability. The second run was a redundant recovery replay, not an independent source change. No further unchanged replay is justified by that pass.
+
+054824 had zero tick commits in every reported window,84 successful FIFO jobs and no failed/pending jobs; admission617.4ms. Memory fullavg60 stayed0–0.03%; IO fullavg10 peaked2.25%, recorded throughout rather than asserted causally irrelevant. Both captures are login-only and precede the new housing code. Native population wall times are diagnostic; state/wake/leave assertions remain, and `check-release-p99-proof.py` beside these artifacts enforces release startup/online p99<50ms plus zero tick commits. All-writer/full-gameplay/HOL acceptance remains open.
+
 ## Content
 
 ### Symptom

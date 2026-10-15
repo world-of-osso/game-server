@@ -1,5 +1,8 @@
 # Wiki Index
 
+- [Housing destination transaction boundary](investigations/server-tick-lag.md#housing-destination-transaction-boundary--2026-10-15) — atomic destination/map/admission, pending-snapshot merge and three real relog-race REDs→GREEN; additional family coverage/integration pending.
+- [Cold release repeatability boundary](investigations/server-tick-lag.md#cold-release-repeatability-boundary--2026-10-15) — retain startup55.8ms failure and later passing same-artifact capture separately; login-only, full gameplay/HOL open.
+
 - [Housing layout/access FIFO](investigations/server-tick-lag.md#housing-layout-and-access-fifo--2026-10-15) — three held-writer REDs→19 native controls, one-copy conservation and visitor publication after editor departure; check/format pass, release pending.
 
 - [Initial target population regression](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15) — real187770-NPC target RED292→GREEN16ms; authentic grid application RED324ms, sparse storage awaiting proof/release.
