@@ -278,7 +278,23 @@ fn pump(h: &mut Harness) -> (Vec<ToyResult>, Vec<ToyCollectionUpdate>) {
         }
         assert!(
             std::time::Instant::now() < deadline,
-            "toy FIFO did not complete"
+            "toy pump exceeded deadline: frames={frames}, pending={pending}, virtual_elapsed={:?}, max_delta={:?}, submitted={}, committed={}",
+            h.app.world().resource::<Time<Virtual>>().elapsed(),
+            h.app.world().resource::<Time<Virtual>>().max_delta(),
+            h.app
+                .world()
+                .resource::<GameDatabase>()
+                .writer
+                .metrics
+                .submitted
+                .load(std::sync::atomic::Ordering::Relaxed),
+            h.app
+                .world()
+                .resource::<GameDatabase>()
+                .writer
+                .metrics
+                .committed
+                .load(std::sync::atomic::Ordering::Relaxed),
         );
         if pending {
             std::thread::sleep(std::time::Duration::from_millis(1));
