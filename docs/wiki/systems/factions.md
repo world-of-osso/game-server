@@ -16,6 +16,12 @@ Every unit carries a Retail `FactionTemplate` ID in the replicated `UnitFactionT
 
 AzerothCore faction values are WotLK FactionTemplate IDs. Measured against Retail `faction_template` (2026-09-23): all 657 distinct `creature_template.faction` values resolve, so 0 of 29,947 templates and 0 of 149,678 spawns are unresolved. Existence is measured; that each Retail row still means the same thing as the Wrath row is not.
 
+## Isle per-spawn script factions — implementation2026-10-15
+
+TC a352b1fa `battleground_isle_of_conquest.cpp:568–571` overrides map628 creature factions only when `HasStringId` matches `bg_ioc_faction_1735` (Horde1735) or `bg_ioc_faction_1732` (Alliance1732). Existing `WorldData::spawn_string_ids` already joins promoted source GUIDs to TDB creature.StringId; `CreatureStringIds` retains that value. No new content column or import is required. `pvp_isle::creature_faction` now supplies this source rule during normal zone/grouped spawning; untagged and other-map creatures retain their template faction.
+
+A real20-player Workshop capture fixture reproduces neutral Demolisher35 instead of1732 (`isle-vehicle-source-faction-red1.log`, b352399a). A preceding processed spellclick66245/aura236 fixture independently reproduces missing driver boarding (`isle-vehicle-boarding-red3.log`, c330fc4e). Current faction implementation verification is pending; vehicle boarding/control/fire and native proof remain open. This is authored script behavior, not a fixture-only faction assignment.
+
 ## Reaction rules
 
 `FactionTemplates::reaction(a, b)` = how a unit with template `a` regards one with template `b`. These are the template checks of AzerothCore `Unit::GetFactionReactionTo`, in order:

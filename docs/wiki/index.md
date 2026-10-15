@@ -1,6 +1,8 @@
 # Wiki Index
 
-- [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — owned normal/huge lifecycle/disarm GREEN5, BG/NPC/arena controls checked; Modern native four-phase/return passes, Forever and render/framing/timing remain separate.
+- [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, verification and driver boarding pending.
+
+- [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — owned normal/huge lifecycle/disarm GREEN5, BG/NPC/arena controls checked; Modern83/Forever88 native four-phase/20-player return pass; render/framing/timing remain separate.
 - [Node-owned world-state expressions](systems/dungeon-achievements.md#node-owned-world-state-expressions) — exact1778/1779 OR; native12-match5253 threshold/grant/reopen, unconditional16513 and timed14944-disabled controls.
 
 - [Pet-level species qualifiers](systems/dungeon-achievements.md#pet-level-species-qualifiers) — native9070 XP/grant/reopen, compiler149 and182/0/1ignored filtered gate; qualified162 positive remains catalog-only.
