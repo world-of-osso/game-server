@@ -737,6 +737,23 @@ fn assert_normal_isle_bomb_lifecycle(disarm: bool) {
                     object: object.to_bits(),
                 });
             h.advance(1);
+            let errors: Vec<_> = h
+                .app
+                .world_mut()
+                .get_mut::<MessageReceiver<shared::protocol::InteractionFailed>>(user.connection)
+                .unwrap()
+                .receive()
+                .collect();
+            eprintln!(
+                "Disarm diagnostic user={:?} errors={errors:?} armed={} player_at={:?} bomb_at={:?}",
+                user.player,
+                h.app
+                    .world()
+                    .get::<crate::game_objects::seaforium_bombs::SeaforiumFuse>(object)
+                    .is_some(),
+                h.app.world().get::<Position>(user.player),
+                h.app.world().get::<Position>(object)
+            );
             if user.player == foreign.player {
                 assert_eq!(
                     objects_in(h, entered.copy, 195235).len(),
