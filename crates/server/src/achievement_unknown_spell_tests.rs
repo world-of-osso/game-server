@@ -61,6 +61,9 @@ fn achievements_criteria_unknown_spell_native_login_waits_for_real_spell_authori
     let db = redb::Database::open(file.path()).unwrap();
     let mut app = App::new();
     app.init_resource::<Time>();
+    // Match the existing mount fixture: run empty Startup, then install the real DB catalog.
+    app.update();
+    app.insert_resource(crate::mount_journal::load(&conn).unwrap());
     // Achievement registration comes first: plugin insertion order is not an initialization dependency.
     app.add_plugins((
         AchievementPlugin,
