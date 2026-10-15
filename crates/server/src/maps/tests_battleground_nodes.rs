@@ -360,6 +360,99 @@ fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
     assert_eq!(creatures_in(h, copy, 13359), 16, "flag-0 tower guards stay");
 }
 
+/// TC a352b1fa GameObject::Use goober Data10 spell (GameObject.cpp:2930-2932, 3563-3567):
+/// a captured Workshop's TDB group1227/1230 Seaforium Bombs195237 cast66265, which creates
+/// item46847 for the user in that battleground copy only.
+#[test]
+fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
+    let template = shared::battleground::isle_of_conquest();
+    let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
+        let db = &app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db;
+        let (owner, _) = crate::persistence::create_character(db, 1, "Bombowner", 1, 1).unwrap();
+        assert_eq!(
+            owner, 1,
+            "native inventory owner matches the first channel actor"
+        );
+        assert!(crate::persistence::inventory_store::load_inventory_record(db, owner).is_some());
+        let path = crate::test_data::world_db_path();
+        let source = rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let templates = crate::item_templates::load_runtime_item_templates(&path).unwrap();
+        assert!(crate::inventory::free_bag_cells(db, &templates, owner) > 0);
+        app.insert_resource(templates);
+        app.insert_resource(crate::merchant::load_vendor_catalog(&source).unwrap());
+        app.insert_resource(crate::quest_data::load_quest_db(&path).unwrap());
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        let data = crate::spell_cast::test_harness::world_db().unwrap();
+        app.insert_resource(crate::spell_info::SpellStore::fixture(
+            [21651, 66265]
+                .into_iter()
+                .map(|id| data.store.get(id).unwrap().clone())
+                .collect(),
+        ));
+    });
+    let actor = &entered.players[0];
+    use_second_frames(&mut entered.h);
+    // TDB groups1227/1230 expose195237 only after normal Workshop capture.
+    // Template195232 has no authored628 spawn in this source database.
+    let (banner, position) = objects_in(&mut entered.h, entered.copy, 195133)[0];
+    entered.h.walk_to(actor, position);
+    use_object(&mut entered.h, actor, banner);
+    entered.h.advance(8);
+    entered.h.advance(60);
+    let (pickup, position) = objects_in(&mut entered.h, entered.copy, 195237)[0];
+    entered.h.walk_to(actor, position);
+    let count = |h: &Harness| {
+        let db = &h
+            .app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db;
+        let character_id = h.app.world().get::<ClientId>(actor.player).unwrap().0;
+        crate::persistence::load_inventory(db, character_id)
+            .items
+            .iter()
+            .filter(|item| item.item_id == 46847)
+            .map(|item| item.stack_count)
+            .sum::<u32>()
+    };
+    assert_eq!(count(&entered.h), 0);
+    let foreign_copy = InMap {
+        map_id: entered.copy.map_id,
+        instance_id: entered.copy.instance_id + 1,
+    };
+    entered
+        .h
+        .app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(foreign_copy);
+    use_object(&mut entered.h, actor, pickup);
+    assert_eq!(
+        count(&entered.h),
+        0,
+        "another copy cannot pick up the source bomb"
+    );
+    entered
+        .h
+        .app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(entered.copy);
+    use_object(&mut entered.h, actor, pickup);
+    assert_eq!(
+        count(&entered.h),
+        1,
+        "normal authored goober use must create item46847"
+    );
+}
+
 /// Isle of Conquest (TC a352b1fa battleground_isle_of_conquest.cpp, TDB spawn groups
 /// 1201-1239): a normal Opening assaults the neutral Quarry, its contested banner captures
 /// one minute later with the Alliance miners, owned Quarry ticks one reinforcement per

@@ -576,14 +576,14 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
     let target = Connection::open(dir.path().join("world.db")).unwrap();
     target.execute_batch("CREATE TABLE arena_map(map_id INTEGER);
         CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER,state INTEGER);
-        CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER,ScriptName TEXT DEFAULT '');
+        CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER,Data10 INTEGER,Data23 INTEGER,ScriptName TEXT DEFAULT '');
         CREATE TABLE game_object_display_info (ID INTEGER PRIMARY KEY,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
     target
         .execute("INSERT INTO arena_map VALUES(?)", [map_id])
         .unwrap();
     let mut query = source.prepare("SELECT g.guid+20000000,g.id,g.map,g.position_x,g.position_y,g.position_z,g.orientation,g.spawnDifficulties,
         t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
-        g.spawntimesecs,t.Data3,t.Data5,t.Data6,g.state
+        g.spawntimesecs,t.Data3,t.Data5,t.Data6,g.state,t.Data10,t.Data23
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
         JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=? ORDER BY g.guid").unwrap();
     let mut rows = query.query([map_id]).unwrap();
@@ -593,7 +593,7 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
             continue;
         }
         let values: Vec<rusqlite::types::Value> =
-            (0..25).map(|index| row.get(index).unwrap()).collect();
+            (0..27).map(|index| row.get(index).unwrap()).collect();
         let mut spawn = values[..8].to_vec();
         spawn.push(values[20].clone());
         spawn.push(values[24].clone());
@@ -606,9 +606,10 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
         let mut template = vec![values[1].clone()];
         template.extend_from_slice(&values[8..14]);
         template.extend_from_slice(&values[21..24]);
+        template.extend_from_slice(&values[25..27]);
         target
             .execute(
-                "INSERT OR IGNORE INTO content_gameobject_template (entry,type,displayId,name,size,Data0,Data1,Data3,Data5,Data6) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO content_gameobject_template (entry,type,displayId,name,size,Data0,Data1,Data3,Data5,Data6,Data10,Data23) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&template),
             )
             .unwrap();
