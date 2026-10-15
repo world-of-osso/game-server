@@ -1,6 +1,6 @@
 ## 2026-10-15 — Companion writer failure classification
 
-[Companion storage errors](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15): malformed durable journal RED exposed writerfailed0 vs1 despite owner refusal. Storage errors now log/count through the writer; species caps remain ordinary refusals.7 controls pass; merged serialization-helper/current check pending. No recovery behavior added.
+[Companion storage errors](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15): malformed durable journal RED exposed writerfailed0 vs1 despite owner refusal. Storage errors now log/count through the writer; species caps remain ordinary refusals.After masterd5e59a07/protocolab40a18,9 companion/guild-note controls pass together; feature check passes46.55s without warnings, format/diff pass. No recovery behavior added.
 
 ## 2026-10-15 — Companion teaching-item FIFO
 
