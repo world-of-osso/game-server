@@ -6,7 +6,7 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5506 ordinary (3491 account/2015 character),1824 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5509 ordinary (3491 account/2018 character),1824 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -162,7 +162,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 71 | CompleteChallengeMode | 0/244 | 0/120 | 0 | Source progress gap: TC CriteriaHandler853 is an explicit unimplemented case through877; native Mythic216/map completion cannot establish71 count/reset semantics. |
 | 72 | CatchFishInFishingHole | 0/38 | 0/36 | 0 | Producer gap: no fishing pool/catch settlement (toy transmitted-object placeholders are not fishing). |
 | 73 | PlayerTriggerGameEvent | 243/817 | 76/598 | 167 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 74 | Login | 13/463 | 12/373 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 74 | Login | 17/463 | 15/373 | 2 | Native Login after complete class/profession/account-mount initialization; bounded SingleFalse104 requires known absence and every companion. Hidden repair tracking does not remove recipes; other conditional/unsupported rows stay disabled. |
 | 75 | LearnSpellFromSkillLine | 15/16 | 2/2 | 13 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 76 | WinDuel | 5/27 | 3/16 | 2 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 77 | LoseDuel | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |

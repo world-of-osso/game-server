@@ -41,7 +41,10 @@ impl Plugin for MountJournalPlugin {
         MountPersistencePlugin::install(app);
         app.init_resource::<PendingMountRequests>()
             .add_systems(Startup, load_catalog)
-            .add_systems(Update, update_mount_journal);
+            .add_systems(
+                Update,
+                update_mount_journal.in_set(crate::achievement::InitializeSpellKnowledge),
+            );
     }
 }
 

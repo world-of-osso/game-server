@@ -4,6 +4,8 @@ use crate::auth::{Authenticated, InWorld};
 use lightyear::connection::host::HostClient;
 use shared::components::{CharacterAppearance, Level, Npc};
 
+#[path = "messaging_mount_special_tests.rs"]
+mod mount_special;
 #[path = "messaging_targeted_emote_tests.rs"]
 mod targeted;
 

@@ -6,6 +6,41 @@ use crate::persistence::{
 };
 
 #[test]
+fn race_source_admin_dwarf_shaman_uses_authentic_kit_and_persists() {
+    let database = crate::persistence::GameDatabase {
+        db: temp_database(),
+    };
+    let (account, _) = register_account(&database.db, "raceclassdb2", "testpass").unwrap();
+    let owned = crate::player_create_info::OwnedKit::from_world_db().expect("native world data");
+    let response = crate::admin_handlers::handle_create_character(
+        &database,
+        &owned.kit(),
+        "raceclassdb2",
+        "Dwarfshaman",
+        3,
+        7,
+    );
+    let crate::admin_types::AdminResponse::CharacterCreated { character_id, .. } = response else {
+        panic!("source-valid Dwarf/Shaman admin creation failed: {response:?}");
+    };
+    let saved = load_character(&database.db, character_id).expect("saved Dwarf Shaman");
+    assert_eq!((saved.race, saved.class, saved.level), (3, 7, 1));
+    let location = owned.kit().starting_location(3, 7).unwrap();
+    assert_eq!(
+        (saved.x, saved.y, saved.z),
+        (location.x, location.y, location.z)
+    );
+    let inventory =
+        crate::persistence::inventory_store::load_inventory_record(&database.db, character_id)
+            .unwrap();
+    assert!(
+        !inventory.equipped.is_empty(),
+        "authentic source starting equipment"
+    );
+    assert_eq!(list_characters_for_account(&database.db, account).len(), 1);
+}
+
+#[test]
 fn register_and_login_by_token() {
     let db = temp_database();
     let (id1, token) = register_account(&db, "user1", "pass123").unwrap();
