@@ -81,6 +81,14 @@ fn persist_request(db: &redb::Database, character: u64, change: Change) -> Publi
                 .into(),
         };
     }
+    persist_authorized_change(db, guild, change)
+}
+
+fn persist_authorized_change(
+    db: &redb::Database,
+    guild: GuildMembership,
+    change: Change,
+) -> Publication {
     let message = match change {
         Change::Motd(text) => persist_text(
             db,
@@ -181,41 +189,51 @@ fn publish_error(world: &mut World, owner: Owner, guild: Option<GuildMembership>
 }
 
 fn publish_changed(world: &mut World, owner: Owner, guild_id: u32, message: String) {
-    let source_current = owns_session(world, owner);
-    let mut connections =
-        world.query_filtered::<(Entity, &InWorld, &PlayerLink), With<Authenticated>>();
-    let recipients: Vec<_> = connections
-        .iter(world)
-        .filter(|(connection, _, _)| *connection != owner.connection || source_current)
-        .map(|(connection, entered, _)| (connection, entered.character_id))
-        .collect();
-    // This query is constructed only for completed writes, never for idle frames.
-    let updates: Vec<_> = {
-        let db = Arc::clone(&world.resource::<GameDatabase>().db);
-        let mut state = bevy::ecs::system::SystemState::<OnlinePlayers>::new(world);
-        let online = state.get(world).expect("read guild online players");
-        recipients
-            .into_iter()
-            .filter_map(|(connection, character)| {
-                let guild = crate::persistence::load_character_guild(&db, character)?;
-                if guild.guild_id != guild_id {
-                    return None;
-                }
-                let snapshot = visible_guild_snapshot(&db, &guild, &online, character);
-                Some((
-                    connection,
-                    GuildStateUpdate {
-                        guild: Some(snapshot),
-                        message: Some(message.clone()),
-                        error: None,
-                    },
-                ))
-            })
-            .collect()
-    };
+    let recipients = find_current_recipients(world, owner);
+    let updates = load_visible_updates(world, guild_id, &message, recipients);
     for (connection, update) in updates {
         send_update(world, connection, update);
     }
+}
+
+fn find_current_recipients(world: &mut World, owner: Owner) -> Vec<(Entity, u64)> {
+    let source_current = owns_session(world, owner);
+    let mut connections =
+        world.query_filtered::<(Entity, &InWorld, &PlayerLink), With<Authenticated>>();
+    connections
+        .iter(world)
+        .filter(|(connection, _, _)| *connection != owner.connection || source_current)
+        .map(|(connection, entered, _)| (connection, entered.character_id))
+        .collect()
+}
+
+fn load_visible_updates(
+    world: &mut World,
+    guild_id: u32,
+    message: &str,
+    recipients: Vec<(Entity, u64)>,
+) -> Vec<(Entity, GuildStateUpdate)> {
+    let db = Arc::clone(&world.resource::<GameDatabase>().db);
+    let mut state = bevy::ecs::system::SystemState::<OnlinePlayers>::new(world);
+    let online = state.get(world).expect("read guild online players");
+    recipients
+        .into_iter()
+        .filter_map(|(connection, character)| {
+            let guild = crate::persistence::load_character_guild(&db, character)?;
+            if guild.guild_id != guild_id {
+                return None;
+            }
+            let snapshot = visible_guild_snapshot(&db, &guild, &online, character);
+            Some((
+                connection,
+                GuildStateUpdate {
+                    guild: Some(snapshot),
+                    message: Some(message.into()),
+                    error: None,
+                },
+            ))
+        })
+        .collect()
 }
 
 fn send_update(world: &mut World, connection: Entity, update: GuildStateUpdate) {

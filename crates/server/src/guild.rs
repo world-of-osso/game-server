@@ -244,16 +244,6 @@ fn process_set_officer_note_requests(world: &mut World) {
     }
 }
 
-fn send_not_in_guild_error(conn_entity: Entity, senders: &mut GuildSenders) {
-    send_guild_update(
-        conn_entity,
-        None,
-        None,
-        Some("not in a guild".into()),
-        senders,
-    );
-}
-
 fn update_officer_note(
     db: &redb::Database,
     guild: &GuildMembership,
