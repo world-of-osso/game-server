@@ -270,6 +270,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     71500,
     # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
     51113,
+    # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.
+    86916,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
