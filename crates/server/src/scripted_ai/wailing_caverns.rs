@@ -108,6 +108,7 @@ impl Disciple {
             }
             EVENT_SUMMON_MOCCASINS => {
                 ctx.summon_creature_group(MOCCASIN_GROUP);
+                // Source event17 (+15s) belongs to the unported later awakening.
             }
             _ => unreachable!("Disciple awakening event {event}"),
         }
