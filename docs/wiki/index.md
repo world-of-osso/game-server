@@ -2,10 +2,13 @@
 
 - [Winner's Podium placement](systems/toys.md#winners-podium-source-placement-2026-10-15) — source47 scaled player reach and138 actual ground; actual UseToy/template/20min simulation expiry, native proof pending.
 - [Source guardian level selection](systems/toys.md#source-guardian-level-selection-2026-10-15) — actual Scarab UseToy20/80, ContentTuning priority/deltas and pre-init clamp; thirteen final controls and private UDP20/30 replication pass; full stats/AI remain open.
+- [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
 
 - [Breakable CC targeting](investigations/follower-data.md#breakable-cc-targeting--2026-10-15) — shared follower hold/retarget/cast-stop and authored Attr6 implicit filtering; native118/31935 regressions, dungeon completion still open.
+- [Unknown-spell login guard](systems/dungeon-achievements.md#unknown-spell-login-guard) — bounded negative104 requires complete native spell sources and initialization before Login74; repair side effects remain separate.
+
 - [Typed area/zone alternatives](systems/dungeon-achievements.md#typed-areazone-alternatives) — complete root Some17/41 preserves distinct ancestry/zone semantics; actual selfie RED→GREEN and strict missing-zone controls, integrated8/8; full grants/travel unclaimed.
 
 - [Unearned-achievement cast guard](systems/dungeon-achievements.md#unearned-achievement-cast-guard) — complete SingleFalse87 on native CastSpell29; twenty real1217637 casts/account41707, self-guard/sibling/reopen/date and unknown/partial-account controls, final6/6; no gear acquisition/UI claim.
@@ -413,3 +416,4 @@ Debug logs and root cause analyses.
 - [Wailing wake-up and flight exit](systems/boss-scripts.md#wailing-wake-up-and-flight-exit--2026-10-15) — source21–27 controlled RED/GREEN, real distinct flight endpoints/retirement and ordinary5s Owl cast; lead gate pending.
 
 - [Wailing Normal wave projection](systems/boss-scripts.md#wailing-normal-wave-projection--2026-10-15) — copy-only source Normal rows; two process-boundary tests pass, no canonical/balance claim.
+- [Feral Spirit owner contribution](systems/spell-casting.md#feral-spirit-owner-contribution--2026-10-15) — source-backed owner AP and weapon terms; intrinsic AP named gap; native live-owner RED→GREEN and24 scoped controls pass.

@@ -27,8 +27,10 @@ pub(crate) struct AccountMounts(pub mount_store::AccountMounts);
 pub struct MountJournalPlugin;
 impl Plugin for MountJournalPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_catalog)
-            .add_systems(Update, update_mount_journal);
+        app.add_systems(Startup, load_catalog).add_systems(
+            Update,
+            update_mount_journal.in_set(crate::achievement::InitializeSpellKnowledge),
+        );
     }
 }
 

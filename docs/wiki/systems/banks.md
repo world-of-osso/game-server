@@ -51,7 +51,7 @@ Tests and externally visible contract: [banks spec](../../specs/banks.md). Warba
 `save_guild_ranks` commits the rank list and materialized member positions together;
 `ChangedGuilds` refreshes open vaults after edits. `guilds` layout 3 uses pinned TC
 `a352b1fa` right values. Layout-2 compact flags translate bit by bit, preserving
-mixed officer masks; layouts 0/1 keep their original default grants. Startup writes
+mixed officer masks; layouts 0/1 keep their original default grants. Each `load_guild` restores the Guild Master's modeled social mask, matching pinned TC LoadFromDB, so newly modeled rights also appear on already-layout3 guilds. Other ranks and authoritative bank booleans/allowances are unchanged. The public-note bit exposed a startup/reopen regression in the existing migration test; updated code/reopen proof is tracked by the [rank contract](../../specs/guild-ranks.md). Startup writes
 rows and the version together once, preserving bank state and member positions. Chat gates speaker and listener
 before recording recipients in history. Social permission checks include the persisted
 guild ID, not only a cached component; hidden tab settings stay stored independently

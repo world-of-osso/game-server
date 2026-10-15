@@ -4,7 +4,7 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 
 ## What it must do
 
-- [x] Accept local CharBaseInfo race/class gates: Monk on all 29 authored non-Dracthyr races, Demon Hunter on Night Elf/Blood Elf/Void Elf, Evoker on Alliance/Horde Dracthyr; reject unsupported pairs without persisting a character.
+- [ ] Follow the [installed race/class eligibility contract](race-class-eligibility.md), replacing the copied Retail matrix while retaining source rejection and separately authored Forever gates. Existing class/start-level controls remain required.
 - [x] Persist starting levels as Player::GetStartLevel (Player.cpp:24384-24398): 1, or 10 for an IsAlliedRace race (ChrRaces.Flags 0x80000) or Dracthyr; a Death Knight at least 8 (a Pandaren one 10); a Demon Hunter at least 8: ordinary-race Monk 1, Night Elf/Blood Elf DH 8, allied-race classes (Haranir Alliance included) 10, Dracthyr 10, Death Knight 8.
 - [x] Load class skill lines, authored specializations and level/spec learnable spells; deliver known-spell and action-bar snapshots and level-up deltas through existing progression.
 - [x] Tiger Palm and Blackout Kick deal damage and use authored Energy/Chi costs; Windwalker Tiger Palm gains the Chi amount from its passive spell modifier.
@@ -48,4 +48,3 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 - Starting zones: user delayed them. Temporary race starts and faction capitals omit class intro quests/gear; retire when class starting zones (Mardum, Forbidden Reach) are implemented.
 - Powers/runes, Essence regeneration, spec/form pool selection and resource replication: powers agent owns them.
 - Engine UI, class art and DH/Dracthyr customization: separate engine slice.
-- Other classes on newly cataloged Kul Tiran/Earthen/Haranir races: only Monk is enabled by this class-scoped slice; their existing Northshire placeholder placement is retained until race starts are authored.
