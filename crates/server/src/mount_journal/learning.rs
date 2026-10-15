@@ -139,17 +139,21 @@ fn publish_learning_result(
             // Ownership belongs to every current account character, even if the learner left.
             broadcast_account(world, request.account);
         }
-        Err(error) if current_session => {
-            if let Some(mut sender) =
-                world.get_mut::<MessageSender<InventoryError>>(request.connection)
-            {
-                sender.send::<InventoryChannel>(error);
-            }
+        Err(error) => send_learning_error(world, &request, error),
+    }
+}
+
+fn send_learning_error(world: &mut World, request: &LearningRequest, error: InventoryError) {
+    if owns_learning_session(world, request) {
+        if let Some(mut sender) = world.get_mut::<MessageSender<InventoryError>>(request.connection)
+        {
+            sender.send::<InventoryChannel>(error);
         }
-        Err(error) => debug!(
+    } else {
+        debug!(
             account = request.account,
             ?error,
             "Mount learning requester left before error publication"
-        ),
+        );
     }
 }
