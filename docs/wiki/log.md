@@ -1,3 +1,7 @@
+## 2026-10-14 — Unearned-achievement cast guard
+
+[Bounded SingleFalse87](systems/dungeon-achievements.md#unearned-achievement-cast-guard) on CastSpell29 uses existing scoped earned state and requires authored metadata. Native/catalog2c612821 GREEN2/2(40.04s), compiler40/40/generated5737; actual twenty1217637 casts grant account41707 then stop, preserving dates/counters across DB/auth reopen and account boundaries. Census5495ordinary/1824statistics adds only41707; no general negation or gear acquisition/encounter/UI certificate.
+
 ## 2026-10-14 — Full native pet-family grants
 
 [Twenty real battles](systems/dungeon-achievements.md#full-family-earned-level-proof) at33782a95 pass1/1(37.10s), proving all0–9 families at10/25, actual6609/6610 grants only after every family, original dates, real Repair/persistent injuries, consumed targets, DB reopen/auth login and account43 isolation. No HP/XP/progress/earned-ID overrides after baseline. Source state161 guard stays intact; optional unsupported Extra Plating was not used. Predicate/census unchanged; acquisition/world population/rendered UI unclaimed.
