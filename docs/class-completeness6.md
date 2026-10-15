@@ -2,6 +2,12 @@
 
 Verified: 2026-10-12. [Contract](specs/class-completeness.md), [prior batches](class-completeness2.md), [implementation](wiki/systems/spell-casting.md#level80-class-completeness).
 
+## cw162 scripted-AI player stat initialization — in progress
+
+Lead gatecw162 finds four required native-dodge reads on scripted-AI fixture players without `CharacterStats`. Current d9caeb0e `cw162-scripted-native-red` reproduces all four panics (exit101/19.777s). TC a352b1fa `Unit.cpp2755–2756` reads a player's existing `ActivePlayerData.DodgePercentage`; no missing-player-stat fallback exists there. Runtime registers `StatsPlugin` (`main.rs284`) and character entry supplies Level/UnitStats/CombatRatings/DerivedStats (`auth_character.rs571–575`). Stockade fixture omitted that producer and all four inputs, supplying only UnitLevel.
+
+Fixture now installs the real StatsPlugin/native class catalog and initializes the same empty native stat inputs. The first ordinary update derives the level30 Human's CharacterStats and health; no fabricated dodge value or runtime bypass. Wipe/re-pull restores the computed maximum instead of writing above it. GREEN/scripted_ai/check/fmt pending; independent class acceptance remains open.
+
 ## Signed attacker enemy-dodge modifier — native slice, 2026-10-14
 
 Pinned TC a352b1fa `Unit.cpp2775–2785` adds the attacker's aura251 total before expertise subtraction and final max0. Native namespace is `SPELL_AURA_MOD_ENEMY_DODGE=251` (`SpellAuraDefines.h338`);248 remains a different selector-based modifier. Consumer is bounded to the existing live-player melee-dodge path and preserves its direction/control/attribute/ranged gates. No NPC dodge baseline or full251/ability promotion.
