@@ -122,15 +122,14 @@ pub(crate) struct PathMovement {
     started: bool,
     deactivated: bool,
     finalized: bool,
+    active_goal: Option<crate::navigation::Goal>,
     wait_ms: i32,
     spline: Option<Spline>,
 }
 
 impl PathMovement {
     /// An active chase/home generator preempts this default-slot waypoint.
-    /// Returns whether it was current, so the new owner initializes with diff0.
-    pub(crate) fn deactivate(&mut self) -> bool {
-        let was_current = !self.deactivated;
+    fn deactivate(&mut self) {
         if let Some(spline) = self.spline.take() {
             if self.path.exact_spline() {
                 // Exact controls correspond one-for-one with authored nodes.
@@ -139,7 +138,15 @@ impl PathMovement {
             self.started = false;
         }
         self.deactivated = true;
-        was_current
+    }
+
+    /// Initialize a new active-slot identity exactly once, regardless of which
+    /// system first deactivated the lower default generator.
+    pub(crate) fn preempt_for(&mut self, goal: crate::navigation::Goal) -> bool {
+        self.deactivate();
+        let initializing = self.active_goal != Some(goal);
+        self.active_goal = Some(goal);
+        initializing
     }
 
     /// WaypointMovementGenerator::DoReset: stop the old spline, then relaunch
@@ -149,6 +156,7 @@ impl PathMovement {
             return false;
         }
         self.deactivated = false;
+        self.active_goal = None;
         if self.wait_ms <= 0 {
             self.wait_ms = MINIMAL_DURATION_MS;
         }
@@ -181,6 +189,7 @@ pub(crate) fn move_path(world: &mut World, unit: Entity, path_id: u32) -> bool {
         started: false,
         deactivated: false,
         finalized: false,
+        active_goal: None,
         wait_ms: INITIALIZE_WAIT_MS,
         spline: None,
     });
