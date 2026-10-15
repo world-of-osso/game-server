@@ -2,6 +2,12 @@
 
 Verified: 2026-10-12. [Contract](specs/class-completeness.md), [prior batches](class-completeness2.md), [implementation](wiki/systems/spell-casting.md#level80-class-completeness).
 
+## Bear crit fixture production-chain trace — 2026-10-15
+
+Published70391 authentication matches2,038 imported fields: the old fixture uses class1 Warrior and applies5487e2, which is armor142/+220, not crit187. A deterministic pre-swing assertion reproduces actual protection0 versus required−6. Player protection comes from Guardian104 `SpecializationSpells3490` → learned passive137010 → e28/187−6, without a stance restriction.292569 is not justified by the checked player skill/spec/form/trigger grants; applying it directly would not prove the player path. TC a352b1fa `Player::LearnSpecializationSpells` and learned-passive handling, not a new Bear-specific exception, define this route.
+
+The replacement fixture uses native class/spec data, persisted Guardian selection, actual `ClassProgressionPlugin` initialization and passive synchronization, then casts5487 before enabling creature auto-attacks. Positive damage and all-noncrit assertions remain unchanged. Real-path GREEN and final checks are pending; no gameplay fix, all-Druid immunity, full Guardian or loadout acceptance is claimed.
+
 ## NPC physical-spell dodge — native slice in progress, 2026-10-15
 
 TC a352b1fa `Unit.cpp2647–2717/2750–2785` supplies ordinary NPC dodge3%, victim aura49 and1.5% per positive effective-level difference. NPCs can dodge rear melee spells; player rear restrictions, controlled/casting states, ranged exclusion, native attributes and spell-masked ignore-combat-result guards remain. Existing signed attacker251 and nonplayer expertise240 apply afterward, before final nonnegative clamp. Specialized Totem/Lightwell summons, player expertise/248, parry and whole hit-table acceptance remain unsupported/unproved.
