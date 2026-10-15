@@ -101,19 +101,21 @@ fn publish_writes(world: &mut World) {
                 previous_members,
             }) => {
                 world.resource_mut::<ChangedGuilds>().0.push(guild);
-                publish_current_members(world, &previous_members);
+                publish_current_members(world, owner, &previous_members);
             }
             Err(error) => send_storage_error(world, owner, error),
         }
     }
 }
 
-fn publish_current_members(world: &mut World, previous_members: &BTreeSet<u64>) {
+fn publish_current_members(world: &mut World, owner: Owner, previous_members: &BTreeSet<u64>) {
+    let source_current = owns_session(world, owner);
     let mut connections =
         world.query_filtered::<(Entity, &InWorld, &PlayerLink), With<Authenticated>>();
     let recipients: Vec<_> = connections
         .iter(world)
         .filter(|(_, entered, _)| previous_members.contains(&entered.character_id))
+        .filter(|(connection, _, _)| *connection != owner.connection || source_current)
         .map(|(connection, entered, link)| (connection, entered.character_id, link.0))
         .collect();
     for (connection, character, player) in recipients {
