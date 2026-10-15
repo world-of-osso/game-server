@@ -18,7 +18,7 @@ Durable receipt: `/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/ep
 
 ## Unknown-spell login guard
 
-TC a352b1fa CriteriaHandler1728–1730 negates SingleFalse;2282–2285 tests the reference player's HasSpell. Native Login74 admits only complete plain SingleFalse104, encoded internally as -104 without changing raw DB2 kinds. Actual hidden repair-tracking roots13166/13167/13169 test absent profession spells264211/264616/264628. Recipe-removal side effects are not implemented by this tracking slice.
+TC a352b1fa CriteriaHandler1728–1730 negates SingleFalse;2282–2285 tests the reference player's HasSpell. Native Login74 admits only complete plain SingleFalse104, encoded internally as -104 without changing raw DB2 kinds. Actual hidden repair-tracking roots13166/13167/13169 test absent profession spells264211/264616/264628. Recipe-removal side effects are not implemented by this tracking slice. Generated5763 predicates (+4): the fourth27504 has positive87 companion8667 and is outside current achievement roots. Census5509 ordinary (3491 account/2018 character),1824 statistics,104 types adds only these three character roots; all source contents remain unchanged.
 
 ReferencePlayer retains positive membership over the class/profession/account-mount union. Its separate completeness flag requires KnownSpells, PlayerProfessions, AccountMounts and MountCatalog, including every owned mount's catalog row; missing authority is not absence. The native initialization set orders class deferred commands and mount loading before the once-only initial achievement snapshot. [Contract](../../specs/dungeon-achievements.md).
 
