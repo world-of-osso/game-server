@@ -88,7 +88,8 @@ fn toyfx32_flute_learn_use_summons_source_snakes_at_one_destination_and_expires(
         first_position.z - origin.z,
     )
     .length();
-    assert!((destination_distance - 2.0).abs() < 0.001);
+    // TC CalcRadius randomizes target86 within its authored2yd disk, not a ring.
+    assert!(destination_distance <= 2.0 + 0.001);
     for (actor, expires_at) in &actors {
         let actor_display = world.get::<ModelDisplay>(*actor).unwrap().display_id;
         assert!([3126, 4440, 35803, 36580].contains(&actor_display));
