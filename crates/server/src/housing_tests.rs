@@ -35,6 +35,7 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
     let mut world = World::new();
     world.insert_resource(GameDatabase::new(db));
     world.init_resource::<persistence_actor::PendingHousingWrites>();
+    world.init_resource::<transfers::PendingTransfers>();
     world.insert_resource(manager);
     world.insert_resource(maps);
     world.insert_resource(HousingAvailability(Ok(catalog.clone())));
@@ -99,11 +100,15 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
     assert!(!world.resource::<crate::gold::GoldUpdateQueue>().is_empty());
     let house_id = snapshot.owned_houses[0].house_id;
     world.entity_mut(player).remove::<InMap>();
-    assert!(
-        execute(&mut world, actor, &HousingCommand::EnterHouse { house_id })
-            .unwrap_err()
-            .contains("entering the world")
-    );
+    assert!(transfers::enqueue_request(
+        &mut world,
+        actor,
+        &HousingRequest {
+            request_id: 2,
+            command: HousingCommand::EnterHouse { house_id },
+        }
+    ));
+    assert!(!transfers::pending(&world));
     assert!(world.get::<crate::maps::MapTransfer>(player).is_none());
     world.entity_mut(player).insert(InMap::continent(0));
     assert!(persistence_actor::enqueue_purchase(&mut world, actor, 417, 1).is_err());
@@ -118,6 +123,7 @@ fn finish_housing_writes(world: &mut World) {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
     while persistence_pending(world) {
         persistence_actor::publish_writes(world);
+        transfers::publish_transfers(world);
         assert!(
             std::time::Instant::now() < deadline,
             "housing write receipt did not complete"

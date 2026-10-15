@@ -47,11 +47,7 @@ pub(super) fn enqueue_request(world: &mut World, actor: Actor, request: &Housing
     true
 }
 
-fn enqueue_transfer(
-    world: &mut World,
-    actor: Actor,
-    request: &HousingRequest,
-) -> Result<(), String> {
+fn read_available_transfer_source(world: &World, actor: Actor) -> Result<InMap, String> {
     if world
         .resource::<GameDatabase>()
         .housing_transfers
@@ -61,10 +57,18 @@ fn enqueue_transfer(
     {
         return Err("Finish the current housing transfer first.".into());
     }
-    let source_map = world
+    world
         .get::<InMap>(actor.player)
         .copied()
-        .ok_or("Finish the current map transfer first.")?;
+        .ok_or_else(|| "Finish the current map transfer first.".into())
+}
+
+fn enqueue_transfer(
+    world: &mut World,
+    actor: Actor,
+    request: &HousingRequest,
+) -> Result<(), String> {
+    let source_map = read_available_transfer_source(world, actor)?;
     let source = catalog(world)?.clone();
     let context = actor_context(world, actor)?;
     let party = world
@@ -78,22 +82,29 @@ fn enqueue_transfer(
         .enqueue("housing location", move |db| {
             persist_transfer(db, context, &command, &source, &party)
         });
+    register_pending_transfer(
+        world,
+        PendingTransfer {
+            actor,
+            source_map,
+            request_id: request.request_id,
+            receipt,
+        },
+    );
+    Ok(())
+}
+
+fn register_pending_transfer(world: &mut World, pending: PendingTransfer) {
     world
         .resource::<GameDatabase>()
         .housing_transfers
         .lock()
         .expect("pending housing transfers")
-        .insert(actor.character, receipt.clone());
+        .insert(pending.actor.character, pending.receipt.clone());
     world
         .resource_mut::<PendingTransfers>()
         .0
-        .push_back(PendingTransfer {
-            actor,
-            source_map,
-            request_id: request.request_id,
-            receipt,
-        });
-    Ok(())
+        .push_back(pending);
 }
 
 fn persist_transfer(
@@ -181,7 +192,7 @@ fn drain_completed(world: &mut World) -> Vec<(PendingTransfer, Result<Transfer, 
     completed
 }
 
-fn publish_transfers(world: &mut World) {
+pub(super) fn publish_transfers(world: &mut World) {
     for (job, result) in drain_completed(world) {
         world
             .resource::<GameDatabase>()
