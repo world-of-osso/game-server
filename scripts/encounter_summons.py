@@ -6,6 +6,8 @@ Normal1 and DB2 summon1264098. Golden Serpent: pinned Spit Gold removal summons
 TDB135406 and the Serpentine Seal summons Shadow of Zul137020; each gets its actual
 base0 row, models and template addon; no new difficulty row is fabricated.
 Adarogg: server-side Inferno Charge119297 summons TDB61409 (base0 + Normal1).
+Wailing ritual: source groups2/3 select5762/5763; project only their actual Normal1
+rows, retaining existing base templates/models and all population/credit.
 """
 import argparse
 import sqlite3
@@ -101,9 +103,31 @@ def import_demonic_leap_template(connection):
     return DEMONIC_LEAP
 
 
+def import_wailing_ritual_difficulties(connection):
+    """TC a352b1fa Disciple groups2/3: only authored Normal wave stats."""
+    groups = connection.execute('''SELECT groupId,entry,count(*) FROM tdb_creature_summon_groups
+        WHERE summonerId=3678 AND summonerType=0 AND groupId IN (2,3)
+        GROUP BY groupId,entry ORDER BY groupId,entry''').fetchall()
+    if groups != [(2,5762,3),(3,5763,7)]:
+        raise ValueError('Wailing ritual wave identity changed')
+    entries = [5762,5763]
+    source = connection.execute('''SELECT d.Entry FROM tdb_creature_template_difficulty d
+        JOIN content_tuning_level l ON l.ID=d.ContentTuningID
+        WHERE d.Entry IN (5762,5763) AND d.DifficultyID=1 ORDER BY d.Entry''').fetchall()
+    if source != [(entry,) for entry in entries]:
+        raise ValueError('Missing authored Wailing Normal wave difficulty or content tuning')
+    templates = connection.execute('''SELECT entry FROM content_creature_template
+        WHERE entry IN (5762,5763) ORDER BY entry''').fetchall()
+    if templates != [(entry,) for entry in entries]:
+        raise ValueError('Missing runtime Wailing wave base template')
+    for entry in entries:
+        project_difficulty(connection, entry, 1)
+    return entries
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
@@ -117,9 +141,11 @@ def main():
                 entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
             elif args.encounter == 'adarogg':
                 entries = [import_demonic_leap_template(conn)]
+            elif args.encounter == 'wailing-ritual':
+                entries = import_wailing_ritual_difficulties(conn)
             else:
                 entries = [import_mirror_template(conn)]
-    print(f'Imported sourced encounter summon templates/models:{entries}; no placement inserted')
+    print(f'Prepared sourced encounter summon entries:{entries}; no placement inserted')
 
 
 if __name__ == '__main__':
