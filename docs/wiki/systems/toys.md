@@ -279,6 +279,10 @@ Wild/default E28 rolls source CalcValue variance before int32 truncation and min
 
 Flute98552 is the concrete zero-primary-radius case; native6122 proves nonzero primary scatter. Guardian/ally count and Scarab2301 are not implemented by this wild-only slice. [Source, behavioral evidence and pending native scope](../../toy-effects14-coverage.md#xantishs-flute--wild-variable-count-slice-2026-10-14); [contract](../../specs/toys.md).
 
+### Source forward destination
+
+TC a352b1fa `SpellInfo.cpp` maps78 to DEST_DEST_FRONT; `Spell.cpp::SelectImplicitDestDestTargets` moves the prior destination by this slot's CalcRadius and direction. The bounded18/78 route shares destination-offset calculation with existing18/79 backward placement. Spirit of Bashiok173895 authors18/78, primary radius0 and secondary radius8=5yd. AttributesEx4=0x00800000 does not set USE_FACING_FROM_SPELL0x80000000, so its authored facing pi is ignored. No destination fallback, other directional selector, or terrain/collision implementation is added. Authentic86916/display60051 and60s actor lifecycle remain separate from destination selection; see [contract](../../specs/toys.md).
+
 ### Initial random destination radius (2026-10-14)
 
 Pinned TC `SpellInfo.cpp`822–825 randomizes `CalcRadius.Max` for targets72/74/86 as `(Max-Min)*sqrt(rand_norm())`; `Spell.cpp` destination callers only consume that result. The implemented72/86 selectors previously randomized direction alone, placing Flute and class summons on rings. They now sample radius too, preserving target91's fixed-distance/random-direction contract. When TargetB lacks its own radius entry, `CalcRadius` inherits both TargetA's entry and target identity; inheriting only the numbers would spuriously randomize an18/86 combination. This is not secondary `GetRandomPoint` scatter: that separate function adds Min, while `CalcRadius` does not. Concrete native Flute142917 and class1276452/123904 destination regressions cover disk interior/area, nonzero-Min span, and target91 isolation. Unsupported74 remains unsupported; broader radius modifiers are not added here.

@@ -60,8 +60,8 @@ enum Selector {
     CasterRandom,
     ///86/91: random direction;86 samples the radius span,91 keeps the radius.
     DestRandom,
-    /// Destination moved backward by this target slot's DB2 radius (79).
-    DestBack,
+    /// Destination moved forward (78) or backward (79) by this slot's DB2 radius.
+    DestOffset(f32),
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
     ForwardLeap,
     /// Area center = explicit target (DEST_TARGET_*).
@@ -116,7 +116,8 @@ fn selector(id: u32) -> Option<Selector> {
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
         87 | 138 | 148 => Selector::ExistingDest,
-        79 => Selector::DestBack,
+        78 => Selector::DestOffset(0.0),
+        79 => Selector::DestOffset(std::f32::consts::PI),
         72 => Selector::CasterRandom,
         86 | 91 => Selector::DestRandom,
         55 => Selector::ForwardLeap,
@@ -151,9 +152,9 @@ pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
             && (effect.effect == super::disenchant::EFFECT_DISENCHANT
                 || super::open_lock::is_item_effect(effect));
         let gathering_target = id == 23 && effect.effect == 33;
-        let unsupported_back =
-            id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
-        unsupported_back || (selector(id).is_none() && !item_target && !gathering_target)
+        let unsupported_offset =
+            matches!(id, 78 | 79) && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
+        unsupported_offset || (selector(id).is_none() && !item_target && !gathering_target)
     })
 }
 
@@ -433,9 +434,13 @@ pub fn select_targets(
                 let origin = center.unwrap_or(caster_pos);
                 center = Some(random_destination(origin, effect, slot));
             }
-            Selector::DestBack => {
+            Selector::DestOffset(angle) => {
                 center = center.map(|point| {
-                    offset_destination_back(point, orientation(world, caster), radius(effect, slot))
+                    offset_destination(
+                        point,
+                        orientation(world, caster) + angle,
+                        radius(effect, slot),
+                    )
                 });
             }
             Selector::ChannelTarget => {
@@ -977,10 +982,9 @@ fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
 }
 
-/// TC SelectImplicitDestDestTargets: TARGET_DEST_DEST_BACK uses the destination's
-/// facing +pi and this slot's CalcRadius. Gnoll/Market/Expedition Tent uses2yd.
-fn offset_destination_back(point: Vec3, facing: f32, distance: f32) -> Vec3 {
-    let angle = facing + std::f32::consts::PI;
+/// TC SelectImplicitDestDestTargets: destination facing plus the selector's
+/// direction, moved by this slot's CalcRadius. Terrain/collision is not modelled.
+fn offset_destination(point: Vec3, angle: f32, distance: f32) -> Vec3 {
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
 }
 
@@ -1021,8 +1025,12 @@ pub fn effect_dest(
             Selector::DestRandom => {
                 dest.map(|dest: Dest| random_destination(dest.position, effect, slot))
             }
-            Selector::DestBack => dest.map(|dest: Dest| {
-                offset_destination_back(dest.position, dest.orientation, radius(effect, slot))
+            Selector::DestOffset(angle) => dest.map(|dest: Dest| {
+                offset_destination(
+                    dest.position,
+                    dest.orientation + angle,
+                    radius(effect, slot),
+                )
             }),
             Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
             Selector::DestTargetBack => {
