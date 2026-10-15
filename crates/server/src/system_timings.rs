@@ -80,8 +80,11 @@ struct PhaseMeasurement {
 #[derive(Default)]
 struct MainPhases(Vec<PhaseMeasurement>);
 
+#[derive(Default)]
 struct SystemTimingLayer {
     totals: Totals,
+    // Bevy system spans explicitly have no parent; ancestry loses enclosing schedules.
+    active_schedules: Mutex<HashMap<std::thread::ThreadId, Vec<Id>>>,
 }
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
@@ -106,9 +109,18 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
         let Some(span) = ctx.span(id) else { return };
         let mut ext = span.extensions_mut();
-        if ext.get_mut::<TimedScope>().is_some() {
-            ext.replace(Entered(Instant::now()));
+        let Some(scope) = ext.get::<TimedScope>() else {
+            return;
+        };
+        if scope.kind == ScopeKind::Schedule {
+            self.active_schedules
+                .lock()
+                .expect("active schedules lock")
+                .entry(std::thread::current().id())
+                .or_default()
+                .push(id.clone());
         }
+        ext.replace(Entered(Instant::now()));
     }
 
     fn on_exit(&self, id: &Id, ctx: Context<'_, S>) {
@@ -120,7 +132,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
         let (kind, name, elapsed) = (scope.kind, scope.name.clone(), entered.0.elapsed());
         drop(ext);
         if kind == ScopeKind::Preparation {
-            record_preparation(&ctx, id, &name);
+            self.record_preparation(&ctx, &name);
             return;
         }
         if kind == ScopeKind::System {
@@ -128,15 +140,17 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
         } else if name == "Main" {
             report_main_phases(&ctx, id, elapsed);
         } else {
-            record_main_phase(
+            self.record_main_phase(
                 &ctx,
-                id,
                 PhaseMeasurement {
                     phase: name.clone(),
                     preparation: false,
                     work_ms: elapsed.as_secs_f64() * 1000.0,
                 },
             );
+        }
+        if kind == ScopeKind::Schedule {
+            self.pop_schedule(id);
         }
         if elapsed > SYSTEM_STALL_BUDGET {
             log_scope_stall(kind, &name, elapsed);
@@ -155,65 +169,80 @@ fn log_scope_stall(kind: ScopeKind, name: &str, elapsed: Duration) {
     }
 }
 
-fn measure_schedule_preparation<S: Subscriber + for<'a> LookupSpan<'a>>(
-    ctx: &Context<'_, S>,
-    id: &Id,
-    name: &str,
-) -> Option<(Id, Duration)> {
-    let span = ctx.span(id)?;
-    span.scope().find_map(|span| {
-        let ext = span.extensions();
-        let scope = ext.get::<TimedScope>()?;
-        if scope.kind != ScopeKind::Schedule || scope.name != name {
-            return None;
+impl SystemTimingLayer {
+    fn pop_schedule(&self, id: &Id) {
+        let mut active = self.active_schedules.lock().expect("active schedules lock");
+        let thread = std::thread::current().id();
+        let stack = active.get_mut(&thread).expect("entered schedule stack");
+        assert_eq!(stack.pop().as_ref(), Some(id), "schedule exit order");
+        if stack.is_empty() {
+            active.remove(&thread);
         }
-        let entered = ext.get::<Entered>()?;
-        Some((span.id(), entered.0.elapsed()))
-    })
-}
-
-fn record_preparation<S: Subscriber + for<'a> LookupSpan<'a>>(
-    ctx: &Context<'_, S>,
-    id: &Id,
-    name: &str,
-) {
-    let Some((schedule, elapsed)) = measure_schedule_preparation(ctx, id, name) else {
-        bevy::log::warn!(
-            schedule = name,
-            "Schedule preparation lacks an active schedule timer"
-        );
-        return;
-    };
-    record_main_phase(
-        ctx,
-        &schedule,
-        PhaseMeasurement {
-            phase: name.to_owned(),
-            preparation: true,
-            work_ms: elapsed.as_secs_f64() * 1000.0,
-        },
-    );
-    if elapsed > SYSTEM_STALL_BUDGET {
-        log_scope_stall(ScopeKind::Preparation, name, elapsed);
     }
-}
 
-fn record_main_phase<S: Subscriber + for<'a> LookupSpan<'a>>(
-    ctx: &Context<'_, S>,
-    id: &Id,
-    measurement: PhaseMeasurement,
-) {
-    let Some(span) = ctx.span(id) else { return };
-    let root = span
-        .scope()
-        .from_root()
-        .find(|ancestor| ancestor.extensions().get::<MainPhases>().is_some());
-    if let Some(root) = root {
-        root.extensions_mut()
-            .get_mut::<MainPhases>()
-            .expect("enclosing Main phase collector")
-            .0
-            .push(measurement);
+    fn active_schedule_ids(&self) -> Vec<Id> {
+        self.active_schedules
+            .lock()
+            .expect("active schedules lock")
+            .get(&std::thread::current().id())
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    fn measure_preparation<S: Subscriber + for<'a> LookupSpan<'a>>(
+        &self,
+        ctx: &Context<'_, S>,
+        name: &str,
+    ) -> Option<Duration> {
+        self.active_schedule_ids().iter().rev().find_map(|id| {
+            let span = ctx.span(id)?;
+            let ext = span.extensions();
+            let scope = ext.get::<TimedScope>()?;
+            if scope.name != name {
+                return None;
+            }
+            Some(ext.get::<Entered>()?.0.elapsed())
+        })
+    }
+
+    fn record_preparation<S: Subscriber + for<'a> LookupSpan<'a>>(
+        &self,
+        ctx: &Context<'_, S>,
+        name: &str,
+    ) {
+        let Some(elapsed) = self.measure_preparation(ctx, name) else {
+            bevy::log::warn!(
+                schedule = name,
+                "Schedule preparation lacks an active schedule timer"
+            );
+            return;
+        };
+        self.record_main_phase(
+            ctx,
+            PhaseMeasurement {
+                phase: name.to_owned(),
+                preparation: true,
+                work_ms: elapsed.as_secs_f64() * 1000.0,
+            },
+        );
+        if elapsed > SYSTEM_STALL_BUDGET {
+            log_scope_stall(ScopeKind::Preparation, name, elapsed);
+        }
+    }
+
+    fn record_main_phase<S: Subscriber + for<'a> LookupSpan<'a>>(
+        &self,
+        ctx: &Context<'_, S>,
+        measurement: PhaseMeasurement,
+    ) {
+        for id in self.active_schedule_ids() {
+            let Some(span) = ctx.span(&id) else { continue };
+            let mut ext = span.extensions_mut();
+            if let Some(phases) = ext.get_mut::<MainPhases>() {
+                phases.0.push(measurement);
+                return;
+            }
+        }
     }
 }
 
@@ -258,7 +287,10 @@ pub fn system_timing_layer(app: &mut App) -> Option<BoxedLayer> {
     })
     .add_systems(Last, report_system_timings)
     .add_observer(report_schedule_prepared);
-    Some(Box::new(SystemTimingLayer { totals }))
+    Some(Box::new(SystemTimingLayer {
+        totals,
+        ..Default::default()
+    }))
 }
 
 #[cfg(test)]
@@ -296,9 +328,7 @@ mod tests {
         let bytes = Arc::new(Mutex::new(Vec::new()));
         let writer = CapturedLog(Arc::clone(&bytes));
         let subscriber = bevy::log::tracing_subscriber::registry()
-            .with(SystemTimingLayer {
-                totals: Totals::default(),
-            })
+            .with(SystemTimingLayer::default())
             .with(
                 bevy::log::tracing_subscriber::fmt::layer()
                     .with_ansi(false)
@@ -373,9 +403,7 @@ mod tests {
         let bytes = Arc::new(Mutex::new(Vec::new()));
         let writer = CapturedLog(Arc::clone(&bytes));
         let subscriber = bevy::log::tracing_subscriber::registry()
-            .with(SystemTimingLayer {
-                totals: Totals::default(),
-            })
+            .with(SystemTimingLayer::default())
             .with(
                 bevy::log::tracing_subscriber::fmt::layer()
                     .with_ansi(false)
@@ -389,6 +417,7 @@ mod tests {
                     std::thread::sleep(Duration::from_millis(60));
                 });
             });
+            app.update();
             app.update();
         });
         let output = String::from_utf8(bytes.lock().unwrap().clone()).unwrap();
@@ -410,6 +439,11 @@ mod tests {
             .find(|phase| phase["phase"] == "Update" && phase["preparation"] == false)
             .unwrap_or_else(|| panic!("missing measured Update execution/deferred work: {output}"));
         assert!(update["work_ms"].as_f64().unwrap() >= 50.0);
+        assert_eq!(
+            output.matches("Main schedule breakdown").count(),
+            2,
+            "each update must retain its own phase measurements: {output}"
+        );
     }
 }
 
