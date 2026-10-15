@@ -142,9 +142,24 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         node = modifiers[child]
         if children[child]:
             ids = some_difficulties(child, modifiers, children, legacy)
-            if ids is None:
+            if ids is not None:
+                allowed = ids if allowed is None else allowed & ids
+                continue
+            if criteria_type != 165 or int(node['Operator']) != ALL:
                 return None
-            allowed = ids if allowed is None else allowed & ids
+            # TC All1733–1737: every nested conjunction must hold in full.
+            nested = tree_conditions(child, modifiers, children, legacy, criteria_type)
+            if nested is None:
+                return None
+            difficulty, nested_facts = nested
+            facts.extend(nested_facts)
+            if difficulty is not None:
+                positive, values = difficulty
+                if positive:
+                    ids = frozenset(values)
+                    allowed = ids if allowed is None else allowed & ids
+                else:
+                    excluded |= frozenset(values)
             continue
         kind, operator = int(node['Type']), int(node['Operator'])
         if not plain(node):
