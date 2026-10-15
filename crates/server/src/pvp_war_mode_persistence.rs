@@ -20,7 +20,7 @@ struct PendingToggle {
 }
 
 #[derive(Resource, Default)]
-pub(super) struct PendingWarModeWrites(VecDeque<PendingToggle>);
+pub(in crate::pvp) struct PendingWarModeWrites(VecDeque<PendingToggle>);
 
 pub(crate) fn install(app: &mut App) {
     app.init_resource::<PendingWarModeWrites>()
