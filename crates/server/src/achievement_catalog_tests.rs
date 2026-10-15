@@ -1,6 +1,103 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_pet_level_species_requires_authored_species_and_exact_event_level() {
+    let mut catalog = catalog();
+    for (species, level, qualifies) in [
+        (1426, 25, true),
+        (1426, 24, false),
+        (39, 25, false),
+        (0, 25, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::BattlePetReachedLevel { species, level },
+            None,
+            1,
+            &PlayerConditions::default(),
+        );
+        assert_eq!(state.criteria_progress.get(&25123), qualifies.then_some(&1));
+    }
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::ActivelyEarnedPetLevel {
+            species: 1974,
+            level: 25,
+        },
+        None,
+        1,
+        &PlayerConditions::default(),
+    );
+    assert_eq!(state.criteria_progress.get(&34667), Some(&1));
+    assert_eq!(
+        state.criteria_progress.get(&34921),
+        None,
+        "type162 cannot impersonate160"
+    );
+    catalog.pet_species.remove(&1426);
+    catalog.pet_species.remove(&1974);
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    load_criteria(&conn, &mut catalog).unwrap();
+    assert!(
+        catalog
+            .snapshot(&PlayerAchievementState::default(), 1)
+            .progress
+            .iter()
+            .all(|progress| progress.achievement_id != 9070),
+        "missing authored species must remove9070 from the supported catalog"
+    );
+}
+
+#[test]
+fn achievements_criteria_earned_prerequisite_requires_known_id_and_scoped_player_awards() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE achievement (ID INTEGER PRIMARY KEY);")
+        .unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(87, 10460)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    conn.execute("INSERT INTO achievement VALUES (10460)", [])
+        .unwrap();
+    let facts = load_criteria_facts(&conn, &[(87, 10460)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    let catalog = catalog();
+    for (own, qualifies) in [(BTreeSet::new(), false), (BTreeSet::from([10460]), true)] {
+        let state = PlayerAchievementState {
+            earned_ids: own,
+            account: Some(Box::new(PlayerAchievementState {
+                earned_ids: BTreeSet::from([10460, 291]),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        let player = ReferencePlayer {
+            earned_achievements: catalog.iter_earned_achievement_ids(&state).collect(),
+            ..Default::default()
+        };
+        assert!(player.earned_achievements.contains(&291));
+        assert_eq!(
+            facts[0].holds(&player, CriteriaEvent::KillPlayer, &BTreeMap::new()),
+            qualifies,
+            "account-wide291 is known, but only this character can supply10460"
+        );
+    }
+    assert!(!facts[0].holds(
+        &ReferencePlayer::default(),
+        CriteriaEvent::KillPlayer,
+        &BTreeMap::new()
+    ));
+}
+
+#[test]
 fn achievements_criteria_pet_team_threshold_rejects_unknown_and_preserves_other_qualifiers() {
     let catalog = catalog();
     for (minimum, qualifies) in [(None, false), (Some(24), false), (Some(25), true)] {
@@ -713,10 +810,13 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5481 + BB King4436/4437 behind actual hit-NPC entry4.
-    // Structural union, not playable-content or proprietary rating-system proof.
-    assert_eq!(union.len(), 5483);
-    for achievement in [141, 291, 1699, 3559, 3579, 4436, 4437, 63640] {
+    // Installed70391: 5490 + Overstuffed9070 behind actual earned pet species91.
+    // Structural union, not prerequisite acquisition or complete-content proof.
+    assert_eq!(union.len(), 5491);
+    for achievement in [
+        141, 291, 1699, 3559, 3579, 4436, 4437, 9070, 11154, 11298, 11419, 11665, 11666, 11667,
+        11668, 63640,
+    ] {
         assert!(union.contains(&achievement));
     }
     for achievement in [
