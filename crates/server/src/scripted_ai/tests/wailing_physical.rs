@@ -309,6 +309,12 @@ fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
     let (mut h, prerequisite, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
     h.hit_pct(prerequisite, 1_000.0);
     h.advance(0.05);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(prerequisite)
+            .is_some()
+    );
     h.app
         .insert_resource(crate::navigation::Navigation::new(&root));
     let conn =
@@ -361,6 +367,16 @@ fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
             path_id: 367802,
         },
     );
+    let heard_chamber = |h: &Harness, copy| {
+        h.inbox(copy)
+            .chat
+            .iter()
+            .any(|message| message.content.contains("Beyond this corridor"))
+    };
+    const BEFORE_ONE_SECOND: f32 = 0.8;
+    const CROSS_ONE_SECOND: f32 = 0.3;
+    const BEFORE_FIVE_MORE_SECONDS: f32 = 4.5;
+    const CROSS_FIVE_MORE_SECONDS: f32 = 0.6;
     // Exercise the actual out-of-combat clock predicate with controlled state;
     // no claim that this is a naturally engaged encounter.
     h.app
@@ -368,39 +384,20 @@ fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
         .entity_mut(disciple)
         .insert(CombatStatus(true));
     dispatch(h.app.world_mut(), disciple, Hook::UpdateAi(10_000));
-    assert!(
-        !h.inbox(0)
-            .chat
-            .iter()
-            .any(|m| m.content.contains("Beyond this corridor"))
-    );
+    assert!(!heard_chamber(&h, 0));
     h.app
         .world_mut()
         .entity_mut(disciple)
         .insert(CombatStatus(false));
-    h.advance(0.8);
+    h.advance(BEFORE_ONE_SECOND);
+    assert!(!heard_chamber(&h, 0));
+    h.advance(CROSS_ONE_SECOND);
     assert!(
-        !h.inbox(0)
-            .chat
-            .iter()
-            .any(|m| m.content.contains("Beyond this corridor"))
-    );
-    h.advance(0.3);
-    assert!(
-        h.inbox(0)
-            .chat
-            .iter()
-            .any(|m| m.content.contains("Beyond this corridor")),
+        heard_chamber(&h, 0),
         "source progress12 speech after one out-of-combat second"
     );
-    assert!(
-        !h.inbox(1)
-            .chat
-            .iter()
-            .any(|m| m.content.contains("Beyond this corridor")),
-        "speech stays in its copy"
-    );
-    h.advance(4.5);
+    assert!(!heard_chamber(&h, 1), "speech stays in its copy");
+    h.advance(BEFORE_FIVE_MORE_SECONDS);
     assert!(
         h.wow_position(disciple).distance(start) <= GROUND_TOLERANCE,
         "source five-second delay before progress13 movement"
@@ -410,6 +407,14 @@ fn encounter_coverage_wailing_chamber_speech_then_walks_to_naralex() {
             .world()
             .get::<crate::scripted_ai::waypoint_path::PathMovement>(disciple)
             .is_none()
+    );
+    h.advance(CROSS_FIVE_MORE_SECONDS);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::scripted_ai::waypoint_path::PathMovement>(disciple)
+            .is_some(),
+        "source progress13 launches by five seconds after chamber speech"
     );
     let mut previous = start;
     let mut walked = 0.0;
