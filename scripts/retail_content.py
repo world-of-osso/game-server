@@ -268,6 +268,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     # Xan'tish's Flute: preserve all four weighted native Snake display choices.
     # Source wild/default count is separate from template publication.
     71500,
+    # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
+    51113,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
