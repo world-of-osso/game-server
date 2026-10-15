@@ -29,6 +29,41 @@
 ## 2026-10-14 — Ordinary NPC weapon-spell blocks
 
 [Native block consumers](systems/player-damage.md#native-player-criticalblock-hit-state) preserve authenticated NO_BLOCK16, distinct from NO_XP64, and native30%/critical60% damage. Genuine flag RED→GREEN15 controls includes Ice Tomb36980/Gorilla1511 plus retained player11;45 adjacent controls/check/fmt also pass. Independent acceptance remains pending. Source Totem/Lightwell spawning and full cumulative probability order stay explicit gaps.
+## 2026-10-15 — Minion ownership flag composition
+
+[Source ownership](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14): native minion/player-owner rule replaces category-only player-control flags; companion immunity augments rather than overwrites ownership. Combat-pet designation, counts and captured privacy remain separate.
+
+## 2026-10-14 — Spawn-group guardian count
+
+[Scarab2301 source boundary](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14): preserve flag-directed default-title guardian routing and source count/scatter without inventing attacks or a pet frame; native visuals and other count routes remain open.
+
+## 2026-10-14 — Initial random summon destination
+
+[CalcRadius boundary](systems/toys.md#initial-random-destination-radius-2026-10-14): native72/86 require random radius as well as direction; preserve91 and separate secondary scatter. Flute follow and broader radius modifiers remain open.
+
+## 2026-10-13 — Startup-owned generated Toy casting data
+
+[Runtime data](../toy-runtime-data.md): removed production area/facing JSON from server source; current canonical export build is mandatory producer input. Generator4/4, loader3/3 and four private process cases verify missing-file refusal and two builds without binary rebuild. Historical69-area and single-radius test fixtures stay test-only. DB2 apply/deploy commands coordinated through lead-inbox-db2.md; canonical data remains lead-owned.
+
+## 2026-10-13 — Clean-master coin dispatch recheck
+
+[Coin ordering](../toy-effects14-coverage.md#coin-dispatch-regression-recheck-2026-10-13): reproduced missing emote on c732ab79, traced targetless dispatch to3ca41770, confirmed existing709082c0 fix after master merge (90839e14,1/1PASS). No duplicate runtime fix or native/transport completion claim.
+
+## 2026-10-13 — Prismatic Bauble source and native gaps
+
+[Coverage](../toy-effects14-coverage.md#prismatic-bauble--source-admission-native-gaps-open-2026-10-13): exact20s/current120s admission, real-source ribbon parser failure/fix, stationary Modern state proof and explicit Forever delivery/native-rendering gaps.
+
+## 2026-10-13 — Source Toy facing
+
+[Coverage](../toy-effects14-coverage.md#source-toy-facing--bounded-gate-2026-10-13): explicit unit180° arc, strict exact3D target-radius exemption and completion refusal before item recovery. Bounded gate and native proof status remain claim-specific.
+
+## 2026-10-13 — Source Toy area-group lifecycle
+
+[Coverage](../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13): real-area guards, source ancestry, cast completion and interrupted owned-aura removal; category preservation and both native skins. Whole1166 goal remains open.
+
+## 2026-10-13 — Current PvP faction and War Banners
+
+[Coverage](../toy-effects14-coverage.md#current-pvp-faction-and-war-banners-2026-10-13): source team scalar, actual BG/arena entry/return and refusal, UDP-only field changes,54 visual contexts and four native physical-combat runs. Whole1166 scope remains open; no independent-review PASS.
 ## 2026-10-14 — Native node-ownership expression credit
 
 [Node67](systems/dungeon-achievements.md#node-owned-world-state-expressions) preserves exact8656/5717 bytecode and accepted native ledger authority. RED4f69590f and GREENc0a6f87f prove real capture/win14943 credit; twelve genuine matches earn5253 at ten wins, preserve award dates/reopened counters, reject two-base wins while unconditional16513 credits, and leave timed14944 disabled. Four targeted native/catalog/regression tests pass; compiler37/37 and decoder3/3. Census5492 adds only5253; generic expressions, honor and acquisition/UI remain excluded.
@@ -1235,6 +1270,11 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 [Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.
 
+- 2026-10-13: [Pendant](systems/toys.md#blazing-diamond-pendant-2026-10-13) exact source admission and both-skin natural expiry; restored coin-script precedence before generic targetless missile dispatch.
+
+- 2026-10-13: [Fountain of Knowledge](systems/toys.md#fountain-of-knowledge-2026-10-13) exact admission, authenticated ordinary model and both-skin natural removal; census expectations now retain source-backed Pendant/Fountain while preserving control refusals.
+
+- 2026-10-13: [Accursed Tome](systems/toys.md#accursed-tome-of-the-sargerei-2026-10-13) exact source admission and both-skin natural model removal; fresh-account learning delivers, while earlier profile ownership-update timeouts remain unexplained.
 ## 2026-10-13 — Native follower class level and routed follow
 
 [Profile/navigation proof](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13): eleven actual labelled basic-role casts/resource publications; Cobra Shot193455 missile-resolution Level panic RED→11GREEN. Real Stockade follow crossed wall at tick19 and lost moving-state progress4.8527yd; native route/progress fix GREEN3. Strict follower missing-bake standing, ordinary behavior retained. Private Ruby12LOS+12NAV/authored zero-gap geometry package staged; advanced AI and new whole-route live proof open.
@@ -1247,12 +1287,14 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-13: Batch49 bounded Charred controls/check/fmt pass;3 native memberships promote. [Proof ledger](../class-completeness6.md#native-charred-warblades--batch49); broader goal open.
 
+- 2026-10-13 — [Group-private runtime](systems/toys.md#source-group-private-runtime-2026-10-13): captured group identity, dynamic membership interest and inherited privacy; behavioral/capture gates tracked separately.
 - 2026-10-13: native aura7 fleeing — pinned timing/distance, Detour collision/routes, player control ownership and14 current controls; all-source TDB model geometry producer, lead-only canonical publication pending. See [batch53](../class-completeness6.md#native-fear-navmesh-fleeing--batch53).
 
 - 2026-10-13: five native Druid BeforeCast form transformers and Berserk AfterCast reset;14 current controls, actual census post-cast form telemetry, no generic dummy certification. See [batch52](../class-completeness6.md#native-druid-beforecast-transformers--batch52).
 
 - 2026-10-13: native Druid/Fear master integration85 controls pass,17 actual unshifted BeforeCast receipts and current check/fmt; canonical model-info98,609 rows verified equal to source-prepared slot. Full class census/rendered acceptance remains open.
 
+- 2026-10-13 — [Signed summon titles](systems/toys.md#signed-summon-title-source-boundary-2026-10-13): current source3001/-1 exposed unsigned loader failure; preserve TC int32 without aborting unrelated toys.
 - 2026-10-13: native168 source creature-type damage and shared type admission;17 scoped controls plus genuine spell/auto REDs, canonical59-row metadata equality, no tracking44/whole-class certification. See [batch54](../class-completeness6.md#native-creature-type-damage--batch54).
 
 - 2026-10-14: Document pinned Warrior per-effect stun dispatch and conditional Storm Bolts selector; native RED3 retained, GREEN pending. Installed70391 slot data follows published canonical snapshot.
@@ -1274,6 +1316,9 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 
 - 2026-10-14: TargetHealth46 final integrated acceptance at30a6e515:175/0/1ignored +site-export1/1; server/engine checks and three-repo fmt pass, census5480/1821. Native authentic bandage item-level context and finite-maximum rejection retain pre-effect inclusive semantics.
 
+## 2026-10-14 — Wild summon count boundary
+
+[Wild counts](systems/toys.md#wild-variable-count-summons-2026-10-14): Flute count RED1→source-variable count, native6122 primary scatter RED→GREEN. Retail follow description remains an explicit gap; no stationary/full-Flute certificate. Body/CASС bytes and current NPC DB2 input provenance remain separate from cached metadata.
 - 2026-10-14: C++ ground waypoint generation ports pinned TC smooth-surface controls and collision normalization; real Wailing node2 RED retained, GREEN pending. Generic navigation/exact/flying unchanged.
 
 - 2026-10-14: Smooth-source gate05062d71 passes15/15,49 Wailing nodes collision-clear/node2 RED-GREEN, actual Ragefire+Golden controls and strict rejection preserved; check/format/independent artifact verification PASS. Full escort remains RED in unchanged generic movement after path1 arrival.
