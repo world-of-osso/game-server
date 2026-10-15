@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Housing layout/access FIFO](investigations/server-tick-lag.md#housing-layout-and-access-fifo--2026-10-15) — three held-writer REDs→19 native controls, one-copy conservation and visitor publication after editor departure; current check/release pending.
+- [Housing layout/access FIFO](investigations/server-tick-lag.md#housing-layout-and-access-fifo--2026-10-15) — three held-writer REDs→19 native controls, one-copy conservation and visitor publication after editor departure; check/format pass, release pending.
 
 - [Initial target population regression](investigations/server-tick-lag.md#initial-target-population-regression--2026-10-15) — real187770-NPC target RED292→GREEN16ms; authentic grid application RED324ms, sparse storage awaiting proof/release.
 
