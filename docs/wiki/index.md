@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates, real Dwarf/Shaman creation regression; runtime gates pending.
+
 - [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
 - [Ordinary NPC physical-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native49 front/rear RED→GREEN, source tuning and separate health buffer; exact chance3/3/9/7.5 component proof, not sampled attack distribution/full NPC loadouts.
 
