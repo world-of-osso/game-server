@@ -312,6 +312,15 @@ fn tank_recovers_a_party_attackers_threat_with_real_hand_of_reckoning() {
     kit.taunt_spell = 62124;
     kit.melee = true;
     let tank = spawn_follower(&mut h, kit);
+    // This tests successful threat recovery; native taunt misses have a
+    // separate forced-miss control in profile_behavior_tests.
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::auras::AuraStatMods {
+            melee_hit_chance_pct: 100.0,
+            ..default()
+        });
     let enemy = h.npc;
     h.app.world_mut().entity_mut(enemy).insert((
         shared::components::ThreatTable::default(),
@@ -329,7 +338,10 @@ fn tank_recovers_a_party_attackers_threat_with_real_hand_of_reckoning() {
             .get::<crate::networking::CombatTarget>(enemy)
             .unwrap()
             .0,
-        Some(tank)
+        Some(tank),
+        "attacker {enemy:?} must switch from owner {:?} to tank {tank:?}; combat {:?}",
+        h.caster,
+        h.inbox.log
     );
     assert!(
         h.app
