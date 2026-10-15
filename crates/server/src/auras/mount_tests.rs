@@ -93,6 +93,20 @@ fn players_entering_the_world_carry_flight_style_steady() {
 }
 
 #[test]
+fn mount_special_identity_comes_from_the_authoritative_mount_aura() {
+    let mut h = rider(225, true, &[]).expect("authentic Golden Gryphon test catalog");
+    mount(&mut h);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let mounted = h.app.world().get::<Mounted>(h.caster).unwrap();
+    let wire = serde_json::to_value(mounted).unwrap();
+    assert_eq!(
+        wire.get("mount_id").and_then(serde_json::Value::as_u64),
+        Some(129)
+    );
+    assert_eq!(mounted.mount_display_id, GOLDEN_GRYPHON_DISPLAY);
+}
+
+#[test]
 fn expert_riding_mounts_the_golden_gryphon_with_standard_steady_flight() {
     let Some(mut h) = rider(225, true, &[]) else {
         return;
