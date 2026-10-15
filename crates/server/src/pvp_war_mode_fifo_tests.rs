@@ -62,6 +62,7 @@ fn city_harness() -> (Harness, u64) {
         crate::maps::InMap::continent(0),
         persistence::ClientId(character),
         PlayerPvpState::default(),
+        CombatStatus(false),
     ));
     h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = 1;
     h.app.world_mut().entity_mut(h.connection).insert((
@@ -74,6 +75,7 @@ fn city_harness() -> (Harness, u64) {
         MessageSender::<PvpStateUpdate>::default(),
         MessageReceiver::<PvpStateUpdate>::default(),
     ));
+    h.app.init_resource::<crate::world_data::WorldData>();
     Plugin::build(&crate::rest::RestPlugin, &mut h.app);
     h.advance(2);
     assert!(
