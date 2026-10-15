@@ -1,3 +1,7 @@
+## 2026-10-15 — Source Toy forward destination
+
+[Bashiok destination](systems/toys.md#source-forward-destination): bounded18/78 forward displacement shares existing79 offset calculation; native secondary radius and caster facing, without collision or visual certification.
+
 ## 2026-10-15 — Minion ownership flag composition
 
 [Source ownership](systems/toys.md#spawn-group-guardian-count-boundary-2026-10-14): native minion/player-owner rule replaces category-only player-control flags; companion immunity augments rather than overwrites ownership. Combat-pet designation, counts and captured privacy remain separate.
