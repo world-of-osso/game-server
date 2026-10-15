@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Cold population and FIFO catalog snapshots](investigations/server-tick-lag.md#cold-population-and-request-catalog-snapshots--2026-10-14) — dormant aura wake and owned catalog snapshot diagnostics; mount item FIFO/native proof, new release acceptance still open.
+
 - [Pressure-controlled login and FIFO reputation](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14) — login-only release zero tick commits/p99 proof; fresh durable NPC-kill reputation and gated owner replies, full gameplay remains open.
 - [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
 
