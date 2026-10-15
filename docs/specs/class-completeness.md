@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] Existing live player DodgePercentage feeds melee weapon-spell hit resolution before block on the same cumulative native roll. Native Evasion5277 self-cast must prevent frontal melee damage; behind-player attacks, controlled/casting states, NoAttackDodge/NoActiveDefense and ranged attacks retain source exclusions. Removal/expiry restore the live value. NPC dodge, attacker expertise/248/251 modifiers and complete hit probabilities remain distinct unproved boundaries.
+
 - [ ] Implemented weapon-spell miss, ranged deflection and block chances share one native integer roll0..9999 with cumulative probabilities truncated to hundredths of a percent. NativeNoAttackMiss/NoActiveDefense and existing target guards retain their ordering. Magic hit behavior remains separate. Missing dodge/parry, mechanic resistance and player baseline hit statistics remain explicit gaps; this bounded table does not certify the full source hit system.
 
 - [ ] Native weapon-spell blocks on ordinary NPCs use authenticated template `flags_extra` (NO_BLOCK16, distinct from NO_XP64), 3% plus victim aura51 and 1.5% per positive effective level difference. They stop native30% damage, or60% on a critical block, before shields. Shared facing/control/attribute exclusions remain intact. Missing template authority fails explicitly. Totem identity requires the source summon runtime, never creature type or title alone; unsupported Totem/Lightwell spawning and full cumulative hit-table ordering remain separate gaps.
