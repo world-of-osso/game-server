@@ -870,12 +870,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5490 + Overstuffed9070 behind actual earned pet species91.
+    // Installed70391: 5491 + FullCoverage5253 behind actual node-world-state67.
     // Structural union, not prerequisite acquisition or complete-content proof.
-    assert_eq!(union.len(), 5491);
+    assert_eq!(union.len(), 5492);
     for achievement in [
-        141, 291, 1699, 3559, 3579, 4436, 4437, 9070, 11154, 11298, 11419, 11665, 11666, 11667,
-        11668, 63640,
+        141, 291, 1699, 3559, 3579, 4436, 4437, 5253, 9070, 11154, 11298, 11419, 11665, 11666,
+        11667, 11668, 63640,
     ] {
         assert!(union.contains(&achievement));
     }
