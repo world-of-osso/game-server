@@ -1,6 +1,6 @@
 ## 2026-10-15 — Source guardian level selection
 
-[Guardian51](systems/toys.md#source-guardian-level-selection-2026-10-15): actual UseToy owner80 Scarabs RED80→GREEN30, owner20 retained20; template/map/destination-area tuning and difficulty delta precede guardian initialization, explicit UseCreatureLevel. Thirteen scoped controls pass at77ef8c6f, including retained class/count/follow/expiry/startup fixtures. Private wire, merged checks and complete guardian-stat/AI parity remain separate.
+[Guardian51](systems/toys.md#source-guardian-level-selection-2026-10-15): actual UseToy owner80 Scarabs RED80→GREEN30, owner20 retained20; template/map/destination-area tuning and difficulty delta precede guardian initialization, explicit UseCreatureLevel. Thirteen final controls pass at0e2c24e8, including retained class/count/follow/expiry/startup fixtures. Merged check/format/build gates pass; fresh private UDP bag-learning/UseToy receives29/26 own Scarabs at20/30 for owners20/80. Exact binary/source ledger linked from the system page. Complete guardian-stat/AI parity remains open.
 
 ## 2026-10-15 — Follower passive-derived stat recomputation
 
