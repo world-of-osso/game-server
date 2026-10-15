@@ -142,3 +142,69 @@ fn achievements_criteria_unknown_spell_native_login_waits_for_real_spell_authori
         );
     }
 }
+
+#[test]
+fn achievements_criteria_unknown_spell_rejects_each_incomplete_authority() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    for missing in [
+        "none",
+        "class",
+        "professions",
+        "mounts",
+        "mount_catalog",
+        "mount_entry",
+    ] {
+        let mut world = World::new();
+        world.insert_resource(crate::mount_journal::load(&conn).unwrap());
+        let player = world
+            .spawn((
+                Player {
+                    name: "Authority".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                Level(10),
+                InMap::continent(0),
+                KnownSpells::fixture(vec![]),
+                PlayerProfessions::default(),
+                AccountMounts::default(),
+            ))
+            .id();
+        match missing {
+            "class" => {
+                world.entity_mut(player).remove::<KnownSpells>();
+            }
+            "professions" => {
+                world.entity_mut(player).remove::<PlayerProfessions>();
+            }
+            "mounts" => {
+                world.entity_mut(player).remove::<AccountMounts>();
+            }
+            "mount_catalog" => {
+                world.remove_resource::<crate::mount_journal::MountCatalog>();
+            }
+            "mount_entry" => {
+                world
+                    .entity_mut(player)
+                    .get_mut::<AccountMounts>()
+                    .unwrap()
+                    .0
+                    .insert(u32::MAX, Default::default());
+            }
+            "none" => {}
+            _ => unreachable!(),
+        }
+        let conditions = event_conditions(&world, player, &[CriteriaEvent::Login]);
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(&mut state, CriteriaEvent::Login, None, 1, &conditions);
+        for (_, criterion, _) in REPAIRS {
+            assert_eq!(
+                state.criteria_progress.get(&criterion),
+                (missing == "none").then_some(&1),
+                "authority boundary {missing}/{criterion}"
+            );
+        }
+    }
+}
