@@ -188,6 +188,17 @@ fn assert_selection_fifo(case: SelectionCase) {
     };
     let replies = await_selection(&mut h, case, expected, fence);
     assert_eq!(prior.result(), Some(Ok(())));
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .metrics
+            .failed
+            .load(std::sync::atomic::Ordering::Relaxed),
+        0,
+        "invalid gameplay selections must not count as persistence failures"
+    );
     let durable = persistence::load_pvp(&h.app.world().resource::<GameDatabase>().db, character);
     assert_eq!(durable.honor, 777);
     assert_eq!(durable.pvp_talents[&70][&1], expected);

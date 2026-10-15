@@ -166,13 +166,19 @@ fn publish_result(
     if !owns_session(world, owner) {
         return;
     }
-    let progress = match result {
-        Ok(progress) => progress,
-        Err(error) => {
-            send_state(world, owner.connection, owner.player, Some(error));
-            return;
-        }
-    };
+    match result {
+        Ok(progress) => publish_committed(world, owner, change, progress, mode),
+        Err(error) => send_state(world, owner.connection, owner.player, Some(error)),
+    }
+}
+
+fn publish_committed(
+    world: &mut World,
+    owner: Owner,
+    change: Change,
+    progress: PlayerPvpProgress,
+    mode: Option<WarModeSnapshot>,
+) {
     {
         let Some(mut state) = world.get_mut::<PlayerPvpState>(owner.player) else {
             return;
