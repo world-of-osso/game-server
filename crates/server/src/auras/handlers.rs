@@ -129,6 +129,8 @@ pub const IGNORE_HIT_DIRECTION: u32 = 288;
 pub const MOD_BLOCK_PERCENT: u32 = 51;
 pub const MOD_HIT_CHANCE: u32 = 54;
 pub const MOUNTED: u32 = 78;
+/// Caster-owned vehicle boarding aura; runtime support is vehicle-context-specific.
+pub const CONTROL_VEHICLE: u32 = 236;
 pub const TRANSFORM: u32 = 56;
 pub const SCHOOL_IMMUNITY: u32 = 39;
 pub const PROC_TRIGGER_SPELL: u32 = 42;

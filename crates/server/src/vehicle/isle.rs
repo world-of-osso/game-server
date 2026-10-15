@@ -1,12 +1,11 @@
 //! IoC Demolisher spellclick66245 / aura236. TC a352b1fa SpellAuraEffects.cpp
 //! HandleAuraControlVehicle and Vehicle.cpp AddVehiclePassenger select a source seat.
 use super::*;
-use crate::auras::{ActiveAuras, AuraInstance, RemoveReason};
+use crate::auras::{ActiveAuras, AuraInstance, RemoveReason, handlers::CONTROL_VEHICLE};
 use shared::components::{ModelDisplay, Npc};
 
 const MAP_ID: u32 = 628;
 const DEMOLISHER: u32 = 34775;
-const CONTROL_VEHICLE: u32 = 236;
 
 #[derive(Clone, Copy)]
 struct Occupant {
