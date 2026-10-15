@@ -18,7 +18,7 @@ fn spawn_native_dodge_target(facing: f32) -> Harness {
             name: template.name.clone(),
         },
         UnitFactionTemplate(u32::from(template.faction)),
-        UnitLevel(10),
+        UnitLevel(template.max_level),
         Rotation {
             x: 0.0,
             y: facing + std::f32::consts::FRAC_PI_2,
