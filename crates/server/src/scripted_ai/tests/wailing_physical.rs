@@ -261,7 +261,7 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
             let target = Entity::from_bits(*target);
             println!(
                 "stalled actor={disciple:?} unrelated={unrelated:?} target={target:?}: npc={:?} health={:?} map={:?} state={:?} react={:?} dead={} castercombat={:?}",
-                world.get::<Npc>(target),
+                world.get::<shared::components::Npc>(target),
                 world.get::<Health>(target),
                 world.get::<InMap>(target),
                 world.get::<crate::creature_ai::CreatureState>(target),
