@@ -97,7 +97,6 @@ fn polymorph_harness(max_health: f32) -> Option<Harness> {
     crate::creature_aggro::insert_aggro_components(
         &mut entity,
         crate::creature_aggro::AggroMode::Reactive,
-        0.0,
     );
     h.app.world_mut().flush();
     h.advance(1);
@@ -348,7 +347,6 @@ fn spy_harness() -> Option<(Harness, f32)> {
     crate::creature_aggro::insert_aggro_components(
         &mut entity,
         crate::creature_aggro::AggroMode::Aggressive,
-        20.0,
     );
     h.app.world_mut().flush();
     Some((h, max_health))

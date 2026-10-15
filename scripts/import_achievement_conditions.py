@@ -157,6 +157,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         elif criteria_type == 29 and kind == 87 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
             # TC SingleFalse1730 negates scoped HasAchieved2200; signed compiled kind, not a raw DB2 kind.
             facts.append((-87, int(node['Asset'])))
+        elif criteria_type == 74 and kind == 104 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
+            # Login waits for complete native spell knowledge before HasSpell can be negated.
+            facts.append((-104, int(node['Asset'])))
         elif kind in PLAYER_FACTS and operator == SINGLE_TRUE and int(node['Asset']) > 0:
             facts.append((kind, int(node['Asset'])))
         elif criteria_type == 110 and kind == 5 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
@@ -259,7 +262,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.',
         '// native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.',
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
-        '// Native CastSpell29 SingleFalse EarnedAchievementOnPlayer87 uses signed compiled kind -87; raw DB2 kinds stay unchanged.',
+        '// Native CastSpell29 SingleFalse87 and Login74 SingleFalse104 use signed compiled kinds; raw DB2 kinds stay unchanged.',
         '// Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.',
         '// Native kill78 CreatureType30 preserves the actual eligible victim type.',
         '// Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.',

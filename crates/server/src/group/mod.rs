@@ -107,11 +107,13 @@ fn process_group_commands(
     mut raid_changes: ResMut<crate::maps::raid::RaidChanges>,
 ) {
     let mut online = build_online_view(&players);
-    online.extend(followers.iter().map(|(entity, follower, level)| {
-        (
+    online.extend(followers.iter().filter_map(|(entity, follower, level)| {
+        let (_, _, _, _, difficulty, _, _) = players.get(follower.owner).ok()?;
+        let difficulty = difficulty?.0;
+        Some((
             crate::followers::Follower::member_id(entity),
-            follower.online(entity, level.0),
-        )
+            follower.online(entity, level.0, difficulty),
+        ))
     }));
     let mut effects = registry.sync_presence(&online);
     effects.extend(registry.tick(time.delta_secs()));

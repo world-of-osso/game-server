@@ -52,6 +52,17 @@ def import_creatures(conn, map_list):
     population.import_creature_relationships(conn)
 
 
+def import_spellclicks(conn, map_list):
+    entries = f"SELECT DISTINCT id1 FROM content_creature WHERE map IN ({map_list})"
+    conn.execute("""CREATE TABLE IF NOT EXISTS content_npc_spellclick_spells
+        (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER,
+         PRIMARY KEY(npc_entry,spell_id))""")
+    conn.execute(f"DELETE FROM content_npc_spellclick_spells WHERE npc_entry IN ({entries})")
+    conn.execute(f"""INSERT INTO content_npc_spellclick_spells (npc_entry,spell_id,cast_flags,user_type)
+        SELECT npc_entry,spell_id,cast_flags,user_type FROM tdb_npc_spellclick_spells
+        WHERE npc_entry IN ({entries})""")
+
+
 def apply_population(conn, maps):
     maps = validate_maps(conn, maps)
     map_list = ",".join(map(str, maps))
@@ -60,6 +71,7 @@ def apply_population(conn, maps):
     population.select_instance_spawns(conn, map_list=map_list)
     import_creatures(conn, map_list)
     population.import_gameobjects(conn, report, map_list=map_list, rebuild_pools=False)
+    import_spellclicks(conn, map_list)
     world_population.restore_rows(conn, snapshots)
     counts = {str(m): {t: conn.execute(f"SELECT count(*) FROM content_{t} WHERE map=?", (m,)).fetchone()[0]
                        for t in ("creature", "gameobject")} for m in maps}
