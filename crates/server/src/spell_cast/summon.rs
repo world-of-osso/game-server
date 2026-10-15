@@ -36,6 +36,7 @@ const RUNE_WEAPON_PARRY: u32 = 81256;
 const ONLY_VISIBLE_TO_SUMMONER: u32 = 0x10;
 const ONLY_VISIBLE_TO_SUMMONER_GROUP: u32 = 0x10000;
 const JOIN_SUMMONER_SPAWN_GROUP: u32 = 0x200;
+const USE_CREATURE_LEVEL: u32 = 0x100;
 /// TC Spell::SummonGuardian scatters secondary actors within5yd of destTarget.
 const GUARDIAN_SCATTER_RADIUS: f32 = 5.0;
 
@@ -233,18 +234,24 @@ fn spawn_owned_summons(
     } else {
         1
     };
-    let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
     for index in 0..count {
-        let Some(template) = read_summon_template(world, entry, level) else {
-            warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
-            return;
-        };
         let destination = if index == 0 {
-            replace_slotted_summon(world, ctx.caster, properties);
             dest
         } else {
             scatter_summon_destination(world, ctx.caster, dest, 0.0, GUARDIAN_SCATTER_RADIUS)
         };
+        let Some(template) =
+            read_summon_template(world, ctx.caster, entry, properties, destination)
+        else {
+            warn!(
+                "Spell {}: missing summon creature {entry} or source level inputs",
+                ctx.spell.id
+            );
+            return;
+        };
+        if index == 0 {
+            replace_slotted_summon(world, ctx.caster, properties);
+        }
         spawn_summon(
             world,
             ctx,
@@ -434,6 +441,7 @@ fn replace_slotted_summon(world: &mut World, owner: Entity, properties: SummonPr
 
 struct SummonTemplate {
     entry: u32,
+    level: u8,
     name: String,
     health: f32,
     faction: u32,
@@ -442,13 +450,48 @@ struct SummonTemplate {
     display_scale: f32,
 }
 
-fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTemplate> {
+fn read_summon_template(
+    world: &mut World,
+    owner: Entity,
+    entry: u32,
+    properties: SummonProperties,
+    dest: super::targets::Dest,
+) -> Option<SummonTemplate> {
+    let map = *world.get::<InMap>(owner)?;
+    let difficulty = crate::zones::map_difficulty_id(world, map);
+    let area = if properties.is_guardian() {
+        world
+            .get_resource_mut::<crate::ground::GroundMap>()
+            .and_then(|mut ground| ground.area_at(map.map_id, dest.position))
+    } else {
+        None
+    };
     let data = world.get_resource::<crate::world_data::WorldData>()?;
-    let template = data.template_for(entry, 0)?;
+    let template = data.template_for(entry, difficulty)?;
+    let owner_level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    let level = if properties.is_guardian() {
+        let tuning = data
+            .summon_levels
+            .content_tuning(template, map.map_id, difficulty, area)?;
+        let range = if tuning == 0 {
+            (0, 0)
+        } else {
+            data.summon_levels.range(tuning)?
+        };
+        let delta = if tuning == 0 {
+            (0, 0)
+        } else {
+            data.summon_levels.delta(entry, difficulty)
+        };
+        roll_guardian_level(owner_level, range, delta, properties.flags)
+    } else {
+        owner_level
+    };
     let display_id = crate::zones::template_display_id(template, &mut rand::thread_rng());
     let display_scale = model_display_scale(template, display_id);
     Some(SummonTemplate {
         entry,
+        level,
         name: template.name.clone(),
         health: crate::hunter_pet::pet_max_health(data, template, level),
         faction: u32::from(template.faction),
@@ -457,6 +500,19 @@ fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTe
         display_id,
         display_scale,
     })
+}
+
+/// Creature::SelectLevel precedes TempSummon::InitStats and Guardian::InitStats.
+fn roll_guardian_level(owner: u8, range: (u8, u8), delta: (i8, i8), flags: u32) -> u8 {
+    use rand::Rng;
+    let delta = rand::thread_rng().gen_range(delta.0.min(delta.1)..=delta.0.max(delta.1));
+    let minimum = i32::from(range.0) + i32::from(delta);
+    let maximum = i32::from(range.1) + i32::from(delta);
+    if flags & USE_CREATURE_LEVEL != 0 {
+        return maximum.clamp(1, i32::from(u8::MAX)) as u8;
+    }
+    // Source InitStats does not clamp these bounds to 1 after the authored delta.
+    i32::from(owner).clamp(minimum, maximum) as u8
 }
 
 /// TC Unit::SetMinion sets PLAYER_CONTROLLED only for player owners.
@@ -487,7 +543,7 @@ fn spawn_summon(
     let Some(map) = world.get::<InMap>(owner).copied() else {
         return;
     };
-    let level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    let level = template.level;
     let health = template.health;
     let faction = if properties.faction != 0 {
         properties.faction
