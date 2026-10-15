@@ -1,6 +1,38 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_unearned_cast_requires_reference_and_authored_award() {
+    let catalog = catalog();
+    for (player, expected) in [(None, None), (Some(ReferencePlayer::default()), Some(1))] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player,
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::CastSpell(1217637),
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(state.criteria_progress.get(&103451).copied(), expected);
+    }
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(-87, 41707)], &HashMap::new())
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(-87, u32::MAX)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "unknown authored metadata is not known-unearned authority"
+    );
+}
+
+#[test]
 fn achievements_criteria_pet_type_level_resolves_species_and_preserves_zero_type() {
     let catalog = catalog();
     let conditions = PlayerConditions {
