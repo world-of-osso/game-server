@@ -39,8 +39,10 @@ use crate::world_data::WorldData;
 pub const SIZE_OF_GRIDS: f32 = 533.3333;
 
 /// A world-spawned creature with no player within one grid of its home grids.
-/// Per-unit creature systems skip entities carrying it.
+/// Per-unit creature systems skip entities carrying it. Sparse storage avoids
+/// copying the creature's wide component table when its grid changes activity.
 #[derive(Component, Debug)]
+#[component(storage = "SparseSet")]
 pub struct GridDormant;
 
 /// A grid of one map copy.
