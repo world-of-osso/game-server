@@ -68,6 +68,25 @@ fn select_native_repair_loadout(world: &mut World, owner: Entity) {
     }
 }
 
+fn spawn_initial_wild_targets(app: &mut App, first: Entity) -> Vec<Entity> {
+    let world = app.world_mut();
+    let npc = world.get::<Npc>(first).unwrap().clone();
+    let position = *world.get::<Position>(first).unwrap();
+    let map = *world.get::<crate::maps::InMap>(first).unwrap();
+    let health = *world.get::<Health>(first).unwrap();
+    let level = *world.get::<UnitLevel>(first).unwrap();
+    assert!(health.current > 0.0);
+    let mut targets = vec![first];
+    for _ in 1..FAMILIES.len() * 2 {
+        targets.push(
+            world
+                .spawn((npc.clone(), position, map, health, level))
+                .id(),
+        );
+    }
+    targets
+}
+
 fn play_native_repair_carry_battle(
     world: &mut World,
     connection: Entity,
@@ -127,7 +146,7 @@ fn play_native_repair_carry_battle(
             round: battle.round,
             action,
         };
-        let health = current.health;
+        let health = battle.teams[0].pets[1].health;
         advance_encounter(world, owner, request)
             .unwrap_or_else(|error| panic!("turn{turn}/{action:?}, health{health}: {error}"));
         if turn < 12 {
@@ -210,6 +229,7 @@ fn achievements_criteria_native_all_pet_families_earn_both_level_grants_without_
     let journal = preowned_family_journal(&catalog);
     let (mut app, owner, connection, creature, character) =
         spawn_owned_pet_achievement_fixture(database, journal, catalog);
+    let mut targets = spawn_initial_wild_targets(&mut app, creature).into_iter();
     let started = app.world().resource::<crate::maps::ServerClock>().unix();
     let mut reached = [BTreeSet::new(), BTreeSet::new()];
     let mut dates = BTreeMap::new();
@@ -219,6 +239,9 @@ fn achievements_criteria_native_all_pet_families_earn_both_level_grants_without_
     for (family, (species, _, _)) in FAMILIES.iter().enumerate() {
         for (index, level, threshold) in [(0, 9, 10), (1, 24, 25)] {
             let guid = carried_id(family, level);
+            let creature = targets
+                .next()
+                .expect("one distinct wild pet per real battle");
             let before =
                 crate::battle_pets::load_or_initialize_pet_states(app.world(), owner).unwrap();
             set_loadout(app.world_mut(), owner, [Some(guid), Some(FIGHTER), None]).unwrap();
@@ -234,6 +257,11 @@ fn achievements_criteria_native_all_pet_families_earn_both_level_grants_without_
             );
             repairs +=
                 play_native_repair_carry_battle(app.world_mut(), connection, owner, creature);
+            assert_eq!(
+                app.world().get::<Health>(creature).unwrap().current,
+                0.0,
+                "a defeated wild pet stays consumed; no fixture revival"
+            );
             let pet = app
                 .world()
                 .get::<AccountPetJournal>(owner)
