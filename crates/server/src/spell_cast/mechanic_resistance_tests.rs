@@ -27,7 +27,18 @@ fn resistance_duel() -> Harness {
         RemoveReason::Cancelled,
         |aura| [STUN_RESISTANCE, SILENCE_RESISTANCE].contains(&aura.spell_id),
     );
+    let native = load_native_creature_world(&[40]);
+    let template = &native.templates[&40];
+    h.app.world_mut().entity_mut(h.npc).insert((
+        shared::components::Npc {
+            template_id: 40,
+            name: template.name.clone(),
+        },
+        shared::components::UnitFactionTemplate(u32::from(template.faction)),
+    ));
+    h.app.insert_resource(native);
     h.advance(2);
+    assert!(super::targets::is_hostile(h.app.world(), h.npc, h.caster));
     h
 }
 
@@ -51,6 +62,10 @@ fn cast_dusted_cheap_shot(h: &mut Harness) {
     assert_eq!(
         crate::combat::creature_miss_chance(h.app.world().get::<crate::auras::AuraStatMods>(h.npc)),
         90.0,
+    );
+    assert!(
+        super::targets::is_hostile(h.app.world(), h.npc, h.caster),
+        "native NPC baseline requires an actually hostile attacker"
     );
     h.inbox.log.clear();
     super::creature_cast(h.app.world_mut(), h.npc, CHEAP_SHOT, Some(h.caster), true)
@@ -118,10 +133,8 @@ fn class_completeness_native_physical_mechanic_resistance_precedes_no_active_def
         cast_dusted_cheap_shot(&mut h);
         assert!(
             !crate::auras::has_aura(h.app.world(), victim, CHEAP_SHOT),
-            "native 90 miss +10 mechanic resistance admitted Cheap Shot at {attempt}: {:?}; victim auras {:?}; spell {:?}",
-            h.inbox.log,
-            h.app.world().get::<ActiveAuras>(victim),
-            world_db().unwrap().store.get(CHEAP_SHOT)
+            "native 90 miss +10 mechanic resistance admitted Cheap Shot at {attempt}: {:?}",
+            h.inbox.log
         );
         assert!(
             !h.app

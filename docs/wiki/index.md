@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; actual Cheap Shot stun RED, bounded GREEN pending.
+- [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; neutral-NPC RED invalidated, corrected hostile fixture pending.
 
 - [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — native240/4 caster-only reduction; receiver-corrected62627/38598 Strike/Evasion RED→GREEN, removal/ownership and merged31 controls/check/fmt pass; wider hit system remains open.
 
