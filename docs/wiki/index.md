@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native GREEN pending, controlled boss identities are not full encounters.
+
 - [Unknown-spell login guard](systems/dungeon-achievements.md#unknown-spell-login-guard) — bounded negative104 requires complete native spell sources and initialization before Login74; repair side effects remain separate.
 
 - [Typed area/zone alternatives](systems/dungeon-achievements.md#typed-areazone-alternatives) — complete root Some17/41 preserves distinct ancestry/zone semantics; actual selfie RED→GREEN and strict missing-zone controls, integrated8/8; full grants/travel unclaimed.
