@@ -498,6 +498,58 @@ fn waypoint_completion_handoff_does_not_add_chase_after_the_final_path_step() {
     assert_eq!(world.resource::<ArrivalReceipts>().0, vec![(1, 1)]);
 }
 
+#[test]
+#[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
+fn waypoint_missing_support_stops_actual_motion_without_reporting_arrival() {
+    let (mut world, actor, _) = motion_ownership_world();
+    let root = std::path::PathBuf::from(std::env::var_os("WAILING_NAV_ROOT").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let wdts = HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]);
+    world.insert_resource(load_script_paths(&db).unwrap());
+    world.insert_resource(crate::navigation::Navigation::new(&root));
+    world.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        wdts.clone(),
+    ));
+    world.entity_mut(actor).insert((
+        bevy(Vec3::new(-134.965, 125.402, -78.0945)),
+        crate::maps::InMap::continent(43),
+    ));
+    assert!(move_path(&mut world, actor, 367800));
+    for _ in 0..40 {
+        world
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(50));
+        path_movement_system(&mut world);
+    }
+    assert_eq!(
+        world.get::<CreatureMotion>(actor),
+        Some(&CreatureMotion::Walk)
+    );
+    let last_supported = *world.get::<Position>(actor).unwrap();
+    // Simulate loss of authoritative geometry, without changing/bypassing nav,
+    // touching real assets or moving the actor to manufacture an arrival.
+    let missing = tempfile::tempdir().unwrap();
+    world.insert_resource(crate::ground::GroundMap::new(missing.path(), wdts));
+    for _ in 0..100 {
+        world
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(50));
+        path_movement_system(&mut world);
+    }
+    assert_eq!(*world.get::<Position>(actor).unwrap(), last_supported);
+    assert_eq!(
+        world.get::<CreatureMotion>(actor),
+        Some(&CreatureMotion::Still)
+    );
+    assert!(world.resource::<ArrivalReceipts>().0.is_empty());
+}
+
 #[derive(Resource, Default)]
 struct ArrivalReceipts(Vec<(u32, u32)>);
 
