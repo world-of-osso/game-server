@@ -36,7 +36,7 @@ fn achievements_criteria_node_world_state_facts_require_live_count_authority() {
             .is_none()
     );
     assert!(
-        load_criteria_facts(&conn, &[(67, 8656), (999, 1)], &HashMap::new())
+        load_criteria_facts(&conn, &[(67, 8656), (67, 999999)], &HashMap::new())
             .unwrap()
             .is_none()
     );

@@ -1229,12 +1229,7 @@ fn use_object(h: &mut Harness, who: &Traveler, object: Entity) {
 /// Every player ends on Team A's victory, leaves, returns to its origin and the copy unloads.
 fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
     let EnteredMatch {
-        h,
-        players,
-        match_id,
-        copy,
-        origin,
-        ..
+        h, players, copy, ..
     } = entered;
     for who in players.iter() {
         let result = battleground(h, who);
@@ -1253,6 +1248,20 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
             _ => 1776,
         };
         assert!(result.world_states.contains(&(score_state, score as i32)));
+    }
+    leave_and_return(entered);
+}
+
+fn leave_and_return(entered: &mut EnteredMatch) {
+    let EnteredMatch {
+        h,
+        players,
+        match_id,
+        copy,
+        origin,
+        ..
+    } = entered;
+    for who in players.iter() {
         h.app
             .world_mut()
             .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
@@ -1328,16 +1337,10 @@ fn gilneas_channel_objectives_scoreboard_victory_and_origin_return() {
     node_match(shared::battleground::battle_for_gilneas());
 }
 
-#[test]
-fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_state() {
-    use crate::achievement::PlayerAchievementState;
-    let template = shared::battleground::battle_for_gilneas();
-    let rules = node_rules(template.map_id).unwrap();
-    let file = tempfile::NamedTempFile::new().unwrap();
-    let database = redb::Database::create(file.path()).unwrap();
+fn create_node_achievement_characters(path: &std::path::Path, template: &BgTemplate) {
+    let database = redb::Database::create(path).unwrap();
     crate::persistence::create_tables(&database);
-    let count = u64::from(template.min_players_per_team) * 2;
-    for id in 1..=count {
+    for id in 1..=u64::from(template.min_players_per_team) * 2 {
         let name = format!("Node{}", char::from(b'a' + (id - 1) as u8));
         let (created, mut data) =
             crate::persistence::create_character(&database, id, &name, 1, 1).unwrap();
@@ -1345,7 +1348,12 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
         data.level = u16::from(template.bracket.min_level);
         crate::persistence::save_character(&database, id, &data);
     }
-    let mut entered = enter_source_match_with(&template, rules.starts, |app| {
+}
+
+fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -> EnteredMatch {
+    let database = redb::Database::open(path).unwrap();
+    let rules = node_rules(template.map_id).unwrap();
+    let mut entered = enter_source_match_with(template, rules.starts, |app| {
         app.insert_resource(crate::persistence::GameDatabase { db: database });
         let conn = Connection::open_with_flags(
             crate::test_data::world_db_path(),
@@ -1365,67 +1373,145 @@ fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_sta
         );
         world.entity_mut(who.player).insert(state);
     }
-    let actor = &entered.players[0];
-    let (h, copy) = (&mut entered.h, entered.copy);
-    for point in source_battleground_objects(template.map_id).0 {
-        let (object, _) = objects_in(h, copy, point.info.entry)[0];
-        h.walk_to(actor, point.position);
-        use_object(h, actor, object);
-    }
-    let before = battleground(h, actor);
-    assert_eq!(before.phase, BgPhase::InProgress);
-    assert_eq!(
-        before.score_a, 0,
-        "assault requests are not earned captures or victory"
-    );
-    assert!(
-        h.app
+    entered
+}
+
+fn assert_node_win_progress(
+    entered: &EnteredMatch,
+    expected: [(u64, u64); 2],
+    dates: &mut std::collections::BTreeMap<u64, u64>,
+) -> Vec<(u64, u64)> {
+    use crate::achievement::PlayerAchievementState;
+    entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .map(|(who, team)| {
+            let world = entered.h.app.world();
+            let character = world.get::<ClientId>(who.player).unwrap().0;
+            let index = match team {
+                BgTeam::A => 0,
+                BgTeam::B => 1,
+            };
+            let (qualified, wins) = expected[index];
+            let state = world.get::<PlayerAchievementState>(who.player).unwrap();
+            assert_eq!(
+                state.criteria_progress.get(&14943).copied(),
+                (qualified > 0).then_some(qualified)
+            );
+            assert_eq!(
+                state.criteria_progress.get(&14944).copied(),
+                (wins > 0).then_some(wins),
+                "ordinary wins still credit when ownership predicate fails"
+            );
+            let account = state.account.as_ref().unwrap();
+            assert_eq!(
+                account.earned_ids.contains(&5253),
+                qualified >= 10,
+                "authored leaf15057 requires10 genuine wins"
+            );
+            if qualified >= 10 {
+                let date = *account
+                    .earned_at
+                    .get(&5253)
+                    .expect("native grant has a date");
+                assert_eq!(
+                    *dates.entry(character).or_insert(date),
+                    date,
+                    "later wins retain original award date"
+                );
+            } else {
+                assert!(!account.earned_at.contains_key(&5253));
+            }
+            (character, qualified)
+        })
+        .collect()
+}
+
+#[test]
+fn achievements_criteria_native_gilneas_full_coverage_uses_earned_node_world_state() {
+    use crate::achievement::PlayerAchievementState;
+    let template = shared::battleground::battle_for_gilneas();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    create_node_achievement_characters(file.path(), &template);
+    let mut dates = std::collections::BTreeMap::new();
+    // Ten source-qualified Alliance wins, one Horde win, then an unqualified two-base win.
+    for round in 1_u64..=12 {
+        let winner = if round == 11 { BgTeam::B } else { BgTeam::A };
+        let held = if round == 12 { 2 } else { 3 };
+        let mut entered = enter_achievement_node_match(file.path(), &template);
+        let actor_index = entered
+            .teams
+            .iter()
+            .position(|team| *team == winner)
+            .unwrap();
+        let actor = &entered.players[actor_index];
+        let (h, copy) = (&mut entered.h, entered.copy);
+        let initial = h
+            .app
             .world()
             .get::<PlayerAchievementState>(actor.player)
             .unwrap()
             .criteria_progress
             .get(&14943)
-            .is_none()
-    );
-    use_second_frames(h);
-    h.advance(120);
-    let result = battleground(h, actor);
-    assert_eq!(result.phase, BgPhase::Ended);
-    assert_eq!(result.outcome, Some(BgOutcome::Winner(BgTeam::A)));
-    assert_eq!(result.score_a, 1500, "source node clocks, not seeded score");
-    assert!(
-        result.world_states.contains(&(1779, 3)),
-        "all three nodes are actually owned"
-    );
-    let state = h
-        .app
-        .world()
-        .get::<PlayerAchievementState>(actor.player)
-        .unwrap();
-    assert_eq!(
-        state.criteria_progress.get(&14943),
-        Some(&1),
-        "native Gilneas win with all three owned nodes must satisfy expression8656"
-    );
-    assert!(state.account.as_ref().unwrap().earned_ids.contains(&5253));
-    h.advance(3);
-    assert_eq!(
-        h.app
-            .world()
-            .get::<PlayerAchievementState>(actor.player)
-            .unwrap()
-            .criteria_progress
-            .get(&14943),
-        Some(&1)
-    );
-    drop(entered);
-    let database = redb::Database::open(file.path()).unwrap();
-    assert_eq!(
-        crate::persistence::load_achievements(&database, 1)
-            .criteria_progress
-            .get(&14943),
-        Some(&1)
-    );
+            .copied();
+        for point in source_battleground_objects(template.map_id)
+            .0
+            .into_iter()
+            .take(held)
+        {
+            let (object, _) = objects_in(h, copy, point.info.entry)[0];
+            h.walk_to(actor, point.position);
+            use_object(h, actor, object);
+        }
+        let before = battleground(h, actor);
+        assert_eq!(before.phase, BgPhase::InProgress);
+        assert_eq!(
+            before.score_a + before.score_b,
+            0,
+            "assaults are not instant captures or wins"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(actor.player)
+                .unwrap()
+                .criteria_progress
+                .get(&14943)
+                .copied(),
+            initial
+        );
+        use_second_frames(h);
+        h.advance(if held == 2 { 620 } else { 120 });
+        let result = battleground(h, actor);
+        assert_eq!(result.phase, BgPhase::Ended);
+        assert_eq!(result.outcome, Some(BgOutcome::Winner(winner)));
+        let (score, state_id) = match winner {
+            BgTeam::A => (result.score_a, 1779),
+            BgTeam::B => (result.score_b, 1778),
+        };
+        assert_eq!(score, 1500, "source node clocks, not seeded scores");
+        assert!(result.world_states.contains(&(state_id, held as i32)));
+        let expected = [
+            (round.min(10), round.min(10) + u64::from(round == 12)),
+            (u64::from(round >= 11), u64::from(round >= 11)),
+        ];
+        assert_node_win_progress(&entered, expected, &mut dates);
+        entered.h.advance(3);
+        let saved = assert_node_win_progress(&entered, expected, &mut dates);
+        leave_and_return(&mut entered);
+        drop(entered);
+        let database = redb::Database::open(file.path()).unwrap();
+        for (character, qualified) in saved {
+            assert_eq!(
+                crate::persistence::load_achievements(&database, character)
+                    .criteria_progress
+                    .get(&14943)
+                    .copied(),
+                (qualified > 0).then_some(qualified)
+            );
+        }
+    }
 }
 
 fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
