@@ -31,6 +31,30 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile({10: node(0, 8)}), {})
         self.assertEqual(self.compile({10: node(0, 2)}), {})
 
+    def test_battle_pet_type_earned_level_requires_complete_positive_companions(self):
+        criteria = {21377: dict(self.criteria[1], Type='160', Asset='25', ModifierTreeId='4131')}
+        mods = {4131: node(0, 4), 4132: node(4131, 2, 78, 9)}
+        self.assertEqual(self.compile(mods, criteria), {21377: [None, ((78, 9),)]})
+        self.assertEqual(self.compile({**mods, 4133: node(4131, 2, 32, 0)}, criteria),
+                         {21377: [None, ((32, 0), (78, 9))]})
+        self.assertEqual(self.compile({**mods, 4133: node(4131, 2, 999, 1)}, criteria), {})
+        mods[4132]['Asset'] = '0'
+        self.assertEqual(self.compile(mods, criteria), {21377: [None, ((78, 0),)]},
+                         'Humanoid pet type0 is real, not missing authority')
+        mods[4132]['Asset'] = '10'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[4132]['Asset'] = '9'
+        mods[4132]['Operator'] = '3'
+        self.assertEqual(self.compile(mods, criteria), {})
+        mods[4132]['Operator'] = '2'
+        for level in ('0', '26'):
+            criteria[21377]['Asset'] = level
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[21377]['Asset'] = '25'
+        for kind in ('157', '158', '162'):
+            criteria[21377]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+
     def test_creature_type_kill_requires_complete_positive_companions(self):
         criteria = {4953: dict(self.criteria[1], Type='78', ModifierTreeId='72')}
         mods = {72: node(0, 4), 73: node(72, 2, 30, 7)}
