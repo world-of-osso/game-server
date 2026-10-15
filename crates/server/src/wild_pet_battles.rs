@@ -941,3 +941,7 @@ mod pvp;
 #[cfg(test)]
 #[path = "wild_pet_battles_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "wild_pet_achievement_tests.rs"]
+mod achievement_tests;
