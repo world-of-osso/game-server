@@ -109,7 +109,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
         let Some(span) = ctx.span(id) else { return };
         let mut ext = span.extensions_mut();
-        let Some(scope) = ext.get::<TimedScope>() else {
+        let Some(scope) = ext.get_mut::<TimedScope>() else {
             return;
         };
         if scope.kind == ScopeKind::Schedule {
