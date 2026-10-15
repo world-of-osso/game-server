@@ -42,7 +42,11 @@ fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
         .expect("explicit private prepared world copy");
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let criteria = crate::achievement::load_achievement_catalog(&conn).unwrap();
-    let catalog = load_catalog(&conn, &criteria);
+    let journal_csv = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("db2/active/AdventureJournal.csv");
+    let catalog = load_catalog(&conn, &criteria, &journal_csv);
     assert!(matches!(catalog, AdventureCatalog::Ready(_)), "{catalog:?}");
     h.app.insert_resource(criteria);
     h.app.insert_resource(catalog);
@@ -140,7 +144,16 @@ fn adventure_guide_real_rows_unavailable_census_tracking_and_monthly_persistence
         "suggestion census {census:?}; visible {}",
         snapshot.suggestions.len()
     );
-    assert_eq!(census.source_rows, 698);
+    let journal_csv = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("db2/active/AdventureJournal.csv");
+    let source_rows = csv::Reader::from_path(journal_csv)
+        .unwrap()
+        .records()
+        .map(Result::unwrap)
+        .count();
+    assert_eq!(census.source_rows as usize, source_rows);
     assert_eq!(
         census.source_rows,
         census.unsupported_conditions

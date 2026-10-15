@@ -1,19 +1,27 @@
-//! Only the existing MapDifficulty PlayerCondition semantics are evaluated here.
-//! Other gates are censused and hidden, never treated as fulfilled.
+//! Bounded PlayerCondition semantics: existing ContentTuning levels and earned achievements.
+//! Other gates remain explicit unknowns. ClientExecutable is metadata; PvPFaction0 is unset.
 use rusqlite::{Connection, OptionalExtension, types::Value};
 use std::collections::{BTreeMap, BTreeSet};
+
+const CLIENT_EXECUTABLE: u32 = 0x1;
+const WITHIN_OR_ABOVE: u32 = 0x20;
+const DISABLED: u32 = 0x100;
 
 #[derive(Clone, Debug)]
 pub(super) enum ConditionRule {
     Always,
     Level { min: u8, max: u8 },
+    Achievement { id: u32 },
     Unsupported(String),
 }
 impl ConditionRule {
-    pub(super) fn evaluate(&self, level: u8) -> Result<bool, &str> {
+    pub(super) fn evaluate(&self, level: u8, earned: Option<&BTreeSet<u32>>) -> Result<bool, &str> {
         match self {
             Self::Always => Ok(true),
             Self::Level { min, max } => Ok(level >= *min && (*max == 0 || level <= *max)),
+            Self::Achievement { id } => earned
+                .map(|earned| earned.contains(id))
+                .ok_or("PlayerCondition achievement authority unavailable"),
             Self::Unsupported(reason) => Err(reason),
         }
     }
@@ -61,10 +69,11 @@ fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
     let flags = u32::try_from(number("Flags")?)
         .map_err(|_| format!("PlayerCondition {id}: invalid flags"))?;
     // Same TC flags as maps/store.rs: Disabled is unconditional; WithinOrAbove drops max.
-    if flags & 0x100 != 0 {
+    if flags & DISABLED != 0 {
         return Ok(ConditionRule::Always);
     }
-    if flags & !0x20 != 0 {
+    // TC PlayerConditionFlags::ClientExecutable0x1 adds no predicate.
+    if flags & !(CLIENT_EXECUTABLE | WITHIN_OR_ABOVE) != 0 {
         return Ok(ConditionRule::Unsupported(format!(
             "PlayerCondition {id}: unsupported flags {flags}"
         )));
@@ -85,6 +94,18 @@ fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
     }
     let tuning = u32::try_from(number("ContentTuningID")?)
         .map_err(|_| format!("PlayerCondition {id}: invalid ContentTuningID"))?;
+    let achievement = u32::try_from(number("Achievement_0")?)
+        .map_err(|_| format!("PlayerCondition {id}: invalid Achievement_0"))?;
+    if achievement != 0 {
+        // Source33559 is a single earned-achievement predicate with no other constraint.
+        return Ok(if tuning == 0 {
+            ConditionRule::Achievement { id: achievement }
+        } else {
+            ConditionRule::Unsupported(format!(
+                "PlayerCondition {id}: combined ContentTuning/achievement unavailable"
+            ))
+        });
+    }
     if tuning == 0 {
         return Ok(ConditionRule::Always);
     }
@@ -99,7 +120,7 @@ fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
     match range {
         Some((min, max)) => Ok(ConditionRule::Level {
             min,
-            max: if flags & 0x20 != 0 { 0 } else { max },
+            max: if flags & WITHIN_OR_ABOVE != 0 { 0 } else { max },
         }),
         None => Ok(ConditionRule::Unsupported(format!(
             "PlayerCondition {id}: ContentTuning {tuning} missing"
@@ -110,7 +131,12 @@ fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
 fn supported_field(name: &str, value: &Value) -> bool {
     if matches!(
         name,
-        "ID" | "Failure_description_lang" | "Flags" | "ContentTuningID" | "MinLevel" | "MaxLevel"
+        "ID" | "Failure_description_lang"
+            | "Flags"
+            | "ContentTuningID"
+            | "MinLevel"
+            | "MaxLevel"
+            | "Achievement_0"
     ) {
         return true;
     }
@@ -121,7 +147,6 @@ fn supported_field(name: &str, value: &Value) -> bool {
         name,
         "Gender"
             | "NativeGender"
-            | "CurrentPvpFaction"
             | "ChrSpecializationIndex"
             | "ChrSpecializationRole"
             | "PowerType"
@@ -140,7 +165,6 @@ fn supported_field(name: &str, value: &Value) -> bool {
         name,
         "Gender"
             | "NativeGender"
-            | "CurrentPvpFaction"
             | "ChrSpecializationIndex"
             | "ChrSpecializationRole"
             | "PowerType"
@@ -165,7 +189,11 @@ mod tests {
         // Authored Wailing Caverns33956: ClientExecutable, PvPFaction0, tuning193(8–30).
         let condition = load_condition(&conn, 33956).unwrap();
         for (level, eligible) in [(7, false), (8, true), (30, true), (31, false)] {
-            assert_eq!(condition.evaluate(level), Ok(eligible), "level{level}");
+            assert_eq!(
+                condition.evaluate(level, None),
+                Ok(eligible),
+                "level{level}"
+            );
         }
     }
 
@@ -178,8 +206,8 @@ mod tests {
         .unwrap();
         // Existing Grim Batol115171: WithinOrAbove, PvPFaction0, tuning2720(80).
         let condition = load_condition(&conn, 115171).unwrap();
-        assert_eq!(condition.evaluate(79), Ok(false));
-        assert_eq!(condition.evaluate(80), Ok(true));
-        assert_eq!(condition.evaluate(90), Ok(true));
+        assert_eq!(condition.evaluate(79, None), Ok(false));
+        assert_eq!(condition.evaluate(80, None), Ok(true));
+        assert_eq!(condition.evaluate(90, None), Ok(true));
     }
 }
