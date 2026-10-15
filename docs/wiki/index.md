@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Remaining source-only criteria boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) —44/58/64 lack executable rules;153 has no matching native action-set path;218 requires pinned hard-false Party Sync leaves.
+
 - [Started-child statistics](systems/dungeon-achievements.md#started-child-statistic-projection) — native40/299/94 kills prove107sum3/1336max2/1337distinct2; zero/refused/dead/idle/reopen controls.
 
 - [Creature-type kill statistics](systems/dungeon-achievements.md#creature-type-kill-statistics) — actual killed-NPC type30/78, source40/299 lethal casts and reopened counters.

@@ -1,3 +1,7 @@
+## 2026-10-14 — Post-count7 source audit
+
+[Remaining boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) pins44/58/64's missing progress rules,153's actual action-set dispatch with zero matching native portals/templates, and218's hard-false Party Sync companions. Source/data proof only; no runtime/census activation. Removed stale spec assertions that already-implemented BG70/objective30/rated37 had no producers; world honor and garrison gaps remain.
+
 ## 2026-10-14 — Raw StartedAtLeast statistic projection
 
 [Operator7](systems/dungeon-achievements.md#started-child-statistic-projection) now shares the existing direct-positive-child count without ordinary target clamping. Genuine three-kill REDa2fb7631 reaches107sum3/1336max2 but1337Nonevs2. GREEN2325ef39 passes2/2(25.37s): native zero→one→two→repeat-type behavior, existing raw-statistic regression and persistence controls. Census/qualification unchanged; no rendered UI claim.
