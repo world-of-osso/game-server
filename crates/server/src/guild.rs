@@ -420,11 +420,16 @@ fn update_officer_note(
             guild.guild_name, request.character_name
         ));
     }
+    if !shared::protocol::valid_guild_member_note(&request.note) {
+        return Err(shared::protocol::GuildRankError::NoteTooLong
+            .message()
+            .into());
+    }
     save_guild_member_note(
         db,
         character_id,
         &GuildMemberNoteData {
-            officer_note: request.note.trim().to_string(),
+            officer_note: request.note,
         },
     );
     Ok(format!(

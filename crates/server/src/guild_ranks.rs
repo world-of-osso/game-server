@@ -111,7 +111,7 @@ fn set_member_note(
     {
         return Err(GuildRankError::Permissions);
     }
-    if note.chars().count() > 31 || note.chars().any(char::is_control) {
+    if !valid_guild_member_note(note) {
         return Err(GuildRankError::NoteTooLong);
     }
     if officer {
