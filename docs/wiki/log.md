@@ -1,3 +1,7 @@
+## 2026-10-15 — Nested encounter conjunction
+
+[Native165 nested All](systems/dungeon-achievements.md#nested-encounter-conjunction) preserves complete companions and scoped prerequisites. Compiler44/44, genuine native-handler RED, exact structural5512/1824 adds only11660; no boss combat or prerequisite acquisition certificate.
+
 ## 2026-10-15 — Absent-player-aura kill guard
 
 [Bounded SingleFalse8](systems/dungeon-achievements.md#absent-player-aura-kill-guard) on KillCreature0 requires known actor aura authority and complete authored companions. Compiler43/43, genuine native RED, structural5511/1824; native/catalog/prior-positive/pinned GREEN5/5(39.10s) at2dc751cc. Native counters, genuine actor mark casts and DB reopen pass; controlled boss identities do not certify encounters or full-map grants.
