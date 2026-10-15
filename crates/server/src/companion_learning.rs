@@ -107,16 +107,25 @@ fn persist_learning(
     ) {
         return Ok(Err(learning_error(format!("cannot learn pet: {reason:?}"))));
     }
-    let bytes = serde_json::to_vec(&journal)
-        .map_err(|error| format!("Encode companion journal: {error}"))?;
-    txn.open_table(ACCOUNT_PET_JOURNALS)
-        .map_err(|error| error.to_string())?
-        .insert(request.account, bytes.as_slice())
-        .map_err(|error| error.to_string())?;
+    write_journal(&txn, request.account, &journal)?;
     crate::persistence::inventory_store::write_inventory_record(&txn, request.character, inventory);
     crate::persistence_commit::commit(txn)
         .map_err(|error| format!("Commit companion learning: {error}"))?;
     Ok(Ok(()))
+}
+
+fn write_journal(
+    txn: &redb::WriteTransaction,
+    account: u64,
+    journal: &PetJournal,
+) -> Result<(), String> {
+    let bytes = serde_json::to_vec(journal)
+        .map_err(|error| format!("Encode companion journal: {error}"))?;
+    txn.open_table(ACCOUNT_PET_JOURNALS)
+        .map_err(|error| error.to_string())?
+        .insert(account, bytes.as_slice())
+        .map_err(|error| error.to_string())?;
+    Ok(())
 }
 
 fn read_journal_for_write(

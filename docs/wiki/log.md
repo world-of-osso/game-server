@@ -1,3 +1,7 @@
+## 2026-10-15 — Companion writer failure classification
+
+[Companion storage errors](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15): malformed durable journal RED exposed writerfailed0 vs1 despite owner refusal. Storage errors now log/count through the writer; species caps remain ordinary refusals.7 controls pass; merged serialization-helper/current check pending. No recovery behavior added.
+
 ## 2026-10-15 — Companion teaching-item FIFO
 
 [Companion items](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15): held-writer RED261.814ms becomes nonwaiting atomic item/GUID/journal learning; fresh prior wallet/pet, species cap/item conservation, native achievement and departed-session/current-peer controls pass across separate invocations. After master852ec57f,8 companion/knowledge/Guardian controls pass together; feature check passes20.84s without warnings and format/diff pass. Pet battles/abilities and release gameplay remain separate.
