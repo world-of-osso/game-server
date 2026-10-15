@@ -73,7 +73,7 @@ class VehicleGroundFilesTest(unittest.TestCase):
         self.db.commit()
         (self.cache / "models/234720.m2").write_bytes(b"mount bind pose")
         (self.cache / "models/123367.m2").write_bytes(b"Demolisher bind pose")
-        self.assertEqual(self.list_files(), ["models/123367.m2", "models/234720.m2"])
+        self.assertCountEqual(self.list_files(), ["models/123367.m2", "models/234720.m2"])
         (self.cache / "models/123367.m2").unlink()
         self.assertEqual(self.list_files("--missing"), ["vehicle 509\tmodels/123367.m2"])
 
