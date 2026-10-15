@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates, real Dwarf/Shaman creation regression; runtime gates pending.
+- [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
 

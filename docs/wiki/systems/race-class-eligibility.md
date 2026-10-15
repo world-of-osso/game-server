@@ -1,6 +1,6 @@
 # Installed race/class eligibility
 
-Contract: [race/class eligibility](../../specs/race-class-eligibility.md). Source inspected2026-10-15; post-change Rust/native gates remain pending.
+Contract: [race/class eligibility](../../specs/race-class-eligibility.md). Source and scoped regression gates verified2026-10-15; live native Dwarf login remains unclaimed.
 
 ## Source and lifetime
 
@@ -18,6 +18,6 @@ The [Skyborne95/96 contract](skyborne.md#race-identity-and-creation) remains exp
 
 The private bot driver received `Class 7 is not available for race 3` for normal Dwarf/Shaman creation while installed12.1.5.70391 CharBaseInfo explicitly contains3/7. The prior static Dwarf list also omitted installed Mage8 and Warlock9. That real admin rejection is retained in engine `data/diagnostics/bot-harness-2026-10-15/native-source-gear1/263/setup-error.json`; the root-cause change does not alter class stats or bypass creation.
 
-The installed snapshot contains283 distinct supported Retail pairs. New regressions check those actual rows and actual Dwarf/Shaman admin creation, source starting location/equipment and saved character data. Existing mask, class rejection, start-level and Forever tests remain controls. Execution results belong in the proof ledger after they run; added test code alone is not acceptance.
+The installed snapshot contains283 distinct supported Retail pairs. New regressions check those actual rows and actual Dwarf/Shaman admin creation, source starting location/equipment and saved character data. Existing mask, class rejection, start-level and Forever tests remain controls. Targeted installed/missing-source/admin creation tests pass3/3. After master integration, race eligibility/mask/start-level/Forever controls pass10/10, scoped server check and workspace format check pass. The real creation test loads the authentic kit, invokes the admin creation handler and reopens saved character/inventory records; it does not establish a rendered Dwarf login. Evidence: race-source-targeted-green.log, race-source-controls.log, race-source-check.log and race-source-fmt.log beneath the bot harness durable evidence root.
 
 The [bot fixture](../../../../game-engine/docs/wiki/systems/bot-harness.md#native-players-and-source-inputs) separately authors Draenei11 for Shaman before provisioning. That choice does not establish Dwarf eligibility or replace this server fix. The full class/rotation and all-pairs intro/asset gates remain separate.
