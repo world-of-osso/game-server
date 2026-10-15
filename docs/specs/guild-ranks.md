@@ -39,7 +39,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Rank list and affected member positions commit together and survive database reopen.
 - [x] Stored bank balances, tabs, limits, logs and repair permissions survive layout upgrades.
 - [x] Social and monetary wire masks use pinned TC `a352b1fa` GuildRankRights values. Layout 3 translates each old layout-2 compact right independently; mixed officer permissions remain mixed and do not acquire newly modeled public-note rights. Layout 0/1 retain their existing grants; repeated startup never remaps already-migrated rights.
-- [ ] Every guild load restores all modeled Guild Master social rights, including newly modeled rights on already-deployed layout3, without changing other ranks or bank booleans/allowances (TC a352b1fa Guild.cpp262–264,318–321). Targeted migration/reopen gate pending.
+- [x] Every guild load restores all modeled Guild Master social rights, including newly modeled rights on already-deployed layout3, without changing other ranks or bank booleans/allowances (TC a352b1fa Guild.cpp262–264,318–321). Existing layout2 migration and layout3 two-reopen tests pass. Guild filter57 cases pass; the remaining raid-history case passes separately with its required read-only SITE_DATA_WORLD_COPY input (58 covered total).
 - [ ] Only authenticated in-world connections can request controls; the actor comes from the connection, never the packet.
 - [ ] Success broadcasts recipient-specific state; errors use typed Retail GlobalStrings refusals.
 
