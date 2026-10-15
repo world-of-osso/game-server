@@ -1,3 +1,7 @@
+## 2026-10-15 — Installed race/class source
+
+[Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Native283-pair and actual kit/persistence tests precede gates; source95/96 contracts, start-level and visage policy remain separate and unchanged. No realm5000 operation or stat tuning.
+
 ## 2026-10-15 — Spell-created unit ownership logs
 
 [Combat log ownership](systems/spell-casting.md#messages): actual effect28/effect56 creations emit Summon with the real spell and actor identities; temporary guardian ancestry delivers combat to its owner without changing gameplay credit. Login restoration emits no synthetic event. Bounded native gates tracked separately from DPS/balance acceptance.
