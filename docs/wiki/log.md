@@ -1,6 +1,6 @@
 ## 2026-10-14 — Signed attacker enemy dodge
 
-[Existing player dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) now adds actual caster aura251's signed total before expertise/final clamp. Native48250e2+20/110294e0−25 are authenticated;24fb3cb5 native Strike damage37 despite verified90miss/+20 reproduces genuine RED. Negative-total/recipient controls pass; GREEN/check/fmt pending, whole251/abilities and broader hit system remain open.
+[Existing player dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) now adds actual caster aura251's signed total before expertise/final clamp. Native48250e2+20/110294e0−25 are authenticated;24fb3cb5 native Strike damage37 despite verified90miss/+20 reproduces genuine RED. Merged18274ca5 native11/11 GREEN (17.48s tests), check16.844s/fmt2.490s pass warning-free:256 miss/dodge draws, removal/negative-total/recipient controls plus Evasion/expertise controls. Whole251/abilities and broader hit system remain open.
 
 ## 2026-10-14 — Physical mechanic resistance
 
