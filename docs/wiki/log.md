@@ -1,6 +1,6 @@
 ## 2026-10-15 — General promoted-map spellclick publication
 
-[Source spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): lead rejects NPC-specific filtering; authentic map628+559 RED expects nine source rows, got one. Refresh all spawned-entry rows, preserve unrelated entries and transaction rollback on absent source table. Process GREEN pending; no canonical write.
+[Source spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): lead rejects NPC-specific filtering; authentic map628+559 RED expects nine source rows, got one. Refresh all spawned-entry rows, preserve unrelated entries and transaction rollback on absent source table. Process GREEN4/4 atd0c7a255,168.538s,0skips; no canonical write.
 
 ## 2026-10-15 — Normal Demolisher spellclick promotion
 

@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback proof pending.
+- [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
 
 - [Vehicle movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) — exact installed Flags/TurnSpeed, observed seat-only-catalog omission and explicit upgrade without defaults; importer GREEN3; canonical publication/driving still pending.
 
