@@ -130,7 +130,7 @@ Primary source: TC a352b1fa CriteriaHandler1738–1750 (Some),1842–1846 (area)
 
 ## Player-area alternatives
 
-Plain Some8 Amount0/1 over complete SingleTrue PlayerIsInArea17 leaves compiles to `CompiledConditions::PlayerAreas`. Loader reuses existing area validation/recursive ancestry, then unions complete member sets into `CriteriaFact::Area`; one missing source area disables the entire predicate. TC a352b1fa CriteriaHandler1738–1750/1842–1847 and DB2Stores1985–1999 define one-of and recursive parent membership. Native queued death fixture exercises109755/character61456 from controlled cached area snapshots; this is not actual terrain travel or every holiday/NPC content lifecycle. [Contract](../../specs/dungeon-achievements.md).
+Pure17 Some alternatives use the [typed location projection](#typed-areazone-alternatives), with unchanged recursive ancestry and strict complete-asset validation. TC a352b1fa CriteriaHandler1738–1750/1842–1847 and DB2Stores1985–1999 define one-of and recursive parent membership. Native queued death fixture exercises109755/character61456 from controlled cached area snapshots; this is not actual terrain travel or every holiday/NPC content lifecycle. [Contract](../../specs/dungeon-achievements.md).
 
 ## Player-map alternatives
 
