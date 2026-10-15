@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Schedule/deferred attribution](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15) — inclusive schedule/preparation diagnostics; root system-span boundary reproduced, corrected instrumentation awaiting proof/capture.
+
 - [Cold-login percentile follow-up](investigations/server-tick-lag.md#low-pressure-cold-login-follow-up--2026-10-14) — release cold online p9932.8ms/zero tick commits under recorded memory+IO pressure; startup209.6ms and coldmax288ms remain visible, full gameplay open.
 
 - [FIFO plot payment](investigations/server-tick-lag.md#housing-plot-purchase-fifo--2026-10-14) — held-writer native purchase, fresh payment funds and durability-gated ownership; layout/access/dyes/location remain open.

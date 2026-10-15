@@ -1,3 +1,7 @@
+## 2026-10-15 — Schedule/deferred attribution diagnostics
+
+[Tick lag](investigations/server-tick-lag.md#scheduledeferred-attribution-instrumentation--2026-10-15): enclosing schedule/preparation measurements leave frame accounting unchanged. Actual deferred-command test exposed Bevy's root system spans defeating ancestry; active per-thread schedule tracking is committed, targeted proof/capture pending. Startup209.6ms/cold288ms attribution remains open.
+
 ## 2026-10-14 — Low-pressure cold-login percentile proof
 
 [Tick lag](investigations/server-tick-lag.md#low-pressure-cold-login-follow-up--2026-10-14): matching releasee91/protocol4135 records cold onlinep9932.8ms and zero tick commits, with memory+IO PSI and exact swap counters. Startupp99209.6ms/coldmax288ms remain visible; the earlier pressure-confounded attempt stays discarded. Login-only proof does not complete full gameplay/HOL/all-writer acceptance.

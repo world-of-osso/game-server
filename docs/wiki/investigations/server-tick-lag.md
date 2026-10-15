@@ -176,6 +176,12 @@ The immediately preceding `release-e91e4d6f-quiet-230959` timing stays discarded
 
 Contract: [server tick budget](../../specs/server-tick-budget.md). Existing [persistence](../systems/persistence.md) boundaries remain authoritative.
 
+### Schedule/deferred attribution instrumentation — 2026-10-15
+
+The remaining startup209.6ms/cold288ms costs need schedule-level evidence before another optimization. Diagnostic `system-timings` now measures inclusive schedules and the `ScheduleBuilt` preparation boundary, emitting named stalls immediately and inclusive `Main` phase rows. Preparation ends before executor initialization; phase rows overlap and must not be summed. Frame accounting and execution order are unchanged.
+
+Bevy0.19 `SystemMeta::new` explicitly creates system spans with `parent: None`. Span ancestry therefore cannot recover enclosing schedules: the real deferred-command regression logged an Update stall but an empty Main phase list (`schedule-attribution-green-89a6327e.log`, FAILED1/3). `6609d15f` tracks active schedule IDs per thread instead. Its targeted proof and attributed release capture are pending capacity; this is not an established explanation for the measured startup/cold frames.
+
 ## Sources
 
 - [crates/server/src/frame_stats.rs](../../../crates/server/src/frame_stats.rs) — frame work and fixed-step report
