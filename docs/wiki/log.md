@@ -1,3 +1,8 @@
+## 2026-10-15 — Unearned-achievement cast guard
+
+[Bounded SingleFalse87](systems/dungeon-achievements.md#unearned-achievement-cast-guard) on CastSpell29 uses existing scoped earned state and requires authored metadata. Final native/catalog/prior-positive87/pinned9dfe04b9 GREEN6/6(45.26s), compiler40/40/generated5737; actual twenty1217637 casts grant account41707 then stop, preserving dates/counters across DB/auth reopen and account boundaries. Census5495ordinary/1824statistics adds only41707; no general negation or gear acquisition/encounter/UI certificate.
+
+## 2026-10-15 — Full native pet-family grants
 ## 2026-10-15 — Spell-created unit ownership logs
 
 [Combat log ownership](systems/spell-casting.md#messages): actual effect28/effect56 creations emit Summon with the real spell and actor identities; temporary guardian ancestry delivers combat to its owner without changing gameplay credit. Login restoration emits no synthetic event. Bounded native gates tracked separately from DPS/balance acceptance.

@@ -1,5 +1,10 @@
 # Wiki Index
 
+- [Unearned-achievement cast guard](systems/dungeon-achievements.md#unearned-achievement-cast-guard) — complete SingleFalse87 on native CastSpell29; twenty real1217637 casts/account41707, self-guard/sibling/reopen/date and unknown/partial-account controls, final6/6; no gear acquisition/UI claim.
+
+- [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates/integrated4/4; [twenty-battle follow-up](systems/dungeon-achievements.md#full-family-earned-level-proof) earns both ten-family grants with persistent injuries/dates/reopen.
+- [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
+- [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; 5736 predicates, integrated native/catalog/pinned4/4; full ten-family grant unclaimed.
 - [Source Toy forward destination](systems/toys.md#source-forward-destination) — Bashiok18/78 secondary5yd radius; inactive effect-facing and open-ground boundary.
 - [Titan's Grip hand rules](systems/inventory.md#titans-grip-hand-rules--2026-10-15) — native effect155 capability/masks and type17 hand placement; three behavioral REDs→nine scoped controls GREEN, check/fmt pass; acquisition, unlearn-time eviction and full-Fury acceptance unclaimed.
 

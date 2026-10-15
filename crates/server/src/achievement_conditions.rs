@@ -5,6 +5,7 @@
 // native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.
 // native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.
 // alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.
+// Native CastSpell29 SingleFalse EarnedAchievementOnPlayer87 uses signed compiled kind -87; raw DB2 kinds stay unchanged.
 // Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.
 // Native kill78 CreatureType30 preserves the actual eligible victim type.
 // Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.
@@ -27702,6 +27703,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (103438, 239899) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 2686)],
+        }),
+        (103451, 392319) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(-87, 41707)],
         }),
         (103483, 383324) => Some(CompiledConditions::All {
             difficulty: None,
