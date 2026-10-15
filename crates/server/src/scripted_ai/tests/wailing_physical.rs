@@ -113,10 +113,19 @@ fn encounter_coverage_wailing_walks_two_camps_and_onward_without_arrival_injecti
     let (mut h, unrelated, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
     h.app
         .insert_resource(crate::navigation::Navigation::new(&root));
-    h.app
-        .world_mut()
-        .entity_mut(unrelated)
-        .insert(ReactState::Passive);
+    // The resource harness seeds Lord Cobrahn3669 near its observer. The source
+    // escort requires all four druids defeated; leaving this prerequisite alive
+    // but Passive preserves its already-started chase and blocks the walk.
+    // Use the actual death boundary as pre-clear, not a stance/faction shortcut.
+    h.hit_pct(unrelated, 1_000.0);
+    h.advance(0.05);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(unrelated)
+            .is_some(),
+        "seeded Cobrahn crossed the real death boundary before escort staging"
+    );
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);
