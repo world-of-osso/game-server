@@ -87,4 +87,25 @@ fn encounter_coverage_wailing_aggro_speech_names_target_and_keeps_say_audience()
     assert!(spoken > 0, "source aggro hook must sometimes speak");
     assert!(quiet > 0, "source aggro hook must sometimes stay silent");
     assert!(named, "NPC attacker name replaces $n for nearby hearers");
+
+    let player_name = h.app.world().get::<Player>(near).unwrap().name.clone();
+    let mut named_player = false;
+    // Exercise Player-name resolution through the same text sender, without
+    // another random chance gate; the prior loop proves the engagement branch.
+    for _ in 0..5 {
+        creature_text::talk_with_target(h.app.world_mut(), disciple, 10, Some(near));
+        h.advance(0.1);
+        let messages = std::mem::take(&mut h.players[0].2.chat);
+        assert_eq!(messages.len(), 1);
+        assert_eq!(h.inbox(2).chat.last().unwrap().content, messages[0].content);
+        assert!(h.inbox(1).chat.is_empty());
+        assert!(h.inbox(3).chat.is_empty());
+        let expected: Vec<_> = source
+            .iter()
+            .map(|text| text.male_text.replace("$n", &player_name))
+            .collect();
+        assert!(expected.contains(&messages[0].content));
+        named_player |= messages[0].content.contains(&player_name);
+    }
+    assert!(named_player, "Player target also replaces $n");
 }
