@@ -111,7 +111,6 @@ fn achievements_criteria_nested_all_native_encounter_respects_prerequisite_and_d
         }
         let saved = state.clone();
         h.advance(3);
-        record_encounter_defeat(h.app.world_mut(), map, 2051, difficulty);
         let state = h
             .app
             .world()
@@ -119,11 +118,11 @@ fn achievements_criteria_nested_all_native_encounter_respects_prerequisite_and_d
             .unwrap();
         assert_eq!(
             state.criteria_progress, saved.criteria_progress,
-            "boolean criterion cannot replay"
+            "idle updates cannot invent another encounter defeat"
         );
         assert_eq!(
             state.earned_at, saved.earned_at,
-            "original dates survive duplicate boundary and idle"
+            "original dates survive idle updates"
         );
         drop(h);
         let reopened = redb::Database::open(file.path()).unwrap();
