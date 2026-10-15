@@ -1,10 +1,12 @@
 //! TC a352b1fa Unit.cpp2898: victim aura187 affects melee, not ranged, crit.
 use super::test_harness::*;
 use crate::auras::{AuraApplication, AuraSource, RemoveReason};
+use crate::class_progression::{ActiveSpec, ClassProgressionPlugin, KnownSpells};
 use crate::combat::AutoAttack;
+use crate::persistence::{ClientId, GameDatabase};
 use crate::stats::CharacterStats;
 use bevy::prelude::Entity;
-use shared::components::{Health, PowerType};
+use shared::components::{Health, Player, PowerType, UnitFactionTemplate};
 use shared::protocol::CombatLogKind;
 
 const HARDENED_BATTLELYNX: u32 = 460575;
@@ -233,12 +235,98 @@ fn class_completeness_native_brittle_increases_victim_melee_crit_chance() {
     assert!(damage.iter().all(|event| event.crit), "{damage:?}");
 }
 
+const GUARDIAN_SPEC: u32 = 104;
+const GUARDIAN_PASSIVE: u32 = 137010;
+const BEAR_FORM: u32 = 5487;
+const DRUID: u8 = 11;
+const NIGHT_ELF: u8 = 4;
+
+fn spawn_native_guardian_progression() -> Harness {
+    let db = crate::persistence::temp_database();
+    let (character_id, _) =
+        crate::persistence::create_character(&db, 1, "Guardian", NIGHT_ELF, DRUID).unwrap();
+    crate::persistence_progression::save_progression(
+        &db,
+        character_id,
+        &crate::persistence_progression::ProgressionData {
+            spec_id: GUARDIAN_SPEC,
+            action_bar: Vec::new(),
+        },
+    );
+    let mut h = harness_with_plugins(Vec::new(), &[BEAR_FORM], DRUID, true, move |app| {
+        app.insert_resource(GameDatabase { db });
+        app.add_plugins(ClassProgressionPlugin);
+    })
+    .unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = NIGHT_ELF;
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<KnownSpells>()
+        .insert((
+            ClientId(character_id),
+            UnitFactionTemplate(crate::faction::faction_template_for_race(NIGHT_ELF)),
+        ));
+    h.app
+        .world_mut()
+        .get_mut::<crate::auth::InWorld>(h.connection)
+        .unwrap()
+        .character_id = character_id;
+    h
+}
+
+fn cast_native_guardian_bear() -> Harness {
+    let mut h = spawn_native_guardian_progression();
+    // Progression writes KnownSpells in Update; passive sync follows in FixedUpdate.
+    for _ in 0..8 {
+        if crate::auras::has_aura(h.app.world(), h.caster, GUARDIAN_PASSIVE) {
+            break;
+        }
+        h.advance(1);
+    }
+    let world = h.app.world();
+    assert_eq!(world.get::<ActiveSpec>(h.caster).unwrap().0, GUARDIAN_SPEC);
+    assert!(
+        world
+            .get::<KnownSpells>(h.caster)
+            .unwrap()
+            .contains(GUARDIAN_PASSIVE)
+    );
+    assert_eq!(
+        world
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE),
+        -6.0
+    );
+    h.cast_and_deliver(BEAR_FORM, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let form = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .and_then(crate::auras::shapeshift::current_form)
+        .map(|(_, form)| form);
+    assert_eq!(
+        form,
+        Some(5),
+        "real player Bear Form cast must finish before creature attacks"
+    );
+    h.inbox.log.clear();
+    h
+}
+
 #[test]
 fn class_completeness_native_bear_reduction_stops_creature_melee_crits() {
-    let mut h = protected_target();
-    remove_protection(&mut h);
+    let mut h = cast_native_guardian_bear();
     let caster = h.caster;
-    apply_native(&mut h, caster, 5487, 2);
     h.app
         .world_mut()
         .entity_mut(h.npc)
