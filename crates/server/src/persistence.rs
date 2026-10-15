@@ -336,6 +336,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(ACCOUNT_CHARACTERS);
     let _ = txn.open_table(CHARACTER_NAMES);
     let _ = txn.open_table(CHARACTER_GUILDS);
+    txn.open_table(crate::guild_event_log::EVENTS)
+        .expect("create guild lifecycle event history");
     let _ = txn.open_table(PENDING_GUILD_INVITES);
     txn.open_table(charters::STATE)
         .expect("create charter state table");
