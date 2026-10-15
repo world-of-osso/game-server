@@ -132,9 +132,49 @@ fn play_native_carry_battle(
     panic!("native carry battle did not finish within100 turns");
 }
 
+fn refuse_stale_and_forfeit(
+    world: &mut World,
+    connection: Entity,
+    owner: Entity,
+    creature: Entity,
+) {
+    start_encounter(world, connection, owner, creature.to_bits()).unwrap();
+    let active = world.get::<ActiveEncounter>(owner).unwrap();
+    let battle_id = active.encounter.id;
+    let round = active.encounter.battle.round;
+    let stale = WildPetBattleActionRequest {
+        battle_id,
+        round: u32::MAX,
+        action: WildPetBattleAction::Pass,
+    };
+    assert!(
+        advance_encounter(world, owner, stale)
+            .unwrap_err()
+            .contains("stale")
+    );
+    let forfeit = WildPetBattleActionRequest {
+        battle_id,
+        round,
+        action: WildPetBattleAction::Forfeit,
+    };
+    advance_encounter(world, owner, forfeit).unwrap();
+    assert!(world.get::<ActiveEncounter>(owner).is_none());
+    let pet = world
+        .get::<AccountPetJournal>(owner)
+        .unwrap()
+        .journal
+        .get(41)
+        .unwrap();
+    assert_eq!(
+        pet.level, 24,
+        "refused/forfeited battles do not earn a level"
+    );
+    assert_eq!(pet.xp, 1979);
+}
+
 #[test]
 fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
-    for species in [39, 1426] {
+    for species in [39, 1426, 1974] {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("species.redb");
         let database = redb::Database::create(&path).unwrap();
@@ -149,6 +189,15 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
                 .get(&25123),
             None,
             "owned level24 is not credit"
+        );
+        refuse_stale_and_forfeit(app.world_mut(), connection, owner, creature);
+        assert!(
+            app.world()
+                .get::<crate::achievement::PlayerAchievementState>(owner)
+                .unwrap()
+                .criteria_progress
+                .get(&25123)
+                .is_none()
         );
         play_native_carry_battle(app.world_mut(), connection, owner, creature);
         assert_eq!(
@@ -166,12 +215,14 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
             .world()
             .get::<crate::achievement::PlayerAchievementState>(owner)
             .unwrap();
+        for (criterion, required_species) in [(25123, 1426), (34921, 1974), (34667, 1974)] {
+            assert_eq!(
+                state.criteria_progress.get(&criterion),
+                (species == required_species).then_some(&1),
+                "actual pet species and level must match type160/162 criterion{criterion}"
+            );
+        }
         let expected = (species == 1426).then_some(&1);
-        assert_eq!(
-            state.criteria_progress.get(&25123),
-            expected,
-            "actual species1426 XP level25 must qualify9070, wrong species must not"
-        );
         assert_eq!(
             state.account.as_ref().unwrap().earned_ids.contains(&9070),
             species == 1426
@@ -195,11 +246,13 @@ fn achievements_criteria_native_pet_level_species_uses_actual_xp_reward() {
                 .level,
             25
         );
-        assert_eq!(
-            crate::persistence::load_achievements(&database, character_id)
-                .criteria_progress
-                .get(&25123),
-            expected
-        );
+        let saved = crate::persistence::load_achievements(&database, character_id);
+        for (criterion, required_species) in [(25123, 1426), (34921, 1974), (34667, 1974)] {
+            assert_eq!(
+                saved.criteria_progress.get(&criterion),
+                (species == required_species).then_some(&1)
+            );
+        }
+        assert_eq!(crate::battle_pets::load_journal(&database, 43).count(), 0);
     }
 }
