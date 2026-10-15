@@ -94,6 +94,36 @@ fn talent_starter_authored_rows_use_cumulative_ranks_and_independent_budgets() {
     );
 }
 
+#[test]
+fn talent_starter_installed_class_builds_are_legal_at_unlock_cap_and_apex_levels() {
+    let classes = classes().unwrap();
+    for class in &classes.classes {
+        for build in &class.traits.starter_builds {
+            if !class.specs.iter().any(|spec| spec.spec_id == build.spec_id) {
+                continue;
+            }
+            for level in [10, 11, 70, 80, 90] {
+                let ctx = TraitContext {
+                    spec_id: build.spec_id,
+                    level,
+                };
+                let purchases = starter_purchases(&class.traits, ctx).unwrap_or_else(|reason| {
+                    panic!(
+                        "class{} spec{} level{level}: {reason}",
+                        class.class_id, build.spec_id
+                    )
+                });
+                let entries = build_config(&class.traits, ctx, &purchases).unwrap();
+                assert!(
+                    unspent(&class.traits, ctx, &entries)
+                        .iter()
+                        .all(|(_, left)| *left >= 0)
+                );
+            }
+        }
+    }
+}
+
 fn ret(level: u8) -> TraitContext {
     TraitContext {
         spec_id: SPEC_RETRIBUTION,
