@@ -79,10 +79,11 @@ fn find_or_spawn_fixture_session(world: &mut World, player: Entity, account: u64
     {
         return (connection, entered.character_id);
     }
+    let suffix = char::from(b'a' + (account % 26) as u8);
     let (character, _) = crate::persistence::create_character(
         &world.resource::<GameDatabase>().db,
         account,
-        &format!("Companion{account}"),
+        &format!("Pet{suffix}"),
         1,
         8,
     )
