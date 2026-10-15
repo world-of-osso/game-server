@@ -76,6 +76,31 @@ class BattlegroundPopulationTest(unittest.TestCase):
                 self.assertEqual(promoted, fingerprints(db, ALLOWED))
                 self.assertEqual(unrelated, fingerprints(db, set(tables) - ALLOWED))
 
+    def test_isle_demolisher_spellclick_is_promoted_from_source_without_other_rows_changing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.copy_database(directory)
+            with closing(sqlite3.connect(path)) as db, db:
+                expected = db.execute(
+                    "SELECT * FROM tdb_npc_spellclick_spells WHERE npc_entry=34775"
+                ).fetchall()
+                self.assertEqual(expected, [(34775, 66245, 1, 0)])
+                db.execute("DELETE FROM content_npc_spellclick_spells WHERE npc_entry=34775")
+                other = db.execute(
+                    "SELECT * FROM content_npc_spellclick_spells WHERE npc_entry<>34775 ORDER BY npc_entry,spell_id"
+                ).fetchall()
+            for _ in range(2):
+                result = self.promote(path, (628,))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                with closing(sqlite3.connect(path)) as db:
+                    self.assertEqual(
+                        db.execute("SELECT * FROM content_npc_spellclick_spells WHERE npc_entry=34775").fetchall(),
+                        expected,
+                    )
+                    self.assertEqual(
+                        db.execute("SELECT * FROM content_npc_spellclick_spells WHERE npc_entry<>34775 ORDER BY npc_entry,spell_id").fetchall(),
+                        other,
+                    )
+
     def test_mixed_open_world_request_is_rejected_without_any_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.copy_database(directory)
