@@ -205,6 +205,10 @@ fn sync_enlisted_aura(world: &mut World, player: Entity, spell: Option<u32>) {
 }
 
 #[cfg(test)]
+#[path = "pvp_war_mode_fifo_tests.rs"]
+mod fifo_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     #[test]
