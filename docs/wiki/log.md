@@ -1,3 +1,7 @@
+## 2026-10-14 — Pet-level type qualifiers, initial proof
+
+[BattlePetType78](systems/dungeon-achievements.md#pet-level-type-qualifiers) uses already-preserved actual earned-level species and joined PetTypeEnum0–9; no new event/schema. Valid native RED3959ea9c and initial GREEN0032d528 prove actual39Mechanical9/1426Magic5 XP24→25. Compiler39/39/generated5736; census5494ordinary/1824statistics adds only6609/6610 structurally. Integrated master/pinned acceptance pending; other native types/level10/all-ten-family grants remain unclaimed.
+
 ## 2026-10-14 — Post-count7 source audit
 
 [Remaining boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) pins44/58/64's missing progress rules,153's actual action-set dispatch with zero matching native portals/templates, and218's hard-false Party Sync companions. Follow-up208/222/229/230/234 likewise lacks executable progress/callers; existing scenario/item/spell/Mythic events cannot stand in. Source/data proof only; no runtime/census activation. Removed stale spec assertions that already-implemented BG70/objective30/rated37 had no producers; world honor and garrison gaps remain.
