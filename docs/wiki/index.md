@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — source aura236, NPC occupancy and M2 seat placement implemented; GREEN/controls, deploy closure and native vehicle proof pending.
+- [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — driver boarding/source pose/exit/death/departure GREEN3 and deploy closure GREEN4; independent-occupant stacking RED reproduced, fix/overfill proof pending; native vehicle path open.
 
 - [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, verification and driver boarding pending.
 

@@ -1,3 +1,7 @@
+## 2026-10-15 — Independent vehicle control-aura ownership
+
+[Demolisher seats](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15): driver/source-pose/normal-exit/reentry/departure and vehicle/rider death release pass3/3, deploy closure4/4. A second real friendly caster then reproduces seat0 instead of2 because generic aura replacement ejects the first driver. TC vehicle-control stacking rule added; occupancy/overfill/reuse verification pending, no native movement/fire claim.
+
 ## 2026-10-15 — Demolisher boarding implementation, verification pending
 
 [Source NPC seating](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) adds aura236/Vehicle509 occupancy, source bind-pose placement and lifetime hooks after genuine processed spellclick RED. Faction1732 now passes before the missing-driver assertion. No boarding GREEN, deploy closure, client attachment, movement/fire or native acceptance claim yet; protocol epoch2 needs coordinated server/client gates before landing.
