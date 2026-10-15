@@ -90,6 +90,99 @@ fn talent_starter_activation_level_up_relog_and_manual_edit() {
 }
 
 #[test]
+fn talent_starter_preserves_named_configs_spec_selection_and_rejected_edits() {
+    let classes = class_spells().expect("world.db");
+    let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
+    drain(&mut app, player);
+    change(
+        &mut app,
+        player,
+        TraitLoadoutOperation::Create {
+            name: "Saved".into(),
+            entries: selections(&[BLADE_OF_JUSTICE]),
+        },
+    );
+    let saved = received::<TraitLoadoutsSnapshot>(&mut app, player)
+        .pop()
+        .unwrap()
+        .selected_id;
+    change(
+        &mut app,
+        player,
+        TraitLoadoutOperation::Activate { id: u32::MAX },
+    );
+    let initial = app.world().get::<TraitLoadout>(player).unwrap().clone();
+    let list = received::<TraitLoadoutsSnapshot>(&mut app, player)
+        .pop()
+        .unwrap();
+    assert!(list.starter_available);
+    assert_eq!(
+        list.configs,
+        vec![TraitLoadoutInfo {
+            id: saved,
+            name: "Saved".into()
+        }]
+    );
+    send_request(
+        &mut app,
+        player,
+        CommitTraitConfig {
+            spec_id: SPEC_RETRIBUTION,
+            entries: vec![TraitEntrySelection {
+                node_id: u32::MAX,
+                entry_id: 1,
+                rank: 1,
+            }],
+        },
+    );
+    assert!(
+        !received::<TraitCommitResult>(&mut app, player)
+            .last()
+            .unwrap()
+            .ok
+    );
+    assert_eq!(app.world().get::<TraitLoadout>(player).unwrap(), &initial);
+    assert_eq!(
+        load_trait_configs(&app.world().resource::<GameDatabase>().db, 9)
+            .spec_mut(SPEC_RETRIBUTION)
+            .selected_id,
+        u32::MAX
+    );
+    send_request(&mut app, player, SetSpecialization { spec_id: SPEC_HOLY });
+    send_request(
+        &mut app,
+        player,
+        SetSpecialization {
+            spec_id: SPEC_RETRIBUTION,
+        },
+    );
+    assert_eq!(app.world().get::<TraitLoadout>(player).unwrap(), &initial);
+    assert_eq!(
+        received::<TraitLoadoutsSnapshot>(&mut app, player)
+            .last()
+            .unwrap()
+            .selected_id,
+        u32::MAX
+    );
+    change(
+        &mut app,
+        player,
+        TraitLoadoutOperation::Activate { id: saved },
+    );
+    assert_eq!(
+        received::<TraitLoadoutsSnapshot>(&mut app, player)
+            .last()
+            .unwrap()
+            .selected_id,
+        saved
+    );
+    assert_eq!(
+        app.world().get::<TraitLoadout>(player).unwrap().purchases(),
+        purchases(&[BLADE_OF_JUSTICE])
+    );
+}
+
+#[test]
 fn talent_loadouts_create_apply_switch_rename_delete_and_login_restore() {
     let classes = class_spells().expect("world.db");
     let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
