@@ -59,16 +59,14 @@ fn toyfx44_bashiok_real_learn_use_preserves_source_actor_and_natural_lifetime() 
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Health, ModelDisplay, Npc, Rotation, UnitIsPet, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
-    let path = import_toyfx8_world(directory.path());
+    let path = toyfx8_world();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("bashiok.redb"));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
-    h.app
-        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-    h.app
-        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     h.app
