@@ -26,6 +26,27 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_encounter_nested_all_preserves_scoped_award_and_difficulty_some(self):
+        criteria = {36050: dict(self.criteria[1], Type='165', Asset='2051', ModifierTreeId='56522')}
+        mods = {56522: node(0, 4), 56523: node(56522, 4),
+                63594: node(56523, 2, 87, 11611), 56524: node(56522, 8, amount=1),
+                56525: node(56524, 2, 68, 15), 56526: node(56524, 2, 68, 16)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {36050: [(True, (15, 16)), ((87, 11611),)]})
+        for kind in ('0', '28', '29', '74', '110'):
+            criteria[36050]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[36050]['Type'] = '165'
+        for field, value in [('Type', '999'), ('SecondaryAsset', '1'), ('Asset', '1')]:
+            invalid = copy.deepcopy(mods)
+            invalid[56523][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+        self.assertEqual(self.compile({**mods, 63595: node(56523, 2, 999, 1)}, criteria), {})
+        self.assertEqual(self.compile({**mods, 63595: node(56523, 3, 87, 10460)}, criteria), {})
+        mixed_some = copy.deepcopy(mods)
+        mixed_some[56526] = node(56524, 2, 87, 10460)
+        self.assertEqual(self.compile(mixed_some, criteria), {})
+
     def test_native_kill_absent_aura_keeps_alive_and_difficulty_companions(self):
         criteria = {20693: dict(self.criteria[1], ModifierTreeId='6635')}
         mods = {6635: node(0, 4), 6636: node(6635, 2, 16),
