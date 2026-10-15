@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; actual Cheap Shot stun RED, bounded GREEN pending.
+
 - [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — native240/4 caster-only reduction; receiver-corrected62627/38598 Strike/Evasion RED→GREEN, removal/ownership and merged31 controls/check/fmt pass; wider hit system remains open.
 
 - [Live player weapon-spell dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — real Rogue Evasion and receiver stat producer; six direction/control/flag/ranged/lifecycle controls, NPC/attacker-modifier/full hit-system gaps retained.
