@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query/additive table; atomic producers and acceptance pending, separate from bank logs/news.
+- [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producer wiring; acceptance pending, separate from bank logs/news.
 
 - [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 

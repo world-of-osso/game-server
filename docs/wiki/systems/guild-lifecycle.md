@@ -1,6 +1,6 @@
 # Guild lifecycle history
 
-Server-authoritative guild lifecycle events are distinct from [bank logs](banks.md). The [contract](../../specs/guild-event-log.md) tracks the ongoing slice; query plumbing exists, producers and acceptance remain pending.
+Server-authoritative guild lifecycle events are distinct from [bank logs](banks.md). The [contract](../../specs/guild-event-log.md) tracks the ongoing slice; query and atomic producer wiring exist; acceptance remains pending.
 
 ## Storage and query
 
@@ -8,9 +8,11 @@ Server-authoritative guild lifecycle events are distinct from [bank logs](banks.
 
 `guild_ranks.rs` routes `QueryEventLog` through its authenticated in-world connection, using that actor's persisted membership to select history. Replies include current server time, oldest-to-newest events and a typed refusal for nonmembers. The request cannot select another guild. No data is reconstructed from administrative membership setup.
 
-## Producer boundary (pending)
+## Producer boundary
 
-The six real mutations must append within their existing redb transactions, not after commit. Mainline reverses insertion order for display; pinned TC caps retention at100. Rank/actor/member labels must be captured when the event occurs, so later renames/leaves cannot rewrite history. These are the unverified contract, not completed producer behavior.
+Pending invitation creation/acceptance, rank promotion/demotion and remove/quit append before their existing redb transaction commits. Charter registration appends actual founder joins with the supplied creation timestamp in its membership/charter-consumption transaction. Administrative set-membership does not reconstruct history. Names are captured from real character records; rank labels are captured before later renames can rewrite their meaning.
+
+The ledger retains the latest100 entries in insertion order, including tied timestamps. Callers retain ownership of commit/abort; appending never opens or commits another transaction. Mainline reverses the returned order for display. Behavioral RED reproduced all six successful actions leaving an empty log; real sequence/restart, founder joins and retention/abort GREEN are pending.
 
 ## Sources
 
