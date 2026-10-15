@@ -41,12 +41,14 @@ pub fn load_guardian_spells(conn: &Connection) -> rusqlite::Result<GuardianSpell
             spells.push(spell);
         }
     }
-    let attack_time: u32 = conn.query_row(
-        "SELECT BaseAttackTime FROM creature_template WHERE entry = 29264",
-        [],
-        |row| row.get(0),
-    )?;
-    result.spirit_wolf_attack_time = Some(attack_time as f32 / 1000.0);
+    if result.spells.contains_key(&29264) {
+        let attack_time: u32 = conn.query_row(
+            "SELECT BaseAttackTime FROM creature_template WHERE entry = 29264",
+            [],
+            |row| row.get(0),
+        )?;
+        result.spirit_wolf_attack_time = Some(attack_time as f32 / 1000.0);
+    }
     Ok(result)
 }
 

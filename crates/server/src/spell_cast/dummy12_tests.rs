@@ -120,6 +120,20 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
     let wolves = actors(&mut h, 29264);
     assert_eq!(wolves.len(), 2);
     h.advance(60);
+    for wolf in &wolves {
+        assert_eq!(
+            super::effects::power_stats(h.app.world(), *wolf, false),
+            (31.0, 31.0)
+        );
+        assert_eq!(
+            super::effects::power_stats(h.app.world(), *wolf, true),
+            (31.0, 31.0)
+        );
+    }
+    assert_eq!(
+        super::effects::power_stats(h.app.world(), dummy, false),
+        (0.0, 0.0)
+    );
     let before: Vec<_> = wolves
         .iter()
         .map(|wolf| largest_wolf_hit(&h, *wolf, dummy))
@@ -137,7 +151,15 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         .unwrap()
         .attack_power *= 100.0;
     h.advance(80);
+    assert_eq!(
+        super::effects::power_stats(h.app.world(), dummy, false),
+        (0.0, 0.0)
+    );
     for (wolf, before) in wolves.into_iter().zip(before) {
+        assert_eq!(
+            super::effects::power_stats(h.app.world(), wolf, false),
+            (3100.0, 3100.0)
+        );
         let after = largest_wolf_hit(&h, wolf, dummy);
         assert!(
             after > before * 10,
