@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Pet-level type qualifiers](systems/dungeon-achievements.md#pet-level-type-qualifiers) — actual XP-driven Mechanical9/Magic5 levels, valid Humanoid0/catalog levels10/25; source5736 predicates, integrated acceptance pending.
+
 - [Remaining source-only criteria boundaries](systems/dungeon-achievements.md#remaining-source-only-boundaries) —44/58/64 lack executable rules;153 has no matching native action-set path;218 requires pinned hard-false Party Sync leaves.
 
 - [Started-child statistics](systems/dungeon-achievements.md#started-child-statistic-projection) — native40/299/94 kills prove107sum3/1336max2/1337distinct2; zero/refused/dead/idle/reopen controls.
