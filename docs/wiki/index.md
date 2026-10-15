@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Guild profile/note FIFO](investigations/server-tick-lag.md#guild-motdinfoofficer-note-fifo--2026-10-15) — actual MOTD/info fields and legacy officer notes, fresh edit/view authority at write/publication;7 held-writer REDs plus tick error become10 native passes; check/release pending.
+- [Guild profile/note FIFO](investigations/server-tick-lag.md#guild-motdinfoofficer-note-fifo--2026-10-15) — actual MOTD/info fields and legacy officer notes, fresh edit/view authority at write/publication;7 held-writer REDs plus tick error become10 native passes; warning-free check passes, release pending.
 
 - [Guild rank request FIFO](investigations/server-tick-lag.md#guild-rank-request-fifo--2026-10-15) — fresh rights, ordered queries and receipt-bound member publication; five held-writer REDs plus rebound-account RED become18 native passes; warning-free check passes, release pending.
 

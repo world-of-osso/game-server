@@ -1,6 +1,6 @@
 ## 2026-10-15 — Guild profile/note FIFO
 
-[Legacy guild mutations](investigations/server-tick-lag.md#guild-motdinfoofficer-note-fifo--2026-10-15):7 full-plugin HostClient held-writer REDs and malformed-profile tick panic become queued fresh mutations/receipt publication. Current recipient view rights prevent private-note publication after later revocation; field merge, departure/rebind and actual writer failure are covered. Final10/10 native passes without warnings; runtime check pending. Invite/creation and global release/HOL coverage remain open.
+[Legacy guild mutations](investigations/server-tick-lag.md#guild-motdinfoofficer-note-fifo--2026-10-15):7 full-plugin HostClient held-writer REDs and malformed-profile tick panic become queued fresh mutations/receipt publication. Current recipient view rights prevent private-note publication after later revocation; field merge, departure/rebind and actual writer failure are covered. Final10/10 native passes; current feature check passes2m10s without warnings, format/diff pass. Invite/creation and global release/HOL coverage remain open.
 
 ## 2026-10-15 — Guild rank request FIFO
 
