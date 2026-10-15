@@ -1,9 +1,6 @@
 # Wiki Index
 
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
-- [Vehicle movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) — exact installed Flags/TurnSpeed, observed seat-only-catalog omission and explicit upgrade without defaults; importer GREEN/publication/driving still pending.
-
-- [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — driver boarding/source pose/exit/death/departure GREEN3 and deploy closure GREEN4; independent-occupant stacking RED→GREEN1 retains seats0/2/3 and refuses overfill; native vehicle path open.
 
 - [Breakable CC targeting](investigations/follower-data.md#breakable-cc-targeting--2026-10-15) — shared follower hold/retarget/cast-stop and authored Attr6 implicit filtering; native118/31935 regressions, dungeon completion still open.
 - [Typed area/zone alternatives](systems/dungeon-achievements.md#typed-areazone-alternatives) — complete root Some17/41 preserves distinct ancestry/zone semantics; actual selfie RED→GREEN and strict missing-zone controls, integrated8/8; full grants/travel unclaimed.
