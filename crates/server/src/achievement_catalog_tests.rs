@@ -1663,3 +1663,177 @@ fn achievements_incremental_event_work_is_bounded_and_snapshot_stays_complete() 
         "unchanged counters must not reevaluate trees"
     );
 }
+
+// Independent pre-index completion algorithm: keep the old full-scan fixed point as an oracle.
+fn reference_full_scan_grants(
+    catalog: &AchievementCatalog,
+    state: &mut PlayerAchievementState,
+    map: Option<u32>,
+    race: u8,
+    account: bool,
+) -> Vec<u32> {
+    let mut earned = Vec::new();
+    loop {
+        catalog.set_pet_battle_points(state);
+        let completed: Vec<_> = catalog
+            .definitions
+            .values()
+            .filter(|definition| {
+                catalog.window.has_account_flag(definition.id) == account
+                    && !state.earned_ids.contains(&definition.id)
+                    && catalog.faction_matches(definition.faction, race)
+                    && definition
+                        .map_id
+                        .is_none_or(|required| map == Some(required))
+                    && catalog.tree_progress(definition.root, state).completed
+            })
+            .map(|definition| definition.id)
+            .collect();
+        if completed.is_empty() {
+            return earned;
+        }
+        state.earned_ids.extend(&completed);
+        earned.extend(completed);
+    }
+}
+
+#[test]
+fn achievements_incremental_matches_full_scan_after_historical_and_boundary_changes() {
+    let catalog = catalog();
+    let mut indexed = PlayerAchievementState::default();
+    let mut reference = indexed.clone();
+    // Seed every supported criterion, exercising all authored tree operators, not just level leaves.
+    for round in 0..4 {
+        for (&id, criterion) in &catalog.criteria {
+            if criterion.supported && criterion.kind != 8 {
+                let value = if round == 0 {
+                    0
+                } else {
+                    u64::from(id % 7 + round) * 10000
+                };
+                if round == 3 && id % 2 == 0 {
+                    indexed.criteria_progress.remove(&id);
+                    reference.criteria_progress.remove(&id);
+                } else {
+                    indexed.criteria_progress.insert(id, value);
+                    reference.criteria_progress.insert(id, value);
+                }
+            }
+        }
+        indexed.earned_ids.extend([4788, 4789]);
+        reference.earned_ids.extend([4788, 4789]);
+        for (map, race, account) in [
+            (None, 1, false),
+            (Some(36), 1, false),
+            (Some(33), 2, false),
+            (None, 2, true),
+        ] {
+            let actual: Vec<_> = catalog
+                .grant_completed(&mut indexed, map, race, account)
+                .into_iter()
+                .map(|toast| toast.achievement_id)
+                .collect();
+            let expected = reference_full_scan_grants(&catalog, &mut reference, map, race, account);
+            assert_eq!(
+                actual, expected,
+                "round {round}, map {map:?}, race {race}, account {account}"
+            );
+            assert_eq!(indexed, reference);
+            assert_eq!(
+                catalog.snapshot(&indexed, race),
+                catalog.snapshot(&reference, race)
+            );
+        }
+    }
+    // The presentation-only account view invalidates character meta dependencies too.
+    let mut account = PlayerAchievementState::default();
+    account.earned_ids = catalog
+        .definitions
+        .keys()
+        .filter(|id| catalog.window.has_account_flag(**id))
+        .copied()
+        .collect();
+    indexed.account = Some(Box::new(account.clone()));
+    reference.account = Some(Box::new(account));
+    let actual: Vec<_> = catalog
+        .grant_completed(&mut indexed, None, 1, false)
+        .into_iter()
+        .map(|toast| toast.achievement_id)
+        .collect();
+    assert_eq!(
+        actual,
+        reference_full_scan_grants(&catalog, &mut reference, None, 1, false)
+    );
+    assert_eq!(
+        catalog.snapshot(&indexed, 1),
+        catalog.snapshot(&reference, 1)
+    );
+    // A reloaded catalog and a deserialized player must never trust old derived results.
+    let reloaded = self::catalog();
+    let mut reopened: PlayerAchievementState =
+        serde_json::from_slice(&serde_json::to_vec(&indexed).unwrap()).unwrap();
+    reopened.account = indexed.account.clone();
+    assert_eq!(
+        reloaded.snapshot(&indexed, 1),
+        reloaded.snapshot(&reopened, 1)
+    );
+    assert_eq!(
+        reloaded.grant_completed(&mut indexed, None, 1, false),
+        reloaded.grant_completed(&mut reopened, None, 1, false)
+    );
+}
+
+#[test]
+fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_persistence() {
+    use crate::achievement::account_store::{AccountUpdate, sync_account_progress};
+    let catalog = catalog();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let (character, _) = crate::persistence::create_character(&db, 17, "Indexed", 1, 1).unwrap();
+    let boundary = AccountUpdate {
+        account: 17,
+        character,
+        completed_map: None,
+        race: 1,
+        now: 12345,
+    };
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    sync_account_progress(&db, &mut state, &catalog, boundary);
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    let mut toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None, 1);
+    toasts.extend(sync_account_progress(&db, &mut state, &catalog, boundary));
+    let snapshot = catalog.snapshot(&state, 1);
+    let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
+    println!(
+        "warmed account event: {definitions} definitions / {trees} tree nodes / {} snapshot rows",
+        snapshot.progress.len()
+    );
+    assert!(toasts.iter().any(|toast| toast.achievement_id == 6));
+    assert!(
+        definitions < 256,
+        "account sync visited {definitions} definitions"
+    );
+    assert!(trees < 2048, "account sync evaluated {trees} tree nodes");
+    assert!(
+        snapshot.progress.len() > 5000,
+        "full account+character snapshot required"
+    );
+    assert_eq!(
+        crate::persistence::load_achievements(&db, character).earned_at[&6],
+        boundary.now
+    );
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(10), None, 1)
+            .is_empty()
+    );
+    assert!(sync_account_progress(&db, &mut state, &catalog, boundary).is_empty());
+    assert_eq!(catalog.snapshot(&state, 1), snapshot);
+    assert_eq!(EVALUATION_WORK.with(|work| work.get()), (0, 0));
+    let mut reopened = crate::persistence::load_achievements(&db, character);
+    assert!(sync_account_progress(&db, &mut reopened, &catalog, boundary).is_empty());
+    assert_eq!(catalog.snapshot(&reopened, 1), snapshot);
+}
