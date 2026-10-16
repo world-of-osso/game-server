@@ -12,6 +12,8 @@
 
 - [Optional cost spell modifiers](systems/auras.md#optional-cost-spell-modifiers-2026-10-16) — native Practiced Strikes/Protection Execute RED3/2→GREEN38 plus merged5; optional spend excludes flat and retains percentage modifiers; workspace check passes.
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls and current-master workspace check pass; full talent/legal/fresh UDP acceptance open.
+- [Missing-storage Call Pet](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16) — actual character47 has no pet record; native cast RED→refusal, sourced Human starter-pet mapping remains a gap.
+- [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls pass, workspace check held by bot live window; full talent/legal/fresh UDP acceptance open.
 
 - [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
 - [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) — Charred/Rampage damage-only fixtures use existing sourced dodge reduction; actual Chaos `Miss(Dodge)` reproduces intermittent zero-damage preconditions, no evade/gameplay change.
