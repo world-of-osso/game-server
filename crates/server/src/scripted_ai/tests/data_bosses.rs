@@ -176,12 +176,13 @@ fn encounter_fixture(
     let data = data().expect("world.db fixture");
     let mut app = stockade_app_with(data, |app| {
         app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
+        // Explicitly spawned actor fixtures also exercise real NPC ingress.
+        app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
         if populate {
             let connection =
                 Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
                     .unwrap();
             app.insert_resource(crate::gathering::load_data(&connection).unwrap());
-            app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
             app.insert_resource(
                 crate::faction::world_db_faction_templates().expect("world.db faction templates"),
             );
