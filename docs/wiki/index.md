@@ -1,3 +1,4 @@
+- [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
@@ -19,6 +20,7 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16) — authentic private vision lifecycle,138/138 Toy regression and17-file body closure; procedural8605 rendering remains open.
 - [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import, learned-use lifecycle and137/137 Toy regression; private70391 five-asset closure verified, native pixels separate.
 
 - [Shrine server per-target stat conversion](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16) — actual-use missing-table RED→source level/armor/damage/health conversion19 controls; actual attack/client HP proof separate.
@@ -37,7 +39,9 @@
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
 - [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
 
-- [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
+- [Guild lifecycle history](systems/guild-lifecycle.md) — member-scoped six-action/founder ledger, separate from bank/news history.
+- [Guild news](systems/guild-news.md) — actual qualified producers, durable member query/sticky authority and native proof ledger.
+- [Guild perks](systems/guild-perks.md) — installed definitions and membership-derived knowledge; effect coverage remains distinct.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
 
@@ -478,3 +482,5 @@ Debug logs and root cause analyses.
 - [Feral Spirit owner contribution](systems/spell-casting.md#feral-spirit-owner-contribution--2026-10-15) — source-backed owner AP and weapon terms; intrinsic AP named gap; native live-owner RED→GREEN and24 scoped controls pass.
 
 - [Rotgrip source mismatch](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16) — authenticated13596→428/bit6, literal Fatal Bite SELF damage versus SAI victim argument, real Puncture and isolated controlled credit; ordinary fight remains uncertified.
+
+- [Noxxion source port](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16) — pinned scheduler/aura port; three runtime controls pass with channel-aware clocks, ten actual Normal adds, phase lifecycle/damage and isolated credit; native/ordinary acceptance separate.

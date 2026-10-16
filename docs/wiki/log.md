@@ -1,8 +1,15 @@
 ## 2026-10-16 — Call Pet missing-storage refusal
 
 [Pet lifecycle](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16): absent PetStable admitted883 success then effect returned without a pet. Actual native-target fresh-storage RED→GREEN; four controls and copied real character47 storage probe pass. No saved pet exists. Pinned creation-cast data has no Human hunter pet row; named source gap, no granted kit. Authenticated real-profile follower melee death already reaches its owner exactly once in a separate baseline test; terminal native delivery ordering remains under investigation rather than adding duplicate events.
+## 2026-10-16 — Guild perk membership knowledge
+
+[Perks](systems/guild-perks.md): actual persisted join RED reproduced no perk grants. Membership-derived known IDs now remain separate from class/profession learning and survive ordinary spec rebuilds; owner deltas follow Update membership changes. Focused GREEN and real UDP/native/effect proof remain open.
 
 ## 2026-10-15 — Read-only follower group reward receipts
+## 2026-10-16 — Ysera source admission and private body closure
+
+[Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16): genuine importer/use RED, authentic99518 admission, six importer controls and actual private-owner/front-offset/static120s simulation lifecycle pass. Whole-Toy138/138 and check/fmt pass after module-order-only formatting repair. Seventeen70391 body dependencies plus four aliases authenticate/publish privately; procedural8605/type22 remains unrendered. Prepared classification adds only130170 to385/1166, not complete-toy parity; earlier interaction and guardian HP gaps remain.
+
 ## 2026-10-16 — Stone Whistle source admission
 
 [Enchanted Stone Whistle](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16): actual importer and learned-use RED reproduce missing98300. Add only authentic Petrified Sand Piper through the maintained importer; existing destination/lifetime handlers are unchanged. Five importer controls, actual learned-use lifecycle, whole-Toy137/137 and server check/fmt pass; prepared classification adds only129279 to384/1166. Follow-up60 authenticates five70391 model/texture/skin assets and privately publishes them with two runtime aliases through the maintained importer; rebuilt graph is complete. Canonical publication, native rendering and guardian HP remain separate.
@@ -1602,3 +1609,10 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) trace Charred/Rampage intermittent failures to actual NPC dodge and qualify damage-only fixtures with existing native aura; evade guard unchanged.
 
 - 2026-10-16: Rotgrip copy-only binding and real source clocks/self-damage/Puncture/isolated credit; preserved DB2SELF versus TDBvictim mismatch, no fabricated correction. See [boss scripts](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16).
+- 2026-10-16: Added [incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16), replacing repeated catalog-wide recursive evaluation with affected-root reconciliation and disposable full-snapshot results. Targeted proof pending.
+
+- 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
+
+- 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
+
+- 2026-10-16: Noxxion real channel-aware clock/phase/ten-add/damage/isolated-credit acceptance GREEN3/3 at8e544d86; source21708 channel deferral explains compressed due-anchored repeat intervals. Native/ordinary acceptance remains separate.
