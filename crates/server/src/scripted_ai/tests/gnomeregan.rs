@@ -42,7 +42,12 @@ fn encounter_coverage_electrocutioner_real_sai_spells_and_copy_isolated_credit()
         h.health(player),
         h.inbox(0).log.iter().rev().take(8).collect::<Vec<_>>()
     );
-    assert!(h.casts(0, boss, SHOCK) >= 1);
+    if h.casts(0, boss, SHOCK) == 0 {
+        let admission =
+            crate::spell_cast::creature_cast(h.app.world_mut(), boss, SHOCK, Some(player), false);
+        eprintln!("ELECTROCUTIONER diagnostic-only direct admission={admission:?}");
+        panic!("authored Shock absent before diagnostic-only direct cast");
+    }
     assert_eq!(h.casts(0, boss, MEGAVOLT), 0);
     assert_eq!(h.casts(0, boss, CHAIN_BOLT), 0);
     h.advance(11.5);
