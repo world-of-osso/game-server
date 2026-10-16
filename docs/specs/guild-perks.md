@@ -40,7 +40,7 @@ Guild rewards/reputation eligibility and invitation tabards are separate slices.
 ## Active effect slice: Mount Up
 
 - [ ] Actual78633 grants10% mounted run/flight speed through authored172/211 effects, with strongest-positive nonstacking semantics (TC Unit.cpp8812–8854). Revocation restores the mounted baseline without removing the mount.
-- [ ] Authored210 is applied only in its controlled-vehicle flight context.
+- [ ] **Blocked by explicit lead decision:**210 applies only to player-controlled NPC flight (TC Unit.cpp8833–8844). The local authored vehicle runtime is ground IoC Demolishers; no flying context is fabricated or applied to the mounted player. This is not part of the supported172/211 completion claim.
 - [ ] Source Attr4/8 arena/battleground restrictions suppress the passive effect while preserving knowledge and restore it on leaving.
 - [ ] Real native mounted/unmounted and guild-removal proof; do not claim effect completion from visible rows or known IDs.
 
