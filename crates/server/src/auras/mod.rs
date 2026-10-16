@@ -6,7 +6,7 @@
 //! - same spell and caster: refresh duration, +1 stack up to `CumulativeAura`
 //!   (`SPELL_ATTR1_AURA_UNIQUE` auras are not refreshed);
 //! - same spell, other caster: coexist when the aura is harmful, has a
-//!   periodic effect or `SPELL_ATTR3_DOT_STACKING_RULE`; otherwise the new
+//!   periodic effect, vehicle-control ownership or `SPELL_ATTR3_DOT_STACKING_RULE`; otherwise the new
 //!   aura replaces the old one.
 //!
 //! Harmful (`AuraApplication::_InitFlags`): from itself or a non-friendly caster, an aura
@@ -887,7 +887,11 @@ pub(crate) fn apply_aura_with_spell(
     let coexist = instance.harmful
         || spell.id == 194384
         || crate::spell_cast::is_channeled(&spell)
-        || instance.effects.iter().any(|effect| effect.period_ms > 0)
+        // TC Aura::CanStackWith keeps each vehicle occupant's control aura;
+        // vehicle seat admission, not generic beneficial-aura replacement, limits capacity.
+        || instance.effects.iter().any(|effect| {
+            effect.period_ms > 0 || effect.aura_type == handlers::CONTROL_VEHICLE
+        })
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
     let previous_rate =
@@ -923,6 +927,7 @@ pub(crate) fn apply_aura_with_spell(
         crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
+        crate::vehicle::isle::on_applied(world, target, &aura);
         let stuns = aura
             .effects
             .iter()
@@ -1099,6 +1104,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     fixate::on_removed(world, aura);
     crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
+    crate::vehicle::isle::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
 

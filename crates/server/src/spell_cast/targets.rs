@@ -204,6 +204,12 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
 }
 
 fn unit_faction(world: &World, entity: Entity) -> UnitFaction {
+    // TC GetAffectingPlayer resolves an owned bomb's reaction through its live owner.
+    // Its spell origin remains the game object's own position and map.
+    let entity = match crate::game_objects::seaforium_bombs::find_caster_controller(world, entity) {
+        Some(owner) => owner,
+        None => entity,
+    };
     UnitFaction {
         template: world
             .get::<UnitFactionTemplate>(entity)
