@@ -13,6 +13,7 @@ pub struct EventMap {
     events: Vec<(u64, u32)>,
     /// `_lastEvent`: what `repeat` schedules again.
     last_event: u32,
+    last_due: u64,
 }
 
 /// `randtime(min, max)`: uniform in `[min, max]` ms.
@@ -65,6 +66,12 @@ impl EventMap {
         self.repeat(rand_ms(min_ms, max_ms));
     }
 
+    /// TaskScheduler::TaskContext::Repeat adds to the task's original deadline,
+    /// not the dispatch time. EventMap's existing repeat methods stay unchanged.
+    pub fn repeat_from_due_range(&mut self, min_ms: u64, max_ms: u64) {
+        self.insert(self.last_due + rand_ms(min_ms, max_ms), self.last_event);
+    }
+
     /// `ExecuteEvent`: the first due event, removed; `None` (TrinityCore 0) when
     /// none is due.
     pub fn execute_event(&mut self) -> Option<u32> {
@@ -74,6 +81,7 @@ impl EventMap {
         }
         self.events.remove(0);
         self.last_event = event_id;
+        self.last_due = due;
         Some(event_id)
     }
 
