@@ -778,6 +778,7 @@ fn toyfx_visual_audit_requires_binding_and_no_extra_effects() {
 fn toyfx_wild_brazier_spawns_owned_with_template_faction() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch(
         "CREATE TABLE summon_properties (
@@ -2015,6 +2016,7 @@ fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
         let race = if item == 163986 { 2 } else { 1 };
         let (mut h, character) =
             setup_for_race(&directory.path().join(format!("{item}.redb")), race);
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -2704,6 +2706,7 @@ fn toyfx11_sweeper_and_trophy_learn_spawn_and_expire() {
         (169865, 362988, 183727, 92396, 1.5_f32),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_world_data(&path));
         h.app
@@ -3211,6 +3214,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (279590, 1306978, 270689, 146432, 60000),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("scenery-{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -3720,6 +3724,7 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
         (276229, 1299034, 267634, 145135, 1.5),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("scaled-{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -3814,6 +3819,7 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
         (204405, 405204, 203158, vec![111821], 1.0),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("statue-{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -3863,45 +3869,6 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
         h.advance(100);
         assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
     }
-}
-
-fn place_toy_caster_on_source_area(h: &mut Harness, fdid: u32, point: [f32; 2], area: u32) {
-    place_toy_caster_on_source_map_area(h, 0, fdid, point, area);
-}
-
-fn place_toy_caster_on_source_map_area(
-    h: &mut Harness,
-    map: u32,
-    fdid: u32,
-    point: [f32; 2],
-    area: u32,
-) {
-    let data = std::fs::read(crate::ground::ground_data_dir().join(format!("terrain/{fdid}.adt")))
-        .unwrap();
-    let terrain = crate::terrain_height::parse_adt_heights(&data).unwrap();
-    assert_eq!(terrain.area_at(point[0], point[1]), Some(area));
-    let height = terrain.height_at(point[0], point[1]).unwrap();
-    let position = Position {
-        x: point[0],
-        y: height,
-        z: -point[1],
-    };
-    let tile = crate::ground::bevy_to_tile(position.x, position.z);
-    h.app
-        .insert_resource(crate::ground::GroundMap::with_terrain_on(
-            map, tile, terrain,
-        ));
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::area_table::load_area_table(&conn).unwrap());
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert((position, crate::maps::InMap::continent(map)));
 }
 
 #[test]
