@@ -399,6 +399,9 @@ fn initialize_wild_summon(
         // the ordinary spawn path selected template scaling components.
         entity.remove::<(LevelScaling, crate::level_scaling::ScaledStats)>();
     }
+    if let Some(scaled_stats) = stats.scaled_stats {
+        entity.insert(scaled_stats);
+    }
     insert_summon_privacy(&mut entity, private_owner);
     drop(entity);
     super::log_summon(world, ctx.caster, actor, ctx.spell);
@@ -411,6 +414,7 @@ struct WildSummonStats {
     armor: crate::level_scaling::CreatureArmor,
     mana: Option<shared::components::Mana>,
     scaling: Option<LevelScaling>,
+    scaled_stats: Option<crate::level_scaling::ScaledStats>,
 }
 
 fn read_wild_summon_stats(
@@ -456,7 +460,28 @@ fn calculate_wild_summon_stats(
         armor: crate::level_scaling::CreatureArmor(base_armor * template.armor_modifier),
         mana: read_wild_summon_mana(data, template, level)?,
         scaling,
+        scaled_stats: scaling.map(|scaling| build_wild_summon_scaling(data, template, scaling)),
     })
+}
+
+fn build_wild_summon_scaling(
+    data: &crate::world_data::WorldData,
+    template: &crate::world_data::CreatureTemplate,
+    scaling: LevelScaling,
+) -> crate::level_scaling::ScaledStats {
+    use crate::level_scaling::{LevelStats, ScaledStats, TuningInputs};
+    let inputs = TuningInputs {
+        content_tuning_id: scaling.content_tuning_id,
+        health_scaling_expansion: template.health_scaling_expansion,
+        unit_class: template.unit_class,
+        health_modifier: template.health_modifier,
+        damage_modifier: template.damage_modifier,
+        armor_modifier: template.armor_modifier,
+    };
+    ScaledStats(std::sync::Arc::new(LevelStats::build(
+        &data.expected_stats,
+        &inputs,
+    )))
 }
 
 fn read_wild_summon_mana(

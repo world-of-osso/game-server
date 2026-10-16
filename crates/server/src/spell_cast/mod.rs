@@ -1770,7 +1770,8 @@ pub(crate) fn applicable_costs(
         // cannot turn an originally positive cost into a grant or vice versa.
         let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
-        let optional = cost.optional_cost.max(0) as f32;
+        let additional = resources::additional_optional_cost(world, caster, spell, cost.power_type);
+        let optional = (cost.optional_cost as f32 + additional).max(0.0);
         let optional = if optional > 0.0 {
             match SpellModOp::power_cost(cost.order_index) {
                 Some(op) => modify(world, caster, spell, op, optional).max(0.0),
@@ -3036,6 +3037,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     }
 }
 
+#[cfg(test)]
+mod additional_optional_power_tests;
 #[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]
