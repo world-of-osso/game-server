@@ -22,6 +22,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
 pub(crate) use batch9::hostile_ground_fields;
@@ -581,6 +582,11 @@ pub fn check_target(
     spell_id: u32,
     target: Entity,
 ) -> Result<(), super::CastFailure> {
+    if spell_id == touch_of_death::TOUCH_OF_DEATH
+        && !touch_of_death::target_allowed(world, caster, target)
+    {
+        return Err(super::CastFailure::InvalidTarget);
+    }
     if spell_id == chrono_flame::CHRONO_FLAMES {
         return chrono_flame::check_children(world);
     }

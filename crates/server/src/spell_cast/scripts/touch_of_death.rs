@@ -1,0 +1,23 @@
+//! 70391 target admission; damage and follow-up talent consumers are separate.
+use bevy::prelude::*;
+use shared::components::{Health, Npc};
+
+pub(super) const TOUCH_OF_DEATH: u32 = 322109;
+const IMPROVED_TOUCH_OF_DEATH: u32 = 322113;
+
+/// 70391 descriptions require a weaker creature, or the learned improved rank
+/// below its authored percentage. SimC76f8118 sc_monk.cpp2685 compares the
+/// creature's current health to the Monk's maximum; strict boundaries follow DB2.
+pub(super) fn target_allowed(world: &World, caster: Entity, target: Entity) -> bool {
+    let monk = world.get::<Health>(caster).expect("living Monk health");
+    let victim = world.get::<Health>(target).expect("living target health");
+    let weaker_creature = world.get::<Npc>(target).is_some() && victim.current < monk.max;
+    if weaker_creature {
+        return true;
+    }
+    if !crate::auras::has_aura(world, caster, IMPROVED_TOUCH_OF_DEATH) {
+        return false;
+    }
+    let threshold = super::script_effect_value(world, caster, IMPROVED_TOUCH_OF_DEATH, 0);
+    victim.current * 100.0 < victim.max * threshold
+}
