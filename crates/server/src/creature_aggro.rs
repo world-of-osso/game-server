@@ -186,7 +186,12 @@ type Watchers<'w, 's> = Query<
         &'static InMap,
         Option<&'static crate::scripted_ai::ReactState>,
     ),
-    (With<AggroRange>, Without<DeathState>, Without<GridDormant>),
+    (
+        With<AggroRange>,
+        Without<DeathState>,
+        Without<GridDormant>,
+        Without<crate::vehicle::isle::NpcDriver>,
+    ),
 >;
 
 /// `CreatureAI::MoveInLineOfSight` → `Creature::CanStartAttack`: an idle
@@ -285,6 +290,7 @@ type Engaged<'w, 's> = Query<
         Without<DeathState>,
         Without<GridDormant>,
         Without<crate::followers::Follower>,
+        Without<crate::vehicle::isle::NpcDriver>,
     ),
 >;
 

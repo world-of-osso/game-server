@@ -51,6 +51,7 @@ const RETRY_CONFUSED_SECS: f32 = 0.1;
 /// Living, active creatures that are not confused or feared: their wander, waypoint
 /// and formation movement runs.
 type Roaming = (
+    Without<crate::vehicle::isle::NpcDriver>,
     Without<crate::knockback::KnockbackFlight>,
     Without<DeathState>,
     Without<GridDormant>,
@@ -63,6 +64,7 @@ type Roaming = (
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
 type ActiveUncontrolled = (
+    Without<crate::vehicle::isle::NpcDriver>,
     Without<GridDormant>,
     Without<Confused>,
     Without<Feared>,

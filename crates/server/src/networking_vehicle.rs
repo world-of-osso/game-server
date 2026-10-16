@@ -3,14 +3,16 @@
 //! supplies movement restrictions. Vehicle509 TurnSpeed and NPC template speeds
 //! remain authored data, not player defaults.
 use super::*;
-use crate::vehicle::{PassengerOrigin, VehicleMovement, VehicleStore, isle::NpcVehicle};
+use crate::vehicle::{
+    CAN_CONTROL, PassengerOrigin, VehicleMovement, VehicleStore,
+    isle::{NpcDriver, NpcVehicle},
+};
 use bevy::ecs::system::SystemParam;
 use shared::components::{CreatureMotion, Health, ModelDisplay, Npc, VehiclePassenger};
 
 const NO_STRAFE: u32 = 0x00000001;
 const NO_JUMPING: u32 = 0x00000002;
 const FIXED_POSITION: u32 = 0x00200000;
-const CAN_CONTROL: u32 = 0x00000800;
 
 #[cfg(test)]
 #[path = "networking_vehicle_tests.rs"]
@@ -26,6 +28,7 @@ type Rider = (
 type Host = (
     &'static Npc,
     &'static NpcVehicle,
+    &'static NpcDriver,
     &'static crate::auras::ActiveAuras,
     &'static ModelDisplay,
     &'static Health,
@@ -65,10 +68,10 @@ impl DriverInputs<'_, '_> {
             return None;
         }
         let entity = Entity::try_from_bits(seat.driver)?;
-        let (npc, host, auras, display, health, map, spawn, departed) =
+        let (npc, host, driver, auras, display, health, map, spawn, departed) =
             self.hosts.get(entity).ok()?;
         let alive_in_copy = health.current > 0.0 && !departed && *map == origin.map;
-        if !alive_in_copy || display.display_id != origin.display {
+        if !alive_in_copy || display.display_id != origin.display || driver.0 != player {
             return None;
         }
         let store = self.store.as_ref()?;
@@ -121,7 +124,11 @@ impl DriverInputs<'_, '_> {
                 behind: step.behind,
             });
             position.set_if_neq(step.position);
-            rotation.y = step.yaw;
+            let facing = Rotation {
+                y: step.yaw,
+                ..*rotation
+            };
+            rotation.set_if_neq(facing);
             speed.set_if_neq(MovementSpeed(step.speed));
             motion.set_if_neq(step.motion);
         }

@@ -13,6 +13,10 @@ struct Occupant {
     aura_id: u32,
 }
 
+/// TC SetCharmedBy(CHARM_TYPE_VEHICLE): a player owns this NPC's movement.
+#[derive(Component)]
+pub(crate) struct NpcDriver(pub Entity);
+
 #[derive(Component, Default)]
 pub(crate) struct NpcVehicle {
     seats: [Option<Occupant>; 8],
@@ -205,6 +209,9 @@ fn board(
     }
     world.get_mut::<NpcVehicle>(vehicle).unwrap().seats[index] =
         Some(Occupant { passenger, aura_id });
+    if world.resource::<VehicleStore>().seats[&seat_id].flags & CAN_CONTROL != 0 {
+        world.entity_mut(vehicle).insert(NpcDriver(passenger));
+    }
     world.entity_mut(passenger).insert((seat, origin));
     set_control(world, passenger, true);
     update_passenger_position(world, passenger, seat);
@@ -290,8 +297,18 @@ pub(crate) fn on_removed(world: &mut World, vehicle: Entity, aura: &AuraInstance
     }
 }
 
+fn release_driver(world: &mut World, vehicle: Entity, passenger: Entity) {
+    if world
+        .get::<NpcDriver>(vehicle)
+        .is_some_and(|driver| driver.0 == passenger)
+    {
+        world.entity_mut(vehicle).remove::<NpcDriver>();
+    }
+}
+
 pub(super) fn release_seat(world: &mut World, passenger: Entity, seat: VehiclePassenger) {
     let vehicle = Entity::from_bits(seat.driver);
+    release_driver(world, vehicle, passenger);
     let aura_id = world.get_mut::<NpcVehicle>(vehicle).and_then(|mut state| {
         let slot = &mut state.seats[usize::from(seat.seat_index)];
         if slot.is_some_and(|occupant| occupant.passenger == passenger) {
@@ -319,13 +336,14 @@ pub(super) fn clear_departed_passengers(world: &mut World) {
                 .filter_map(|(index, occupant)| {
                     let occupant = occupant.as_ref()?;
                     let seated = is_current_passenger(world, occupant.passenger, vehicle, index);
-                    (!seated).then_some((vehicle, index, occupant.aura_id))
+                    (!seated).then_some((vehicle, index, occupant.passenger, occupant.aura_id))
                 })
                 .collect::<Vec<_>>()
         })
         .collect();
-    for (vehicle, index, aura_id) in departed {
+    for (vehicle, index, passenger, aura_id) in departed {
         world.get_mut::<NpcVehicle>(vehicle).unwrap().seats[index] = None;
+        release_driver(world, vehicle, passenger);
         crate::auras::remove_auras(world, vehicle, RemoveReason::CasterGone, |aura| {
             aura.instance_id == aura_id
         });

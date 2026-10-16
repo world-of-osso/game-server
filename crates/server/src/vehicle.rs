@@ -11,7 +11,7 @@ use std::collections::HashMap;
 pub(crate) mod isle;
 
 const CAN_ENTER_OR_EXIT: u32 = 0x02000000;
-const CAN_CONTROL: u32 = 0x00000800;
+pub(crate) const CAN_CONTROL: u32 = 0x00000800;
 const BOARD_DISTANCE: f32 = 5.0;
 
 #[derive(Clone, Copy)]

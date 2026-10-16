@@ -924,6 +924,21 @@ fn isle_channel_driver_authority_is_not_replaced_by_hostile_creature_chase() {
         position,
         "a player-driven Demolisher must not chase its attacker without driver input"
     );
+    let driver = &entered.players[0];
+    h.app
+        .world_mut()
+        .entity_mut(driver.connection)
+        .insert(pair::<shared::protocol::ExitVehicle>());
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::ExitVehicle>>(driver.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::ExitVehicle);
+    h.advance(5);
+    assert!(
+        h.app.world().get::<Position>(demolisher).unwrap().x > position.x + 0.1,
+        "normal exit restores the living NPC's response to its hostile threat"
+    );
 }
 
 #[test]
