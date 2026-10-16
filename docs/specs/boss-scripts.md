@@ -236,3 +236,4 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 
 - Admit only pinned TC a352b1fa Razorlash12258→423/Normal349/bit1, authenticated by installed Journal70391 encounter424/actor994/display12389. Produce copy-only SQL; preserve unrelated bindings. Reject AI/DB2 identity drift.
 - Keep authored SmartAI probabilities (Thrash70%, Cleave/Puncture85%), resources, targeting and timers. Controlled proof may stage player survival health; ordinary balance, extra-attack parity, native clear, loot/persistence and canonical publication remain separate.
+- Bounded proof: repeated source-window SpellGo with explicit self/victim targets, actual Thrash/Puncture auras, real Cleave/Puncture damage and isolated423/bit1 controlled death credit. Production interest routing and Thrash extra-attack effect parity are not certified by this fixture.
