@@ -1506,3 +1506,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-15: Feral Spirit owner/weapon-only repair f135c4a8+28859d64, merged afc0e5e5/protocol62865c23:24/24 scoped controls, check/fmt/readability clean; intrinsic AP and full-stat acceptance remain open.
 
 - 2026-10-15: Feero4484 counter63/event77 first-wave RED and queued cross-creature implementation; native acceptance pending.
+
+- 2026-10-15: counter first-wave GREEN1; Feero immunity/ambusher-target RED2, action145/49 implementation.

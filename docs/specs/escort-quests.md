@@ -15,7 +15,8 @@ Extend the existing [SmartAI escort interpreter](smartai-escort.md), not a paral
 |---|---|---|
 | Existing path/pause/summon/quest machinery | Reused | Previous quest863 proof, not Feero acceptance |
 | Counter63/event77 cross-creature death flow | Implemented; GREEN pending | RED reaches four real deaths, remains paused before fix |
-| Attack-start49, immunity145, emote5 | Pending | Authored Feero/ambusher rows require these |
+| Attack-start49, immunity145 | Implemented; GREEN pending | RED: immunity512 retained; appearance failed to select Feero |
+| Emote5 | Pending | Authored second-camp list requires roar15 |
 | Both-skin native complete/death run | Pending | No evidence yet |
 
 No canonical DB writes, guessed missing actions, source replacement, master push or unrelated UI redesign. Other unsupported SmartAI actions/events remain named gaps; this is not full SmartAI parity.
