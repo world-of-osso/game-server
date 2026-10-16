@@ -823,53 +823,11 @@ fn handle_guild_invite(
     }
 }
 
-pub fn process_guild_accepts(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &mut MessageReceiver<GuildAcceptInviteRequest>,
-        ),
-        With<crate::auth::Authenticated>,
-    >,
-    char_ids: Query<&ClientId>,
-    guilds: Query<&GuildMembership>,
-    db: Option<Res<GameDatabase>>,
-    mut commands: Commands,
-    mut replies: GuildAcceptReplies,
-) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
-        for _ in receiver.receive() {
-            let response = handle_guild_accept(&db, &char_ids, &guilds, &mut commands, link.0);
-            if let Some(guild_id) = response.guild_id {
-                replies.changed.0.push(guild_id);
-                for (connection, world) in &replies.connections {
-                    if persistence::load_character_guild(&db.db, world.character_id)
-                        .is_some_and(|g| g.guild_id == guild_id)
-                    {
-                        if let Ok(mut sender) = replies.ranks.get_mut(connection) {
-                            sender.send::<shared::protocol::GuildChannel>(
-                                crate::guild::guild_rank_snapshot(&db.db, world.character_id, None),
-                            );
-                        }
-                    }
-                }
-            }
-            if let Ok(mut sender) = replies.accepts.get_mut(conn_entity) {
-                sender.send::<AuthChannel>(response);
-            }
-        }
-    }
-}
+#[path = "guild_accept_persistence.rs"]
+pub(crate) mod guild_accept;
 
-#[derive(SystemParam)]
-pub struct GuildAcceptReplies<'w, 's> {
-    accepts: Query<'w, 's, &'static mut MessageSender<GuildAcceptInviteResponse>>,
-    ranks: Query<'w, 's, &'static mut MessageSender<shared::protocol::GuildRanksState>>,
-    connections:
-        Query<'w, 's, (Entity, &'static crate::auth::InWorld), With<crate::auth::Authenticated>>,
-    changed: ResMut<'w, crate::guild_bank::ChangedGuilds>,
+pub fn process_guild_accepts(world: &mut World) {
+    guild_accept::enqueue_requests(world);
 }
 
 fn guild_accept_error(msg: impl Into<String>) -> GuildAcceptInviteResponse {
@@ -878,43 +836,6 @@ fn guild_accept_error(msg: impl Into<String>) -> GuildAcceptInviteResponse {
         guild_id: None,
         guild_name: None,
         error: Some(msg.into()),
-    }
-}
-
-fn handle_guild_accept(
-    db: &GameDatabase,
-    char_ids: &Query<&ClientId>,
-    guilds: &Query<&GuildMembership>,
-    commands: &mut Commands,
-    player_entity: Entity,
-) -> GuildAcceptInviteResponse {
-    let Ok(character_id) = char_ids.get(player_entity).map(|c| c.0) else {
-        return guild_accept_error("Character id not found");
-    };
-    if persistence::load_character_guild(&db.db, character_id).is_some() {
-        return guild_accept_error("You are already in a guild.");
-    }
-    let invite = match persistence::accept_pending_guild_invite(&db.db, character_id) {
-        Ok(invite) => invite,
-        Err(error) => return guild_accept_error(error),
-    };
-    let next_membership = GuildMembership {
-        guild_id: invite.guild_id,
-        guild_name: invite.guild_name.clone(),
-    };
-    let membership_changed = match guilds.get(player_entity) {
-        Ok(current) => current != &next_membership,
-        Err(_) => true,
-    };
-    if membership_changed {
-        commands.entity(player_entity).insert(next_membership);
-    }
-
-    GuildAcceptInviteResponse {
-        success: true,
-        guild_id: Some(invite.guild_id),
-        guild_name: Some(invite.guild_name),
-        error: None,
     }
 }
 
@@ -946,17 +867,70 @@ mod tests {
     use super::*;
     use bevy::ecs::system::RunSystemOnce;
 
-    fn apply_guild_accept(app: &mut App, player_entity: Entity) -> GuildAcceptInviteResponse {
-        app.world_mut()
-            .run_system_once(
-                move |db: Res<GameDatabase>,
-                      char_ids: Query<&ClientId>,
-                      guilds: Query<&GuildMembership>,
-                      mut commands: Commands| {
-                    handle_guild_accept(&db, &char_ids, &guilds, &mut commands, player_entity)
+    fn apply_guild_accept(
+        app: &mut App,
+        player: Entity,
+        account: u64,
+    ) -> GuildAcceptInviteResponse {
+        if !app.is_plugin_added::<shared::ProtocolPlugin>() {
+            app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+            app.add_plugins(lightyear::prelude::server::ServerPlugins {
+                tick_duration: std::time::Duration::from_millis(50),
+            });
+            app.add_plugins(shared::ProtocolPlugin);
+            app.add_plugins(crate::guild::GuildPlugin);
+            app.add_systems(Update, process_guild_accepts);
+            app.finish();
+            app.cleanup();
+        }
+        let character = app.world().get::<ClientId>(player).unwrap().0;
+        let connection = app
+            .world_mut()
+            .spawn((
+                crate::auth::Authenticated {
+                    account_id: account,
                 },
-            )
-            .expect("guild accept handler should run")
+                crate::auth::InWorld {
+                    character_id: character,
+                },
+                PlayerLink(player),
+                RemoteId(PeerId::Local(character)),
+                Connected,
+                lightyear::connection::host::HostClient { buffer: Vec::new() },
+                MessageSender::<GuildAcceptInviteRequest>::default(),
+                MessageReceiver::<GuildAcceptInviteRequest>::default(),
+                MessageSender::<GuildAcceptInviteResponse>::default(),
+                MessageReceiver::<GuildAcceptInviteResponse>::default(),
+            ))
+            .id();
+        app.world_mut()
+            .get_mut::<MessageSender<GuildAcceptInviteRequest>>(connection)
+            .unwrap()
+            .send::<AuthChannel>(GuildAcceptInviteRequest);
+        for _ in 0..3 {
+            app.update();
+        }
+        let (done, wait) = std::sync::mpsc::channel();
+        app.world()
+            .resource::<GameDatabase>()
+            .writer
+            .enqueue("legacy accept fixture barrier", move |_| {
+                done.send(()).map_err(|error| error.to_string())
+            });
+        wait.recv().unwrap();
+        let mut responses = Vec::new();
+        for _ in 0..6 {
+            app.update();
+            responses.extend(
+                app.world_mut()
+                    .get_mut::<MessageReceiver<GuildAcceptInviteResponse>>(connection)
+                    .unwrap()
+                    .receive(),
+            );
+        }
+        app.world_mut().despawn(connection);
+        assert_eq!(responses.len(), 1);
+        responses.pop().unwrap()
     }
 
     #[test]
@@ -1025,7 +999,7 @@ mod tests {
         persistence::take_pending_guild_invite(db, target); // decline
         assert!(persistence::load_pending_guild_invite(db, target).is_none());
         assert!(invite(&mut app).success);
-        assert!(apply_guild_accept(&mut app, invitee).success);
+        assert!(apply_guild_accept(&mut app, invitee, 2).success);
         assert_eq!(
             invite(&mut app).error.as_deref(),
             Some("Invitee is already in a guild.")
@@ -1062,7 +1036,7 @@ mod tests {
         let mut app = App::new();
         app.insert_resource(GameDatabase::new(db));
         let player = app.world_mut().spawn(ClientId(id)).id();
-        let response = apply_guild_accept(&mut app, player);
+        let response = apply_guild_accept(&mut app, player, 1);
         assert!(!response.success);
         assert_eq!(
             response.error.as_deref(),
@@ -1102,7 +1076,7 @@ mod tests {
             .expect("initial guild membership")
             .last_changed();
 
-        let first_response = apply_guild_accept(&mut app, player);
+        let first_response = apply_guild_accept(&mut app, player, 1);
         assert!(first_response.success);
         assert_eq!(
             app.world().entity(player).get::<GuildMembership>(),
@@ -1129,7 +1103,7 @@ mod tests {
             "Raid Team",
             "Inviter",
         );
-        let second_response = apply_guild_accept(&mut app, player);
+        let second_response = apply_guild_accept(&mut app, player, 1);
         assert!(!second_response.success);
         assert_eq!(
             second_response.error.as_deref(),
