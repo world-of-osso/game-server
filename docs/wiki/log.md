@@ -1598,3 +1598,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) trace Charred/Rampage intermittent failures to actual NPC dodge and qualify damage-only fixtures with existing native aura; evade guard unchanged.
 
 - 2026-10-16: Rotgrip copy-only binding and real source clocks/self-damage/Puncture/isolated credit; preserved DB2SELF versus TDBvictim mismatch, no fabricated correction. See [boss scripts](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16).
+
+- 2026-10-16: Optional-cost flat exclusion: native Practiced Strikes/ProtExecute RED3/2; shared totals retain percentage and charged/live matching, optional consumer excludes flat. Native Sudden Death/cost-order controls retained; GREEN pending. See [auras](systems/auras.md#optional-cost-spell-modifiers-2026-10-16).
