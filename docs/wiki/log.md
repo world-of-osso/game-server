@@ -1,3 +1,7 @@
+## 2026-10-16 — Guild news real producers and private readback
+
+[News](systems/guild-news.md): actual achievement, loot-slot, CREATE_ITEM24 and vendor boundaries; authenticated query/sticky and live subscriptions. Backend6/6 and final consumer/wire/check gates pass. Genuine private Lillehoff acquisitions drive250-row native both-skin retention; real permission/post-quit refusals and exact fresh-process history/sticky readback pass. No synthetic history or catalog changes; independent lead integration remains separate.
+
 ## 2026-10-15 — Readiness real-time clock
 
 [Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.
