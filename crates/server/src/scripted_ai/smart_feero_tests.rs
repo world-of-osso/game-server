@@ -1,5 +1,8 @@
 //! TDB1210 Feero Ironhand4484 / Supplies to Auberdine976, real death-hook boundary.
 use super::*;
+
+#[path = "smart_feero_combat_tests.rs"]
+mod combat;
 use crate::scripted_ai::{CreatureAiState, Hook, MotionType, dispatch};
 use shared::components::{Health, UnitFactionTemplate, UnitFlags};
 
@@ -126,6 +129,7 @@ fn smartai_feero_four_real_ambusher_deaths_release_first_camp() {
     );
     world.get_mut::<Health>(last).unwrap().current = 0.0;
     dispatch(&mut world, last, Hook::JustDied(Some(player)));
+    dispatch(&mut world, creature, Hook::UpdateAi(0));
     dispatch(&mut world, creature, Hook::UpdateAi(1000));
     dispatch(&mut world, creature, Hook::UpdateAi(11000));
     dispatch(&mut world, creature, Hook::UpdateAi(50));
