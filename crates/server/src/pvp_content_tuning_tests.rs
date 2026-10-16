@@ -169,6 +169,11 @@ fn achievements_criteria_content268_native_settlement_uses_authored_max_level_ra
     // Real winning capture and both present teams' unconditional native participation occurred.
     assert_eq!(participation(&world, players[0].1, 45067), Some(1));
     assert_eq!(participation(&world, players[1].1, 45067), Some(1));
+    assert_eq!(
+        participation(&world, players[2].1, 45067),
+        Some(1),
+        "level89 participated; only268 excludes its qualified credit"
+    );
     for index in [2, 3, 8] {
         assert_eq!(
             participation(&world, players[index].1, 45044),
