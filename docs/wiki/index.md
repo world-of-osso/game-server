@@ -26,6 +26,7 @@
 
 - [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
+- [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
 

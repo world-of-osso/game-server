@@ -1,3 +1,10 @@
+## 2026-10-15 — Read-only follower group reward receipts
+
+[Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
+## 2026-10-16 — Autoattack-only critical chance
+
+[Native334](systems/auras.md#autoattack-only-critical-chance-2026-10-16): TC Unit2387 traces Avenging Wrath's separate334/290 effects. Ordinary native100/-999 endpoint casts reproduce missing positive/negative swing modifiers; shared attacker-only consumer passes4/4, including cancellation, victim ownership and spell isolation. Adjacent attack/critical-damage controls36/36; workspace/all-target check and fmt pass. No native stat/RNG/clock edits; full Wings/talents/legal builds and fresh bot UDP remain open.
+
 - 2026-10-16: Added [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16); binder13/13 and real copy-only generation, runtime proof pending.
 ## 2026-10-16 — Thermaplugg source identity and linked bombs
 
@@ -14,13 +21,6 @@
 ## 2026-10-15 — Controlled Disciple gossip/start
 
 [Source callbacks](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) port Hello/Select and events1–3 without synthesizing flags/menu options/5232. Genuine missing-Hello RED→controlled2/2 GREEN56.54s, including real flag0 InteractNpc rejection and physical first-path movement. Missing NpcInteractionPlugin/faction initialization caused earlier empty/panicking ingress fixtures; no transport behavior changed to fix those fixtures. Integrated3a035ee1/protocol1707389: controlled2/2(60.82s), ordinary NPC controls9/9, first-camp regression1/1(25.18s), scoped check without warnings and fmt/diff pass. Natural positive activation and full escort/native clear remain open.
-## 2026-10-15 — Read-only follower group reward receipts
-
-[Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
-## 2026-10-16 — Autoattack-only critical chance
-
-[Native334](systems/auras.md#autoattack-only-critical-chance-2026-10-16): TC Unit2387 traces Avenging Wrath's separate334/290 effects. Ordinary native100/-999 endpoint casts reproduce missing positive/negative swing modifiers; shared attacker-only consumer passes4/4, including cancellation, victim ownership and spell isolation. Adjacent attack/critical-damage controls36/36; workspace/all-target check and fmt pass. No native stat/RNG/clock edits; full Wings/talents/legal builds and fresh bot UDP remain open.
-
 ## 2026-10-16 — Touch of Death primary damage and native flags
 
 [Health damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16): native999-health/zero-damage RED→GREEN100%/35% maximum-health outcomes with actual armor, school modifiers and Can'tCrit. Shared source attribute consumers honor caster-percent/victim/armor exclusions; ordinary-modifier and adjacent controls62/62 pass. PvP/Stagger/mastery/follow-up talents and fresh bot acceptance remain open.
@@ -46,9 +46,16 @@
 [Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED→GREEN4/4, census5513/1824 adds only account17495. Integratedbd808152 required four-filter208/0/1ignored plus site-export1/1; server/engine checks and formatting pass warning-free. Existing additive login counters and original account dates preserved; quest acquisition unproven.
 
 ## 2026-10-15 — Nested encounter conjunction
+## 2026-10-16 — Guild news real producers and private readback
+
+[News](systems/guild-news.md): actual achievement, loot-slot, CREATE_ITEM24 and vendor boundaries; authenticated query/sticky and live subscriptions. Backend6/6 and final consumer/wire/check gates pass. Genuine private Lillehoff acquisitions drive250-row native both-skin retention; real permission/post-quit refusals and exact fresh-process history/sticky readback pass. No synthetic history or catalog changes; independent lead integration remains separate.
+
 ## 2026-10-15 — Readiness real-time clock
 
 [Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.
+## 2026-10-15 — Shrine viewer-level projection
+
+[Viewer-level boundary](systems/toys.md#shrine-viewer-level-projection-2026-10-15): actual learned Shrine projects30 to viewer20 RED; selected regional range and same rolled delta now survive wild initialization. Nine targeted controls pass, including Podium's zero-tuning native-level behavior. Whole-Toy136/136, six current build/check/fmt gates and fresh replicated Shrine/Podium/default-Scarab viewer projections pass. Admin creation-timeout evidence retained; only unfinished scenarios resumed with new accounts. Server-combat tables and exact client HP remain separate.
 
 ## 2026-10-15 — Guild lifecycle query boundary
 
