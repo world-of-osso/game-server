@@ -20,6 +20,20 @@ The3 authored criteria trees are unconditional All→Single amount-one leaves. P
 
 Imported reputation caps apply before positive settlement (`Player.cpp:6645`); cap0 is unlimited, losses remain allowed. Real redb regression verifies quest45068's cap7 does not award beyond already-Exalted standing. Numeric and profession-knowledge rewards share the staged wallet in the merged transaction; ordinary master knowledge-only batch behavior is unchanged and outside this task's proof.
 
+## Five admission gaps — verified 2026-10-16
+
+A fresh installed70391 QuestPOIBlob/QuestPOIPoint polygon census joined to the private TDB-backed quest source leaves exactly these five of244 polygon tasks outside239 admitted definitions:
+
+| Quest | Required source / producer still missing | Disposition |
+|---|---|---|
+|82468 Let Them Win|Type19 objective450336, template32539; authored trigger/create-properties/spawn binding and enter-credit producer|Named gap; do not substitute the task polygon for the ring.|
+|86610 Nor Void of Night|Type19 objectives457126/457127/457128/457132, templates35987/35988/35989/35990; bindings and enter-credit producer|Named gap; no invented delivery volumes.|
+|91804 Fish for the Fire|Type19 objective466299, template40181; binding and enter-credit producer|Named gap; no invented airflow volume.|
+|86938 Void Perforations|Type21 objective457598, label4346; installed CreatureLabel has zero members|Named source gap; existing label kill producer needs authentic membership.|
+|86945 Shadowed Supplies|Type21 objective457610, label4348; installed CreatureLabel has zero members|Named source gap; no guessed creature entries.|
+
+Pinned TC `AreaTrigger::HandleUnitEnter` credits its template `GetEntry()`, not a static `AreaTrigger.db2` position ID or a task polygon. The six template IDs have no TDB template rows, no create-properties rows referencing `AreaTriggerId`, and no spawns joined through those properties. Installed70391 AreaTriggerCreateProperties has159 rows; checking its independent ID namespace is not a template-binding join. Installed CreatureLabel has75,820 rows and no members for4346/4348. The existing runtime decodes type19 amount0 as an unset boolean requiring one entry, but no general authoritative enter producer is wired. Do not admit these tasks by omitting optional objectives or guessing geometry. No admission code or source content changed. Private reproducible queries and source hashes: `world-quests2-proof/five-admission-gaps-70391.json` (outside tracked checkout).
+
 ## Source-area audit
 
 `python3 scripts/audit_world_quest_areas.py --db2-dir /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/world-quests-2026-10-11/db2 --duration-receipt /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/world-quests-2026-10-11/source-census.json --output /home/osso/.worktrees/world-quests-lead/area-poi-joins.json`
