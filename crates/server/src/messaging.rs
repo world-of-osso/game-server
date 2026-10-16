@@ -934,6 +934,10 @@ pub fn process_target_messages(
 }
 
 #[cfg(test)]
+#[path = "guild_accept_fifo_tests.rs"]
+mod guild_accept_fifo_tests;
+
+#[cfg(test)]
 #[path = "messaging_achievement_tests.rs"]
 mod achievement_tests;
 
