@@ -2,6 +2,14 @@
 
 Verified: 2026-10-13. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
 
+## Azure Frost Bomb — 2026-10-16
+
+Pinned TC `a352b1fa`, `boss_telash_greywing.cpp:321–379`:386781 effect0/DUMMY casts386881 on selected hit units;386881 effect0/aura4 removal casts387149 then386910 only for natural expiry and an extant original caster. Native70391 rows retain those selectors, aura duration and damage; no guessed mechanic or spell substitution. Implementation is `scripted_ai/azure_vault.rs`, registered through the existing spell-hit/aura-remove hooks. Frozen Ground387149 currently creates only the existing unbound area-trigger lifecycle; no damage/slow/enter/exit action is claimed.
+
+`scripted_ai/tests/azure_frost_bomb.rs` uses the real map2515 difficulty205 combat Telash186737 and its native spells. Initial1b7fd850 RED4/4 fails at missing386881, not compilation. Tests cover copy isolation, moving-target natural expiry with actual child damage/ground position, nonexpiry removal and missing caster. GREEN and native pixels are separate gates. No encounter AI schedule/energy/jump/rune phase is added. Existing compatibility bindings are not boss-mechanic coverage; Leymor, Azureblade, Umbrelskul and full-Azure acceptance remain open.
+
+Private source population was imported with existing `import_instance_population.apply_population(map_list='SELECT 2515')` into a new `azure-world.copy.db`:225 Azure actors, original143 map34 actor rows unchanged; ordinary2498 queue/100022 entrance remain the admission path. Canonical and completed Stockade proof databases were not modified. Artifact source audit/import receipts live under `/home/osso/.worktrees/follower-dungeons-2026-10-13/`.
+
 ## Passive-derived stat refresh — 2026-10-15
 
 Lead09:02 approved recomputing the existing player-spec bridge from its actual passive modifiers, not a health override or NPC-budget change. The old initializer computed `CharacterStats` with `mods=None`, then applied spec passives. `auras_changed` correctly wrote `StatModifiers`, but the production `StatsQuery` required `Player`, excluding NPC followers. Thus native Aegis353367/Plate Specialization86102 stored30%+5% stamina without changing level32 Garrick's7840 maximum health.
