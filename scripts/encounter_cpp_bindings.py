@@ -206,7 +206,22 @@ ROTGRIP_PRIMARY = dict(
     actor_id=1000,
     display_id=13589,
 )
+NOXXION_PRIMARY = dict(
+    map_id=349,
+    entry=13282,
+    encounter_id=422,
+    bit=0,
+    script="boss_noxxion",
+    journal_id=423,
+    actor_id=993,
+    display_id=11172,
+)
+NOXXION_SOURCES = {
+    **MARAUDON_SOURCES,
+    "Kalimdor/Maraudon/boss_noxxion.cpp": "1ccc69132bb6a4dc95bb9b0ce4e9d81586447e59ca494d575e95b36f1ee8f211",
+}
 PROFILES = {
+    "noxxion": (NOXXION_PRIMARY, NOXXION_SOURCES),
     "rotgrip": (ROTGRIP_PRIMARY, MARAUDON_SOURCES),
     "razorlash": (RAZORLASH_PRIMARY, MARAUDON_SOURCES),
     "thermaplugg": (THERMAPLUGG_PRIMARY, GNOMEREGAN_SOURCES),
