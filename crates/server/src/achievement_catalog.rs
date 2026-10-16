@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use bevy::prelude::*;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use shared::protocol::{
     AchievementProgressSnapshot, AchievementSnapshot, AchievementToastSnapshot,
 };
