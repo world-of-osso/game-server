@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Completed-quest login guard](systems/dungeon-achievements.md#completed-quest-login-guard) — bounded positive110 reuses character reward-derived Login74 facts for account17495; no quest acquisition or account-history borrowing.
+
 - [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
 
 - [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native/catalog5/5, controlled boss identities and counters are not full encounter/map grants.

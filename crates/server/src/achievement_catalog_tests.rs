@@ -1311,9 +1311,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5511 + nested-All encounter definition11660.
+    // Installed70391: 5512 + completed-quest Login74 account definition17495.
     // Structural union, not full boss content, recipe repair, travel or acquisition proof.
-    assert_eq!(union.len(), 5512);
+    assert_eq!(union.len(), 5513);
+    assert!(union.contains(&17495), "completed-quest login");
     assert!(
         union.contains(&11660),
         "complete nested encounter conjunction"
