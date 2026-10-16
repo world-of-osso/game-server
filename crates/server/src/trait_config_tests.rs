@@ -55,6 +55,96 @@ fn paladin_tree() -> Option<&'static TraitTree> {
     Some(&class.traits)
 }
 
+#[test]
+fn talent_starter_authored_rows_use_cumulative_ranks_and_independent_budgets() {
+    let classes = classes().unwrap();
+    for (class_id, spec_id) in [(2, 70), (8, 62)] {
+        let tree = &classes
+            .classes
+            .iter()
+            .find(|class| class.class_id == class_id)
+            .unwrap()
+            .traits;
+        for (level, expected) in [(10, 1), (11, 2), (20, 11), (70, 61), (80, 61), (90, 68)] {
+            let ctx = TraitContext { spec_id, level };
+            let purchases = starter_purchases(tree, ctx)
+                .unwrap_or_else(|reason| panic!("spec{spec_id} level{level}: {reason}"));
+            assert_eq!(
+                purchases.iter().map(|purchase| purchase.ranks).sum::<u32>(),
+                expected,
+                "spec{spec_id} level{level}"
+            );
+            let entries = build_config(tree, ctx, &purchases).unwrap();
+            assert!(
+                unspent(tree, ctx, &entries)
+                    .iter()
+                    .all(|(_, left)| *left >= 0)
+            );
+        }
+    }
+    assert!(
+        starter_purchases(
+            paladin_tree().unwrap(),
+            TraitContext {
+                spec_id: 62,
+                level: 80
+            }
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn talent_starter_installed_class_builds_are_legal_at_unlock_cap_and_apex_levels() {
+    let classes = classes().unwrap();
+    for class in &classes.classes {
+        for build in &class.traits.starter_builds {
+            if !class.specs.iter().any(|spec| spec.spec_id == build.spec_id) {
+                continue;
+            }
+            for level in [10, 11, 70, 80, 90] {
+                let ctx = TraitContext {
+                    spec_id: build.spec_id,
+                    level,
+                };
+                let purchases = starter_purchases(&class.traits, ctx).unwrap_or_else(|reason| {
+                    panic!(
+                        "class{} spec{} level{level}: {reason}",
+                        class.class_id, build.spec_id
+                    )
+                });
+                let entries = build_config(&class.traits, ctx, &purchases).unwrap();
+                assert!(
+                    unspent(&class.traits, ctx, &entries)
+                        .iter()
+                        .all(|(_, left)| *left >= 0)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn talent_starter_arms_apex_waits_for_authored_level_conditions() {
+    let tree = &classes()
+        .unwrap()
+        .classes
+        .iter()
+        .find(|class| class.class_id == 1)
+        .unwrap()
+        .traits;
+    for (level, expected) in [(70, 0), (80, 0), (81, 2), (84, 3), (90, 4)] {
+        let ctx = TraitContext { spec_id: 71, level };
+        let purchases = starter_purchases(tree, ctx).unwrap();
+        let apex = purchases
+            .iter()
+            .filter(|purchase| purchase.node_id == 110407)
+            .map(|purchase| purchase.ranks)
+            .sum::<u32>();
+        assert_eq!(apex, expected, "Arms authored apex at level{level}");
+    }
+}
+
 fn ret(level: u8) -> TraitContext {
     TraitContext {
         spec_id: SPEC_RETRIBUTION,
