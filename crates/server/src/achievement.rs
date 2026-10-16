@@ -47,6 +47,9 @@ pub struct PlayerAchievementState {
     /// Presentation-only aggregate; never serialized into character contributions.
     #[serde(skip)]
     pub account: Option<Box<PlayerAchievementState>>,
+    /// Disposable derived tree results; excluded from persistence and logical equality.
+    #[serde(skip)]
+    pub(crate) evaluation: catalog::EvaluationCache,
 }
 
 /// One-time migration of the six former level placeholders. Counter-bearing rows
@@ -1208,6 +1211,14 @@ fn update_player_events(
                     now,
                 },
             ));
+        }
+        if !toasts.is_empty()
+            && let Some((_, character)) = owner
+        {
+            world.init_resource::<crate::gold::GoldUpdateQueue>();
+            world
+                .resource_mut::<crate::gold::GoldUpdateQueue>()
+                .record_news(character);
         }
         let snapshot = catalog.snapshot(&state, race);
         world.entity_mut(player).insert(state);

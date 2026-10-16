@@ -85,6 +85,8 @@ pub const MOD_STEALTH: u32 = 16;
 pub const MOD_STEALTH_DETECT: u32 = 17;
 pub const MOD_STEALTH_LEVEL: u32 = 154;
 pub const DETECT_STEALTH: u32 = 228;
+/// TC a352b1fa SpellInfo.cpp4140: matching optional resource cost only.
+pub const MOD_ADDITIONAL_POWER_COST: u32 = 63;
 pub const MOD_POWER_COST_SCHOOL_PCT: u32 = 72;
 pub const ALLOW_TALENT_SWAPPING: u32 = 158;
 pub const ARENA_PREPARATION: u32 = 215;
@@ -377,7 +379,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_SPELL_CATEGORY_COOLDOWN
         | MOD_RECOVERY_RATE => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
-        MOD_POWER_COST_SCHOOL_PCT => PowerCost,
+        MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,

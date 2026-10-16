@@ -15,6 +15,32 @@ const ARCANE_BARRAGE: u32 = 44425;
 const ARCANE_BLAST: u32 = 30451;
 const ARCANE_CHARGE: u32 = 36032;
 
+/// CalcPowerCost's optional branch: signed, power/family-masked caster total.
+pub(super) fn additional_optional_cost(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    power_type: i32,
+) -> f32 {
+    use crate::auras::{ActiveAuras, handlers, spell_mods};
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return 0.0;
+    };
+    auras
+        .iter()
+        .flat_map(|aura| {
+            aura.effects
+                .iter()
+                .filter(move |effect| {
+                    effect.aura_type == handlers::MOD_ADDITIONAL_POWER_COST
+                        && effect.misc_values[0] == power_type
+                        && spell_mods::class_mask_affects(aura, effect, spell)
+                })
+                .map(move |effect| effect.amount.trunc() * aura.stack_multiplier())
+        })
+        .sum()
+}
+
 pub(super) fn spent(costs: &[(CostPool, f32)], power: PowerType) -> f32 {
     costs
         .iter()
