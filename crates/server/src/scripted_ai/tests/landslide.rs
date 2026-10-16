@@ -44,12 +44,19 @@ fn encounter_coverage_landslide_wipe_rearms_damage_trigger() {
 
 #[test]
 fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
+    for seed in 1..=16 {
+        eprintln!("LANDSLIDE seed={seed}");
+        assert_landslide_clocks(seed);
+    }
+}
+
+fn assert_landslide_clocks(seed: u64) {
     let (mut h, boss, map) = bound_boss(12203, 349, 4);
     h.app
         .world_mut()
         .get_mut::<CreatureAiState>(boss)
         .unwrap()
-        .ai = Some(super::super::super::maraudon::seeded_landslide(0));
+        .ai = Some(super::super::super::maraudon::seeded_landslide(seed));
     let player = h.player();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert((
