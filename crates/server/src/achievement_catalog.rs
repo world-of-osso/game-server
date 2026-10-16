@@ -505,6 +505,8 @@ pub(crate) struct ReferencePlayer {
     pub known_spells: BTreeSet<u32>,
     /// Absence is meaningful only after class, profession and account mount sources are complete.
     pub spell_knowledge_complete: bool,
+    /// CompleteQuest facts; Login74 reconstructs these from this character's persisted rewards.
+    pub rewarded_quests: BTreeSet<u32>,
     /// This character's earned IDs plus account-wide awards; None when state/catalog is unknown.
     pub earned_achievements: Option<BTreeSet<u32>>,
     /// Negative87 requires the account aggregate too; character-only state is incomplete.
@@ -536,6 +538,7 @@ enum CriteriaFact {
     NotAura(u32),
     KnownSpell(u32),
     NotKnownSpell(u32),
+    CompletedQuest(u32),
     EarnedAchievement(u32),
     NotEarnedAchievement(u32),
     BattlePetTeamLevel(u8),
@@ -605,6 +608,7 @@ impl CriteriaFact {
             Self::Aura(spell) => player.auras.contains(spell),
             Self::NotAura(spell) => player.auras_known && !player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
+            Self::CompletedQuest(quest) => player.rewarded_quests.contains(quest),
             Self::NotKnownSpell(spell) => {
                 player.spell_knowledge_complete && !player.known_spells.contains(spell)
             }
@@ -1467,6 +1471,7 @@ fn load_criteria_facts(
             -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             -104 => exists("spell")?.then_some(CriteriaFact::NotKnownSpell(asset)),
+            110 => exists("content_quest_template")?.then_some(CriteriaFact::CompletedQuest(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
             19 => exists("content_item")?
@@ -1517,7 +1522,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
+                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/110/122"
                 )
             }
         };

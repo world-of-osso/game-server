@@ -175,6 +175,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         elif criteria_type == 29 and kind == 87 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
             # TC SingleFalse1730 negates scoped HasAchieved2200; signed compiled kind, not a raw DB2 kind.
             facts.append((-87, int(node['Asset'])))
+        elif criteria_type == 74 and kind == 110 and operator == SINGLE_TRUE and int(node['Asset']) > 0:
+            # TC PlayerHasCompletedQuest2313–2315 reads this character's rewarded quest bit.
+            facts.append((kind, int(node['Asset'])))
         elif criteria_type == 74 and kind == 104 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
             # Login waits for complete native spell knowledge before HasSpell can be negated.
             facts.append((-104, int(node['Asset'])))

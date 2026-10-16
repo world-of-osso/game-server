@@ -181,3 +181,32 @@ fn achievements_criteria_completed_quest_real_login_preserves_character_history_
     assert_eq!(state.criteria_progress.get(&LOGIN_CRITERION), Some(&1));
     assert_eq!(state.account.as_ref().unwrap().earned_at[&AWARD], date);
 }
+
+#[test]
+fn achievements_criteria_completed_quest_rejects_missing_login_history_or_reference() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut app = App::new();
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Unknownhistory".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            Level(10),
+            InMap::continent(0),
+        ))
+        .id();
+    let events = load_login_events(app.world(), 1, 17, 10);
+    for conditions in [
+        PlayerConditions::default(),
+        event_conditions(app.world(), player, &events),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update_at(&mut state, CriteriaEvent::Login, None, 1, &conditions);
+        assert!(!state.criteria_progress.contains_key(&LOGIN_CRITERION));
+    }
+}
