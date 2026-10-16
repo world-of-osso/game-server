@@ -36,6 +36,7 @@ const RUNE_WEAPON_PARRY: u32 = 81256;
 const ONLY_VISIBLE_TO_SUMMONER: u32 = 0x10;
 const ONLY_VISIBLE_TO_SUMMONER_GROUP: u32 = 0x10000;
 const JOIN_SUMMONER_SPAWN_GROUP: u32 = 0x200;
+const USE_CREATURE_LEVEL: u32 = 0x100;
 /// TC Spell::SummonGuardian scatters secondary actors within5yd of destTarget.
 const GUARDIAN_SCATTER_RADIUS: f32 = 5.0;
 
@@ -233,18 +234,24 @@ fn spawn_owned_summons(
     } else {
         1
     };
-    let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
     for index in 0..count {
-        let Some(template) = read_summon_template(world, entry, level) else {
-            warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
-            return;
-        };
         let destination = if index == 0 {
-            replace_slotted_summon(world, ctx.caster, properties);
             dest
         } else {
             scatter_summon_destination(world, ctx.caster, dest, 0.0, GUARDIAN_SCATTER_RADIUS)
         };
+        let Some(template) =
+            read_summon_template(world, ctx.caster, entry, properties, destination)
+        else {
+            warn!(
+                "Spell {}: missing summon creature {entry} or source level inputs",
+                ctx.spell.id
+            );
+            return;
+        };
+        if index == 0 {
+            replace_slotted_summon(world, ctx.caster, properties);
+        }
         spawn_summon(
             world,
             ctx,
@@ -334,6 +341,13 @@ fn spawn_wild_summon(
     entry: u32,
     dest: super::targets::Dest,
 ) {
+    let Some(stats) = read_wild_summon_stats(world, ctx.caster, entry, properties, dest) else {
+        warn!(
+            "Spell {}: wild creature {entry} lacks source level/stat inputs",
+            ctx.spell.id
+        );
+        return;
+    };
     let position = [
         dest.position.x,
         -dest.position.z,
@@ -347,25 +361,108 @@ fn spawn_wild_summon(
         );
         return;
     };
+    initialize_wild_summon(world, ctx, properties_id, properties, actor, stats);
+}
+
+fn initialize_wild_summon(
+    world: &mut World,
+    ctx: &EffectCtx,
+    properties_id: u32,
+    properties: SummonProperties,
+    actor: Entity,
+    stats: WildSummonStats,
+) {
     let display_scale = read_actor_display_scale(world, actor);
     let metadata = snapshot_summon_metadata(world, ctx, properties_id, properties, display_scale);
     let private_owner = private_summon_owner(world, ctx.caster, properties.flags);
     let mut entity = world.entity_mut(actor);
     entity.insert((
-        // Model DisplayScale is a separate factor, not native object scale.
-        // Current authored wild templates have native object scale1, like the
-        // existing guardian path; do not multiply the model factor twice.
+        // Native scale1 is separate from the model's DisplayScale multiplier.
         crate::zones::NativeObjectScale(1.0),
         UnitSummonedBy(ctx.caster.to_bits()),
         metadata,
+        stats.level,
+        stats.health,
+        stats.armor,
     ));
     if properties.faction != 0 {
         entity.insert(UnitFactionTemplate(properties.faction));
+    }
+    if let Some(mana) = stats.mana {
+        entity.insert(mana);
     }
     insert_summon_privacy(&mut entity, private_owner);
     drop(entity);
     super::log_summon(world, ctx.caster, actor, ctx.spell);
     crate::auras::auras_changed(world, actor);
+}
+
+struct WildSummonStats {
+    level: UnitLevel,
+    health: Health,
+    armor: crate::level_scaling::CreatureArmor,
+    mana: Option<shared::components::Mana>,
+}
+
+fn read_wild_summon_stats(
+    world: &mut World,
+    owner: Entity,
+    entry: u32,
+    properties: SummonProperties,
+    dest: super::targets::Dest,
+) -> Option<WildSummonStats> {
+    let selected = roll_summon_level(world, owner, entry, properties, dest)?;
+    // TempSummon::InitStats inherits the owner's tuning only without UseCreatureLevel.
+    // Absent owner scaling represents the source's zero-initialized tuning field.
+    let tuning = if properties.flags & USE_CREATURE_LEVEL != 0 {
+        selected.content_tuning_id
+    } else {
+        world
+            .get::<shared::level_scaling::LevelScaling>(owner)
+            .map_or(0, |scaling| scaling.content_tuning_id)
+    };
+    let data = world.get_resource::<crate::world_data::WorldData>()?;
+    let template = data.template_for(entry, selected.difficulty)?;
+    calculate_wild_summon_stats(data, template, selected.level, tuning)
+}
+
+fn calculate_wild_summon_stats(
+    data: &crate::world_data::WorldData,
+    template: &crate::world_data::CreatureTemplate,
+    level: u8,
+    tuning: u32,
+) -> Option<WildSummonStats> {
+    let (base_health, base_armor) = data.expected_stats.creature_health_armor(
+        level,
+        template.health_scaling_expansion,
+        tuning,
+        template.unit_class,
+    );
+    let health = (base_health * template.health_modifier).ceil();
+    Some(WildSummonStats {
+        level: UnitLevel(level),
+        health: Health {
+            current: health,
+            max: health,
+        },
+        armor: crate::level_scaling::CreatureArmor(base_armor * template.armor_modifier),
+        mana: read_wild_summon_mana(data, template, level)?,
+    })
+}
+
+fn read_wild_summon_mana(
+    data: &crate::world_data::WorldData,
+    template: &crate::world_data::CreatureTemplate,
+    level: u8,
+) -> Option<Option<shared::components::Mana>> {
+    if !matches!(template.unit_class, 2 | 8) {
+        return Some(None);
+    }
+    let base = data
+        .class_level_base_mana
+        .get(&(level, template.unit_class))?;
+    let max = (*base as f32 * template.mana_modifier).round();
+    Some(Some(shared::components::Mana { current: max, max }))
 }
 
 fn snapshot_summon_metadata(
@@ -434,6 +531,7 @@ fn replace_slotted_summon(world: &mut World, owner: Entity, properties: SummonPr
 
 struct SummonTemplate {
     entry: u32,
+    level: u8,
     name: String,
     health: f32,
     faction: u32,
@@ -442,13 +540,22 @@ struct SummonTemplate {
     display_scale: f32,
 }
 
-fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTemplate> {
+fn read_summon_template(
+    world: &mut World,
+    owner: Entity,
+    entry: u32,
+    properties: SummonProperties,
+    dest: super::targets::Dest,
+) -> Option<SummonTemplate> {
+    let selected = roll_summon_level(world, owner, entry, properties, dest)?;
+    let level = selected.level;
     let data = world.get_resource::<crate::world_data::WorldData>()?;
-    let template = data.template_for(entry, 0)?;
+    let template = data.template_for(entry, selected.difficulty)?;
     let display_id = crate::zones::template_display_id(template, &mut rand::thread_rng());
     let display_scale = model_display_scale(template, display_id);
     Some(SummonTemplate {
         entry,
+        level,
         name: template.name.clone(),
         health: crate::hunter_pet::pet_max_health(data, template, level),
         faction: u32::from(template.faction),
@@ -457,6 +564,77 @@ fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTe
         display_id,
         display_scale,
     })
+}
+
+fn read_summoner_level(world: &World, owner: Entity) -> Option<u8> {
+    if world.get::<Player>(owner).is_some() {
+        world.get::<Level>(owner).map(|level| level.0)
+    } else {
+        world.get::<UnitLevel>(owner).map(|level| level.0)
+    }
+}
+
+struct SelectedSummonLevel {
+    difficulty: u32,
+    level: u8,
+    content_tuning_id: u32,
+}
+
+/// Select the source native level before reading dependent stats.
+fn roll_summon_level(
+    world: &mut World,
+    owner: Entity,
+    entry: u32,
+    properties: SummonProperties,
+    dest: super::targets::Dest,
+) -> Option<SelectedSummonLevel> {
+    let owner_level = read_summoner_level(world, owner)?;
+    let uses_native_level =
+        properties.is_guardian() || (properties.control == CONTROL_WILD && properties.title == 0);
+    if !uses_native_level {
+        return Some(SelectedSummonLevel {
+            difficulty: 0,
+            level: owner_level,
+            content_tuning_id: 0,
+        });
+    }
+    let map = *world.get::<InMap>(owner)?;
+    let difficulty = crate::zones::map_difficulty_id(world, map);
+    let area = world
+        .get_resource_mut::<crate::ground::GroundMap>()
+        .and_then(|mut ground| ground.area_at(map.map_id, dest.position));
+    let data = world.get_resource::<crate::world_data::WorldData>()?;
+    let template = data.template_for(entry, difficulty)?;
+    let range = data
+        .summon_levels
+        .guardian_range(template, map.map_id, difficulty, area)?;
+    Some(SelectedSummonLevel {
+        difficulty,
+        level: roll_guardian_level(owner_level, range, properties.flags),
+        content_tuning_id: range.content_tuning_id,
+    })
+}
+
+/// Creature::SelectLevel precedes TempSummon::InitStats and Guardian::InitStats.
+fn roll_guardian_level(
+    owner: u8,
+    inputs: crate::world_data::summon_levels::GuardianLevelRange,
+    flags: u32,
+) -> u8 {
+    use rand::Rng;
+    let (range, delta) = (inputs.range, inputs.delta);
+    let delta = if delta.0 == delta.1 {
+        delta.0
+    } else {
+        rand::thread_rng().gen_range(delta.0.min(delta.1)..=delta.0.max(delta.1))
+    };
+    let minimum = i32::from(range.0) + i32::from(delta);
+    let maximum = i32::from(range.1) + i32::from(delta);
+    if flags & USE_CREATURE_LEVEL != 0 {
+        return maximum.clamp(1, i32::from(u8::MAX)) as u8;
+    }
+    // Source InitStats does not clamp these bounds to 1 after the authored delta.
+    i32::from(owner).clamp(minimum, maximum) as u8
 }
 
 /// TC Unit::SetMinion sets PLAYER_CONTROLLED only for player owners.
@@ -487,7 +665,7 @@ fn spawn_summon(
     let Some(map) = world.get::<InMap>(owner).copied() else {
         return;
     };
-    let level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    let level = template.level;
     let health = template.health;
     let faction = if properties.faction != 0 {
         properties.faction

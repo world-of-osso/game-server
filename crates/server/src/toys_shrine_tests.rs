@@ -12,13 +12,14 @@ fn toyfx29_shrine_learn_use_cursor_stationary_and_source_expiry() {
             .unwrap();
     let native_level: u8 = conn
         .query_row(
-            "SELECT minlevel FROM content_creature_template WHERE entry=246037",
+            "SELECT maxlevel FROM content_tuning_level WHERE ID=73",
             [],
             |row| row.get(0),
         )
         .unwrap();
-    assert_eq!(native_level, 1);
+    assert_eq!(native_level, 30);
     let (mut h, character) = setup(&directory.path().join("shrine.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -57,7 +58,7 @@ fn toyfx29_shrine_learn_use_cursor_stationary_and_source_expiry() {
     assert_eq!(actors.len(), 1);
     let (actor, expires_at) = actors[0];
     assert_eq!(world.get::<ModelDisplay>(actor).unwrap().display_id, 129958);
-    // Source2910 UseCreatureLevel: preserve the native creature level, not owner80.
+    // Source2910 UseCreatureLevel preserves regional SelectLevel30, not legacy min1/owner80.
     assert_eq!(world.get::<UnitLevel>(actor).unwrap().0, native_level);
     assert_eq!(
         world.get::<UnitSummonedBy>(actor).unwrap().0,
