@@ -8,12 +8,13 @@ use super::test_harness::{Harness, harness};
 const PROTECTION_WARRIOR: u32 = 137_048;
 const ARMS_WARRIOR: u32 = 137_049;
 const PRACTICED_STRIKES: u32 = 429_647;
+const SUDDEN_DEATH: u32 = 52_437;
 const EXECUTE: u32 = 163_201;
 const EXECUTE_DAMAGE: u32 = 260_798;
 const WARRIOR: u8 = 1;
 
 fn native_harness(spec: u32, talented: bool) -> Harness {
-    let mut known = vec![spec, EXECUTE, EXECUTE_DAMAGE];
+    let mut known = vec![spec, EXECUTE, EXECUTE_DAMAGE, SUDDEN_DEATH];
     if talented {
         known.push(PRACTICED_STRIKES);
     }
@@ -56,5 +57,40 @@ fn optional_flat_native_practiced_strikes_preserves_available_rage_and_base_admi
 #[test]
 fn optional_flat_native_practiced_strikes_does_not_modify_arms_execute_cost_order() {
     let mut h = native_harness(ARMS_WARRIOR, true);
+    assert_eq!(cast_execute(&mut h, 400.0), 0.0);
+}
+
+fn apply_sudden_death_cost_one(h: &mut Harness) {
+    // Native52437 effect1359006: -100% PowerCost1, Execute family mask536870912.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: SUDDEN_DEATH,
+            effect_mask: 1 << 5,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        SUDDEN_DEATH
+    ));
+}
+
+#[test]
+fn optional_flat_native_sudden_death_percentage_keeps_protection_optional_spend_free() {
+    for talented in [false, true] {
+        let mut h = native_harness(PROTECTION_WARRIOR, talented);
+        apply_sudden_death_cost_one(&mut h);
+        assert_eq!(cast_execute(&mut h, 400.0), 400.0);
+    }
+}
+
+#[test]
+fn optional_flat_native_cost_one_percentage_does_not_modify_arms_cost_zero() {
+    let mut h = native_harness(ARMS_WARRIOR, true);
+    apply_sudden_death_cost_one(&mut h);
     assert_eq!(cast_execute(&mut h, 400.0), 0.0);
 }
