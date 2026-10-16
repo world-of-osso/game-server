@@ -161,9 +161,29 @@ def import_celebras_redeemed(connection):
     return [13716]
 
 
+def import_zaetar_spirit(connection):
+    """Pinned Theradras JustDied summons12238; actual base0 and Normal1 only."""
+    identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=12238').fetchone()
+    difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=12238 ORDER BY DifficultyID').fetchall()
+    if identity != ('SmartAI','') or difficulties != [(0,), (1,)]:
+        raise ValueError('Zaetar spirit12238 source identity changed')
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=12238 AND DifficultyID=0')
+    connection.execute('DELETE FROM content_creature_template WHERE entry=12238')
+    retail_content.insert_tdb_templates(connection,'12238',replace_legacy=True)
+    connection.execute('DELETE FROM content_creature_template_model WHERE CreatureID=12238')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=12238')
+    connection.execute('DELETE FROM content_creature_template_addon WHERE entry=12238')
+    connection.execute(f'''INSERT INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=12238''')
+    project_difficulty(connection, 12238, 1)
+    return [12238]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
@@ -177,6 +197,8 @@ def main():
                 entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
             elif args.encounter == 'adarogg':
                 entries = [import_demonic_leap_template(conn)]
+            elif args.encounter == 'theradras':
+                entries = import_zaetar_spirit(conn)
             elif args.encounter == 'celebras':
                 entries = import_celebras_redeemed(conn)
             elif args.encounter == 'noxxion':
