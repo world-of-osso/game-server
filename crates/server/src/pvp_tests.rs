@@ -1,6 +1,8 @@
 use super::*;
 use crate::persistence::GameDatabase;
 
+#[path = "pvp_honor_tests.rs"]
+mod honor_progress;
 #[path = "pvp_kill_criteria_tests.rs"]
 mod kill_criteria;
 use crate::pvp::pvp_support::build_pvp_snapshot;
