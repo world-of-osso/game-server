@@ -4,11 +4,11 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 ## What it must do
 
-- [ ] Actual guild members know the five installed perk spells; nonmembers do not receive them. Joining, quitting/removal and login reconcile the authoritative membership.
+- [x] Actual guild members know the five installed perk spells; nonmembers do not receive them. Joining, quitting/removal and login reconcile the authoritative membership.
 - [x] Owner learn/unlearn messages reflect those changes without removing unrelated class/profession knowledge. Ordinary class/spec rebuilds preserve guild grants without transient unlearning.
 - [x] Fresh processes preserve the correct membership-derived knowledge after leave; never persist a stale guild entitlement as permanent class knowledge.
-- [ ] Forced/offline removal also revokes guild knowledge and remains revoked after relog.
-- [ ] Report actual effect coverage separately from catalog/known-spell availability; no invented buffs, mail acceleration, reputation or guild-chest authority.
+- [x] Forced/offline removal also revokes guild knowledge and remains revoked after relog.
+- [x] Report actual effect coverage separately from catalog/known-spell availability; no invented buffs, mail acceleration, reputation or guild-chest authority.
 
 ## How it works
 
@@ -29,7 +29,8 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 ## Known gaps (current cycle)
 
 - [x] Real persisted join, changed specialization, quit and fresh-process class-knowledge test GREEN1/1 at serveree29a3bd/protoe50b02c.
-- [ ] Forced-removal, private UDP/native and authentic effect coverage remain open.
+- [x] Existing-member login, online forced removal/rejoin and offline removal/reopen controls GREEN2/2 at5dd1cfa9.
+- [ ] Four perk effects remain explicitly unsupported/unproven; Guild Mail retains existing same-guild zero-delay behavior.
 - [ ] Private real-UDP/native join/leave/relog acceptance and independent consumer gates.
 
 ## Out of scope
