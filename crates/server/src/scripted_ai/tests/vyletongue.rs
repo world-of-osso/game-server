@@ -81,10 +81,17 @@ fn encounter_coverage_vyletongue_source_range_casts_and_isolated_credit() {
             "source first {spell}: {times:?}"
         );
     }
-    assert!(stun_seen, "real Flash7964 player stun");
-    // This headless app has no LOS/GroundMap: retain observed displacement as a
-    // named geometry-fixture gap, never certify an unchecked Blink move.
+    assert!(
+        !stun_seen,
+        "10yd ranged victim stays outside Flash's source radius"
+    );
     assert!(blink_displacements.len() >= 2, "real21655 cast repeats");
+    assert!(
+        blink_displacements
+            .iter()
+            .all(|distance| (*distance - 20.0).abs() < 0.01),
+        "actual source20yd caster-front Blink: {blink_displacements:?}"
+    );
     for spell in [16100, 21390] {
         assert!(
             h.inbox(0)
@@ -140,4 +147,83 @@ fn encounter_coverage_vyletongue_source_range_casts_and_isolated_credit() {
         before,
         "dead actor stops source casts"
     );
+}
+
+#[test]
+fn encounter_coverage_vyletongue_range_boundaries_recheck_after_source_half_second() {
+    for vertical in [false, true] {
+        let (mut h, boss, _) = bound_boss(12236, 349, 2);
+        let player = h.player();
+        let origin = *h.app.world().get::<Position>(boss).unwrap();
+        let mut visibility = crate::interest::NetworkVisibility::default();
+        visibility.gain_visibility(h.players[0].1);
+        h.app.world_mut().entity_mut(boss).insert(visibility);
+        let reach = super::super::super::model_reach::combat_reach(h.app.world(), boss).unwrap()
+            + super::super::super::model_reach::combat_reach(h.app.world(), player).unwrap();
+        // Below the reach-adjusted minimum, or exactly at the strict3D maximum.
+        let outside = if vertical {
+            Position {
+                y: origin.y + 30.0 + reach,
+                ..origin
+            }
+        } else {
+            Position {
+                x: origin.x + 5.0 + reach - 0.5,
+                ..origin
+            }
+        };
+        h.app.world_mut().entity_mut(player).insert((
+            outside,
+            Health {
+                current: 1_000_000.0,
+                max: 1_000_000.0,
+            },
+        ));
+        h.engage(boss);
+        h.advance(0.05);
+        assert!(
+            spell_gos(&h, boss, 21390).is_empty(),
+            "range-excluded victim"
+        );
+        let current = *h.app.world().get::<Position>(boss).unwrap();
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: current.x + 10.0,
+            ..current
+        });
+        h.advance(0.45);
+        assert!(
+            spell_gos(&h, boss, 21390).is_empty(),
+            "source500ms recheck must not run early"
+        );
+        h.advance(0.1);
+        assert_eq!(
+            spell_gos(&h, boss, 21390).len(),
+            1,
+            "eligible victim after500ms recheck"
+        );
+    }
+}
+
+#[test]
+fn encounter_coverage_vyletongue_flash_stuns_a_real_nearby_victim() {
+    let (mut h, boss, _) = bound_boss(12236, 349, 2);
+    let player = h.player();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert((
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+        Health {
+            current: 1_000_000.0,
+            max: 1_000_000.0,
+        },
+    ));
+    h.engage(boss);
+    let mut stun_seen = false;
+    for _ in 0..300 {
+        h.advance(0.05);
+        stun_seen |= h.has_aura(player, 7964);
+    }
+    assert!(stun_seen, "real source7964 nearby stun, no aura injection");
 }
