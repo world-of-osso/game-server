@@ -1,6 +1,47 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_scenario_step82_requires_authored_ordinals_and_complete_metadata() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE scenario_step (ID INTEGER PRIMARY KEY, OrderIndex INTEGER); INSERT INTO scenario_step VALUES (140,7),(987,2),(1001,2);").unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(82, 0)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(82, 3), (82, 6)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "missing companion ordinal disables the entire predicate"
+    );
+    let facts = load_criteria_facts(&conn, &[(82, 3)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (step, expected) in [
+        (None, false),
+        (Some(3), false),
+        (Some(140), false),
+        (Some(987), true),
+        (Some(1001), true),
+    ] {
+        let player = ReferencePlayer {
+            scenario_step: step,
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(
+                &player,
+                CriteriaEvent::KillCreature(204799),
+                &BTreeMap::new()
+            ),
+            expected,
+            "authored ordinal, not ID or vector position"
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_completed_quest_requires_authored_metadata_and_rewarded_membership() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE content_quest_template (ID INTEGER PRIMARY KEY); INSERT INTO content_quest_template VALUES (72360);").unwrap();

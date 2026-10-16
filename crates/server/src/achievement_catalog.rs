@@ -513,6 +513,8 @@ pub(crate) struct ReferencePlayer {
     pub account_achievements_known: bool,
     /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
     pub battle_pet_team_min_level: Option<u8>,
+    /// Actual current authored ScenarioStep ID; None outside/after a scenario or without authority.
+    pub scenario_step: Option<u32>,
     /// Current terrain area (TC Player::GetAreaId).
     pub area: Option<u32>,
     pub map: u32,
@@ -539,6 +541,8 @@ enum CriteriaFact {
     KnownSpell(u32),
     NotKnownSpell(u32),
     CompletedQuest(u32),
+    /// Authored step IDs whose OrderIndex equals the one-based modifier asset minus one.
+    ScenarioSteps(BTreeSet<u32>),
     EarnedAchievement(u32),
     NotEarnedAchievement(u32),
     BattlePetTeamLevel(u8),
@@ -609,6 +613,9 @@ impl CriteriaFact {
             Self::NotAura(spell) => player.auras_known && !player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
             Self::CompletedQuest(quest) => player.rewarded_quests.contains(quest),
+            Self::ScenarioSteps(steps) => player
+                .scenario_step
+                .is_some_and(|step| steps.contains(&step)),
             Self::NotKnownSpell(spell) => {
                 player.spell_knowledge_complete && !player.known_spells.contains(spell)
             }
@@ -1443,6 +1450,21 @@ fn load_battle_pet_type_fact(
     Ok((!species.is_empty()).then_some(CriteriaFact::BattlePetSpeciesOfType(species)))
 }
 
+/// TC PlayerScenarioStep compares the actual authored OrderIndex, not vector position.
+fn load_scenario_step_fact(
+    conn: &Connection,
+    stage: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let Some(order) = stage.checked_sub(1) else {
+        return Ok(None);
+    };
+    let mut query = conn.prepare_cached("SELECT ID FROM scenario_step WHERE OrderIndex=?1")?;
+    let steps = query
+        .query_map([order], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!steps.is_empty()).then_some(CriteriaFact::ScenarioSteps(steps)))
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
@@ -1467,6 +1489,7 @@ fn load_criteria_facts(
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             -8 => exists("spell")?.then_some(CriteriaFact::NotAura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
+            82 => load_scenario_step_fact(conn, asset)?,
             87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
             -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
@@ -1522,7 +1545,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/110/122"
+                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122"
                 )
             }
         };
