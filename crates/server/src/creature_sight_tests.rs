@@ -428,3 +428,29 @@ fn dormant_resize_population_fits_one_catch_up_frame() {
         "resize scans exhaust frame: {fastest:?}"
     );
 }
+
+#[test]
+fn waking_resized_npc_updates_spatial_search_after_dormant_changes_settle() {
+    let mut app = sight_app();
+    let npc = spawn(&mut app, &ORC, at(200.0));
+    run(&mut app, 1);
+    let map = InMap::continent(0);
+    assert!(
+        !app.world()
+            .resource::<NpcGrid>()
+            .near(map, &at(0.0))
+            .any(|unit| unit == npc)
+    );
+    app.world_mut()
+        .entity_mut(npc)
+        .insert((GridDormant, shared::components::UnitScale(1000.0)));
+    run(&mut app, 3);
+    app.world_mut().entity_mut(npc).remove::<GridDormant>();
+    assert!(
+        app.world()
+            .resource::<NpcGrid>()
+            .near(map, &at(0.0))
+            .any(|unit| unit == npc),
+        "waking a resized creature immediately expands neighbour search to its authored scaled reach"
+    );
+}
