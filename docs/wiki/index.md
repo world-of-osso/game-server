@@ -487,3 +487,5 @@ Debug logs and root cause analyses.
 - [Gizlock source runtime](systems/boss-scripts.md#maraudon-gizlock-source-runtime) — actual ranged pull, channel-aware clocks, cone damage, beast-only Flash Bomb exclusion and isolated bit5 controlled credit; native/ordinary/publication open.
 
 - [Vyletongue range events](systems/boss-scripts.md#maraudon-lord-vyletongue-range-events) — real21390 RED→source EVENT_RANGE9/500ms rechecks, nearby stun and20yd Blink with isolated bit2 controlled credit; native/geometry/publication open.
+
+- [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port) — schedules, guardian lifecycle and copy-only redeemed base replacement; runtime gate pending.

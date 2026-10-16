@@ -11,13 +11,18 @@ use crate::auras::{
 };
 
 const NOXXION_SCRIPT: &str = "boss_noxxion";
+const CELEBRAS_SCRIPT: &str = "boss_celebras_the_cursed";
+const WRATH: u32 = 21807;
+const ENTANGLING_ROOTS: u32 = 12747;
+const CORRUPT_FORCES: u32 = 21968;
+const CELEBRAS_REDEEMED: u32 = 13716;
 const TOXIC_VOLLEY: u32 = 21687;
 const UPPERCUT: u32 = 22916;
 const SUMMON_DUMMY: u32 = 21708;
 const SUMMON_SPAWNS: u32 = 21707;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, NOXXION_SCRIPT | "boss_celebras_the_cursed")
+    matches!(name, NOXXION_SCRIPT | CELEBRAS_SCRIPT)
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -33,7 +38,7 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
         NOXXION_SCRIPT => Some(Box::new(Noxxion {
             boss: BossAi::new(0),
         })),
-        "boss_celebras_the_cursed" => Some(Box::new(Celebras {
+        CELEBRAS_SCRIPT => Some(Box::new(Celebras {
             boss: BossAi::new(3),
         })),
         _ => None,
@@ -111,18 +116,18 @@ impl CreatureAi for Celebras {
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
-        self.boss.events.schedule_range(21807, 0, 6_000);
-        self.boss.events.schedule_range(12747, 0, 5_000);
-        self.boss.events.schedule(21968, 30_000);
+        self.boss.events.schedule_range(WRATH, 0, 6_000);
+        self.boss.events.schedule_range(ENTANGLING_ROOTS, 0, 5_000);
+        self.boss.events.schedule(CORRUPT_FORCES, 30_000);
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         self.boss.just_died(ctx);
-        let p = *ctx
+        let position = *ctx
             .world
             .get::<shared::components::Position>(ctx.me)
             .expect("boss position");
-        ctx.summon_creature(13716, [p.x, p.y, p.z, 0.0]);
+        ctx.summon_creature(CELEBRAS_REDEEMED, [position.x, position.y, position.z, 0.0]);
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
@@ -145,16 +150,16 @@ impl BossScript for Celebras {
 
     fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
         let repeat = match event {
-            21807 => {
-                ctx.do_cast_victim(21807);
+            WRATH => {
+                ctx.do_cast_victim(WRATH);
                 (4_000, 8_000)
             }
-            12747 => {
-                ctx.do_cast_victim(12747);
+            ENTANGLING_ROOTS => {
+                ctx.do_cast_victim(ENTANGLING_ROOTS);
                 (20_000, 20_000)
             }
-            21968 => {
-                ctx.do_cast_self(21968);
+            CORRUPT_FORCES => {
+                ctx.do_cast_self(CORRUPT_FORCES);
                 (20_000, 20_000)
             }
             _ => return,
