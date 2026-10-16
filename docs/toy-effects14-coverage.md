@@ -10,10 +10,10 @@ Actual learned Shrine use at c8a791f8 retains correct client projection but serv
 |---|---|
 | Real Shrine initialized actor, owners20/80 | Against viewers1/20/80, server(level,armor,dealt100,loss100) is(1,50,2,5614)/(20,135,53,182)/(30,155,100,100). Source HP ceilings78/2404/4379 and DPS4.75353193/86.6685715/162.622925 anchor truncation. CPU integration setup uses actual bag learning and UseToy, then evaluates server conversion consumers on that actor. |
 | Podium zero tuning | Native20/30 and armor135/155 remain unchanged for every viewer;100 damage stays100 in either conversion direction. |
-| Focused regression | Nineteen actual-use, signed-delta, guardian/Podium and existing level-scaling controls pass82.49s at450a85de. Final whole-Toy-plus-seven gate and current server gates pending. |
+| Focused regression | Nineteen actual-use, signed-delta, guardian/Podium and existing level-scaling controls pass82.49s at450a85de. Final exact seven master regressions plus whole `toys:: --test-threads 2` pass143/143, zero ignored722.30s at450a85de. Server all-target check, fmt and maintained build EXIT0 at docs-equivalent86d26423/engine035700cd9/protocoldc30250; unchanged engine proof is reused without a duplicate build. |
 | Not certified | No new actual attack/cast/AI stimulus, three rendered observers, client HP display or full combat/AP/guardian-stat parity. Scaling56 wire remains its own literal earlier binary proof, not a new server-conversion wire certificate. |
 
-Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `scaling57-active-goal.json`, `scaling57-proof-ledger.json`, `scaling57-server-{red,green}.log`. No new item admission or Full1166 completion claim.
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `scaling57-active-goal.json`, `scaling57-proof-ledger.json`, `scaling57-server-{red,green}.log`, `scaling57-whole-proof.json`, `scaling57-server-{scope,results}.json` and manual readability audit. No new wire/native run: previous scaling56 receipts retain their exact binaries. No new item admission or Full1166 completion claim.
 
 ## Shrine viewer-level projection (2026-10-15)
 
