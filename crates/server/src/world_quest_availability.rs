@@ -4,9 +4,7 @@ use crate::quest::{QuestStore, quest_player};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Level, Player};
-use shared::protocol::{
-    AvailableWorldQuest, QuestChannel, QuestPoiPoint, WorldQuestAvailability, WorldQuestPoi,
-};
+use shared::protocol::{AvailableWorldQuest, QuestChannel, WorldQuestAvailability, WorldQuestPoi};
 
 #[derive(Component)]
 pub(crate) struct SentAvailability(WorldQuestAvailability);
@@ -97,9 +95,8 @@ fn area_poi(area: &crate::world_quests::Area) -> WorldQuestPoi {
     WorldQuestPoi {
         map_id: area.map_id,
         ui_map_id: area.ui_map_id,
-        position: QuestPoiPoint {
-            x: (area.vertices.iter().map(|point| point.0).sum::<f32>() / count) as i32,
-            y: (area.vertices.iter().map(|point| point.1).sum::<f32>() / count) as i32,
-        },
+        x: (area.vertices.iter().map(|point| point.0).sum::<f32>() / count) as i32,
+        y: (area.vertices.iter().map(|point| point.1).sum::<f32>() / count) as i32,
+        z: (area.vertices.iter().map(|point| point.2).sum::<f32>() / count) as i32,
     }
 }
