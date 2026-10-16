@@ -5,6 +5,9 @@ use shared::protocol::{InstanceChannel, ScenarioProgress, ScenarioStage};
 use std::collections::HashMap;
 
 #[cfg(test)]
+#[path = "scenario_step82_tests.rs"]
+mod step82_tests;
+#[cfg(test)]
 #[path = "scenario_tests.rs"]
 mod tests;
 
