@@ -761,6 +761,15 @@ struct AchievementDef {
     faction: i32,
 }
 
+#[path = "achievement_evaluation.rs"]
+mod evaluation;
+pub(crate) use evaluation::EvaluationCache;
+
+#[cfg(test)]
+thread_local! {
+    static EVALUATION_WORK: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
+}
+
 #[derive(Resource, Debug, Default)]
 #[cfg_attr(test, derive(Clone))]
 pub(crate) struct AchievementCatalog {
@@ -770,6 +779,7 @@ pub(crate) struct AchievementCatalog {
     pub trees: HashMap<u32, CriteriaTree>,
     pub children: HashMap<u32, Vec<u32>>,
     event_criteria: HashMap<u32, Vec<u32>>,
+    evaluation_index: evaluation::EvaluationIndex,
     faction_groups: HashMap<u32, u32>,
     area_bits: HashMap<u32, u32>,
     pet_creatures: BTreeSet<u32>,
@@ -777,7 +787,7 @@ pub(crate) struct AchievementCatalog {
     spell_skill_lines: HashMap<u32, BTreeSet<u32>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct TreeProgress {
     pub current: u64,
     pub required: u64,
@@ -871,61 +881,6 @@ impl AchievementCatalog {
         self.grant_completed(state, completed_map, race, false)
     }
 
-    pub(super) fn grant_completed(
-        &self,
-        state: &mut PlayerAchievementState,
-        completed_map: Option<u32>,
-        race: u8,
-        account_scope: bool,
-    ) -> Vec<AchievementToastSnapshot> {
-        let mut toasts = Vec::new();
-        loop {
-            self.set_pet_battle_points(state);
-            let completed =
-                self.find_completed_definitions(state, completed_map, race, account_scope);
-            if completed.is_empty() {
-                return toasts;
-            }
-            for definition in completed {
-                state.earned_ids.insert(definition.id);
-                toasts.push(AchievementToastSnapshot {
-                    achievement_id: definition.id,
-                    name: definition.name.clone(),
-                    points: definition.points,
-                    icon_fdid: self.window.icon_fdid(definition.id),
-                });
-            }
-        }
-    }
-
-    fn find_completed_definitions(
-        &self,
-        state: &PlayerAchievementState,
-        completed_map: Option<u32>,
-        race: u8,
-        account_scope: bool,
-    ) -> Vec<&AchievementDef> {
-        self.definitions
-            .values()
-            .filter(|definition| {
-                if self.window.has_account_flag(definition.id) != account_scope
-                    || state.earned_ids.contains(&definition.id)
-                {
-                    return false;
-                }
-                if !self.faction_matches(definition.faction, race) {
-                    return false;
-                }
-                if let Some(map) = definition.map_id
-                    && completed_map != Some(map)
-                {
-                    return false;
-                }
-                self.tree_progress(definition.root, state).completed
-            })
-            .collect()
-    }
-
     pub(crate) fn iter_earned_achievement_ids<'a>(
         &'a self,
         state: &'a PlayerAchievementState,
@@ -955,6 +910,11 @@ impl AchievementCatalog {
         state: &PlayerAchievementState,
         race: u8,
     ) -> Vec<AchievementProgressSnapshot> {
+        let character_progress = self.cached_progress(state);
+        let account_progress = state
+            .account
+            .as_deref()
+            .and_then(|account| self.cached_progress(account));
         self.definitions
             .values()
             .filter(|definition| self.faction_matches(definition.faction, race))
@@ -962,8 +922,15 @@ impl AchievementCatalog {
                 !self.window.has_account_flag(definition.id) || state.account.is_some()
             })
             .map(|definition| {
+                let cached = if self.window.has_account_flag(definition.id) {
+                    account_progress
+                } else {
+                    character_progress
+                };
                 let state = self.definition_state(state, definition.id);
-                let progress = self.tree_progress(definition.root, state);
+                let progress = cached
+                    .map(|progress| progress[&definition.id].clone())
+                    .unwrap_or_else(|| self.tree_progress(definition.root, state));
                 AchievementProgressSnapshot {
                     achievement_id: definition.id,
                     current: progress.current.min(u64::from(u32::MAX)) as u32,
@@ -1209,6 +1176,11 @@ impl AchievementCatalog {
     }
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
+        #[cfg(test)]
+        EVALUATION_WORK.with(|work| {
+            let (definitions, trees) = work.get();
+            work.set((definitions, trees + 1));
+        });
         let tree = &self.trees[&id];
         let counter = self.criterion_counter(tree.criteria_id, state);
         let children = self.children.get(&id).into_iter().flatten();
@@ -1395,6 +1367,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
                 .push(id);
         }
     }
+    catalog.index_evaluation_dependencies();
     Ok(catalog)
 }
 
