@@ -23,6 +23,13 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Rotgrip source boundary
+
+- [x] Prepare only13596→428/Normal349bit6 from pinned TC Maraudon header/instance, TDB1210 SmartAI and actual Journal70391 CSV430/actor1000/display13589. SQL stays copy-only, idempotent, preserves Razorlash and refuses AI/bit drift.
+- [x] Exercise unchanged100% SAI clocks: Fatal Bite16495 first6s/repeat12s; Puncture15976 first6–8s/repeat13–18s, both victim arguments. Installed DB2 makes16495 effect165/50% maximum health with implicit SELF1. Two casts actually reduce Rotgrip's own health; Puncture applies its victim aura and real periodic damage. No spell/target/timer/resource override or per-tick healing. High initial player HP is controlled survival only.
+- [x] Separate controlled player kill after29 simulated seconds grants exactly428/bit6 once, with no other-copy start/casts/credit or post-death Fatal Bite.
+- [ ] Intended victim-damaging Fatal Bite/ordinary fight is not certified: installed spell16495 damages SELF despite the TDB victim argument. Do not replace its ID/implicit target to hide this source mismatch. Native clear, loot, persistence and canonical publication remain separate.
+
 ## Gnomeregan Electrocutioner source boundary
 
 - [x] Prepare only Electrocutioner6235/encounter380 Normal map90 bit3 from pinned TC header/instance, installed Journal421/actor991/display36558 and actual TDB SmartAI identity. TC ordinal2 must not replace DB2 bit3. Generated SQL remains copy-only and preserves unrelated bindings; other Gnomeregan actors receive no credit from this profile.
