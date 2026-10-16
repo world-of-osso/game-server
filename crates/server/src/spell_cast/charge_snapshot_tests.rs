@@ -5,7 +5,7 @@ const HASTY_HEARTH: u32 = 83944;
 const HEARTH_CHARGES: u32 = 2309;
 
 fn hasty_hearth_fixture(member: bool) -> Harness {
-    let mut h = harness(Vec::new(), &[HEARTHSTONE, HASTY_HEARTH], 8).unwrap();
+    let mut h = harness(Vec::new(), &[HEARTHSTONE, HASTY_HEARTH, 458619], 8).unwrap();
     let mut known = crate::class_progression::KnownSpells::fixture(vec![HEARTHSTONE]);
     if member {
         known.set_guild_grants(&[HASTY_HEARTH]);
@@ -121,6 +121,70 @@ fn guild_hasty_hearth_removal_preserves_consumed_charge_then_restores_next_use()
     );
     h.advance(18_010);
     assert_eq!(cast_hearthstone(&mut h).recharge_ms, 1_800_000);
+}
+
+#[test]
+fn guild_hasty_hearth_human_keeps_mixed_consumption_durations_across_guild_changes() {
+    // Actual native Human458619 (No Place Like Home):411/+1 charge and453/-300000ms.
+    // TC ConsumeCharge records each use's own duration, not one category interval.
+    let mut h = hasty_hearth_fixture(false);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            HEARTHSTONE,
+            458619,
+        ]));
+    h.advance(4);
+    let first = cast_hearthstone(&mut h);
+    assert_eq!(
+        (first.current, first.max, first.recharge_ms),
+        (1, 2, 1_500_000)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .set_guild_grants(&[HASTY_HEARTH]);
+    h.advance(4);
+    let second = cast_hearthstone(&mut h);
+    assert_eq!(
+        (second.current, second.max, second.recharge_ms),
+        (0, 2, 1_500_000)
+    );
+    h.advance((second.remaining_ms / 50 + 5) as usize);
+    let next = h
+        .inbox
+        .charges
+        .iter()
+        .rev()
+        .find(|update| update.category == HEARTH_CHARGES)
+        .expect("First Human charge recovers before the queued guild use");
+    assert_eq!((next.current, next.max, next.recharge_ms), (1, 2, 600_000));
+    assert!((599_000..=600_000).contains(&next.remaining_ms), "{next:?}");
+    h.app
+        .world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .set_guild_grants(&[]);
+    h.advance(4);
+    let third = cast_hearthstone(&mut h);
+    assert_eq!(
+        (third.current, third.max, third.recharge_ms),
+        (0, 2, 600_000)
+    );
+    h.advance((third.remaining_ms / 50 + 5) as usize);
+    let restored = h
+        .inbox
+        .charges
+        .iter()
+        .rev()
+        .find(|update| update.category == HEARTH_CHARGES)
+        .expect("Queued guild use recovers before the ordinary Human use");
+    assert_eq!(
+        (restored.current, restored.max, restored.recharge_ms),
+        (1, 2, 1_500_000)
+    );
 }
 
 #[test]
