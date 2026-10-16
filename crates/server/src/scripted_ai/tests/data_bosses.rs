@@ -21,6 +21,8 @@ mod wailing_physical;
 mod wailing_progress;
 #[path = "wailing_ritual_waves.rs"]
 mod wailing_ritual_waves;
+#[path = "wailing_start.rs"]
+mod wailing_start;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
