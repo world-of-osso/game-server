@@ -191,7 +191,8 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         qualities = set(item_rows.values())
         authored_facts = {19: set(item_rows), 15: qualities,
                           14: set(range(max(qualities, default=-1) + 1)),
-                          110: {row[0] for row in db.execute('SELECT ID FROM content_quest_template')}}
+                          110: {row[0] for row in db.execute('SELECT ID FROM content_quest_template')},
+                          82: {row[0] + 1 for row in db.execute('SELECT DISTINCT OrderIndex FROM scenario_step WHERE OrderIndex >= 0')}}
     header, overlays = db2_casc.decode(overlays_path.read_bytes())
     if header['layout_hash'] != 0x9A196494:
         raise ValueError('requires pinned WorldMapOverlay layout9A196494')

@@ -204,6 +204,16 @@ pub(super) fn send_entry_progress(world: &mut World) {
     }
 }
 
+/// Current authored step identity; the run's vector position is never an ordinal.
+pub(super) fn current_step_id(world: &World, map: InMap) -> Option<u32> {
+    let (id, run) = world.get_resource::<ScenarioRuns>()?.0.get(&map)?;
+    let definition = world
+        .get_resource::<ScenarioCatalog>()?
+        .definitions
+        .get(id)?;
+    definition.steps.get(run.step).map(|step| step.id)
+}
+
 fn snapshot(world: &World, map: InMap) -> ScenarioProgress {
     let difficulty_id = world
         .get_resource::<crate::maps::InstanceManager>()

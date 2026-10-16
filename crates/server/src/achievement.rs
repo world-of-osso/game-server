@@ -1128,6 +1128,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .get::<PlayerAchievementState>(player)
             .is_some_and(|state| state.account.is_some()),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
+        scenario_step: map.and_then(|map| scenario::current_step_id(world, map)),
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),
