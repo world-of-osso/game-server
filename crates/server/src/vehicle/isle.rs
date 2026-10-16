@@ -2,7 +2,7 @@
 //! HandleAuraControlVehicle and Vehicle.cpp AddVehiclePassenger select a source seat.
 use super::*;
 use crate::auras::{ActiveAuras, AuraInstance, RemoveReason, handlers::CONTROL_VEHICLE};
-use shared::components::{ModelDisplay, Npc, VehicleDriverMovement};
+use shared::components::{ModelDisplay, MovementSpeed, Npc, VehicleDriverMovement};
 
 const MAP_ID: u32 = 628;
 const DEMOLISHER: u32 = 34775;
