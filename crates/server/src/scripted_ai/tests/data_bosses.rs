@@ -7,6 +7,8 @@ mod gnomeregan;
 mod group_criteria;
 #[path = "maraudon.rs"]
 mod maraudon;
+#[path = "noxxion.rs"]
+mod noxxion;
 
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
