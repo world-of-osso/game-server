@@ -1,3 +1,4 @@
+use super::effects2_tests::use_ability;
 use super::*;
 
 const TWO_WAY_WALLS: [(u32, u32); 7] = [
