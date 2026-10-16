@@ -97,7 +97,7 @@ pub(crate) fn world_db() -> Option<&'static WorldData> {
     .as_ref()
 }
 
-/// Own the prepared native snapshot until its fixture finishes; canonical data is read-only.
+/// Shared process input under target/, never mutable app state or canonical data.
 pub(crate) struct PreparedClassWorld {
     directory: std::sync::Arc<tempfile::TempDir>,
 }
@@ -122,8 +122,11 @@ pub(crate) fn prepare_class_world() -> PreparedClassWorld {
 }
 
 fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
+    // The process cache outlives individual fixtures; keep the 800MB snapshot off /tmp tmpfs.
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/class-fixtures");
+    std::fs::create_dir_all(&root).expect("disk-backed class fixture cache");
     let prepared = PreparedClassWorld {
-        directory: std::sync::Arc::new(tempfile::tempdir().unwrap()),
+        directory: std::sync::Arc::new(tempfile::tempdir_in(root).unwrap()),
     };
     let helper = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/prepare_class_summon_db.py");
