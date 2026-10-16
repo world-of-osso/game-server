@@ -294,3 +294,5 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 - [x] Prepare actual TDB serverside30642 Request Heal, absent from current DB2; retain every source field and source target conditions. Copy-only, idempotent and missing-source refusal.
 - [ ] Port pinned EventMap mortal30641 victim5–10s/repeat5–15s, surge34645 maximum-distance threat target3–5s/repeat15–40s, incoming-damage below40% request30642 once, below20% retaliation22857 then30s repeats; reset re-arms both. Preserve actual casting admission and source speech/death sound.
 - [ ] Prove source damage/healer chain/retaliation, reset, isolated1893bit2 credit and silence. Source taunt10–15min is timed, not LoS. Ordinary/native, loot/persistence and remaining Ramparts encounters stay separate.
+
+Gargolmar runtime port uses dispatch-anchored EventMap repeats, incoming-only 40%/20% arm-once thresholds and installed encounter bit2. Idle taunt is timed 10–15min, not LoS. OnSpellCast/slay speech and death sound10336 remain unimplemented hook gaps; no complete encounter claim. Runtime GREEN/effect/healer-chain acceptance remains pending.
