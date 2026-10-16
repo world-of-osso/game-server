@@ -9,6 +9,8 @@ const STEALTH: u32 = 1784;
 const SHADOW_DANCE: u32 = 185313;
 const SLOW_FALL: u32 = 130;
 const NO_FEATHER_FALL: u32 = 79636;
+const CUTLASS_SLASH: u32 = 214794;
+const BLOOD_FRENZY: u32 = 214789;
 
 fn rogue() -> Harness {
     let mut h = harness(Vec::new(), &[STEALTH, SHADOW_DANCE], 4).unwrap();
@@ -152,4 +154,43 @@ fn native_excluded_caster_aura_spell_applies_to_ordinary_npc_casts() {
     assert_eq!(reason, CastFailReason::InvalidTarget);
     assert_eq!(detail.as_deref(), Some("SPELL_FAILED_CASTER_AURASTATE"));
     assert!(!crate::auras::has_aura(h.app.world(), h.npc, SHADOW_DANCE));
+}
+
+#[test]
+fn native_excluded_caster_aura_gained_during_cast_refuses_completion() {
+    let mut h = harness(Vec::new(), &[CUTLASS_SLASH, BLOOD_FRENZY], 1).unwrap();
+    let health = h.health(h.npc);
+    h.cast_and_deliver(CUTLASS_SLASH, Some(h.npc));
+    assert!(h.app.world().get::<super::CastState>(h.caster).is_some());
+    super::cast_triggered(h.app.world_mut(), h.caster, BLOOD_FRENZY, None, 0);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        BLOOD_FRENZY
+    ));
+    h.advance(12); // Native450ms cast finishes after the blocker appeared.
+    assert_refused_without_launch(&h, "SPELL_FAILED_CASTER_AURASTATE");
+    assert_eq!(h.health(h.npc), health);
+}
+
+#[test]
+fn native_excluded_caster_aura_removed_before_completion_allows_cast() {
+    let mut h = harness(Vec::new(), &[CUTLASS_SLASH, BLOOD_FRENZY], 1).unwrap();
+    h.cast_and_deliver(CUTLASS_SLASH, Some(h.npc));
+    assert!(h.app.world().get::<super::CastState>(h.caster).is_some());
+    super::cast_triggered(h.app.world_mut(), h.caster, BLOOD_FRENZY, None, 0);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        BLOOD_FRENZY
+    ));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == BLOOD_FRENZY,
+    );
+    h.advance(12);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == CUTLASS_SLASH));
 }
