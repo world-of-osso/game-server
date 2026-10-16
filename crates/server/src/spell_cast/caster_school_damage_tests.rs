@@ -11,7 +11,7 @@ const OPEN_WOUNDS: u32 = 188400;
 const FIREBALL_BASE: f32 = 388.125;
 
 fn fixture() -> Harness {
-    harness(Vec::new(), &[HAUNT, FIREBALL, OPEN_WOUNDS], 9).unwrap()
+    harness(Vec::new(), &[HAUNT, FIREBALL, OPEN_WOUNDS, 172, 146739], 9).unwrap()
 }
 
 fn cast_haunt(h: &mut Harness) {
@@ -51,6 +51,35 @@ fn caster_school_damage_native_haunt_amplifies_owner_fireball_by_sixteen_percent
         varied(FIREBALL_BASE * 1.16).contains(&damage),
         "Haunt damage {damage}"
     );
+}
+
+#[test]
+fn caster_school_damage_native_haunt_amplifies_actual_corruption_ticks() {
+    let mut h = fixture();
+    cast_haunt(&mut h);
+    let first_event = h.inbox.log.len();
+    h.cast_and_deliver(172, Some(h.npc));
+    h.advance(90);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let ticks: Vec<_> = h.inbox.log[first_event..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(146739)
+                && event.source == Some(h.caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.periodic
+        })
+        .collect();
+    assert_eq!(ticks.len(), 2, "two native2000ms Corruption ticks");
+    for tick in ticks {
+        // Native146739:100 SP ×0.380104989, then Haunt16%.
+        assert!(
+            varied(38.0105 * 1.16).contains(&(tick.amount as f32)),
+            "Corruption tick {}",
+            tick.amount
+        );
+    }
 }
 
 #[test]
