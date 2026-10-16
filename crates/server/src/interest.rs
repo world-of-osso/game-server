@@ -868,3 +868,30 @@ fn distance_squared(a: &Position, b: &Position) -> f32 {
 #[cfg(test)]
 #[path = "interest_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn idle_detection_full_population_is_bounded() {
+    let mut app = App::new();
+    app.init_resource::<InterestIndex>();
+    app.add_systems(Update, sync_detection_geometry);
+    crate::test_data::populate_idle_world(app.world_mut(), || {
+        (
+            Level(30),
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            UnitScale(1.0),
+            Npc {
+                template_id: 30,
+                name: String::new(),
+            },
+        )
+    });
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_detection_full_population_is_bounded",
+    );
+}

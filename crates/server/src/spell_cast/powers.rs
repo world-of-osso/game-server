@@ -774,3 +774,25 @@ pub(super) fn regenerate_creature_mana(
         mana.current = (mana.current + gain).min(mana.max);
     }
 }
+
+#[cfg(test)]
+#[test]
+fn idle_health_regen_full_population_is_bounded() {
+    let mut app = App::new();
+    app.insert_resource(Time::<()>::default());
+    app.add_systems(Update, regenerate_creature_health);
+    crate::test_data::populate_idle_world(app.world_mut(), || {
+        (
+            CreatureHealthRegenTimer::default(),
+            GridDormant,
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        )
+    });
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_health_regen_full_population_is_bounded",
+    );
+}
