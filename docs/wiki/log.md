@@ -1,3 +1,7 @@
+## 2026-10-15 — Read-only follower group reward receipts
+
+[Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
+
 ## 2026-10-15 — Player-owned evade aura retention
 
 [Native source boundary](investigations/follower-data.md#owned-evade-aura-retention--2026-10-15): Stockwait67 credits Moloch/Overheat but later loses all Garrick passives on evade (10584→7840HP,68→0SP). Shared cleanup now follows TC Unit.cpp4461 owned-unit exclusion. Real initialized-spec→evade→stat-refresh RED1 matches7840; GREEN/build/native retention pending. Route/loot gaps keep fullStockade/Azure gates open.

@@ -18,7 +18,13 @@ Pinned-source controlled-player run Stockwait67 physically kills Stockade Moloch
 
 During that run Garrick maxHP10584→7840 and spell power68→0. Native command20359 records all18 applied auras removed at1792116202633, including137028,353367,86102 and Righteous Fury25780. `remove_auras_on_evade` applied ordinary NPC cleanup to this player-controlled follower. TC a352b1fa `Unit.cpp:4459–4463` returns before aura removal for `IsCharmedOwnedByPlayerOrPlayer`; existing `faction::player_affected` represents that boundary with Player/PLAYER_CONTROLLED. The shared cleanup now retains existing owned-unit auras, not reapplying or granting anything. Unowned creature rules and normal expiration/removal remain unchanged. See [creature aggro](../systems/creature-aggro.md#evade-and-death).
 
-Real level32 Garrick initialization→production evade→StatsPlugin regression at0350ec6b fails10584 versus actual7840, matching native ordering. Initial6e5ec7d0 was a fixture field compile error, not RED. GREEN/check/build and native retention proof remain separately pending; this fix does not close the independent route/loot gaps.
+Real level32 Garrick initialization→production evade→StatsPlugin regression at0350ec6b fails10584 versus actual7840, matching native ordering. Initial6e5ec7d0 was a fixture field compile error, not RED. At9b3968e8 native lifecycle3/3 plus the separate ordinary unowned dummy-evade control1/1 pass; helper check/build/fmt exit0. The first combined green command's misspelled ordinary-test filter matched none and is not counted for that control. Native post-fix retention remains pending; this does not close independent route/loot gaps.
+
+## Group reward receipts — 2026-10-15
+
+Stockwait67's Moloch native pixels show pending GroupLoot items, while the old diagnostic calls corpse `LootSlot` operations only after walking beyond the kill position. Both post-route `take-loot` calls return no-open-window and inventory remains Hearthstone only; no loot delivery is accepted from those calls. Group rewards must be voted through the real native UI and their actual inventory delivery checked, not manufactured by corpse interaction or item grants.
+
+Runtime source boundary: Moloch/Hogger configured nonquest drops are Rare quality3 in installed70391 ItemSparse; both have zero configured coins. Overheat has only quest-required item62305 and zero coins, so a character without a quest needing it has no eligible configured reward item. The chance rows can also produce an empty ordinary roll. Do not infer an empty server roll merely from an absent UI offer. Opt-in `game_server::loot=debug` records actual generated personal/shared/pending state and rewarded characters; roll-start traces record actual corpse/roll/item IDs and eligible players. These receipts change no tables, chance, quest eligibility, mode or delivery behavior.
 
 ## Breakable CC targeting — 2026-10-15
 
