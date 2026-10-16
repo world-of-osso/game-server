@@ -66,6 +66,8 @@ fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
     let mut blocked = Vec::new();
     let mut summons = std::collections::HashSet::new();
     let mut channel_seen = false;
+    let mut channel_start_count = None;
+    let mut completed_waves = 0;
     for tick in 1..=1900 {
         if tick == 401 {
             h.hit_pct(boss, 60.0);
@@ -101,8 +103,19 @@ fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
                 (21808, CastType::Channel)
             );
             channel_seen = true;
+            channel_start_count.get_or_insert(summons.len());
         }
         summons.extend(h.creatures_of(11783));
+        if !h.has_aura(boss, 21808)
+            && let Some(start_count) = channel_start_count.take()
+        {
+            assert_eq!(
+                summons.len() - start_count,
+                4,
+                "8s channel with native2s period produces four actual summons"
+            );
+            completed_waves += 1;
+        }
     }
     eprintln!(
         "LANDSLIDE source casts={casts:?}, unique summons={}",
@@ -131,7 +144,7 @@ fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
         );
     }
     assert!(channel_seen, "real below50 channel");
-    assert!(!summons.is_empty(), "real21809 periodic summon11783");
+    assert!(completed_waves >= 2, "two full native21809 summon waves");
     for spell in [18670, 5568] {
         assert!(
             h.inbox(0)
