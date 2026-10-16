@@ -1,3 +1,7 @@
+## 2026-10-16 — Azure finite Frost Bomb chain
+
+[Source and proof boundary](investigations/follower-data.md#azure-frost-bomb--2026-10-16): native Telash186737/205 RED4/4 precedes386781→386881 expiry-only387149+386910 hooks. No boss phases or unbound frozen-ground actions inferred; private225-actor population import preserves canonical/Stockade proof snapshots.
+
 ## 2026-10-15 — Read-only follower group reward receipts
 
 [Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
