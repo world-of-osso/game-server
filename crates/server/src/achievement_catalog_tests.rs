@@ -1625,3 +1625,41 @@ fn achievements_criteria_pet_battle_points_sum_earned_category_achievements_to_a
     catalog.grant_completed(&mut fresh, None, 1, true);
     assert_eq!(fresh.criteria_progress.get(&21256), None);
 }
+
+#[test]
+fn achievements_incremental_event_work_is_bounded_and_snapshot_stays_complete() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    let baseline = catalog.snapshot(&state, 1);
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None, 1);
+    let snapshot = catalog.snapshot(&state, 1);
+    let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
+    assert!(toasts.iter().any(|toast| toast.achievement_id == 6));
+    assert_eq!(snapshot.progress.len(), baseline.progress.len());
+    assert!(
+        snapshot
+            .progress
+            .iter()
+            .any(|row| row.achievement_id == 6 && row.completed)
+    );
+    assert!(
+        definitions < 128,
+        "event visited {definitions} definitions, {trees} tree nodes"
+    );
+    assert!(trees < 1024, "event evaluated {trees} tree nodes");
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(10), None, 1)
+            .is_empty()
+    );
+    assert_eq!(catalog.snapshot(&state, 1), snapshot);
+    let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
+    assert_eq!(
+        (definitions, trees),
+        (0, 0),
+        "unchanged counters must not reevaluate trees"
+    );
+}

@@ -761,6 +761,11 @@ struct AchievementDef {
     faction: i32,
 }
 
+#[cfg(test)]
+thread_local! {
+    static EVALUATION_WORK: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
+}
+
 #[derive(Resource, Debug, Default)]
 pub(crate) struct AchievementCatalog {
     window: window::WindowData,
@@ -907,6 +912,11 @@ impl AchievementCatalog {
         self.definitions
             .values()
             .filter(|definition| {
+                #[cfg(test)]
+                EVALUATION_WORK.with(|work| {
+                    let (definitions, trees) = work.get();
+                    work.set((definitions + 1, trees));
+                });
                 if self.window.has_account_flag(definition.id) != account_scope
                     || state.earned_ids.contains(&definition.id)
                 {
@@ -1208,6 +1218,11 @@ impl AchievementCatalog {
     }
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
+        #[cfg(test)]
+        EVALUATION_WORK.with(|work| {
+            let (definitions, trees) = work.get();
+            work.set((definitions, trees + 1));
+        });
         let tree = &self.trees[&id];
         let counter = self.criterion_counter(tree.criteria_id, state);
         let children = self.children.get(&id).into_iter().flatten();
