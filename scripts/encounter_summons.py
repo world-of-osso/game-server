@@ -138,9 +138,32 @@ def import_noxxion_spawn_difficulty(connection):
     return [13456]
 
 
+def import_celebras_redeemed(connection):
+    """Pinned Celebras JustDied summons13716; replace its legacy base, not difficulty1.
+
+    TDB1210 has only base0/ContentTuning0. Preserve that absence rather than
+    invent a Normal row or assign the boss's tuning to the redeemed actor.
+    """
+    identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=13716').fetchone()
+    difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=13716 ORDER BY DifficultyID').fetchall()
+    if identity != ('SmartAI','') or difficulties != [(0,)]:
+        raise ValueError('Celebras redeemed13716 source identity changed')
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=13716 AND DifficultyID=0')
+    connection.execute('DELETE FROM content_creature_template WHERE entry=13716')
+    retail_content.insert_tdb_templates(connection,'13716',replace_legacy=True)
+    connection.execute('DELETE FROM content_creature_template_model WHERE CreatureID=13716')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=13716')
+    connection.execute('DELETE FROM content_creature_template_addon WHERE entry=13716')
+    connection.execute(f'''INSERT INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=13716''')
+    return [13716]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
@@ -154,6 +177,8 @@ def main():
                 entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
             elif args.encounter == 'adarogg':
                 entries = [import_demonic_leap_template(conn)]
+            elif args.encounter == 'celebras':
+                entries = import_celebras_redeemed(conn)
             elif args.encounter == 'noxxion':
                 entries = import_noxxion_spawn_difficulty(conn)
             elif args.encounter == 'wailing-ritual':

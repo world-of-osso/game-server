@@ -1,4 +1,4 @@
-//! TC a352b1fa boss_noxxion.cpp; TaskScheduler deadlines and aura effect0 hooks.
+//! TC a352b1fa Maraudon bosses; TaskScheduler deadlines and aura effect0 hooks.
 use bevy::prelude::*;
 use shared::components::{Npc, UnitFlags};
 
@@ -17,7 +17,7 @@ const SUMMON_DUMMY: u32 = 21708;
 const SUMMON_SPAWNS: u32 = 21707;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    name == NOXXION_SCRIPT
+    matches!(name, NOXXION_SCRIPT | "boss_celebras_the_cursed")
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -26,11 +26,18 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
         .get_resource::<crate::maps::MapStore>()?
         .instance_scripts
         .get(&map.map_id)?;
-    (instance == "instance_maraudon").then(|| {
-        Box::new(Noxxion {
+    if instance != "instance_maraudon" {
+        return None;
+    }
+    match world.get::<super::CreatureScriptName>(actor)?.0.as_str() {
+        NOXXION_SCRIPT => Some(Box::new(Noxxion {
             boss: BossAi::new(0),
-        }) as Box<dyn CreatureAi>
-    })
+        })),
+        "boss_celebras_the_cursed" => Some(Box::new(Celebras {
+            boss: BossAi::new(3),
+        })),
+        _ => None,
+    }
 }
 
 struct Noxxion {
@@ -90,6 +97,69 @@ impl BossScript for Noxxion {
             _ => return,
         };
         self.boss.events.repeat_from_due_range(min, max);
+    }
+}
+
+struct Celebras {
+    boss: BossAi,
+}
+
+impl CreatureAi for Celebras {
+    fn reset(&mut self, ctx: &mut Ctx) {
+        self.boss.reset(ctx);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
+        self.boss.just_engaged_with(ctx);
+        self.boss.events.schedule_range(21807, 0, 6_000);
+        self.boss.events.schedule_range(12747, 0, 5_000);
+        self.boss.events.schedule(21968, 30_000);
+    }
+
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        self.boss.just_died(ctx);
+        let p = *ctx
+            .world
+            .get::<shared::components::Position>(ctx.me)
+            .expect("boss position");
+        ctx.summon_creature(13716, [p.x, p.y, p.z, 0.0]);
+    }
+
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        boss_update_ai(self, ctx, diff_ms);
+    }
+}
+
+impl BossScript for Celebras {
+    fn boss_ai(&mut self) -> &mut BossAi {
+        &mut self.boss
+    }
+
+    fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
+        let repeat = match event {
+            21807 => {
+                ctx.do_cast_victim(21807);
+                (4_000, 8_000)
+            }
+            12747 => {
+                ctx.do_cast_victim(12747);
+                (20_000, 20_000)
+            }
+            21968 => {
+                ctx.do_cast_self(21968);
+                (20_000, 20_000)
+            }
+            _ => return,
+        };
+        self.boss.events.repeat_from_due_range(repeat.0, repeat.1);
     }
 }
 
