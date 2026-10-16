@@ -8,6 +8,8 @@ use shared::components::{
     CombatStatus, Health, Npc, Rotation, StandState, UnitFactionTemplate, UnitPose,
 };
 
+use shared::protocol::NpcFlags;
+
 use super::event_map::EventMap;
 
 use super::instance_script::{EncounterState, InstanceScript, InstanceScripts};
@@ -115,23 +117,8 @@ impl Disciple {
         self.escort_events.update(u64::from(diff_ms));
         while let Some(event) = self.escort_events.execute_event() {
             match event {
-                EVENT_START => {
-                    ctx.world
-                        .entity_mut(ctx.me)
-                        .insert(UnitFactionTemplate(FACTION_ESCORTEE));
-                    ctx.world
-                        .get_mut::<shared::protocol::NpcFlags>(ctx.me)
-                        .expect("Disciple NPC flags")
-                        .0 &= !shared::protocol::NpcFlags::GOSSIP;
-                    mark_replication_dirty(ctx.world, ctx.me);
-                    self.escort_events.schedule(EVENT_START_SPEECH, 10_000);
-                }
-                EVENT_START_SPEECH => {
-                    ctx.talk(SAY_START);
-                    self.escort_events.schedule(EVENT_START_PATH, 3_500);
-                }
-                EVENT_START_PATH => {
-                    super::waypoint_path::move_path(ctx.world, ctx.me, PATH_FIRST_CAMP);
+                EVENT_START | EVENT_START_SPEECH | EVENT_START_PATH => {
+                    self.run_start_event(ctx, event)
                 }
                 EVENT_FIRST_CAMP_SPEECH
                 | EVENT_FIRST_CAMP_SUMMONS
@@ -156,6 +143,30 @@ impl Disciple {
                 EVENT_OWL_FORM | EVENT_FLIGHT | EVENT_DESPAWN => self.run_exit_event(ctx, event),
                 _ => unreachable!("Disciple escort event {event}"),
             }
+        }
+    }
+
+    fn run_start_event(&mut self, ctx: &mut Ctx, event: u32) {
+        match event {
+            EVENT_START => {
+                ctx.world
+                    .entity_mut(ctx.me)
+                    .insert(UnitFactionTemplate(FACTION_ESCORTEE));
+                ctx.world
+                    .get_mut::<NpcFlags>(ctx.me)
+                    .expect("Disciple NPC flags")
+                    .0 &= !NpcFlags::GOSSIP;
+                mark_replication_dirty(ctx.world, ctx.me);
+                self.escort_events.schedule(EVENT_START_SPEECH, 10_000);
+            }
+            EVENT_START_SPEECH => {
+                ctx.talk(SAY_START);
+                self.escort_events.schedule(EVENT_START_PATH, 3_500);
+            }
+            EVENT_START_PATH => {
+                super::waypoint_path::move_path(ctx.world, ctx.me, PATH_FIRST_CAMP);
+            }
+            _ => unreachable!("Disciple start event {event}"),
         }
     }
 

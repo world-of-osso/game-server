@@ -51,7 +51,7 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
-- [Wailing controlled gossip/start](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) — source callbacks/events1–3, no fabricated natural eligibility; targeted proof pending.
+- [Wailing controlled gossip/start](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) — source callbacks/events1–3, real flag0 ingress rejection and physical first path2/2; natural positive activation remains data-blocked.
 - [Wailing targeted aggro Say](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) — attacker-name substitution, unchanged25yd broadcast, controlled native-server proof; natural activation/native clear open.
 
 - [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
