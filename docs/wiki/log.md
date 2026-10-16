@@ -1,3 +1,7 @@
+## 2026-10-15 — Readiness real-time clock
+
+[Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.
+
 ## 2026-10-15 — Guild lifecycle query boundary
 
 [Lifecycle history](systems/guild-lifecycle.md): additive history table and authenticated actor-guild query; same-transaction six-action/founder producer wiring and100-row insertion-order retention implemented. Actual six-action RED observed an empty history; targeted4/4 now passes six-action/refusal/privacy/reopen, founder join labels,100-row tied-order retention and abort. Actual UDP transport1/1 and both-skin native real-action/privacy/100-row overflow acceptance now pass; fresh server/client processes preserve exact100 raw events/timestamps with identical binary receipts. Eleven inspected full-HD PNGs and durable trial evidence linked in the system page; refreshed-master gates remain separate. No fabricated/backfilled history or bank/news reuse.

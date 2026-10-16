@@ -63,7 +63,7 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.id != BERSERK {
         return;
     }
-    let now = super::now(world);
+    let now = super::history_now(world);
     let categories: Vec<_> = {
         let store = world.resource::<SpellStore>();
         RESET_COOLDOWNS
