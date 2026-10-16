@@ -259,6 +259,8 @@ pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 /// Read at landing by `networking::fall_damage_multiplier` (`Player::HandleFall`).
 pub const MODIFY_FALL_DAMAGE_PCT: u32 = 374;
+/// TC HandleForceMoveForward sets UnitFlags2::FORCE_MOVEMENT.
+pub const FORCE_MOVE_FORWARD: u32 = 241;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -362,6 +364,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | DETECT_VISIBLE_WHILE_INVISIBLE
         | MOD_SCALE
         | FEATHER_FALL
+        | FORCE_MOVE_FORWARD
         | MOD_UNATTACKABLE
         | MOD_CONFUSE
         | MOD_FEAR

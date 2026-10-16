@@ -22,6 +22,9 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Grizzlesnout source lifecycle](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16) — actual learning/Northrend cast/15s expiry acceptance1/1; twelve canonical body assets/two aliases authenticated, native rendering separate.
+
+- [Forced-forward flag boundary](systems/toys.md#forced-forward-flag-boundary-2026-10-16) — aura241 source overlap/final-removal RED→GREEN1/1; generic native35/35 and whole-Toy139/139 pass, Ashhide mount remains deferred.
 - [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16) — authentic private vision lifecycle,138/138 Toy regression and17-file body closure; procedural8605 rendering remains open.
 - [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import, learned-use lifecycle and137/137 Toy regression; private70391 five-asset closure verified, native pixels separate.
 
