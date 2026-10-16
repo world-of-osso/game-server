@@ -29,7 +29,8 @@ class ToyStoneWhistleImportTests(unittest.TestCase):
                                 "--db", str(path)], check=True, capture_output=True, text=True)
             with closing(sqlite3.connect(path)) as conn:
                 after = set(conn.execute("SELECT entry FROM content_creature_template"))
-                self.assertIn((98300,), after)
+                self.assertEqual(conn.execute("""SELECT count(*) FROM content_creature_template
+                    WHERE entry = 98300""").fetchone()[0], 1)
                 self.assertTrue(before <= after)
                 self.assertEqual(conn.execute("""SELECT * FROM content_creature_template_model
                     WHERE CreatureID = 98300""").fetchall(), models)

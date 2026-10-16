@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Enchanted Stone Whistle source summon (2026-10-16)
+
+129279/193687 has one source wild/default summon of Petrified Sand Piper98300/display71056. The maintained additive importer copies its authentic template/model; existing63→86 destination selection, ownership, ordinary wild initialization and60000ms expiry remain unchanged. No AI/addon/spell/click/root-script binding supplies another action. [Source-order gaps and exact proof status](../../toy-effects14-coverage.md#source-order-continuation-gaps-2026-10-16) distinguish server acceptance from native assets/pixels; guardian final HP remains read-only.
+
 ## Shrine server per-target stat conversion (2026-10-16)
 
 A replicated viewer range alone is insufficient for server `UnitScaling`, which pairs it with per-level `ScaledStats`. Wild initialization now builds that existing table from final summon tuning and source difficulty modifiers; raw DamageModifier is retained for regionally tuned templates too. Actual learned Shrine RED observes server level30/armor155 against viewer20; nineteen focused controls now pass level20/armor135 and source damage/health conversion outputs while Podium stays unscaled. [Exact output matrix and proof scope](../../toy-effects14-coverage.md#shrine-server-per-target-stat-conversion-2026-10-16) distinguish this actor-state CPU proof from actual combat hits, client HP display, guardian stats and native rendering.
