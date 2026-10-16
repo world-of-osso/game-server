@@ -1,0 +1,103 @@
+//! Native Execute damage follows the Rage actually spent, not a later pool value.
+use super::test_harness::*;
+use crate::auras::{AuraApplication, AuraSource};
+use shared::components::PowerType;
+use shared::protocol::CombatLogKind;
+
+const EXECUTE: u32 = 163201;
+const DAMAGE: u32 = 260798;
+const PROTECTION: u32 = 137048;
+const ARMS: u32 = 137049;
+
+fn setup(spec: u32) -> Harness {
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[EXECUTE, DAMAGE, spec], 1).unwrap();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: spec,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    h
+}
+
+fn take_damage(h: &mut Harness) -> f32 {
+    let events: Vec<_> = h
+        .inbox
+        .log
+        .drain(..)
+        .filter(|e| {
+            e.spell_id == Some(DAMAGE)
+                && e.target == Some(h.npc.to_bits())
+                && e.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert_eq!(events.len(), 1, "one native child hit: {events:?}");
+    // Native frontal blocks still count toward the original damage amount.
+    (events[0].amount + events[0].blocked) as f32
+}
+
+fn unscaled_child(h: &mut Harness) -> f32 {
+    let before = h.power(PowerType::Rage);
+    assert!(super::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        DAMAGE,
+        Some(h.npc),
+        1
+    ));
+    h.advance(3);
+    assert_eq!(h.power(PowerType::Rage), before, "standalone child is free");
+    let amount = take_damage(h);
+    assert!(amount > 0.0);
+    amount
+}
+
+fn assert_rage_damage(spec: u32, rage: f32, expected_spend: f32, multiplier: f32) {
+    let mut h = setup(spec);
+    let baseline = unscaled_child(&mut h);
+    h.set_power(PowerType::Rage, rage);
+    let health = h.health(h.npc);
+    h.cast_and_deliver(EXECUTE, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == EXECUTE));
+    assert_eq!(h.power(PowerType::Rage), rage - expected_spend);
+    assert!(h.health(h.npc) < health);
+    let amount = take_damage(&mut h);
+    // Two independent native Variance0.05 rolls, each in [0.975,1.025].
+    // Two points cover integer rounding of damage and blocked amounts.
+    let low = baseline * multiplier * 0.975 / 1.025 - 2.0;
+    let high = baseline * multiplier * 1.025 / 0.975 + 2.0;
+    assert!(
+        (low..=high).contains(&amount),
+        "spec={spec},rage={rage},baseline={baseline},amount={amount},expected={low}..={high}"
+    );
+}
+
+#[test]
+fn execute_damage_native_protection_base_partial_and_full_actual_rage() {
+    for (rage, spent, multiplier) in [
+        (200.0, 200.0, 1.0),
+        (300.0, 300.0, 1.5),
+        (400.0, 400.0, 2.0),
+        (700.0, 400.0, 2.0),
+    ] {
+        assert_rage_damage(PROTECTION, rage, spent, multiplier);
+    }
+}
+
+#[test]
+fn execute_damage_native_arms_shares_actual_rage_formula() {
+    assert_rage_damage(ARMS, 400.0, 400.0, 2.0);
+}
+
+#[test]
+fn execute_damage_native_standalone_child_does_not_spend_rage() {
+    let mut h = setup(PROTECTION);
+    h.set_power(PowerType::Rage, 700.0);
+    unscaled_child(&mut h);
+}

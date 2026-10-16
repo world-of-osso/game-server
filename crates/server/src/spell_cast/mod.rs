@@ -121,6 +121,8 @@ mod dummy9_tests;
 mod dummy_tests;
 pub mod effects;
 #[cfg(test)]
+mod execute_damage_tests;
+#[cfg(test)]
 mod fount_strength_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
