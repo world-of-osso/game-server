@@ -23,6 +23,7 @@ pub mod event_map;
 pub mod instance_script;
 pub(crate) mod jump_movement;
 pub mod kings_rest;
+pub(crate) mod maraudon;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
@@ -78,6 +79,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
+            .add_systems(Startup, maraudon::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(Startup, azure_vault::register_aura_scripts)
@@ -180,6 +182,12 @@ pub enum Hook {
         path_id: u32,
     },
     DoAction(i32),
+    /// SmartScript::StoreCounter on a selected SmartAI creature.
+    StoreCounter {
+        id: u32,
+        value: u32,
+        reset: bool,
+    },
     UpdateAi(u32),
     QuestAccepted {
         player: Entity,
@@ -220,6 +228,13 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, _path_id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
     fn do_action(&mut self, _ctx: &mut Ctx, _action: i32) {}
+    fn gossip_hello(&mut self, _ctx: &mut Ctx, _player: Entity) -> bool {
+        false
+    }
+    fn gossip_select(&mut self, _ctx: &mut Ctx, _player: Entity) -> bool {
+        false
+    }
+    fn store_counter(&mut self, _ctx: &mut Ctx, _id: u32, _value: u32, _reset: bool) {}
     fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     /// `ScriptedAI::UpdateAI`: keep the victim current.
@@ -273,6 +288,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if wailing_caverns::is_creature_script(script_name) {
         return wailing_caverns::creature_ai(world, creature);
     }
+    if maraudon::is_creature_script(script_name) {
+        return maraudon::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -289,6 +307,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || kings_rest::is_creature_script(script_name)
         || ragefire_chasm::is_creature_script(script_name)
         || wailing_caverns::is_creature_script(script_name)
+        || maraudon::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
@@ -433,6 +452,50 @@ pub(crate) fn dispatch(world: &mut World, creature: Entity, hook: Hook) {
     }
 }
 
+/// Source callbacks, separate from NPC eligibility and option validation. These
+/// do not bypass the interaction system's authored flags or menu options.
+pub(crate) fn creature_gossip_hello(world: &mut World, player: Entity, creature: Entity) -> bool {
+    call_gossip(world, creature, |ai, ctx| ai.gossip_hello(ctx, player))
+}
+
+pub(crate) fn creature_gossip_select(world: &mut World, player: Entity, creature: Entity) -> bool {
+    call_gossip(world, creature, |ai, ctx| ai.gossip_select(ctx, player))
+}
+
+fn call_gossip(
+    world: &mut World,
+    creature: Entity,
+    callback: impl FnOnce(&mut dyn CreatureAi, &mut Ctx) -> bool,
+) -> bool {
+    let Some(mut state) = world.get_mut::<CreatureAiState>(creature) else {
+        return false;
+    };
+    let Some(mut ai) = state.ai.take() else {
+        warn!(
+            ?creature,
+            "Cannot synchronously invoke gossip while creature AI is running"
+        );
+        return false;
+    };
+    let handled = callback(
+        ai.as_mut(),
+        &mut Ctx {
+            world,
+            me: creature,
+        },
+    );
+    while let Some(hook) = world
+        .get_mut::<CreatureAiState>(creature)
+        .and_then(|mut state| state.pending.pop_front())
+    {
+        run_hook(world, creature, ai.as_mut(), hook);
+    }
+    if let Some(mut state) = world.get_mut::<CreatureAiState>(creature) {
+        state.ai = Some(ai);
+    }
+    handled
+}
+
 fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) {
     if world.get_entity(me).is_err() {
         return;
@@ -470,6 +533,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
             ai.waypoint_path_ended(&mut ctx, node_id, path_id)
         }
         Hook::DoAction(action) => ai.do_action(&mut ctx, action),
+        Hook::StoreCounter { id, value, reset } => ai.store_counter(&mut ctx, id, value, reset),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
         Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),

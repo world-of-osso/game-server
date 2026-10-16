@@ -48,7 +48,8 @@ impl<R: BattleRng> Runtime<'_, R> {
                 }
                 Ok(true)
             }
-            168 => self.add_aura_effect(caster, target, effect),
+            150 | 168 => self.add_aura_effect(caster, target, effect),
+            107 => self.fade_swap(caster, effect),
             68 => self.percent_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
@@ -447,6 +448,31 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         Ok(true)
     }
+    fn fade_swap(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let candidates: Vec<_> = (0..3)
+            .filter(|slot| {
+                *slot != caster.slot && self.battle.teams[caster.team].pets[*slot].health > 0
+            })
+            .collect();
+        if candidates.is_empty() {
+            return Ok(false);
+        }
+        let choice = if candidates.len() == 1 {
+            0
+        } else {
+            self.draw() as usize * candidates.len() / super::rules::RANDOM_SCALE as usize
+        };
+        let slot = candidates[choice];
+        if self.validate_swap(caster, slot).is_err() {
+            self.events.push(Event::Immune {
+                effect: effect.id,
+                target: caster,
+            });
+            return Ok(false);
+        }
+        self.swap_pet(caster.team, slot)?;
+        Ok(true)
+    }
     fn force_swap(&mut self, target: PetRef, effect: &Effect) -> Result<bool, String> {
         if !self.roll(effect.params[0]) {
             return Ok(false);
@@ -490,8 +516,11 @@ impl<R: BattleRng> Runtime<'_, R> {
         Ok(true)
     }
     fn block_attack(&mut self, target: PetRef) -> Result<bool, String> {
-        let Some(index) = self.battle.auras.iter().position(|a| {
-            a.charges > 0 && (a.target == target || a.team_bound && a.target.team == target.team)
+        let Some(index) = self.battle.auras.iter().position(|aura| {
+            let blocks_both_sides = super::rules::is_two_way_wall(aura.ability);
+            let protects_target =
+                aura.target == target || aura.team_bound && aura.target.team == target.team;
+            aura.charges > 0 && (blocks_both_sides || protects_target)
         }) else {
             return Ok(false);
         };
@@ -874,7 +903,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         target: PetRef,
         effect: &Effect,
     ) -> Result<bool, String> {
-        let positive = matches!(effect.property, 26 | 28 | 63);
+        let positive = matches!(effect.property, 26 | 28 | 63 | 150);
         let wearer = if positive { caster } else { target };
         // Bend Time1905 uses Accuracy0 for its unconditional next-swap team trigger.
         let unconditional = effect.aura == 1904 && effect.params[1] == 0;
@@ -954,7 +983,9 @@ impl<R: BattleRng> Runtime<'_, R> {
             .map(|t| t.order)
             .max()
             .unwrap_or(1) as i32;
-        let remaining = if effect.params[2] == -1 || effect.aura == 333 && effect.params[2] == 0 {
+        let persistent_object =
+            effect.params[2] == 0 && (effect.aura == 333 || effect.property == 150);
+        let remaining = if effect.params[2] == -1 || persistent_object {
             -1
         } else {
             effect.params[2].max(max_turn)
@@ -984,6 +1015,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             });
             return Ok(());
         }
+        let follows_active_ally = effect.property == 63 && effect.aura != 267;
+        let shared_across_team = effect.property == 150 || matches!(effect.aura, 189 | 333 | 1904);
         let mut aura = Aura {
             serial: self.battle.next_aura,
             ability: effect.aura,
@@ -993,8 +1026,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             turn: 1,
             applied_round: self.battle.round,
             tick_first,
-            team_bound: effect.property == 63 && effect.aura != 267
-                || matches!(effect.aura, 189 | 333 | 1904),
+            team_bound: follows_active_ally || shared_across_team,
             weather: effect.property == 80,
             charges: self
                 .catalog
