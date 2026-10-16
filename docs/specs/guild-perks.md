@@ -36,3 +36,12 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 ## Out of scope
 
 Guild rewards/reputation eligibility and invitation tabards are separate slices. Missing effect support stays explicit rather than being claimed from a known spell ID.
+
+## Active effect slice: Mount Up
+
+- [ ] Actual78633 grants10% mounted run/flight speed through authored172/211 effects, with strongest-positive nonstacking semantics (TC Unit.cpp8812–8854). Revocation restores the mounted baseline without removing the mount.
+- [ ] Authored210 is applied only in its controlled-vehicle flight context.
+- [ ] Source Attr4/8 arena/battleground restrictions suppress the passive effect while preserving knowledge and restore it on leaving.
+- [ ] Real native mounted/unmounted and guild-removal proof; do not claim effect completion from visible rows or known IDs.
+
+Development proof: actual Golden Gryphon32235 + expert riding225 baseline is run2.0/flight3.2; Mount Up must produce2.2/3.52. Test33ec603a RED reports actual run2.0, after real passive application. Earlier289dbe3b failure was missing fixture SpellStore metadata, not a product RED.
