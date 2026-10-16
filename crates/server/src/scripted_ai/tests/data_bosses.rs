@@ -1,6 +1,9 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "azure_frost_bomb.rs"]
+mod azure_frost_bomb;
+
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
 
