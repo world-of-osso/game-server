@@ -143,11 +143,13 @@ fn encounter_coverage_rotgrip_source_spells_damage_and_isolated_credit() {
     let mut cursor = 0;
     let mut casts = Vec::new();
     let mut puncture_seen = false;
-    for tick in 1..=1800 {
-        // Fatal Bite is DB2 effect165/50% maximum health: high HP alone cannot
-        // sustain repeats. Refill only player HP for observation, never boss data.
-        h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1_000_000.0;
+    let mut self_losses = Vec::new();
+    // Installed16495 targets SELF despite SAI's victim argument. Observe two
+    // genuine casts before a third can kill the boss; never repair source data.
+    for tick in 1..=580 {
+        let boss_before = h.health(boss).current;
         h.advance(0.05);
+        let boss_after = h.health(boss).current;
         let gos = &h.inbox(0).spell_gos;
         casts.extend(gos[cursor..].iter().filter_map(|go| {
             (go.caster == boss.to_bits() && [16495, 15976].contains(&go.spell_id)).then_some((
@@ -156,10 +158,16 @@ fn encounter_coverage_rotgrip_source_spells_damage_and_isolated_credit() {
                 go.target,
             ))
         }));
+        if gos[cursor..]
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 16495)
+        {
+            self_losses.push(boss_before - boss_after);
+        }
         cursor = gos.len();
         puncture_seen |= h.has_aura(player, 15976);
     }
-    eprintln!("ROTGRIP successful source casts: {casts:?}");
+    eprintln!("ROTGRIP successful source casts: {casts:?}; self losses={self_losses:?}");
     eprintln!(
         "ROTGRIP health player={:?} boss={:?}, source events={:?}",
         h.health(player),
@@ -179,7 +187,7 @@ fn encounter_coverage_rotgrip_source_spells_damage_and_isolated_credit() {
             .map(|(_, time, _)| *time)
             .collect();
         assert!(
-            times.len() >= 3,
+            times.len() >= 2,
             "missing source repeats {spell}: {times:?}"
         );
         assert!(
@@ -201,18 +209,35 @@ fn encounter_coverage_rotgrip_source_spells_damage_and_isolated_credit() {
                 .all(|(_, _, target)| *target == Some(player.to_bits())),
             "source victim target {spell}"
         );
-        assert!(
-            h.inbox(0)
-                .log
-                .iter()
-                .any(|event| event.source == Some(boss.to_bits())
-                    && event.target == Some(player.to_bits())
-                    && event.spell_id == Some(spell)
-                    && event.kind == CombatLogKind::Damage
-                    && event.amount > 0),
-            "real damage {spell}"
-        );
     }
+    assert_eq!(self_losses.len(), 2, "two source Fatal Bite casts");
+    assert!(
+        self_losses.iter().all(|loss| *loss > 0.0),
+        "actual self damage"
+    );
+    assert!(
+        h.health(boss).current > 0.0,
+        "controlled death must remain separate"
+    );
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.source == Some(boss.to_bits())
+                && event.target == Some(player.to_bits())
+                && event.spell_id == Some(15976)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+                && event.amount > 0
+        }),
+        "actual victim Puncture periodic damage"
+    );
+    assert!(
+        !h.inbox(0).log.iter().any(|event| {
+            event.target == Some(player.to_bits())
+                && event.spell_id == Some(16495)
+                && event.kind == CombatLogKind::Damage
+        }),
+        "installed Fatal Bite has no victim damage: explicit source gap"
+    );
     assert!(puncture_seen, "real Puncture aura must apply");
     assert!(
         h.inbox(1)
