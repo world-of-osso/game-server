@@ -7,6 +7,7 @@ Extend the existing [SmartAI escort interpreter](smartai-escort.md), not a paral
 - Quest acceptance runs authored list448400, removes questgiver flags and NPC immunity, sets faction774, speaks group0 after1000ms and starts path after3000ms more.
 - Waypoints19/27/43 pause and summon groups0/1/2: four Dark Strand Assassins3879; three Forsaken Scouts3893; Aligar3898, Balizar3899 and Caedakar3900. Positions, lifetimes, spells and texts come from TDB, never invented fixtures.
 - Ambusher death actions63 add to the nearest same-copy Feero's counters1/2/3. Counter events77 require exact values4/3/3, with source cooldown/reset semantics. Earlier kills never resume the path. Lists448402/448404/448406 provide authored speech/delays/resume; the last credits976. Death fails976. Waypoint48 despawns after2000ms.
+- Active scripted paths remain awake outside their spawn grids, including ambush pauses and the acceptor leaving; combat cleanup, timed continuation and out-of-range failure must keep ticking. Starting a path wakes a dormant actor. Ordinary non-escort grid dormancy is unchanged.
 - Native Modern and Forever clients show walking, authored speech, ambushes and earned completion for a real private account on UDP5931; inspected1920x1080 PNGs are required. Server unit tests alone do not establish this acceptance.
 
 ## Coverage / gaps
