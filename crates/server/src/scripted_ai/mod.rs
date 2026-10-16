@@ -673,6 +673,14 @@ impl Ctx<'_> {
                 true
             }
             Err(failure) => {
+                #[cfg(test)]
+                if spell_id == 18670 {
+                    eprintln!(
+                        "LANDSLIDE admission at sim={} real={}: {failure:?}",
+                        self.world.resource::<Time>().elapsed_secs_f64(),
+                        self.world.resource::<Time<Real>>().elapsed_secs_f64()
+                    );
+                }
                 debug!("{name} ({}) cast {spell_id} failed: {failure:?}", self.me);
                 failure == crate::spell_cast::CastFailure::InProgress
             }

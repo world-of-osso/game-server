@@ -45,6 +45,11 @@ fn encounter_coverage_landslide_wipe_rearms_damage_trigger() {
 #[test]
 fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
     let (mut h, boss, map) = bound_boss(12203, 349, 4);
+    h.app
+        .world_mut()
+        .get_mut::<CreatureAiState>(boss)
+        .unwrap()
+        .ai = Some(super::super::super::maraudon::seeded_landslide(0));
     let player = h.player();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert((
@@ -79,7 +84,13 @@ fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
             (tick - 1) as f32 * 0.05,
             h.app.world().get::<CastState>(boss).is_some(),
         ));
+        let elapsed = h.app.world().resource::<Time<Fixed>>().elapsed();
         h.advance(0.05);
+        assert_eq!(
+            h.app.world().resource::<Time<Fixed>>().elapsed() - elapsed,
+            Duration::from_millis(50),
+            "each harness frame advances exactly one simulation tick"
+        );
         let gos = &h.inbox(0).spell_gos;
         casts.extend(gos[cursor..].iter().filter_map(|go| {
             (go.caster == boss.to_bits() && [18670, 5568, 21808, 21809].contains(&go.spell_id))

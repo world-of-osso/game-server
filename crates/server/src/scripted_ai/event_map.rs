@@ -14,6 +14,8 @@ pub struct EventMap {
     /// `_lastEvent`: what `repeat` schedules again.
     last_event: u32,
     last_due: u64,
+    #[cfg(test)]
+    rng: Option<rand::rngs::StdRng>,
 }
 
 /// `randtime(min, max)`: uniform in `[min, max]` ms.
@@ -25,6 +27,27 @@ pub fn rand_ms(min_ms: u64, max_ms: u64) -> u64 {
 }
 
 impl EventMap {
+    #[cfg(test)]
+    pub fn seeded(seed: u64) -> Self {
+        use rand::SeedableRng;
+        Self {
+            rng: Some(rand::rngs::StdRng::seed_from_u64(seed)),
+            ..Default::default()
+        }
+    }
+
+    fn roll_delay(&mut self, min_ms: u64, max_ms: u64) -> u64 {
+        #[cfg(test)]
+        if let Some(rng) = &mut self.rng {
+            return if max_ms <= min_ms {
+                min_ms
+            } else {
+                rng.gen_range(min_ms..=max_ms)
+            };
+        }
+        rand_ms(min_ms, max_ms)
+    }
+
     /// `EventMap::Reset`: no events, the clock back at zero.
     pub fn reset(&mut self) {
         *self = Self::default();
@@ -53,7 +76,8 @@ impl EventMap {
 
     /// `ScheduleEvent(eventId, minTime, maxTime)`.
     pub fn schedule_range(&mut self, event_id: u32, min_ms: u64, max_ms: u64) {
-        self.schedule(event_id, rand_ms(min_ms, max_ms));
+        let delay = self.roll_delay(min_ms, max_ms);
+        self.schedule(event_id, delay);
     }
 
     /// `Repeat(time)`: the last executed event again, `delay_ms` from now.
@@ -63,13 +87,15 @@ impl EventMap {
 
     /// `Repeat(minTime, maxTime)`.
     pub fn repeat_range(&mut self, min_ms: u64, max_ms: u64) {
-        self.repeat(rand_ms(min_ms, max_ms));
+        let delay = self.roll_delay(min_ms, max_ms);
+        self.repeat(delay);
     }
 
     /// TaskScheduler::TaskContext::Repeat adds to the task's original deadline,
     /// not the dispatch time. EventMap's existing repeat methods stay unchanged.
     pub fn repeat_from_due_range(&mut self, min_ms: u64, max_ms: u64) {
-        self.insert(self.last_due + rand_ms(min_ms, max_ms), self.last_event);
+        let delay = self.roll_delay(min_ms, max_ms);
+        self.insert(self.last_due + delay, self.last_event);
     }
 
     /// `ExecuteEvent`: the first due event, removed; `None` (TrinityCore 0) when
