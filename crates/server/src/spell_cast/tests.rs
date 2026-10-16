@@ -311,7 +311,8 @@ fn moving_cancels_cast_time_spell_without_effects() {
 
 #[test]
 fn kick_interrupts_target_cast_and_locks_its_school_combat_log_metadata() {
-    let mut h = harness(Vec::new(), &[KICK, FIREBALL], 4).expect("spell fixture");
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[KICK, FIREBALL], 4)
+        .expect("spell fixture");
     let before = std::time::SystemTime::now();
     // NPCs do not cast yet; give the NPC a Fireball cast bar directly.
     h.app
@@ -969,7 +970,8 @@ fn moving_cancel_sends_spell_failure_to_the_casters_set() {
 /// m_caster->GetGUID())` names the kicker as `FailedBy` (SpellEffects.cpp:3015).
 #[test]
 fn kick_sends_interrupted_combat_failure_naming_the_kicker() {
-    let Some(mut h) = harness(Vec::new(), &[KICK, FIREBALL], 4) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(Vec::new(), &[KICK, FIREBALL], 4)
+    else {
         return;
     };
     let npc = h.npc;
