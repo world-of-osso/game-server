@@ -102,18 +102,20 @@ fn dummy14_survival_kill_command_routes_named_damage_from_owned_pet() {
     assert_eq!(hits[0].source, Some(pet.to_bits()));
 }
 #[test]
-fn dummy14_survival_kill_command_never_borrows_a_foreign_pet() {
-    let mut h = harness(Vec::new(), &[259489, 259277], 3).unwrap();
-    let p = pet(&mut h);
-    let foreign = spawn_player(&mut h.app, 3, 0.0);
-    h.app
-        .world_mut()
-        .get_mut::<crate::hunter_pet::HunterPet>(p)
-        .unwrap()
-        .owner = foreign;
-    let target = h.npc;
-    execute(&mut h, 259489, Some(target));
-    assert_eq!(h.health(target), 5000.0);
+fn dummy14_kill_commands_never_borrow_foreign_pets() {
+    for (command, damage) in [(259489, 259277), (34026, 83381)] {
+        let mut h = harness(Vec::new(), &[command, damage], 3).unwrap();
+        let p = pet(&mut h);
+        let foreign = spawn_player(&mut h.app, 3, 0.0);
+        h.app
+            .world_mut()
+            .get_mut::<crate::hunter_pet::HunterPet>(p)
+            .unwrap()
+            .owner = foreign;
+        let target = h.npc;
+        execute(&mut h, command, Some(target));
+        assert_eq!(h.health(target), 5000.0);
+    }
 }
 
 #[test]
