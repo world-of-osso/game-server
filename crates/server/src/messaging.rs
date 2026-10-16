@@ -907,8 +907,15 @@ mod tests {
             .get_mut::<MessageSender<GuildAcceptInviteRequest>>(connection)
             .unwrap()
             .send::<AuthChannel>(GuildAcceptInviteRequest);
+        let mut responses = Vec::new();
         for _ in 0..3 {
             app.update();
+            responses.extend(
+                app.world_mut()
+                    .get_mut::<MessageReceiver<GuildAcceptInviteResponse>>(connection)
+                    .unwrap()
+                    .receive(),
+            );
         }
         let (done, wait) = std::sync::mpsc::channel();
         app.world()
@@ -918,7 +925,6 @@ mod tests {
                 done.send(()).map_err(|error| error.to_string())
             });
         wait.recv().unwrap();
-        let mut responses = Vec::new();
         for _ in 0..6 {
             app.update();
             responses.extend(

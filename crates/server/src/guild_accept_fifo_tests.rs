@@ -1,5 +1,6 @@
 use super::*;
 use crate::auth::{Authenticated, InWorld};
+use redb::ReadableDatabase;
 use shared::protocol::*;
 use std::time::{Duration, Instant};
 
@@ -50,6 +51,7 @@ fn fixture(pending: bool) -> Fixture {
                 MessageSender::<GuildAcceptInviteResponse>::default(),
                 MessageReceiver::<GuildAcceptInviteResponse>::default(),
                 MessageSender::<GuildInvitation>::default(),
+                MessageReceiver::<GuildInvitation>::default(),
                 MessageSender::<GuildRanksState>::default(),
                 MessageReceiver::<GuildRanksState>::default(),
             ))
@@ -107,7 +109,9 @@ enum Case {
     Double,
     Departed,
     Rebound,
+    Relog,
     StorageFailure,
+    CleanupFailure,
 }
 
 #[test]
@@ -147,8 +151,17 @@ fn guild_accept_rebound_account_receives_no_old_reply_or_component() {
     assert_accept(Case::Rebound);
 }
 #[test]
+fn guild_accept_relogged_character_receives_no_old_reply_or_component() {
+    assert_accept(Case::Relog);
+}
+#[test]
 fn guild_accept_storage_failure_is_counted_without_success_or_membership() {
     assert_accept(Case::StorageFailure);
+}
+
+#[test]
+fn guild_accept_cleanup_failure_rolls_back_membership_rank_and_invite_consumption() {
+    assert_accept(Case::CleanupFailure);
 }
 
 fn enqueue_prior(f: &Fixture, case: Case) {
@@ -205,6 +218,20 @@ fn assert_accept(case: Case) {
             .unwrap();
         crate::persistence_commit::commit(txn).unwrap();
     }
+    if matches!(case, Case::CleanupFailure) {
+        let txn = f
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .db
+            .begin_write()
+            .unwrap();
+        txn.open_table(persistence::charters::STATE)
+            .unwrap()
+            .insert(0u8, b"invalid charter state".as_slice())
+            .unwrap();
+        crate::persistence_commit::commit(txn).unwrap();
+    }
     let held = f
         .app
         .world()
@@ -249,6 +276,14 @@ fn assert_accept(case: Case) {
             .entity_mut(f.connections[0])
             .insert(Authenticated { account_id: 99 });
     }
+    if matches!(case, Case::Relog) {
+        f.app.world_mut().entity_mut(f.connections[0]).insert((
+            InWorld {
+                character_id: f.characters[1],
+            },
+            PlayerLink(f.players[1]),
+        ));
+    }
     release.join().unwrap();
     assert!(
         elapsed < Duration::from_millis(50),
@@ -286,9 +321,13 @@ fn assert_outcome(f: &Fixture, case: Case, replies: &Replies) {
     let db = &f.app.world().resource::<GameDatabase>().db;
     let refused = matches!(
         case,
-        Case::Missing | Case::PriorDecline | Case::PriorMembership | Case::StorageFailure
+        Case::Missing
+            | Case::PriorDecline
+            | Case::PriorMembership
+            | Case::StorageFailure
+            | Case::CleanupFailure
     );
-    let departed = matches!(case, Case::Departed | Case::Rebound);
+    let departed = matches!(case, Case::Departed | Case::Rebound | Case::Relog);
     assert_eq!(
         replies.accepts.len(),
         if departed {
@@ -316,9 +355,45 @@ fn assert_outcome(f: &Fixture, case: Case, replies: &Replies) {
             .metrics
             .failed
             .load(std::sync::atomic::Ordering::Relaxed),
-        u64::from(matches!(case, Case::StorageFailure))
+        u64::from(matches!(case, Case::StorageFailure | Case::CleanupFailure))
     );
     if refused {
+        let error = replies.accepts[0].error.as_deref().unwrap();
+        match case {
+            Case::Missing | Case::PriorDecline => assert_eq!(error, "No pending guild invite"),
+            Case::PriorMembership => assert_eq!(error, "You are already in a guild."),
+            Case::StorageFailure => assert!(error.starts_with("decode pending invite:")),
+            Case::CleanupFailure => assert!(error.starts_with("decode guild charter state:")),
+            _ => unreachable!(),
+        }
+        let txn = db.begin_read().unwrap();
+        let invites = txn.open_table(persistence::PENDING_GUILD_INVITES).unwrap();
+        let pending = invites
+            .get(f.characters[0])
+            .unwrap()
+            .map(|row| row.value().to_vec());
+        assert_eq!(
+            pending.is_some(),
+            matches!(
+                case,
+                Case::StorageFailure | Case::CleanupFailure | Case::PriorMembership
+            )
+        );
+        if matches!(case, Case::StorageFailure) {
+            assert_eq!(pending.as_deref(), Some(b"invalid invite".as_slice()));
+        }
+        if matches!(case, Case::CleanupFailure) {
+            assert_eq!(
+                persistence::load_pending_guild_invite(db, f.characters[0])
+                    .unwrap()
+                    .guild_id,
+                7
+            );
+        }
+        let ranks = txn
+            .open_table(persistence::banks::GUILD_MEMBER_RANKS)
+            .unwrap();
+        assert!(ranks.get(f.characters[0]).unwrap().is_none());
         assert!(replies.ranks.iter().all(Vec::is_empty));
         assert!(f.app.world().get::<GuildMembership>(f.players[0]).is_none());
         assert_eq!(
