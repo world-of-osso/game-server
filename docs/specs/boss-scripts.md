@@ -23,6 +23,12 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Gizlock source boundary
+
+- [x] Prepare13601→427/Normal349bit5 from pinned TC Maraudon header/instance, TDB SmartAI and Journal70391 CSV425/995/display7125. TC ordinal2 is not DB2 bit5. Preserve Noxxion credit and refuse ordinal/bit drift; output remains copy-only SQL.
+- [ ] Gate unchanged SAI Shoot16100, Flash Bomb29419, Goblin Dragon Gun21833, Bomb9143 and aggro Talk0 against actual DB2 targeting/channel/effect data, then isolated controlled death credit. No invented source timers/resources/targets.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
 ## Maraudon Noxxion source port
 
 - [x] Prepare13282→422/Normal349bit0 using pinned TC boss/header/instance and actual Journal70391 CSV423/993/display11172; preserve other credit, write SQL only.
