@@ -289,6 +289,14 @@ fn encounter_fixture(
     app.insert_resource(store);
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
+    if entry == 234648 {
+        // Mirror Image and Blink resolve their authored ground destinations.
+        let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
+        app.insert_resource(crate::ground::GroundMap::new(
+            &crate::ground::ground_data_dir(),
+            std::collections::HashMap::from([(map_id, wdt)]),
+        ));
+    }
     maps.raid_creature_encounters.insert((map_id, entry), bit);
     if map_id == 43 {
         // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
