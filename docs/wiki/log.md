@@ -1638,6 +1638,7 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Added [incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16), replacing repeated catalog-wide recursive evaluation with affected-root reconciliation and disposable full-snapshot results. Targeted proof pending.
 
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
+- 2026-10-16: [Native aura restrictions producer](systems/spell-info.md#native-aura-restrictions-producer--2026-10-16): maintained CLI drops supplied native rows RED2pass/1fail→GREEN3; merged cbeea718 producer3/0/0, native70391 headercheck and workspace/all-target check66.132s/0warnings pass. Canonical table remains absent pending lead publication; runtime health/aura-state admission is not certified.
 
 - 2026-10-16: [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port): real no-Wrath RED, redeemed legacy stats replaced from base0, guardian summoner lifecycle failure reproduced; runtime gate pending.
 - 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
