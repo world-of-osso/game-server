@@ -3,6 +3,8 @@ use super::*;
 
 #[path = "celebras.rs"]
 mod celebras;
+#[path = "gargolmar.rs"]
+mod gargolmar;
 #[path = "gizlock.rs"]
 mod gizlock;
 #[path = "gnomeregan.rs"]
@@ -69,6 +71,22 @@ fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path:
     source
         .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
         .expect("snapshot canonical encounter data without writing source");
+    if encounter == "gargolmar" {
+        let dump = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql");
+        run_preparation_script(
+            "encounter_serverside_spells.py",
+            &[
+                "--encounter".as_ref(),
+                "gargolmar".as_ref(),
+                "--db".as_ref(),
+                path.as_os_str(),
+                "--source-dump".as_ref(),
+                dump.as_os_str(),
+            ],
+        );
+        return (directory, path);
+    }
     if ["adarogg", "slagmaw"].contains(&encounter) {
         // encounter_serverside_spells.py's actual TDB rows precede the summon import.
         let copy = Connection::open(&path).unwrap();
@@ -215,6 +233,7 @@ fn encounter_fixture(
         13282 => Some(prepare_encounter_database("noxxion")),
         12225 => Some(prepare_encounter_database("celebras")),
         12201 => Some(prepare_encounter_database("theradras")),
+        17306 => Some(prepare_encounter_database("gargolmar")),
         _ => None,
     };
     let path = prepared
@@ -259,6 +278,7 @@ fn encounter_fixture(
             || (entry == 12225 && [13743, 13716].contains(id))
             || (entry == 12203 && *id == 11783)
             || (entry == 12201 && *id == 12238)
+            || (entry == 17306 && *id == 17309)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
@@ -324,7 +344,7 @@ fn encounter_fixture(
     // A script's unknown spell must fail normal admission, not panic the fixture.
     let all = crate::spell_cast::test_harness::world_db().unwrap();
     let mut store = all.store.clone();
-    if store.get(119297).is_none() {
+    if entry == 17306 || store.get(119297).is_none() {
         // Production's loader over the prepared copy's server-side tables.
         store.append_serverside(&conn).unwrap();
     }
@@ -414,7 +434,7 @@ fn encounter_fixture(
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
         let near = if [
-            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201,
+            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 17306,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
