@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "celebras.rs"]
+mod celebras;
 #[path = "gizlock.rs"]
 mod gizlock;
 #[path = "gnomeregan.rs"]
@@ -248,6 +250,7 @@ fn encounter_fixture(
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
             || (entry == 7800 && *id == 7915)
             || (entry == 13282 && *id == 13456)
+            || (entry == 12225 && [13743, 13716].contains(id))
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
@@ -402,7 +405,7 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if [ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236].contains(&entry)
+        let near = if [ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225].contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
         {
             // Keep these hostile source actors idle until their fixture explicitly pulls.
