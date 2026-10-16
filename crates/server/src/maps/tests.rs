@@ -1817,10 +1817,14 @@ fn exercise_arena_channel_with_reconnect(
     let database_file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
-    let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
-    let classes = (mode == ArenaQueueMode::SoloShuffle)
-        .then(|| crate::spell_info::load_spell_data(&source).unwrap().1);
-    let achievements = crate::achievement::load_achievement_catalog(&source).unwrap();
+    let world_data = crate::test_data::world_data().clone();
+    let classes = (mode == ArenaQueueMode::SoloShuffle).then(|| {
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .classes
+            .clone()
+    });
+    let achievements = crate::test_data::achievement_catalog();
     let mut h = harness_with(move |app| {
         if let Some(classes) = classes {
             app.insert_resource(classes);
