@@ -22,7 +22,6 @@ fn achievements_criteria_content268_native_settlement_uses_authored_max_level_ra
         world.entity_mut(players[index].1).insert(Level(90));
     }
     world.entity_mut(players[2].1).insert(Level(89));
-    world.entity_mut(players[3].1).remove::<Level>();
     pvp_objective::update_battleground_objectives(&mut world);
     assert_eq!(
         world.resource::<PvpServerState>().battleground_matches[&17]
@@ -35,6 +34,8 @@ fn achievements_criteria_content268_native_settlement_uses_authored_max_level_ra
         None,
         "not settled"
     );
+    // Missing Level excludes the unit from the objective roster; remove only after native readiness.
+    world.entity_mut(players[3].1).remove::<Level>();
     {
         let mut state = world.resource_mut::<PvpServerState>();
         let invitation = state.battleground_matches.get_mut(&17).unwrap();
