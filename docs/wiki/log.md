@@ -1,6 +1,10 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 [Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
+## 2026-10-16 — Additional optional resource cost
+
+[Native63](systems/auras.md#additional-optional-resource-cost-2026-10-16): successful native cap6 Envenom leaves1CP RED; signed caster/power/family optional-cost consumer passes5/5, including6/7 spend, availability, unlearning, foreign and mismatched native-mask controls. Anticipation is only a native cap fixture, not a legal build. Merged32 focused resource controls pass; fmt/manual Rust readability pass. Workspace/all-target check held by the bot's live window, not yet claimed. Optional percentage costs, flat-modifier exclusion, full talent/legal and fresh UDP acceptance remain open.
+
 ## 2026-10-16 — Autoattack-only critical chance
 
 [Native334](systems/auras.md#autoattack-only-critical-chance-2026-10-16): TC Unit2387 traces Avenging Wrath's separate334/290 effects. Ordinary native100/-999 endpoint casts reproduce missing positive/negative swing modifiers; shared attacker-only consumer passes4/4, including cancellation, victim ownership and spell isolation. Adjacent attack/critical-damage controls36/36; workspace/all-target check and fmt pass. No native stat/RNG/clock edits; full Wings/talents/legal builds and fresh bot UDP remain open.
