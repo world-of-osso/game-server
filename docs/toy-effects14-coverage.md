@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Shrine viewer-level projection (2026-10-15)
+
+TC a352b1fa `Creature::HasScalableLevels` requires nonzero ContentTuningID. `TempSummon::InitStats` skips owner-tuning replacement for UseCreatureLevel; Shrine therefore retains Area9/CT73[1,30], delta0. Unflagged player-owned Podium inherits zero tuning and must not scale merely because its initial native level came from that region.
+
+| Boundary | Evidence / remaining |
+|---|---|
+| Real learned Shrine use, owners20/80 | Genuine RED ff6a464f projects30 to viewers1/20 instead of1/20; native30/HP4379/armor155 remains correct. |
+| Selected regional viewer range/delta | 4dd65bab retains the same once-rolled delta and range before wild initialization; shared viewer projection1/20/80→1/20/30 passes in actual UseToy CPU fixtures. |
+| Unflagged player-owned Podium | All viewer levels remain its initialized native20/30. Negative control passes; no blanket regional scaling. |
+| Focused regression | Nine source-level, mana, missing-region, guardian and Podium tests pass88.75s at4dd65bab with protocoldc30250. Whole-Toy gate, current builds and fresh replicated viewer projection pending. |
+| Unproved boundaries | Server combat `UnitScaling` additionally requires `ScaledStats`; region-only Shrine has no such table yet. Damage/health/armor combat scaling, exact client HP projection, pixels and wall expiry are not certified by viewer-text assertions. |
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `scaling56-active-goal.json`, `scaling56-proof-ledger.json`, `scaling56-viewer-{red,green}.log`. No new Toy admission or Full1166 completion claim.
+
 ## Wild summon initial-state proof (2026-10-15)
 
 TC a352b1fa Creature::Create resolves actual terrain area before CreateFromProto→UpdateEntry→SelectLevel; TempSummon::InitStats then applies its property-controlled owner clamp. Wild/default E28 is not exempt. `wild55-create-level-source.json` records that sequence and authentic rows. Genuine learned-use RED at e3314a09/f269c22a observes legacy level1/HP20-or1/armor50; source initialization917388be updates level/HP/armor/mana together, rather than relabeling UnitLevel. The existing learned-use group chain independently reproduces an NPC-owned child at1 instead of30; b3f59be0 requires actual player Level or non-player UnitLevel, removing the invented1 fallback. Normal zone AI, ownership, placement and lifetime paths remain.
