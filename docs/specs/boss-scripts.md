@@ -23,6 +23,12 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Lord Vyletongue source boundary
+
+- [x] Prepare12236→424/Normal349bit2 using pinned TC Maraudon ordinal3/header/instance, actual TDB SmartAI and Journal70391 CSV427/997/display12334. Preserve Gizlock credit and refuse AI/ordinal-as-bit drift; SQL output only.
+- [ ] Gate unchanged Shoot16100/CAST_COMBAT_MOVE64, range-conditioned21390, self21655/7964 and isolated controlled death credit against installed spell effects and source clocks. Do not invent targets/resources/timers.
+- [ ] Native/ordinary fight, positive movement/CC, loot, persistence and canonical publication remain separate until demonstrated.
+
 ## Maraudon Gizlock source boundary
 
 - [x] Prepare13601→427/Normal349bit5 from pinned TC Maraudon header/instance, TDB SmartAI and Journal70391 CSV425/995/display7125. TC ordinal2 is not DB2 bit5. Preserve Noxxion credit and refuse ordinal/bit drift; output remains copy-only SQL.
