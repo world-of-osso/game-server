@@ -1,5 +1,5 @@
 //! Native Devastator procs from real swings while Shield Slam's real cooldown runs.
-use crate::spell_cast::{SpellHistory, history_now, test_harness::*};
+use crate::spell_cast::{history_now, test_harness::*};
 use shared::protocol::CombatLogKind;
 
 const DEVASTATOR: u32 = 236279;
@@ -37,15 +37,18 @@ fn devastator_reset_native_swings_reset_running_shield_slam_and_notify_owner() {
     // 64 fresh actors have two unarmed swings, plus three delivery frames.
     for _ in 0..64 {
         let mut h = spawn_devastator();
+        let started_at = history_now(h.app.world());
         h.cast_and_deliver(SHIELD_SLAM, Some(h.npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert!(h.inbox.go.iter().any(|go| go.spell_id == SHIELD_SLAM));
-        let ready_at = h
-            .app
-            .world()
-            .get::<SpellHistory>(h.caster)
-            .unwrap()
-            .spell_ready_at[&SHIELD_SLAM];
+        let cooldown = h
+            .inbox
+            .cooldowns
+            .iter()
+            .find(|update| update.spell_id == SHIELD_SLAM && !update.is_gcd)
+            .expect("ordinary Shield Slam publishes its native cooldown");
+        assert_eq!(cooldown.duration_ms, 9000);
+        let ready_at = started_at + f64::from(cooldown.duration_ms) / 1000.0;
         assert!(ready_at > history_now(h.app.world()));
         h.inbox.cooldowns.clear();
         h.attack(h.npc);
