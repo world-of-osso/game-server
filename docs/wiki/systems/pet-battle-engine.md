@@ -69,7 +69,7 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 ### Bench resurrection112 — 2026-10-16
 
-[Bounded2347/2348](../../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16) restore dead inactive allies to5% maximum HP, never heal living allies, clear dead/old undead-expiry metadata and retain passive usage. The owned-team loader derives Is_Dead from persisted health; a real redb close/reopen boundary reproduces the missing-state defect. RED3+1→GREEN4 and catalog1760/2829 rows,1008 graphs are recorded; native acceptance remains separate. No generic property111 routing or client simulation added.
+[Bounded2347/2348](../../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16) restore dead inactive allies to5% maximum HP, never heal living allies, clear dead/old undead-expiry metadata and retain passive usage. The owned-team loader derives Is_Dead from persisted health; a real redb close/reopen boundary reproduces the missing-state defect. RED3+1→GREEN4 and catalog1760/2829 rows,1008 graphs are recorded. Both-skin private5961 actual2347 cast revives two persisted-dead reserves to78/1563, then pointer swap and Metal Fist147 win prove a revived reserve usable. Eight fullHD originals inspected;2348 native/VFX/full Retail timing remain separate. No generic property111 routing or client simulation added.
 
 ### Limits
 
