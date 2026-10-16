@@ -31,7 +31,7 @@ use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 use shared::spell_data::CastFailReason;
 
-use super::{SpellHistory, log_event, now};
+use super::{SpellHistory, log_event};
 use crate::auras::procs::{self, AuraEvent};
 use crate::auras::{AuraStatMods, SpellModOp, spell_mods};
 use crate::creature_scripts::{TrainingDummy, health_loss};
@@ -1559,7 +1559,7 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
         CastFailReason::InterruptedCombat,
         Some(ctx.caster),
     );
-    let until = now(world) + lockout_ms as f64 / 1000.0;
+    let until = super::history_now(world) + lockout_ms as f64 / 1000.0;
     world
         .entity_mut(target)
         .entry::<SpellHistory>()

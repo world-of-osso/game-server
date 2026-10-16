@@ -125,6 +125,8 @@ pub(crate) mod guardian;
 mod guardian_tests;
 mod hit;
 #[cfg(test)]
+mod readiness_lifetime_tests;
+#[cfg(test)]
 mod warrior_stun_tests;
 mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
@@ -445,7 +447,7 @@ impl ChargeState {
     }
 }
 
-/// Per-unit cooldown state in absolute server seconds (`Time` elapsed).
+/// Per-unit cooldown state in real elapsed server seconds (`history_now`).
 #[derive(Component, Debug, Clone, Default)]
 pub struct SpellHistory {
     spell_ready_at: HashMap<u32, f64>,
@@ -568,7 +570,7 @@ pub(crate) fn publish_known_charge_snapshot(world: &mut World, unit: Entity) {
         return;
     }
     let spells = known_charge_categories(world, unit);
-    let now = now(world);
+    let now = history_now(world);
     for spell in spells.into_values() {
         let mods = charge_mods(world, unit, &spell);
         let charges = *world
@@ -608,7 +610,7 @@ fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
         .clone();
     let category = spell.categories.as_ref().unwrap().charge_category;
     let mods = charge_mods(world, unit, &spell);
-    let now = now(world);
+    let now = history_now(world);
     if world.get::<SpellHistory>(unit).is_none() {
         world.entity_mut(unit).insert(SpellHistory::default());
     }
@@ -625,6 +627,14 @@ fn gcd_category(spell: &SpellInfo) -> u32 {
         .categories
         .as_ref()
         .map_or(0, |categories| categories.start_recovery_category)
+}
+
+/// TC SpellHistory uses GameTime deadlines, independent of simulation catch-up.
+/// Bevy virtual/fixed time drops elapsed time when a frame exceeds its 250ms cap.
+/// Keep simulation clocks for casts, auras and missiles; readiness must match the
+/// real milliseconds sent to the owning client's cooldown and charge timers.
+pub(crate) fn history_now(world: &World) -> f64 {
+    world.resource::<Time<Real>>().elapsed_secs_f64()
 }
 
 pub(crate) fn now(world: &World) -> f64 {
@@ -1116,7 +1126,7 @@ pub(crate) fn cast_item_spell(
     item_level: u16,
     retail_item_id: Option<u32>,
 ) -> Result<(), CastFailure> {
-    let now = now(world);
+    let now = history_now(world);
     let cooling = cooldown.category != 0
         && world.get::<SpellHistory>(caster).is_some_and(|history| {
             history
@@ -1333,7 +1343,7 @@ fn cast_queue_delay(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
         .and_then(|history| history.gcd_ready_at.get(&gcd_category(spell)))
         .copied()
         .unwrap_or(0.0);
-    cast_remaining.max((gcd_ready_at - now(world)).max(0.0))
+    cast_remaining.max((gcd_ready_at - history_now(world)).max(0.0))
 }
 
 /// Run after active cast completion and due missile effects, before power replication.
@@ -1507,7 +1517,7 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
     let Some(history) = world.get::<SpellHistory>(caster) else {
         return Ok(());
     };
-    let now = now(world);
+    let now = history_now(world);
     // TC source 0x2 skips SpellHistory::IsReady, including its school/charge
     // readiness checks; GCD and caster-aura checks are independent.
     if !spell.cast_ignore_cooldowns && history.school_locked(spell.school_mask(), now) {
@@ -1921,7 +1931,7 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if gcd_ms == 0 || category == 0 {
         return;
     }
-    let until = now(world) + gcd_ms as f64 / 1000.0;
+    let until = history_now(world) + gcd_ms as f64 / 1000.0;
     world
         .entity_mut(caster)
         .entry::<SpellHistory>()
@@ -2723,7 +2733,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.cast_ignore_cooldowns {
         return;
     }
-    let now = now(world);
+    let now = history_now(world);
     let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
     let (base_recovery_ms, base_category_ms) = spell
         .cooldowns
@@ -2839,7 +2849,7 @@ fn send_charges(world: &mut World, unit: Entity, charges: &ChargeState, now: f64
 /// `SpellHistory::RestoreCharge` (a352b1fa SpellHistory.cpp:831-840) `count` times: give back the
 /// most recently used charges of `charge_category`; the oldest keeps recovering.
 pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: u32, count: u8) {
-    let now = now(world);
+    let now = history_now(world);
     let Some(mut history) = world.get_mut::<SpellHistory>(unit) else {
         return;
     };
