@@ -67,6 +67,8 @@ pub enum AuraKind {
     CastRestriction,
     /// Receiver-side finite harmful aura duration (`mechanic_duration`).
     MechanicDuration,
+    /// Target detection-distance modifier read by `creature_aggro::AggroDistance`.
+    DetectedRange,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -84,6 +86,8 @@ pub const DAMAGE_SHIELD: u32 = 15;
 pub const MOD_STEALTH: u32 = 16;
 pub const MOD_STEALTH_DETECT: u32 = 17;
 pub const MOD_STEALTH_LEVEL: u32 = 154;
+/// Added to the target's creature detection distance before the native minimum clamp.
+pub const MOD_DETECTED_RANGE: u32 = 152;
 pub const DETECT_STEALTH: u32 = 228;
 /// TC a352b1fa SpellInfo.cpp4140: matching optional resource cost only.
 pub const MOD_ADDITIONAL_POWER_COST: u32 = 63;
@@ -160,6 +164,8 @@ pub const MOD_REGEN_DURING_COMBAT: u32 = 116;
 pub const MOD_HEALING_PCT: u32 = 118;
 pub const MOD_SPEED_ALWAYS: u32 = 129;
 pub const MOD_MOUNTED_SPEED_ALWAYS: u32 = 130;
+/// TC Unit.cpp8816: strongest positive mounted bonus, not stacked with aura130.
+pub const MOD_MOUNTED_SPEED_NOT_STACK: u32 = 172;
 pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
 pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
 pub const REDUCE_PUSHBACK: u32 = 149;
@@ -177,6 +183,8 @@ pub const LEARN_SPELL: u32 = 195;
 pub const FLY: u32 = 201;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
+/// TC Unit.cpp8854: strongest positive flight bonus.
+pub const MOD_FLIGHT_SPEED_NOT_STACK: u32 = 211;
 pub const ADV_FLYING: u32 = 446;
 /// Unit::SpellCriticalDamageBonus / CalculateMeleeDamage, school-mask multiplier.
 pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
@@ -287,6 +295,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
         DISABLE_CASTING_EXCEPT_ABILITIES => CastRestriction,
         MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
+        MOD_DETECTED_RANGE => DetectedRange,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT
@@ -345,7 +354,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_HEALTH_REGEN_IN_COMBAT
         | MOD_INCREASE_MOUNTED_SPEED
         | MOD_MOUNTED_SPEED_ALWAYS
+        | MOD_MOUNTED_SPEED_NOT_STACK
         | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
+        | MOD_FLIGHT_SPEED_NOT_STACK
         | MOD_DODGE_PERCENT
         | MOD_PARRY_PERCENT
         | MOD_BLOCK_PERCENT

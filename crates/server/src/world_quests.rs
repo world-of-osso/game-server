@@ -47,6 +47,24 @@ impl Area {
     }
 }
 
+fn require_source_z_column(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+    let has_source_z: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM pragma_table_info('content_world_quest_area') WHERE name='z')",
+        [],
+        |row| row.get(0),
+    )?;
+    if has_source_z {
+        return Ok(());
+    }
+    Err(rusqlite::Error::InvalidColumnName(
+        "content_world_quest_area.z is missing; rebuild world-quest content with \
+         scripts/import_world_quests.py --source-db <world.db> --output-db <new-world.db> \
+         --poi-db2-dir <installed-build-csv-directory> --duration-receipt <receipt.json>; \
+         publish the verified world-quest tables before starting the server"
+            .into(),
+    ))
+}
+
 pub(crate) fn load_areas(
     conn: &rusqlite::Connection,
 ) -> rusqlite::Result<std::collections::HashMap<u32, Vec<Area>>> {
@@ -55,6 +73,7 @@ pub(crate) fn load_areas(
     if !installed {
         return Ok(result);
     }
+    require_source_z_column(conn)?;
     let mut statement = conn.prepare("SELECT quest_id,blob_id,map_id,ui_map_id,x,y,z FROM content_world_quest_area ORDER BY quest_id,blob_id,point_index")?;
     let rows = statement.query_map([], |r| {
         Ok((

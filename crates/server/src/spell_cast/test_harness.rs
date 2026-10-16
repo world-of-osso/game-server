@@ -459,6 +459,9 @@ pub(crate) fn harness_with_plugins(
     let conn =
         Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     app.insert_resource(crate::unit_creature_type::load_race_types(&conn).unwrap());
+    app.insert_resource(
+        crate::maps::store::load_map_store(&conn).expect("Actual passive map eligibility metadata"),
+    );
     app.insert_resource(class_spells(data));
     app.insert_resource(crate::faction::world_db_faction_templates()?);
     let caster = spawn_player(&mut app, class, 0.0);
