@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Waywatcher source lifecycle (2026-10-16)
+
+130249/195806 consumes the currently published source99572 template, choosing63609or63606 without a new importer admission. Actual bag learning/UseToy acceptance passes1/1: terrain-backed Val'sharah7558 admission/Northshire refusal, source instant cast/15s duration/+200% speed/241 and900s recovery, then ordinary expiry restores native display/health/flags/speed. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#waywatcher64-source-lifecycle-2026-10-16) separate this existing-handler acceptance from eighteen authenticated privately published body assets/four aliases. Current loader/regression gates and native rendering remain separate; no manufactured RED or canonical publication claim.
+
 ## Grizzlesnout source lifecycle (2026-10-16)
 
 129965/194807 uses existing transform27864/display9287, aura241 and+250% run speed for15000ms, with600000ms item recovery. Actual bag learning/UseToy acceptance passes1/1 after62: real Northshire terrain refuses group4446 without spending; real Northrend571/3537 accepts the1500ms cast. Ordinary50ms simulation expiry restores native display/health/flags/speed without clearing recovery. This is a new acceptance test of existing behavior, not an invented runtime RED. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#grizzlesnout63-source-lifecycle-2026-10-16) separate server lifecycle from twelve already-owned authenticated canonical body assets/two aliases. Actual canonical Rust loader, whole-Toy140/140, server binary/tests check and fmt pass at the recorded63 revisions. No fresh wire/pixels or complete-toy claim.

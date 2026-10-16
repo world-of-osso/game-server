@@ -1,6 +1,8 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Waywatcher source lifecycle](systems/toys.md#waywatcher-source-lifecycle-2026-10-16) — current99572 learned-use acceptance1/1, source Val'sharah/15s/900s behavior and private18-asset closure; canonical publication/rendering separate.
+
 - [Grizzlesnout source lifecycle](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16) — actual learning/Northrend cast/15s expiry acceptance1/1; twelve canonical body assets/two aliases authenticated, native rendering separate.
 
 - [Forced-forward flag boundary](systems/toys.md#forced-forward-flag-boundary-2026-10-16) — aura241 source overlap/final-removal RED→GREEN1/1; generic native35/35 and whole-Toy139/139 pass, Ashhide mount remains deferred.
