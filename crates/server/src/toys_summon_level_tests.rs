@@ -12,8 +12,9 @@ fn toyfx55_wild_use_creature_level_keeps_region_selected_shrine_level() {
 }
 
 fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8)]) {
+    use crate::level_scaling::CreatureArmor;
     use crate::spell_cast::summon::SummonedCreature;
-    use shared::components::{Npc, UnitLevel};
+    use shared::components::{Health, Npc, UnitLevel};
     let directory = tempfile::tempdir().unwrap();
     let path = toyfx8_world();
     let conn =
@@ -51,22 +52,35 @@ fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         let world = h.app.world_mut();
         let levels: Vec<_> = world
-            .query::<(&Npc, &SummonedCreature, &UnitLevel)>()
+            .query::<(&Npc, &SummonedCreature, &UnitLevel, &Health, &CreatureArmor)>()
             .iter(world)
-            .filter(|(npc, summon, _)| npc.template_id == entry && summon.spell_id == spell)
-            .map(|(_, _, level)| level.0)
+            .filter(|(npc, summon, _, _, _)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(_, _, level, health, armor)| (level.0, health.max, armor.0))
             .collect();
         assert_eq!(
             levels.len(),
             1,
             "one source actor from actual learned UseToy"
         );
-        observed.push((owner_level, levels[0], expected));
+        // Installed ExpectedStat IDs20/30 (ExpansionID -2), class mod4=1,
+        // no ContentTuning73 mods; Podium HealthModifier20, Shrine1.
+        let expected_health = match (item, expected) {
+            (239018, 20) => 48066.0,
+            (239018, 30) => 87576.0,
+            (245942, 30) => 4379.0,
+            _ => panic!("missing concrete source stat expectation"),
+        };
+        let expected_armor = if expected == 20 { 135.0 } else { 155.0 };
+        observed.push((
+            owner_level,
+            levels[0],
+            (expected, expected_health, expected_armor),
+        ));
     }
     assert!(
         observed
             .iter()
             .all(|(_, level, expected)| level == expected),
-        "item{item}: (owner, actual, source expected) {observed:?}"
+        "item{item}: (owner, actual(level,HP,armor), source expected) {observed:?}"
     );
 }
