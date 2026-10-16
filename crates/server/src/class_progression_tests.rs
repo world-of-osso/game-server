@@ -143,7 +143,14 @@ fn guild_perks_real_membership_grants_rebuilds_revokes_and_reopens_without_touch
         .collect();
     assert_eq!(learned, perks);
     received::<SpellsUnlearned>(&mut app, player);
-    send_request(&mut app, player, SetSpecialization { spec_id: SPEC_HOLY });
+    let previous_spec = app.world().get::<ActiveSpec>(player).unwrap().0;
+    let next_spec = if previous_spec == SPEC_HOLY {
+        SPEC_RETRIBUTION
+    } else {
+        SPEC_HOLY
+    };
+    send_request(&mut app, player, SetSpecialization { spec_id: next_spec });
+    assert_eq!(app.world().get::<ActiveSpec>(player).unwrap().0, next_spec);
     let rebuilt: BTreeSet<_> = app
         .world()
         .get::<KnownSpells>(player)

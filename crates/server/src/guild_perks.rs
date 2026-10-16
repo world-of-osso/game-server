@@ -29,19 +29,15 @@ impl Plugin for GuildPerksPlugin {
     }
 }
 
-type PlayerQueries<'w, 's> = ParamSet<
-    'w,
-    's,
-    (
-        Query<'w, 's, Entity, Or<(Changed<GuildMembership>, Changed<KnownSpells>)>>,
-        Query<'w, 's, (Option<&'static GuildMembership>, &'static mut KnownSpells)>,
-    ),
->;
+type ChangedPlayers<'w, 's> =
+    Query<'w, 's, Entity, Or<(Changed<GuildMembership>, Changed<KnownSpells>)>>;
+type PlayerKnowledge<'w, 's> =
+    Query<'w, 's, (Option<&'static GuildMembership>, &'static mut KnownSpells)>;
 
 fn reconcile_perks(
     catalog: Res<PerkSpells>,
     mut removed: RemovedComponents<GuildMembership>,
-    mut queries: PlayerQueries,
+    mut queries: ParamSet<(ChangedPlayers, PlayerKnowledge)>,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut learned: Query<&mut MessageSender<SpellsLearned>>,
     mut unlearned: Query<&mut MessageSender<SpellsUnlearned>>,
