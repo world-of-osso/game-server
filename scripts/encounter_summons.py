@@ -181,12 +181,32 @@ def import_zaetar_spirit(connection):
     return [12238]
 
 
+def import_fiendish_hound(connection):
+    """Omor30707 summons17540; retain authored base0, not an invented Normal1."""
+    identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=17540').fetchone()
+    difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=17540 ORDER BY DifficultyID').fetchall()
+    effect = connection.execute('SELECT Effect,EffectMiscValue_0,EffectMiscValue_1 FROM spell_effect WHERE SpellID=30707 AND EffectIndex=0 AND DifficultyID=0').fetchone()
+    if identity != ('SmartAI','') or difficulties != [(0,), (2,)] or effect != (28,17540,64):
+        raise ValueError('Fiendish Hound17540 source identity changed')
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=17540 AND DifficultyID=0')
+    connection.execute('DELETE FROM content_creature_template WHERE entry=17540')
+    retail_content.insert_tdb_templates(connection,'17540',replace_legacy=True)
+    connection.execute('DELETE FROM content_creature_template_model WHERE CreatureID=17540')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=17540')
+    connection.execute('DELETE FROM content_creature_template_addon WHERE entry=17540')
+    connection.execute(f'''INSERT INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=17540''')
+    return [17540]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
-    canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
+    canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
     if args.db.name == 'world.db' or args.db.resolve() == canonical.resolve():
         parser.error('use an independent database copy, not canonical world.db')
     if args.db.is_symlink() or not args.db.is_file() or args.db.stat().st_nlink != 1:
@@ -197,6 +217,8 @@ def main():
                 entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
             elif args.encounter == 'adarogg':
                 entries = [import_demonic_leap_template(conn)]
+            elif args.encounter == 'omor':
+                entries = import_fiendish_hound(conn)
             elif args.encounter == 'theradras':
                 entries = import_zaetar_spirit(conn)
             elif args.encounter == 'celebras':
