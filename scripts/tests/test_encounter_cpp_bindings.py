@@ -144,6 +144,47 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_thermaplugg_primary_preserves_bosses_and_excludes_walking_bombs(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('thermaplugg')
+        self.assertIsNotNone(profile, 'source Thermaplugg primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(382,90,5);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (7800,'','SmartAI'),(7915,'','SmartAI');
+            INSERT INTO raid_encounter_creature VALUES(90,6229,381,4,418,989,36560);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=90 ORDER BY bit').fetchall(),
+            [(6229,381,4,418,989,36560),(7800,382,5,422,992,36563)])
+        self.assertEqual(self.db.execute('SELECT count(*) FROM raid_encounter_creature WHERE creature_entry=7915').fetchone()[0], 0)
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=7800")
+        with self.assertRaisesRegex(ValueError, 'creature AI identity'):
+            prepare_bindings(self.db, [primary])
+
+    def test_journal_csv_authenticates_exact_encounter_and_actor(self):
+        import encounter_cpp_bindings as bindings
+        import tempfile
+        from pathlib import Path
+        primary = dict(entry=7800,encounter_id=382,journal_id=422,actor_id=992,display_id=36563)
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Path(directory) / 'JournalEncounter.csv'
+            actors = Path(directory) / 'JournalEncounterCreature.csv'
+            journal.write_text('ID,DungeonEncounterID\n422,382\n')
+            actors.write_text('ID,JournalEncounterID,CreatureDisplayInfoID\n992,422,36563\n')
+            bindings.validate_journal(journal, actors, primary)
+            actors.write_text('ID,JournalEncounterID,CreatureDisplayInfoID\n992,422,36560\n')
+            with self.assertRaisesRegex(ValueError, 'journal primary actor'):
+                bindings.validate_journal(journal, actors, primary)
+            journal.write_text('ID,DungeonEncounterID\n422,381\n')
+            with self.assertRaisesRegex(ValueError, 'journal encounter'):
+                bindings.validate_journal(journal, actors, primary)
+
     def test_wailing_primaries_keep_all_eight_authored_normal_bits(self):
         import encounter_cpp_bindings as bindings
         names = ['anacondra', 'cobrahn', 'kresh', 'pythas', 'skum', 'serpentis', 'verdan', 'mutanus']
