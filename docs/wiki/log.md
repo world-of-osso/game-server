@@ -1524,3 +1524,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-15: Negative104 actual SelectCharacter RED724af71c exposed missing selection-to-knowledge edge; fix408f0a3b passes unchanged native handler plus8 scoped controls,43.44s. Census5509/1824, only3hidden character roots, all243/same7sourcehashes.
 
 - 2026-10-15: Feral Spirit owner/weapon-only repair f135c4a8+28859d64, merged afc0e5e5/protocol62865c23:24/24 scoped controls, check/fmt/readability clean; intrinsic AP and full-stat acceptance remain open.
+
+- 2026-10-16: [Caster-owned school amplification](systems/auras.md#caster-owned-school-amplification--2026-10-16): native Haunt aura270 omission reproduced through ordinary casts; shared owner/school consumer, with pet381/unknown380/full-ability proof separate.
