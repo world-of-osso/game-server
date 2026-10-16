@@ -1,6 +1,6 @@
 # Retail achievement criteria producer inventory
 
-verified: 2026-10-15
+verified: 2026-10-16
 
 Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras before effect dispatch, with authored spells and complete companions. Native65403/61925 RED→GREEN1/1 proves target-not-caster, refused-depth/launch/missing/idle/NPC-hook/reopen boundaries and3579; compiler34/34. Full required four-thread filter176/0/1ignored plus site-export1/1, server/engine checks and3repofmt pass. No table acquisition/holiday/full vehicle/UI certificate.
 
@@ -10,7 +10,7 @@ Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT 
 
 ## Current-tree wiring
 
-- Native participation15 admits complete positive PlayerLevelWithinContentTuning268, using existing authored content_tuning_level minlevel/maxlevel (not delta). Tuning483 resolves90..90. Compiler47/47/generated5809(+26); structural census adds only account908/909, no removals and unchanged seven source hashes. Native/catalog3/3 proves both full100-contribution faction grants, reopened dates, winner/loser and rejection controls. Source/fixture boundary: [content-tuning participation](wiki/systems/dungeon-achievements.md#content-tuning-participation).
+- Native participation15 admits complete positive PlayerLevelWithinContentTuning268, using existing authored content_tuning_level minlevel/maxlevel (not delta). Tuning483 resolves90..90. Compiler47/47/generated5809(+26); structural census adds only account908/909, no removals and unchanged seven source hashes. Native/catalog3/3 proves both full100-contribution faction grants, reopened dates, winner/loser and rejection controls. Integrated required workspace filter217PASS/0FAIL/1existing opt-in ignored plus site-export1/1; workspace/all-target check and fmt pass. Source/fixture boundary: [content-tuning participation](wiki/systems/dungeon-achievements.md#content-tuning-participation).
 
 - Native KillCreature0 admits complete positive ScenarioStep82 only from the actual current authored step ID. Resolve all scenario_step IDs with OrderIndex=Asset-1; run vector position and step ID are not ordinals. Compiler46/46/generated5783(+15); census adds only account18202/18203/18205/18206, same seven hashes. Explicitly bound authored58 run plus genuine123744/32548 and lethal686 prove stages3/5 counters, not scenario admission or original research content. InstanceManager rejects1031; stages7/14/17 have no supported bound source. [Details](wiki/systems/dungeon-achievements.md#authored-scenario-step-kill-guard).
 
