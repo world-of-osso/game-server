@@ -330,6 +330,34 @@ fn spawn_persisted_perk_member(app: &mut App, character_id: u64) -> Entity {
 }
 
 #[test]
+fn guild_perks_preserve_pvp_replacements_and_profession_spell_identity() {
+    use std::collections::BTreeSet;
+    // The same native210256→853 replacement used by pvp_talents' knowledge controls;
+    //2259 is Alchemy profession knowledge, not a guild entitlement.
+    let mut known = KnownSpells::fixture(vec![2259, 853, 35395]);
+    let perks = [78633, 83944, 83958, 83950, 83951];
+    known.set_guild_grants(&perks);
+    known.set_pvp_grants(vec![(210256, 853)]);
+    let active: BTreeSet<_> = known.iter().collect();
+    let expected: BTreeSet<_> = [2259, 35395, 210256].into_iter().chain(perks).collect();
+    assert_eq!(active, expected);
+    assert_eq!(known.iter().count(), expected.len());
+    known.set_guild_grants(&[]);
+    assert_eq!(
+        known.iter().collect::<BTreeSet<_>>(),
+        [2259, 35395, 210256].into_iter().collect()
+    );
+    known.set_pvp_grants(Vec::new());
+    assert_eq!(
+        known.iter().collect::<BTreeSet<_>>(),
+        [2259, 853, 35395].into_iter().collect()
+    );
+    known.set_guild_grants(&perks);
+    assert!(perks.iter().all(|id| known.contains(*id)));
+    assert!(known.contains(2259) && known.contains(853));
+}
+
+#[test]
 fn paladin_known_spells_follow_required_level_and_race_mask() {
     let Some(classes) = class_spells() else {
         return;
