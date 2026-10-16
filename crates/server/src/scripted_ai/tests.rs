@@ -65,10 +65,7 @@ struct Data {
 
 /// The five Stockade script creatures' templates.
 fn stockade_templates() -> std::collections::HashMap<u32, crate::world_data::CreatureTemplate> {
-    let conn =
-        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    let expected = crate::world_data::load_expected_stats(&conn);
-    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    let mut templates = crate::test_data::world_data().templates.clone();
     templates.retain(|entry, _| {
         [
             NPC_HOGGER,
@@ -79,7 +76,6 @@ fn stockade_templates() -> std::collections::HashMap<u32, crate::world_data::Cre
         ]
         .contains(entry)
     });
-    crate::world_data::load_template_models(&conn, &mut templates);
     templates
 }
 

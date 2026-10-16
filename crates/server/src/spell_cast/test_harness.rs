@@ -1,6 +1,7 @@
 //! Real-DB Bevy App harness for cast and aura tests: a player caster with an
 //! authenticated connection and an NPC target.
 
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -98,18 +99,31 @@ pub(crate) fn world_db() -> Option<&'static WorldData> {
 
 /// Own the prepared native snapshot until its fixture finishes; canonical data is read-only.
 pub(crate) struct PreparedClassWorld {
-    directory: tempfile::TempDir,
+    directory: std::sync::Arc<tempfile::TempDir>,
 }
 
 impl PreparedClassWorld {
     pub(crate) fn path(&self) -> PathBuf {
         self.directory.path().join("world.class-summons.copy.db")
     }
+
+    pub(crate) fn world_data(&self) -> crate::world_data::WorldData {
+        static DATA: OnceLock<crate::world_data::WorldData> = OnceLock::new();
+        DATA.get_or_init(|| crate::world_data::load_world_data(&self.path()))
+            .clone()
+    }
 }
 
 pub(crate) fn prepare_class_world() -> PreparedClassWorld {
+    static DIRECTORY: OnceLock<std::sync::Arc<tempfile::TempDir>> = OnceLock::new();
+    PreparedClassWorld {
+        directory: DIRECTORY.get_or_init(import_class_world).clone(),
+    }
+}
+
+fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
     let prepared = PreparedClassWorld {
-        directory: tempfile::tempdir().unwrap(),
+        directory: std::sync::Arc::new(tempfile::tempdir().unwrap()),
     };
     let helper = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/prepare_class_summon_db.py");
@@ -124,7 +138,11 @@ pub(crate) fn prepare_class_world() -> PreparedClassWorld {
         "class fixture import failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    prepared
+    std::fs::File::open(prepared.path())
+        .unwrap()
+        .set_permissions(std::fs::Permissions::from_mode(0o444))
+        .unwrap();
+    prepared.directory
 }
 
 /// Explicit native template authority for fixtures whose spells restrict creature type.

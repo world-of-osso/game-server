@@ -209,7 +209,12 @@ fn encounter_fixture(
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     app.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
-    let expected = crate::world_data::load_expected_stats(&conn);
+    // Prepared copies have distinct imported authority; only canonical input is cached.
+    let canonical = prepared.is_none().then(crate::test_data::world_data);
+    let expected = canonical.map_or_else(
+        || crate::world_data::load_expected_stats(&conn),
+        |data| data.expected_stats.clone(),
+    );
     let spawns: Vec<_> = if populate {
         crate::world_data::load_spawns(&conn)
             .into_iter()
@@ -218,7 +223,10 @@ fn encounter_fixture(
     } else {
         Vec::new()
     };
-    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    let mut templates = canonical.map_or_else(
+        || crate::world_data::load_templates(&conn, &expected),
+        |data| data.templates.clone(),
+    );
     templates.retain(|id, _| {
         *id == entry
             || (entry == 234648 && [234660, 255050].contains(id))
@@ -227,9 +235,16 @@ fn encounter_fixture(
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
-    crate::world_data::load_template_models(&conn, &mut templates);
-    let difficulty_templates =
-        crate::world_data::load_difficulty_templates(&conn, &expected, &templates);
+    let difficulty_templates = if let Some(data) = canonical {
+        data.difficulty_templates
+            .iter()
+            .filter(|((entry, _), _)| templates.contains_key(entry))
+            .map(|(key, template)| (*key, template.clone()))
+            .collect()
+    } else {
+        crate::world_data::load_template_models(&conn, &mut templates);
+        crate::world_data::load_difficulty_templates(&conn, &expected, &templates)
+    };
     let hp = conn
         .prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats")
         .unwrap()
@@ -5063,11 +5078,10 @@ fn achievements_criteria_dungeon_difficulty_credits_only_the_copy_difficulty() {
 
 #[test]
 fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
-    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    use crate::achievement::PlayerAchievementState;
     let (mut h, boss, map) = bound_boss_at_difficulty(102263, 1530, 1, 14, None);
-    let conn = Connection::open(world_db_path()).unwrap();
     h.app
-        .insert_resource(load_achievement_catalog(&conn).unwrap());
+        .insert_resource(crate::test_data::achievement_catalog());
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
@@ -5171,11 +5185,10 @@ fn assert_copy_difficulty_credit(
     credited: u32,
     criteria: &[u32],
 ) {
-    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    use crate::achievement::PlayerAchievementState;
     let (mut h, boss, map) = bound_boss_at_difficulty(entry, map_id, bit, difficulty, None);
-    let conn = Connection::open(world_db_path()).unwrap();
     h.app
-        .insert_resource(load_achievement_catalog(&conn).unwrap());
+        .insert_resource(crate::test_data::achievement_catalog());
     let database_file = tempfile::NamedTempFile::new().unwrap();
     h.app.insert_resource(crate::persistence::GameDatabase {
         db: redb::Database::create(database_file.path()).unwrap(),
