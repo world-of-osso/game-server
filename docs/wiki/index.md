@@ -10,7 +10,7 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
-- [Optional cost spell modifiers](systems/auras.md#optional-cost-spell-modifiers-2026-10-16) — native Practiced Strikes/Protection Execute reproduces double flat discount; optional spend excludes flat and retains percentage modifiers; proof pending.
+- [Optional cost spell modifiers](systems/auras.md#optional-cost-spell-modifiers-2026-10-16) — native Practiced Strikes/Protection Execute RED3/2→GREEN38 plus merged5; optional spend excludes flat and retains percentage modifiers; workspace check passes.
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls and current-master workspace check pass; full talent/legal/fresh UDP acceptance open.
 
 - [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
