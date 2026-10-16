@@ -20,9 +20,10 @@ Test-only commit6f02eec4 exercises actual bag learning and journal UseToy129965/
 |---|---|
 | Server lifecycle | Source transform27864 selects9287; flag1 becomes65 without losing the unrelated bit; run speed multiplier3.5 and aura15000ms remain authored. The ordinary50ms simulation expires the aura, restores original display/health/flag1/speed1, and retains the600000ms item recovery. No clock, cooldown or duration reset. |
 | Body ownership | Twelve same70391 body dependencies authenticate by resolution content key/MD5, SHA256 and byte length. Every key already has exactly one canonical owner; both12648700/01.skin aliases are byte-equal to the referenced skins. No new fragment, extraction or canonical mutation. |
-| Remaining | Current whole-Toy/fmt/check and actual Rust loader proof are pending at this checkpoint. No fresh wire, native input delivery for this particular toy, pixels, audio, wall-clock lifetime or complete-toy parity claim. Generic35/35 native movement proof retains only its62 scope. |
+| Current gates | At server5b3a1604/engined6adbe444/protocol07a8faa, whole `toys:: --test-threads 2` passes140/140, zero ignored623.06s. Server binary/tests check passes1m36s; fmt passes. Actual production `ModelAssetIndex::load` accepts the canonical combined namespace and resolves all12 Grizzlesnout receipts/two aliases. No compile warnings; manual changed-Rust readability has no findings. |
+| Remaining | No fresh wire, native input delivery for this particular toy, pixels, audio, wall-clock lifetime or complete-toy parity claim. Generic35/35 native movement proof retains only its62 scope. |
 
-Evidence root below: `grizzlesnout63-{active-goal,proof-ledger,source-metadata,body-source,terrain-source,authenticated-owners,readability}.json` and `grizzlesnout63-initial.log`. Model43→M2 126487 has seven external animations, two skins and display overrides126492/126493; source display scale1.5 remains separate from server display identity.
+Evidence root below: `grizzlesnout63-{active-goal,proof-ledger,source-metadata,body-source,terrain-source,authenticated-owners,readability}.json` and `grizzlesnout63-initial.log`, `grizzlesnout63-final-results.json`, final gate logs and `grizzlesnout63-canonical-loader.log`. Model43→M2 126487 has seven external animations, two skins and display overrides126492/126493; source display scale1.5 remains separate from server display identity.
 
 ## Forced-forward62 generic input proof (2026-10-16)
 
