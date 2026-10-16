@@ -27,6 +27,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 
 - [x] Prepare12236→424/Normal349bit2 using pinned TC Maraudon ordinal3/header/instance, actual TDB SmartAI and Journal70391 CSV427/997/display12334. Preserve Gizlock credit and refuse AI/ordinal-as-bit drift; SQL output only.
 - [ ] Gate unchanged Shoot16100/CAST_COMBAT_MOVE64, range-conditioned21390, self21655/7964 and isolated controlled death credit against installed spell effects and source clocks. Do not invent targets/resources/timers.
+- [x] Interpret EVENT_RANGE9 using an engaged current victim and actual3D distance minus both source combat reaches: inclusive minimum, strict maximum. In-range actions reset their authored repeat; excluded victims recheck after500ms, carrying the victim as invoker. Preserve ordinary cast/channel deferral and source flags.
 - [ ] Native/ordinary fight, positive movement/CC, loot, persistence and canonical publication remain separate until demonstrated.
 
 ## Maraudon Gizlock source boundary
