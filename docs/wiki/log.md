@@ -1520,3 +1520,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Feero authored escort gate passes after master integration; both-skin native accept/speech/movement/first-wave partial evidence and completion/data gaps recorded in escort contract.
 
 - 2026-10-16: Corrected70391 Regrowth8936 native cast restores Feero236→484 without admin healing; missing ambusher receipt/completion boundary remains open.
+
+- 2026-10-16: Feero976 both native skins earn credit after all three waves; authenticated missing receipt-index entries resolved without substitutions; same-coordinate grid RED→GREEN8 fixes active escort dormancy beyond spawn grid. Eighteen inspected1920x1080 earned-run PNGs; cosmetic roar, native death-failure and unrelated renderer parity remain separate. See [escort contract](../specs/escort-quests.md).
