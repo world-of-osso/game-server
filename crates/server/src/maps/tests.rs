@@ -1742,6 +1742,7 @@ fn exercise_arena_channel_with_reconnect(
     map_id: u32,
     reconnect: Option<ReconnectCase>,
 ) {
+    let profile = std::time::Instant::now();
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
     let team_size = match mode {
@@ -1797,7 +1798,9 @@ fn exercise_arena_channel_with_reconnect(
     if map_id == 617 {
         entries.extend([191877, 194395]);
     }
+    eprintln!("ARENA_PHASE {map_id} catalogs {:?}", profile.elapsed());
     let objects = source_map_objects(map_id, &entries);
+    eprintln!("ARENA_PHASE {map_id} objects {:?}", profile.elapsed());
     let sight = crate::pvp::arena_objects::SightCatalog::load(&source, &objects).unwrap();
     let source_orb = objects
         .0
@@ -1817,7 +1820,9 @@ fn exercise_arena_channel_with_reconnect(
     let database_file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
+    eprintln!("ARENA_PHASE {map_id} spells/db {:?}", profile.elapsed());
     let world_data = crate::test_data::world_data().clone();
+    eprintln!("ARENA_PHASE {map_id} world {:?}", profile.elapsed());
     let classes = (mode == ArenaQueueMode::SoloShuffle).then(|| {
         crate::spell_cast::test_harness::world_db()
             .unwrap()
@@ -1825,6 +1830,7 @@ fn exercise_arena_channel_with_reconnect(
             .clone()
     });
     let achievements = crate::test_data::achievement_catalog();
+    eprintln!("ARENA_PHASE {map_id} achievements {:?}", profile.elapsed());
     let mut h = harness_with(move |app| {
         if let Some(classes) = classes {
             app.insert_resource(classes);
@@ -1855,10 +1861,12 @@ fn exercise_arena_channel_with_reconnect(
         app.insert_resource(cage);
     })
     .unwrap();
+    eprintln!("ARENA_PHASE {map_id} app {:?}", profile.elapsed());
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
     let players: Vec<_> = (1..=(team_size * 2) as u64)
         .map(|id| h.spawn_at_level(id, 90, STORMWIND, origin + Vec3::new(id as f32, 0.0, 0.0)))
         .collect();
+    eprintln!("ARENA_PHASE {map_id} players {:?}", profile.elapsed());
     let origins: Vec<_> = players
         .iter()
         .map(|who| wow(h.app.world().get::<Position>(who.player).unwrap()))
@@ -2516,6 +2524,7 @@ fn exercise_arena_channel_with_reconnect(
         assert_rated_arena_combat_credits(&saved, rated, index, team_size);
         assert_arena_map_type_credits(&saved, index, team_size);
     }
+    eprintln!("ARENA_PHASE {map_id} complete {:?}", profile.elapsed());
 }
 
 fn exercise_shuffle_rounds(
