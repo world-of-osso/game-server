@@ -879,7 +879,7 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
 }
 
 #[test]
-fn isle_channel_driver_authority_is_not_replaced_by_hostile_creature_chase() {
+fn isle_channel_driver_authority_is_not_replaced_by_hostile_creature_ai() {
     let (mut entered, demolisher) = enter_and_board_isle_demolisher();
     let enemy_index = entered
         .teams
@@ -938,6 +938,53 @@ fn isle_channel_driver_authority_is_not_replaced_by_hostile_creature_chase() {
     assert!(
         h.app.world().get::<Position>(demolisher).unwrap().x > position.x + 0.1,
         "normal exit restores the living NPC's response to its hostile threat"
+    );
+
+    // Losing a victim runs EnterEvadeMode before the next home movement tick.
+    // Combat has stopped, so a friendly rider can board this returning vehicle.
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), demolisher);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(demolisher),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+    let returning = *h.app.world().get::<Position>(demolisher).unwrap();
+    h.walk_to(driver, wow(&returning));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(driver.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.advance(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(driver.player)
+            .unwrap()
+            .driver,
+        demolisher.to_bits(),
+        "published spellclick accepts the living friendly returning vehicle"
+    );
+    h.app
+        .add_systems(FixedUpdate, crate::creature_ai::return_to_spawn_system);
+    h.advance(5);
+    assert_eq!(
+        *h.app.world().get::<Position>(demolisher).unwrap(),
+        returning,
+        "return-home AI must not move a vehicle after its controlling seat is occupied"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::ExitVehicle>>(driver.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::ExitVehicle);
+    h.advance(5);
+    assert!(
+        h.app.world().get::<Position>(demolisher).unwrap().x < returning.x - 0.1,
+        "normal exit restores the pending return-home movement"
     );
 }
 
