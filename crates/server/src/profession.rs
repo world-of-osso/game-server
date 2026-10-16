@@ -14,6 +14,7 @@
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
 mod data;
+mod concentration;
 mod gathering;
 #[cfg(test)]
 mod modern_crafting_fixture;
@@ -303,6 +304,7 @@ impl Plugin for ProfessionPlugin {
                 FixedUpdate,
                 continue_craft_queues.after(crate::spell_cast::advance_casts),
             )
+            .add_systems(Update, concentration::receive_queries)
             .add_systems(PostUpdate, save_and_send_professions);
     }
 }

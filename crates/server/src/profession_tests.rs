@@ -1310,3 +1310,6 @@ fn achievements_criteria_skill_step_reads_learned_line_maximum_in_seventy_five_p
     let leaf = catalog.tree_progress(1165, state);
     assert_eq!((leaf.required, leaf.completed), (75, true));
 }
+
+#[path = "profession/concentration_tests.rs"]
+mod concentration_tests;
