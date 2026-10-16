@@ -122,6 +122,35 @@ fn write_history_in(txn: &WriteTransaction, guild: u32, history: &History) {
         .expect("write guild news");
 }
 
+/// TC Player.cpp23904: committed vendor purchase uses the template's base level.
+pub(crate) fn record_purchase(
+    db: &Database,
+    character: u64,
+    item_id: u32,
+    template: &crate::item_templates::ItemTemplate,
+) {
+    const EPIC: u8 = 4;
+    const MIN_NEWS_ITEM_LEVEL: u16 = 353; // TC Guild.h260.
+    let qualifies = template.scaling.quality > EPIC
+        || (template.scaling.quality == EPIC && template.scaling.item_level >= MIN_NEWS_ITEM_LEVEL);
+    if !qualifies {
+        return;
+    }
+    let Some(membership) = crate::persistence::load_character_guild(db, character) else {
+        return;
+    };
+    let txn = db.begin_write().expect("begin actual guild purchase news");
+    let member = crate::guild_event_log::character_name_in(&txn, character);
+    append_in(
+        &txn,
+        membership.guild_id,
+        GuildNewsKind::ItemPurchased { member, item_id },
+        crate::guild_bank::unix_now(),
+        false,
+    );
+    txn.commit().expect("commit actual guild purchase news");
+}
+
 /// Called inside the transaction saving newly earned character/account achievements.
 pub(crate) fn record_achievements_in(
     txn: &WriteTransaction,
