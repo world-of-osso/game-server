@@ -54,7 +54,8 @@ fn encounter_coverage_wailing_controlled_gossip_hello_uses_four_done_and_real_em
         .send::<InteractionChannel>(InteractNpc {
             npc: disciple.to_bits(),
         });
-    h.advance(0.1);
+    // HostClient request/response loopback needs three frames.
+    h.advance(0.2);
     assert!(
         h.inbox(0).opened.is_empty(),
         "raw npcflag0 blocks natural interaction"
@@ -109,6 +110,13 @@ fn encounter_coverage_wailing_controlled_select_closes_then_starts_authored_firs
     );
     h.app
         .insert_resource(crate::navigation::Navigation::new(&root));
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
+    ));
     for encounter in [588, 585, 590] {
         finish_druid(&mut h, map, encounter);
     }
