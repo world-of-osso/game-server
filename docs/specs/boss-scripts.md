@@ -302,3 +302,5 @@ Gargolmar acceptance remains open: source charge effect96 must move to the selec
 Omor primary binding: TC a352b1fa17308/source ordinal1 maps to installed DB2 encounter1891/map543bit0, Journal70391 CSV528/1105/display18237. Copy-only binding must preserve Gargolmar17306 and exclude Fiendish Hound17540 from completion credit. Runtime schedules, Orbital scripts, hound lifetime and actual mechanics remain unproven.
 
 Omor Orbital Strike Target35642 and Whip32185 must retain every actual TDB1210 server-side spell/effect field via `encounter_serverside_spells.py --encounter omor` on independent copies. Whip source effect0 is aura23/2000ms/trigger30638; target effect0 is dummy3/source-enemy area15/radius33. Import is data preparation, not proof of script behavior.
+
+Omor30707 summons Fiendish Hound17540 via authored property64. Copy-only `encounter_summons.py --encounter omor` must replace legacy base/models/addon from actual TDB base0 (CT220, level10–30, Health0.55, Mana2.8568, Damage1), preserving SmartAI and absence of Normal1; existing difficulty rows, population and credit remain unchanged. Authored Heroic2 is not Normal authority.
