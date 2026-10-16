@@ -378,3 +378,11 @@ Terrain gravity captures the fall peak before landing resets FallTracker, then q
 - [[boss-scripts]] — encounter state transitions.
 - [[persistence]] — character and instance storage.
 - [[zone-architecture]] — map copies and lock lifecycle.
+
+## Incremental evaluation — 2026-10-16
+
+The live event path previously scanned every definition repeatedly to find completions, then recursively evaluated every tree again for the full snapshot. A warmed level event reproduced 11,034 definition visits and 19,460 tree-node evaluations.
+
+Catalog load now indexes criterion IDs to owning definitions, earned-ID dependencies to criteria, and map boundaries to definitions. A disposable per-state memo compares authoritative counters/visible earned IDs, reevaluates affected roots, and retains full root results for snapshot construction. New awards and pet-battle points reach the same fixed point. Historical edits, removed counters, race/scope changes, and map completion remain explicit invalidations. Account aggregation reuses the previous in-memory account memo; persisted contributions and original earned dates stay authoritative. Catalog identity prevents reusing results across reloads. Cold reconciliation still evaluates all definitions; full snapshots still enumerate their complete row set, without repeated recursive evaluation.
+
+Proof pending: bounded-work RED committed before optimization; targeted GREEN and integration gate recorded in lead inbox when complete.
