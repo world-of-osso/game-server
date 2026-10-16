@@ -1,3 +1,4 @@
+- [Native excluded aura-spell admission](systems/spell-casting.md#native-excluded-aura-spell-admission--2026-10-16) — native player/NPC and actual450ms completion RED4/5; source field consumer committed, GREEN pending.
 - [Native aura restriction metadata loader](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16) — native metadata/schema RED→GREEN4 and merged39 controls; mandatory source publication, state/admission still separate.
 - [Native aura restrictions producer](systems/spell-info.md#native-aura-restrictions-producer--2026-10-16) — real CLI metadata-loss RED→GREEN3, complete native columns/build stamp/reimport and rollback; publication/runtime admission remain separate.
 - [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.

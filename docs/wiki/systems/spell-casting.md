@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Native excluded aura-spell admission — 2026-10-16
+
+The raw [aura restriction metadata](spell-info.md#native-aura-restrictions-metadata--2026-10-16) previously reached no cast checks. Ordinary `validate_start`/`execute_cast` now consume `ExcludeCasterAuraSpell` on the actual caster and `ExcludeTargetAuraSpell` on the resolved explicit/auto-self target, before payment/launch. Both use existing active aura identity, not amounts or a spell-ID exception. Refusal carries exact source `SPELL_FAILED_CASTER_AURASTATE`/`SPELL_FAILED_TARGET_AURASTATE` through the existing InvalidTarget/detail wire pattern; no protocol change. Completion refusal retains the already-started GCD; existing full-trigger helper bypass is unchanged.
+
+Native70391 Stealth1784↔Shadow Dance185313 and Slow Fall130→No Feather Fall79636 provide both field consumers. Cutlass Slash214794's actual450ms cast and Blood Frenzy214789 reproduce a blocker gained between admission and completion, with removal-before-completion as a control. Genuine REDc40d6f42 is4pass/5fail in12.90s, including ordinary NPC and selected-ally cases; productiona44ea1f7 is committed, GREEN/final gates pending. No native amounts, rows, RNG, resources or clocks changed. [Contract](../../specs/class-completeness.md); receipts `data/class-completeness6-2026-10-12/excluded-aura-spells-{goal,source,proof-ledger}.json`.
+
+Required spell refs, aura types, health/other states (including1784's separate excluded state12), implicit/area targets and full trigger-flag semantics remain open. Native61988/65219 marker definitions are absent locally and were not fabricated; the fixtures are not complete Stealth/Shadow Dance, legal-build or fresh-native acceptance. Canonical source-table publication remains a loader deployment prerequisite.
+
 ## Native damage prerequisite fixtures — 2026-10-16
 
 Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.
