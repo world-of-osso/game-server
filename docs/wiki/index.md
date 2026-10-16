@@ -1,3 +1,4 @@
+- [Native aura restriction metadata loader](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16) — native metadata/schema RED→GREEN4; mandatory source publication, state/admission still separate.
 - [Native aura restrictions producer](systems/spell-info.md#native-aura-restrictions-producer--2026-10-16) — real CLI metadata-loss RED→GREEN3, complete native columns/build stamp/reimport and rollback; publication/runtime admission remain separate.
 - [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
