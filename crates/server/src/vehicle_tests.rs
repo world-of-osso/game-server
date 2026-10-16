@@ -6,6 +6,18 @@ use crate::{
 use bevy::prelude::*;
 use shared::components::{Health, Mounted, MovementControl, Position, Rotation, VehiclePassenger};
 
+pub(crate) fn install_source_vehicle_runtime(app: &mut App) {
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = super::load_store(&crate::ground::ground_data_dir(), &source).unwrap();
+    app.insert_resource(store);
+    app.add_systems(Update, super::receive_requests);
+    app.add_systems(FixedPostUpdate, reconcile_passengers);
+}
+
 #[test]
 fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
     let conn = rusqlite::Connection::open_with_flags(

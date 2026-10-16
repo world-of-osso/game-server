@@ -6,8 +6,8 @@ crates/server/src/ground.rs reads, from the client asset cache: each map's WDT
 WMO, else every MAID tile's root and `_obj0` ADT (`terrain/<fdid>.adt`); each `_obj0`
 MODF WMO placed by FileDataID (flag 0x8) and its GFID group files (`models/<fdid>.wmo`).
 
-Also ships passenger-mount M2 bind poses selected by vehicle_models.sql, the same
-query compiled into vehicle.rs. No skins or skeleton companions are read by the
+Also ships passenger-mount and IoC Demolisher M2 bind poses selected by
+vehicle_models.sql and isle_vehicle_models.sql, shared with the server loaders. No skins or skeleton companions are read by the
 server's attachment parser.
 
 Prints the cached files' paths relative to the cache, one per line (rsync
@@ -193,11 +193,16 @@ def selected_map_sources(world_db, map_ids=None, registered=False):
     return result
 
 
+def query_vehicle_models(db):
+    for filename in ("vehicle_models.sql", "isle_vehicle_models.sql"):
+        sql = Path(__file__).with_name(filename).read_text()
+        yield from db.execute(sql)
+
+
 def add_vehicle_models(files, world_db):
-    """Include exactly the passenger mount M2s the server opens at startup."""
-    sql = Path(__file__).with_name("vehicle_models.sql").read_text()
+    """Include exactly the mount and IoC vehicle M2s the server opens at startup."""
     with closing(sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)) as db:
-        for display, vehicle, model, scale, fdid in db.execute(sql):
+        for display, vehicle, model, scale, fdid in query_vehicle_models(db):
             if scale is None or fdid is None:
                 raise ValueError(
                     f"vehicle {vehicle} display {display}: missing display/model {model}"
