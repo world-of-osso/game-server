@@ -19,6 +19,10 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 - 2026-10-16: [Arena residual](investigations/slow-native-test-fixtures.md#arena-residual-bounded-independent-fixtures-2026-10-16): LEAD-approved cap4 workers; all sixteen native cases pass52.70s with unchanged assertions/frames/50msstep; sampled CPU113.70s versus52.90s wall, full-suite separate.
+## 2026-10-16 — Sightless detection consumer
+
+[Sightless153293](systems/toys.md#sightless-detection-consumer-2026-10-16): journal RED rejects152 despite an existing native target-detected-range consumer. Real hostile12yd/7yd controls pass before minimal registry admission; actual learning/UseToy plus aggro GREEN2/2 retain source group5454/600s aura/300s recovery and ordinary expiry. Whole-Toy142/142, creature-aggro30/30, binary/tests check and fmt pass; canonical classification369→370 adds only153293. Native delivery/rendering remains separate; remote-view/possession roots unimplemented.
+
 ## 2026-10-16 — Waywatcher source lifecycle
 
 [Waywatcher130249](systems/toys.md#waywatcher-source-lifecycle-2026-10-16): actual Val'sharah terrain/learning/instant use/source model choices/15s expiry/900s recovery pass1/1 using existing published99572, superseding the old missing-template snapshot. Eighteen same70391 assets and four aliases authenticate/publish privately; canonical ownership absent before publication. Actual private Rust loader, whole-Toy141/141, server binary/tests check and fmt pass; native rendering remains separate.
@@ -1655,4 +1659,6 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Celebras controlled runtime GREEN2/2 in30.73s, including two source guardian waves, cleanup/manual redeemed actor, due clocks and isolated credit. Actual base0 projection GREEN; native/ordinary/regional manual-summon scaling remain separate.
 
 - 2026-10-16: [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) follows authenticated binder19/19/SQL and real no-casts RED; casting-aware timer/threshold port implemented, runtime gate pending.
+
+- 2026-10-16: Theradras source port after real missing-casts RED; Zaetar actual base/Normal projection process RED→GREEN. [Details](systems/boss-scripts.md#maraudon-theradras-source-port).
 - 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].
