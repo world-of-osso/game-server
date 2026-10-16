@@ -1,6 +1,25 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 [Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
+## 2026-10-16 — Touch of Death primary damage and native flags
+
+[Health damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16): native999-health/zero-damage RED→GREEN100%/35% maximum-health outcomes with actual armor, school modifiers and Can'tCrit. Shared source attribute consumers honor caster-percent/victim/armor exclusions; ordinary-modifier and adjacent controls62/62 pass. PvP/Stagger/mastery/follow-up talents and fresh bot acceptance remain open.
+
+## 2026-10-16 — Touch of Death admission
+
+[Target policy](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16):70391 weaker-creature/improved15% admission; seven actual rank/health cases RED→GREEN2. Reject before CastSuccess/cooldowns. Strict description boundary retained with SimC equality discrepancy documented; damage/PvP/follow-up talent consumers remain open.
+
+## 2026-10-16 — BM Kill Command owned pet damage
+
+[Source bridge](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16):70391 names83381 and pinned SimC identifies its pet caster. Actual Call Pet/owner intent reproduces missing damage before the bridge; native BM/Survival/foreign-owner controls pass3/3. Extra talent/charging/admission and fresh UDP acceptance remain open.
+
+## 2026-10-16 — Neutral DK faction creation policy
+
+[Source creation boundary](systems/race-class-eligibility.md#neutral-pandaren-death-knight-creation--2026-10-16):70391 neutral24/DK6 model rows are valid, but Retail explicitly requires early faction choice for DK. TDB has25/6 and26/6 Icecrown starts, no24/6. Reject neutral identity without inventing a start; faction DKs/neutral Monk/Dwarf Shaman preserved. Exact master all-pairs creation test reproduced RED before fix; scoped gates pending.
+
+## 2026-10-15 — Readiness real-time clock
+
+[Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.
 
 ## 2026-10-15 — Guild lifecycle query boundary
 

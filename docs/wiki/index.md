@@ -3,6 +3,12 @@
 - [Stockade proximity receipts](investigations/follower-data.md#stockade-proximity-receipts--2026-10-15) — debug-only acquisition positions distinguish proximity from damage; social-assist gaps remain explicit.
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
+- [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; [health-based damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16) and native modifier exclusions covered separately; PvP/follow-up talents open.
+
+- [BM Kill Command pet damage](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16) — actual Call Pet/owner intent RED→GREEN for34026→83381; native damage attribution and foreign ownership, not charging/full talent coverage.
+
+- [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
+
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
