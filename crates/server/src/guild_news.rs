@@ -223,24 +223,13 @@ mod tests {
     #[test]
     #[ignore = "private5891 runtime setup; requires GUILD_NEWS_PRIVATE_DB"]
     fn guild_news_private_lillehoff_prerequisites() {
-        use redb::ReadableTable;
         let path = std::env::var("GUILD_NEWS_PRIVATE_DB").expect("explicit private redb");
         assert!(path.starts_with("/home/osso/.worktrees/logs/guild-news-"));
         let db = Database::open(path).expect("open stopped private server database");
-        let ids = {
-            let read = db.begin_read().unwrap();
-            let table = read.open_table(crate::persistence::CHARACTERS).unwrap();
-            table
-                .iter()
-                .unwrap()
-                .filter_map(|row| {
-                    let (id, value) = row.unwrap();
-                    let character: crate::persistence_types::CharacterData =
-                        bitcode::decode(value.value()).unwrap();
-                    character.name.starts_with("Gcnews").then_some(id.value())
-                })
-                .collect::<Vec<_>>()
-        };
+        let ids = ["Gcnewslead", "Gcnewsbuyer", "Gcnewsother"].map(|name| {
+            crate::persistence_character::find_character_id_by_name(&db, name)
+                .expect("existing private test character")
+        });
         assert_eq!(ids.len(), 3, "only the three private news characters");
         for id in ids {
             let mut reputation = shared::reputation::CharacterReputation::default();
