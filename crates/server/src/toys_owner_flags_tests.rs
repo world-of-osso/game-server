@@ -34,6 +34,8 @@ fn assert_source_actor_flags(title: i32, flags: u32, owner_is_player: bool, cont
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
     let spell = store.get(92146).unwrap().clone();
     let (mut h, _) = setup(&directory.path().join("owner-flags.redb"));
+    // Owner identity controls flags, not whether regional source data is available.
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.app.insert_resource(store);
     h.app.insert_resource(shared_world_data(&path));
     let mut properties = crate::spell_cast::summon::load_summon_properties(&conn).unwrap();

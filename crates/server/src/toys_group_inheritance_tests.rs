@@ -11,6 +11,8 @@ fn toyfx28_group_private_use_captures_group_and_child_inherits_it() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("inherit.redb"));
+    // Both the group-private guardian and its child use real destination terrain.
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
     h.app.insert_resource(shared_world_data(&path));
