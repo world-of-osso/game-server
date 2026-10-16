@@ -1516,3 +1516,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-15: Feero4484 counter63/event77 first-wave RED and queued cross-creature implementation; native acceptance pending.
 
 - 2026-10-15: counter first-wave GREEN1; Feero immunity/ambusher-target RED2, action145/49 implementation.
+
+- 2026-10-16: Feero authored escort gate passes after master integration; both-skin native accept/speech/movement/first-wave partial evidence and completion/data gaps recorded in escort contract.
