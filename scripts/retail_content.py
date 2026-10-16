@@ -270,6 +270,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     71500,
     # Enchanted Stone Whistle: source Petrified Sand Piper, no AI/click payload.
     98300,
+    # Ysera's Tear: source private vision; procedural display rendering is separate.
+    99518,
     # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
     51113,
     # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.
