@@ -429,6 +429,28 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'creature script identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_gargolmar_primary_uses_db2_bit_not_source_ordinal_and_excludes_companions(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('gargolmar')
+        self.assertIsNotNone(profile, 'pinned Watchkeeper Gargolmar primary is missing')
+        primary, _ = profile
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(1893,543,2);
+            INSERT INTO tdb_creature_template VALUES(17306,'boss_watchkeeper_gargolmar');
+            INSERT INTO raid_encounter_creature VALUES(349,12201,429,7,431,1001,12292);
+        ''')
+        rows = prepare_bindings(self.db, [primary])
+        for _ in range(2):
+            self.db.executescript(binding_sql(rows))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=543').fetchall(),
+            [(17306,1893,2,527,1104,18236)])
+        self.assertEqual(self.db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=349').fetchall(), [(12201,)])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=17306")
+        with self.assertRaisesRegex(ValueError, 'creature script identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_source_identity_drift_refused_before_mutation(self):
         binding = dict(map_id=2813,entry=234648,encounter_id=3101,bit=1,
                        script='boss_kystia_manaheart',journal_id=2679,actor_id=5847,display_id=124578)
