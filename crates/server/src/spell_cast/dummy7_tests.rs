@@ -30,7 +30,8 @@ fn landed(h: &Harness) {
 
 #[test]
 fn dummy7_colossus_smash_marks_each_hit_enemy_and_only_amplifies_owners_damage() {
-    let mut h = harness(Vec::new(), &[167105, 208086, 108853], 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[167105, 208086, 108853], 1)
+        .unwrap();
     let near = spawn_npc(&mut h.app, 4.0);
     let far = spawn_npc(&mut h.app, 40.0);
     let foreign = spawn_player(&mut h.app, 1, 0.0);
@@ -215,7 +216,7 @@ fn raging_blow(chance: f32, rank: bool) {
     if rank {
         ids.push(383854);
     }
-    let mut h = harness(vec![root], &ids, 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(vec![root], &ids, 1).unwrap();
     h.cast_and_deliver(85288, Some(h.npc));
     h.advance(4);
     landed(&h);
@@ -268,7 +269,7 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
         .find(|e| e.index == 0)
         .unwrap()
         .base_points = 0.0;
-    let mut h = harness(vec![root.clone()], &ids, 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(vec![root.clone()], &ids, 1).unwrap();
     h.cast_and_deliver(85288, Some(h.npc));
     h.advance(4);
     landed(&h);
@@ -325,7 +326,7 @@ fn whirlwind(rank: bool, enemies: usize) {
     if rank {
         ids.push(12950);
     }
-    let mut h = harness(Vec::new(), &ids, 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
     h.app
         .world_mut()
         .get_mut::<shared::components::Position>(h.npc)

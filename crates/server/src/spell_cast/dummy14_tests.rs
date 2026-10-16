@@ -238,7 +238,12 @@ fn dummy14_eye_beam_native_initial_plus_ten_primary_hits_with_ranked_guaranteed_
 
 #[test]
 fn dummy14_metamorphosis_landing_hits_at_destination_and_splits_player_cc() {
-    let mut h = harness(Vec::new(), &[191427, 200166, 247121, 162264, 201453], 12).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[191427, 200166, 247121, 162264, 201453],
+        12,
+    )
+    .unwrap();
     let target = h.npc;
     h.app.world_mut().get_mut::<Position>(target).unwrap().x = 20.0;
     let hostile = spawn_npc(&mut h.app, 27.9);
