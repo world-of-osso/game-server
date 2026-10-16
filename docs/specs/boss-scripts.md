@@ -37,7 +37,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 ## Gnomeregan Thermaplugg source boundary
 
 - [x] Prepare only Thermaplugg7800/encounter382 Normal map90 bit5 from pinned TC header/instance, TDB SmartAI and Journal70391 encounter422/actor992/display36563. Copy-only SQL must preserve existing bosses and never credit Walking Bomb7915. `encounter_cpp_bindings.py` accepts explicitly selected paired CSV or WDC5 inputs and requires `--journal-build` so reports do not mislabel70391 as69933.
-- [ ] Verify ordinary SAI10101 first15s/repeat15–35s and11130 first40s/repeat40–60s, real damage, source speech and Normal-only linked pairs of7915 every30s at authored coordinates; controlled death credit/copy isolation. Preserve source templates/flags/resources. Ordinary fight, bomb movement/explosion, knockback movement, loot/persistence and native clear remain separate.
+- [x] Verify ordinary SAI10101 first15s/repeat15–35s and11130 first40s/repeat40–60s, real damage, Talk2 and linked pairs of7915 at30s and60.05s on Normal at authored coordinates; controlled death credit/copy isolation. TC SmartScript.cpp:3794 uses strict timer<diff, so a repeat needs the additional50ms update. Preserve source templates/flags/resources. Other-difficulty exclusion, ordinary fight, bomb movement/explosion, killed-player speech, knockback movement, loot/persistence and native clear remain separate.
 
 ## Ragefire Chasm source hooks
 

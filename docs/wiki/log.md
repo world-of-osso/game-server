@@ -1,6 +1,6 @@
 ## 2026-10-16 — Thermaplugg source identity and linked bombs
 
-[Thermaplugg](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16): Journal70391CSV422/992/display36563 plus pinnedTC/TDB authenticate7800→382/bit5; producerRED→GREEN12/12 and actualSQL generation. Ordinary spell damage/isolated controlled credit and linked30s bomb pair GREEN2/2c0e41c8a; fixture retains real7915 template and observes exact birth positions before unmodified chase. Strengthened source repeat checks pending final integration; no ordinary/native/full-instance claim.
+[Thermaplugg](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16): Journal70391CSV422/992/display36563 plus pinnedTC/TDB authenticate7800→382/bit5; producerRED→GREEN12/12 and actualSQL generation. Ordinary spell damage/isolated controlled credit and linked30s bomb pair GREEN2/2c0e41c8a; fixture retains real7915 template and observes exact birth positions before unmodified chase. Strengthened spell-repeat and second-pair checks pass2/2 at43dd64c6 (41.16s), check/fmt/diffPASS; strict TC timer<diff requires repeat capture by60.05s. No ordinary/native/full-instance claim.
 
 ## 2026-10-16 — Crowd Pummeler source clock and identity
 
