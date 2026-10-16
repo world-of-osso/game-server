@@ -1397,10 +1397,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5513 + four account-only authored scenario-ordinal definitions.
-    // Structural union, not full boss content, recipe repair, travel or acquisition proof.
-    assert_eq!(union.len(), 5517);
-    for achievement in [18202, 18203, 18205, 18206] {
+    // Installed70391: 5517 + both faction-specific Call to Arms definitions.
+    // Structural union, not queue/admission, travel or acquisition proof.
+    assert_eq!(union.len(), 5519);
+    for achievement in [908, 909, 18202, 18203, 18205, 18206] {
         assert!(
             union.contains(&achievement),
             "authored scenario ordinal {achievement}"
