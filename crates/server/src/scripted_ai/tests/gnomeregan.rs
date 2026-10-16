@@ -22,18 +22,38 @@ fn encounter_coverage_thermaplugg_real_spells_and_isolated_credit() {
         max: 1_000_000.0,
     });
     h.engage(boss);
-    h.advance(14.5);
-    assert_eq!(h.casts(0, boss, 10101), 0);
-    assert_eq!(h.casts(0, boss, 11130), 0);
-    h.advance(1.0);
-    assert_eq!(h.casts(0, boss, 10101), 1);
-    h.advance(24.0);
-    assert_eq!(h.casts(0, boss, 11130), 0);
-    h.advance(1.0);
-    assert_eq!(h.casts(0, boss, 11130), 1);
-    h.advance(65.0);
-    for spell in [10101, 11130] {
-        assert!(h.casts(0, boss, spell) >= 2, "missing repeat {spell}");
+    let mut observed = Vec::new();
+    let mut cursor = 0;
+    for tick in 1..=2200 {
+        h.advance(0.05);
+        let log = &h.inbox(0).log;
+        observed.extend(log[cursor..].iter().filter_map(|event| {
+            let spell = event.spell_id?;
+            (event.source == Some(boss.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && [10101, 11130].contains(&spell))
+            .then_some((spell, tick as f32 * 0.05))
+        }));
+        cursor = log.len();
+    }
+    eprintln!("THERMAPLUGG successful cast times: {observed:?}");
+    for (spell, first, minimum, maximum) in [(10101, 15.0, 15.0, 35.0), (11130, 40.0, 40.0, 60.0)] {
+        let times: Vec<_> = observed
+            .iter()
+            .filter(|(id, _)| *id == spell)
+            .map(|(_, time)| *time)
+            .collect();
+        assert!(times.len() >= 2, "missing repeat {spell}");
+        assert!(
+            (first - 0.1..=first + 0.1).contains(&times[0]),
+            "first {spell}: {times:?}"
+        );
+        for pair in times.windows(2) {
+            assert!(
+                (minimum - 0.1..=maximum + 0.1).contains(&(pair[1] - pair[0])),
+                "repeat {spell}: {times:?}"
+            );
+        }
         assert_eq!(h.casts(1, boss, spell), 0);
         assert!(
             h.inbox(0)
@@ -140,6 +160,16 @@ fn encounter_coverage_thermaplugg_normal_linked_walking_bomb_pair() {
         "bomb pair must not complete encounter"
     );
     assert!(h.inbox(1).ends.is_empty());
+    h.advance(29.9);
+    assert_eq!(h.app.world().resource::<WalkingBombBirths>().0.len(), 2);
+    h.advance(0.1);
+    let births = &h.app.world().resource::<WalkingBombBirths>().0;
+    assert_eq!(
+        births.len(),
+        4,
+        "authored30s repeat must create another linked pair"
+    );
+    assert!(births.iter().all(|(_, birth_map)| *birth_map == map));
 }
 
 #[test]
