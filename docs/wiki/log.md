@@ -6,6 +6,8 @@
 [Perks](systems/guild-perks.md): actual persisted join RED reproduced no perk grants. Membership-derived known IDs now remain separate from class/profession learning and survive ordinary spec rebuilds; owner deltas follow Update membership changes. Focused GREEN and real UDP/native/effect proof remain open.
 
 ## 2026-10-15 — Read-only follower group reward receipts
+
+- 2026-10-16: [Arena residual](investigations/slow-native-test-fixtures.md#arena-residual-bounded-independent-fixtures-2026-10-16): LEAD-approved cap4 workers; all sixteen native cases pass52.70s with unchanged assertions/frames/50msstep; sampled CPU113.70s versus52.90s wall, full-suite separate.
 ## 2026-10-16 — Ysera source admission and private body closure
 
 [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16): genuine importer/use RED, authentic99518 admission, six importer controls and actual private-owner/front-offset/static120s simulation lifecycle pass. Whole-Toy138/138 and check/fmt pass after module-order-only formatting repair. Seventeen70391 body dependencies plus four aliases authenticate/publish privately; procedural8605/type22 remains unrendered. Prepared classification adds only130170 to385/1166, not complete-toy parity; earlier interaction and guardian HP gaps remain.
