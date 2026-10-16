@@ -370,6 +370,9 @@ pub(crate) fn spawn_creature(
             spawn: world_data.spawn_string_ids.get(&spawn.guid).cloned(),
             script: None,
         };
+        if let Some(faction) = crate::pvp::isle::creature_faction(spawn.map, &string_ids) {
+            entity.insert(UnitFactionTemplate(faction));
+        }
         if string_ids != CreatureStringIds::default() {
             entity.insert(string_ids);
         }
