@@ -17,7 +17,12 @@ Extend the existing [SmartAI escort interpreter](smartai-escort.md), not a paral
 | Counter63/event77 cross-creature death flow | Server GREEN | Real four-death gate plus all three waves/credit |
 | Attack-start49, immunity145 | Server GREEN | RED2→GREEN2 at appearance/acceptance hooks |
 | Emote5 | Named cosmetic gap | Authored second-camp roar15 not yet delivered to client |
-| Both-skin native complete/death run | Pending | No evidence yet |
+| Both-skin native acceptance/speech/walking/first ambush | Partial, inspected1920x1080 | Modern and Forever real accounts on5931; no completion override |
+| Both-skin native complete run | BLOCKED | Required ambusher textures lack verified receipts; no earned native completion |
+
+Final merged-server gate:36 escort interpreter tests passed,1 explicit private-account setup test ignored; server cargo check and both workspace format checks passed. All three authored waves/credit and death failure are server-tested, not native completion proof.
+
+Native receipts missing for source-selected assassin textures923044/919332/1105445. Private70391 appearance import fixes eleven display-admission rows, but cannot manufacture verified payload receipts from CSVs. Earlier harness Healing Touch5185 was also absent from70391 and produced Unknown spell; corrected to Regrowth8936, independently present with heal10/periodic-heal8 in local SpellEffect. Corrected protective-heal live proof remains open. No model substitution or fabricated receipt is permitted. Evidence: engine `data/diagnostics/escort-quests-2026-10-15/`; inspected partial PNGs under `/syncthing/AgentShared/2026-10-15/escort-quests/`.
 
 No canonical DB writes, guessed missing actions, source replacement, master push or unrelated UI redesign. Other unsupported SmartAI actions/events remain named gaps; this is not full SmartAI parity.
 
@@ -25,7 +30,7 @@ No canonical DB writes, guessed missing actions, source replacement, master push
 
 Read-only `/home/osso/Projects/world-of-osso/game-engine/data/skyborn-handoff/2026-10-07-c1cdf6e/server/world.db`: tdb_smart_scripts, tdb_waypoint_path/node, tdb_creature_summon_groups, tdb_creature_template, content_creature_text. Supplied DB includes all ten ambushers.
 
-Pinned URLs and SHA-256 (retrieved2026-10-15; archived in engine data/diagnostics/escort-quests-2026-10-15/sources):
+Pinned URLs and SHA-256 (retrieved2026-10-16; archived in engine data/diagnostics/escort-quests-2026-10-15/sources):
 
 - https://raw.githubusercontent.com/TrinityCore/TrinityCore/a352b1fa/src/server/game/AI/SmartScripts/SmartScript.cpp — `957a0a95fb083039b08485ea89f83f2f0c31931c8a8acaf4d2a6a62bbfc6b3b4`
 - https://raw.githubusercontent.com/TrinityCore/TrinityCore/a352b1fa/src/server/game/AI/SmartScripts/SmartAI.cpp — `ee01874e762becccf07c0be1e02fee6eb3927c6fa0b6b040e9bdf88a2af9380f`
