@@ -1,6 +1,8 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Stampwhistle assistant/mailbox](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16) — authentic132969/Assistant35 and mailbox service source fixes; full summoned expiry/gates active, native rendering separate.
+
 - [Sightless detection consumer](systems/toys.md#sightless-detection-consumer-2026-10-16) — actual journal152 RED→GREEN; existing native12yd/7yd hostile acquisition and source10min lifecycle proof, wire/rendering separate.
 
 - [Waywatcher source lifecycle](systems/toys.md#waywatcher-source-lifecycle-2026-10-16) — current99572 learned-use acceptance1/1, source Val'sharah/15s/900s behavior and private18-asset closure; canonical publication/rendering separate.
