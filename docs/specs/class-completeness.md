@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Optional percentage costs, flat-spellmod exclusion and full talent/finisher acceptance remain separate.
+
 - [x] Native aura334 adds signed attacker-owned percentage points only to autoattack critical chance, summing applied amounts/stacks before the nonnegative clamp. Removal ends its contribution; victim-only auras and magic/weapon spell crit remain independent. Avenging Wrath31884 also has aura290, which continues through normal stat computation; this consumer does not replace or double-count it. Full talent amount bindings, legal gear and fresh native acceptance remain separate.
 
 - [ ] At the existing live-player melee weapon-spell dodge boundary, caster aura251 contributes its signed active total before expertise subtraction and final nonnegative clamp. Positive and negative native effects sum on the actual attacker; recipient-only effects do not contribute, and removal ends the modifier. Keep native facing/control/attribute/ranged exclusions. NPC dodge, aura248, player expertise and full251/ability acceptance remain separate.
