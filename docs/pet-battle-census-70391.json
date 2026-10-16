@@ -1,10 +1,10 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "52327dd5",
+  "validator_revision": "4fbe6e59",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1749,
+  "admitted_effect_rows": 1756,
   "effect_rows": 2829,
-  "admitted_abilities": 993,
+  "admitted_abilities": 1006,
   "abilities": 1404,
   "properties": [
     {
@@ -1335,19 +1335,12 @@
       ]
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 7,
+      "handler": true,
       "property": 150,
       "rows": 8,
       "rejected_graph_effect_ids": [
-        547,
-        713,
-        716,
-        722,
-        745,
-        763,
-        4252,
-        4551
+        716
       ]
     },
     {
@@ -1970,7 +1963,6 @@
     517,
     519,
     521,
-    523,
     525,
     526,
     527,
@@ -1991,22 +1983,14 @@
     600,
     605,
     646,
-    652,
-    653,
     657,
     658,
-    662,
-    663,
     670,
     672,
-    683,
-    684,
     685,
     686,
     693,
     697,
-    700,
-    701,
     715,
     719,
     720,
@@ -2339,7 +2323,6 @@
     3845,
     3852,
     3853,
-    3854,
     3856,
     3857,
     3859,
@@ -2372,7 +2355,6 @@
     3944,
     3947,
     3950,
-    3960,
     3969,
     3970,
     3971,
@@ -2488,8 +2470,6 @@
     "319": "ability 319: undetermined team target routing",
     "321": "unsupported parameters for property 159 effect 543: [0, 0, 0, 0, 0, 0]",
     "323": "unsupported property 86 at effect 546",
-    "325": "unsupported property 150 at effect 547",
-    "326": "ability 326: unsupported object/team aura",
     "327": "ability 328: unsupported object/team aura",
     "328": "ability 328: unsupported object/team aura",
     "329": "ability 329: unsupported object/team aura",
@@ -2503,22 +2483,14 @@
     "387": "ability 387: undetermined team target routing",
     "392": "unsupported parameters for property 85 effect 647: [161, 0, 0, 0, 0, 0]",
     "427": "unsupported property 25 at effect 698",
-    "433": "unsupported property 150 at effect 713",
-    "434": "ability 434: unsupported object/team aura",
     "438": "ability 438: unsupported object/team aura",
     "439": "ability 438: unsupported object/team aura",
-    "443": "ability 443: unsupported object/team aura",
-    "444": "unsupported property 150 at effect 722",
     "451": "unsupported property 121 at effect 1368",
     "453": "ability 453: undetermined weather flat-modifier power ownership",
-    "464": "ability 464: unsupported object/team aura",
-    "465": "unsupported property 150 at effect 745",
     "466": "unsupported parameters for property 107 effect 2147: [100, 0, 0, 0, 0, 0]",
     "467": "unsupported property 121 at effect 747",
     "472": "ability 472: unsupported turn 1109 kind1 event1",
     "476": "ability 968: unsupported aura state 124 Special_TypeOverride",
-    "479": "unsupported property 150 at effect 763",
-    "480": "ability 480: unsupported object/team aura",
     "492": "ability 537: unsupported turn 765 kind1 event2",
     "496": "ability 496: unsupported turn 724 kind1 event1",
     "497": "ability 496: unsupported turn 724 kind1 event1",
@@ -2766,7 +2738,6 @@
     "2309": "ability 2309: undetermined team target routing",
     "2316": "ability 2316: unsupported turn 3852 kind1 event1",
     "2317": "ability 2316: unsupported turn 3852 kind1 event1",
-    "2318": "unsupported property 150 at effect 4252",
     "2320": "ability 2320: unsupported turn 3856 kind1 event2",
     "2321": "ability 2321: undetermined weather flat-modifier power ownership",
     "2323": "ability 2323: unsupported turn 3859 kind1 event1",
@@ -2795,8 +2766,6 @@
     "2386": "ability 543: unsupported turn 773 kind1 event2",
     "2388": "unsupported property 363 at effect 4453",
     "2391": "unsupported parameters for property 168 effect 4467: [0, 100, 0, 0, 0, 0]",
-    "2397": "ability 2397: unsupported object/team aura",
-    "2398": "unsupported property 150 at effect 4551",
     "2405": "ability 2405: unsupported turn 3971 kind1 event12",
     "2406": "ability 718: unsupported aura state 314 Critical_Damage_Bonus",
     "2410": "ability 2410: undetermined team target routing",
@@ -2890,70 +2859,77 @@
     {
       "id": 1,
       "name": "Is_Dead",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         131,
         285,
         288
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 2,
       "name": "maxHealthBonus",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         88,
         289,
         577,
         610,
         1990
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 3,
       "name": "Internal_InitialHealth",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 4,
       "name": "Stat_Kharma",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         196
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 17,
       "name": "Internal_InitialLevel",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 18,
       "name": "Stat_Power",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 19,
       "name": "Stat_Stamina",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 20,
       "name": "Stat_Speed",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         235,
         853
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 21,
       "name": "Mechanic_IsPoisoned",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         151,
         271,
@@ -2969,12 +2945,13 @@
         2290,
         2350,
         2441
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 22,
       "name": "Mechanic_IsStunned",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         174,
         498,
@@ -2987,12 +2964,13 @@
         2061,
         2211,
         2459
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 23,
       "name": "Mod_DamageDealtPercent",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         153,
         207,
@@ -3034,12 +3012,13 @@
         2216,
         2249,
         2254
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 24,
       "name": "Mod_DamageTakenPercent",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         164,
         185,
@@ -3068,12 +3047,13 @@
         2316,
         2371,
         2510
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 25,
       "name": "Mod_SpeedPercent",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         154,
         161,
@@ -3099,30 +3079,34 @@
         2091,
         2254,
         2494
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 26,
       "name": "Ramping_DamageID",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 27,
       "name": "Ramping_DamageUses",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 28,
       "name": "Condition_WasDamagedThisTurn",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 29,
       "name": "untargettable",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         261,
         331,
@@ -3137,12 +3121,13 @@
         1358,
         2339,
         2408
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 30,
       "name": "Mechanic_IsUnderground",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         331,
         340,
@@ -3150,24 +3135,27 @@
         829,
         830,
         2408
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 31,
       "name": "Last_HitTaken",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 32,
       "name": "Last_HitDealt",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 33,
       "name": "Mechanic_IsFlying",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         264,
         322,
@@ -3176,12 +3164,13 @@
         839,
         852,
         2339
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 34,
       "name": "Mechanic_IsBurning",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         171,
         177,
@@ -3191,12 +3180,13 @@
         1042,
         1889,
         1918
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 35,
       "name": "turnLock",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         86,
         174,
@@ -3219,12 +3209,13 @@
         2066,
         2211,
         2481
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 36,
       "name": "swapOutLock",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         246,
         248,
@@ -3244,12 +3235,13 @@
         2066,
         2083,
         2481
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 40,
       "name": "Stat_CritChance",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         196,
         251,
@@ -3274,12 +3266,13 @@
         1771,
         2235,
         2445
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 41,
       "name": "Stat_Accuracy",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         187,
         251,
@@ -3299,74 +3292,85 @@
         1061,
         1735,
         2235
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 42,
       "name": "Passive_Critter",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 43,
       "name": "Passive_Beast",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 44,
       "name": "Passive_Humanoid",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 45,
       "name": "Passive_Flying",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 46,
       "name": "Passive_Dragon",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 47,
       "name": "Passive_Elemental",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 48,
       "name": "Passive_Mechanical",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 49,
       "name": "Passive_Magic",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 50,
       "name": "Passive_Undead",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         2262
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 51,
       "name": "Passive_Aquatic",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 52,
       "name": "Mechanic_IsChilled",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         205,
         415,
@@ -3375,116 +3379,130 @@
         785,
         787,
         848
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 53,
       "name": "Weather_BurntEarth",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         171
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 54,
       "name": "Weather_ArcaneStorm",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         590
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 55,
       "name": "Weather_Moonlight",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         596
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 56,
       "name": "Weather_Darkness",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         257
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 57,
       "name": "Weather_Sandstorm",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         454
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 58,
       "name": "Weather_Blizzard",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         205
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 59,
       "name": "Weather_Mud",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         718
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 60,
       "name": "Weather_Rain",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         229
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 61,
       "name": "Weather_Sunlight",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         403
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 62,
       "name": "Weather_LightningStorm",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         203,
         2320
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 63,
       "name": "Weather_Windy",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 64,
       "name": "Mechanic_IsWebbed",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         338,
         381
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 65,
       "name": "Mod_HealingDealtPercent",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         403
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 66,
       "name": "Mod_HealingTakenPercent",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         220,
         257,
@@ -3492,32 +3510,35 @@
         793,
         1059,
         1732
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 67,
       "name": "Mechanic_IsInvisible",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         261,
         565,
         822
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 68,
       "name": "unkillable",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         242,
         284,
         725
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 69,
       "name": "Mechanic_IsObject",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         175,
         189,
@@ -3553,18 +3574,20 @@
         2427,
         2447,
         2490
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 70,
       "name": "Special_Plant",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 71,
       "name": "Add_FlatDamageTaken",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         306,
         309,
@@ -3592,21 +3615,23 @@
         2428,
         2450,
         2504
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 72,
       "name": "Add_FlatDamageDealt",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         203,
         2320
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 73,
       "name": "Stat_Dodge",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         311,
         804,
@@ -3624,12 +3649,13 @@
         2060,
         2409,
         2459
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 74,
       "name": "Special_BlockedAttackCount",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         326,
         333,
@@ -3653,12 +3679,13 @@
         2379,
         2397,
         2415
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 75,
       "name": "Special_ObjectRedirectionAuraID",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         326,
         333,
@@ -3674,104 +3701,116 @@
         2110,
         2226,
         2397
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 77,
       "name": "Mechanic_IsBleeding",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         410,
         491,
         2369
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 78,
       "name": "Stat_Gender",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 82,
       "name": "Mechanic_IsBlind",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         257,
         462,
         954,
         1014,
         1048
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 84,
       "name": "Cosmetic_Stealthed",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         543,
         822,
         2254
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 85,
       "name": "Cosmetic_WaterBubbled",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 87,
       "name": "Mod_PetTypeDamageDealtPercent",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         203,
         205,
         229,
         596,
         2320
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 88,
       "name": "Mod_PetTypeDamageTakenPercent",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 89,
       "name": "Mod_PetType_ID",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         203,
         205,
         229,
         596,
         2320
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 90,
       "name": "Internal_CaptureBoost",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 91,
       "name": "Internal_EffectSucceeded",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 93,
       "name": "Special_IsCockroach",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 98,
       "name": "swapInLock",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         246,
         331,
@@ -3780,129 +3819,157 @@
         1358,
         1409,
         2066
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 99,
       "name": "Mod_MaxHealthPercent",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         403
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 100,
       "name": "Clone_Active",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 101,
       "name": "Clone_PBOID",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 102,
       "name": "Clone_PetAbility1",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 103,
       "name": "Clone_PetAbility2",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 104,
       "name": "Clone_PetAbility3",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 105,
       "name": "Clone_Health",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 106,
       "name": "Clone_MaxHealth",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 107,
       "name": "Clone_LastAbilityID",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 108,
       "name": "Clone_LastAbilityTurn",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 113,
       "name": "Special_IsCharging",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 114,
       "name": "Special_IsRecovering",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 117,
       "name": "Clone_CloneAbilityID",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 118,
       "name": "Clone_CloneAuraID",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         720,
         799
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 119,
       "name": "DarkSimulacrum_AbilityID",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 120,
       "name": "Special_ConsumedCorpse",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 121,
       "name": "Ramping_PBOID",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 122,
       "name": "reflecting",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 123,
       "name": "Special_BlockedFriendlyMode",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         326,
         434,
         438,
+        443,
+        464,
+        480,
+        2397
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": [
+        326,
+        434,
         443,
         464,
         480,
@@ -3912,23 +3979,32 @@
     {
       "id": 124,
       "name": "Special_TypeOverride",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         968,
         1417,
         1419,
         1420,
         2262
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 126,
       "name": "Mechanic_IsWall",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         326,
         434,
         438,
+        443,
+        464,
+        480,
+        2397
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": [
+        326,
+        434,
         443,
         464,
         480,
@@ -3938,217 +4014,247 @@
     {
       "id": 127,
       "name": "Condition_DidDamageThisRound",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 128,
       "name": "Cosmetic_FlyTier",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 129,
       "name": "Cosmetic_FetishMask",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 136,
       "name": "Mechanic_IsBomb",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         385,
         635,
         637,
         1071,
         1081
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 141,
       "name": "Special_IsCleansing",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 144,
       "name": "Cosmetic_Bigglesworth",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 145,
       "name": "Internal_HealthBeforeInstakill",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 149,
       "name": "resilient",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         924
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 153,
       "name": "Passive_Elite",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 158,
       "name": "Cosmetic_Chaos",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         1074
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 162,
       "name": "Passive_Boss",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 176,
       "name": "Cosmetic_TreasureGoblin",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 191,
       "name": "Ignore_Damage_Below_Threshold",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         1390
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 196,
       "name": "Cosmetic_Spectral_Blue",
-      "accepted_as_aura_state": true,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 199,
       "name": "Special_Egg",
-      "accepted_as_aura_state": true,
       "referenced_by_abilities": [
         1593
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": true,
+      "conditional_aura_abilities": []
     },
     {
       "id": 200,
       "name": "Ignore_Damage_Above_Threshold",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         1674
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 201,
       "name": "Cheating_Death",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         1906
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 202,
       "name": "Add_PeriodicDamageTaken",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         2112,
         2233
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 302,
       "name": "Dealt_KillingBlow",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 303,
       "name": "Passive_Leprosy",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         2244
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 304,
       "name": "Special_Auto_Rebuilder",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 305,
       "name": "Special_Necrotic_Touch",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 306,
       "name": "Special_Redirect_Healing",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         2264,
         2295
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 313,
       "name": "Special_Intercept_Damage",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         2281
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 314,
       "name": "Critical_Damage_Bonus",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         718,
         2343
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 315,
       "name": "Internal_Never_Cancel_Spell_Visual",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         2262
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 316,
       "name": "Weather_Toxic_Gas",
-      "accepted_as_aura_state": false,
       "referenced_by_abilities": [
         2350
-      ]
+      ],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 319,
       "name": "Internal_Immune_Knockback",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 320,
       "name": "Special_Stored_Up_Damage",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     },
     {
       "id": 321,
       "name": "Special_IsFromZM",
-      "accepted_as_aura_state": false,
-      "referenced_by_abilities": []
+      "referenced_by_abilities": [],
+      "accepted_by_unconditional_aura_gate": false,
+      "conditional_aura_abilities": []
     }
   ],
   "unresolved_state_rows": [
@@ -4397,5 +4503,8 @@
       "Value": "2544",
       "BattlePetSpeciesID": "5061"
     }
+  ],
+  "referenced_without_definition": [
+    0
   ]
 }
