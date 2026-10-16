@@ -9,7 +9,7 @@ const DAMAGE: u32 = 260798;
 const PROTECTION: u32 = 137048;
 const ARMS: u32 = 137049;
 
-fn setup(spec: u32) -> Harness {
+fn spawn_execute_caster(spec: u32) -> Harness {
     let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
         &[EXECUTE, DAMAGE, spec, 29725, 52437, 316405],
@@ -66,7 +66,7 @@ fn unscaled_child(h: &mut Harness) -> f32 {
 }
 
 fn assert_rage_damage(spec: u32, rage: f32, expected_spend: f32, multiplier: f32) {
-    let mut h = setup(spec);
+    let mut h = spawn_execute_caster(spec);
     let baseline = unscaled_child(&mut h);
     h.set_power(PowerType::Rage, rage);
     let health = h.health(h.npc);
@@ -109,7 +109,7 @@ fn execute_damage_native_arms_shares_actual_rage_formula() {
 
 #[test]
 fn execute_damage_native_sudden_death_uses_authored_rage_without_spending() {
-    let mut h = setup(PROTECTION);
+    let mut h = spawn_execute_caster(PROTECTION);
     let baseline = unscaled_child(&mut h);
     apply(&mut h, 29725);
     apply(&mut h, 52437);
@@ -124,7 +124,7 @@ fn execute_damage_native_sudden_death_uses_authored_rage_without_spending() {
 
 #[test]
 fn execute_damage_native_standalone_child_does_not_spend_rage() {
-    let mut h = setup(PROTECTION);
+    let mut h = spawn_execute_caster(PROTECTION);
     h.set_power(PowerType::Rage, 700.0);
     let before = unscaled_child(&mut h);
     h.cast_and_deliver(EXECUTE, Some(h.npc));
@@ -136,7 +136,7 @@ fn execute_damage_native_standalone_child_does_not_spend_rage() {
 
 #[test]
 fn execute_damage_native_refund_does_not_reduce_launched_damage_budget() {
-    let mut h = setup(ARMS);
+    let mut h = spawn_execute_caster(ARMS);
     let baseline = unscaled_child(&mut h);
     apply(&mut h, 316405);
     h.set_power(PowerType::Rage, 400.0);
