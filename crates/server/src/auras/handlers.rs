@@ -213,6 +213,8 @@ pub const MOD_NO_ACTIONS: u32 = 321;
 pub const ANIM_REPLACEMENT_SET: u32 = 312;
 pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
 pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
+/// TC a352b1fa Unit.cpp2387: signed autoattack-only critical chance.
+pub const MOD_AUTOATTACK_CRIT_CHANCE: u32 = 334;
 pub const MOD_AUTOATTACK_DAMAGE: u32 = 344;
 /// SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT (SpellAuraDefines.h, TrinityCore a352b1fa).
 pub const OVERRIDE_SPELL_POWER_BY_AP_PCT: u32 = 366;
@@ -319,6 +321,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_RESISTANCE_PCT
         | MOD_MINIMUM_SPEED
         | MOD_MELEE_RANGED_HASTE_2
+        | MOD_AUTOATTACK_CRIT_CHANCE
         | MOD_AUTOATTACK_DAMAGE
         | MOD_AUTOATTACK_RANGE
         | MOD_SUMMON_DAMAGE
