@@ -1,3 +1,7 @@
+## 2026-10-16 — Two-way pet-wall150 charges
+
+[Seven source-qualified pairs](../pet-battle-effect-coverage.md#two-way-walls150--bounded-proof2026-10-16): actual unsupported150 RED6→GREEN88, canonical journal3/wild12/PvP9 and check/fmt;1749→1756/2829 rows (61.82→62.07%),993→1006 graphs. Both-skin private5961 Ice Barrier479 physically blocks incoming then outgoing attacks, expires, and exposes subsequent45/65critical damage; six fullHD originals inspected. Conditional123/126 is bounded to six auras; Onyx, multi-wall order and exact Retail/VFX feedback remain gaps. Subject model/texture receipts match the current local root; owned-process cleanup passes.
+
 ## 2026-10-16 — Call Pet missing-storage refusal
 
 [Pet lifecycle](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16): absent PetStable admitted883 success then effect returned without a pet. Actual native-target fresh-storage RED→GREEN; four controls and copied real character47 storage probe pass. No saved pet exists. Pinned creation-cast data has no Human hunter pet row; named source gap, no granted kit. Authenticated real-profile follower melee death already reaches its owner exactly once in a separate baseline test; terminal native delivery ordering remains under investigation rather than adding duplicate events.
