@@ -13,8 +13,8 @@
 //! `CREATE_ITEM` (24) stores the item and rolls `Player::UpdateCraftSkill`.
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
-mod data;
 mod concentration;
+mod data;
 mod gathering;
 #[cfg(test)]
 mod modern_crafting_fixture;
