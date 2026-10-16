@@ -1,3 +1,7 @@
+## 2026-10-15 — Guild invitation creation FIFO
+
+[Invitation producer](investigations/server-tick-lag.md#guild-invitation-creation-fifo--2026-10-15):8 held-writer REDs, premature refusal and tick decode panic become fresh FIFO authority and receipt-bound source/target publication;13/13 wire/lifecycle controls pass. Earlier revocation/join/invite/decline, duplicates, departed/rebound source, relogged target, actual failure metric and reopen covered. Initial fixture tuple-limit compile failure is retained separately; charters and global release/HOL proof remain open.
+
 ## 2026-10-15 — Guild invitation acceptance FIFO
 
 [Acceptance](investigations/server-tick-lag.md#guild-invitation-acceptance-fifo--2026-10-15): fresh shared-FIFO acceptance with atomic membership/rank/petition cleanup and receipt-bound component/reply/member publication. Seven held-writer REDs, two premature refusals and tick decode failure become15/15 native passes including legacy gameplay assertions, relog/rebound/departure and mid-transaction rollback. Initial fixture receiver/early-reply failures remain archived; invite creation, charters and global release/HOL proof remain open.

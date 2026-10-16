@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Guild invitation creation FIFO](investigations/server-tick-lag.md#guild-invitation-creation-fifo--2026-10-15) — fresh inviter/target authority and durable notification, source/target session binding;10 wire/FIFO plus3 retained controls pass13/13; release proof remains open.
+
 - [Guild acceptance FIFO](investigations/server-tick-lag.md#guild-invitation-acceptance-fifo--2026-10-15) — owned authenticated intent, atomic fresh acceptance and receipt-bound membership/replies;12 wire/FIFO plus3 retained controls pass15/15, release proof remains open.
 
 - [Guild decline FIFO](investigations/server-tick-lag.md#guild-invitation-decline-fifo--2026-10-15) — owned character intent, no-ack packet and fresh pending row;5 held-writer REDs plus tick decode error become8 native passes,2 incoming admin controls pass separately; current warning-free check passes.
