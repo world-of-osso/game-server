@@ -70,4 +70,13 @@ fn toyfx28_group_private_use_captures_group_and_child_inherits_it() {
         .0;
     assert_eq!(world.get::<PrivateObjectGroup>(child).unwrap().0, group);
     assert!(world.get::<PrivateObjectOwner>(child).is_none());
+    // The temporary NPC owner has UnitLevel, not the player's Level component.
+    assert_eq!(
+        world.get::<shared::components::UnitLevel>(actor).unwrap().0,
+        30
+    );
+    assert_eq!(
+        world.get::<shared::components::UnitLevel>(child).unwrap().0,
+        30
+    );
 }
