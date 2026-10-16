@@ -1,8 +1,12 @@
 # Auras
 
+## Optional cost spell modifiers (2026-10-16)
+
+TC a352b1fa SpellInfo.cpp4220–4226 explicitly excludes flat spellmods from optional power costs. `spell_mods::modifier_totals` retains the existing live/charged snapshot matching; ordinary `modify` uses `(base+flat)×mult`, while optional `modify_percent` uses only `base×mult`. Native Practiced Strikes429647 effect6/op34 previously subtracted100 from both Protection Execute163201's required and optional Rage: a400 input left200 instead of100. No spell-specific production exception or resource-cap change. Native Sudden Death52437 effect5/op34=-100% and Arms order0 are independent controls. Native OptionalCostPct remains unconsumed. [Contract](../../specs/class-completeness.md).
+
 ## Additional optional resource cost (2026-10-16)
 
-TC a352b1fa SpellInfo.cpp4140–4144 adds aura63 only in the optional branch, filtered by power type and `IsAffectingSpell`. `resources::additional_optional_cost` reads the actual caster's applied effects and shared native family/mask matcher; `power_costs` adds that total before the existing optional modifier/availability clamp. Native193531/394321 already raise ComboPoint maximum through418, but their63 effects were missing: ordinary Envenom at native cap6 left1 point, including after unlearning one of two Stratagems. No resource caps, native rows, RNG or simulation clocks change. Native availability and base Energy cost remain separate from optional spend. Existing optional percentage costs and flat-spellmod exclusion are not implemented by this slice. [Contract](../../specs/class-completeness.md).
+TC a352b1fa SpellInfo.cpp4140–4144 adds aura63 only in the optional branch, filtered by power type and `IsAffectingSpell`. `resources::additional_optional_cost` reads the actual caster's applied effects and shared native family/mask matcher; `power_costs` adds that total before the existing optional modifier/availability clamp. Native193531/394321 already raise ComboPoint maximum through418, but their63 effects were missing: ordinary Envenom at native cap6 left1 point, including after unlearning one of two Stratagems. No resource caps, native rows, RNG or simulation clocks change. Native availability and base Energy cost remain separate from optional spend. Native OptionalCostPct fields remain separate from the percentage spell modifiers below. [Contract](../../specs/class-completeness.md).
 
 ## Autoattack-only critical chance (2026-10-16)
 

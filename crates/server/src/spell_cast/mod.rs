@@ -1774,7 +1774,7 @@ pub(crate) fn applicable_costs(
         let optional = (cost.optional_cost as f32 + additional).max(0.0);
         let optional = if optional > 0.0 {
             match SpellModOp::power_cost(cost.order_index) {
-                Some(op) => modify(world, caster, spell, op, optional).max(0.0),
+                Some(op) => spell_mods::modify_percent(world, caster, spell, op, optional).max(0.0),
                 None => optional,
             }
         } else {
