@@ -10,6 +10,115 @@ const MEGAVOLT: u32 = 11082;
 const CHAIN_BOLT: u32 = 11085;
 
 #[test]
+fn encounter_coverage_thermaplugg_real_spells_and_isolated_credit() {
+    const THERMAPLUGG: u32 = 7800;
+    const BIT: u32 = 5;
+    const ENCOUNTER: u32 = 382;
+    let (mut h, boss, map) = bound_boss(THERMAPLUGG, MAP, BIT);
+    let player = h.player();
+    // Controlled survival only; preserve authored spells/resources/timers and summon behavior.
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000.0,
+        max: 1_000_000.0,
+    });
+    h.engage(boss);
+    h.advance(14.5);
+    assert_eq!(h.casts(0, boss, 10101), 0);
+    assert_eq!(h.casts(0, boss, 11130), 0);
+    h.advance(1.0);
+    assert_eq!(h.casts(0, boss, 10101), 1);
+    h.advance(24.0);
+    assert_eq!(h.casts(0, boss, 11130), 0);
+    h.advance(1.0);
+    assert_eq!(h.casts(0, boss, 11130), 1);
+    h.advance(65.0);
+    for spell in [10101, 11130] {
+        assert!(h.casts(0, boss, spell) >= 2, "missing repeat {spell}");
+        assert_eq!(h.casts(1, boss, spell), 0);
+        assert!(
+            h.inbox(0)
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(spell)
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "missing real damage {spell}"
+        );
+    }
+    assert!(
+        h.inbox(0)
+            .starts
+            .iter()
+            .any(|start| start.encounter_id == ENCOUNTER)
+    );
+    assert!(h.inbox(1).starts.is_empty());
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        1 << BIT
+    );
+    assert_eq!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .filter(|end| end.encounter_id == ENCOUNTER && end.success)
+            .count(),
+        1
+    );
+    assert!(h.inbox(1).ends.is_empty());
+}
+
+#[test]
+fn encounter_coverage_thermaplugg_normal_linked_walking_bomb_pair() {
+    const THERMAPLUGG: u32 = 7800;
+    const WALKING_BOMB: u32 = 7915;
+    let (mut h, boss, map) = bound_boss(THERMAPLUGG, MAP, 5);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000.0,
+        max: 1_000_000.0,
+    });
+    let speech = h.app.world().resource::<CreatureTexts>().groups[&THERMAPLUGG][&2][0]
+        .male_text
+        .clone();
+    h.engage(boss);
+    h.advance(29.9);
+    assert!(h.creatures_of(WALKING_BOMB).is_empty());
+    h.advance(0.1);
+    let bombs = h.creatures_of(WALKING_BOMB);
+    assert_eq!(bombs.len(), 2, "real linked Normal-only pair must spawn");
+    for (x, y, z) in [(-521.934, 693.13, -327.005), (-535.318, 649.987, -326.494)] {
+        assert!(
+            bombs.iter().any(|bomb| {
+                let pos = h.app.world().get::<Position>(*bomb).unwrap();
+                Vec3::new(pos.x - x, pos.y - z, pos.z + y).length() < 0.01
+            }),
+            "missing authored bomb position {x}/{y}/{z}"
+        );
+    }
+    for bomb in bombs {
+        assert_eq!(h.app.world().get::<InMap>(bomb), Some(&map));
+    }
+    assert!(h.inbox(0).chat.iter().any(|line| line.content == speech));
+    assert!(h.inbox(1).chat.is_empty());
+    assert!(
+        h.inbox(0).ends.is_empty(),
+        "bomb pair must not complete encounter"
+    );
+    assert!(h.inbox(1).ends.is_empty());
+}
+
+#[test]
 fn encounter_coverage_pummeler_source_clock_damage_and_death_credit() {
     const PUMMELER: u32 = 6229;
     const PUMMELER_BIT: u32 = 4;
