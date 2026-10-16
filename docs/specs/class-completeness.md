@@ -103,6 +103,10 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] When a player stops knowing Dual Wield (spec/talent change), TC moves the off-hand weapon to the bags or mails it (OffhandCheckAtSpellUnlearn defaults on). Not yet modelled.
 - [x] Knowing any of the six native SPELL_EFFECT_PARRY (22) spells enables parry; without one, parry chance never applies.
 
+## Touch of Death admission
+
+- [x] Native322109 refuses a healthy stronger target before CastSuccess or cooldown publication. Its baseline admits creatures whose current health is strictly below the caster's maximum health; learned passive322113 additionally admits targets strictly below its authored health percentage. The native15% threshold is exclusive. Actual damage, PvP integration, Stagger removal and other follow-up talents remain separate, uncertified paths.
+
 ## Melee attack speed
 
 - [x] Native aura319 multiplies melee swing time by 100/(100+amount) per aura (negative amounts by (100−amount)/100) for players and creatures, independently of haste and cast time.
