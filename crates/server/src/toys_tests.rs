@@ -26,6 +26,8 @@ mod shrine;
 mod stone_whistle;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
+#[path = "toys_waywatcher_tests.rs"]
+mod waywatcher;
 #[path = "toys_ysera_tests.rs"]
 mod ysera;
 
