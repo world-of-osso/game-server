@@ -29,6 +29,8 @@ const DASH: u32 = 61_684;
 const BITE: u32 = 17_253;
 const GROWL: u32 = 2_649;
 const FURIOUS_BITE: u32 = 263_840;
+const BM_KILL_COMMAND: u32 = 34_026;
+const BM_KILL_COMMAND_DAMAGE: u32 = 83_381;
 
 fn world_db() -> Option<Connection> {
     let path = crate::test_data::world_db_path();
@@ -94,7 +96,14 @@ fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
     let templates = wolf_template(&conn);
     let spells = load_pet_levelup_spells(&conn).expect("creature_family imported");
     let db = open_db(path);
-    let ids = [CALL_PET_1, BITE, GROWL, DASH];
+    let ids = [
+        CALL_PET_1,
+        BITE,
+        GROWL,
+        DASH,
+        BM_KILL_COMMAND,
+        BM_KILL_COMMAND_DAMAGE,
+    ];
     let mut h = harness_with_plugins(Vec::new(), &ids, CLASS_HUNTER, false, |app| {
         app.insert_resource(WorldData {
             templates,
@@ -146,6 +155,45 @@ fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
         .and_then(|stable| stable.summoned)
         .expect("Call Pet 1 brought the wolf out");
     Some(harness)
+}
+
+#[test]
+fn pet_control_bm_kill_command_native_called_wolf_deals_named_damage_to_owner_target() {
+    let mut p = hunter_with_wolf().expect("native hunter/wolf catalog");
+    p.advance(35);
+    let owner = p.h.caster;
+    let target = p.h.npc;
+    assert_eq!(
+        p.h.app
+            .world()
+            .get::<crate::hunter_pet::HunterPet>(p.pet)
+            .unwrap()
+            .owner,
+        owner
+    );
+    let health_before = p.h.health(target);
+    p.h.set_power(PowerType::Focus, 100.0);
+    p.h.inbox.log.clear();
+    p.h.cast(BM_KILL_COMMAND, Some(target));
+    p.advance(10);
+    assert!(p.h.inbox.failed.is_empty(), "{:?}", p.h.inbox.failed);
+    assert!(
+        p.h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(BM_KILL_COMMAND)
+                && event.source == Some(owner.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+        }),
+        "ordinary owner Kill Command succeeds"
+    );
+    let damage = p.spell_damage(BM_KILL_COMMAND_DAMAGE, target);
+    assert_eq!(
+        damage.len(),
+        1,
+        "one83381 hit from the actual called wolf; owner log {:?}",
+        p.h.inbox.log
+    );
+    assert!(damage[0] > 0);
+    assert_eq!((health_before - p.h.health(target)) as i32, damage[0]);
 }
 
 impl PetHarness {

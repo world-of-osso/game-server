@@ -22,6 +22,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
 pub(crate) use batch9::hostile_ground_fields;
@@ -179,6 +180,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
+        (KILL_COMMAND, 0) => Some(batch14::command_beast),
         (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
         (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
@@ -292,6 +294,7 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        touch_of_death::TOUCH_OF_DEATH => Some(touch_of_death::damage),
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
         batch11::SINISTER_STRIKE => Some(batch11::sinister_damage),
         batch3::SHRED => Some(batch11::shred_damage),
@@ -580,6 +583,11 @@ pub fn check_target(
     spell_id: u32,
     target: Entity,
 ) -> Result<(), super::CastFailure> {
+    if spell_id == touch_of_death::TOUCH_OF_DEATH
+        && !touch_of_death::target_allowed(world, caster, target)
+    {
+        return Err(super::CastFailure::InvalidTarget);
+    }
     if spell_id == chrono_flame::CHRONO_FLAMES {
         return chrono_flame::check_children(world);
     }
