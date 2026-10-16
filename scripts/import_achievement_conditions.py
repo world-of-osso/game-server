@@ -175,6 +175,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         elif criteria_type == 29 and kind == 87 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
             # TC SingleFalse1730 negates scoped HasAchieved2200; signed compiled kind, not a raw DB2 kind.
             facts.append((-87, int(node['Asset'])))
+        elif criteria_type == 28 and kind == 171 and operator == SINGLE_TRUE and int(node['Asset']) > 0:
+            # TC InstancePlayerCountEqual2871–2873 reads actual map players, not group size.
+            facts.append((kind, int(node['Asset'])))
         elif criteria_type == 0 and kind == 82 and operator == SINGLE_TRUE and int(node['Asset']) > 0:
             # TC PlayerScenarioStep2181–2187 compares authored OrderIndex to Asset-1.
             facts.append((kind, int(node['Asset'])))

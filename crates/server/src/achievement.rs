@@ -1113,6 +1113,18 @@ fn earned_player_achievement_ids(world: &World, player: Entity) -> Option<BTreeS
     Some(catalog.iter_earned_achievement_ids(state).collect())
 }
 
+/// TC171 counts current map players, including dead players, not a party roster.
+fn map_player_count(world: &World, map: Option<InMap>) -> Option<u32> {
+    let map = map?;
+    let mut players = world.try_query::<(&Player, &InMap)>()?;
+    players
+        .iter(world)
+        .filter(|(_, current)| **current == map)
+        .count()
+        .try_into()
+        .ok()
+}
+
 fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
     let identity = world.get::<Player>(player)?;
     let arena = crate::pvp::player_arena_conditions(world, player);
@@ -1132,6 +1144,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .is_some_and(|state| state.account.is_some()),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         scenario_step: map.and_then(|map| scenario::current_step_id(world, map)),
+        map_player_count: map_player_count(world, map),
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),

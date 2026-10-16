@@ -515,6 +515,8 @@ pub(crate) struct ReferencePlayer {
     pub battle_pet_team_min_level: Option<u8>,
     /// Actual current authored ScenarioStep ID; None outside/after a scenario or without authority.
     pub scenario_step: Option<u32>,
+    /// Current Player entities in this exact map copy; None without map/roster authority.
+    pub map_player_count: Option<u32>,
     /// Current terrain area (TC Player::GetAreaId).
     pub area: Option<u32>,
     pub map: u32,
@@ -541,6 +543,7 @@ enum CriteriaFact {
     KnownSpell(u32),
     NotKnownSpell(u32),
     CompletedQuest(u32),
+    MapPlayerCount(u32),
     /// Authored step IDs whose OrderIndex equals the one-based modifier asset minus one.
     ScenarioSteps(BTreeSet<u32>),
     EarnedAchievement(u32),
@@ -613,6 +616,7 @@ impl CriteriaFact {
             Self::NotAura(spell) => player.auras_known && !player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
             Self::CompletedQuest(quest) => player.rewarded_quests.contains(quest),
+            Self::MapPlayerCount(count) => player.map_player_count == Some(*count),
             Self::ScenarioSteps(steps) => player
                 .scenario_step
                 .is_some_and(|step| steps.contains(&step)),
@@ -1464,6 +1468,7 @@ fn load_criteria_facts(
             -8 => exists("spell")?.then_some(CriteriaFact::NotAura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
             82 => load_scenario_step_fact(conn, asset)?,
+            171 => Some(CriteriaFact::MapPlayerCount(asset)),
             87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
             -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
@@ -1519,7 +1524,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122"
+                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122/171"
                 )
             }
         };

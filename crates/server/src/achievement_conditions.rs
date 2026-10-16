@@ -10049,6 +10049,10 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
+        (25374, 16390) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(171, 3)],
+        }),
         (25376, 16392) => Some(CompiledConditions::PlayerLocations(&[
             (41, 6662),
             (41, 6719),
@@ -10754,6 +10758,30 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[15],
             }),
             facts: &[],
+        }),
+        (27180, 16390) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(171, 3)],
+        }),
+        (27181, 16390) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(171, 3)],
+        }),
+        (27182, 16390) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(171, 3)],
+        }),
+        (27183, 16390) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(171, 3)],
+        }),
+        (27184, 16390) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(171, 3)],
+        }),
+        (27304, 16390) => Some(CompiledConditions::All {
+            difficulty: None,
+            facts: &[(171, 3)],
         }),
         (27426, 18427) => Some(CompiledConditions::PlayerAuras(&[
             174069, 174454, 174455, 174456, 174457,

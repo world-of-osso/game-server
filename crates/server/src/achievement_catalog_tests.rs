@@ -1,6 +1,34 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_map_count171_requires_exact_known_roster_count() {
+    let conn = Connection::open_in_memory().unwrap();
+    let facts = load_criteria_facts(&conn, &[(171, 3)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (map_player_count, expected) in [
+        (None, false),
+        (Some(0), false),
+        (Some(2), false),
+        (Some(3), true),
+        (Some(4), false),
+    ] {
+        let player = ReferencePlayer {
+            map_player_count,
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(
+                &player,
+                CriteriaEvent::BeSpellTarget(178544),
+                &BTreeMap::new()
+            ),
+            expected
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_scenario_step82_requires_authored_ordinals_and_complete_metadata() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE scenario_step (ID INTEGER PRIMARY KEY, OrderIndex INTEGER); INSERT INTO scenario_step VALUES (140,7),(987,2),(1001,2);").unwrap();
