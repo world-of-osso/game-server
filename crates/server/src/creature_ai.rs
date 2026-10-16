@@ -1500,6 +1500,7 @@ pub(crate) fn return_to_spawn_system(
         (
             Without<GridDormant>,
             Without<crate::scripted_ai::jump_movement::JumpMovement>,
+            Without<crate::vehicle::isle::NpcDriver>,
         ),
     >,
     mut commands: Commands,
