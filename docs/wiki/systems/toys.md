@@ -2,6 +2,18 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Ysera source summon boundary (2026-10-16)
+
+Ysera's Tear130170/195708 summons one99518/display66207 with property3054: private to its owner, ordinary non-pet wild actor, source47's8yd front offset and120000ms expiry. Authentic template publication was missing: real importer RED finds zero99518; actual learned UseToy RED refuses missing99518. The maintained importer now admits only that source entry; existing placement/privacy/level/lifetime handlers are unchanged. [Contract](../../specs/toys.md#contract). Six importer controls and the real learned-use lifecycle pass; whole-Toy138/138 and current check/fmt pass after a module-order-only correction. [Exact proof](../../toy-effects14-coverage.md#ysera-source-summon-proof-2026-10-16) records literal revisions, private seventeen-asset body closure and prepared classification385/1166, not complete-toy coverage. Native state kit60600→procedural8605/type22 is currently ignored by the renderer; body asset closure and server acceptance do not establish that appearance or complete-toy parity.
+
+## Enchanted Stone Whistle source summon (2026-10-16)
+
+129279/193687 has one source wild/default summon of Petrified Sand Piper98300/display71056. The maintained additive importer copies its authentic template/model; existing63→86 destination selection, ownership, ordinary wild initialization and60000ms expiry remain unchanged. No AI/addon/spell/click/root-script binding supplies another action. [Exact server proof and native gaps](../../toy-effects14-coverage.md#enchanted-stone-whistle-server-proof-2026-10-16) distinguish server acceptance from native assets/pixels; guardian final HP remains read-only.
+
+## Shrine server per-target stat conversion (2026-10-16)
+
+A replicated viewer range alone is insufficient for server `UnitScaling`, which pairs it with per-level `ScaledStats`. Wild initialization now builds that existing table from final summon tuning and source difficulty modifiers; raw DamageModifier is retained for regionally tuned templates too. Actual learned Shrine RED observes server level30/armor155 against viewer20; nineteen focused controls now pass level20/armor135 and source damage/health conversion outputs while Podium stays unscaled. [Exact output matrix and proof scope](../../toy-effects14-coverage.md#shrine-server-per-target-stat-conversion-2026-10-16) distinguish this actor-state CPU proof from actual combat hits, client HP display, guardian stats and native rendering.
+
 ## Shrine viewer-level projection (2026-10-15)
 
 UseCreatureLevel retains the initial source regional `LevelScaling`; wild initialization carries its range and once-rolled delta instead of dropping them after native selection. Unflagged player-owned Podium inherits zero tuning and stays native for every viewer. Actual learned Shrine use reproduces viewer20→30, then passes viewer1/20/80→1/20/30 while preserving native30 and initialized stats. [Claim-specific evidence and open server-combat/HP-projection boundaries](../../toy-effects14-coverage.md#shrine-viewer-level-projection-2026-10-15) own verification scope; no complete combat or new native-rendering certificate.

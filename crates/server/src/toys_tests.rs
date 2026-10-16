@@ -20,8 +20,12 @@ mod podium;
 mod scarab;
 #[path = "toys_shrine_tests.rs"]
 mod shrine;
+#[path = "toys_stone_whistle_tests.rs"]
+mod stone_whistle;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
+#[path = "toys_ysera_tests.rs"]
+mod ysera;
 
 const FIGURINE: u32 = 32782;
 const TRANSFORM: u32 = 41301;
@@ -2940,8 +2944,12 @@ fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
             );
             h.app.insert_resource(toy_catalog::load(&conn).unwrap());
             h.app.insert_resource(shared_item_templates(&path));
-            h.app
-                .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+            h.app.insert_resource(
+                crate::spell_cast::test_harness::world_db()
+                    .unwrap()
+                    .store
+                    .clone(),
+            );
             h.app
                 .world_mut()
                 .get_mut::<Player>(h.caster)
@@ -3004,8 +3012,12 @@ fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
     let (mut h, character) = setup_for_race(&directory.path().join("orb-unmapped.redb"), 9);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
-    h.app
-        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.insert_resource(
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .store
+            .clone(),
+    );
     learn_effect_toy(&mut h, character, 1973);
     let result = activate(&mut h, 1973);
     assert!(

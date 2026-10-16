@@ -275,6 +275,7 @@ struct LootStore<'w> {
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
     catalog: Res<'w, VendorCatalog>,
+    scaling: Option<Res<'w, crate::item_stats::ItemScalingTables>>,
     gold: ResMut<'w, GoldUpdateQueue>,
     quests: Option<Res<'w, QuestDb>>,
     quest_dirty: Option<ResMut<'w, crate::quest::QuestDirty>>,
@@ -405,6 +406,18 @@ impl LootStore<'_> {
         }
         let gold = model.gold();
         save_inventory_record(db, character_id, &model.into_record());
+        if let LootContent::Item { item_id, .. } = content {
+            crate::guild_news::record_item(
+                db,
+                character_id,
+                *item_id,
+                templates
+                    .get(shared::item_data::ItemDefinitionSource::Retail, *item_id)
+                    .expect("committed loot item template"),
+                self.scaling.as_deref(),
+                crate::guild_news::ItemNewsSource::Looted,
+            );
+        }
         self.gold.record(character_id, gold);
         match content {
             LootContent::Item { item_id, count, .. } => {

@@ -89,7 +89,7 @@ fn class_completeness_native_aimed_shot_uses_source_ranged_ap_not_melee_ap() {
 
 #[test]
 fn class_completeness_native_hunter_pet_command_inherits_owner_ranged_not_melee_ap() {
-    let mut h = harness(Vec::new(), &[259489, 259277], 3).unwrap();
+    let mut h = harness(Vec::new(), &[259489, 259277, SUNWELL_RADIANCE], 3).unwrap();
     {
         let mut owner = h
             .app
@@ -116,6 +116,8 @@ fn class_completeness_native_hunter_pet_command_inherits_owner_ranged_not_melee_
             stored: Default::default(),
             summoned: Some(pet),
         });
+    // Qualify the actual pet attacker, not just its owner.
+    apply_native_enemy_dodge_reduction_to(&mut h, pet);
     h.cast_and_deliver(259489, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     h.advance(3);

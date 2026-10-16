@@ -1431,12 +1431,22 @@ fn arena_all_sixteen_active_source_maps_play_authored_starts_gates_orbs_and_retu
         16,
         "local BattlemasterList/Map/WDT source census"
     );
-    for map_id in maps {
-        exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, map_id);
-        println!(
-            "SOURCE_ARENA_MAP_PASS {map_id}: authored starts/gates, preparation, physical orb, scored elimination, exact returns"
-        );
-    }
+    const MAX_WORKERS: usize = 4;
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = maps.chunks(maps.len().div_ceil(MAX_WORKERS))
+            .map(|batch| scope.spawn(move || {
+                for &map_id in batch {
+                    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, map_id);
+                    println!(
+                        "SOURCE_ARENA_MAP_PASS {map_id}: authored starts/gates, preparation, physical orb, scored elimination, exact returns"
+                    );
+                }
+            }))
+            .collect();
+        for worker in workers {
+            worker.join().expect("every source arena fixture must pass");
+        }
+    });
 }
 
 #[test]
@@ -1817,10 +1827,14 @@ fn exercise_arena_channel_with_reconnect(
     let database_file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
-    let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
-    let classes = (mode == ArenaQueueMode::SoloShuffle)
-        .then(|| crate::spell_info::load_spell_data(&source).unwrap().1);
-    let achievements = crate::achievement::load_achievement_catalog(&source).unwrap();
+    let world_data = crate::test_data::world_data().clone();
+    let classes = (mode == ArenaQueueMode::SoloShuffle).then(|| {
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .classes
+            .clone()
+    });
+    let achievements = crate::test_data::achievement_catalog();
     let mut h = harness_with(move |app| {
         if let Some(classes) = classes {
             app.insert_resource(classes);
