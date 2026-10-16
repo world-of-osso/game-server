@@ -173,6 +173,32 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_rotgrip_primary_preserves_razorlash_and_authored_ai(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('rotgrip')
+        self.assertIsNotNone(profile, 'source Rotgrip primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(428,349,6);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (13596,'','SmartAI');
+            INSERT INTO raid_encounter_creature VALUES(349,12258,423,1,424,994,12389);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=349 ORDER BY bit').fetchall(),
+            [(12258,423,1,424,994,12389),(13596,428,6,430,1000,13589)])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=13596")
+        with self.assertRaisesRegex(ValueError, 'creature AI identity'):
+            prepare_bindings(self.db, [primary])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='SmartAI' WHERE entry=13596")
+        self.db.execute('UPDATE dungeon_encounter SET Bit=5 WHERE ID=428')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_thermaplugg_primary_preserves_bosses_and_excludes_walking_bombs(self):
         import encounter_cpp_bindings as bindings
         profile = bindings.PROFILES.get('thermaplugg')
