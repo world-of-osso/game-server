@@ -1,5 +1,15 @@
 # Pet battle effect-property coverage
 
+## Current70391 continuation — 2026-10-16
+
+Baseline server `4b4e017f`, active local-CASC12.1.5.70391: **105 referenced property IDs**,136 definitions,2829 effects,1650 turns,1404 abilities,123 states. Current baseline remains992 admitted abilities and1746/2829 executable rows (61.72%). The104-property table below is historical69933 coverage, not the current census.
+
+Canonical read-only world.db is still older: effects5035/5036/5039 change26→387 in70391;5039 changes aura2551→2548; definition387 supplies health-threshold min/max labels. Private server-s3 SQLite copy imports all ten current tables; canonical untouched. Abilities differ only in CSV newline normalization, not text. Threshold387 semantics remain a named gap rather than pretending those rows are ordinary26 applications.
+
+First sourced batch: Fade1084 property107/effect2429. DB2 description explicitly says user swaps with a random pet; turn1752/event6 applies dodge1083 (state73=100), turn1753/event7 removes1083 before107. Bounded implementation chooses a living reserve on the caster's team, reuses existing swap validation/callbacks, and leaves unspecified other107 routes rejected. Three real-ID RED cases reproduce unsupported107; GREEN and native proof pending. Existing inherited damage constants/rounding are not recertified.
+
+Source hashes and exact baseline admission JSON: `/home/osso/.worktrees/logs/petbattle-effects-2026-10-16/`. Source CSVs resolve under canonical `data/db2/12.1.5.70391/`; UI reference is only current install `BlizzardInterfaceCode/Interface/AddOns/Blizzard_PetBattleUI` and its FrameXML tooltip helper. No third-party effect interpreter used.
+
 Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; production revisions `1b02589`/`f7ea28f`, final test correction `a0e04b0` (origin/master615fb90 merged into petbattle-effects3; already up to date).
 
 ## Coverage by rows — do not conflate these metrics
