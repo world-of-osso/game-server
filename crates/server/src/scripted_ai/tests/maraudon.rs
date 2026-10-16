@@ -8,6 +8,10 @@ fn encounter_coverage_razorlash_source_spells_damage_and_isolated_credit() {
     const ENCOUNTER: u32 = 423;
     let (mut h, boss, map) = bound_boss(BOSS, 349, BIT);
     let player = h.player();
+    // This headless fixture has no interest plugin; supply the caster's real recipient set.
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
     // Survival staging only. Source70%/85% chance, resources, flags and timers stay intact.
     h.app.world_mut().entity_mut(player).insert(Health {
         current: 1_000_000.0,
