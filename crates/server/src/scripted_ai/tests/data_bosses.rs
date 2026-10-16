@@ -11,6 +11,8 @@ mod group_criteria;
 mod maraudon;
 #[path = "noxxion.rs"]
 mod noxxion;
+#[path = "vyletongue.rs"]
+mod vyletongue;
 
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
@@ -400,7 +402,7 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if [ADAROGG, 61412, SLAGMAW, 61528, 13601].contains(&entry)
+        let near = if [ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236].contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
         {
             // Keep these hostile source actors idle until their fixture explicitly pulls.
