@@ -23,6 +23,7 @@ fn arena_live_caster_ground_destination_lands_on_enabled_trapdoor() {
     let mut app = App::new();
     app.insert_resource(GroundMap::new(&data, HashMap::from([(2759, wdt)])));
     app.insert_resource(crate::pvp::arena::Catalog::load(&db).unwrap());
+    app.add_plugins(crate::game_objects::collision::CollisionIndexPlugin);
     app.add_systems(
         FixedUpdate,
         crate::game_objects::collision::sync_live_objects,

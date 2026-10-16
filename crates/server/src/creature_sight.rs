@@ -165,8 +165,20 @@ fn forget_npc(trigger: On<Remove, Npc>, mut grid: ResMut<NpcGrid>, mut pass: Res
 
 /// A creature whose grid a player woke is seen again (its grid is loaded and its
 /// creatures added to the map in TrinityCore).
-fn notify_woken(trigger: On<Remove, GridDormant>, mut pass: ResMut<SightPass>) {
-    pass.pending.insert(trigger.entity);
+fn notify_woken(
+    trigger: On<Remove, GridDormant>,
+    units: Query<(&Position, &InMap), With<Npc>>,
+    attack_distance: crate::creature_aggro::AggroDistance,
+    mut grid: ResMut<NpcGrid>,
+    mut pass: ResMut<SightPass>,
+) {
+    let npc = trigger.entity;
+    if let Ok((position, map)) = units.get(npc)
+        && let Some(reach) = attack_distance.combat_reach(npc)
+    {
+        grid.place(npc, cell_of(*map, position), reach);
+    }
+    pass.pending.insert(npc);
 }
 
 /// Display/scale changes (including Polymorph) change reach without movement.
@@ -175,6 +187,7 @@ fn resize_npcs(
         (Entity, &Position, &InMap),
         (
             With<Npc>,
+            Without<GridDormant>,
             Or<(
                 Changed<shared::components::ModelDisplay>,
                 Changed<shared::components::UnitScale>,
