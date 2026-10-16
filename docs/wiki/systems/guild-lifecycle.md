@@ -1,6 +1,6 @@
 # Guild lifecycle history
 
-Server-authoritative guild lifecycle events are distinct from [bank logs](banks.md). The [contract](../../specs/guild-event-log.md) tracks the ongoing slice; query and atomic producer wiring exist; backend acceptance4/4 passes, native/UDP acceptance remains pending.
+Server-authoritative guild lifecycle events are distinct from [bank logs](banks.md). The [contract](../../specs/guild-event-log.md) tracks the ongoing slice; query and atomic producer wiring exist; backend acceptance4/4, actual UDP transport1/1 and both-skin native/server-process restart acceptance pass.
 
 ## Storage and query
 
@@ -12,7 +12,7 @@ Server-authoritative guild lifecycle events are distinct from [bank logs](banks.
 
 Pending invitation creation/acceptance, rank promotion/demotion and remove/quit append before their existing redb transaction commits. Charter registration appends actual founder joins with the supplied creation timestamp in its membership/charter-consumption transaction. Administrative set-membership does not reconstruct history. Names are captured from real character records; rank labels are captured before later renames can rewrite their meaning.
 
-The ledger retains the latest100 entries in insertion order, including tied timestamps. Callers retain ownership of commit/abort; appending never opens or commits another transaction. Mainline reverses the returned order for display. Behavioral RED reproduced all six successful actions leaving an empty log; targeted4/4 GREEN atc317745f/protocol4fad8c7 covers all six real mutations, refused actions, no administrative backfill, event-time labels after rank renames, actual founder joins at the creation timestamp,103→100 tied-order retention and transaction abort/durable reopen. Actual network/private server-process restart and native UI acceptance remain pending.
+The ledger retains the latest100 entries in insertion order, including tied timestamps. Callers retain ownership of commit/abort; appending never opens or commits another transaction. Mainline reverses the returned order for display. Behavioral RED reproduced all six successful actions leaving an empty log; targeted4/4 GREEN atc317745f/protocol4fad8c7 covers all six real mutations, refused actions, no administrative backfill, event-time labels after rank renames, actual founder joins at the creation timestamp,103→100 tied-order retention and transaction abort/durable reopen. Verified2026-10-15 at engine27661fa5e/server8038e839/protocol4fad8c7: actual UDP preserves six kinds/order/refusal; real native Officer mutations and ordinary UDP target acceptance/quit/read/refusal/privacy pass in both skins. A hundred physical rank changes produce genuine100-row overflow; a fresh server/client process preserves every raw event and timestamp with identical binary SHA256 receipts. Eleven1920×1080 PNGs inspected; trial logs, history and artifact receipts: `/home/osso/.worktrees/logs/guild-lifecycle-2026-10-15-run4/`. Refreshed-master integration gates remain separate.
 
 ## Sources
 
