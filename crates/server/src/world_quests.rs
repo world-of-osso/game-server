@@ -15,7 +15,8 @@ pub(crate) struct Definition {
 pub(crate) struct Area {
     pub map_id: u32,
     pub ui_map_id: u32,
-    pub vertices: Vec<(f32, f32)>,
+    /// Source XYZ; acceptance retains its existing XY footprint policy.
+    pub vertices: Vec<(f32, f32, f32)>,
 }
 
 impl Area {
@@ -24,7 +25,7 @@ impl Area {
             return false;
         }
         let mut inside = false;
-        for (&(ax, ay), &(bx, by)) in self
+        for (&(ax, ay, _), &(bx, by, _)) in self
             .vertices
             .iter()
             .zip(self.vertices.iter().cycle().skip(1))
@@ -54,7 +55,7 @@ pub(crate) fn load_areas(
     if !installed {
         return Ok(result);
     }
-    let mut statement = conn.prepare("SELECT quest_id,blob_id,map_id,ui_map_id,x,y FROM content_world_quest_area ORDER BY quest_id,blob_id,point_index")?;
+    let mut statement = conn.prepare("SELECT quest_id,blob_id,map_id,ui_map_id,x,y,z FROM content_world_quest_area ORDER BY quest_id,blob_id,point_index")?;
     let rows = statement.query_map([], |r| {
         Ok((
             r.get::<_, u32>(0)?,
@@ -63,11 +64,12 @@ pub(crate) fn load_areas(
             r.get::<_, u32>(3)?,
             r.get::<_, f32>(4)?,
             r.get::<_, f32>(5)?,
+            r.get::<_, f32>(6)?,
         ))
     })?;
     let mut blobs: BTreeMap<(u32, u32), Area> = BTreeMap::new();
     for row in rows {
-        let (quest, blob, map_id, ui_map_id, x, y) = row?;
+        let (quest, blob, map_id, ui_map_id, x, y, z) = row?;
         blobs
             .entry((quest, blob))
             .or_insert_with(|| Area {
@@ -76,7 +78,7 @@ pub(crate) fn load_areas(
                 vertices: Vec::new(),
             })
             .vertices
-            .push((x, y));
+            .push((x, y, z));
     }
     for ((quest, _), area) in blobs {
         result.entry(quest).or_insert_with(Vec::new).push(area);
