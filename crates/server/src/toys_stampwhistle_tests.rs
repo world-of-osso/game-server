@@ -8,10 +8,8 @@ use shared::protocol::{
 fn install_katy_mailbox_service(h: &mut Harness, conn: &rusqlite::Connection) {
     h.app
         .insert_resource(crate::npc_interaction::load_gossip_catalog(conn).unwrap());
-    h.app.add_plugins((
-        crate::npc_interaction::NpcInteractionPlugin,
-        crate::mail::MailPlugin,
-    ));
+    bevy::app::Plugin::build(&crate::npc_interaction::NpcInteractionPlugin, &mut h.app);
+    bevy::app::Plugin::build(&crate::mail::MailPlugin, &mut h.app);
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<InteractNpc>::default(),
         MessageReceiver::<InteractNpc>::default(),
