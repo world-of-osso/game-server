@@ -112,6 +112,15 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     ));
     h.cast(INVASION_SPELL, Some(h.caster));
     h.advance(4);
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|cast| cast.spell_id == INVASION_SPELL)
+            .count(),
+        2,
+        "second native cast succeeds with exactly three players"
+    );
     let state = h
         .app
         .world()
@@ -127,6 +136,15 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     h.app.world_mut().entity_mut(fourth_player).insert(map);
     h.cast(INVASION_SPELL, Some(h.caster));
     h.advance(4);
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|cast| cast.spell_id == INVASION_SPELL)
+            .count(),
+        3,
+        "third native cast succeeds with four players"
+    );
     assert_eq!(
         h.app
             .world()
