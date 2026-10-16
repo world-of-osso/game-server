@@ -1997,6 +1997,8 @@ fn receive_cancel_aura(world: &mut World) {
 }
 
 #[cfg(test)]
+mod devastator_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod toy_effects_tests;
