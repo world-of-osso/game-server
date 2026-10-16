@@ -779,6 +779,24 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
             > 0.15,
         "source seat5766 controlling input was processed, but the Demolisher did not move: {vehicle_start:?} -> {vehicle_after:?}"
     );
+    let authored_run = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(demolisher)
+        .unwrap()
+        .speed_run
+        * shared::movement::RUN_SPEED;
+    assert!(
+        (h.app
+            .world()
+            .get::<shared::components::MovementSpeed>(demolisher)
+            .unwrap()
+            .0
+            - authored_run)
+            .abs()
+            < 0.0001,
+        "the actual NPC mover publishes its authored run gait, not the player default"
+    );
     let rider_after = *h.app.world().get::<Position>(actor.player).unwrap();
     let expected = Vec3::new(vehicle_after.x, vehicle_after.y, vehicle_after.z)
         + Quat::from_rotation_y(h.app.world().get::<Rotation>(demolisher).unwrap().y) * local_seat;
@@ -857,6 +875,54 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
         *h.app.world().get::<Position>(demolisher).unwrap(),
         vehicle_after,
         "departed driver input cannot move the NPC"
+    );
+}
+
+#[test]
+fn isle_channel_driver_authority_is_not_replaced_by_hostile_creature_chase() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let enemy_index = entered
+        .teams
+        .iter()
+        .position(|team| *team != entered.teams[0])
+        .unwrap();
+    let enemy = &entered.players[enemy_index];
+    let h = &mut entered.h;
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_millis(50),
+        ));
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .set_timestep(Duration::from_millis(50));
+    h.app.add_systems(
+        FixedUpdate,
+        (
+            crate::creature_aggro::update_victim_system,
+            crate::creature_ai::chase_system,
+        )
+            .chain(),
+    );
+    let position = *h.app.world().get::<Position>(demolisher).unwrap();
+    h.walk_to(
+        enemy,
+        wow(&Position {
+            x: position.x + 15.0,
+            ..position
+        }),
+    );
+    let before = h.app.world().get::<Health>(demolisher).unwrap().current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), enemy.player, demolisher, 1.0);
+    assert!(
+        h.app.world().get::<Health>(demolisher).unwrap().current < before,
+        "a real hostile hit reaches the driven vehicle"
+    );
+    h.advance(5);
+    assert_eq!(
+        *h.app.world().get::<Position>(demolisher).unwrap(),
+        position,
+        "a player-driven Demolisher must not chase its attacker without driver input"
     );
 }
 
