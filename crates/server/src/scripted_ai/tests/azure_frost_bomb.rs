@@ -10,6 +10,31 @@ const FROZEN_GROUND: u32 = 387149;
 
 fn fixture() -> (Harness, Entity) {
     let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+    // Native138 projects the destination onto authored map geometry.
+    let wdt = h
+        .app
+        .world()
+        .resource::<MapStore>()
+        .maps
+        .get(&2515)
+        .unwrap()
+        .wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(2515, wdt)]),
+    ));
+    let position = *h.app.world().get::<Position>(telash).unwrap();
+    let map = *h.app.world().get::<InMap>(telash).unwrap();
+    assert!(
+        matches!(
+            h.app
+                .world_mut()
+                .resource_mut::<crate::ground::GroundMap>()
+                .ground_in(map, Vec3::new(position.x, position.y, position.z)),
+            crate::ground::GroundProbe::Supported(_)
+        ),
+        "native Azure floor fixture must be available"
+    );
     // No engagement/AI schedule: exercise the real authored actor's cast boundary.
     h.players[0].2.log.clear();
     (h, telash)
@@ -79,7 +104,17 @@ fn azure_frost_bomb_natural_expiry_casts_ground_and_damage_at_current_target_pos
     assert!(ground_fields(&mut h).is_empty());
     // Movement after application must not leave the explosion at the old pose.
     h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1.0;
-    let position = *h.app.world().get::<Position>(player).unwrap();
+    let mut position = *h.app.world().get::<Position>(player).unwrap();
+    let map = *h.app.world().get::<InMap>(player).unwrap();
+    let crate::ground::GroundProbe::Supported(height) = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .ground_in(map, Vec3::new(position.x, position.y, position.z))
+    else {
+        panic!("native moved-target floor");
+    };
+    position.y = height;
     let before = h.app.world().get::<Health>(player).unwrap().current;
     h.advance(0.3);
     assert!(!h.has_aura(player, BOMB_AURA));
