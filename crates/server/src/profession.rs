@@ -15,6 +15,8 @@
 
 mod data;
 mod gathering;
+#[cfg(test)]
+mod modern_crafting_fixture;
 mod quality_reagents;
 pub(crate) mod specializations;
 mod trainer;

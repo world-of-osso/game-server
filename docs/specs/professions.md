@@ -20,6 +20,8 @@ Retail professions on the server: learning at profession trainers and crafting k
 - Runtime requires local Retail exports under `data/db2/active`: ModifiedCraftingSpellSlot, ModifiedCraftingReagentSlot, MCRSlotXMCRCategory, CraftingReagentQuality, Item and CraftingQuality. No network lookup or invented substitution is permitted.
 - Quality remains `Err(CraftingOperationComposition)` (`CRAFTING_OPERATION_COMPOSITION`), never a default tier. Modifying/finishing eligibility and unevaluated slot conditions refuse explicitly. Pinned TC a352b1fa `SpellEffects.cpp` maps effects288/297 to EffectNULL; Retail SchematicForm delegates composition to native APIs.
 
+Private acceptance fixture: ignored `profession::modern_crafting_fixture` tests create only the fixed 2026-10-16 diagnostics redb, grant concrete test bags/skills/knowledge and verify post-run reagent/skill conservation. Fixture grants are not acquisition evidence.
+
 ## Out of scope
 
 Gathering nodes, Dragonflight+ quality/concentration/crafting orders/specializations, recrafting, unlearning, First Aid, reputation price discounts, gossip-menu-specific trainers.
