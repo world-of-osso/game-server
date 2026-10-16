@@ -433,6 +433,8 @@ struct ChargeState {
     max: u8,
     used: u8,
     recharge_secs: f64,
+    /// Rate modifiers can retime consumed charges; flat453 only affects new uses.
+    recovery_mult: f32,
     /// When the next used charge returns (valid while `used > 0`).
     next_ready_at: f64,
     /// Exact time the last missing charge returned, not the next observed frame.
@@ -526,18 +528,23 @@ impl SpellHistory {
                 max,
                 used: 0,
                 recharge_secs: 0.0,
+                recovery_mult: mods.recovery_mult,
                 next_ready_at: 0.0,
                 fully_ready_at: 0.0,
             });
         state.max = max;
         state.refresh(now);
         let recharge_secs = f64::from(recharge_ms) / 1000.0;
-        if state.used > 0 && state.recharge_secs != recharge_secs {
-            // TC UpdateChargeRecoveryRate preserves completed progress, not elapsed time.
-            let ratio = recharge_secs / state.recharge_secs;
+        if state.used == 0 {
+            state.recharge_secs = recharge_secs;
+        } else if state.recovery_mult != mods.recovery_mult {
+            // TC UpdateChargeRecoveryRate preserves completed progress. Aura453
+            // has no immediate handler: its flat amount applies at consumption.
+            let ratio = f64::from(mods.recovery_mult / state.recovery_mult);
             state.next_ready_at = now + (state.next_ready_at - now) * ratio;
+            state.recharge_secs *= ratio;
         }
-        state.recharge_secs = recharge_secs;
+        state.recovery_mult = mods.recovery_mult;
         Some(state)
     }
 }

@@ -24,6 +24,12 @@ Real-data RED33ec603a recorded run2 instead of2.2; REDc0f608da recorded the pass
 
 Sources: pinned TC Unit.cpp8812–8854, SpellInfo.cpp2218, Spell.cpp7158 and Player.cpp26509; actual installed SpellEffect and Map rows.
 
+## Hasty Hearth charge boundary
+
+Installed8690 uses category2309 (one charge,1800000ms). Guild passive83944 has453/-900000ms for that category. TC SpellHistory.cpp982–995 adds the flat modifier when consuming a charge; SpellAuraEffects.cpp525 gives453 no immediate handler. Existing new-cast behavior already produced30/15/30-minute receipts for nonmember/member/removed controls. RED at7770d9c5 exposed a different defect: joining changed an already-consumed charge to898750ms remaining instead of preserving its roughly30-minute clock.
+
+The charge state now retains the consumed duration while charges are missing. Multiplier changes retain the existing progress-preserving rate path; a flat modifier affects the duration selected when the category is full again. This fixes the observed one-charge Hearthstone boundary, not arbitrary mixed-duration multi-charge queues. Native proof and final targeted verification remain pending.
+
 ## Sources
 
 Installed Mainline GuildPerks.lua/XML; active GuildPerkSpells rows2/7/10/14/16. TrinityCore a352b1fa Guild.cpp2322 grants the perk store's spells on guild login;3002 removes them on leaving/removal.

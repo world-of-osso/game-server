@@ -39,7 +39,13 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 Guild rewards/reputation eligibility and invitation tabards are separate slices. Missing effect support stays explicit rather than being claimed from a known spell ID.
 
-## Active effect slice: Mount Up
+## Active effect slice: Hasty Hearth
+
+- [ ] Actual Hearthstone8690 consumes charge category2309:1800000ms without83944,900000ms with its authored453/-900000ms passive; revocation restores future uses.
+- [ ] Joining or leaving does not retime an already-consumed Hearthstone charge (TC SpellAuraEffects.cpp525 and SpellHistory.cpp834–853).
+- [ ] Actual native membership/cast/charge receipts establish both-skin behavior; catalog knowledge alone is insufficient.
+
+## Supported effect slice: Mount Up
 
 - [x] Actual78633 grants10% mounted run/flight speed through authored172/211 effects, with strongest-positive nonstacking semantics (TC Unit.cpp8812–8854). Revocation restores the mounted baseline without removing the mount.
 - [ ] **Blocked by explicit lead decision:**210 applies only to player-controlled NPC flight (TC Unit.cpp8833–8844). The local authored vehicle runtime is ground IoC Demolishers; no flying context is fabricated or applied to the mounted player. This is not part of the supported172/211 completion claim.
