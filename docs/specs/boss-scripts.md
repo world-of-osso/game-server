@@ -26,7 +26,8 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 ## Gnomeregan Electrocutioner source boundary
 
 - [x] Prepare only Electrocutioner6235/encounter380 Normal map90 bit3 from pinned TC header/instance, installed Journal421/actor991/display36558 and actual TDB SmartAI identity. TC ordinal2 must not replace DB2 bit3. Generated SQL remains copy-only and preserves unrelated bindings; other Gnomeregan actors receive no credit from this profile.
-- [ ] Verify actual installed SAI Megavolt11082 (25s/5s), Shock15605 (15s/8s, random hostile) and Chain Bolt11085 (31s/11s, victim), ordinary cast behavior and copy-isolated death credit. No canonical publication or native-clear claim.
+- [x] Verify source-authenticated Electrocutioner engagement, controlled death, one encounter380/bit3 completion and no other-copy credit without mana/class/triggered overrides. This does not certify an ordinary fight, loot or persistence.
+- [ ] Verify actual installed SAI Megavolt11082 (25s/5s), Shock15605 (15s/8s, random hostile) and Chain Bolt11085 (31s/11s, victim). Source-data gap: TDB class1 actor has no mana; ordinary15605 admission returns NotEnoughPower(Mana). Pinned TC SpellInfo.cpp:4043–4089 computes authored cost and Spell.cpp:7392–7430 rejects insufficient power. Retain named ignored failing mechanics acceptance; no resource/class/cast-flag fabrication. Later assertions remain unverified behind the first Shock failure. No canonical publication or native-clear claim.
 
 ## Ragefire Chasm source hooks
 

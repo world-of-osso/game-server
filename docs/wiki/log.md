@@ -1,3 +1,7 @@
+## 2026-10-16 — Electrocutioner identity and explicit mana gap
+
+[Electrocutioner](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16): copy-only pinned TC/Journal primary6235→380/bit3 RED→GREEN9/9, actual source generation succeeds; controlled death/copy credit GREEN1/1. Real SAI acceptance remains source-data RED at Shock NotEnoughPower(Mana), TDB class1; lead approved named ignore without mana/class/triggered overrides. Blackfathom legacy/modern identity mismatch recorded, no substituted credit.
+
 ## 2026-10-15 — Controlled Disciple gossip/start
 
 [Source callbacks](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) port Hello/Select and events1–3 without synthesizing flags/menu options/5232. Genuine missing-Hello RED→controlled2/2 GREEN56.54s, including real flag0 InteractNpc rejection and physical first-path movement. Missing NpcInteractionPlugin/faction initialization caused earlier empty/panicking ingress fixtures; no transport behavior changed to fix those fixtures. Integrated3a035ee1/protocol1707389: controlled2/2(60.82s), ordinary NPC controls9/9, first-camp regression1/1(25.18s), scoped check without warnings and fmt/diff pass. Natural positive activation and full escort/native clear remain open.
