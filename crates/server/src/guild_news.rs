@@ -16,9 +16,40 @@ struct History {
 pub(crate) fn apply_request(
     db: &Database,
     actor: u64,
-    _request: shared::protocol::GuildNewsRequest,
+    request: shared::protocol::GuildNewsRequest,
 ) -> GuildNewsState {
-    query(db, actor)
+    let error = match request {
+        shared::protocol::GuildNewsRequest::Query => None,
+        shared::protocol::GuildNewsRequest::SetSticky { id, sticky } => {
+            set_sticky(db, actor, id, sticky).err()
+        }
+    };
+    let mut reply = query(db, actor);
+    if error.is_some() {
+        reply.error = error;
+    }
+    reply
+}
+
+fn set_sticky(db: &Database, actor: u64, id: u64, sticky: bool) -> Result<(), GuildNewsError> {
+    let guild = crate::persistence::load_character_guild(db, actor)
+        .ok_or(GuildNewsError::NotInGuild)?
+        .guild_id;
+    if !crate::guild::character_has_right(db, actor, guild, shared::protocol::GUILD_RIGHT_EDIT_MOTD)
+    {
+        return Err(GuildNewsError::Permissions);
+    }
+    let txn = db.begin_write().expect("begin guild news sticky write");
+    let mut history = read_history_in(&txn, guild);
+    let entry = history
+        .entries
+        .iter_mut()
+        .find(|entry| entry.id == id)
+        .ok_or(GuildNewsError::EntryNotFound)?;
+    entry.sticky = sticky;
+    write_history_in(&txn, guild, &history);
+    txn.commit().expect("commit guild news sticky write");
+    Ok(())
 }
 
 pub(crate) fn query(db: &Database, actor: u64) -> GuildNewsState {
@@ -55,12 +86,7 @@ pub(crate) fn append_in(
     timestamp: u64,
     sticky: bool,
 ) {
-    let mut table = txn.open_table(NEWS).expect("open guild news for append");
-    let mut history: History = table
-        .get(guild)
-        .expect("read guild news for append")
-        .map(|record| serde_json::from_str(record.value()).expect("decode guild news"))
-        .unwrap_or_default();
+    let mut history = read_history_in(txn, guild);
     history.next_id = history
         .next_id
         .checked_add(1)
@@ -76,8 +102,22 @@ pub(crate) fn append_in(
             .entries
             .drain(..history.entries.len() - GUILD_NEWS_MAX_RECORDS);
     }
-    let encoded = serde_json::to_string(&history).expect("encode guild news");
+    write_history_in(txn, guild, &history);
+}
+
+fn read_history_in(txn: &WriteTransaction, guild: u32) -> History {
+    let table = txn.open_table(NEWS).expect("open guild news for write");
     table
+        .get(guild)
+        .expect("read guild news for write")
+        .map(|record| serde_json::from_str(record.value()).expect("decode guild news"))
+        .unwrap_or_default()
+}
+
+fn write_history_in(txn: &WriteTransaction, guild: u32, history: &History) {
+    let encoded = serde_json::to_string(history).expect("encode guild news");
+    txn.open_table(NEWS)
+        .expect("open guild news for write")
         .insert(guild, encoded.as_str())
         .expect("write guild news");
 }
