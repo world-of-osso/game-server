@@ -1803,6 +1803,9 @@ fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_p
     sync_account_progress(&db, &mut state, &catalog, boundary);
     EVALUATION_WORK.with(|work| work.set((0, 0)));
     let mut toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None, 1);
+    for toast in &toasts {
+        state.earned_at.insert(toast.achievement_id, boundary.now);
+    }
     toasts.extend(sync_account_progress(&db, &mut state, &catalog, boundary));
     let snapshot = catalog.snapshot(&state, 1);
     let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
