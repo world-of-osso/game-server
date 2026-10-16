@@ -232,7 +232,20 @@ GIZLOCK_PRIMARY = dict(
     actor_id=995,
     display_id=7125,
 )
+# TC ordinal3 is not the installed Normal424 completion bit2.
+VYLETONGUE_PRIMARY = dict(
+    map_id=349,
+    entry=12236,
+    encounter_id=424,
+    bit=2,
+    script="",
+    ai="SmartAI",
+    journal_id=427,
+    actor_id=997,
+    display_id=12334,
+)
 PROFILES = {
+    "vyletongue": (VYLETONGUE_PRIMARY, MARAUDON_SOURCES),
     "gizlock": (GIZLOCK_PRIMARY, MARAUDON_SOURCES),
     "noxxion": (NOXXION_PRIMARY, NOXXION_SOURCES),
     "rotgrip": (ROTGRIP_PRIMARY, MARAUDON_SOURCES),
