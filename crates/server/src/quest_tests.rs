@@ -851,11 +851,12 @@ fn world_quest_availability_multiple_zones_cross_policy_windows_and_reconnect() 
         app.world_mut()
             .resource_mut::<crate::maps::difficulty::ServerClock>()
             .fixed_unix = Some(now);
-        app.update();
+        // HostClient transfers in Last; the next frame clears unread messages.
+        // This clock mutation is already local, unlike a queued client request.
         app.update();
         let snapshot = received::<shared::protocol::WorldQuestAvailability>(&mut app, &client)
             .pop()
-            .unwrap();
+            .unwrap_or_else(|| panic!("availability not received at realm time {now}"));
         assert_eq!(snapshot.server_time, now);
         assert_eq!(
             snapshot
