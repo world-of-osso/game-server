@@ -734,9 +734,7 @@ mod admin_npc_combat_tests {
     use shared::components::{Health, Npc, ThreatTable};
 
     fn inspect(world: &mut World) -> serde_json::Value {
-        let db = GameDatabase {
-            db: crate::persistence::temp_database(),
-        };
+        let db = GameDatabase::new(crate::persistence::temp_database());
         let mut state = SystemState::<AdminInstances>::new(world);
         let response = state
             .get_mut(world)
