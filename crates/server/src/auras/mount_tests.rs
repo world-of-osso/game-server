@@ -88,12 +88,20 @@ fn stat_mods(h: &Harness) -> AuraStatMods {
 fn guild_mount_up_real_spell_grant_modifies_ground_and_flight_then_revokes() {
     // Active GuildPerkSpells2→78633; SpellEffect68259/68260/102117 are172/211/210.
     // TC Unit.cpp8812–8854: mounted base multiplier × max(stacking, nonstacking).
-    let mut h = rider(225, true, &[]).expect("Actual Golden Gryphon and mount catalog");
-    h.app
-        .world_mut()
-        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+    let mut h = rider(225, true, &[78633]).expect("Actual Golden Gryphon and mount catalog");
+    // The harness loads only requested native spell records into SpellStore.
+    // Keep78633 available there, but derive its knowledge from the guild grant.
+    let baseline = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(h.caster)
         .unwrap()
-        .set_guild_grants(&[78633]);
+        .iter()
+        .filter(|id| *id != 78633)
+        .collect();
+    let mut known = crate::class_progression::KnownSpells::fixture(baseline);
+    known.set_guild_grants(&[78633]);
+    h.app.world_mut().entity_mut(h.caster).insert(known);
     h.advance(3);
     assert!(
         has(&h, 78633),
