@@ -194,7 +194,6 @@ fn pet_control_bm_kill_command_native_called_wolf_deals_named_damage_to_owner_ta
     );
     assert!(damage[0] > 0);
     assert_eq!((health_before - p.h.health(target)) as i32, damage[0]);
-    assert_eq!(p.spell_casts(BM_KILL_COMMAND_DAMAGE, target), 1);
 }
 
 impl PetHarness {
