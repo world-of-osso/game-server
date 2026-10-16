@@ -1,6 +1,40 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_completed_quest_requires_authored_metadata_and_rewarded_membership() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_quest_template (ID INTEGER PRIMARY KEY); INSERT INTO content_quest_template VALUES (72360);").unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(110, 72361)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(110, 72360), (110, 72361)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "missing companion metadata rejects the whole predicate"
+    );
+    let facts = load_criteria_facts(&conn, &[(110, 72360)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (rewarded_quests, expected) in [
+        (BTreeSet::new(), false),
+        (BTreeSet::from([28766]), false),
+        (BTreeSet::from([72360]), true),
+    ] {
+        let player = ReferencePlayer {
+            rewarded_quests,
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(&player, CriteriaEvent::Login, &BTreeMap::new()),
+            expected
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_absent_aura_requires_authored_metadata() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(
