@@ -87,6 +87,16 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
     );
     let (actor, expires_at) = actors[0];
     assert_eq!(world.get::<ModelDisplay>(actor).unwrap().display_id, 68512);
+    assert_eq!(
+        world.get::<shared::protocol::NpcFlags>(actor),
+        Some(&shared::protocol::NpcFlags(
+            shared::protocol::NpcFlags::GOSSIP | shared::protocol::NpcFlags::MAILBOX
+        ))
+    );
+    assert_eq!(
+        world.get::<shared::components::UnitFactionTemplate>(actor),
+        Some(&shared::components::UnitFactionTemplate(35))
+    );
     assert!(!world.get::<UnitIsPet>(actor).is_some_and(|pet| pet.0));
     assert!(
         world
@@ -105,9 +115,20 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
         (599.0..=600.0).contains(&remaining),
         "source600s summon: {remaining}"
     );
+    let opened = open_katy_mailbox(&mut h, actor);
     assert_eq!(
-        open_katy_mailbox(&mut h, actor).last().unwrap().kind,
-        InteractionKind::Role(NpcRole::Mailbox)
+        opened.last().map(|event| &event.kind),
+        Some(&InteractionKind::Role(NpcRole::Mailbox)),
+        "live source actor must open mailbox: actor={:?}, player={:?}, actor_map={:?}, player_map={:?}, combat={:?}, health={:?}, active={:?}",
+        h.app.world().get::<Position>(actor),
+        h.app.world().get::<Position>(caster),
+        h.app.world().get::<crate::maps::InMap>(actor),
+        h.app.world().get::<crate::maps::InMap>(caster),
+        h.app.world().get::<CombatStatus>(actor),
+        h.app.world().get::<Health>(actor),
+        h.app
+            .world()
+            .get::<crate::npc_interaction::ActiveInteraction>(h.connection)
     );
     let contents = drain::<MailboxContents>(&mut h.app, h.connection);
     assert!(
