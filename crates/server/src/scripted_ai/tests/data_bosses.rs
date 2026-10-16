@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "gnomeregan.rs"]
+mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
 
