@@ -80,6 +80,22 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '30642'):
             encounter_serverside_spells.import_spells(self.db, self.dump, encounter='gargolmar')
 
+    def test_omor_orbital_spells_preserve_source_fields_and_refuse_missing_effect(self):
+        fixture = FIXTURE.with_name('omor-serverside-spells.json')
+        write_dump(self.dump, fixture=fixture)
+        for _ in range(2):
+            encounter_serverside_spells.import_spells(self.db, self.dump, encounter='omor')
+        with sqlite3.connect(self.db) as connection:
+            connection.row_factory = sqlite3.Row
+            source = json.loads(fixture.read_text())['rows']
+            for table, expected in source.items():
+                key = 'Id' if table == 'serverside_spell' else 'SpellID'
+                self.assertEqual([dict(row) for row in connection.execute(f'SELECT * FROM tdb_{table} ORDER BY {key}')], expected)
+            self.assertEqual(connection.execute('SELECT value FROM unrelated').fetchone()[0], 'retained')
+        write_dump(self.dump, missing=('serverside_spell_effect', 32185), fixture=fixture)
+        with self.assertRaisesRegex(ValueError, '32185'):
+            encounter_serverside_spells.import_spells(self.db, self.dump, encounter='omor')
+
     def test_missing_authored_spell_refuses_without_partial_tables(self):
         write_dump(self.dump, missing=('serverside_spell_effect', 119426))
         with self.assertRaisesRegex(ValueError, '119426'):
