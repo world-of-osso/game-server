@@ -5,6 +5,8 @@ use super::*;
 mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "maraudon.rs"]
+mod maraudon;
 
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
