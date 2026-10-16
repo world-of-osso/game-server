@@ -29,6 +29,11 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] Verify source-authenticated Electrocutioner engagement, controlled death, one encounter380/bit3 completion and no other-copy credit without mana/class/triggered overrides. This does not certify an ordinary fight, loot or persistence.
 - [ ] Verify actual installed SAI Megavolt11082 (25s/5s), Shock15605 (15s/8s, random hostile) and Chain Bolt11085 (31s/11s, victim). Source-data gap: TDB class1 actor has no mana; ordinary15605 admission returns NotEnoughPower(Mana). Pinned TC SpellInfo.cpp:4043–4089 computes authored cost and Spell.cpp:7392–7430 rejects insufficient power. Retain named ignored failing mechanics acceptance; no resource/class/cast-flag fabrication. Later assertions remain unverified behind the first Shock failure. No canonical publication or native-clear claim.
 
+## Gnomeregan Crowd Pummeler source boundary
+
+- [x] Prepare only Crowd Pummeler6229/encounter381 Normal map90 bit4 from pinned TC header/instance, installed Journal418/actor989/display36560 and actual TDB SmartAI identity. TC ordinal3 must not replace DB2 bit4. Generated copy-only SQL preserves Electrocutioner and unrelated bindings; no other Gnomeregan actors receive credit from this profile.
+- [ ] Verify real installed SAI Arcing Smash8374 first15s/repeat15–20s, Trample5568 first25s/repeat25–35s, Crowd Pummel10887 first40s/repeat35–60s, victim targets, damage and copy-isolated death credit without timer/chance/resource/flag overrides. Ordinary fight, native clear, loot and persistence remain separate.
+
 ## Ragefire Chasm source hooks
 
 - [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. No DB2 substitutes or derived effect IDs.

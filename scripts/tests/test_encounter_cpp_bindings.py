@@ -116,6 +116,34 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_pummeler_primary_keeps_db2_bit_and_existing_gnomeregan_credit(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('crowd-pummeler')
+        self.assertIsNotNone(profile, 'source Crowd Pummeler primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(381,90,4),(380,90,3);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (6229,'','SmartAI'),(6235,'','SmartAI'),(7800,'','SmartAI');
+            INSERT INTO raid_encounter_creature VALUES(90,6235,380,3,421,991,36558);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=90 ORDER BY bit').fetchall(),
+            [(6235,380,3,421,991,36558),(6229,381,4,418,989,36560)])
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(), [(12118,)])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=6229")
+        with self.assertRaisesRegex(ValueError, 'creature AI identity'):
+            prepare_bindings(self.db, [primary])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='SmartAI' WHERE entry=6229")
+        self.db.execute('UPDATE dungeon_encounter SET Bit=3 WHERE ID=381')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_wailing_primaries_keep_all_eight_authored_normal_bits(self):
         import encounter_cpp_bindings as bindings
         names = ['anacondra', 'cobrahn', 'kresh', 'pythas', 'skum', 'serpentis', 'verdan', 'mutanus']
