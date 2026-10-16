@@ -208,7 +208,7 @@ Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast s
 
 ## Readiness elapsed time
 
-- [ ] Spell/category cooldowns, GCDs, school lockouts and charge recovery use real elapsed server time, including slow frames, matching owner timer milliseconds. Existing rate modifiers, charge restoration, readiness credit and cooldown resets use that same clock. Simulation catch-up, cast/channel progression, aura expiry and missiles retain their existing clocks.
+- [x] Spell/category cooldowns, GCDs, school lockouts and charge recovery use real elapsed server time, including slow frames, matching owner timer milliseconds. Existing rate modifiers, charge restoration, readiness credit and cooldown resets use that same clock. Simulation catch-up, cast/channel progression, aura expiry and missiles retain their existing clocks.
 - Source: TC a352b1fa `SpellHistory.cpp:834–855` consumes charges against GameTime. Native70391 Overpower7384/category1680 recovers one charge in12000ms; Throw Glaive185123/category1612 in9000ms; both and Slam1464 use GCD category133/1500ms before existing modifiers.
 
 ## Category charge-recovery rates
