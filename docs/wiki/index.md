@@ -23,6 +23,8 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Sightless detection consumer](systems/toys.md#sightless-detection-consumer-2026-10-16) — actual journal152 RED→GREEN; existing native12yd/7yd hostile acquisition and source10min lifecycle proof, wire/rendering separate.
+
 - [Waywatcher source lifecycle](systems/toys.md#waywatcher-source-lifecycle-2026-10-16) — current99572 learned-use acceptance1/1, source Val'sharah/15s/900s behavior and private18-asset closure; canonical publication/rendering separate.
 
 - [Grizzlesnout source lifecycle](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16) — actual learning/Northrend cast/15s expiry acceptance1/1; twelve canonical body assets/two aliases authenticated, native rendering separate.
