@@ -351,10 +351,14 @@ fn quality_crafting_refuses_before_any_reagent_or_skill_mutation() {
         .unwrap()
         .clone();
     assert!(spell.effects.iter().any(|effect| effect.effect == 288));
-    assert!(matches!(
-        check_cast_items(h.app.world(), h.player, &spell),
-        Err(CastFailure::Unsupported(_))
-    ));
+    let Err(CastFailure::Unsupported(reason)) = check_cast_items(h.app.world(), h.player, &spell)
+    else {
+        panic!("unsourced quality operations must refuse before consuming reagents");
+    };
+    assert!(
+        reason.contains("CRAFTING_OPERATION_COMPOSITION"),
+        "{reason}"
+    );
     h.send::<CraftRecipe, ProfessionChannel>(CraftRecipe {
         spell_id: 375110,
         casts: 1,
@@ -364,6 +368,76 @@ fn quality_crafting_refuses_before_any_reagent_or_skill_mutation() {
         persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id),
         before
     );
+    assert_eq!(h.professions(), professions);
+}
+
+#[test]
+fn quality_reagent_selection_is_authoritative_and_never_assigns_an_outcome() {
+    use shared::crafting_reagents::{CraftingReagentCatalog, ReagentAllocation};
+    use shared::protocol::{CraftingOperationRequest, CraftingOperationStateUpdate};
+    let mut h = harness_with(80, |app| {
+        add_inbox::<CraftingOperationStateUpdate>(app);
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+        app.insert_resource(CraftingReagentCatalog::load(&dir).unwrap());
+    })
+    .unwrap();
+    h.app.world_mut().entity_mut(h.connection).insert((
+        pair::<CraftingOperationRequest>(),
+        pair::<CraftingOperationStateUpdate>(),
+    ));
+    h.give(193222, "Lustrous Scaled Hide", 2);
+    h.give(193208, "Resilient Leather", 6);
+    h.give(193210, "Resilient Leather", 4);
+    let mut professions = h.professions();
+    professions.spells.push(375188);
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(professions.clone());
+    h.app.update();
+    let before = persistence::load_inventory(h.db(), h.character_id);
+    let selected = vec![
+        ReagentAllocation {
+            slot_index: 0,
+            item_id: 193222,
+            quantity: 2,
+        },
+        ReagentAllocation {
+            slot_index: 1,
+            item_id: 193208,
+            quantity: 6,
+        },
+        ReagentAllocation {
+            slot_index: 1,
+            item_id: 193210,
+            quantity: 4,
+        },
+    ];
+    h.send::<_, ProfessionChannel>(CraftingOperationRequest {
+        spell_id: 375188,
+        allocations: selected.clone(),
+    });
+    let update = h
+        .take::<CraftingOperationStateUpdate>()
+        .pop()
+        .expect("server must validate owned selections");
+    assert_eq!(update.validation_error, None);
+    assert_eq!(update.allocations, selected);
+    assert_eq!(
+        update.quality,
+        Err(shared::profession::CraftingOperationGap::CraftingOperationComposition)
+    );
+    let mut invalid = selected.clone();
+    invalid[2].quantity = 5;
+    h.send::<_, ProfessionChannel>(CraftingOperationRequest {
+        spell_id: 375188,
+        allocations: invalid,
+    });
+    let update = h.take::<CraftingOperationStateUpdate>().pop().unwrap();
+    assert!(update.validation_error.is_some());
+    assert!(update.allocations.is_empty());
+    assert!(update.quality.is_err());
+    assert_eq!(persistence::load_inventory(h.db(), h.character_id), before);
     assert_eq!(h.professions(), professions);
 }
 
