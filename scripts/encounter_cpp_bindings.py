@@ -2,7 +2,7 @@
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
 Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
-Adarogg, Slagmaw, Gordoth, Wailing Caverns, Silverlaine and Electrocutioner primaries.
+Adarogg, Slagmaw, Gordoth, Wailing Caverns, Silverlaine, Electrocutioner and Crowd Pummeler primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
@@ -156,7 +156,20 @@ ELECTROCUTIONER_PRIMARY = dict(
     actor_id=991,
     display_id=36558,
 )
+# TC DATA_CROWD_PUMMELER is ordinal3; installed Normal encounter381 uses bit4.
+PUMMELER_PRIMARY = dict(
+    map_id=90,
+    entry=6229,
+    encounter_id=381,
+    bit=4,
+    script="",
+    ai="SmartAI",
+    journal_id=418,
+    actor_id=989,
+    display_id=36560,
+)
 PROFILES = {
+    "crowd-pummeler": (PUMMELER_PRIMARY, GNOMEREGAN_SOURCES),
     "electrocutioner": (ELECTROCUTIONER_PRIMARY, GNOMEREGAN_SOURCES),
     "silverlaine": (SILVERLAINE_PRIMARY, SHADOWFANG_SOURCES),
     "kystia": (PRIMARY, SOURCES),
