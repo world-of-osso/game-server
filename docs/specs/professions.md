@@ -14,6 +14,12 @@ Retail professions on the server: learning at profession trainers and crafting k
 
 - New characters start with empty bags and no money (the old 20 Linen / 10 Peacebloom / 10 Copper Ore / 10 gold seed is gone). Admin `grant-item <character> <item_id> <count>` stores items in the bags (content_item name, quality and sell price, stacked to the template's max) and sends an online owner the `InventoryDelta`; unknown items, unknown characters and full bags are refused unchanged.
 
+## Quality reagent validation
+
+- `CraftingOperationRequest` validates learned recipes, authored basic slot membership/quantities, aggregate owned Retail bag counts and fixed reagent requirements. It never consumes inventory, advances skill or creates an item.
+- Runtime requires local Retail exports under `data/db2/active`: ModifiedCraftingSpellSlot, ModifiedCraftingReagentSlot, MCRSlotXMCRCategory, CraftingReagentQuality, Item and CraftingQuality. No network lookup or invented substitution is permitted.
+- Quality remains `Err(CraftingOperationComposition)` (`CRAFTING_OPERATION_COMPOSITION`), never a default tier. Modifying/finishing eligibility and unevaluated slot conditions refuse explicitly. Pinned TC a352b1fa `SpellEffects.cpp` maps effects288/297 to EffectNULL; Retail SchematicForm delegates composition to native APIs.
+
 ## Out of scope
 
 Gathering nodes, Dragonflight+ quality/concentration/crafting orders/specializations, recrafting, unlearning, First Aid, reputation price discounts, gossip-menu-specific trainers.
