@@ -319,7 +319,9 @@ fn dummy_warrior_bloodthirst_enrage_uses_effect_two_chance() {
 #[test]
 fn dummy_warrior_rampage_spends_rage_hits_and_enrages() {
     let ids = [184367, 184707, 184709, 201364, 201363, 184362];
-    let mut h = harness(Vec::new(), &ids, 1).expect("real world.db required");
+    // Every sourced child must hit here; avoidance has separate native tests.
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1)
+        .expect("real world.db required");
     h.set_power(PowerType::Rage, 1000.0);
     h.cast_and_deliver(184367, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
