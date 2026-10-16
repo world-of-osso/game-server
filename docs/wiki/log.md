@@ -1,3 +1,16 @@
+## 2026-10-16 — Exact map-player-count guard
+
+[Positive171/native28](systems/dungeon-achievements.md#exact-map-player-count-guard) preserves exact current-map roster equality, including dead players. Genuine compiler/native RED, compiler47/47/generated5790, structural5518/1824 adds only character9244; native GREEN pending. No group substitute or garrison invasion claim.
+
+## 2026-10-16 — Authored scenario-step kill guard
+
+[Positive82/native0](systems/dungeon-achievements.md#authored-scenario-step-kill-guard) resolves current authored IDs via OrderIndex=Asset-1, not vector positions. Compiler46/46/generated5783; genuine native component RED→GREEN2/2; structural5517/1824 adds four account roots. Explicit run binding, rejected1031 admission, missing original research content and stages7/14/17 remain named gaps.
+
+## 2026-10-15 — Completed-quest login guard
+
+[Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED→GREEN4/4, census5513/1824 adds only account17495. Integratedbd808152 required four-filter208/0/1ignored plus site-export1/1; server/engine checks and formatting pass warning-free. Existing additive login counters and original account dates preserved; quest acquisition unproven.
+
+## 2026-10-15 — Nested encounter conjunction
 ## 2026-10-15 — Read-only follower group reward receipts
 ## 2026-10-16 — Ysera source admission and private body closure
 

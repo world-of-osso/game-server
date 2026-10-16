@@ -11,6 +11,9 @@
 # Wiki Index
 
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls pass, workspace check held by bot live window; full talent/legal/fresh UDP acceptance open.
+- [Exact map-player-count guard](systems/dungeon-achievements.md#exact-map-player-count-guard) — bounded positive171/native28 counts actual Player entities in the exact reference map/copy, including dead players; no group substitution or garrison content claim.
+
+- [Authored scenario-step kill guard](systems/dungeon-achievements.md#authored-scenario-step-kill-guard) — native0 positive82 resolves actual current step IDs through authored ordinals; stage3/5 spell/death component proof, scenario admission and original research content remain gaps.
 
 - [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
 - [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) — Charred/Rampage damage-only fixtures use existing sourced dodge reduction; actual Chaos `Miss(Dodge)` reproduces intermittent zero-damage preconditions, no evade/gameplay change.
