@@ -12,6 +12,17 @@ Earlier root refusals remain in the [effects12 identity/reason table](toy-effect
 
 [Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
 
+## Forced-forward62 generic input proof (2026-10-16)
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Replicated flag | TC aura241 sets `UnitFlags2::FORCE_MOVEMENT`0x40; unrelated bits survive, overlapping auras retain the flag until last removal. Genuine RED0/1 observes1 instead of65; GREEN1/1 passes6.08s at serverb0a24e7d/protocol07a8faa. Existing wire field reused; no new schema. |
+| Native input | Engine8be3b46e8 test genuinely fails forced idle input `[0,0,0]` instead of `[0,0,1]`. Production18625f980 plus numeric-tuple API correctiond6adbe444 consumes replicated0x40 and clamps forward exactly1 while preserving strafe, ordinary mouse/scripted controls and release. Native gameplay controls pass35/35, zero ignored2.84s; compile3m27s. Initial contains-method compile failure is retained separately. |
+| Current regression | Whole `toys:: --test-threads 2` passes139/139, zero ignored418.73s at server2d8fc58e/engined6adbe444/protocol07a8faa; compile24m16s. Native lib check passes2m24s, server binary check4m13s, changed-package engine/server and protocol fmt pass. Manual changed-Rust readability finds no suppressions or new issue. |
+| Classification and gaps | Same shared-data catalog snapshot basis364→369 adds104329/113543/129965/130249/153193, zero removals. This is handler classification, not five complete toys; prior385 prepared-import count is a different DB basis. Missing73689 and zero-entry113543 mount action remain named gaps above; next actual-use candidate129965 has source27864/display9287. No new native wire/pixels, per-toy movement/body/lifetime or guardian-health parity claim. |
+
+Evidence root below: `force-forward62-{proof-ledger,readonly-source,next-source-order,readability,census-delta,final-results}.json`, native/flag RED/GREEN and final logs. Unexecuted Ashhide drafts are archived under `deferred62-*`, not admitted to the active regression suite. [Native input contract](../../game-engine/docs/specs/player-movement-sync.md#forced-forward-aura).
+
 ## Ysera source summon proof (2026-10-16)
 
 [Contract](specs/toys.md#contract) owns130170/195708→99518/display66207. Genuine importer/use RED4425c34c reproduces zero published99518 and real learned-use refusal for missing99518(0/1,35.81s). Productionb0417165 adds only99518 to the maintained importer; no runtime Rust/Cargo, destination, privacy, stat, clock or cooldown implementation changes. Source has no AI/addon/spell/click/root-script binding;1200000ms item recovery remains unchanged.
