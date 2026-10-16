@@ -1,6 +1,9 @@
 ## 2026-10-16 — Call Pet missing-storage refusal
 
 [Pet lifecycle](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16): absent PetStable admitted883 success then effect returned without a pet. Actual native-target fresh-storage RED→GREEN; four controls and copied real character47 storage probe pass. No saved pet exists. Pinned creation-cast data has no Human hunter pet row; named source gap, no granted kit. Authenticated real-profile follower melee death already reaches its owner exactly once in a separate baseline test; terminal native delivery ordering remains under investigation rather than adding duplicate events.
+## 2026-10-16 — Sourced Fade107 continuation
+
+[Current70391 census](../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16):105 referenced properties, exact rejected effect/turn IDs and123-state aura gate; Fade1084 alone adds3 admitted rows1746→1749/2829 (61.72→61.82%). Actual unsupported107 RED3→GREEN81, lib check/fmt and both-skin private5961 fullHD pointer/log/model proof pass. No canonical DB/index change; remaining unknown semantics and lead-owned asset publication explicit.
 ## 2026-10-16 — Guild perk membership knowledge
 
 [Perks](systems/guild-perks.md): actual persisted join RED reproduced no perk grants. Membership-derived known IDs now remain separate from class/profession learning and survive ordinary spec rebuilds; owner deltas follow Update membership changes. Focused GREEN and real UDP/native/effect proof remain open.
