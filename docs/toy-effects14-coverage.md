@@ -601,3 +601,7 @@ Refreshed actual private wire at the [Podium postmerge packet](#winners-podium-s
 Updated source checkpoint2026-10-15: `bashiok44-prepared.json` finds382 admissible/784 unavailable after the maintained importer, +118222 and no removals against381. Canonical-data census finds364 because18 summon templates are not published there; this is a data-scope distinction, not17 code regressions. `bashiok44-census-delta.json` records exact IDs/revision. Admission still does not certify complete behavior or native rendering.
 
 Read-only next-root audit retains explicit refusals: Gadgetzan18986 has bound native root23453/backfire23448 but child36902 lacks an authored DB destination; RequiredSkill2506/rank260 also needs authoritative eligibility. Mastery book43824's bound59317 script chooses59316/59314 from actual area4637; WMO-only actual-area identification is not proved. Neither script is guessed or admitted by this audit.
+
+## Corgi68 source viewer aura (2026-10-16)
+
+Next Full1166 item158149/264091 is existing accepted viewer aura233, not global transformation. Same70391 source effect707262 preserves literal base550 and misc[3569,53]; SpellMisc duration6 is600000ms. Extended real bag-learning/UseToy/cancel regression pending; no new production handler. Existing native code has no viewer233 consumer; payload interpretation, body selection, target eligibility and pixels remain open. Neither a direct display3569 nor creature-template3569 is inferred. `corgi68-readonly-source.json` retains source rows; acceptance does not certify full toy parity.

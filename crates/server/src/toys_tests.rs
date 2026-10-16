@@ -1373,7 +1373,11 @@ fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
 
 #[test]
 fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
-    for (item, spell, payload) in [(166678, 289277, [4076, 155]), (198227, 384585, [6409, 170])] {
+    for (item, spell, payload) in [
+        (158149, 264091, [3569, 53]), // Overtuned Corgi Goggles
+        (166678, 289277, [4076, 155]),
+        (198227, 384585, [6409, 170]),
+    ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
         learn_effect_toy(&mut h, character, item);
