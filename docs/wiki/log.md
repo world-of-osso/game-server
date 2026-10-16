@@ -1,6 +1,6 @@
 ## 2026-10-15 — Completed-quest login guard
 
-[Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED, census5513/1824 adds only account17495. Existing additive login counters preserved; quest acquisition unproven.
+[Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED→GREEN4/4, census5513/1824 adds only account17495. Integratedbd808152 required four-filter208/0/1ignored plus site-export1/1; server/engine checks and formatting pass warning-free. Existing additive login counters and original account dates preserved; quest acquisition unproven.
 
 ## 2026-10-15 — Nested encounter conjunction
 
