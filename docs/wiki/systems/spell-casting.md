@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Directed radius spell modifiers — 2026-10-16
+
+TC a352b1fa `SpellDefines.h152–160` identifies Radius/op6; `SpellInfo.cpp783–826` applies the owner's modifier after calculating radius.Max and returns zero before modifiers when the radius entry is missing. The existing directed-unit selector now passes its modeled raw radius through the shared `(base+flat)×pct` fold; no spell-ID exception or new native-row value. Family/mask/recipient and charged/live modifier behavior stay shared. Native275339E2 extends46968 from10 to16; native207547E0 extends31661 from12 to37. The latter is a native item-aura fixture, not a legal-current-build claim.
+
+Atfb0cc47d ordinary HostClient casts miss both expanded boundaries while three absence/removal/foreign/wrong-mask controls pass (genuine RED3pass/2fail,7.25s). Initial attempt only failed stale protocol's PvP snapshot compilation and is not a gameplay RED; protocol slot is a clean FF to landed7f0772e. Selected70391 effect/class/radius scalars match the installed catalog. Targeted GREEN/check pending. Other selectors and base per-level/min/max/movement-radius logic remain unchanged/unproved; positive percentage-radius calls have source/fold proof, not a native positive caller fixture. Geometry stays unit-center, not full Retail combat reach. [Contract](../../specs/class-completeness.md); evidence `data/class-completeness6-2026-10-12/directed-radius-{goal,source,native-equality,proof-ledger}.json`.
+
 ## Native damage prerequisite fixtures — 2026-10-16
 
 Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.

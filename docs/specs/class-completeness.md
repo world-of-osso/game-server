@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] At the existing directed-unit selectors24/104/129/134, native Radius/op6 modifies the caster's effective base radius through the ordinary signed flat/percentage spell-mod fold and native family/mask matching. Rumbling Earth275339 adds six yards to Shockwave's ten-yard cone; native Diadem207547 adds25 to Dragon's Breath's12. Absent/removed/foreign and same-family wrong-mask modifiers preserve base radius. Keep cone/line shape, target cap/LOS and current inclusive unit-center geometry; missing radius entries remain zero. This modifier-stage proof does not certify other selectors, base per-level/min/max/movement-radius logic, combat-reach expansion or legal current item builds.
+
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
 
 - [x] Optional resource spend ignores flat spell modifiers while retaining percentage modifiers for the native cost order, family/mask and caster. Practiced Strikes429647 discounts only Protection Execute's base cost; native Sudden Death52437 effect5 still makes order1 base/optional spend free without changing Arms order0. Existing available-resource clamping remains unchanged.

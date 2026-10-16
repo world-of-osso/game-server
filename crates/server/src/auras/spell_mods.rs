@@ -22,6 +22,7 @@ pub enum SpellModOp {
     PointsIndex0 = 3,
     ProcCharges = 4,
     Range = 5,
+    Radius = 6,
     CritChance = 7,
     Points = 8,
     ChangeCastTime = 10,

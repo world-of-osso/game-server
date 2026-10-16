@@ -26,6 +26,7 @@ use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
 use shared::components::{Health, Player, Position, Rotation, UnitFactionTemplate};
 
+use crate::auras::spell_mods::{self, SpellModOp};
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
 use crate::spell_info::{SpellEffect, SpellInfo};
@@ -767,6 +768,23 @@ fn raid_corpses(
     bodies.into_iter().map(|(_, unit)| unit).collect()
 }
 
+/// TC SpellInfo.cpp783–826: a missing radius entry stays zero; matching op6
+/// modifiers apply after the existing raw-radius calculation. Base per-level/cap
+/// logic and other selectors remain separate consumers.
+fn modified_directed_radius(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+) -> f32 {
+    if effect.radius[radius_slot(effect, slot)].is_none() {
+        return 0.0;
+    }
+    let base = radius(effect, slot);
+    spell_mods::modify(world, caster, spell, SpellModOp::Radius, base)
+}
+
 ///24/129 use caster facing; 104/134 use the caster-to-destination direction.
 ///129: SpellInfo.cpp377; SpellMgr.cpp3244-3245 marks native Width as CONE_LINE.
 ///TC a352b1fa Spell.cpp:1273-1324 selects 24 with native ConeAngle/CalcRadius.
@@ -789,14 +807,8 @@ fn directed_units(
         .ok_or(effect.implicit_targets[slot])?;
     let half_arc = restrictions.cone_degrees.to_radians() / 2.0;
     let width = restrictions.width;
-    let mut units = area_units(
-        world,
-        caster,
-        origin,
-        radius(effect, slot),
-        Relation::Enemy,
-        0,
-    );
+    let radius = modified_directed_radius(world, caster, spell, effect, slot);
+    let mut units = area_units(world, caster, origin, radius, Relation::Enemy, 0);
     units.retain(|&unit| {
         let offset = position(world, unit).expect("area unit position") - origin;
         within_directed_shape(
