@@ -60,7 +60,7 @@ impl ImpHarness {
         .unwrap();
         let spells = load_pet_levelup_spells(&conn).unwrap();
         let prepared = crate::spell_cast::test_harness::prepare_class_world();
-        let mut data = load_world_data(&prepared.path());
+        let mut data = prepared.world_data();
         data.templates
             .retain(|entry, _| [416, 417, 1860, 1863, 17252, 184600, 78116].contains(entry));
         let db = redb::Database::create(path).unwrap();
@@ -85,8 +85,12 @@ impl ImpHarness {
         .expect("real spell data");
         h.app.world_mut().entity_mut(h.caster).insert(Level(level));
         // Keep the full live spell catalog, not the generic harness's three-spell fixture.
-        let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
-        h.app.insert_resource(store);
+        h.app.insert_resource(
+            crate::spell_cast::test_harness::world_db()
+                .unwrap()
+                .store
+                .clone(),
+        );
         h.app.world_mut().entity_mut(h.connection).insert((
             MessageSender::<PetAction>::default(),
             MessageReceiver::<PetAction>::default(),
