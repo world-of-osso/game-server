@@ -80,7 +80,8 @@ fn mangle(with_rank: bool, bleeding: bool) -> f32 {
     if with_rank {
         ids.push(231064);
     }
-    let mut h = harness(Vec::new(), &ids, 11).expect("real catalog");
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 11).expect("real catalog");
     let caster = h.caster;
     let npc = h.npc;
     aura(&mut h, caster, caster, 5487);
