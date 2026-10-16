@@ -85,6 +85,8 @@ pub const MOD_STEALTH: u32 = 16;
 pub const MOD_STEALTH_DETECT: u32 = 17;
 pub const MOD_STEALTH_LEVEL: u32 = 154;
 pub const DETECT_STEALTH: u32 = 228;
+/// TC a352b1fa SpellInfo.cpp4140: matching optional resource cost only.
+pub const MOD_ADDITIONAL_POWER_COST: u32 = 63;
 pub const MOD_POWER_COST_SCHOOL_PCT: u32 = 72;
 pub const ALLOW_TALENT_SWAPPING: u32 = 158;
 pub const ARENA_PREPARATION: u32 = 215;
@@ -199,6 +201,8 @@ pub const MOD_MELEE_HASTE_3: u32 = 319;
 pub const SCREEN_EFFECT: u32 = 260;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
 pub const MOD_ARMOR_PCT_FROM_STAT: u32 = 268;
+/// TC a352b1fa Unit.cpp7056/8178: victim aura owner and incoming school mask.
+pub const MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER: u32 = 270;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 /// TC a352b1fa Unit::SpellDamageBonusTaken: owner + SpellLabel match.
 pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
@@ -211,6 +215,8 @@ pub const MOD_NO_ACTIONS: u32 = 321;
 pub const ANIM_REPLACEMENT_SET: u32 = 312;
 pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
 pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
+/// TC a352b1fa Unit.cpp2387: signed autoattack-only critical chance.
+pub const MOD_AUTOATTACK_CRIT_CHANCE: u32 = 334;
 pub const MOD_AUTOATTACK_DAMAGE: u32 = 344;
 /// SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT (SpellAuraDefines.h, TrinityCore a352b1fa).
 pub const OVERRIDE_SPELL_POWER_BY_AP_PCT: u32 = 366;
@@ -317,6 +323,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_RESISTANCE_PCT
         | MOD_MINIMUM_SPEED
         | MOD_MELEE_RANGED_HASTE_2
+        | MOD_AUTOATTACK_CRIT_CHANCE
         | MOD_AUTOATTACK_DAMAGE
         | MOD_AUTOATTACK_RANGE
         | MOD_SUMMON_DAMAGE
@@ -372,13 +379,15 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_SPELL_CATEGORY_COOLDOWN
         | MOD_RECOVERY_RATE => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
-        MOD_POWER_COST_SCHOOL_PCT => PowerCost,
+        MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
-        MOD_SPELL_DAMAGE_FROM_CASTER | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
+        MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER
+        | MOD_SPELL_DAMAGE_FROM_CASTER
+        | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
         MOD_MAX_CHARGES
         | MOD_CHARGE_RECOVERY_RATE
         | CHARGE_RECOVERY_MOD

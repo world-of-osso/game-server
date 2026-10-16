@@ -1372,13 +1372,19 @@ pub(crate) fn damage_resilience_multiplier(
 }
 
 /// Damage taken multiplier of `target`: MOD_DAMAGE_PERCENT_TAKEN (through
-/// `AuraStatMods`) × MOD_SPELL_DAMAGE_FROM_CASTER auras cast by `attacker`.
+/// `AuraStatMods`) × matching school/family/label auras cast by `attacker`.
 pub fn damage_taken_multiplier(
     world: &World,
     target: Entity,
     attacker: Entity,
     spell: &SpellInfo,
 ) -> f32 {
+    // TC Unit.cpp7033: only mechanic damage modifiers survive this attribute.
+    // This function's supported modifiers are school/caster/versatility, not mechanic.
+    const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x0000_0100;
+    if attributes(spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0 {
+        return 1.0;
+    }
     let versatility = damage_resilience_multiplier(world, target, spell);
     let school_mask = spell.school_mask();
     let taken = world
@@ -1393,6 +1399,9 @@ pub fn damage_taken_multiplier(
                 aura.effects
                     .iter()
                     .filter(|effect| match effect.aura_type {
+                        handlers::MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER => {
+                            effect.misc_values[0] as u32 & school_mask != 0
+                        }
                         handlers::MOD_SPELL_DAMAGE_FROM_CASTER => {
                             scripts::affects_incoming_spell(aura, effect, spell)
                         }
@@ -1992,6 +2001,8 @@ mod tests;
 #[cfg(test)]
 mod toy_effects_tests;
 
+#[cfg(test)]
+mod autoattack_crit_tests;
 #[cfg(test)]
 mod bloodsurge_tests;
 #[cfg(test)]

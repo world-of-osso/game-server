@@ -1,6 +1,38 @@
+- [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
+
+- [Crowd Pummeler source clock](systems/boss-scripts.md#gnomeregan-crowd-pummeler-source-clock--2026-10-16) — authenticated6229→381/bit4 copy-only binding and real three-spell first/repeat/damage/death-credit proof; knockback/interrupt and native acceptance remain separate.
+
+- [Electrocutioner primary and source mana gap](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16) — authenticated6235/380/bit3 binding and controlled death credit; ordinary SAI Shock fails authored mana admission, named mechanics acceptance remains open.
+- [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
+# Wiki Index
+
+- [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls pass, workspace check held by bot live window; full talent/legal/fresh UDP acceptance open.
+
+- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
+- [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) — Charred/Rampage damage-only fixtures use existing sourced dodge reduction; actual Chaos `Miss(Dodge)` reproduces intermittent zero-damage preconditions, no evade/gameplay change.
+
+- [Stockade proximity receipts](investigations/follower-data.md#stockade-proximity-receipts--2026-10-15) — debug-only acquisition positions distinguish proximity from damage; social-assist gaps remain explicit.
+
+- [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
+- [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Shrine server per-target stat conversion](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16) — actual-use missing-table RED→source level/armor/damage/health conversion19 controls; actual attack/client HP proof separate.
+
+- [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
+
+- [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; [health-based damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16) and native modifier exclusions covered separately; PvP/follow-up talents open.
+
+- [BM Kill Command pet damage](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16) — actual Call Pet/owner intent RED→GREEN for34026→83381; native damage attribution and foreign ownership, not charging/full talent coverage.
+
+- [Authored scenario-step kill guard](systems/dungeon-achievements.md#authored-scenario-step-kill-guard) — native0 positive82 resolves actual current step IDs through authored ordinals; stage3/5 spell/death component proof, scenario admission and original research content remain gaps.
+
+- [Completed-quest login guard](systems/dungeon-achievements.md#completed-quest-login-guard) — bounded positive110 reuses character reward-derived Login74 facts for account17495; no quest acquisition or account-history borrowing.
+
+- [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
+- [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — member-scoped six-action/founder ledger, separate from bank/news history.
 - [Guild news](systems/guild-news.md) — actual qualified producers, durable member query/sticky authority and native proof ledger.
@@ -26,7 +58,6 @@
 - [Source guardian level selection](systems/toys.md#source-guardian-level-selection-2026-10-15) — actual Scarab UseToy20/80, ContentTuning priority/deltas and pre-init clamp; thirteen final controls and private UDP20/30 replication pass; full stats/AI remain open.
 - [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 
-- [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC recomputation; [owned-evade retention](investigations/follower-data.md#owned-evade-aura-retention--2026-10-15) preserves existing class/threat auras without budget overrides.
 
 - [Breakable CC targeting](investigations/follower-data.md#breakable-cc-targeting--2026-10-15) — shared follower hold/retarget/cast-stop and authored Attr6 implicit filtering; native118/31935 regressions, dungeon completion still open.
@@ -76,6 +107,7 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Wailing controlled gossip/start](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) — source callbacks/events1–3, real flag0 ingress rejection and physical first path2/2; natural positive activation remains data-blocked.
 - [Wailing targeted aggro Say](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) — attacker-name substitution, unchanged25yd broadcast, controlled native-server proof; natural activation/native clear open.
 
 - [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
@@ -94,6 +126,7 @@
 - [Authored goober spell dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) — native persistent-owner Workshop pickup RED6→GREEN1/1 with leased dependency provenance; timed siege activation remains separate.
 - [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
 
+- [Caster-owned school amplification](systems/auras.md#caster-owned-school-amplification--2026-10-16) — native Haunt270 owner/school consumer; ordinary cast regression and explicit pet/talent/UDP gaps.
 - [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; native13 controls pass, frontend RAP propagation and whole-AP limits remain open.
 
 - [Warrior effect-hit stuns](systems/spell-casting.md#warrior-effect-hit-stuns) — native Shockwave/Storm Bolt children and caster-owned Storm Bolts selector; 12 native controls pass, other Dummy/talent fields remain gaps.
@@ -442,3 +475,5 @@ Debug logs and root cause analyses.
 
 - [Wailing Normal wave projection](systems/boss-scripts.md#wailing-normal-wave-projection--2026-10-15) — copy-only source Normal rows; two process-boundary tests pass, no canonical/balance claim.
 - [Feral Spirit owner contribution](systems/spell-casting.md#feral-spirit-owner-contribution--2026-10-15) — source-backed owner AP and weapon terms; intrinsic AP named gap; native live-owner RED→GREEN and24 scoped controls pass.
+
+- [Rotgrip source mismatch](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16) — authenticated13596→428/bit6, literal Fatal Bite SELF damage versus SAI victim argument, real Puncture and isolated controlled credit; ordinary fight remains uncertified.

@@ -123,6 +123,7 @@ fn register_creatures(
     mut index: ResMut<GridIndex>,
     creatures: CreatureHomes,
     world_data: Option<Res<WorldData>>,
+    escorts: Query<(), With<crate::scripted_ai::movement::ScriptedPath>>,
 ) {
     for creature in std::mem::take(&mut index.pending) {
         let Ok(home) = creatures.get(creature) else {
@@ -137,7 +138,7 @@ fn register_creatures(
                 .push(creature);
         }
         index.home_grids.insert(creature, grids);
-        if !index.is_active(creature) {
+        if !index.is_active(creature) && !escorts.contains(creature) {
             commands.entity(creature).insert(GridDormant);
         }
     }
@@ -200,6 +201,7 @@ fn update_grid_activity(
     mut commands: Commands,
     mut index: ResMut<GridIndex>,
     players: Query<(Entity, &Position, &InMap), With<Player>>,
+    escorts: Query<(), With<crate::scripted_ai::movement::ScriptedPath>>,
 ) {
     let player_grids: HashMap<Entity, GridCoord> = players
         .iter()
@@ -220,7 +222,7 @@ fn update_grid_activity(
     }
     for grid in slept {
         for &creature in index.creatures_by_grid.get(&grid).into_iter().flatten() {
-            if !index.is_active(creature) {
+            if !index.is_active(creature) && !escorts.contains(creature) {
                 commands.entity(creature).insert(GridDormant);
             }
         }

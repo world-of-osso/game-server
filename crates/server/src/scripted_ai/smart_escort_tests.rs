@@ -1,4 +1,7 @@
 //! Real TDB Erland quest-accept → timed-list → waypoint-start boundary.
+
+#[path = "smart_feero_tests.rs"]
+mod feero;
 use super::*;
 use shared::components::{Npc, Position};
 use shared::protocol::NpcFlags;
@@ -50,6 +53,7 @@ fn erland() -> (tempfile::TempDir, World, SmartAi, Entity, Entity) {
         phase: 0,
         boss: None,
         stored_targets: HashMap::new(),
+        counters: HashMap::new(),
         timed_list: None,
         processing_timed_list: false,
         escort: None,
@@ -1561,6 +1565,7 @@ fn smartai_coverage_wailing_source_ordinal_updates_only_its_encounter() {
         phase: 0,
         boss: None,
         stored_targets: HashMap::new(),
+        counters: HashMap::new(),
         timed_list: None,
         processing_timed_list: false,
         escort: None,

@@ -436,7 +436,16 @@ fn creature_sight_system(
             }
         }
     }
-    for (watcher, (target, _)) in nearest {
+    for (watcher, (target, center_distance)) in nearest {
+        debug!(
+            creature = watcher.to_bits(),
+            target = target.to_bits(),
+            creature_position = ?params.view(watcher).map(|view| *view.position),
+            target_position = ?params.view(target).map(|view| *view.position),
+            map = ?params.view(watcher).map(|view| view.map),
+            center_distance,
+            "creature proximity acquisition"
+        );
         commands.queue(move |world: &mut World| {
             crate::creature_aggro::attack_start(world, watcher, target);
         });

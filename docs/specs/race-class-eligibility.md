@@ -4,7 +4,8 @@ Retail creation eligibility and race-mask identity follow the installed DB2 buil
 
 ## What it must do
 
-- [ ] Admit installed CharBaseInfo pairs for supported gameplay classes1–13 using playable ChrRaces metadata; do not enable unconverted Adventurer14.
+- [ ] Admit installed CharBaseInfo creation pairs for supported gameplay classes1–13 using playable ChrRaces metadata; do not enable unconverted Adventurer14. Raw model memberships do not override Retail creation policy.
+- [ ] Require a faction identity for Death Knights from neutral races: reject neutral Pandaren24/DK6 creation, retain Alliance25/DK6 and Horde26/DK6, and keep neutral Pandaren24/Monk10. Do not invent a24/6 start.
 - [ ] Derive RaceMasks bits from installed ChrRaces.PlayableRaceBit rather than race IDs or the retired Retail table.
 - [ ] Accept Dwarf3/Shaman7 through ordinary admin/client validation, authentic starting kit/location and character persistence.
 - [ ] Fail explicitly on missing, corrupt or empty required source instead of using a static Retail permission matrix.
@@ -24,7 +25,9 @@ Retail creation eligibility and race-mask identity follow the installed DB2 buil
 
 ## Tests asserting this spec
 
-- `race_class::tests::race_source_installed_char_base_info_pairs_are_admitted`
+- `race_class::tests::race_source_installed_creatable_pairs_are_admitted`
+- `race_class::tests::race_source_neutral_dk_requires_faction_but_neutral_monk_remains_creatable`
+- `player_create_info::tests::every_playable_pair_has_an_authored_start_loadout_and_creates`
 - `race_class::tests::race_source_missing_or_empty_installed_tables_do_not_use_static_defaults`
 - Existing `race_class::tests` mask, unsupported-pair, start-level and Forever controls.
 - `persistence_accounts_tests::race_source_admin_dwarf_shaman_uses_authentic_kit_and_persists`

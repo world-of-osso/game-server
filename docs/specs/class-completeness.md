@@ -4,6 +4,10 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Optional percentage costs, flat-spellmod exclusion and full talent/finisher acceptance remain separate.
+
+- [x] Native aura334 adds signed attacker-owned percentage points only to autoattack critical chance, summing applied amounts/stacks before the nonnegative clamp. Removal ends its contribution; victim-only auras and magic/weapon spell crit remain independent. Avenging Wrath31884 also has aura290, which continues through normal stat computation; this consumer does not replace or double-count it. Full talent amount bindings, legal gear and fresh native acceptance remain separate.
+
 - [ ] At the existing live-player melee weapon-spell dodge boundary, caster aura251 contributes its signed active total before expertise subtraction and final nonnegative clamp. Positive and negative native effects sum on the actual attacker; recipient-only effects do not contribute, and removal ends the modifier. Keep native facing/control/attribute/ranged exclusions. NPC dodge, aura248, player expertise and full251/ability acceptance remain separate.
 
 - [ ] Physical weapon-spell resistance consumes victim aura117 totals for the effect mechanic when nonzero, otherwise the spell category mechanic; take the nonnegative maximum total across selected mechanics, not their sum. Add its truncated hundredths after miss and before NoActiveDefense on the same native roll; resisted casts apply no stun/control effects. Recipient ownership, removal and mismatched selectors retain native behavior. Magic probability and full-ability acceptance remain separate.
@@ -102,6 +106,11 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Learned native Titan's Grip effect155 permits two-hand weapon hand placement with native subclass masks; the off hand additionally needs Dual Wield40. Explicit and auto-equip preserve the permitted main/off-hand pair. This does not establish acquisition or whole-Fury acceptance. See [inventory](inventory.md).
 - [ ] When a player stops knowing Dual Wield (spec/talent change), TC moves the off-hand weapon to the bags or mails it (OffhandCheckAtSpellUnlearn defaults on). Not yet modelled.
 - [x] Knowing any of the six native SPELL_EFFECT_PARRY (22) spells enables parry; without one, parry chance never applies.
+
+## Touch of Death admission
+
+- [x] Native322109 refuses a healthy stronger target before CastSuccess or cooldown publication. Its baseline admits creatures whose current health is strictly below the caster's maximum health; learned passive322113 additionally admits targets strictly below its authored health percentage. The native15% threshold is exclusive. PvP integration, Stagger removal and other follow-up talents remain separate, uncertified paths.
+- [x] Native322109 primary damage uses the caster's live maximum health and authored100%/35% fields for weaker creatures/other admitted targets. Native Can'tCrit, ignore caster percent damage modifiers, and ignore victim school/caster/versatility modifiers plus armor retain their source exclusions. These flags do not disable ordinary spells' modifiers. Mechanic-specific damage-taken auras, PvP integration, Stagger removal and other follow-up talents remain separate.
 
 ## Melee attack speed
 
@@ -227,3 +236,9 @@ The replicated owner stats carry distinct melee and ranged attack power. Ranged-
 ### Ordinary NPC physical-spell dodge
 
 Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per positive effective-level difference. Rear attacks may be dodged in PvE. Controlled/casting victims, ranged attacks and native avoidance/ignore-result attributes retain their exclusions. Signed attacker251 and nonplayer expertise240 apply before the final nonnegative clamp. Specialized Totem/Lightwell spawning and player expertise/248 remain separate gaps; template creature type must not impersonate runtime IsTotem.
+
+## Caster-owned school damage taken
+
+- [x] Aura270 multiplies incoming spell damage only for the aura caster and overlapping native school masks, using live amounts/stacks; removal and expiry remove the bonus. Existing IgnoreDamageTakenModifiers bypass remains in force.
+- [x] Native Haunt48181 effect1 increases the owner's actual Fireball damage by16%; foreign Haunt and physical-only Open Wounds188400 do not amplify Fire damage.
+- [ ] Haunt pet amplification381, unknown380, optional periodic/talent behavior and fresh UDP acceptance remain separate.

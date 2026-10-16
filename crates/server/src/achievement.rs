@@ -1025,6 +1025,16 @@ pub(crate) fn event_conditions(
     events: &[CriteriaEvent],
 ) -> PlayerConditions {
     let mut conditions = player_conditions(world, player);
+    if let Some(reference) = conditions.player.as_mut() {
+        // Login74 already rebuilds these facts from this character's persisted rewards.
+        reference.rewarded_quests = events
+            .iter()
+            .filter_map(|event| match event {
+                CriteriaEvent::CompleteQuest(quest) => Some(*quest),
+                _ => None,
+            })
+            .collect();
+    }
     for event in events {
         if let CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) = event {
             conditions
@@ -1112,11 +1122,13 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
         auras_known: world.get::<crate::auras::ActiveAuras>(player).is_some(),
         known_spells: known_player_spell_ids(world, player),
         spell_knowledge_complete: spell_knowledge_complete(world, player),
+        rewarded_quests: BTreeSet::new(),
         earned_achievements: earned_player_achievement_ids(world, player),
         account_achievements_known: world
             .get::<PlayerAchievementState>(player)
             .is_some_and(|state| state.account.is_some()),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
+        scenario_step: map.and_then(|map| scenario::current_step_id(world, map)),
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),
@@ -1581,6 +1593,9 @@ fn query_comparison_target(
 #[cfg(test)]
 #[path = "achievement_absent_aura_tests.rs"]
 mod absent_aura_tests;
+#[cfg(test)]
+#[path = "achievement_completed_quest_tests.rs"]
+mod completed_quest_tests;
 #[cfg(test)]
 #[path = "achievement_creature_type_tests.rs"]
 mod creature_type_tests;
