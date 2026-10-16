@@ -85,6 +85,57 @@ fn stat_mods(h: &Harness) -> AuraStatMods {
 }
 
 #[test]
+fn guild_mount_up_real_spell_grant_modifies_ground_and_flight_then_revokes() {
+    // Active GuildPerkSpells2→78633; SpellEffect68259/68260/102117 are172/211/210.
+    // TC Unit.cpp8812–8854: mounted base multiplier × max(stacking, nonstacking).
+    let mut h = rider(225, true, &[]).expect("Actual Golden Gryphon and mount catalog");
+    h.app
+        .world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .set_guild_grants(&[78633]);
+    h.advance(3);
+    assert!(
+        has(&h, 78633),
+        "Real known passive is applied, not a fabricated speed aura"
+    );
+    assert_eq!(
+        stat_mods(&h).movement_speed,
+        1.0,
+        "Unmounted running is unchanged"
+    );
+    mount(&mut h);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let mounted = stat_mods(&h);
+    assert!(
+        (mounted.movement_speed - 2.2).abs() < 1e-6,
+        "Actual mounted ground speed: {}",
+        mounted.movement_speed
+    );
+    assert!(
+        (mounted.flight_speed - 3.52).abs() < 1e-6,
+        "Actual mounted flight speed: {}",
+        mounted.flight_speed
+    );
+    h.app
+        .world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .set_guild_grants(&[]);
+    h.advance(3);
+    assert!(!has(&h, 78633));
+    let departed = stat_mods(&h);
+    assert_eq!(departed.movement_speed, 2.0);
+    assert!((departed.flight_speed - 3.2).abs() < 1e-6);
+    assert!(
+        has(&h, GOLDEN_GRYPHON),
+        "Guild departure does not unmount or unlearn class spells"
+    );
+    cancel_mount(&mut h);
+    assert_eq!(stat_mods(&h).movement_speed, 1.0);
+}
+
+#[test]
 fn players_entering_the_world_carry_flight_style_steady() {
     let Some(h) = rider(225, true, &[]) else {
         return;
