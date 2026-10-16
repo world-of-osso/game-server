@@ -272,6 +272,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     51113,
     # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.
     86916,
+    # Winner's Podium: source47/138 placement, no AI/click/control bindings.
+    240220,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,

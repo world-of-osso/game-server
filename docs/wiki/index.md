@@ -15,6 +15,10 @@
 
 - [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native/catalog5/5, controlled boss identities and counters are not full encounter/map grants.
 
+- [Wild summon initial level and stats](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15) — source Create-area ordering and actual learned-use RED for Podium/Shrine; initialized fields under verification, broader scaling parity remains open.
+
+- [Winner's Podium placement](systems/toys.md#winners-podium-source-placement-2026-10-15) — source47 scaled player reach and138 actual ground; actual UseToy/template/20min simulation expiry and both-skin native actor/static proof; wall expiry separate.
+- [Source guardian level selection](systems/toys.md#source-guardian-level-selection-2026-10-15) — actual Scarab UseToy20/80, ContentTuning priority/deltas and pre-init clamp; thirteen final controls and private UDP20/30 replication pass; full stats/AI remain open.
 - [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
