@@ -1605,3 +1605,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Added [incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16), replacing repeated catalog-wide recursive evaluation with affected-root reconciliation and disposable full-snapshot results. Targeted proof pending.
 
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
+
+- 2026-10-16: [AreaGroup298 source preflight](systems/dungeon-achievements.md#area-group-qualifier-source-preflight--2026-10-16) finds only account18738 hypothetical gain on native29; existing membership CSV is missing from authenticated installed manifests and SQL membership is absent. No support enabled or canonical data changed.

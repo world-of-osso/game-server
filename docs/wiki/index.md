@@ -1,3 +1,4 @@
+- [AreaGroup298 source preflight](systems/dungeon-achievements.md#area-group-qualifier-source-preflight--2026-10-16) — one hypothetical account root; membership provenance and SQL data remain blockers, no runtime support enabled.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
