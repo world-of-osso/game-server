@@ -652,6 +652,17 @@ fn send_isle_facing_input(h: &mut Harness, actor: &Traveler, position: Position,
         .get::<MovementControl>(actor.player)
         .unwrap()
         .epoch;
+    queue_isle_facing_input(h, actor, position, yaw, epoch);
+    h.advance(5);
+}
+
+fn queue_isle_facing_input(
+    h: &mut Harness,
+    actor: &Traveler,
+    position: Position,
+    yaw: f32,
+    epoch: u32,
+) {
     h.app
         .world_mut()
         .get_mut::<MessageSender<PlayerInput>>(actor.connection)
@@ -667,7 +678,6 @@ fn send_isle_facing_input(h: &mut Harness, actor: &Traveler, position: Position,
             position: [position.x, position.y, position.z],
             epoch,
         });
-    h.advance(5);
 }
 
 #[test]
@@ -682,7 +692,7 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
         ));
     h.app.init_resource::<crate::friends::AutoAfkScheduler>();
     h.app
-        .add_systems(Update, crate::networking::process_player_inputs);
+        .add_systems(FixedUpdate, crate::networking::process_player_inputs);
     install_isle_input_sender(h, actor);
     install_isle_input_sender(h, ordinary);
     let ordinary_start = *h.app.world().get::<Position>(ordinary.player).unwrap();
@@ -717,6 +727,28 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
         Quat::from_rotation_y(h.app.world().get::<Rotation>(demolisher).unwrap().y);
     let local_seat = initial_facing.inverse() * relative;
     let vehicle_yaw = h.app.world().get::<Rotation>(demolisher).unwrap().y;
+    let driver_epoch = h
+        .app
+        .world()
+        .get::<MovementControl>(actor.player)
+        .unwrap()
+        .epoch;
+    queue_isle_facing_input(
+        h,
+        actor,
+        Position {
+            x: vehicle_start.x + 50.0,
+            ..vehicle_start
+        },
+        vehicle_yaw,
+        driver_epoch.wrapping_sub(1),
+    );
+    h.advance(5);
+    assert_eq!(
+        *h.app.world().get::<Position>(demolisher).unwrap(),
+        vehicle_start,
+        "pre-boarding input cannot move the NPC"
+    );
     // A no-strafe vehicle moves along its authored initial facing. The report does
     // not demand the instantaneous eastward turn an ordinary player can make.
     send_isle_facing_input(

@@ -89,7 +89,7 @@ impl DriverInputs<'_, '_> {
         })
     }
 
-    pub(crate) fn apply_inputs(
+    pub(in crate::networking) fn apply_inputs(
         &mut self,
         mover: &NpcMover,
         player: Entity,
