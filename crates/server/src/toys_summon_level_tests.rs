@@ -2,6 +2,37 @@
 use super::*;
 
 #[test]
+fn toyfx55_wild_missing_destination_source_refuses_spawn() {
+    use crate::spell_cast::summon::SummonedCreature;
+    let directory = tempfile::tempdir().unwrap();
+    let path = toyfx8_world();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("wild-unknown-area.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    h.app
+        .world_mut()
+        .remove_resource::<crate::ground::GroundMap>();
+    learn_effect_toy(&mut h, character, 239018);
+    assert_eq!(activate(&mut h, 239018)[0].error, None);
+    h.advance(40);
+    let world = h.app.world_mut();
+    assert!(
+        world
+            .query::<&SummonedCreature>()
+            .iter(world)
+            .all(|summon| summon.spell_id != 1227063)
+    );
+}
+
+#[test]
 fn toyfx55_wild_real_use_clamps_podium_to_region() {
     assert_wild_source_levels(239018, 1227063, 240220, &[(20, 20), (80, 30)]);
 }

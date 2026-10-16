@@ -1,3 +1,7 @@
+## 2026-10-15 — Wild summon initial-state source RED
+
+[Wild55](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15): actual learned Podium/Shrine source RED proves legacy level1/HP20-or1/armor50, instead of Northshire source level20/30 with corresponding ExpectedStat HP/armor. Source terrain precedes SelectLevel, then property flags control owner clamp. Minimal wild initialization updates level/HP/armor/mana; unknown-source refusal and retained lifecycle checks are under verification. No broader scaling/combat-stat or previous-native recertification claim.
+
 ## 2026-10-15 — Winner's Podium source placement
 
 [Podium54](systems/toys.md#winners-podium-source-placement-2026-10-15): real-source RED3 for missing240220, scaled player-front minimum and destination138 airborne height; minimal source fix GREEN6/6 at3c2d0bb6, with real learning/use/20min simulation expiry and retained62/Bashiok/Shrine87 controls. Importer3/3, postmerge20/20/check/format/matching builds and both-skin native source/static proofs pass. Final clamp extraction377d5139 rechecks six affected controls58.66s/check/format/build; native receipts retain ed425/fe1d/ab40 scope. Prepared383 adds only239018, not383 complete;20min native wall expiry remains unproved. No runtime clock or cooldown changes.

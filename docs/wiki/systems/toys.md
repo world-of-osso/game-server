@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Wild summon initial level and stats (2026-10-15)
+
+Pinned TC a352b1fa initializes terrain area in Creature::Create before CreateFromProto→UpdateEntry→SelectLevel, then TempSummon::InitStats clamps all unflagged summons, not only guardians. Actual learned-use RED observes Podium239018 owners20/80 at level1/HP20/armor50 instead of regional20/30 and corresponding ExpectedStat fields; Shrine245942 UseCreatureLevel likewise retains legacy1 instead of regional30. Source ExpectedStat IDs20/30, class mod4 and template modifiers anchor Podium HP48066/87576 and armor135/155; Shrine HP4379/armor155. No ContentTuning73 modifiers are installed.
+
+The wild E28 path now reads the same strict destination-level projection before normal zone spawning and initializes selected UnitLevel/HP/armor/mana before spell summon bookkeeping. Unknown regional or mana-source rows refuse spawning. UseCreatureLevel retains source template/map/area tuning for initial stats; unflagged TempSummon inherits the owner's tuning (source zero-initialized when absent). Ordinary zone spawning, guardian stats, AI, placement, privacy and lifetime paths remain separate. The Shrine fixture now supplies authentic Northshire terrain and expects sourced regional30, not legacy min1. This is initial-state work: inherited per-viewer scaling/combat modifiers, attack power and full creature-stat parity remain unproved. New runtime/native acceptance is pending; previous native images are not recertified. [Contract](../../specs/toys.md).
+
 ## Winner's Podium source placement (2026-10-15)
 
 239018/1227063 selects static240220/display127527 through47→138. Actual-source RED reproduces1.25yd instead of native player reach1.5yd, airborne82.5378 instead of terrain80.52305, and real bag-learning/UseToy refusal for missing240220. The additive source importer now includes240220; player-front47 clamps to the existing sourced scaled reach, and the mutable cast-plan ground step resolves138 alongside62. Non-player front reach is not redesigned. Source TDB has no AI/script/spell/click/vehicle binding and properties64 has no flags; no interaction is inferred.
