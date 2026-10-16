@@ -6,6 +6,7 @@ use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx, ReactState};
 use crate::auras::{
     AuraInstance, RemoveReason,
+    handlers::DUMMY,
     scripts::{AuraScript, AuraScripts},
 };
 
@@ -108,7 +109,7 @@ fn is_creature_dummy_zero(world: &World, target: Entity, aura: &AuraInstance) ->
         && aura
             .effects
             .iter()
-            .any(|effect| effect.index == 0 && effect.aura_type == 4)
+            .any(|effect| effect.index == 0 && effect.aura_type == DUMMY)
 }
 
 fn apply_spawn_phase(world: &mut World, target: Entity, aura: &AuraInstance) {

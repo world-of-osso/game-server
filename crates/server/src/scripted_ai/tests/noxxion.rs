@@ -103,7 +103,7 @@ fn encounter_coverage_noxxion_source_clocks_phase_summons_and_credit() {
         phase_seen && phase_ended,
         "real aura apply/remove transitions"
     );
-    assert!(adds.len() >= 10, "two real five-add waves");
+    assert_eq!(adds.len(), 10, "two real five-add waves");
     assert!(
         casts
             .iter()
