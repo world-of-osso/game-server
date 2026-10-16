@@ -298,3 +298,5 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 Gargolmar runtime port uses dispatch-anchored EventMap repeats, incoming-only 40%/20% arm-once thresholds and installed encounter bit2. Idle taunt is timed 10–15min, not LoS. OnSpellCast/slay speech and death sound10336 remain unimplemented hook gaps; no complete encounter claim. Runtime GREEN/effect/healer-chain acceptance remains pending.
 
 Gargolmar acceptance remains open: source charge effect96 must move to the selected distant threat before Surge impact. Keep the concrete20yd failing acceptance, not a cast-only substitute. NPC-to-NPC Watcher Heal30643 effect proof uses actual HP delta (base30±5%); player inbox receives only events owned by source/target and cannot prove absence of that heal.
+
+Omor primary binding: TC a352b1fa17308/source ordinal1 maps to installed DB2 encounter1891/map543bit0, Journal70391 CSV528/1105/display18237. Copy-only binding must preserve Gargolmar17306 and exclude Fiendish Hound17540 from completion credit. Runtime schedules, Orbital scripts, hound lifetime and actual mechanics remain unproven.
