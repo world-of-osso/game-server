@@ -202,6 +202,7 @@ fn encounter_fixture(
         135322 => Some(prepare_encounter_database("golden-serpent")),
         ADAROGG => Some(prepare_encounter_database("adarogg")),
         SLAGMAW => Some(prepare_encounter_database("slagmaw")),
+        13282 => Some(prepare_encounter_database("noxxion")),
         _ => None,
     };
     let path = prepared
@@ -234,6 +235,7 @@ fn encounter_fixture(
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
             || (entry == 7800 && *id == 7915)
+            || (entry == 13282 && *id == 13456)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
