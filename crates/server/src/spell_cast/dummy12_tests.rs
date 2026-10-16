@@ -86,9 +86,9 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
     let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
     actor_data(&mut h);
     let caster = h.caster;
-    // Child228562 selects32: the native primary destination is3yd front-left,
-    // not the caster. Center the dummy there so secondary5yd scatter stays in
-    // melee range without teleporting actors or depending on chase support.
+    // Native70391 child228562 selects65: 3yd behind the explicit target.
+    // Summon behind the original NPC, then attack the dummy at that destination.
+    // Casting at this dummy instead would move the summon center another3yd.
     let child = world_db().unwrap().store.get(228562).unwrap();
     let destination =
         super::targets::effect_dest(h.app.world(), caster, Some(h.npc), &child.effects[0], None)
@@ -111,11 +111,10 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
             .get::<crate::creature_scripts::TrainingDummy>(dummy)
             .is_some()
     );
+    h.cast_and_deliver(51533, Some(h.npc));
     h.select(Some(dummy));
     h.attack(dummy);
     h.advance(4);
-    h.cast_and_deliver(51533, Some(dummy));
-    h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let wolves = actors(&mut h, 29264);
     assert_eq!(wolves.len(), 2);
