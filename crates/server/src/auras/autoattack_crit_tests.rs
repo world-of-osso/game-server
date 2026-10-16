@@ -10,7 +10,7 @@ use crate::stats::CharacterStats;
 const MASTER_ASSASSINS_MARK: u32 = 340_094;
 const SHADOW_CORRUPTION: u32 = 456_718;
 const FIREBALL: u32 = 133;
-const STRIKE: u32 = 49;
+const STRIKE: u32 = 38_598;
 const ROGUE: u8 = 4;
 
 fn native_harness() -> Harness {
