@@ -1626,6 +1626,7 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Added [incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16), replacing repeated catalog-wide recursive evaluation with affected-root reconciliation and disposable full-snapshot results. Targeted proof pending.
 
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
+- 2026-10-16: [Devastator running-cooldown reset](systems/spell-casting.md#devastator-running-cooldown-reset--2026-10-16): source-native RED2pass/1fail113hits/0resets, GREEN6/0/0 with owner/actual recast, ready/absent and default-damage/Devastate controls. Integrated master61b82675 at10ee9b0d, workspace/all-target check25.909s/0warnings, fmt/readability and independent artifact checks pass; whole talent/native/ordering acceptance separate.
 
 - 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
 

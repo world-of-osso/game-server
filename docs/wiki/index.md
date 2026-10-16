@@ -1,3 +1,4 @@
+- [Devastator running-cooldown reset](systems/spell-casting.md#devastator-running-cooldown-reset--2026-10-16) — actual native proc RED113hits/0resets→GREEN6; sourced25% running-Shield-Slam reset, owner update and marker, default damage retained; full marker/ordering/native acceptance separate.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
