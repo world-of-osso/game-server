@@ -1,5 +1,5 @@
 //! Offline, private UDP5941 presentation fixture. Never awards currency.
-use redb::TableDefinition;
+use redb::{ReadableDatabase, TableDefinition};
 use shared::currency::{CurrencyEntry, CurrencyWallet, HONOR_CURRENCY_ID};
 use std::{error::Error, net::UdpSocket};
 
