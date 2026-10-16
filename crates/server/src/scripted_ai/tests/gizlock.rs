@@ -30,6 +30,25 @@ fn assert_source_clock(
 }
 
 #[test]
+fn encounter_coverage_gizlock_clock_observer_accepts_only_blocked_delay() {
+    let blocked: Vec<_> = (0..=180).map(|tick| (tick as f32 * 0.05, true)).collect();
+    assert_source_clock(&[0.05, 9.0], (0.0, 0.0), (2.3, 3.9), &blocked);
+}
+
+#[test]
+#[should_panic(expected = "late unblocked dispatch")]
+fn encounter_coverage_gizlock_clock_observer_rejects_unblocked_delay() {
+    let blocked: Vec<_> = (0..=180).map(|tick| (tick as f32 * 0.05, false)).collect();
+    assert_source_clock(&[0.05, 9.0], (0.0, 0.0), (2.3, 3.9), &blocked);
+}
+
+#[test]
+#[should_panic(expected = "early source dispatch")]
+fn encounter_coverage_gizlock_clock_observer_rejects_early_repeat() {
+    assert_source_clock(&[0.05, 1.0], (0.0, 0.0), (2.3, 3.9), &[]);
+}
+
+#[test]
 fn encounter_coverage_gizlock_source_clocks_effects_talk_and_isolated_credit() {
     const BIT: u32 = 5;
     const ENCOUNTER: u32 = 427;

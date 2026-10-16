@@ -477,3 +477,5 @@ Debug logs and root cause analyses.
 - [Rotgrip source mismatch](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16) — authenticated13596→428/bit6, literal Fatal Bite SELF damage versus SAI victim argument, real Puncture and isolated controlled credit; ordinary fight remains uncertified.
 
 - [Noxxion source port](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16) — pinned scheduler/aura port; three runtime controls pass with channel-aware clocks, ten actual Normal adds, phase lifecycle/damage and isolated credit; native/ordinary acceptance separate.
+
+- [Gizlock source runtime](systems/boss-scripts.md#maraudon-gizlock-source-runtime) — actual ranged pull, channel-aware clocks, cone damage, beast-only Flash Bomb exclusion and isolated bit5 controlled credit; native/ordinary/publication open.

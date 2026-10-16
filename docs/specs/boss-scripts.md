@@ -26,7 +26,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 ## Maraudon Gizlock source boundary
 
 - [x] Prepare13601→427/Normal349bit5 from pinned TC Maraudon header/instance, TDB SmartAI and Journal70391 CSV425/995/display7125. TC ordinal2 is not DB2 bit5. Preserve Noxxion credit and refuse ordinal/bit drift; output remains copy-only SQL.
-- [ ] Gate unchanged SAI Shoot16100, Flash Bomb29419, Goblin Dragon Gun21833, Bomb9143 and aggro Talk0 against actual DB2 targeting/channel/effect data, then isolated controlled death credit. No invented source timers/resources/targets.
+- [x] Gate unchanged SAI Shoot16100 first0/repeat2.3–3.9s, Bomb9143 first4/repeat12s (actual2s cast), Dragon Gun21833 first6–9/repeat16–19s (actual8s channel), Flash Bomb29419 self first25/repeat25s and aggro Talk0. Require source-clock repeats with observed casting-only deferrals, genuine16100/9143/21910 damage,21833 self periodic-trigger aura,29419 beast-only exclusion of the human player, isolated427/bit5 controlled credit and post-death silence. Only initial player survival HP/8yd pull position are staged; source flags/resources/targets remain intact.
 - [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
 
 ## Maraudon Noxxion source port
