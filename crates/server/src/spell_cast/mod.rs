@@ -2261,7 +2261,7 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
-    let shockwave_hits = warrior_stuns::count_shockwave_targets(world, spell, plan);
+    let shockwave_hits = warrior_stuns::count_shockwave_targets(spell, plan);
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
@@ -2350,7 +2350,7 @@ fn resolve_effects(
                 continue;
             }
             if warrior_stuns::is_rumbling_earth_effect(spell, effect) {
-                warrior_stuns::reduce_shockwave_cooldown(world, caster, shockwave_hits);
+                warrior_stuns::reduce_shockwave_with_rumbling_earth(world, caster, shockwave_hits);
                 continue;
             }
             if let Some(handler) = handler

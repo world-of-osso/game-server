@@ -1,5 +1,5 @@
-//! TC a352b1fa spell_warrior.cpp1792–1856, OnEffectHitTarget(EFFECT_0,
-//! SCHOOL_DAMAGE) and Storm Bolts' conditional destination-area target filter.
+//! Native Warrior effect scripts: Rumbling Earth cooldowns, per-hit stuns and
+//! Storm Bolts' conditional destination-area target filter (TC a352b1fa).
 use bevy::prelude::*;
 
 use super::effects::{EFFECT_SCHOOL_DAMAGE, EffectCtx};
@@ -20,34 +20,23 @@ pub(super) fn is_rumbling_earth_effect(spell: &SpellInfo, effect: &SpellEffect) 
         && effect.effect == super::effects::EFFECT_SCRIPT_EFFECT
 }
 
-/// TC Spell.cpp2712 counts non-missed effect0 targets, including later killing hits.
-/// Capture effect immunity before any target's damage/stun changes its aura state.
-pub(super) fn count_shockwave_targets(
-    world: &World,
-    spell: &SpellInfo,
-    plan: &super::TargetPlan,
-) -> usize {
+/// TC Spell.cpp2712 counts original successful effect0 targets, including kills.
+/// The hit plan already removed misses and immune effect bits (hit.rs); freeze
+/// its count before damage/stun dispatch instead of rechecking live target state.
+pub(super) fn count_shockwave_targets(spell: &SpellInfo, plan: &super::TargetPlan) -> usize {
     if spell.id != SHOCKWAVE {
         return 0;
     }
-    let Some(planned) = plan
-        .iter()
+    plan.iter()
         .find(|planned| spell.effects[planned.index].index == 0)
-    else {
-        return 0;
-    };
-    let effect = &spell.effects[planned.index];
-    planned
-        .units
-        .iter()
-        .copied()
-        .filter(|target| {
-            !crate::auras::effect_immunity::blocks_effect(world, *target, spell, effect)
-        })
-        .count()
+        .map_or(0, |planned| planned.units.len())
 }
 
-pub(super) fn reduce_shockwave_cooldown(world: &mut World, caster: Entity, hit_count: usize) {
+pub(super) fn reduce_shockwave_with_rumbling_earth(
+    world: &mut World,
+    caster: Entity,
+    hit_count: usize,
+) {
     let Some(aura) = world
         .get::<crate::auras::ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|aura| aura.spell_id == RUMBLING_EARTH))
@@ -62,7 +51,8 @@ pub(super) fn reduce_shockwave_cooldown(world: &mut World, caster: Entity, hit_c
         warn!("Rumbling Earth requires native aura effects0/1");
         return;
     };
-    if (hit_count as f64) < f64::from(minimum.amount.trunc()) {
+    let minimum_targets = f64::from(minimum.amount.trunc());
+    if (hit_count as f64) < minimum_targets {
         return;
     }
     let seconds = f64::from(reduction.amount);
