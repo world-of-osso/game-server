@@ -19,6 +19,17 @@ fn cast_bomb(h: &mut Harness, telash: Entity) {
     crate::spell_cast::creature_cast(h.app.world_mut(), telash, BOMB_CAST, None, true)
         .expect("native Telash Frost Bomb cast");
     h.advance(0.1);
+    if !h.has_aura(h.player(), BOMB_AURA) {
+        let world = h.app.world();
+        eprintln!(
+            "Telash pose={:?} faction={:?}; player pose={:?} faction={:?}; log={:?}",
+            world.get::<Position>(telash),
+            world.get::<UnitFactionTemplate>(telash),
+            world.get::<Position>(h.player()),
+            world.get::<UnitFactionTemplate>(h.player()),
+            h.players[0].2.log
+        );
+    }
 }
 
 fn ground_fields(h: &mut Harness) -> Vec<(Entity, Position, InMap)> {
