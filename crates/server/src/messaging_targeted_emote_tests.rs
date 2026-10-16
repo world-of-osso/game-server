@@ -261,9 +261,14 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
         crate::death::process_player_death_transitions.before(process_chat_messages),
     );
     let map = crate::maps::InMap::continent(0);
-    app.world_mut()
-        .entity_mut(player)
-        .insert((UnitFactionTemplate(1), Position::default()));
+    app.world_mut().entity_mut(player).insert((
+        UnitFactionTemplate(1),
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
     let enemy = app
         .world_mut()
         .spawn((
@@ -276,7 +281,11 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
             Level(1),
             ClientId(9001),
             map,
-            Position::default(),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             UnitFactionTemplate(2),
             Health {
                 current: 100.0,
@@ -297,7 +306,11 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
             Level(1),
             ClientId(9002),
             map,
-            Position::default(),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             UnitFactionTemplate(1),
             Health {
                 current: 100.0,
