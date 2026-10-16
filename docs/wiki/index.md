@@ -1,11 +1,22 @@
+- [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) — Charred/Rampage damage-only fixtures use existing sourced dodge reduction; actual Chaos `Miss(Dodge)` reproduces intermittent zero-damage preconditions, no evade/gameplay change.
+
+- [Stockade proximity receipts](investigations/follower-data.md#stockade-proximity-receipts--2026-10-15) — debug-only acquisition positions distinguish proximity from damage; social-assist gaps remain explicit.
+
+- [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
 
 - [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; [health-based damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16) and native modifier exclusions covered separately; PvP/follow-up talents open.
 
 - [BM Kill Command pet damage](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16) — actual Call Pet/owner intent RED→GREEN for34026→83381; native damage attribution and foreign ownership, not charging/full talent coverage.
 
+- [Authored scenario-step kill guard](systems/dungeon-achievements.md#authored-scenario-step-kill-guard) — native0 positive82 resolves actual current step IDs through authored ordinals; stage3/5 spell/death component proof, scenario admission and original research content remain gaps.
+
+- [Completed-quest login guard](systems/dungeon-achievements.md#completed-quest-login-guard) — bounded positive110 reuses character reward-derived Login74 facts for account17495; no quest acquisition or account-history borrowing.
+
+- [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
@@ -30,7 +41,6 @@
 - [Source guardian level selection](systems/toys.md#source-guardian-level-selection-2026-10-15) — actual Scarab UseToy20/80, ContentTuning priority/deltas and pre-init clamp; thirteen final controls and private UDP20/30 replication pass; full stats/AI remain open.
 - [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 
-- [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC recomputation; [owned-evade retention](investigations/follower-data.md#owned-evade-aura-retention--2026-10-15) preserves existing class/threat auras without budget overrides.
 
 - [Breakable CC targeting](investigations/follower-data.md#breakable-cc-targeting--2026-10-15) — shared follower hold/retarget/cast-stop and authored Attr6 implicit filtering; native118/31935 regressions, dungeon completion still open.

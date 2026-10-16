@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Native damage prerequisite fixtures — 2026-10-16
+
+Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.
+
+These damage-only fixtures now use existing `harness_with_native_enemy_dodge_reduction`: actual Sunwell Radiance45769 effect1 applies native aura251/-20 enemy dodge. No spell attributes, production evade guard, kit, stat formula or hit resolver change. Dedicated avoidance tests retain the ordinary harness. The bounded repeated-hit regression asserts positive source-derived heal input while retaining actual combat logs on failure; it does not retry missed hits or fabricate damage. Named regression results live in the follower master-RED proof ledger; no full-suite acceptance follows from these focused tests.
+
 ## Readiness clock isolation — 2026-10-15
 
 `history_now` reads Bevy `Time<Real>` for SpellHistory deadlines, owner snapshots, charge recovery, queue GCD admission, school lockouts, rate changes, resets and ready-time credit. Generic `now`, aura time, cast/channel delta and missile clocks remain unchanged. No global simulation clamp change. [Contract](../../specs/class-completeness.md#readiness-elapsed-time).

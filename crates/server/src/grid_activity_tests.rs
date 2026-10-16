@@ -182,6 +182,44 @@ fn patroller_stays_active_where_its_path_passes_a_player() {
 }
 
 #[test]
+fn scripted_path_start_wakes_a_dormant_actor() {
+    let mut app = grid_app(HashMap::new());
+    let actor = spawn_wanderer(&mut app);
+    advance(&mut app, 2);
+    assert!(dormant(&app, actor));
+    crate::scripted_ai::movement::retain_path_home(app.world_mut(), actor);
+    advance(&mut app, 2);
+    assert!(!dormant(&app, actor));
+}
+
+#[test]
+fn scripted_escort_stays_awake_after_crossing_two_grids_from_its_spawn() {
+    let mut app = grid_app(HashMap::new());
+    let start = bevy_position(3178.51, 188.551);
+    let camp = bevy_position(3756.44, 163.149);
+    let player = spawn_player(&mut app, 3178.51);
+    let escort = app
+        .world_mut()
+        .spawn((start, InMap::continent(0), spawn_point(start)))
+        .id();
+    advance(&mut app, 2);
+    crate::scripted_ai::movement::retain_path_home(app.world_mut(), escort);
+    app.world_mut().entity_mut(escort).insert(camp);
+    app.world_mut().entity_mut(player).insert(camp);
+    advance(&mut app, 2);
+    assert!(
+        !dormant(&app, escort),
+        "Feero's second ambush must keep ticking near its acceptor"
+    );
+    app.world_mut().despawn(player);
+    advance(&mut app, 2);
+    assert!(
+        !dormant(&app, escort),
+        "escort range failure must still tick after the acceptor leaves"
+    );
+}
+
+#[test]
 fn a_player_on_another_map_does_not_wake_the_creature_under_its_coordinates() {
     let mut app = grid_app(HashMap::new());
     let player = spawn_player(&mut app, SPAWN.0);
