@@ -141,6 +141,7 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
             max: 2,
             used: 1,
             recharge_secs: 15.0,
+            recovery_mult: 1.0,
             next_ready_at: 15.0,
             fully_ready_at: 15.0,
         },

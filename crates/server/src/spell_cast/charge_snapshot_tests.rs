@@ -98,6 +98,32 @@ fn guild_hasty_hearth_join_does_not_retime_an_already_consumed_charge() {
 }
 
 #[test]
+fn guild_hasty_hearth_removal_preserves_consumed_charge_then_restores_next_use() {
+    let mut h = hasty_hearth_fixture(true);
+    assert_eq!(cast_hearthstone(&mut h).recharge_ms, 900_000);
+    h.inbox.charges.clear();
+    h.app
+        .world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .set_guild_grants(&[]);
+    h.advance(4);
+    let removed = h
+        .inbox
+        .charges
+        .iter()
+        .rev()
+        .find(|update| update.category == HEARTH_CHARGES)
+        .expect("Removal snapshot must report the pending Hearthstone charge");
+    assert!(
+        (890_000..900_000).contains(&removed.remaining_ms),
+        "{removed:?}"
+    );
+    h.advance(18_010);
+    assert_eq!(cast_hearthstone(&mut h).recharge_ms, 1_800_000);
+}
+
+#[test]
 fn cooldown_assist_known_charge_spell_publishes_full_category_before_first_cast() {
     let mut h = harness(Vec::new(), &[108853], 8).unwrap();
     // Character progression supplies ClientId and KnownSpells on world entry.
