@@ -15,9 +15,10 @@ fn collect_natural_failures(
     mut failures: ResMut<NaturalFailures>,
 ) {
     for (connection, mut receiver) in &mut receivers {
-        failures
-            .0
-            .extend(receiver.receive().map(|message| (connection, message)));
+        failures.0.extend(receiver.receive().map(|message| {
+            println!("NATIVE_INGRESS_RESPONSE connection={connection:?} {message:?}");
+            (connection, message)
+        }));
     }
 }
 
@@ -69,6 +70,7 @@ fn encounter_coverage_wailing_controlled_gossip_hello_uses_four_done_and_real_em
     let player = h.player();
     let other_player = h.players[1].0;
     let connection = h.players[0].1;
+    println!("NATIVE_INGRESS_SEND connection={connection:?} npc={disciple:?}");
     h.app
         .world_mut()
         .get_mut::<MessageSender<InteractNpc>>(connection)
@@ -104,6 +106,7 @@ fn encounter_coverage_wailing_controlled_gossip_hello_uses_four_done_and_real_em
         "other copy stays unready"
     );
     // Explicit source callback, not a native interaction through invented data.
+    println!("CONTROLLED_GOSSIP_DISPATCH npc={disciple:?} four_done=true");
     assert!(creature_gossip_hello(h.app.world_mut(), player, disciple));
     h.advance(0.1);
     let opened = h.inbox(0).opened.last().expect("prepared source menu");
