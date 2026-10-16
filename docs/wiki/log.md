@@ -1431,3 +1431,5 @@ Replaced area-only Some projection with typed17/41 alternatives and strict compl
 Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/8(59.21s), compiler41/41, census5506/1824 with all243/same7hashes. Native cached254 selfie27968/refused/outside/idle/reopen; no full grants/travel/acquisition/UI claim.
 
 - 2026-10-15: documented read-only Stockade proximity acquisition receipts and pinned TC social/link distinctions; native cause remains under investigation.
+
+- 2026-10-15: recorded native14.5yd Stockade proximity boundary and Moloch source-UI Transmog click/delivered63346 proof; no gameplay change/full-clear claim.
