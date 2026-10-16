@@ -5,20 +5,13 @@ use crate::spell_cast::test_harness::{Harness, harness_with_plugins, spawn_npc, 
 use shared::components::{Health, Npc, UnitPowers};
 
 pub(super) fn spawn_profile_fixture(entry: u32) -> (Harness, Entity, Profile) {
-    spawn_profile_fixture_with_plugins(entry, |_| {})
-}
-
-pub(super) fn spawn_profile_fixture_with_plugins(
-    entry: u32,
-    configure: impl FnOnce(&mut App),
-) -> (Harness, Entity, Profile) {
-    let (mut h, unit, profile) = selected_profile_fixture(entry, configure);
+    let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, |_| {});
     h.attack(h.npc);
     h.advance(3);
     (h, unit, profile)
 }
 
-fn selected_profile_fixture(
+pub(super) fn spawn_profile_fixture_with_plugins(
     entry: u32,
     configure: impl FnOnce(&mut App),
 ) -> (Harness, Entity, Profile) {
@@ -68,7 +61,7 @@ fn selected_profile_fixture(
 
 #[test]
 fn follower_selection_is_not_engagement_but_native_attack_is() {
-    let (mut h, unit, _) = selected_profile_fixture(209059, |_| {});
+    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
     let enemy = h.npc;
     let before = h.health(enemy);
     let position = *h
@@ -118,7 +111,7 @@ fn follower_selection_is_not_engagement_but_native_attack_is() {
 
 #[test]
 fn follower_party_threat_engages_without_selection_or_owner_auto_attack() {
-    let (mut h, unit, _) = selected_profile_fixture(209059, |_| {});
+    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
     let enemy = h.npc;
     h.app
         .world_mut()

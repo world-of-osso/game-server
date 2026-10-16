@@ -635,8 +635,10 @@ fn follower_felguard_melee_kill_taps_the_authenticated_player() {
 }
 
 #[test]
-fn follower_felguard_fights_the_companions_selected_enemy() {
+fn follower_felguard_fights_the_companions_engaged_enemy() {
     let mut f = fixture();
+    f.h.attack(f.h.npc);
+    f.h.advance(3);
     for _ in 0..240 {
         super::update_ai(f.h.app.world_mut());
         f.h.advance(1);
