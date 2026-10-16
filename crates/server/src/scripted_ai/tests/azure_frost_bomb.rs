@@ -18,18 +18,17 @@ fn fixture() -> (Harness, Entity) {
 fn cast_bomb(h: &mut Harness, telash: Entity) {
     crate::spell_cast::creature_cast(h.app.world_mut(), telash, BOMB_CAST, None, true)
         .expect("native Telash Frost Bomb cast");
+    // Native Attr9/0x10 treats Speed=1 as a one-second delay, not yard/second.
+    h.advance(0.9);
+    assert!(!h.has_aura(h.player(), BOMB_AURA), "missile not landed yet");
+    h.advance(0.3);
+}
+
+fn apply_bomb_aura(h: &mut Harness, telash: Entity) {
+    let player = h.player();
+    crate::spell_cast::creature_cast(h.app.world_mut(), telash, BOMB_AURA, Some(player), true)
+        .expect("native Frost Bomb aura cast");
     h.advance(0.1);
-    if !h.has_aura(h.player(), BOMB_AURA) {
-        let world = h.app.world();
-        eprintln!(
-            "Telash pose={:?} faction={:?}; player pose={:?} faction={:?}; log={:?}",
-            world.get::<Position>(telash),
-            world.get::<UnitFactionTemplate>(telash),
-            world.get::<Position>(h.player()),
-            world.get::<UnitFactionTemplate>(h.player()),
-            h.players[0].2.log
-        );
-    }
 }
 
 fn ground_fields(h: &mut Harness) -> Vec<(Entity, Position, InMap)> {
@@ -61,7 +60,7 @@ fn azure_frost_bomb_cast_marks_only_selected_players_in_its_copy() {
 #[test]
 fn azure_frost_bomb_natural_expiry_casts_ground_and_damage_at_current_target_pose() {
     let (mut h, telash) = fixture();
-    cast_bomb(&mut h, telash);
+    apply_bomb_aura(&mut h, telash);
     let player = h.player();
     assert!(h.has_aura(player, BOMB_AURA));
     let expiry = h
@@ -115,7 +114,7 @@ fn azure_frost_bomb_nonexpiry_removal_never_explodes() {
         RemoveReason::Evade,
     ] {
         let (mut h, telash) = fixture();
-        cast_bomb(&mut h, telash);
+        apply_bomb_aura(&mut h, telash);
         let player = h.player();
         assert!(h.has_aura(player, BOMB_AURA));
         let removed = remove_auras(h.app.world_mut(), player, reason, |a| {
@@ -143,7 +142,7 @@ fn azure_frost_bomb_nonexpiry_removal_never_explodes() {
 #[test]
 fn azure_frost_bomb_missing_caster_expiry_does_not_cast_children() {
     let (mut h, telash) = fixture();
-    cast_bomb(&mut h, telash);
+    apply_bomb_aura(&mut h, telash);
     assert!(h.has_aura(h.player(), BOMB_AURA));
     h.app.world_mut().entity_mut(telash).despawn();
     h.advance(9.0);
