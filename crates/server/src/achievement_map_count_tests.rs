@@ -1,6 +1,6 @@
 //! Actual spell-target28 with controlled same-map players; not garrison invasion content.
 use super::*;
-use crate::spell_cast::test_harness::harness_with_plugins;
+use crate::spell_cast::test_harness::{Harness, harness_with_plugins};
 use rusqlite::Connection;
 use shared::components::Health;
 
@@ -37,6 +37,22 @@ fn spawn_counted_peer(app: &mut App, character: u64, map: InMap) -> Entity {
         },
     ));
     player
+}
+
+fn assert_native_spell_hits(h: &Harness, expected: usize) {
+    let casts: Vec<_> = h
+        .inbox
+        .go
+        .iter()
+        .filter(|cast| cast.spell_id == INVASION_SPELL)
+        .collect();
+    assert_eq!(casts.len(), expected, "authored native casts must succeed");
+    for cast in casts {
+        assert!(
+            cast.hit_targets.contains(&h.caster.to_bits()),
+            "cast must actually hit reference player: {cast:?}"
+        );
+    }
 }
 
 #[test]
@@ -98,13 +114,7 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     );
     h.cast(INVASION_SPELL, Some(h.caster));
     h.advance(30); // Authored spell178544 RecoveryTime is1000ms.
-    assert!(
-        h.inbox
-            .go
-            .iter()
-            .any(|cast| cast.spell_id == INVASION_SPELL),
-        "actual authored cast succeeds with two players"
-    );
+    assert_native_spell_hits(&h, 1);
     assert!(
         !h.app
             .world()
@@ -131,15 +141,7 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     ));
     h.cast(INVASION_SPELL, Some(h.caster));
     h.advance(30);
-    assert_eq!(
-        h.inbox
-            .go
-            .iter()
-            .filter(|cast| cast.spell_id == INVASION_SPELL)
-            .count(),
-        2,
-        "second native cast succeeds with exactly three players"
-    );
+    assert_native_spell_hits(&h, 2);
     let state = h
         .app
         .world()
@@ -155,15 +157,7 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     h.app.world_mut().entity_mut(fourth_player).insert(map);
     h.cast(INVASION_SPELL, Some(h.caster));
     h.advance(30);
-    assert_eq!(
-        h.inbox
-            .go
-            .iter()
-            .filter(|cast| cast.spell_id == INVASION_SPELL)
-            .count(),
-        3,
-        "third native cast succeeds with four players"
-    );
+    assert_native_spell_hits(&h, 3);
     assert_eq!(
         h.app
             .world()
