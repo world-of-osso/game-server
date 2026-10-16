@@ -264,6 +264,8 @@ fn encounter_fixture(
         template_addons: crate::world_data::load_template_addons(&conn),
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
+        expected_stats: expected,
+        summon_levels: crate::world_data::summon_levels::SummonLevels::load(&conn).unwrap(),
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
