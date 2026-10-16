@@ -12,6 +12,14 @@ Native source: Aegis353367 aura137/MiscValueB4 is30%; Plate86102's applied aura1
 
 Valid RED at7121fb7b: both native tests fail with actual7840 versus sourced10584/8232. Initiald1b96ea4 failed fixture creature_classlevelstats authority, not the intended behavior, and is not counted as RED. GREEN/check/build/live proof remain separately gated; Stockade0/3 is not resolved by this source finding alone.
 
+## Owned evade aura retention — 2026-10-15
+
+Pinned-source controlled-player run Stockwait67 physically kills Stockade Moloch and Overheat: server encounter1146/1145 become Done, native objectives/350XP each inspected. Hogger remains open: a missing-LoS/zero-party-movement loop reaches the600s bound. Corpse interactions after authored endpoint movement are too far away; loot remains unclaimed. This is2/3 combat credit, not full-instance or loot acceptance.
+
+During that run Garrick maxHP10584→7840 and spell power68→0. Native command20359 records all18 applied auras removed at1792116202633, including137028,353367,86102 and Righteous Fury25780. `remove_auras_on_evade` applied ordinary NPC cleanup to this player-controlled follower. TC a352b1fa `Unit.cpp:4459–4463` returns before aura removal for `IsCharmedOwnedByPlayerOrPlayer`; existing `faction::player_affected` represents that boundary with Player/PLAYER_CONTROLLED. The shared cleanup now retains existing owned-unit auras, not reapplying or granting anything. Unowned creature rules and normal expiration/removal remain unchanged. See [creature aggro](../systems/creature-aggro.md#evade-and-death).
+
+Real level32 Garrick initialization→production evade→StatsPlugin regression at0350ec6b fails10584 versus actual7840, matching native ordering. Initial6e5ec7d0 was a fixture field compile error, not RED. GREEN/check/build and native retention proof remain separately pending; this fix does not close the independent route/loot gaps.
+
 ## Breakable CC targeting — 2026-10-15
 
 Pinned TrinityCore a352b1fa `AI/CoreAI/CombatAI.cpp:166–177` interrupts non-melee casting and holds when the current victim has breakable-by-damage CC. `Entities/Unit/Unit.cpp:783–801` deliberately checks harmful aura + `SpellAuraInterruptFlags::AnyDamageMask`, not aura type; `Spells/SpellDefines.h:114` defines the mask as `0x09000002`. The shared native aura predicate uses that same mask. Installed Polymorph118 has interrupt flags `0x08080000`, including the scripted damage-break bit. No damage budget or aura duration changes are involved.
