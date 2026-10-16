@@ -2002,6 +2002,8 @@ mod tests;
 mod toy_effects_tests;
 
 #[cfg(test)]
+mod autoattack_crit_tests;
+#[cfg(test)]
 mod bloodsurge_tests;
 #[cfg(test)]
 mod charred_warblades_tests;
