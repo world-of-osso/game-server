@@ -1618,3 +1618,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Added [incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16), replacing repeated catalog-wide recursive evaluation with affected-root reconciliation and disposable full-snapshot results. Targeted proof pending.
 
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
+
+- 2026-10-16: Corrected [map-count171](systems/dungeon-achievements.md#exact-map-player-count-guard) native RED provenance: original second cast was refused by authored recovery; b857fd84 confirms successful second SpellGo before missing exact-count credit. Fresh integrated census remains5518/1824 with only9244 new, all243 inventory rows and seven input hashes unchanged.
