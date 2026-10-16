@@ -28,6 +28,7 @@ fn encounter_coverage_gargolmar_source_clocks_thresholds_and_credit() {
     let player = h.player();
     let mut cursor = 0;
     let mut casts = Vec::new();
+    let mut retaliation_seen = false;
     for tick in 1..=1400 {
         if tick == 401 {
             h.hit_pct(boss, 61.0);
@@ -39,6 +40,7 @@ fn encounter_coverage_gargolmar_source_clocks_thresholds_and_credit() {
             h.hit_pct(boss, 1.0);
         }
         h.advance(0.05);
+        retaliation_seen |= h.has_aura(boss, 22857);
         let gos = &h.inbox(0).spell_gos;
         casts.extend(gos[cursor..].iter().filter_map(|go| {
             (go.caster == boss.to_bits() && [30641, 34645, 30642, 22857].contains(&go.spell_id))
@@ -109,7 +111,11 @@ fn encounter_coverage_gargolmar_source_clocks_thresholds_and_credit() {
         h.has_aura(player, 30641),
         "actual Mortal Wound heal reduction"
     );
-    assert!(h.has_aura(boss, 22857), "actual Retaliation aura");
+    assert!(
+        retaliation_seen,
+        "actual Retaliation aura during its sourced 8s duration"
+    );
+    assert!(!h.has_aura(boss, 22857), "last Retaliation expires at 68s");
     h.hit_pct(boss, 200.0);
     h.advance(0.1);
     assert_eq!(
@@ -158,8 +164,31 @@ fn encounter_coverage_gargolmar_real_evade_rearms_damage_thresholds() {
     h.advance(0.2);
     assert_eq!(spell_gos(&h, boss, 30642).len(), 1);
     assert_eq!(spell_gos(&h, boss, 22857).len(), 1);
+    let player = h.player();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x + 500.0,
+        ..origin
+    });
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
-    h.advance(0.1);
+    for _ in 0..200 {
+        h.advance(0.05);
+        if h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+            != Some(&crate::creature_ai::CreatureState::Returning)
+        {
+            break;
+        }
+    }
+    assert_ne!(
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss),
+        Some(&crate::creature_ai::CreatureState::Returning),
+        "complete actual home return before re-pull"
+    );
+    let health = h.app.world().get::<Health>(boss).unwrap();
+    assert_eq!(
+        health.current, health.max,
+        "home return restores source health"
+    );
     assert_eq!(
         instance_script::get_boss_state(h.app.world_mut(), map, 2),
         Some(EncounterState::NotStarted)
@@ -170,6 +199,11 @@ fn encounter_coverage_gargolmar_real_evade_rearms_damage_thresholds() {
             .iter()
             .any(|end| end.encounter_id == 1893 && !end.success)
     );
+    let home = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: home.x + 3.0,
+        ..home
+    });
     h.engage(boss);
     h.advance(0.1);
     h.hit_pct(boss, 81.0);
@@ -183,5 +217,92 @@ fn encounter_coverage_gargolmar_real_evade_rearms_damage_thresholds() {
         spell_gos(&h, boss, 22857).len(),
         2,
         "real re-pull retaliation rearm"
+    );
+}
+
+#[test]
+fn encounter_coverage_gargolmar_surge_selects_farthest_living_threat() {
+    let (mut h, boss, map) = pull_gargolmar();
+    let victim = h.player();
+    let far = h.players[1].0;
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(far).insert((
+        map,
+        Position {
+            x: origin.x + 20.0,
+            ..origin
+        },
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), boss, far, 0.1);
+    let mut cast = None;
+    for _ in 0..120 {
+        h.advance(0.05);
+        cast = spell_gos(&h, boss, 34645).last().map(|go| go.target);
+        if cast.is_some() {
+            break;
+        }
+    }
+    assert_eq!(
+        cast,
+        Some(Some(far.to_bits())),
+        "source MaxDistance is not the high-threat melee victim"
+    );
+    assert_ne!(far, victim);
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(boss.to_bits())
+                && event.target == Some(far.to_bits())
+                && event.spell_id == Some(34645)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Surge damages selected distant threat"
+    );
+}
+
+#[test]
+fn encounter_coverage_gargolmar_request_hits_real_watcher_and_heals() {
+    let (mut h, boss, map) = pull_gargolmar();
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (watcher, _) = spawn_authored_actor(&mut h.app, &conn, 17309, map, 1);
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(watcher).insert(Position {
+        x: origin.x + 4.0,
+        ..origin
+    });
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(watcher).insert(visibility);
+    h.advance(0.1);
+    h.hit_pct(boss, 61.0);
+    let before = h.app.world().get::<Health>(boss).unwrap().current;
+    h.advance(5.0);
+    assert_eq!(
+        spell_gos(&h, boss, 30642).len(),
+        1,
+        "actual incoming threshold request"
+    );
+    assert!(
+        spell_gos(&h, watcher, 30643)
+            .iter()
+            .any(|go| go.target == Some(boss.to_bits())),
+        "real SmartAI SpellHit30642 selects action invoker for Heal30643"
+    );
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(watcher.to_bits())
+                && event.target == Some(boss.to_bits())
+                && event.spell_id == Some(30643)
+                && event.kind == CombatLogKind::Heal
+                && event.amount > 0),
+        "source Heal has a real effect"
+    );
+    assert!(
+        h.app.world().get::<Health>(boss).unwrap().current > before,
+        "actual boss health rises"
     );
 }
