@@ -215,6 +215,121 @@ fn guild_perks_real_membership_grants_rebuilds_revokes_and_reopens_without_touch
 }
 
 #[test]
+fn guild_perks_member_login_forced_removal_and_offline_removal_reconcile_after_reopen() {
+    use std::collections::BTreeSet;
+    let perks: BTreeSet<_> = [78633, 83944, 83958, 83950, 83951].into_iter().collect();
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("guild-perks-removal.redb");
+    let db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
+    let owner = create_with_kit(&db, "Perkowner", HUMAN, PALADIN).unwrap();
+    let member = create_with_kit(&db, "Perklogin", HUMAN, PALADIN).unwrap();
+    crate::persistence_character::set_character_guild_by_id(&db, owner, 7, "Actual Perks").unwrap();
+    accept_perk_membership(&db, member);
+    let mut app = setup_progression_app(db, class_spells().unwrap(), false, true);
+    let player = spawn_persisted_perk_member(&mut app, member);
+    let joined: BTreeSet<_> = app
+        .world()
+        .get::<KnownSpells>(player)
+        .unwrap()
+        .iter()
+        .collect();
+    assert!(
+        perks.is_subset(&joined),
+        "Existing member login derives all perks"
+    );
+    assert_eq!(
+        app.world()
+            .get::<KnownSpells>(player)
+            .unwrap()
+            .iter()
+            .count(),
+        joined.len()
+    );
+    let class_knowledge: BTreeSet<_> = joined.difference(&perks).copied().collect();
+    received::<SpellsUnlearned>(&mut app, player);
+    crate::persistence_character::remove_character_guild(
+        &app.world().resource::<GameDatabase>().db,
+        member,
+        owner,
+    );
+    app.world_mut()
+        .entity_mut(player)
+        .remove::<shared::components::GuildMembership>();
+    advance(&mut app);
+    let after_kick: BTreeSet<_> = app
+        .world()
+        .get::<KnownSpells>(player)
+        .unwrap()
+        .iter()
+        .collect();
+    assert_eq!(after_kick, class_knowledge);
+    let revoked: BTreeSet<_> = received::<SpellsUnlearned>(&mut app, player)
+        .into_iter()
+        .flat_map(|message| message.spells)
+        .collect();
+    assert_eq!(revoked, perks);
+    accept_perk_membership(&app.world().resource::<GameDatabase>().db, member);
+    let guild = crate::persistence_character::load_character_guild(
+        &app.world().resource::<GameDatabase>().db,
+        member,
+    )
+    .unwrap();
+    app.world_mut().entity_mut(player).insert(guild);
+    advance(&mut app);
+    let rejoined: BTreeSet<_> = app
+        .world()
+        .get::<KnownSpells>(player)
+        .unwrap()
+        .iter()
+        .collect();
+    assert_eq!(rejoined, joined, "Rejoin restores perks exactly once");
+    drop(app);
+    let db = redb::Database::open(&path).unwrap();
+    crate::persistence_character::remove_character_guild(&db, member, owner);
+    drop(db);
+    let db = redb::Database::open(&path).unwrap();
+    assert!(crate::persistence_character::load_character_guild(&db, member).is_none());
+    let mut app = setup_progression_app(db, class_spells().unwrap(), false, true);
+    let player = spawn_persisted_perk_member(&mut app, member);
+    let after_offline_kick: BTreeSet<_> = app
+        .world()
+        .get::<KnownSpells>(player)
+        .unwrap()
+        .iter()
+        .collect();
+    assert_eq!(after_offline_kick, class_knowledge);
+}
+
+fn accept_perk_membership(db: &redb::Database, member: u64) {
+    crate::persistence_character::set_pending_guild_invite(
+        db,
+        member,
+        7,
+        "Actual Perks",
+        "Perkowner",
+    );
+    crate::persistence_character::accept_pending_guild_invite(db, member).unwrap();
+}
+
+fn spawn_persisted_perk_member(app: &mut App, character_id: u64) -> Entity {
+    let player = spawn_player(app, character_id, HUMAN, PALADIN, 60);
+    let connection = connection_of(app, player);
+    app.world_mut()
+        .entity_mut(connection)
+        .insert(crate::auth::InWorld { character_id });
+    let guild = crate::persistence_character::load_character_guild(
+        &app.world().resource::<GameDatabase>().db,
+        character_id,
+    );
+    if let Some(guild) = guild {
+        app.world_mut().entity_mut(player).insert(guild);
+    }
+    advance(app);
+    player
+}
+
+#[test]
 fn paladin_known_spells_follow_required_level_and_race_mask() {
     let Some(classes) = class_spells() else {
         return;
