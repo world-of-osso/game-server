@@ -2305,12 +2305,7 @@ fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -
     let rules = node_rules(template.map_id).unwrap();
     let mut entered = enter_source_match_with(template, rules.starts, |app| {
         app.insert_resource(crate::persistence::GameDatabase { db: database });
-        let conn = Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .unwrap();
-        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        app.insert_resource(crate::test_data::achievement_catalog());
         app.add_plugins(crate::achievement::AchievementPlugin);
     });
     // Authentication loads this component before gameplay (auth_character.rs468).
