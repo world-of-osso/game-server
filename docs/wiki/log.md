@@ -1604,3 +1604,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Noxxion real channel-aware clock/phase/ten-add/damage/isolated-credit acceptance GREEN3/3 at8e544d86; source21708 channel deferral explains compressed due-anchored repeat intervals. Native/ordinary acceptance remains separate.
 
 - 2026-10-16: Gizlock13601 controlled SAI clocks/channel/cone damage/Talk0 and isolated427bit5 credit; [source runtime](systems/boss-scripts.md#maraudon-gizlock-source-runtime), no native/ordinary/publication claim.
+
+- 2026-10-16: Lord Vyletongue21390 runtime RED→EVENT_RANGE9 source port; strict3D/reach/500ms controls, nearby Flash stun and20yd Blink/isolated424bit2 controlled credit. [Details](systems/boss-scripts.md#maraudon-lord-vyletongue-range-events).

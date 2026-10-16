@@ -26,9 +26,14 @@ fn encounter_coverage_vyletongue_source_range_casts_and_isolated_credit() {
     h.engage(boss);
     let mut cursor = 0;
     let mut casts = Vec::new();
+    let mut blocked = Vec::new();
     let mut stun_seen = false;
     let mut blink_displacements = Vec::new();
     for tick in 1..=1300 {
+        blocked.push((
+            (tick - 1) as f32 * 0.05,
+            h.app.world().get::<CastState>(boss).is_some(),
+        ));
         let before = *h.app.world().get::<Position>(boss).unwrap();
         h.advance(0.05);
         let gos = &h.inbox(0).spell_gos;
@@ -48,6 +53,12 @@ fn encounter_coverage_vyletongue_source_range_casts_and_isolated_credit() {
         }
         cursor = gos.len();
         stun_seen |= h.has_aura(player, 7964);
+        if tick < 400 {
+            assert!(
+                !h.has_aura(player, 7964),
+                "10yd victim outside Flash before first Blink"
+            );
+        }
     }
     eprintln!(
         "VYLETONGUE source casts={casts:?}, stun={stun_seen}, Blink displacement={blink_displacements:?}"
@@ -62,29 +73,20 @@ fn encounter_coverage_vyletongue_source_range_casts_and_isolated_credit() {
         "source EVENT_RANGE21390 first and repeat: {range_times:?}"
     );
     assert!(range_times[0] <= 0.1, "range event initially ready");
-    for pair in range_times.windows(2) {
-        let interval = pair[1] - pair[0];
-        assert!(
-            (7.0..=9.6).contains(&interval),
-            "source range repeat7–9.5s: {range_times:?}"
-        );
-    }
-    for (spell, minimum, maximum) in [(16100, 0.0, 0.1), (7964, 8.0, 12.6), (21655, 20.0, 30.1)] {
+    super::gizlock::assert_source_clock(&range_times, (0.0, 0.0), (7.0, 9.5), &blocked);
+    for (spell, first, repeat, cast_time) in [
+        (16100, (0.0, 0.0), (2.3, 3.9), 0.0),
+        (7964, (8.0, 12.0), (14.0, 18.0), 1.5),
+        (21655, (20.0, 30.0), (20.0, 30.0), 0.0),
+    ] {
         let times: Vec<_> = casts
             .iter()
-            .filter(|(id, _, _)| *id == spell)
-            .map(|(_, time, _)| *time)
+            .filter(|(id, time, _)| *id == spell && (spell != 16100 || *time < 19.5))
+            .map(|(_, time, _)| *time - cast_time)
             .collect();
-        assert!(times.len() >= 2, "source repeated {spell}: {times:?}");
-        assert!(
-            times[0] >= minimum && times[0] <= maximum,
-            "source first {spell}: {times:?}"
-        );
+        super::gizlock::assert_source_clock(&times, first, repeat, &blocked);
     }
-    assert!(
-        !stun_seen,
-        "10yd ranged victim stays outside Flash's source radius"
-    );
+
     assert!(blink_displacements.len() >= 2, "real21655 cast repeats");
     assert!(
         blink_displacements

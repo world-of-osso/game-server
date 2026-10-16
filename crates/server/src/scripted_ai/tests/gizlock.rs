@@ -1,7 +1,7 @@
 //! Source SAI with actual ranged admission and channel deferral; survival is staged.
 use super::*;
 
-fn assert_source_clock(
+pub(super) fn assert_source_clock(
     times: &[f32],
     first: (f32, f32),
     repeat: (f32, f32),
