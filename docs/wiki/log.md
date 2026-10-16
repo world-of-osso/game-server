@@ -1,3 +1,7 @@
+## 2026-10-16 — Sourced Fade107 continuation
+
+[Current70391 census](../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16):105 referenced properties, exact rejected effect/turn IDs and123-state aura gate; Fade1084 alone adds3 admitted rows1746→1749/2829 (61.72→61.82%). Actual unsupported107 RED3→GREEN81, lib check/fmt and both-skin private5961 fullHD pointer/log/model proof pass. No canonical DB/index change; remaining unknown semantics and lead-owned asset publication explicit.
+
 ## 2026-10-15 — Read-only follower group reward receipts
 ## 2026-10-16 — Ysera source admission and private body closure
 
