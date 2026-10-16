@@ -25,11 +25,11 @@ Real member-scoped guild news, separate from lifecycle/bank history. Source: Mai
 
 ## Tests asserting this spec
 
-- `achievement_tests.rs::guild_news_real_flagged_player_achievement_commits_once_and_survives_restart` — RED observed0 news despite actual installed Level50 toast; GREEN pending for durable sourced row/duplicate/reopen controls.
+- `achievement_tests.rs::guild_news_real_flagged_player_achievement_commits_once_and_survives_restart` — RED observed0 news despite actual installed Level50 toast; GREEN for durable sourced row/duplicate/reopen controls; actual vendor/loot/craft/authenticated controls documented in [proof ledger](../wiki/systems/guild-news.md#proof-ledger-2026-10-15).
 
 ## Known gaps (current cycle)
 
-- [ ] Atomic producers, persistence/retention/sticky authority and network handler.
+- [x] Actual achievement/vendor/loot/craft producers, persistence/retention/sticky authority and authenticated handler (targeted6/6).
 - [ ] Both-skin real native/persistence/pixel acceptance and independent gates.
 
 ## Out of scope
