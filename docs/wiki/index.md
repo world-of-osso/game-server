@@ -1,6 +1,7 @@
 - [Native excluded aura-spell admission](systems/spell-casting.md#native-excluded-aura-spell-admission--2026-10-16) — native player/NPC and actual450ms completion RED4/5; source field consumer committed, GREEN pending.
 - [Native aura restriction metadata loader](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16) — native metadata/schema RED→GREEN4 and merged39 controls; mandatory source publication, state/admission still separate.
 - [Native aura restrictions producer](systems/spell-info.md#native-aura-restrictions-producer--2026-10-16) — real CLI metadata-loss RED→GREEN3, complete native columns/build stamp/reimport and rollback; publication/runtime admission remain separate.
+- [Remaining geometry scans](investigations/server-tick-lag.md#remaining-geometry-scans-2026-10-16) — dormant wake-aware detection/resize and live collision membership indexing; bounded 50-control proof.
 - [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
@@ -505,3 +506,5 @@ Debug logs and root cause analyses.
 - [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port) — schedules, two guardian waves/death cleanup, manual redeemed actor/isolated credit GREEN; copy-only redeemed base replaces legacy stats.
 
 - [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
+
+- [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — controlled source clocks/effects/fixed death spirit/credit GREEN and actual TDB Normal projection; extra attacks remain unsupported.
