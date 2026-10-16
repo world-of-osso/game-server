@@ -1,3 +1,7 @@
+## 2026-10-16 — Guild perk membership knowledge
+
+[Perks](systems/guild-perks.md): actual persisted join RED reproduced no perk grants. Membership-derived known IDs now remain separate from class/profession learning and survive ordinary spec rebuilds; owner deltas follow Update membership changes. Focused GREEN and real UDP/native/effect proof remain open.
+
 ## 2026-10-15 — Read-only follower group reward receipts
 ## 2026-10-16 — Ysera source admission and private body closure
 
