@@ -2048,11 +2048,12 @@ fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
         }
         let caster_position = *h.app.world().get::<Position>(h.caster).unwrap();
         let is_sign = item == 197719;
-        // Retail radius16 = 1yd for war banners; radius7 = 2yd for seasonal banners.
+        // Target47 clamps the source1yd war-banner radius to player reach1.5yd;
+        // seasonal banners retain their authored2yd radius.
         let forward_distance = if is_sign {
             0.0
         } else if matches!(item, 163986 | 163987) {
-            1.0
+            1.5
         } else {
             2.0
         };
@@ -2702,7 +2703,8 @@ fn toyfx11_sweeper_and_trophy_learn_spawn_and_expire() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     for (item, spell, entry, display, radius) in [
-        (147867, 243209, 121762, 76543, 1.0_f32),
+        // Target47 clamps the source1yd radius to the default player's1.5yd reach.
+        (147867, 243209, 121762, 76543, 1.5_f32),
         (169865, 362988, 183727, 92396, 1.5_f32),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("{item}.redb")));
