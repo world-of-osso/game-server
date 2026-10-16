@@ -209,6 +209,7 @@ fn encounter_fixture(
         ADAROGG => Some(prepare_encounter_database("adarogg")),
         SLAGMAW => Some(prepare_encounter_database("slagmaw")),
         13282 => Some(prepare_encounter_database("noxxion")),
+        12225 => Some(prepare_encounter_database("celebras")),
         _ => None,
     };
     let path = prepared
