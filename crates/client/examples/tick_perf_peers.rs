@@ -164,7 +164,7 @@ fn run_peer(run: Run) -> bool {
     app.run().is_success()
 }
 
-fn main() {
+fn read_private_endpoint() -> SocketAddr {
     let server: SocketAddr = std::env::args()
         .nth(1)
         .expect("private endpoint")
@@ -174,8 +174,10 @@ fn main() {
         server.ip().is_loopback() && server.port() != 5000,
         "private endpoint required"
     );
-    let mut logging = App::new();
-    logging.add_plugins(bevy::log::LogPlugin::default());
+    server
+}
+
+fn spawn_profile_peers(server: SocketAddr) -> Vec<std::thread::JoinHandle<bool>> {
     let count = Arc::new(AtomicUsize::new(0));
     let (sender, receiver) = mpsc::channel();
     let mut workers = Vec::new();
@@ -202,6 +204,14 @@ fn main() {
             std::thread::sleep(Duration::from_secs(10));
         }
     }
+    workers
+}
+
+fn main() {
+    let server = read_private_endpoint();
+    let mut logging = App::new();
+    logging.add_plugins(bevy::log::LogPlugin::default());
+    let workers = spawn_profile_peers(server);
     println!("ALL_ENTERED {PEER_COUNT}");
     for worker in workers {
         assert!(worker.join().expect("peer panicked"), "peer failed");
