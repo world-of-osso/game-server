@@ -846,6 +846,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
             crate::achievement::record_player_killed_by(world, victim, killer);
             let owner = combat_event_owner(world, killer);
             crate::pvp::record_battleground_player_kill(world, owner, victim);
+            crate::pvp::reward_world_player_kill(world, owner, victim);
             crate::quest::record_player_kill(world, owner, victim);
         }
     }
@@ -1766,7 +1767,7 @@ pub(crate) fn applicable_costs(
         let optional = (cost.optional_cost as f32 + additional).max(0.0);
         let optional = if optional > 0.0 {
             match SpellModOp::power_cost(cost.order_index) {
-                Some(op) => modify(world, caster, spell, op, optional).max(0.0),
+                Some(op) => spell_mods::modify_percent(world, caster, spell, op, optional).max(0.0),
                 None => optional,
             }
         } else {
@@ -3042,6 +3043,8 @@ mod mechanics_talent_tests;
 mod mechanics_tests;
 #[cfg(test)]
 mod new_class_tests;
+#[cfg(test)]
+mod optional_flat_cost_tests;
 #[cfg(test)]
 mod override_queue_tests;
 #[cfg(test)]
