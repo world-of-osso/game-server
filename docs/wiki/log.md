@@ -1,3 +1,7 @@
+## 2026-10-16 — Native required caster aura-spell admission
+
+[Spell casting](systems/spell-casting.md#native-required-caster-aura-spell-admission--2026-10-16): actual Voidform/Sheilun casts and two-second cloud loss RED3pass/6fail9.05s precede the shared caster identity check. Positive heal, recipient/expiry/NPC/full-trigger controls included; GREEN/final gates pending. Target322109→1221044 notification producer remains unqualified and is not invented.
+
 ## 2026-10-16 — Native excluded aura-spell admission
 
 [Spell casting](systems/spell-casting.md#native-excluded-aura-spell-admission--2026-10-16): shared caster/target exclusion references now checked at normal admission/completion; native4pass/5fail RED precedes implementation, actual450ms blocker gain/removal included. GREEN37/0/0 in8.88s includes nine new and28 native controls; source Stealth-child closure retained. Master9aca3c1a integrated; current merged37 passes7.71s, workspace/all-target check27.129s/0warnings and fmt/manual Rust readability pass. Target-midcast/charge/GCD lifetime details remain source/code proof, distinct from the actual caster450ms fixture. Required refs/states/types and other implicit targets remain open; no protocol or native-row edits.
