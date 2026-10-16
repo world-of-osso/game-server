@@ -40,7 +40,7 @@ fn reduce_judgment(root: u32, target_enemy: bool) {
             .world_mut()
             .entity_mut(h.caster)
             .insert(super::SpellHistory::default());
-        let until = super::now(h.app.world()) + 20.0;
+        let until = super::history_now(h.app.world()) + 20.0;
         h.app
             .world_mut()
             .get_mut::<super::SpellHistory>(h.caster)
