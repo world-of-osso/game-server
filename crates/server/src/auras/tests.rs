@@ -7,7 +7,9 @@ use shared::components::{
 use shared::protocol::{CancelAura, CombatChannel, CombatLogEvent, CombatLogKind};
 
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness, varied, world_db};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_native_enemy_dodge_reduction, varied, world_db,
+};
 
 const SHADOW_WORD_PAIN: u32 = 589;
 const RENEW: u32 = 139;
@@ -668,7 +670,9 @@ fn purify_dispels_a_magic_debuff_combat_log_metadata() {
 
 #[test]
 fn passive_proc_trigger_fires_on_melee_swing() {
-    let Some(mut h) = harness(Vec::new(), &[DEVASTATOR, DEVASTATOR_DAMAGE], 1) else {
+    let Some(mut h) =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[DEVASTATOR, DEVASTATOR_DAMAGE], 1)
+    else {
         return;
     };
     h.advance(1);

@@ -125,9 +125,22 @@ def import_wailing_ritual_difficulties(connection):
     return entries
 
 
+def import_noxxion_spawn_difficulty(connection):
+    """Pinned21708 aura triggers21707: five13456 summons, actual Normal1 stats."""
+    effect = connection.execute('''SELECT Effect,EffectMiscValue_0,EffectBasePointsF
+        FROM spell_effect WHERE SpellID=21707 AND EffectIndex=0 AND DifficultyID=0''').fetchone()
+    if effect != (28,13456,5.0):
+        raise ValueError('Noxxion21707 summon identity changed')
+    template = connection.execute('SELECT AIName,ScriptName FROM content_creature_template WHERE entry=13456').fetchone()
+    if template != ('SmartAI',''):
+        raise ValueError('Noxxion spawn13456 runtime AI identity changed')
+    project_difficulty(connection, 13456, 1)
+    return [13456]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
@@ -141,6 +154,8 @@ def main():
                 entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
             elif args.encounter == 'adarogg':
                 entries = [import_demonic_leap_template(conn)]
+            elif args.encounter == 'noxxion':
+                entries = import_noxxion_spawn_difficulty(conn)
             elif args.encounter == 'wailing-ritual':
                 entries = import_wailing_ritual_difficulties(conn)
             else:
