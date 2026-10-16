@@ -874,3 +874,15 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn idle_just_appeared_full_population_is_bounded() {
+    let mut app = App::new();
+    app.add_systems(Update, trigger_just_appeared);
+    crate::test_data::populate_idle_world(app.world_mut(), || crate::grid_activity::GridDormant);
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_just_appeared_full_population_is_bounded",
+    );
+}
