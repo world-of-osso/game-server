@@ -255,7 +255,16 @@ fn aggro_on_sight_system(
                 _ => false,
             }
         });
-        if let Some((player, _)) = seen {
+        if let Some((player, center_distance)) = seen {
+            debug!(
+                creature = creature.to_bits(),
+                target = player.to_bits(),
+                map = ?map,
+                creature_position = ?position,
+                target_position = ?players.iter().find(|(unit, ..)| *unit == player).map(|(_, position, _)| position),
+                center_distance,
+                "player proximity acquisition"
+            );
             commands.queue(move |world: &mut World| attack_start(world, creature, player));
         }
     }

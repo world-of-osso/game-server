@@ -1,5 +1,23 @@
 # Toy effects14 — active whole-goal coverage
 
+## Shrine viewer-level projection (2026-10-15)
+
+TC a352b1fa `Creature::HasScalableLevels` requires nonzero ContentTuningID. `TempSummon::InitStats` skips owner-tuning replacement for UseCreatureLevel; Shrine therefore retains Area9/CT73[1,30], delta0. Unflagged player-owned Podium inherits zero tuning and must not scale merely because its initial native level came from that region.
+
+| Boundary | Evidence / remaining |
+|---|---|
+| Real learned Shrine use, owners20/80 | Genuine RED ff6a464f projects30 to viewers1/20 instead of1/20; native30/HP4379/armor155 remains correct. |
+| Selected regional viewer range/delta | 4dd65bab retains the same once-rolled delta and range before wild initialization; shared viewer projection1/20/80→1/20/30 passes in actual UseToy CPU fixtures. |
+| Unflagged player-owned Podium | All viewer levels remain its initialized native20/30. Negative control passes; no blanket regional scaling. |
+| Focused/whole regression | Nine source-level, mana, missing-region, guardian and Podium tests pass88.75s; whole `-- toys:: --test-threads 2` passes136/136, zero ignored554.81s at4dd65bab/protocoldc30250. Current six build/check/fmt gates all EXIT0 at docs-equivalent749d4984/359c8e521/dc30250. |
+| Unproved boundaries | Server combat `UnitScaling` additionally requires `ScaledStats`; region-only Shrine has no such table yet. Damage/health/armor combat scaling, exact client HP projection, pixels and wall expiry are not certified by viewer-text assertions. |
+
+Fresh private5911 actual UseItem→UseToy wire passes at server749d49849bdd48cc072d517c33b5e325bfd850f0, peer359c8e521a8b8ea0fbadaed30f4c03539fd410d5 and protocoldc30250f22c09dacdcd5266034ac6c4c22292fd4. Shrine owners20/80 each receive one native30/HP4379 actor with CT73/min1/max30/delta0; the shared client consumer projects viewers1/20/80→1/20/30. Podium receives one native20/30 actor, HP48066/87576 and no scaling: all projections stay native. Default Scarab control receives26/28 actors, all native20/30/no scaling, positive HP1 only—not full guardian-stat parity. These are projections from replicated fields, not three rendered observer clients or target-frame pixels.
+
+First controller completed Podium, then hit unchanged admin3000ms create-character timeout. Read-only restart inspection found the unfinished Shrine character absent; account retained untouched. Only unfinished Shrine/Scarab scenarios resumed on four new accounts after preparation, without repeating Podium, resetting cooldowns or changing deadlines. Both sequential owned runtimes stopped; final PID3390250 is gone, slice inactive, UDP5911 free. Server SHA25604e361ecd8901adf90409fa9c2de162e7940a98826a5077612b1b0c4d0a10fa1; peerf8e386da070e837391787a9aea028c1fe308b4bfdef9991ef71e831ba77e3907.
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `scaling56-proof-ledger.json`, `scaling56-whole-toys-proof.json`, `scaling56-final-results.json`, `scaling56-built-artifacts.json`, per-scenario wire JSON, initial/resume receipts/server logs and manual readability audit. No new Toy admission or Full1166 completion claim.
+
 ## Wild summon initial-state proof (2026-10-15)
 
 TC a352b1fa Creature::Create resolves actual terrain area before CreateFromProto→UpdateEntry→SelectLevel; TempSummon::InitStats then applies its property-controlled owner clamp. Wild/default E28 is not exempt. `wild55-create-level-source.json` records that sequence and authentic rows. Genuine learned-use RED at e3314a09/f269c22a observes legacy level1/HP20-or1/armor50; source initialization917388be updates level/HP/armor/mana together, rather than relabeling UnitLevel. The existing learned-use group chain independently reproduces an NPC-owned child at1 instead of30; b3f59be0 requires actual player Level or non-player UnitLevel, removing the invented1 fallback. Normal zone AI, ownership, placement and lifetime paths remain.
@@ -16,7 +34,7 @@ Final server source/test revision1049f85d1d388131a5f06eac98fe4862891a8f9d, peer1
 
 Current server check/fmt/maintained build pass; unchanged engine fixture build, network all-targets check and format proof pass at10f07788b and are reused. Source ExpectedStat IDs20/30 (ExpansionID-2), class mod4 and template modifiers anchor concrete values; installed ContentTuning73 has no ExpectedStat modifiers. The single private5911 stack uses six fresh `fb_toyfx55_*` accounts and real UseItem→UseToy, then stops; owned PID2052890 is gone, slice inactive and UDP5911 free. Literal binary SHA256: server510db5f4dbb6f396c18d747032d4acaf6364730a73795a3d1ac9ec8ae26ffa20; peerb69e735e875f1df863f6b2c922840ab9a43f756905f771d55e5bf250a5f5b94e.
 
-Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `wild55-proof-ledger.json`, `ty239-whole-toys-proof.json`, `wild55-server-followup-results.json`, `wild55-built-artifacts.json`, `wild55-wire-results.json`, per-scenario wire JSON/process logs and server/preparation receipts. No new item admission or canonical publication. Inherited per-viewer scaling/combat modifiers, attack power and complete creature-stat parity remain open. No new pixels, navigation or native wall-expiry certificate; older native images/lifetimes retain their literal earlier binary scopes. Neither136 passing tests nor the earlier383 admissible items certifies complete1166.
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `wild55-proof-ledger.json`, `ty239-whole-toys-proof.json`, `wild55-server-followup-results.json`, `wild55-built-artifacts.json`, `wild55-wire-results.json`, per-scenario wire JSON/process logs and server/preparation receipts. No new item admission or canonical publication. [Later Shrine client-level projection](#shrine-viewer-level-projection-2026-10-15) is proved separately; inherited server-combat scaling/modifiers, attack power and complete creature-stat parity remain open. No new pixels, navigation or native wall-expiry certificate; older native images/lifetimes retain their literal earlier binary scopes. Neither136 passing tests nor the earlier383 admissible items certifies complete1166.
 
 ## Sea-Blessed Shrine — bounded source and release-native lifecycle
 

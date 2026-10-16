@@ -1,8 +1,12 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "gnomeregan.rs"]
+mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "maraudon.rs"]
+mod maraudon;
 
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
@@ -21,6 +25,8 @@ mod wailing_physical;
 mod wailing_progress;
 #[path = "wailing_ritual_waves.rs"]
 mod wailing_ritual_waves;
+#[path = "wailing_start.rs"]
+mod wailing_start;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
@@ -174,15 +180,16 @@ fn encounter_fixture(
     let data = data().expect("world.db fixture");
     let mut app = stockade_app_with(data, |app| {
         app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
+        // Install ingress and its source faction resource before the first update.
+        app.insert_resource(
+            crate::faction::world_db_faction_templates().expect("world.db faction templates"),
+        );
+        app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
         if populate {
             let connection =
                 Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
                     .unwrap();
             app.insert_resource(crate::gathering::load_data(&connection).unwrap());
-            app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
-            app.insert_resource(
-                crate::faction::world_db_faction_templates().expect("world.db faction templates"),
-            );
         }
     });
     if let Some(catalog) = catalog {
@@ -224,6 +231,7 @@ fn encounter_fixture(
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
+            || (entry == 7800 && *id == 7915)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
@@ -264,6 +272,8 @@ fn encounter_fixture(
         template_addons: crate::world_data::load_template_addons(&conn),
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
+        expected_stats: expected,
+        summon_levels: crate::world_data::summon_levels::SummonLevels::load(&conn).unwrap(),
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
@@ -287,6 +297,14 @@ fn encounter_fixture(
     app.insert_resource(store);
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
+    if entry == 234648 {
+        // Mirror Image and Blink resolve their authored ground destinations.
+        let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
+        app.insert_resource(crate::ground::GroundMap::new(
+            &crate::ground::ground_data_dir(),
+            std::collections::HashMap::from([(map_id, wdt)]),
+        ));
+    }
     maps.raid_creature_encounters.insert((map_id, entry), bit);
     if map_id == 43 {
         // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
