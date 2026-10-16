@@ -1,6 +1,6 @@
 ## 2026-10-16 — Native excluded aura-spell admission
 
-[Spell casting](systems/spell-casting.md#native-excluded-aura-spell-admission--2026-10-16): shared caster/target exclusion references now checked at normal admission/completion; native4pass/5fail RED precedes implementation, actual450ms blocker gain/removal included. GREEN/final gates pending. Required refs/states/types and other implicit targets remain open; no protocol or native-row edits.
+[Spell casting](systems/spell-casting.md#native-excluded-aura-spell-admission--2026-10-16): shared caster/target exclusion references now checked at normal admission/completion; native4pass/5fail RED precedes implementation, actual450ms blocker gain/removal included. GREEN37/0/0 in8.88s includes nine new and28 native controls; source Stealth-child closure retained. Master9aca3c1a integrated; merged/final gates pending. Required refs/states/types and other implicit targets remain open; no protocol or native-row edits.
 
 ## 2026-10-16 — Native aura restrictions metadata loader
 
