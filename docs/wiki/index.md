@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Stockade proximity receipts](investigations/follower-data.md#stockade-proximity-receipts--2026-10-15) — debug-only acquisition positions distinguish proximity from damage; social-assist gaps remain explicit.
+
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC recomputation; [owned-evade retention](investigations/follower-data.md#owned-evade-aura-retention--2026-10-15) preserves existing class/threat auras without budget overrides.
 
