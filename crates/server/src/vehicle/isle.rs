@@ -211,7 +211,13 @@ fn board(
     world.get_mut::<NpcVehicle>(vehicle).unwrap().seats[index] =
         Some(Occupant { passenger, aura_id });
     if let Some(movement) = movement {
-        world.entity_mut(vehicle).insert(NpcDriver(passenger));
+        let modifier = world
+            .get::<crate::auras::AuraStatMods>(vehicle)
+            .map_or(1.0, |mods| mods.movement_speed);
+        world.entity_mut(vehicle).insert((
+            NpcDriver(passenger),
+            MovementSpeed(movement.run_speed * modifier),
+        ));
         world.entity_mut(passenger).insert(movement);
     }
     world.entity_mut(passenger).insert((seat, origin));
