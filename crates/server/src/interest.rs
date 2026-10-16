@@ -394,6 +394,7 @@ impl Plugin for InterestPlugin {
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
             .add_observer(on_player_link_removed)
+            .add_observer(refresh_woken_detection_geometry)
             .add_systems(
                 FixedUpdate,
                 (
@@ -545,38 +546,66 @@ fn forward_position_changes_to_replication(
     }
 }
 
+type DetectionGeometryData = (
+    Entity,
+    Option<&'static Level>,
+    Option<&'static Rotation>,
+    Option<&'static UnitScale>,
+    Has<Player>,
+    Has<Npc>,
+    Option<&'static shared::protocol::GameObjectInfo>,
+);
+
 type ChangedDetectionGeometry<'w, 's> = Query<
     'w,
     's,
+    DetectionGeometryData,
     (
-        Entity,
-        Option<&'static Level>,
-        Option<&'static Rotation>,
-        Option<&'static UnitScale>,
-        Has<Player>,
-        Has<Npc>,
-        Option<&'static shared::protocol::GameObjectInfo>,
+        Without<crate::grid_activity::GridDormant>,
+        Or<(
+            Changed<Level>,
+            Changed<Rotation>,
+            Changed<UnitScale>,
+            Added<Player>,
+            Added<Npc>,
+            Added<shared::protocol::GameObjectInfo>,
+        )>,
     ),
-    Or<(
-        Changed<Level>,
-        Changed<Rotation>,
-        Changed<UnitScale>,
-        Added<Player>,
-        Added<Npc>,
-        Added<shared::protocol::GameObjectInfo>,
-    )>,
 >;
 
 fn sync_detection_geometry(units: ChangedDetectionGeometry, mut index: ResMut<InterestIndex>) {
     for (entity, level, rotation, scale, player, npc, object) in &units {
-        index.detection_geometry.insert(
+        publish_detection_geometry(
+            &mut index,
             entity,
             DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
         );
-        index.dirty_targets.insert(entity);
-        if let Some(&connection) = index.connection_by_player.get(&entity) {
-            index.dirty_observers.insert(connection);
-        }
+    }
+}
+
+fn refresh_woken_detection_geometry(
+    trigger: On<Remove, crate::grid_activity::GridDormant>,
+    units: Query<DetectionGeometryData>,
+    mut index: ResMut<InterestIndex>,
+) {
+    if let Ok((entity, level, rotation, scale, player, npc, object)) = units.get(trigger.entity) {
+        publish_detection_geometry(
+            &mut index,
+            entity,
+            DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
+        );
+    }
+}
+
+fn publish_detection_geometry(
+    index: &mut InterestIndex,
+    entity: Entity,
+    geometry: DetectionGeometry,
+) {
+    index.detection_geometry.insert(entity, geometry);
+    index.dirty_targets.insert(entity);
+    if let Some(&connection) = index.connection_by_player.get(&entity) {
+        index.dirty_observers.insert(connection);
     }
 }
 
