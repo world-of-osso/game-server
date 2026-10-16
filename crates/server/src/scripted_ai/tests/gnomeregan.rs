@@ -49,7 +49,7 @@ fn encounter_coverage_electrocutioner_real_sai_spells_and_copy_isolated_credit()
         assert!(
             damage
                 .iter()
-                .all(|event| { event.target == Some(player.to_bits()) && event.amount > 0.0 })
+                .all(|event| { event.target == Some(player.to_bits()) && event.amount > 0 })
         );
     }
     assert!(h.inbox(1).starts.is_empty());
