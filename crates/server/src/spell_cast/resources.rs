@@ -7,6 +7,7 @@ use shared::components::PowerType;
 use super::{CostPool, powers};
 use crate::spell_info::{SpellDuration, SpellInfo};
 
+const EXECUTE: u32 = 163201;
 const ENVENOM: u32 = 32645;
 const BLACK_POWDER: u32 = 319175;
 const DISPATCH: u32 = 2098;
@@ -87,7 +88,7 @@ pub(super) fn snapshot(
     costs: &[(CostPool, f32)],
 ) -> SpellInfo {
     let mut spell = source.clone();
-    if spell.id == 163201 {
+    if spell.id == EXECUTE {
         spell.cast_execute_multiplier = Some(super::scripts::execute_multiplier(
             world, caster, &spell, costs,
         ));

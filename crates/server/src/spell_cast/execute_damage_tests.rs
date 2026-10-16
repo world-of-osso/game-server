@@ -13,11 +13,11 @@ fn spawn_execute_caster(spec: u32, talents: &[u32]) -> Harness {
     let mut ids = vec![EXECUTE, DAMAGE, spec];
     ids.extend_from_slice(talents);
     let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
-    apply(&mut h, spec);
+    apply_self_aura(&mut h, spec);
     h
 }
 
-fn apply(h: &mut Harness, spell_id: u32) {
+fn apply_self_aura(h: &mut Harness, spell_id: u32) {
     crate::auras::apply_aura(
         h.app.world_mut(),
         &AuraApplication {
@@ -108,8 +108,8 @@ fn execute_damage_native_arms_shares_actual_rage_formula() {
 fn execute_damage_native_sudden_death_uses_authored_rage_without_spending() {
     let mut h = spawn_execute_caster(PROTECTION, &[29725, 52437]);
     let baseline = unscaled_child(&mut h);
-    apply(&mut h, 29725);
-    apply(&mut h, 52437);
+    apply_self_aura(&mut h, 29725);
+    apply_self_aura(&mut h, 52437);
     h.set_power(PowerType::Rage, 100.0);
     h.cast_and_deliver(EXECUTE, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -155,7 +155,7 @@ fn execute_damage_native_triggered_parent_calculates_cost_but_spends_no_rage() {
 fn execute_damage_native_refund_does_not_reduce_launched_damage_budget() {
     let mut h = spawn_execute_caster(ARMS, &[316405]);
     let baseline = unscaled_child(&mut h);
-    apply(&mut h, 316405);
+    apply_self_aura(&mut h, 316405);
     h.set_power(PowerType::Rage, 400.0);
     h.cast_and_deliver(EXECUTE, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);

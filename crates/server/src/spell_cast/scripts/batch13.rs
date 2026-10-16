@@ -113,14 +113,31 @@ pub(in crate::spell_cast) fn cast_execute_damage(
     else {
         return true;
     };
-    // Triggered parents pay no Rage; direct child casts have no TriggerArgs.
-    child.cast_execute_multiplier = Some(
-        ctx.spell
-            .cast_execute_multiplier
-            .unwrap_or_else(|| raw_execute_multiplier(ctx.spell, 0.0)),
-    );
+    let multiplier = match cast_execute_multiplier(world, ctx) {
+        Ok(multiplier) => multiplier,
+        Err(failure) => {
+            warn!("Triggered Execute cost calculation failed: {failure:?}");
+            return true;
+        }
+    };
+    child.cast_execute_multiplier = Some(multiplier);
     spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1);
     true
+}
+
+fn cast_execute_multiplier(
+    world: &World,
+    ctx: &effects::EffectCtx,
+) -> Result<f32, spell_cast::CastFailure> {
+    if let Some(multiplier) = ctx.spell.cast_execute_multiplier {
+        return Ok(multiplier);
+    }
+    // TC Spell.cpp3484/3868: triggered parents calculate costs, but skip payment.
+    let costs: Vec<_> = spell_cast::applicable_costs(world, ctx.caster, ctx.spell)?
+        .into_iter()
+        .map(|(pool, amount, _)| (pool, amount))
+        .collect();
+    Ok(execute_multiplier(world, ctx.caster, ctx.spell, &costs))
 }
 
 ///163201 and its260798 damage child both have native Speed0. Refund after that
