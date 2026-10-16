@@ -40,6 +40,9 @@
 ## 2026-10-15 — Readiness real-time clock
 
 [Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.
+## 2026-10-15 — Shrine viewer-level projection
+
+[Viewer-level boundary](systems/toys.md#shrine-viewer-level-projection-2026-10-15): actual learned Shrine projects30 to viewer20 RED; selected regional range and same rolled delta now survive wild initialization. Nine targeted controls pass, including Podium's zero-tuning native-level behavior. Whole-Toy136/136, six current build/check/fmt gates and fresh replicated Shrine/Podium/default-Scarab viewer projections pass. Admin creation-timeout evidence retained; only unfinished scenarios resumed with new accounts. Server-combat tables and exact client HP remain separate.
 
 ## 2026-10-15 — Guild lifecycle query boundary
 
