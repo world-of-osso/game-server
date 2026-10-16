@@ -1,10 +1,15 @@
-//! Real UDP peers for bounded private-server profiling; no token files or rendering.
+//! Eleven independent real-UDP apps for private-server profiling; no token files.
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use shared::protocol::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+    mpsc,
+};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const PEER_COUNT: usize = 11;
@@ -13,29 +18,17 @@ const MEASUREMENT: Duration = Duration::from_secs(90);
 #[derive(Resource)]
 struct Run {
     server: SocketAddr,
+    username: String,
     started: Instant,
-    next_peer: usize,
-    last_entry: Option<Instant>,
+    sent: bool,
+    entered: bool,
+    count: Arc<AtomicUsize>,
+    ready: mpsc::Sender<usize>,
+    index: usize,
     all_entered: Option<Instant>,
 }
 
-#[derive(Component)]
-struct Peer {
-    username: String,
-    sent: bool,
-    entered: bool,
-}
-
-fn connect_next(mut commands: Commands, mut run: ResMut<Run>, peers: Query<&Peer>) {
-    if run.next_peer > PEER_COUNT || peers.iter().any(|peer| !peer.entered) {
-        return;
-    }
-    if run
-        .last_entry
-        .is_some_and(|entry| entry.elapsed() < Duration::from_secs(10))
-    {
-        return;
-    }
+fn connect(mut commands: Commands, run: Res<Run>) {
     let client_id = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock")
@@ -54,14 +47,8 @@ fn connect_next(mut commands: Commands, mut run: ResMut<Run>, peers: Query<&Peer
             PeerAddr(run.server),
             UdpIo::default(),
             netcode,
-            Peer {
-                username: format!("fb_perf_live{}", run.next_peer),
-                sent: false,
-                entered: false,
-            },
         ))
         .id();
-    run.next_peer += 1;
     commands.trigger(Connect { entity });
 }
 
@@ -75,35 +62,33 @@ fn connected(event: On<Add, Connected>, mut commands: Commands) {
     ));
 }
 
-fn login(mut peers: Query<(&mut Peer, &mut MessageSender<LoginRequest>), With<Connected>>) {
-    for (mut peer, mut sender) in &mut peers {
-        if peer.sent {
-            continue;
-        }
+fn login(
+    mut run: ResMut<Run>,
+    mut senders: Query<&mut MessageSender<LoginRequest>, With<Connected>>,
+) {
+    if run.sent {
+        return;
+    }
+    for mut sender in &mut senders {
         sender.send::<AuthChannel>(LoginRequest {
             token: None,
-            username: peer.username.clone(),
+            username: run.username.clone(),
             password: "fbtest".into(),
         });
-        peer.sent = true;
-        println!("LOGIN_SENT {}", peer.username);
+        run.sent = true;
+        println!("LOGIN_SENT {}", run.username);
     }
 }
 
 fn select(
     mut peers: Query<(
-        &Peer,
         &mut MessageReceiver<LoginResponse>,
         &mut MessageSender<SelectCharacter>,
     )>,
 ) {
-    for (peer, mut receiver, mut sender) in &mut peers {
+    for (mut receiver, mut sender) in &mut peers {
         for reply in receiver.receive() {
-            assert!(
-                reply.success,
-                "{} login rejected: {:?}",
-                peer.username, reply.error
-            );
+            assert!(reply.success, "login rejected: {:?}", reply.error);
             let character = reply
                 .characters
                 .first()
@@ -115,55 +100,68 @@ fn select(
     }
 }
 
-fn entered(
-    mut run: ResMut<Run>,
-    mut peers: Query<(&mut Peer, &mut MessageReceiver<EnterWorldResponse>)>,
-) {
-    for (mut peer, mut receiver) in &mut peers {
+fn entered(mut run: ResMut<Run>, mut replies: Query<&mut MessageReceiver<EnterWorldResponse>>) {
+    for mut receiver in &mut replies {
         for reply in receiver.receive() {
             assert!(
                 reply.success,
                 "{} admission rejected: {:?}",
-                peer.username, reply.error
+                run.username, reply.error
             );
-            peer.entered = true;
-            run.last_entry = Some(Instant::now());
+            assert!(!run.entered, "duplicate world entry");
+            run.entered = true;
+            run.count.fetch_add(1, Ordering::SeqCst);
+            run.ready.send(run.index).expect("profiling supervisor");
             println!(
                 "ENTERED {} elapsed={:.3}",
-                peer.username,
+                run.username,
                 run.started.elapsed().as_secs_f64()
             );
         }
     }
-    let entered = peers.iter().filter(|(peer, _)| peer.entered).count();
-    if entered == PEER_COUNT && run.all_entered.is_none() {
+    if run.count.load(Ordering::SeqCst) == PEER_COUNT && run.all_entered.is_none() {
         run.all_entered = Some(Instant::now());
-        println!("ALL_ENTERED {entered}");
     }
 }
 
-fn finish(run: Res<Run>, peers: Query<(&Peer, Has<Connected>)>, mut exit: MessageWriter<AppExit>) {
+fn finish(run: Res<Run>, connected: Query<(), With<Connected>>, mut exit: MessageWriter<AppExit>) {
     assert!(
         run.started.elapsed() < Duration::from_secs(600),
         "peer readiness deadline exceeded"
     );
-    for (peer, connected) in &peers {
-        assert!(
-            !peer.entered || connected,
-            "{} disconnected after entry",
-            peer.username
-        );
-    }
+    assert!(
+        !run.entered || !connected.is_empty(),
+        "{} disconnected after entry",
+        run.username
+    );
     if run
         .all_entered
         .is_some_and(|start| start.elapsed() >= MEASUREMENT)
     {
-        println!(
-            "MEASUREMENT_COMPLETE peers={PEER_COUNT} seconds={}",
-            MEASUREMENT.as_secs()
-        );
+        println!("PEER_COMPLETE {}", run.username);
         exit.write(AppExit::Success);
     }
+}
+
+fn run_peer(run: Run) -> bool {
+    // Replicon's client receive resources are app-global: each peer needs its own App.
+    let mut app = App::new();
+    app.add_plugins(
+        MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+            Duration::from_millis(10),
+        )),
+    );
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(ClientPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.add_plugins(shared::ProtocolPlugin);
+    app.insert_resource(run);
+    app.add_observer(connected);
+    app.add_systems(Startup, connect);
+    app.add_systems(FixedUpdate, login);
+    app.add_systems(Update, (select, entered, finish).chain());
+    app.run().is_success()
 }
 
 fn main() {
@@ -176,31 +174,40 @@ fn main() {
         server.ip().is_loopback() && server.port() != 5000,
         "private endpoint required"
     );
-    let mut app = App::new();
-    app.add_plugins(
-        MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-            Duration::from_millis(10),
-        )),
-    );
-    app.add_plugins((
-        bevy::state::app::StatesPlugin,
-        bevy::log::LogPlugin::default(),
-    ));
-    app.add_plugins(ClientPlugins {
-        tick_duration: Duration::from_millis(50),
-    });
-    app.add_plugins(shared::ProtocolPlugin);
-    app.insert_resource(Run {
-        server,
-        started: Instant::now(),
-        next_peer: 1,
-        last_entry: None,
-        all_entered: None,
-    });
-    app.add_observer(connected);
-    app.add_systems(FixedUpdate, login);
-    app.add_systems(Update, (select, entered, connect_next, finish).chain());
-    if !app.run().is_success() {
-        std::process::exit(1);
+    let mut logging = App::new();
+    logging.add_plugins(bevy::log::LogPlugin::default());
+    let count = Arc::new(AtomicUsize::new(0));
+    let (sender, receiver) = mpsc::channel();
+    let mut workers = Vec::new();
+    for index in 1..=PEER_COUNT {
+        let run = Run {
+            server,
+            username: format!("fb_perf_live{index}"),
+            started: Instant::now(),
+            sent: false,
+            entered: false,
+            count: count.clone(),
+            ready: sender.clone(),
+            index,
+            all_entered: None,
+        };
+        workers.push(std::thread::spawn(move || run_peer(run)));
+        assert_eq!(
+            receiver
+                .recv_timeout(Duration::from_secs(60))
+                .expect("peer entry"),
+            index
+        );
+        if index < PEER_COUNT {
+            std::thread::sleep(Duration::from_secs(10));
+        }
     }
+    println!("ALL_ENTERED {PEER_COUNT}");
+    for worker in workers {
+        assert!(worker.join().expect("peer panicked"), "peer failed");
+    }
+    println!(
+        "MEASUREMENT_COMPLETE peers={PEER_COUNT} seconds={}",
+        MEASUREMENT.as_secs()
+    );
 }
