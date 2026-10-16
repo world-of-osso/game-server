@@ -67,7 +67,10 @@ pub(super) fn save_account_progress(
         update.character,
         character_state,
     );
-    let aggregate = load_account_aggregate(&txn, update.account, &saved, catalog);
+    let mut aggregate = load_account_aggregate(&txn, update.account, &saved, catalog);
+    if let Some(previous) = character_state.account.as_deref() {
+        aggregate.evaluation = previous.evaluation.clone();
+    }
     let (aggregate, toasts) = evaluate_account_progress(catalog, &saved, &update, aggregate);
     saved.state = aggregate.clone();
     let bytes = serde_json::to_vec(&saved).expect("encode account achievements");
