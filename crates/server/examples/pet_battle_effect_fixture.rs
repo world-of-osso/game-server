@@ -80,6 +80,6 @@ fn main() {
     let (journal, states) = seed_fixture_pets(&catalog);
     save_fixture_pets(&journal, &states);
     println!(
-        "Seeded private account1: Jadefire Spirit1348 Fade1084 plus two Chicken39 reserves; not acquisition proof"
+        "Seeded private account1: Jadefire Spirit1348 Fade1084 plus two Mechanical Squirrel39 reserves; not acquisition proof"
     );
 }
