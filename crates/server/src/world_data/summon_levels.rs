@@ -9,6 +9,7 @@ const CREATURE_TYPE_CRITTER: u8 = 8;
 
 #[derive(Clone, Copy)]
 pub(crate) struct GuardianLevelRange {
+    pub content_tuning_id: u32,
     pub range: (u8, u8),
     pub delta: (i8, i8),
 }
@@ -56,11 +57,13 @@ impl SummonLevels {
             // UF::UpdateFieldBase zero-initializes both scaling bounds; a missing
             // ContentTuning row never supplies the template's legacy min/max.
             return Some(GuardianLevelRange {
+                content_tuning_id: 0,
                 range: (0, 0),
                 delta: (0, 0),
             });
         }
         Some(GuardianLevelRange {
+            content_tuning_id: tuning,
             range: *self.ranges.get(&tuning)?,
             delta: self.delta(template.entry, difficulty)?,
         })
