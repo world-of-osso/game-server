@@ -374,11 +374,16 @@ pub(crate) fn harness_with_native_enemy_dodge_reduction(
 
 /// Custom coefficient fixtures load SUNWELL_RADIANCE explicitly before opting in.
 pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
+    apply_native_enemy_dodge_reduction_to(h, h.caster);
+}
+
+/// Pet and foreign-player damage fixtures must qualify the actual attacker.
+pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: Entity) {
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
-            caster: h.caster,
-            target: h.caster,
+            caster: attacker,
+            target: attacker,
             spell_id: SUNWELL_RADIANCE,
             effect_mask: 1 << 1,
             source: crate::auras::AuraSource::Cast,
@@ -387,7 +392,7 @@ pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
     assert_eq!(
         h.app
             .world()
-            .get::<crate::auras::ActiveAuras>(h.caster)
+            .get::<crate::auras::ActiveAuras>(attacker)
             .unwrap()
             .modifier(251),
         -20.0

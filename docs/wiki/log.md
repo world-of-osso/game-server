@@ -1,8 +1,13 @@
+## 2026-10-16 — Call Pet missing-storage refusal
+
+[Pet lifecycle](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16): absent PetStable admitted883 success then effect returned without a pet. Actual native-target fresh-storage RED→GREEN; four controls and copied real character47 storage probe pass. No saved pet exists. Pinned creation-cast data has no Human hunter pet row; named source gap, no granted kit. Authenticated real-profile follower melee death already reaches its owner exactly once in a separate baseline test; terminal native delivery ordering remains under investigation rather than adding duplicate events.
 ## 2026-10-16 — Guild perk membership knowledge
 
 [Perks](systems/guild-perks.md): actual persisted join RED reproduced no perk grants. Membership-derived known IDs now remain separate from class/profession learning and survive ordinary spec rebuilds; owner deltas follow Update membership changes. Focused GREEN and real UDP/native/effect proof remain open.
 
 ## 2026-10-15 — Read-only follower group reward receipts
+
+- 2026-10-16: [Arena residual](investigations/slow-native-test-fixtures.md#arena-residual-bounded-independent-fixtures-2026-10-16): LEAD-approved cap4 workers; all sixteen native cases pass52.70s with unchanged assertions/frames/50msstep; sampled CPU113.70s versus52.90s wall, full-suite separate.
 ## 2026-10-16 — Ysera source admission and private body closure
 
 [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16): genuine importer/use RED, authentic99518 admission, six importer controls and actual private-owner/front-offset/static120s simulation lifecycle pass. Whole-Toy138/138 and check/fmt pass after module-order-only formatting repair. Seventeen70391 body dependencies plus four aliases authenticate/publish privately; procedural8605/type22 remains unrendered. Prepared classification adds only130170 to385/1166, not complete-toy parity; earlier interaction and guardian HP gaps remain.
@@ -1607,6 +1612,7 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: Rotgrip copy-only binding and real source clocks/self-damage/Puncture/isolated credit; preserved DB2SELF versus TDBvictim mismatch, no fabricated correction. See [boss scripts](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16).
 
+- 2026-10-16: Optional-cost flat exclusion: native Practiced Strikes/ProtExecute RED3/2; shared totals retain percentage and charged/live matching, optional consumer excludes flat. Native Sudden Death/cost-order controls retained; GREEN38/0/0 and merged5/0/0, workspace/all-target check64.411s, fmt and independent verifier pass. See [auras](systems/auras.md#optional-cost-spell-modifiers-2026-10-16).
 - 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
 
 - 2026-10-16: Noxxion real channel-aware clock/phase/ten-add/damage/isolated-credit acceptance GREEN3/3 at8e544d86; source21708 channel deferral explains compressed due-anchored repeat intervals. Native/ordinary acceptance remains separate.
@@ -1619,3 +1625,6 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
 
 - 2026-10-16: [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port): real no-Wrath RED, redeemed legacy stats replaced from base0, guardian summoner lifecycle failure reproduced; runtime gate pending.
+- 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
+
+- 2026-10-16: Noxxion real channel-aware clock/phase/ten-add/damage/isolated-credit acceptance GREEN3/3 at8e544d86; source21708 channel deferral explains compressed due-anchored repeat intervals. Native/ordinary acceptance remains separate.
