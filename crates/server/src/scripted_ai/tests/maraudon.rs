@@ -1,4 +1,4 @@
-//! Installed Razorlash SAI; controlled survival, not ordinary-fight/native acceptance.
+//! Installed Maraudon SAI; controlled survival, not ordinary-fight/native acceptance.
 use super::*;
 
 #[test]
@@ -120,6 +120,129 @@ fn encounter_coverage_razorlash_source_spells_damage_and_isolated_credit() {
     h.advance(15.0);
     assert_eq!(
         spell_gos(&h, boss, 40504).len(),
+        before,
+        "dead boss must not cast"
+    );
+}
+
+#[test]
+fn encounter_coverage_rotgrip_source_spells_damage_and_isolated_credit() {
+    const BIT: u32 = 6;
+    const ENCOUNTER: u32 = 428;
+    let (mut h, boss, map) = bound_boss(13596, 349, BIT);
+    let player = h.player();
+    // Headless fixture has no interest plugin. Supply the actual caster recipient set.
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000.0,
+        max: 1_000_000.0,
+    });
+    h.engage(boss);
+    let mut cursor = 0;
+    let mut casts = Vec::new();
+    let mut puncture_seen = false;
+    for tick in 1..=1800 {
+        // Fatal Bite is DB2 effect165/50% maximum health: high HP alone cannot
+        // sustain repeats. Refill only player HP for observation, never boss data.
+        h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1_000_000.0;
+        h.advance(0.05);
+        let gos = &h.inbox(0).spell_gos;
+        casts.extend(gos[cursor..].iter().filter_map(|go| {
+            (go.caster == boss.to_bits() && [16495, 15976].contains(&go.spell_id)).then_some((
+                go.spell_id,
+                tick as f32 * 0.05,
+                go.target,
+            ))
+        }));
+        cursor = gos.len();
+        puncture_seen |= h.has_aura(player, 15976);
+    }
+    eprintln!("ROTGRIP successful source casts: {casts:?}");
+    for (spell, first_min, first_max, repeat_min, repeat_max) in
+        [(16495, 6.0, 6.0, 12.0, 12.0), (15976, 6.0, 8.0, 13.0, 18.0)]
+    {
+        let times: Vec<_> = casts
+            .iter()
+            .filter(|(id, _, _)| *id == spell)
+            .map(|(_, time, _)| *time)
+            .collect();
+        assert!(
+            times.len() >= 3,
+            "missing source repeats {spell}: {times:?}"
+        );
+        assert!(
+            times[0] >= first_min && times[0] <= first_max + 0.1,
+            "first source clock {spell}: {times:?}"
+        );
+        for pair in times.windows(2) {
+            let elapsed = pair[1] - pair[0];
+            // Pinned TC uses timer < diff; fixed updates add one50ms repeat tick.
+            assert!(
+                elapsed >= repeat_min - 0.01 && elapsed <= repeat_max + 0.1,
+                "repeat source clock {spell}: {times:?}"
+            );
+        }
+        assert!(
+            casts
+                .iter()
+                .filter(|(id, _, _)| *id == spell)
+                .all(|(_, _, target)| *target == Some(player.to_bits())),
+            "source victim target {spell}"
+        );
+        assert!(
+            h.inbox(0)
+                .log
+                .iter()
+                .any(|event| event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "real damage {spell}"
+        );
+    }
+    assert!(puncture_seen, "real Puncture aura must apply");
+    assert!(
+        h.inbox(1)
+            .spell_gos
+            .iter()
+            .all(|go| go.caster != boss.to_bits())
+    );
+    assert!(
+        h.inbox(0)
+            .starts
+            .iter()
+            .any(|start| start.encounter_id == ENCOUNTER)
+    );
+    assert!(h.inbox(1).starts.is_empty());
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        1 << BIT
+    );
+    assert_eq!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .filter(|end| end.encounter_id == ENCOUNTER && end.success)
+            .count(),
+        1
+    );
+    assert!(h.inbox(1).ends.is_empty());
+    let before = spell_gos(&h, boss, 16495).len();
+    h.advance(20.0);
+    assert_eq!(
+        spell_gos(&h, boss, 16495).len(),
         before,
         "dead boss must not cast"
     );
