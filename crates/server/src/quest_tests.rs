@@ -774,10 +774,10 @@ fn world_quest_availability_preserves_both_authored_floor_areas() {
         "one logical task, not duplicate quest entries"
     );
     assert_eq!(availability.quests[0].quest_id, 82521);
-    let represented_maps: Vec<_> = availability
-        .quests
+    let represented_maps: Vec<_> = availability.quests[0]
+        .pois
         .iter()
-        .map(|quest| quest.ui_map_id)
+        .map(|poi| poi.ui_map_id)
         .collect();
     assert_eq!(
         represented_maps,
@@ -785,9 +785,149 @@ fn world_quest_availability_preserves_both_authored_floor_areas() {
         "every authored floor area must be conveyed"
     );
     assert!(
+        availability.quests[0]
+            .pois
+            .iter()
+            .all(|poi| poi.map_id == 2601)
+    );
+    assert_eq!(
+        availability.quests[0]
+            .pois
+            .iter()
+            .map(|poi| poi.position)
+            .collect::<Vec<_>>(),
+        vec![
+            shared::protocol::QuestPoiPoint { x: -2268, y: -1960 },
+            shared::protocol::QuestPoiPoint { x: -2275, y: -1992 }
+        ],
+    );
+    assert_eq!(availability.quests[0].expires_at, 87400);
+    assert!(
         load_quest_log(db(&app), client.character_id)
             .active(82521)
             .is_none()
+    );
+}
+
+#[test]
+fn world_quest_availability_multiple_zones_cross_policy_windows_and_reconnect() {
+    let mut app = setup_app().expect("authentic quest fixture");
+    app.insert_resource(crate::maps::difficulty::ServerClock {
+        fixed_unix: Some(999),
+        ..Default::default()
+    });
+    app.insert_resource(crate::world_quests::Rotation {
+        epoch: 1000,
+        active_per_zone: 1,
+        gap_seconds: 86400,
+        ..Default::default()
+    });
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        // Two actual tasks per zone; retain their authentic areas, objectives and policy duration.
+        quests
+            .world_quests
+            .retain(|quest| [82521, 82524, 86941, 86948].contains(&quest.quest_id));
+        assert_eq!(quests.world_quests.len(), 4);
+        assert!(
+            quests
+                .world_quests
+                .iter()
+                .all(|quest| quest.duration == 86400)
+        );
+    }
+    let client = spawn_client(&mut app, 80);
+    enter_world(&mut app, &client);
+    assert!(
+        received::<shared::protocol::WorldQuestAvailability>(&mut app, &client)
+            .pop()
+            .unwrap()
+            .quests
+            .is_empty()
+    );
+    for (now, ids, deadline) in [
+        (1000, vec![82521, 86941], Some(87400)),
+        (87400, vec![], None),
+        (173799, vec![], None),
+        (173800, vec![82524, 86948], Some(260200)),
+    ] {
+        app.world_mut()
+            .resource_mut::<crate::maps::difficulty::ServerClock>()
+            .fixed_unix = Some(now);
+        app.update();
+        app.update();
+        let snapshot = received::<shared::protocol::WorldQuestAvailability>(&mut app, &client)
+            .pop()
+            .unwrap();
+        assert_eq!(snapshot.server_time, now);
+        assert_eq!(
+            snapshot
+                .quests
+                .iter()
+                .map(|quest| quest.quest_id)
+                .collect::<Vec<_>>(),
+            ids
+        );
+        assert!(
+            snapshot
+                .quests
+                .iter()
+                .all(|quest| Some(quest.expires_at) == deadline)
+        );
+        if now == 1000 {
+            assert_eq!(
+                snapshot.quests[0]
+                    .pois
+                    .iter()
+                    .map(|poi| poi.ui_map_id)
+                    .collect::<Vec<_>>(),
+                vec![2256, 2255]
+            );
+        }
+    }
+    let current = app
+        .world()
+        .resource::<QuestDb>()
+        .world_quest_windows
+        .clone();
+    app.world_mut().despawn(client.connection);
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(1)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            PlayerLink(client.player),
+        ))
+        .id();
+    for_quest_messages!(add_message_pair, &mut app, connection);
+    let reconnected = Client {
+        character_id: client.character_id,
+        player: client.player,
+        connection,
+    };
+    enter_world(&mut app, &reconnected);
+    let snapshot = received::<shared::protocol::WorldQuestAvailability>(&mut app, &reconnected)
+        .pop()
+        .unwrap();
+    assert_eq!(snapshot.server_time, 173800);
+    assert_eq!(
+        snapshot
+            .quests
+            .iter()
+            .map(|quest| quest.quest_id)
+            .collect::<Vec<_>>(),
+        vec![82524, 86948]
+    );
+    assert_eq!(
+        app.world().resource::<QuestDb>().world_quest_windows,
+        current
+    );
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active
+            .is_empty()
     );
 }
 
@@ -848,7 +988,7 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     assert_eq!(availability.quests.len(), 1);
     assert_eq!(availability.quests[0].expires_at, 1100);
     assert_eq!(
-        availability.quests[0].position,
+        availability.quests[0].pois[0].position,
         shared::protocol::QuestPoiPoint { x: 15, y: 15 }
     );
     assert!(
