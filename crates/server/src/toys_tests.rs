@@ -5783,6 +5783,7 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("linked-fire.redb"));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(store.clone());
         h.app.world_mut().entity_mut(h.caster).insert((
             UnitScale(1.0),
@@ -5799,7 +5800,8 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
             .effects
             .iter()
             .any(|effect| effect.implicit_targets.contains(&87));
-        let destination = cursor.then_some([3.0, 0.0, 0.0]);
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        let destination = cursor.then_some([origin.x + 3.0, origin.y, origin.z]);
         assert_eq!(
             activate_at(&mut h, item, destination)[0].error,
             None,
