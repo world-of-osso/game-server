@@ -291,6 +291,31 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_landslide_primary_keeps_bit_four_not_ordinal_five(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('landslide')
+        self.assertIsNotNone(profile, 'source Landslide primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(426,349,4);
+            INSERT INTO tdb_creature_template(entry,ScriptName) VALUES
+                (12203,'boss_landslide'),(11783,'');
+            INSERT INTO raid_encounter_creature VALUES(349,12225,425,3,428,998,12350);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=349 ORDER BY bit').fetchall(),
+            [(12225,425,3,428,998,12350),(12203,426,4,429,999,12293)])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=12203")
+        with self.assertRaisesRegex(ValueError, 'creature script identity'):
+            prepare_bindings(self.db, [primary])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='boss_landslide' WHERE entry=12203")
+        self.db.execute('UPDATE dungeon_encounter SET Bit=5 WHERE ID=426')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_thermaplugg_primary_preserves_bosses_and_excludes_walking_bombs(self):
         import encounter_cpp_bindings as bindings
         profile = bindings.PROFILES.get('thermaplugg')
