@@ -45,3 +45,5 @@ Guild rewards/reputation eligibility and invitation tabards are separate slices.
 - [ ] Real native mounted/unmounted and guild-removal proof; do not claim effect completion from visible rows or known IDs.
 
 Development proof: actual Golden Gryphon32235 + expert riding225 baseline is run2.0/flight3.2; Mount Up must produce2.2/3.52. Test33ec603a RED reports actual run2.0, after real passive application. Earlier289dbe3b failure was missing fixture SpellStore metadata, not a product RED.
+
+Map eligibility REDc0f608da: installed map489 is Battleground and559 is Arena; changing InMap left78633 active. Source SpellInfo.cpp2218 / Spell.cpp7158 and Player.cpp26509 require location-driven aura suppression, not unlearning. Passive sync now also observes actual map changes and consults required installed map metadata; isolated spell fixtures load that same source catalog. Ordinary world known-spell authority remains unchanged.
