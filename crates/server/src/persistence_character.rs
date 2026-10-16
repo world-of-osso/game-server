@@ -173,14 +173,21 @@ pub fn set_character_guild_by_id(
     Ok(())
 }
 
-/// Remove membership and guild-local rank/note/invite in one durable transaction.
+/// Remove membership/local data and its actual lifecycle event atomically.
 /// Daily bank usage remains, so leaving/rejoining cannot reset today's allowance.
-pub fn remove_character_guild(db: &Database, character_id: u64) {
+pub fn remove_character_guild(db: &Database, character_id: u64, actor: u64) {
     let txn = db.begin_write().expect("begin guild member removal");
-    txn.open_table(CHARACTER_GUILDS)
+    let guild_id = txn
+        .open_table(CHARACTER_GUILDS)
         .expect("open memberships")
         .remove(character_id)
-        .expect("remove membership");
+        .expect("remove membership")
+        .map(|record| {
+            bitcode::decode::<GuildMembershipData>(record.value())
+                .expect("decode removed membership")
+                .guild_id
+        })
+        .expect("removed member belongs to a guild");
     txn.open_table(crate::persistence::banks::GUILD_MEMBER_RANKS)
         .expect("open ranks")
         .remove(character_id)
@@ -197,7 +204,18 @@ pub fn remove_character_guild(db: &Database, character_id: u64) {
         .expect("open invites")
         .remove(character_id)
         .expect("remove invite");
-    txn.commit().expect("commit guild member removal");
+    let member = crate::guild_event_log::character_name_in(&txn, character_id);
+    let event = if actor == character_id {
+        shared::protocol::GuildEventKind::Quit { member }
+    } else {
+        shared::protocol::GuildEventKind::Remove {
+            actor: crate::guild_event_log::character_name_in(&txn, actor),
+            member,
+        }
+    };
+    crate::guild_event_log::record_in(&txn, guild_id, event);
+    txn.commit()
+        .expect("commit guild member removal and lifecycle event");
 }
 
 pub fn set_pending_guild_invite(
@@ -222,9 +240,17 @@ pub fn set_pending_guild_invite(
             .insert(character_id, encoded.as_slice())
             .expect("insert pending guild invite");
     }
+    crate::guild_event_log::record_in(
+        &write,
+        guild_id,
+        shared::protocol::GuildEventKind::Invite {
+            actor: inviter_name.to_owned(),
+            member: crate::guild_event_log::character_name_in(&write, character_id),
+        },
+    );
     write
         .commit()
-        .expect("Failed to commit pending guild invite");
+        .expect("Failed to commit pending guild invite and lifecycle event");
 }
 
 pub fn accept_pending_guild_invite(
@@ -266,7 +292,15 @@ pub fn accept_pending_guild_invite(
         invite.guild_id,
         &invite.guild_name,
     );
-    txn.commit().expect("commit guild invite acceptance");
+    crate::guild_event_log::record_in(
+        &txn,
+        invite.guild_id,
+        shared::protocol::GuildEventKind::Join {
+            member: crate::guild_event_log::character_name_in(&txn, character_id),
+        },
+    );
+    txn.commit()
+        .expect("commit guild invite acceptance and lifecycle event");
     Ok(invite)
 }
 
