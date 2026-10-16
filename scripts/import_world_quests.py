@@ -17,20 +17,21 @@ from retail_content import QUEST_COLUMNS
 WORLD_QUEST_MODIFIER = 0x100
 
 
-def read_areas(directory, faction_reward_db2, creature_label_db2):
-    from db2_casc import decode
-    poi = {key: [dict((k, int(v)) for k, v in row.items())
-                 for row in csv.DictReader((Path(directory) / filename).open())]
-           for key, filename in [('blobs', 'QuestPOIBlob.csv'), ('points', 'QuestPOIPoint.csv'), ('xp', 'QuestXP.csv')]}
-    header, rows = decode(Path(faction_reward_db2).read_bytes())
-    if header['layout_hash'] != 572521898:
-        raise ValueError('QuestFactionReward layout differs from pinned 12.1.0.69933')
-    label_header, label_rows = decode(Path(creature_label_db2).read_bytes())
-    if label_header['layout_hash'] != 0x25B2B438:
-        raise ValueError('CreatureLabel layout differs from pinned 12.1.0.69933')
-    poi['creature_labels'] = list(label_rows.values())
-    poi['faction_rewards'] = {row_id: [v if v < 32768 else v - 65536 for v in values[1:]]
-                              for row_id, values in rows.items()}
+def read_areas(directory):
+    # All five exports come from the same installed build. Separate pinned binary
+    # inputs silently retained older CreatureLabel rows after active CSV updates.
+    tables = [('blobs', 'QuestPOIBlob.csv'), ('points', 'QuestPOIPoint.csv'),
+              ('xp', 'QuestXP.csv'), ('labels', 'CreatureLabel.csv'),
+              ('factions', 'QuestFactionReward.csv')]
+    poi = {}
+    for key, filename in tables:
+        with (Path(directory) / filename).open() as stream:
+            poi[key] = [{column: int(value) for column, value in row.items()}
+                        for row in csv.DictReader(stream)]
+    poi['creature_labels'] = [[row['ID'], row['LabelID'], row['CreatureDifficultyID']]
+                              for row in poi.pop('labels')]
+    poi['faction_rewards'] = {row['ID']: [row[f'Difficulty_{n}'] for n in range(10)]
+                              for row in poi.pop('factions')}
     return poi
 
 
@@ -271,11 +272,9 @@ def main():
     parser.add_argument("--duration-receipt", required=True, type=Path)
     parser.add_argument('--poi-db2-dir', required=True, type=Path)
     parser.add_argument('--policy-duration', type=int, default=86400)
-    parser.add_argument('--faction-reward-db2', required=True, type=Path)
-    parser.add_argument('--creature-label-db2', required=True, type=Path)
     args = parser.parse_args()
     receipt = json.loads(args.duration_receipt.read_text())
-    poi = read_areas(args.poi_db2_dir, args.faction_reward_db2, args.creature_label_db2)
+    poi = read_areas(args.poi_db2_dir)
     imported = copy_and_import(args.source_db, args.output_db, receipt, poi, args.policy_duration)
     with closing(sqlite3.connect(f'{args.output_db.resolve().as_uri()}?mode=ro', uri=True)) as conn:
         counts = census(conn, poi)
