@@ -23,6 +23,13 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Celebras source boundary
+
+- [x] Prepare12225→425/Normal349bit3 (TCordinal4), pinned Celebras/header/instance, TDB script identity and Journal70391 CSV428/998/display12350. Preserve other credit;13743/13716 must not acquire primary credit. SQL only.
+- [x] Port source21807 victim first0–6/repeat4–8s,12747 victim first0–5/repeat20s,21968 self first30/repeat20s; preserve actual class2 mana/costs, TaskScheduler casting validator and due-anchored repeats.
+- [x] Gate real21968 summon13743, death summon13716 at boss position/orientation0/manual despawn and isolated controlled425bit3 credit.13743 uses its actual Normal1 row;13716 has only TDB base0 (Health35/Mana5.3615/Damage7.5, ContentTuning0), replacing legacy Health8/Mana4 through copy-only projection; never fabricate Normal1. Regional level-scaling parity of the manual death summon is not certified.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
 ## Maraudon Lord Vyletongue source boundary
 
 - [x] Prepare12236→424/Normal349bit2 using pinned TC Maraudon ordinal3/header/instance, actual TDB SmartAI and Journal70391 CSV427/997/display12334. Preserve Gizlock credit and refuse AI/ordinal-as-bit drift; SQL output only.
@@ -264,3 +271,10 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 - Admit only pinned TC a352b1fa Razorlash12258→423/Normal349/bit1, authenticated by installed Journal70391 encounter424/actor994/display12389. Produce copy-only SQL; preserve unrelated bindings. Reject AI/DB2 identity drift.
 - Keep authored SmartAI probabilities (Thrash70%, Cleave/Puncture85%), resources, targeting and timers. Controlled proof may stage player survival health; ordinary balance, extra-attack parity, native clear, loot/persistence and canonical publication remain separate.
 - Bounded proof: repeated source-window SpellGo with explicit self/victim targets, actual Thrash/Puncture auras, real Cleave/Puncture damage and isolated423/bit1 controlled death credit. Production interest routing and Thrash extra-attack effect parity are not certified by this fixture.
+
+
+## Maraudon Landslide source boundary
+
+- [x] Authenticate12203→426/Normal349bit4 (TCordinal5), Journal70391 CSV429/999/display12293; copy-only binding preserves Celebras and excludes summons11783.
+- [x] Port18670 victim5–10s/repeat15–25s,5568 self10–15s/repeat10–20s and21808 self immediately upon first incoming hit crossing below50%, then30–40s repeats; reset re-arms once. Preserve source casting validator and due clocks.
+- [x] Gate actual effects/summons and isolated controlled426bit4 credit; ordinary/native, loot and persistence remain separate.

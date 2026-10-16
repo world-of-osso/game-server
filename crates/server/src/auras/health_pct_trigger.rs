@@ -25,9 +25,34 @@ struct Watch {
     trigger: u32,
 }
 
-pub(super) fn trigger_on_health_pct(world: &mut World) {
-    let units: Vec<(Entity, f32, f32, Vec<Watch>)> = world
-        .query::<(Entity, &ActiveAuras, &Health)>()
+/// Indexed at aura membership changes, not by scanning every world unit.
+#[derive(Component)]
+#[require(ObservedHealth)]
+pub(super) struct HealthPercentWatch;
+
+pub(super) fn reconcile(world: &mut World, unit: Entity) {
+    let watches = world
+        .get::<ActiveAuras>(unit)
+        .is_some_and(|auras| auras.has_type(TRIGGER_SPELL_ON_HEALTH_PCT));
+    let indexed = world.get::<HealthPercentWatch>(unit).is_some();
+    match (watches, indexed) {
+        (true, false) => {
+            world.entity_mut(unit).insert(HealthPercentWatch);
+        }
+        (false, true) => {
+            world
+                .entity_mut(unit)
+                .remove::<(HealthPercentWatch, ObservedHealth)>();
+        }
+        _ => {}
+    }
+}
+
+type HealthWatches =
+    QueryState<(Entity, &'static ActiveAuras, &'static Health), With<HealthPercentWatch>>;
+
+pub(super) fn trigger_on_health_pct(world: &mut World, watched: &mut HealthWatches) {
+    let units: Vec<(Entity, f32, f32, Vec<Watch>)> = watched
         .iter(world)
         .filter_map(|(unit, auras, health)| {
             let watches: Vec<_> = auras
@@ -83,7 +108,38 @@ fn fires(direction: i32, old: Option<f32>, new: f32, threshold: f32) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::fires;
+    use super::*;
+
+    #[test]
+    fn health_percent_idle_population_fits_one_frame_even_during_catch_up() {
+        let mut app = App::new();
+        app.add_systems(Update, trigger_on_health_pct);
+        app.world_mut().spawn_batch((0..250_000).map(|_| {
+            (
+                ActiveAuras::default(),
+                Health {
+                    current: 1000.0,
+                    max: 1000.0,
+                },
+            )
+        }));
+        app.update();
+        let fastest = (0..3)
+            .map(|_| {
+                let start = std::time::Instant::now();
+                for _ in 0..5 {
+                    app.update();
+                }
+                start.elapsed()
+            })
+            .min()
+            .unwrap();
+        println!("250000 idle units, five catch-up observations: {fastest:?}");
+        assert!(
+            fastest < std::time::Duration::from_millis(50),
+            "idle health watchers consume the entire frame budget: {fastest:?}"
+        );
+    }
 
     #[test]
     fn below_fires_once_on_the_crossing_and_on_apply_only_when_already_below() {
