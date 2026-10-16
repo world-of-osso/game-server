@@ -15,6 +15,7 @@ fn source_ship_deck_collision_follows_the_transport_only_in_its_copy() {
         ..copy
     };
     let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
     app.insert_resource(GroundMap::new(&data, HashMap::new()));
     app.add_systems(FixedUpdate, sync_live_objects);
     let entity = app
@@ -83,6 +84,58 @@ fn source_ship_deck_collision_follows_the_transport_only_in_its_copy() {
             .ground_in(copy, feet),
         crate::ground::GroundProbe::Supported(_)
     ));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((GameObjectCollision(true), GameObjectVisible(false)));
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(copy, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((GameObjectVisible(true), other));
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(copy, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    assert!(matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    let mut unrelated = ship.info.clone();
+    unrelated.go_type = 5;
+    app.world_mut().entity_mut(entity).insert(unrelated);
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    app.world_mut().entity_mut(entity).insert(ship.info.clone());
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    app.world_mut().despawn(entity);
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
 }
 
 fn arena_app(map_id: u32) -> (App, Vec<(Entity, crate::game_objects::GameObjectSpawn)>) {
@@ -102,6 +155,7 @@ fn arena_app(map_id: u32) -> (App, Vec<(Entity, crate::game_objects::GameObjectS
         .unwrap();
     let spawns = crate::game_objects::load_game_object_spawns(&db).unwrap();
     let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
     app.insert_resource(GroundMap::new(&data, HashMap::from([(map_id, wdt)])));
     app.insert_resource(LineOfSight::load(&data.join("los")).unwrap());
     app.insert_resource(catalog);
@@ -349,6 +403,7 @@ fn unrelated_world_objects_fit_one_catch_up_frame() {
         .find(|spawn| spawn.map_id == 0 && spawn.info.go_type != 15)
         .expect("authored nontransport world object");
     let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
     app.insert_resource(GroundMap::new(&data, HashMap::new()));
     app.add_systems(Update, sync_live_objects);
     app.world_mut().spawn_batch((0..250_000).map(|_| {
