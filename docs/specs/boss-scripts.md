@@ -271,3 +271,10 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 - Admit only pinned TC a352b1fa Razorlash12258→423/Normal349/bit1, authenticated by installed Journal70391 encounter424/actor994/display12389. Produce copy-only SQL; preserve unrelated bindings. Reject AI/DB2 identity drift.
 - Keep authored SmartAI probabilities (Thrash70%, Cleave/Puncture85%), resources, targeting and timers. Controlled proof may stage player survival health; ordinary balance, extra-attack parity, native clear, loot/persistence and canonical publication remain separate.
 - Bounded proof: repeated source-window SpellGo with explicit self/victim targets, actual Thrash/Puncture auras, real Cleave/Puncture damage and isolated423/bit1 controlled death credit. Production interest routing and Thrash extra-attack effect parity are not certified by this fixture.
+
+
+## Maraudon Landslide source boundary
+
+- [x] Authenticate12203→426/Normal349bit4 (TCordinal5), Journal70391 CSV429/999/display12293; copy-only binding preserves Celebras and excludes summons11783.
+- [ ] Port18670 victim5–10s/repeat15–25s,5568 self10–15s/repeat10–20s and21808 self immediately upon first incoming hit crossing below50%, then30–40s repeats; reset re-arms once. Preserve source casting validator and due clocks.
+- [ ] Gate actual effects/summons and isolated controlled426bit4 credit; ordinary/native, loot and persistence remain separate.
