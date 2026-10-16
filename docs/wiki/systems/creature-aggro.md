@@ -50,6 +50,8 @@ It does nothing for a creature without a threat list, dead, at 0 health, or `Ret
 
 `combat::insert_npc_death` calls `forget_combat`: threat reset, `Idle`, `CombatTarget(None)`, so a corpse does not chase and respawns idle.
 
+`RemoveAurasOnEvade` preserves all existing auras for player-owned units (`faction::player_affected`, TC a352b1fa Unit.cpp4459–4463). Ordinary unowned units still lose auras without AURA_STAYS_AFTER_COMBAT and restore addon auras at home. This prevents no-path/leash evade from erasing follower class/spec/threat passives; no reapplication, stat override or extra spell grant. [Native failure and regression](../investigations/follower-data.md#owned-evade-aura-retention--2026-10-15).
+
 ## Sources
 
 - [crates/server/src/creature_aggro.rs](../../../crates/server/src/creature_aggro.rs)
