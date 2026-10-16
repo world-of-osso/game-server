@@ -12,7 +12,7 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 pub(crate) type LiveHulls = HashMap<InMap, Vec<Arc<LosTile>>>;
 
 #[derive(Component)]
-struct LiveCollisionModel;
+pub(crate) struct LiveCollisionModel;
 
 pub(crate) struct CollisionIndexPlugin;
 
