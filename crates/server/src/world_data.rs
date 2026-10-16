@@ -62,6 +62,8 @@ pub struct CreatureTemplate {
     pub armor: f32,
     /// Authored multiplier retained when the NPC is promoted to another level.
     pub armor_modifier: f32,
+    /// Authored DamageModifier, also required for regionally tuned temporary summons.
+    pub damage_modifier: f32,
     pub health_scaling_expansion: i32,
     /// `ManaModifier` (creature_template_difficulty): max mana is
     /// creature_classlevelstats `basemana` × this (Creature::UpdateLevelDependantStats).
@@ -582,6 +584,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         models: Vec::new(),
         armor: expected.untuned_armor(row.get::<_, i64>(1)? as u8, unit_class, armor_modifier),
         armor_modifier,
+        damage_modifier: row.get(22)?,
         health_scaling_expansion: row.get::<_, i64>(19)? as i32,
         tuning,
         mana_modifier: row.get(25)?,

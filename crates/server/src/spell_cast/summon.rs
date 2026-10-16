@@ -13,6 +13,7 @@ use shared::components::{
     CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
     Player, Position, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy, Zone,
 };
+use shared::level_scaling::LevelScaling;
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
 
@@ -391,6 +392,16 @@ fn initialize_wild_summon(
     if let Some(mana) = stats.mana {
         entity.insert(mana);
     }
+    if let Some(scaling) = stats.scaling {
+        entity.insert(scaling);
+    } else {
+        // InitStats owner tuning zero disables HasScalableLevels, even when
+        // the ordinary spawn path selected template scaling components.
+        entity.remove::<(LevelScaling, crate::level_scaling::ScaledStats)>();
+    }
+    if let Some(scaled_stats) = stats.scaled_stats {
+        entity.insert(scaled_stats);
+    }
     insert_summon_privacy(&mut entity, private_owner);
     drop(entity);
     super::log_summon(world, ctx.caster, actor, ctx.spell);
@@ -402,6 +413,8 @@ struct WildSummonStats {
     health: Health,
     armor: crate::level_scaling::CreatureArmor,
     mana: Option<shared::components::Mana>,
+    scaling: Option<LevelScaling>,
+    scaled_stats: Option<crate::level_scaling::ScaledStats>,
 }
 
 fn read_wild_summon_stats(
@@ -414,24 +427,23 @@ fn read_wild_summon_stats(
     let selected = roll_summon_level(world, owner, entry, properties, dest)?;
     // TempSummon::InitStats inherits the owner's tuning only without UseCreatureLevel.
     // Absent owner scaling represents the source's zero-initialized tuning field.
-    let tuning = if properties.flags & USE_CREATURE_LEVEL != 0 {
-        selected.content_tuning_id
+    let scaling = if properties.flags & USE_CREATURE_LEVEL != 0 {
+        selected.scaling
     } else {
-        world
-            .get::<shared::level_scaling::LevelScaling>(owner)
-            .map_or(0, |scaling| scaling.content_tuning_id)
+        world.get::<LevelScaling>(owner).copied()
     };
     let data = world.get_resource::<crate::world_data::WorldData>()?;
     let template = data.template_for(entry, selected.difficulty)?;
-    calculate_wild_summon_stats(data, template, selected.level, tuning)
+    calculate_wild_summon_stats(data, template, selected.level, scaling)
 }
 
 fn calculate_wild_summon_stats(
     data: &crate::world_data::WorldData,
     template: &crate::world_data::CreatureTemplate,
     level: u8,
-    tuning: u32,
+    scaling: Option<LevelScaling>,
 ) -> Option<WildSummonStats> {
+    let tuning = scaling.map_or(0, |scaling| scaling.content_tuning_id);
     let (base_health, base_armor) = data.expected_stats.creature_health_armor(
         level,
         template.health_scaling_expansion,
@@ -447,7 +459,29 @@ fn calculate_wild_summon_stats(
         },
         armor: crate::level_scaling::CreatureArmor(base_armor * template.armor_modifier),
         mana: read_wild_summon_mana(data, template, level)?,
+        scaling,
+        scaled_stats: scaling.map(|scaling| build_wild_summon_scaling(data, template, scaling)),
     })
+}
+
+fn build_wild_summon_scaling(
+    data: &crate::world_data::WorldData,
+    template: &crate::world_data::CreatureTemplate,
+    scaling: LevelScaling,
+) -> crate::level_scaling::ScaledStats {
+    use crate::level_scaling::{LevelStats, ScaledStats, TuningInputs};
+    let inputs = TuningInputs {
+        content_tuning_id: scaling.content_tuning_id,
+        health_scaling_expansion: template.health_scaling_expansion,
+        unit_class: template.unit_class,
+        health_modifier: template.health_modifier,
+        damage_modifier: template.damage_modifier,
+        armor_modifier: template.armor_modifier,
+    };
+    ScaledStats(std::sync::Arc::new(LevelStats::build(
+        &data.expected_stats,
+        &inputs,
+    )))
 }
 
 fn read_wild_summon_mana(
@@ -577,7 +611,7 @@ fn read_summoner_level(world: &World, owner: Entity) -> Option<u8> {
 struct SelectedSummonLevel {
     difficulty: u32,
     level: u8,
-    content_tuning_id: u32,
+    scaling: Option<LevelScaling>,
 }
 
 /// Select the source native level before reading dependent stats.
@@ -595,7 +629,7 @@ fn roll_summon_level(
         return Some(SelectedSummonLevel {
             difficulty: 0,
             level: owner_level,
-            content_tuning_id: 0,
+            scaling: None,
         });
     }
     let map = *world.get::<InMap>(owner)?;
@@ -608,10 +642,11 @@ fn roll_summon_level(
     let range = data
         .summon_levels
         .guardian_range(template, map.map_id, difficulty, area)?;
+    let (level, scaling) = roll_guardian_level(owner_level, range, properties.flags);
     Some(SelectedSummonLevel {
         difficulty,
-        level: roll_guardian_level(owner_level, range, properties.flags),
-        content_tuning_id: range.content_tuning_id,
+        level,
+        scaling,
     })
 }
 
@@ -620,7 +655,7 @@ fn roll_guardian_level(
     owner: u8,
     inputs: crate::world_data::summon_levels::GuardianLevelRange,
     flags: u32,
-) -> u8 {
+) -> (u8, Option<LevelScaling>) {
     use rand::Rng;
     let (range, delta) = (inputs.range, inputs.delta);
     let delta = if delta.0 == delta.1 {
@@ -630,11 +665,19 @@ fn roll_guardian_level(
     };
     let minimum = i32::from(range.0) + i32::from(delta);
     let maximum = i32::from(range.1) + i32::from(delta);
-    if flags & USE_CREATURE_LEVEL != 0 {
-        return maximum.clamp(1, i32::from(u8::MAX)) as u8;
-    }
-    // Source InitStats does not clamp these bounds to 1 after the authored delta.
-    i32::from(owner).clamp(minimum, maximum) as u8
+    let level = if flags & USE_CREATURE_LEVEL != 0 {
+        maximum.clamp(1, i32::from(u8::MAX)) as u8
+    } else {
+        // Source InitStats does not clamp these bounds to 1 after the authored delta.
+        i32::from(owner).clamp(minimum, maximum) as u8
+    };
+    let scaling = (inputs.content_tuning_id != 0).then_some(LevelScaling {
+        content_tuning_id: inputs.content_tuning_id,
+        min_level: range.0,
+        max_level: range.1,
+        delta,
+    });
+    (level, scaling)
 }
 
 /// TC Unit::SetMinion sets PLAYER_CONTROLLED only for player owners.
@@ -752,6 +795,13 @@ fn spawn_summon(
         ));
     }
     drop(entity);
+    // TC TemporarySummon.cpp: Guardian::InitSummon calls TempSummon::InitSummon,
+    // including the creature summoner's JustSummoned (BossAI's SummonList).
+    world
+        .entity_mut(actor)
+        .insert(crate::zones::TempSummon { summoner: owner });
+    crate::scripted_ai::dispatch(world, actor, crate::scripted_ai::Hook::IsSummonedBy(owner));
+    crate::scripted_ai::dispatch(world, owner, crate::scripted_ai::Hook::JustSummoned(actor));
     super::log_summon(world, owner, actor, ctx.spell);
 }
 

@@ -2,13 +2,45 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Sightless detection consumer (2026-10-16)
+
+Sightless Eye153293/254568 already has its target aura152 consumer in native `AggroDistance`. Real hostile-acquisition controls prove ordinary12yd acquisition versus protected12yd non-acquisition and protected7yd acquisition before registry admission. Actual journal RED rejects152;574d45f5 recognizes that existing consumer without changing aggro math. Actual bag learning/UseToy and native aggro pass2/2; source group5454/instant10min aura/5min recovery and ordinary expiry remain unchanged. Whole-Toy142/142, creature-aggro30/30, current binary/tests check and fmt pass at recorded65 revisions; canonical classification adds only153293 to370, not370 complete toys. [Exact revisions and proof boundaries](../../toy-effects14-coverage.md#sightless65-native-detection-consumer-2026-10-16) distinguish server behavior from native rendering/wire and preceding unimplemented remote-view/possession roots.
+
+## Waywatcher source lifecycle (2026-10-16)
+
+130249/195806 consumes the currently published source99572 template, choosing63609or63606 without a new importer admission. Actual bag learning/UseToy acceptance passes1/1: terrain-backed Val'sharah7558 admission/Northshire refusal, source instant cast/15s duration/+200% speed/241 and900s recovery, then ordinary expiry restores native display/health/flags/speed. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#waywatcher64-source-lifecycle-2026-10-16) separate this existing-handler acceptance from eighteen authenticated privately published body assets/four aliases. Actual private Rust loader, whole-Toy141/141, server binary/tests check and fmt pass at recorded64 revisions. Native rendering remains separate; no manufactured RED or canonical publication claim.
+
+## Grizzlesnout source lifecycle (2026-10-16)
+
+129965/194807 uses existing transform27864/display9287, aura241 and+250% run speed for15000ms, with600000ms item recovery. Actual bag learning/UseToy acceptance passes1/1 after62: real Northshire terrain refuses group4446 without spending; real Northrend571/3537 accepts the1500ms cast. Ordinary50ms simulation expiry restores native display/health/flags/speed without clearing recovery. This is a new acceptance test of existing behavior, not an invented runtime RED. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#grizzlesnout63-source-lifecycle-2026-10-16) separate server lifecycle from twelve already-owned authenticated canonical body assets/two aliases. Actual canonical Rust loader, whole-Toy140/140, server binary/tests check and fmt pass at the recorded63 revisions. No fresh wire/pixels or complete-toy claim.
+
+## Forced-forward flag boundary (2026-10-16)
+
+TC `HandleForceMoveForward` reconciles aura241 into `UnitFlags2::FORCE_MOVEMENT` (0x40), preserving every unrelated bit and retaining the flag until the last241 aura leaves. Genuine source-spell148626/194807 RED observes1 instead of65; the committed handler and shared constant pass the overlap/final-removal control1/1 in6.08s at serverb0a24e7d/protocol07a8faa. Native input now passes35/35 gameplay controls after genuine idle-input RED, and whole-Toy passes139/139 at server2d8fc58e/engined6adbe444/protocol07a8faa. [Exact packet scope and named gaps](../../toy-effects14-coverage.md#forced-forward62-generic-input-proof-2026-10-16) separate generic flag/input support from missing104329 mount template73689 and unresolved113543 mount action; no fresh wire, native-pixel or complete-toy claim. [Contract](../../specs/toys.md#contract). Exact stage ledger: `/home/osso/.worktrees/logs/toy-effects14-continuation/force-forward62-proof-ledger.json`.
+
+## Ysera source summon boundary (2026-10-16)
+
+Ysera's Tear130170/195708 summons one99518/display66207 with property3054: private to its owner, ordinary non-pet wild actor, source47's8yd front offset and120000ms expiry. Authentic template publication was missing: real importer RED finds zero99518; actual learned UseToy RED refuses missing99518. The maintained importer now admits only that source entry; existing placement/privacy/level/lifetime handlers are unchanged. [Contract](../../specs/toys.md#contract). Six importer controls and the real learned-use lifecycle pass; whole-Toy138/138 and current check/fmt pass after a module-order-only correction. [Exact proof](../../toy-effects14-coverage.md#ysera-source-summon-proof-2026-10-16) records literal revisions, private seventeen-asset body closure and prepared classification385/1166, not complete-toy coverage. Native state kit60600→procedural8605/type22 is currently ignored by the renderer; body asset closure and server acceptance do not establish that appearance or complete-toy parity.
+
+## Enchanted Stone Whistle source summon (2026-10-16)
+
+129279/193687 has one source wild/default summon of Petrified Sand Piper98300/display71056. The maintained additive importer copies its authentic template/model; existing63→86 destination selection, ownership, ordinary wild initialization and60000ms expiry remain unchanged. No AI/addon/spell/click/root-script binding supplies another action. [Exact server proof and native gaps](../../toy-effects14-coverage.md#enchanted-stone-whistle-server-proof-2026-10-16) distinguish server acceptance from native assets/pixels; guardian final HP remains read-only.
+
+## Shrine server per-target stat conversion (2026-10-16)
+
+A replicated viewer range alone is insufficient for server `UnitScaling`, which pairs it with per-level `ScaledStats`. Wild initialization now builds that existing table from final summon tuning and source difficulty modifiers; raw DamageModifier is retained for regionally tuned templates too. Actual learned Shrine RED observes server level30/armor155 against viewer20; nineteen focused controls now pass level20/armor135 and source damage/health conversion outputs while Podium stays unscaled. [Exact output matrix and proof scope](../../toy-effects14-coverage.md#shrine-server-per-target-stat-conversion-2026-10-16) distinguish this actor-state CPU proof from actual combat hits, client HP display, guardian stats and native rendering.
+
+## Shrine viewer-level projection (2026-10-15)
+
+UseCreatureLevel retains the initial source regional `LevelScaling`; wild initialization carries its range and once-rolled delta instead of dropping them after native selection. Unflagged player-owned Podium inherits zero tuning and stays native for every viewer. Actual learned Shrine use reproduces viewer20→30, then passes viewer1/20/80→1/20/30 while preserving native30 and initialized stats. [Claim-specific evidence and open server-combat/HP-projection boundaries](../../toy-effects14-coverage.md#shrine-viewer-level-projection-2026-10-15) own verification scope; no complete combat or new native-rendering certificate.
+
 ## Wild summon initial level and stats (2026-10-15)
 
 Pinned TC a352b1fa initializes actual terrain area in Creature::Create before CreateFromProto→UpdateEntry→SelectLevel; TempSummon::InitStats then clamps all unflagged summons, not only guardians. Wild E28 reads the same strict destination-level projection before normal zone spawning, then initializes selected UnitLevel/HP/armor/mana before spell summon bookkeeping. Missing regional or required mana-source rows refuse spawning.
 
 UseCreatureLevel retains source template/map/area tuning for initial stats; unflagged TempSummon inherits its owner's tuning (source zero-initialized when absent). Owner level comes from player Level or non-player UnitLevel; absent state is not a guessed1. This also corrects the existing learned-use group chain's temporary NPC child. Ordinary zone spawning, guardian stat formulas, AI, placement, privacy and lifetime paths are not redesigned.
 
-[Source rows, genuine REDs, exact whole-Toy gate, current build/checks, private initialized-field wire proof and binary hashes](../../toy-effects14-coverage.md#wild-summon-initial-state-proof-2026-10-15) own acceptance evidence. Initial-state CPU and fresh Podium/Shrine/default-Scarab wire now pass. Inherited per-viewer scaling/combat modifiers, attack power and full creature-stat parity remain open; previous native pixels/lifetimes are not recertified. [Contract](../../specs/toys.md).
+[Source rows, genuine REDs, exact whole-Toy gate, current build/checks, private initialized-field wire proof and binary hashes](../../toy-effects14-coverage.md#wild-summon-initial-state-proof-2026-10-15) own acceptance evidence. Initial-state CPU and fresh Podium/Shrine/default-Scarab wire now pass. [Shrine client-level projection](#shrine-viewer-level-projection-2026-10-15) is separately proved; inherited server-combat scaling/modifiers, attack power and full creature-stat parity remain open; previous native pixels/lifetimes are not recertified. [Contract](../../specs/toys.md).
 
 ## Winner's Podium source placement (2026-10-15)
 

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::components::{ModelDisplay, Npc, Player, UnitScale};
 
-use crate::auras::ActiveAuras;
+use crate::auras::{ActiveAuras, handlers::MOD_DETECTED_RANGE};
 use crate::scripted_ai::model_reach::ModelReaches;
 use crate::world_data::WorldData;
 
@@ -12,7 +12,6 @@ const MIN_ATTACK_DISTANCE: f32 = 5.0;
 const PLAYER_COMBAT_REACH: f32 = 1.5;
 const MAX_PLAYER_LEVEL: u8 = 90;
 const MOD_DETECT_RANGE: u32 = 91;
-const MOD_DETECTED_RANGE: u32 = 152;
 
 #[derive(Debug, Clone, Copy)]
 struct AttackDistance {

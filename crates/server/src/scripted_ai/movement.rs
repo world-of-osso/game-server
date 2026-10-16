@@ -28,7 +28,11 @@ pub(crate) fn retain_path_home(world: &mut World, creature: Entity) {
     let Some(home) = world.get::<Position>(creature).copied() else {
         return;
     };
-    world.entity_mut(creature).insert(ScriptedPath { home });
+    // Escort timers (including out-of-range failure) must run beyond spawn grids.
+    world
+        .entity_mut(creature)
+        .insert(ScriptedPath { home })
+        .remove::<crate::grid_activity::GridDormant>();
 }
 
 /// A running `PointMovementGenerator`.

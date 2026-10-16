@@ -4,7 +4,7 @@ use shared::components::PowerType;
 use shared::protocol::{CombatLogKind, MissKind};
 
 fn assert_dark_luck_misses(spell: u32, class: u8) {
-    let mut h = harness(Vec::new(), &[194356, spell], class).unwrap();
+    let mut h = harness(Vec::new(), &[194356, spell, SUNWELL_RADIANCE], class).unwrap();
     if class == 1 {
         h.set_power(PowerType::Rage, 1000.0);
     } else {
@@ -36,6 +36,8 @@ fn assert_dark_luck_misses(spell: u32, class: u8) {
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == 194356,
     );
+    // Only the post-removal positive control requires a hit. Preserve the miss case.
+    apply_native_enemy_dodge_reduction(&mut h);
     h.advance(130); // Native Mortal Strike cooldown has elapsed; no history reset.
     h.cast_and_deliver(spell, Some(h.npc));
     h.advance(50);

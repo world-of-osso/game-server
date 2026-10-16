@@ -20,6 +20,19 @@ python3 scripts/import-pvp-progression.py --db /path/to/explicit/world.db
 
 Imports only `pvp_currency`, `pvp_talent`, `pvp_talent_category`, `pvp_talent_slot_unlock`, `pvp_honor_reward` in one transaction, preserving unrelated tables. Requires an existing DB; validates every source first, rejects duplicate IDs and incompatible destination columns. Re-running replaces those owned catalogs without duplicates. Runtime integration is separately required; import alone is not progression completion.
 
+## Lifetime honor XP — 70391 continuation
+
+Concrete pinned-TC honorable world-player kills accumulate `lifetime_honor_xp` in existing durable PvP progress and replicate it separately from wallet1792. Same-team/self/gray victims, inactive recipients, no-PvP-credit victims and battleground/arena kill paths do not generate world-kill XP. Nearby living group recipients divide base credit before maximum-positive honor aura modifiers. No currency conversion is inferred from `RewardHonor`, which calls `AddHonorXP`, not `AddCurrency`.
+
+`HONOR_LEVEL_XP_CURVE` is unresolved: keep `honor_level=None`; earned XP must not advance levels or grant milestone rewards. Current-install1391671 remains the old Prestige0..32 table. Honor rested-pool accrual also depends on that unknown curve and is not implemented by borrowing ordinary rested XP. Completion rewards require independently authored DB2/TDB rows; absent payouts remain gaps.
+
+Pinned raw sources (prefix `https://raw.githubusercontent.com/TrinityCore/TrinityCore/a352b1fa/`):
+- `src/server/game/Entities/Player/Player.cpp`, SHA256 `78e2294e84ff0a9b778690a42a9fe77c2a02885b9425d8039974bf881ac5b1e4`:6695–6913. Its universal8800 assignment is explicitly guessed and excluded.
+- `src/server/game/Miscellaneous/Formulas.h`, SHA256 `ce1ea35a826bcff3410a7da5882e93c30195d167c11ef79264b0fe67c889e434`:55–83.
+- `src/server/game/Entities/Player/KillRewarder.cpp`, SHA256 `a0252c17dbce436709362f9fd9e10552bad90c45239572168bddaaa3aaf9eb76`:89–118,133–137,190–198,220–250.
+- `src/server/game/Entities/Player/Player.h`, SHA256 `9908cb848beaa931b878dcc2d47a016e3fff0288ddb686874163b603d5b08199`:1207–1208.
+- `src/server/game/Spells/Auras/SpellAuraDefines.h`, SHA256 `1784b495ea9704bbe12223c2ad42d9d5fea7d320f0dc6c0055cd090cb7e5498b`:159/212/491 identities; active70391 SpellName identifies43681 as Inactive.
+
 ## Gaps
 
 Honor cap15000 is authored. Conquest uses dynamic WorldState31270/AwardCondition146857, not guessed1800/weekly550. Honor/conquest per result and rating policy are not locally derived. PrestigeLevelInfo maps e.g. honor-level5 to achievement12893; no certified Mainline lifetime-XP curve was recovered. The available HonorLevel game table has old Prestige0..32 columns and is not assumed equivalent. Lifetime leveling/reward grants remain blocked by that uncertified curve. Enlisted XP/quest-XP consumers and individual selected spell effects beyond temporary learning remain unproved; aura application and native both-skin selection have bounded proof below.

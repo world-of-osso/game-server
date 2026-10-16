@@ -33,6 +33,8 @@ mod timed;
 #[path = "smart_instance_data.rs"]
 mod instance_data;
 
+#[path = "smart_combat.rs"]
+mod combat;
 #[path = "smart_escort.rs"]
 mod escort;
 #[path = "smart_pose.rs"]
@@ -64,6 +66,7 @@ const EVENT_SUMMONED_UNIT: u32 = 17;
 const EVENT_SUMMON_DESPAWNED: u32 = 35;
 const EVENT_JUST_SUMMONED: u32 = 54;
 const EVENT_SPELLHIT: u32 = 8;
+const EVENT_RANGE: u32 = 9;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
 const EVENT_RESPAWN: u32 = 11;
@@ -77,6 +80,7 @@ const EVENT_WAYPOINT_PAUSED: u32 = 55;
 const EVENT_WAYPOINT_RESUMED: u32 = 56;
 const EVENT_WAYPOINT_STOPPED: u32 = 57;
 const EVENT_WAYPOINT_ENDED: u32 = 58;
+const EVENT_COUNTER_SET: u32 = 77;
 // `SMART_ACTION`.
 const ACTION_TALK: u32 = 1;
 const ACTION_SET_EMOTE_STATE: u32 = 17;
@@ -92,6 +96,8 @@ const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
 const ACTION_SET_INST_DATA: u32 = 34;
 const ACTION_DIE: u32 = 37;
+const ACTION_ATTACK_START: u32 = 49;
+const ACTION_SET_IMMUNE_NPC: u32 = 145;
 const ACTION_FORCE_DESPAWN: u32 = 41;
 const ACTION_WP_START: u32 = 53;
 const ACTION_WP_PAUSE: u32 = 54;
@@ -100,6 +106,7 @@ const ACTION_SET_RUN: u32 = 59;
 const ACTION_SET_NPC_FLAG: u32 = 81;
 const ACTION_ADD_NPC_FLAG: u32 = 82;
 const ACTION_WP_RESUME: u32 = 65;
+const ACTION_SET_COUNTER: u32 = 63;
 const ACTION_STORE_TARGET_LIST: u32 = 64;
 const ACTION_CALL_TIMED_ACTION_LIST: u32 = 80;
 const ACTION_REMOVE_NPC_FLAG: u32 = 83;
@@ -227,6 +234,7 @@ fn supports_event(kind: u32) -> bool {
     matches!(
         kind,
         EVENT_UPDATE_IC
+            | EVENT_RANGE
             | EVENT_AGGRO
             | EVENT_DEATH
             | EVENT_FOLLOW_COMPLETED
@@ -246,6 +254,7 @@ fn supports_event(kind: u32) -> bool {
             | EVENT_WAYPOINT_RESUMED
             | EVENT_WAYPOINT_STOPPED
             | EVENT_WAYPOINT_ENDED
+            | EVENT_COUNTER_SET
     )
 }
 
@@ -263,6 +272,8 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_CALL_KILLEDMONSTER
             | ACTION_SET_INST_DATA
             | ACTION_DIE
+            | ACTION_ATTACK_START
+            | ACTION_SET_IMMUNE_NPC
             | ACTION_FORCE_DESPAWN
             | ACTION_FAIL_QUEST
             | ACTION_COMPLETE_QUEST
@@ -270,6 +281,7 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_WP_PAUSE
             | ACTION_WP_RESUME
             | ACTION_STORE_TARGET_LIST
+            | ACTION_SET_COUNTER
             | ACTION_CALL_TIMED_ACTION_LIST
             | ACTION_REMOVE_NPC_FLAG
             | ACTION_SET_FACTION
@@ -358,6 +370,7 @@ pub(crate) struct SmartAi {
     phase: u32,
     boss: Option<super::boss_ai::BossAi>,
     stored_targets: HashMap<u32, Vec<Entity>>,
+    counters: HashMap<u32, u32>,
     timed_list: Option<TimedList>,
     processing_timed_list: bool,
     escort: Option<paths::EscortPath>,
@@ -392,6 +405,7 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         phase: 0,
         boss,
         stored_targets: HashMap::new(),
+        counters: HashMap::new(),
         timed_list: None,
         processing_timed_list: false,
         escort: None,
@@ -512,6 +526,7 @@ impl SmartAi {
                     self.process_action(ctx, index, invoker);
                 }
             }
+            EVENT_RANGE => self.process_range_event(ctx, index),
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
                     self.recalc_timer(index, event.event_params[2], event.event_params[3]);
@@ -527,6 +542,13 @@ impl SmartAi {
                 {
                     self.recalc_timer(index, event.event_params[1], event.event_params[2]);
                     self.process_action(ctx, index, invoker);
+                }
+            }
+            EVENT_COUNTER_SET => {
+                let [id, value, cooldown_min, cooldown_max, _] = event.event_params;
+                if id == spell && self.counters.get(&id).copied().unwrap_or(0) == value {
+                    self.recalc_timer(index, cooldown_min, cooldown_max);
+                    self.process_action(ctx, index, None);
                 }
             }
             EVENT_ACCEPTED_QUEST | EVENT_REWARD_QUEST => {
@@ -568,6 +590,27 @@ impl SmartAi {
                 }
             }
             _ => {}
+        }
+    }
+
+    /// TC SmartScript.cpp3226–3235: engaged victim in reach-adjusted3D range;
+    /// an excluded victim gets a predictable500ms recheck, not the action repeat.
+    fn process_range_event(&mut self, ctx: &mut Ctx, index: usize) {
+        if !ctx.is_engaged() {
+            return;
+        }
+        let Some(victim) = ctx.victim() else {
+            return;
+        };
+        let event = &self.events[index];
+        let [min, max, repeat_min, repeat_max, ..] = event.event_params;
+        let in_range = super::model_reach::distance(ctx.world, ctx.me, victim)
+            .is_some_and(|distance| distance >= min as f32 && distance < max as f32);
+        if in_range {
+            self.recalc_timer(index, repeat_min, repeat_max);
+            self.process_action(ctx, index, Some(victim));
+        } else {
+            self.recalc_timer(index, 500, 500);
         }
     }
 
@@ -654,6 +697,10 @@ impl SmartAi {
             ACTION_CAST => {
                 return Self::cast_targets(ctx, event, targets);
             }
+            ACTION_ATTACK_START => combat::attack_random_target(ctx, &targets),
+            ACTION_SET_IMMUNE_NPC => {
+                combat::set_npc_immunity(ctx, &targets, event.action_params[0] != 0)
+            }
             ACTION_SET_EVENT_PHASE => self.phase = event.action_params[0],
             ACTION_SET_INST_DATA => return instance_data::apply(ctx, event.action_params),
             ACTION_FAIL_QUEST | ACTION_COMPLETE_QUEST => {
@@ -692,6 +739,27 @@ impl SmartAi {
             ACTION_DIE => {
                 if ctx.is_alive() {
                     ctx.kill_self();
+                }
+            }
+            ACTION_SET_COUNTER => {
+                let [id, value, reset, ..] = event.action_params;
+                if targets.is_empty() {
+                    self.store_counter(ctx, id, value, reset != 0);
+                }
+                for target in targets {
+                    if target == ctx.me {
+                        self.store_counter(ctx, id, value, reset != 0);
+                    } else {
+                        super::dispatch(
+                            ctx.world,
+                            target,
+                            super::Hook::StoreCounter {
+                                id,
+                                value,
+                                reset: reset != 0,
+                            },
+                        );
+                    }
                 }
             }
             ACTION_STORE_TARGET_LIST => {
@@ -923,6 +991,16 @@ impl SmartAi {
 }
 
 impl CreatureAi for SmartAi {
+    fn store_counter(&mut self, ctx: &mut Ctx, id: u32, value: u32, reset: bool) {
+        let counter = self.counters.entry(id).or_default();
+        *counter = if reset {
+            value
+        } else {
+            counter.wrapping_add(value)
+        };
+        self.process_events_for(ctx, EVENT_COUNTER_SET, None, id);
+    }
+
     /// TC SmartAI::JustAppeared: RESPawn11 precedes OnReset; evade never emits11.
     fn just_appeared(&mut self, ctx: &mut Ctx) {
         if !crate::spell_cast::targets::is_alive(ctx.world, ctx.me) {
@@ -1038,12 +1116,14 @@ impl CreatureAi for SmartAi {
         self.update_follow(ctx, diff_ms);
         self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
-            if self.tick_summon_hook_cooldown(index, diff_ms) {
+            if self.tick_hook_cooldown(index, diff_ms) {
                 continue;
             }
             let event = &self.events[index];
-            if !matches!(event.event_type, EVENT_UPDATE_IC | EVENT_HAS_AURA)
-                || !self.in_phase(event.phase_mask)
+            if !matches!(
+                event.event_type,
+                EVENT_UPDATE_IC | EVENT_RANGE | EVENT_HAS_AURA
+            ) || !self.in_phase(event.phase_mask)
             {
                 continue;
             }

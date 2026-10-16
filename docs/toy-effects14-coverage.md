@@ -1,5 +1,127 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source-order continuation gaps (2026-10-16)
+
+Ashhide104329/148626 remains blocked by the missing mount template73689. Source aura78 names73689; the authentic TDB model row selects display51484 (M2 646374), but the published creature catalog lacks73689. Generic aura241 flag proof does not establish Ashhide learning/use, mount rendering, area acceptance or expiry. Per lead instruction, retain this named gap and continue source order; no substitute mount or importer admission. Unexecuted Ashhide test drafts remain in continuation evidence, not the passing regression suite.
+
+113543/174004 has aura78 with zero creature entry and no matching70391 Mount SourceSpell row; its mount/body action remains unresolved. [Grizzlesnout129965 learned-use proof](#grizzlesnout63-source-lifecycle-2026-10-16) now covers the next source root without closing that gap. Next130249/195806 has current published template99572 with authentic display choices63609/63606; the earlier absent-template snapshot is stale. [Waywatcher learned-use acceptance](#waywatcher64-source-lifecycle-2026-10-16) now covers this existing template without adding an importer admission; native rendering remains separate. Evidence: `waywatcher64-template-source-preflight.json`.
+
+Guardian health remains read-only. Pinned TC `Guardian::InitStatsForLevel` uses ExpectedStat when pet_levelstats has no matching row; the local TDB archive has2715 rows and none for51113. `SetCreateHealth(uint32)` truncates the computed base, unlike the wild-summon ceiling. Final `UpdateAllStats` also inherits30% of owner stamina. The actual owner-stamina/final-health oracle remains incomplete; prior positive HP1 wire evidence is not parity. Continue other toys without inventing a guardian default.
+
+Earlier root refusals remain in the [effects12 identity/reason table](toy-effects12-coverage.md#exact-retained-gaps) and [effects13 refinements](toy-effects13-coverage.md#exact-retained-gaps), except identities explicitly closed by later packets here. Arrival of the Naaru64456/91752 is not admitted: TDB51200/display35543 resolves model124640, `creature/invisiblestalker/invisiblestalker.m2`, not a recording model. The local root has only its summon effect; template addon, AI/script, creature spells and SmartAI bindings are empty. The recording action is not established by publishing this invisible actor. This is a local source gap, not proof that Retail has no action.
+
+[Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
+
+## Sightless65 native detection consumer (2026-10-16)
+
+Actual journal153293/254568 RED at077ed8f6 rejects `unsupported toy spell: aura 152` (0/1,56.25s). Before production admission, real source-aura hostile-acquisition controls664a50ed pass1/1,37.57s: ordinary level5 spider acquires player at12yd, protected player stays unacquired12yd but is acquired7yd. Existing `AggroDistance::center_radius` already reads target152 before native minimum/reach clamps. Minimal574d45f5 names that constant in the aura registry and recognizes the existing consumer; no aggro formula, stealth, faction, movement or wire change.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Focused GREEN | Both actual bag-learning/UseToy and real hostile acquisition pass2/2, zero ignored42.78s. Source Val'sharah7558 terrain accepts group5454, instant cast/600000ms aura and300000ms recovery remain authored. Ordinary50ms simulation expiry removes the aura with original body/health retained. Northshire9 refuses without spending, then valid terrain permits use after ordinary recovery expiry. No clock/duration/cooldown reset. |
+| Current gates | At server2e936278/engine48fcd9625/protocol07a8faa, whole `toys:: --test-threads 2` passes142/142, zero ignored792.86s; native creature-aggro controls30/30 pass118.42s. Server binary/tests check passes5m34s and fmt passes; no compile warnings/manual readability findings. Canonical runtime catalog classification369→370 adds only153293, zero removals; not370 completed toys or the separate prepared-import basis. No new assets/native pixels/wire/audio/wall-lifetime or complete-toy claim. |
+| Preceding source gaps |153193 zero-entry mount action remains unresolved.153194 effect72 creates a farsight DynamicObject/viewpoint;153204 uses bind-sight1/stalked68;153253 property65 Control3 requires possessed128391, not a wild actor. These capabilities remain unimplemented and are not admitted by152 recognition. |
+
+Evidence root below: `sightless65-{active-goal,proof-ledger,source-preflight}.json`, genuine journal RED, pre-admission aggro proof, focused GREEN and final fmt/check/aggro/whole-Toy logs plus `sightless65-{final-results,readability,census-delta}.json`; local pinned TC `Creature.cpp::GetAttackDistance` and `SpellAuraEffects.cpp`152 consumer mapping. `after-waywatcher64-root-metadata.json` preserves preceding source identities.
+
+## Waywatcher64 source lifecycle (2026-10-16)
+
+Test-only194e7c82 adds actual bag learning and journal UseToy130249/195806 acceptance. Initial run passes1/1, zero ignored42.09s against the currently published authentic99572 template. No runtime fix, importer change or manufactured RED; earlier absent99572 source evidence is stale.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Server lifecycle | Real Northshire9 terrain refuses group4273 without recovery; real Broken Isles1220/Val'sharah7558 accepts the authored instant cast. Existing transform selects one source63609/63606 display, flag1→65 preserves the unrelated bit, run speed is3.0 and aura duration15000ms. Ordinary50ms simulation expiry restores original display/health/flag1/speed1 while retaining900000ms recovery. Test does not certify both random outcomes or their distribution. |
+| Private body closure | Eighteen70391 assets authenticate against build334a36cf5f3c32a5f7a167405487fa14 resolution/config/root/encoding: M2 1120483, three BLPs, ten animations and four skins. Maintained importer publishes18 private receipts/four byte-equal runtime aliases; reconstructed graph has zero missing/unresolved dependencies. All-build canonical ownership check finds zero keys before private publication. Both source display overrides1120500/1120502 are included. |
+| Current gates | At server15d7e63e/enginecd4c614d/protocol07a8faa, whole `toys:: --test-threads 2` passes141/141, zero ignored569.87s. Server binary/tests check passes27.90s, fmt passes; actual production `ModelAssetIndex::load` resolves the private combined namespace's18 receipts/four aliases. Manual Rust readability and compile-warning audit have no findings. Later contract/docs-only commits do not invalidate this source scope. |
+| Remaining | Lead owns canonical publication; private receipts do not establish native metadata availability, wire, input delivery for this toy, pixels/audio/wall lifetime or complete-toy parity. |
+
+Evidence root below: `waywatcher64-{active-goal,proof-ledger,metadata-preflight,template-source-preflight,terrain-preflight,body-preflight,all-build-owners,readability}.json`, `waywatcher64-initial.log` and `waywatcher64-native-{staged,publication,verified}.json`, `waywatcher64-final-results.json` and final logs/private-loader log. Next153193 has an unresolved zero-entry mount action; no substitute is inferred.
+
+## Grizzlesnout63 source lifecycle (2026-10-16)
+
+Test-only commit6f02eec4 exercises actual bag learning and journal UseToy129965/194807. Initial run passes1/1 in41.95s, zero ignored; this is acceptance of existing handlers after62, not a new RED→GREEN runtime fix. The source-backed test asserts real ADT parser area/height: Northshire9 refuses area group4446 without spending recovery; Northrend571/area3537 accepts after the authored1500ms cast.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Server lifecycle | Source transform27864 selects9287; flag1 becomes65 without losing the unrelated bit; run speed multiplier3.5 and aura15000ms remain authored. The ordinary50ms simulation expires the aura, restores original display/health/flag1/speed1, and retains the600000ms item recovery. No clock, cooldown or duration reset. |
+| Body ownership | Twelve same70391 body dependencies authenticate by resolution content key/MD5, SHA256 and byte length. Every key already has exactly one canonical owner; both12648700/01.skin aliases are byte-equal to the referenced skins. No new fragment, extraction or canonical mutation. |
+| Current gates | At server5b3a1604/engined6adbe444/protocol07a8faa, whole `toys:: --test-threads 2` passes140/140, zero ignored623.06s. Server binary/tests check passes1m36s; fmt passes. Actual production `ModelAssetIndex::load` accepts the canonical combined namespace and resolves all12 Grizzlesnout receipts/two aliases. No compile warnings; manual changed-Rust readability has no findings. |
+| Remaining | No fresh wire, native input delivery for this particular toy, pixels, audio, wall-clock lifetime or complete-toy parity claim. Generic35/35 native movement proof retains only its62 scope. |
+
+Evidence root below: `grizzlesnout63-{active-goal,proof-ledger,source-metadata,body-source,terrain-source,authenticated-owners,readability}.json` and `grizzlesnout63-initial.log`, `grizzlesnout63-final-results.json`, final gate logs and `grizzlesnout63-canonical-loader.log`. Model43→M2 126487 has seven external animations, two skins and display overrides126492/126493; source display scale1.5 remains separate from server display identity.
+
+## Forced-forward62 generic input proof (2026-10-16)
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Replicated flag | TC aura241 sets `UnitFlags2::FORCE_MOVEMENT`0x40; unrelated bits survive, overlapping auras retain the flag until last removal. Genuine RED0/1 observes1 instead of65; GREEN1/1 passes6.08s at serverb0a24e7d/protocol07a8faa. Existing wire field reused; no new schema. |
+| Native input | Engine8be3b46e8 test genuinely fails forced idle input `[0,0,0]` instead of `[0,0,1]`. Production18625f980 plus numeric-tuple API correctiond6adbe444 consumes replicated0x40 and clamps forward exactly1 while preserving strafe, ordinary mouse/scripted controls and release. Native gameplay controls pass35/35, zero ignored2.84s; compile3m27s. Initial contains-method compile failure is retained separately. |
+| Current regression | Whole `toys:: --test-threads 2` passes139/139, zero ignored418.73s at server2d8fc58e/engined6adbe444/protocol07a8faa; compile24m16s. Native lib check passes2m24s, server binary check4m13s, changed-package engine/server and protocol fmt pass. Manual changed-Rust readability finds no suppressions or new issue. |
+| Classification and gaps | Same shared-data catalog snapshot basis364→369 adds104329/113543/129965/130249/153193, zero removals. This is handler classification, not five complete toys; prior385 prepared-import count is a different DB basis. Missing73689 and zero-entry113543 mount action remain named gaps above; next actual-use candidate129965 has source27864/display9287. No new native wire/pixels, per-toy movement/body/lifetime or guardian-health parity claim. |
+
+Evidence root below: `force-forward62-{proof-ledger,readonly-source,next-source-order,readability,census-delta,final-results}.json`, native/flag RED/GREEN and final logs. Unexecuted Ashhide drafts are archived under `deferred62-*`, not admitted to the active regression suite. [Native input contract](../../game-engine/docs/specs/player-movement-sync.md#forced-forward-aura).
+
+## Ysera source summon proof (2026-10-16)
+
+[Contract](specs/toys.md#contract) owns130170/195708→99518/display66207. Genuine importer/use RED4425c34c reproduces zero published99518 and real learned-use refusal for missing99518(0/1,35.81s). Productionb0417165 adds only99518 to the maintained importer; no runtime Rust/Cargo, destination, privacy, stat, clock or cooldown implementation changes. Source has no AI/addon/spell/click/root-script binding;1200000ms item recovery remains unchanged.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Import and learned use | Six real importer controls pass7.046s; actual bag-learning/UseToy passes1/1,33.84s. One66207 actor has the caster's private-owner field and map, source47's8yd front offset, no pet/follow designation, static position after caster movement, unchanged caster body/health and ordinary50ms-harness120000ms expiry. Observer exclusion is not a fresh wire claim. |
+| Regression | Whole `toys:: --test-threads 2` passes138/138, zero ignored605.34s atb0417165/engine826302db5/protocoldc30250. All-target check passes21.80s; initial fmt finds only module declaration ordering. Formatting-only69a826f8 corrects it; fmt and follow-up all-target check pass15.55s. Whole behavior proof is not rerun or relabeled; manual changed-Rust readability has no findings. |
+| Body asset closure | All seventeen70391 model dependencies authenticate against build334a36cf5f3c32a5f7a167405487fa14 resolution/config/root/encoding identities: one532126 M2, five BLPs, seven animations and four skins. Maintained importer privately publishes17 assets and4 runtime aliases; rebuilt namespace graph has zero missing/unresolved dependencies and every byte receipt matches. |
+| Classification and gaps | Prepared classification384→385 adds only130170, zero removals; not385 complete toys or canonical publication. State kit60600→procedural8605/type22(values1,1,0.5,820812) is ignored by current native renderer. No guessed shader, procedural appearance, both-skin pixels, fresh UDP, wall expiry, audio or full NPC/guardian-stat parity claim. |
+
+Evidence root below: `green-aspect60-readonly-source.json`, `green-aspect61-{active-goal,proof-ledger,final-scope,final-results,readability,census-delta}.json`, importer/use RED/GREEN and whole-Toy/check/fmt logs, plus `green-aspect61-native-{closure-preflight,staged,publication,verified}.json`. Earlier interaction roots130191(trap/disarm),130199(portal imp),130209(chest progression) and130232(Moonfeather infection/spread) remain refused: related spells exist but local summon/template rows do not bind their actions.130194 still lacks an ItemSparse identity. Next sourced forced-forward boundary includes earlier104329/113543/129965 as well as130249/153193; no blanket admission.
+
+## Enchanted Stone Whistle server proof (2026-10-16)
+
+[Contract](specs/toys.md#contract) owns129279/193687→98300/display71056. Genuine RED at5228c1d7/docs-equivalent9770e896 reproduces missing98300 in the real importer and actual bag-learning/UseToy refusal(0/1,49.46s). Production3e5772a6 adds only98300 to the maintained source importer; no runtime Rust/Cargo, destination, AI, stat, clock or cooldown implementation changes.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Authentic import | Five real CLI importer controls pass14.301s on disposable copies, including exact source template/model preservation, idempotence and existing missing-source rollback controls. Canonical data is untouched. |
+| Actual learned use | One CPU integration test passes36.35s: source actor71056 near the selected unit in its3yd disk, not the caster's disk; correct owner/map, no pet/follow designation, stationary after actual caster movement, unchanged caster body/health and natural60000ms simulation expiry through the ordinary50ms harness. |
+| Regression | Whole `toys:: --test-threads 2` passes137/137, zero ignored671.73s at3e5772a6/engine035700cd9/protocoldc30250. Server all-target check and fmt EXIT0; manual changed-Rust readability audit has no findings. No redundant native rebuild: production Rust/Cargo is unchanged from the prior packet. |
+| Catalog classification | Prepared1166 scan finds384 admissible/782 unavailable: exactly+129279, zero removals against the recorded Podium383 prepared checkpoint. This is not384 complete toys or canonical publication. |
+| Native asset closure | Follow-up60 authenticates all five70391 assets against build334a36cf5f3c32a5f7a167405487fa14 resolution content keys: M2 1394881, BLP1394882/1394883 and skins1394884/1394885. Maintained importer privately publishes five assets and two runtime skin aliases; rebuilt product graph has zero missing/unresolved dependencies. Existing Classic Beta receipts are not relabeled. |
+| Remaining | No new UDP/native pixels, client interaction or native wall-expiry certificate; no full NPC/guardian-stat parity. Private asset publication is not canonical publication or both-skin rendering. |
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `whistle59-{active-goal,readonly-source,proof-ledger,final-scope,final-results,census-delta,readability}.json`, importer/use RED/GREEN logs and `whistle59-whole-toys.log`. Follow-up asset evidence: `whistle60-native-{closure-preflight,staged,publication,verified}.json` and `whistle60-native-assets.log`; authentication rechecks build-config/root/encoding hashes and every published byte. No new effect handler, invented script, canonical data publication or Full1166 completion claim.
+
+## Shrine server per-target stat conversion (2026-10-16)
+
+Actual learned Shrine use at c8a791f8 retains correct client projection but server `UnitScaling::level_against` returns native30 because it requires both `LevelScaling` and `ScaledStats`. Genuine source-area RED for owners20/80 observes server(level30,armor155,dealt100,loss100) against viewer20 instead of(20,135,53,182); Podium's no-scaling control passes. Source TC a352b1fa Creature.cpp3173–3257 defines per-target level and ExpectedStat ratios.
+
+450a85de builds the existing per-level table using the summon’s final content tuning, actual template expansion/class/HP/armor/DamageModifier, and installed ExpectedStats. Raw DamageModifier is retained even for templates with zero tuning; regionally tuned summons cannot invent it. Ordinary NPC selection, global conversion denominators, guardian initialization, clocks and destination handling are unchanged.
+
+| Boundary | Concrete proof / remaining |
+|---|---|
+| Real Shrine initialized actor, owners20/80 | Against viewers1/20/80, server(level,armor,dealt100,loss100) is(1,50,2,5614)/(20,135,53,182)/(30,155,100,100). Source HP ceilings78/2404/4379 and DPS4.75353193/86.6685715/162.622925 anchor truncation. CPU integration setup uses actual bag learning and UseToy, then evaluates server conversion consumers on that actor. |
+| Podium zero tuning | Native20/30 and armor135/155 remain unchanged for every viewer;100 damage stays100 in either conversion direction. |
+| Focused regression | Nineteen actual-use, signed-delta, guardian/Podium and existing level-scaling controls pass82.49s at450a85de. Final exact seven master regressions plus whole `toys:: --test-threads 2` pass143/143, zero ignored722.30s at450a85de. Server all-target check, fmt and maintained build EXIT0 at docs-equivalent86d26423/engine035700cd9/protocoldc30250; unchanged engine proof is reused without a duplicate build. |
+| Not certified | No new actual attack/cast/AI stimulus, three rendered observers, client HP display or full combat/AP/guardian-stat parity. Scaling56 wire remains its own literal earlier binary proof, not a new server-conversion wire certificate. |
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `scaling57-active-goal.json`, `scaling57-proof-ledger.json`, `scaling57-server-{red,green}.log`, `scaling57-whole-proof.json`, `scaling57-server-{scope,results}.json` and manual readability audit. No new wire/native run: previous scaling56 receipts retain their exact binaries. No new item admission or Full1166 completion claim.
+
+## Shrine viewer-level projection (2026-10-15)
+
+TC a352b1fa `Creature::HasScalableLevels` requires nonzero ContentTuningID. `TempSummon::InitStats` skips owner-tuning replacement for UseCreatureLevel; Shrine therefore retains Area9/CT73[1,30], delta0. Unflagged player-owned Podium inherits zero tuning and must not scale merely because its initial native level came from that region.
+
+| Boundary | Evidence / remaining |
+|---|---|
+| Real learned Shrine use, owners20/80 | Genuine RED ff6a464f projects30 to viewers1/20 instead of1/20; native30/HP4379/armor155 remains correct. |
+| Selected regional viewer range/delta | 4dd65bab retains the same once-rolled delta and range before wild initialization; shared viewer projection1/20/80→1/20/30 passes in actual UseToy CPU fixtures. |
+| Unflagged player-owned Podium | All viewer levels remain its initialized native20/30. Negative control passes; no blanket regional scaling. |
+| Focused/whole regression | Nine source-level, mana, missing-region, guardian and Podium tests pass88.75s; whole `-- toys:: --test-threads 2` passes136/136, zero ignored554.81s at4dd65bab/protocoldc30250. Current six build/check/fmt gates all EXIT0 at docs-equivalent749d4984/359c8e521/dc30250. |
+| Unproved boundaries | At this packet's literal scope, server combat `UnitScaling` additionally requires `ScaledStats` and region-only Shrine has no such table; [later server conversion proof](#shrine-server-per-target-stat-conversion-2026-10-16) addresses that separately. Damage/health/armor combat scaling, exact client HP projection, pixels and wall expiry are not certified by viewer-text assertions. |
+
+Fresh private5911 actual UseItem→UseToy wire passes at server749d49849bdd48cc072d517c33b5e325bfd850f0, peer359c8e521a8b8ea0fbadaed30f4c03539fd410d5 and protocoldc30250f22c09dacdcd5266034ac6c4c22292fd4. Shrine owners20/80 each receive one native30/HP4379 actor with CT73/min1/max30/delta0; the shared client consumer projects viewers1/20/80→1/20/30. Podium receives one native20/30 actor, HP48066/87576 and no scaling: all projections stay native. Default Scarab control receives26/28 actors, all native20/30/no scaling, positive HP1 only—not full guardian-stat parity. These are projections from replicated fields, not three rendered observer clients or target-frame pixels.
+
+First controller completed Podium, then hit unchanged admin3000ms create-character timeout. Read-only restart inspection found the unfinished Shrine character absent; account retained untouched. Only unfinished Shrine/Scarab scenarios resumed on four new accounts after preparation, without repeating Podium, resetting cooldowns or changing deadlines. Both sequential owned runtimes stopped; final PID3390250 is gone, slice inactive, UDP5911 free. Server SHA25604e361ecd8901adf90409fa9c2de162e7940a98826a5077612b1b0c4d0a10fa1; peerf8e386da070e837391787a9aea028c1fe308b4bfdef9991ef71e831ba77e3907.
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `scaling56-proof-ledger.json`, `scaling56-whole-toys-proof.json`, `scaling56-final-results.json`, `scaling56-built-artifacts.json`, per-scenario wire JSON, initial/resume receipts/server logs and manual readability audit. No new Toy admission or Full1166 completion claim.
+
 ## Wild summon initial-state proof (2026-10-15)
 
 TC a352b1fa Creature::Create resolves actual terrain area before CreateFromProto→UpdateEntry→SelectLevel; TempSummon::InitStats then applies its property-controlled owner clamp. Wild/default E28 is not exempt. `wild55-create-level-source.json` records that sequence and authentic rows. Genuine learned-use RED at e3314a09/f269c22a observes legacy level1/HP20-or1/armor50; source initialization917388be updates level/HP/armor/mana together, rather than relabeling UnitLevel. The existing learned-use group chain independently reproduces an NPC-owned child at1 instead of30; b3f59be0 requires actual player Level or non-player UnitLevel, removing the invented1 fallback. Normal zone AI, ownership, placement and lifetime paths remain.
@@ -16,7 +138,7 @@ Final server source/test revision1049f85d1d388131a5f06eac98fe4862891a8f9d, peer1
 
 Current server check/fmt/maintained build pass; unchanged engine fixture build, network all-targets check and format proof pass at10f07788b and are reused. Source ExpectedStat IDs20/30 (ExpansionID-2), class mod4 and template modifiers anchor concrete values; installed ContentTuning73 has no ExpectedStat modifiers. The single private5911 stack uses six fresh `fb_toyfx55_*` accounts and real UseItem→UseToy, then stops; owned PID2052890 is gone, slice inactive and UDP5911 free. Literal binary SHA256: server510db5f4dbb6f396c18d747032d4acaf6364730a73795a3d1ac9ec8ae26ffa20; peerb69e735e875f1df863f6b2c922840ab9a43f756905f771d55e5bf250a5f5b94e.
 
-Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `wild55-proof-ledger.json`, `ty239-whole-toys-proof.json`, `wild55-server-followup-results.json`, `wild55-built-artifacts.json`, `wild55-wire-results.json`, per-scenario wire JSON/process logs and server/preparation receipts. No new item admission or canonical publication. Inherited per-viewer scaling/combat modifiers, attack power and complete creature-stat parity remain open. No new pixels, navigation or native wall-expiry certificate; older native images/lifetimes retain their literal earlier binary scopes. Neither136 passing tests nor the earlier383 admissible items certifies complete1166.
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `wild55-proof-ledger.json`, `ty239-whole-toys-proof.json`, `wild55-server-followup-results.json`, `wild55-built-artifacts.json`, `wild55-wire-results.json`, per-scenario wire JSON/process logs and server/preparation receipts. No new item admission or canonical publication. [Later Shrine client-level projection](#shrine-viewer-level-projection-2026-10-15) is proved separately; inherited server-combat scaling/modifiers, attack power and complete creature-stat parity remain open. No new pixels, navigation or native wall-expiry certificate; older native images/lifetimes retain their literal earlier binary scopes. Neither136 passing tests nor the earlier383 admissible items certifies complete1166.
 
 ## Sea-Blessed Shrine — bounded source and release-native lifecycle
 

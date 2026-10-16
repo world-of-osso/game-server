@@ -442,6 +442,80 @@ fn attack_distance_is_capped_before_adding_combat_reaches() {
 }
 
 #[test]
+fn toyfx65_sightless_native_aggro_ignores_protected_player_at_twelve_yards() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{
+        harness_with_plugins, place_toy_caster_on_source_map_area,
+    };
+    for protected in [false, true] {
+        let mut h = harness_with_plugins(Vec::new(), &[254568], 8, false, |app| {
+            app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
+                &[30],
+            ));
+            let conn = rusqlite::Connection::open_with_flags(
+                crate::test_data::world_db_path(),
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )
+            .unwrap();
+            app.insert_resource(
+                crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap(),
+            );
+            app.insert_resource(faction_templates());
+            app.add_plugins((CreatureAiPlugin, CreatureAggroPlugin));
+        })
+        .unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((shared::components::Level(5), UnitLevel(5)));
+        place_toy_caster_on_source_map_area(&mut h, 1220, 955950, [4584.0, 6450.666], 7558);
+        let player_position = *h.app.world().get::<Position>(h.caster).unwrap();
+        let origin = Position {
+            x: player_position.x - 12.0,
+            ..player_position
+        };
+        let spider = spawn_creature(&mut h.app, &FOREST_SPIDER, origin);
+        h.app
+            .world_mut()
+            .entity_mut(spider)
+            .insert(crate::maps::InMap::continent(1220));
+        if protected {
+            let caster = h.caster;
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 254568,
+                    effect_mask: 1,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        h.advance(2);
+        let expected = if protected {
+            Some(CreatureState::Idle)
+        } else {
+            pursuing(h.caster)
+        };
+        assert_eq!(
+            state(&h.app, spider),
+            expected,
+            "source -15yd detection at12yd, protected={protected}"
+        );
+        if protected {
+            h.app.world_mut().get_mut::<Position>(h.caster).unwrap().x = origin.x + 7.0;
+            h.advance(2);
+            assert_eq!(
+                state(&h.app, spider),
+                pursuing(h.caster),
+                "source minimum range plus reaches still detects at7yd"
+            );
+        }
+    }
+}
+
+#[test]
 fn nearest_hostile_player_is_attacked_first() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));

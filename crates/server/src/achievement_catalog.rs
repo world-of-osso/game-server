@@ -505,12 +505,16 @@ pub(crate) struct ReferencePlayer {
     pub known_spells: BTreeSet<u32>,
     /// Absence is meaningful only after class, profession and account mount sources are complete.
     pub spell_knowledge_complete: bool,
+    /// CompleteQuest facts; Login74 reconstructs these from this character's persisted rewards.
+    pub rewarded_quests: BTreeSet<u32>,
     /// This character's earned IDs plus account-wide awards; None when state/catalog is unknown.
     pub earned_achievements: Option<BTreeSet<u32>>,
     /// Negative87 requires the account aggregate too; character-only state is incomplete.
     pub account_achievements_known: bool,
     /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
     pub battle_pet_team_min_level: Option<u8>,
+    /// Actual current authored ScenarioStep ID; None outside/after a scenario or without authority.
+    pub scenario_step: Option<u32>,
     /// Current terrain area (TC Player::GetAreaId).
     pub area: Option<u32>,
     pub map: u32,
@@ -536,6 +540,9 @@ enum CriteriaFact {
     NotAura(u32),
     KnownSpell(u32),
     NotKnownSpell(u32),
+    CompletedQuest(u32),
+    /// Authored step IDs whose OrderIndex equals the one-based modifier asset minus one.
+    ScenarioSteps(BTreeSet<u32>),
     EarnedAchievement(u32),
     NotEarnedAchievement(u32),
     BattlePetTeamLevel(u8),
@@ -605,6 +612,10 @@ impl CriteriaFact {
             Self::Aura(spell) => player.auras.contains(spell),
             Self::NotAura(spell) => player.auras_known && !player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
+            Self::CompletedQuest(quest) => player.rewarded_quests.contains(quest),
+            Self::ScenarioSteps(steps) => player
+                .scenario_step
+                .is_some_and(|step| steps.contains(&step)),
             Self::NotKnownSpell(spell) => {
                 player.spell_knowledge_complete && !player.known_spells.contains(spell)
             }
@@ -750,7 +761,17 @@ struct AchievementDef {
     faction: i32,
 }
 
+#[path = "achievement_evaluation.rs"]
+mod evaluation;
+pub(crate) use evaluation::EvaluationCache;
+
+#[cfg(test)]
+thread_local! {
+    static EVALUATION_WORK: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
+}
+
 #[derive(Resource, Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct AchievementCatalog {
     window: window::WindowData,
     definitions: BTreeMap<u32, AchievementDef>,
@@ -758,6 +779,7 @@ pub(crate) struct AchievementCatalog {
     pub trees: HashMap<u32, CriteriaTree>,
     pub children: HashMap<u32, Vec<u32>>,
     event_criteria: HashMap<u32, Vec<u32>>,
+    evaluation_index: evaluation::EvaluationIndex,
     faction_groups: HashMap<u32, u32>,
     area_bits: HashMap<u32, u32>,
     pet_creatures: BTreeSet<u32>,
@@ -765,7 +787,7 @@ pub(crate) struct AchievementCatalog {
     spell_skill_lines: HashMap<u32, BTreeSet<u32>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct TreeProgress {
     pub current: u64,
     pub required: u64,
@@ -859,61 +881,6 @@ impl AchievementCatalog {
         self.grant_completed(state, completed_map, race, false)
     }
 
-    pub(super) fn grant_completed(
-        &self,
-        state: &mut PlayerAchievementState,
-        completed_map: Option<u32>,
-        race: u8,
-        account_scope: bool,
-    ) -> Vec<AchievementToastSnapshot> {
-        let mut toasts = Vec::new();
-        loop {
-            self.set_pet_battle_points(state);
-            let completed =
-                self.find_completed_definitions(state, completed_map, race, account_scope);
-            if completed.is_empty() {
-                return toasts;
-            }
-            for definition in completed {
-                state.earned_ids.insert(definition.id);
-                toasts.push(AchievementToastSnapshot {
-                    achievement_id: definition.id,
-                    name: definition.name.clone(),
-                    points: definition.points,
-                    icon_fdid: self.window.icon_fdid(definition.id),
-                });
-            }
-        }
-    }
-
-    fn find_completed_definitions(
-        &self,
-        state: &PlayerAchievementState,
-        completed_map: Option<u32>,
-        race: u8,
-        account_scope: bool,
-    ) -> Vec<&AchievementDef> {
-        self.definitions
-            .values()
-            .filter(|definition| {
-                if self.window.has_account_flag(definition.id) != account_scope
-                    || state.earned_ids.contains(&definition.id)
-                {
-                    return false;
-                }
-                if !self.faction_matches(definition.faction, race) {
-                    return false;
-                }
-                if let Some(map) = definition.map_id
-                    && completed_map != Some(map)
-                {
-                    return false;
-                }
-                self.tree_progress(definition.root, state).completed
-            })
-            .collect()
-    }
-
     pub(crate) fn iter_earned_achievement_ids<'a>(
         &'a self,
         state: &'a PlayerAchievementState,
@@ -943,6 +910,11 @@ impl AchievementCatalog {
         state: &PlayerAchievementState,
         race: u8,
     ) -> Vec<AchievementProgressSnapshot> {
+        let character_progress = self.cached_progress(state);
+        let account_progress = state
+            .account
+            .as_deref()
+            .and_then(|account| self.cached_progress(account));
         self.definitions
             .values()
             .filter(|definition| self.faction_matches(definition.faction, race))
@@ -950,8 +922,15 @@ impl AchievementCatalog {
                 !self.window.has_account_flag(definition.id) || state.account.is_some()
             })
             .map(|definition| {
+                let cached = if self.window.has_account_flag(definition.id) {
+                    account_progress
+                } else {
+                    character_progress
+                };
                 let state = self.definition_state(state, definition.id);
-                let progress = self.tree_progress(definition.root, state);
+                let progress = cached
+                    .map(|progress| progress[&definition.id].clone())
+                    .unwrap_or_else(|| self.tree_progress(definition.root, state));
                 AchievementProgressSnapshot {
                     achievement_id: definition.id,
                     current: progress.current.min(u64::from(u32::MAX)) as u32,
@@ -1197,6 +1176,11 @@ impl AchievementCatalog {
     }
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
+        #[cfg(test)]
+        EVALUATION_WORK.with(|work| {
+            let (definitions, trees) = work.get();
+            work.set((definitions, trees + 1));
+        });
         let tree = &self.trees[&id];
         let counter = self.criterion_counter(tree.criteria_id, state);
         let children = self.children.get(&id).into_iter().flatten();
@@ -1383,6 +1367,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
                 .push(id);
         }
     }
+    catalog.index_evaluation_dependencies();
     Ok(catalog)
 }
 
@@ -1439,6 +1424,21 @@ fn load_battle_pet_type_fact(
     Ok((!species.is_empty()).then_some(CriteriaFact::BattlePetSpeciesOfType(species)))
 }
 
+/// TC PlayerScenarioStep compares the actual authored OrderIndex, not vector position.
+fn load_scenario_step_fact(
+    conn: &Connection,
+    stage: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let Some(order) = stage.checked_sub(1) else {
+        return Ok(None);
+    };
+    let mut query = conn.prepare_cached("SELECT ID FROM scenario_step WHERE OrderIndex=?1")?;
+    let steps = query
+        .query_map([order], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!steps.is_empty()).then_some(CriteriaFact::ScenarioSteps(steps)))
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
@@ -1463,10 +1463,12 @@ fn load_criteria_facts(
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             -8 => exists("spell")?.then_some(CriteriaFact::NotAura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
+            82 => load_scenario_step_fact(conn, asset)?,
             87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
             -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             -104 => exists("spell")?.then_some(CriteriaFact::NotKnownSpell(asset)),
+            110 => exists("content_quest_template")?.then_some(CriteriaFact::CompletedQuest(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
             19 => exists("content_item")?
@@ -1517,7 +1519,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
+                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122"
                 )
             }
         };

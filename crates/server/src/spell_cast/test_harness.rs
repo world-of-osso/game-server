@@ -1,6 +1,7 @@
 //! Real-DB Bevy App harness for cast and aura tests: a player caster with an
 //! authenticated connection and an NPC target.
 
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -96,20 +97,36 @@ pub(crate) fn world_db() -> Option<&'static WorldData> {
     .as_ref()
 }
 
-/// Own the prepared native snapshot until its fixture finishes; canonical data is read-only.
+/// Shared process input under target/, never mutable app state or canonical data.
 pub(crate) struct PreparedClassWorld {
-    directory: tempfile::TempDir,
+    directory: std::sync::Arc<tempfile::TempDir>,
 }
 
 impl PreparedClassWorld {
     pub(crate) fn path(&self) -> PathBuf {
         self.directory.path().join("world.class-summons.copy.db")
     }
+
+    pub(crate) fn world_data(&self) -> crate::world_data::WorldData {
+        static DATA: OnceLock<crate::world_data::WorldData> = OnceLock::new();
+        DATA.get_or_init(|| crate::world_data::load_world_data(&self.path()))
+            .clone()
+    }
 }
 
 pub(crate) fn prepare_class_world() -> PreparedClassWorld {
+    static DIRECTORY: OnceLock<std::sync::Arc<tempfile::TempDir>> = OnceLock::new();
+    PreparedClassWorld {
+        directory: DIRECTORY.get_or_init(import_class_world).clone(),
+    }
+}
+
+fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
+    // The process cache outlives individual fixtures; keep the 800MB snapshot off /tmp tmpfs.
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/class-fixtures");
+    std::fs::create_dir_all(&root).expect("disk-backed class fixture cache");
     let prepared = PreparedClassWorld {
-        directory: tempfile::tempdir().unwrap(),
+        directory: std::sync::Arc::new(tempfile::tempdir_in(root).unwrap()),
     };
     let helper = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/prepare_class_summon_db.py");
@@ -124,7 +141,11 @@ pub(crate) fn prepare_class_world() -> PreparedClassWorld {
         "class fixture import failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    prepared
+    std::fs::File::open(prepared.path())
+        .unwrap()
+        .set_permissions(std::fs::Permissions::from_mode(0o444))
+        .unwrap();
+    prepared.directory
 }
 
 /// Explicit native template authority for fixtures whose spells restrict creature type.
@@ -353,11 +374,16 @@ pub(crate) fn harness_with_native_enemy_dodge_reduction(
 
 /// Custom coefficient fixtures load SUNWELL_RADIANCE explicitly before opting in.
 pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
+    apply_native_enemy_dodge_reduction_to(h, h.caster);
+}
+
+/// Pet and foreign-player damage fixtures must qualify the actual attacker.
+pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: Entity) {
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
-            caster: h.caster,
-            target: h.caster,
+            caster: attacker,
+            target: attacker,
             spell_id: SUNWELL_RADIANCE,
             effect_mask: 1 << 1,
             source: crate::auras::AuraSource::Cast,
@@ -366,7 +392,7 @@ pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
     assert_eq!(
         h.app
             .world()
-            .get::<crate::auras::ActiveAuras>(h.caster)
+            .get::<crate::auras::ActiveAuras>(attacker)
             .unwrap()
             .modifier(251),
         -20.0
@@ -433,6 +459,9 @@ pub(crate) fn harness_with_plugins(
     let conn =
         Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     app.insert_resource(crate::unit_creature_type::load_race_types(&conn).unwrap());
+    app.insert_resource(
+        crate::maps::store::load_map_store(&conn).expect("Actual passive map eligibility metadata"),
+    );
     app.insert_resource(class_spells(data));
     app.insert_resource(crate::faction::world_db_faction_templates()?);
     let caster = spawn_player(&mut app, class, 0.0);

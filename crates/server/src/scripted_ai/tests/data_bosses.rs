@@ -3,9 +3,22 @@ use super::*;
 
 #[path = "azure_frost_bomb.rs"]
 mod azure_frost_bomb;
-
+#[path = "celebras.rs"]
+mod celebras;
+#[path = "gizlock.rs"]
+mod gizlock;
+#[path = "gnomeregan.rs"]
+mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "landslide.rs"]
+mod landslide;
+#[path = "maraudon.rs"]
+mod maraudon;
+#[path = "noxxion.rs"]
+mod noxxion;
+#[path = "vyletongue.rs"]
+mod vyletongue;
 
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
@@ -24,6 +37,8 @@ mod wailing_physical;
 mod wailing_progress;
 #[path = "wailing_ritual_waves.rs"]
 mod wailing_ritual_waves;
+#[path = "wailing_start.rs"]
+mod wailing_start;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
@@ -177,15 +192,16 @@ fn encounter_fixture(
     let data = data().expect("world.db fixture");
     let mut app = stockade_app_with(data, |app| {
         app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
+        // Install ingress and its source faction resource before the first update.
+        app.insert_resource(
+            crate::faction::world_db_faction_templates().expect("world.db faction templates"),
+        );
+        app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
         if populate {
             let connection =
                 Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
                     .unwrap();
             app.insert_resource(crate::gathering::load_data(&connection).unwrap());
-            app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
-            app.insert_resource(
-                crate::faction::world_db_faction_templates().expect("world.db faction templates"),
-            );
         }
     });
     if let Some(catalog) = catalog {
@@ -196,6 +212,8 @@ fn encounter_fixture(
         135322 => Some(prepare_encounter_database("golden-serpent")),
         ADAROGG => Some(prepare_encounter_database("adarogg")),
         SLAGMAW => Some(prepare_encounter_database("slagmaw")),
+        13282 => Some(prepare_encounter_database("noxxion")),
+        12225 => Some(prepare_encounter_database("celebras")),
         _ => None,
     };
     let path = prepared
@@ -212,7 +230,12 @@ fn encounter_fixture(
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     app.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
-    let expected = crate::world_data::load_expected_stats(&conn);
+    // Prepared copies have distinct imported authority; only canonical input is cached.
+    let canonical = prepared.is_none().then(crate::test_data::world_data);
+    let expected = canonical.map_or_else(
+        || crate::world_data::load_expected_stats(&conn),
+        |data| data.expected_stats.clone(),
+    );
     let spawns: Vec<_> = if populate {
         crate::world_data::load_spawns(&conn)
             .into_iter()
@@ -221,18 +244,32 @@ fn encounter_fixture(
     } else {
         Vec::new()
     };
-    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    let mut templates = canonical.map_or_else(
+        || crate::world_data::load_templates(&conn, &expected),
+        |data| data.templates.clone(),
+    );
     templates.retain(|id, _| {
         *id == entry
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && [135406, 137020].contains(id))
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
+            || (entry == 7800 && *id == 7915)
+            || (entry == 13282 && *id == 13456)
+            || (entry == 12225 && [13743, 13716].contains(id))
+            || (entry == 12203 && *id == 11783)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
-    crate::world_data::load_template_models(&conn, &mut templates);
-    let difficulty_templates =
-        crate::world_data::load_difficulty_templates(&conn, &expected, &templates);
+    let difficulty_templates = if let Some(data) = canonical {
+        data.difficulty_templates
+            .iter()
+            .filter(|((entry, _), _)| templates.contains_key(entry))
+            .map(|(key, template)| (*key, template.clone()))
+            .collect()
+    } else {
+        crate::world_data::load_template_models(&conn, &mut templates);
+        crate::world_data::load_difficulty_templates(&conn, &expected, &templates)
+    };
     let hp = conn
         .prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats")
         .unwrap()
@@ -267,6 +304,8 @@ fn encounter_fixture(
         template_addons: crate::world_data::load_template_addons(&conn),
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
+        expected_stats: expected,
+        summon_levels: crate::world_data::summon_levels::SummonLevels::load(&conn).unwrap(),
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
@@ -290,6 +329,14 @@ fn encounter_fixture(
     app.insert_resource(store);
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
+    if entry == 234648 {
+        // Mirror Image and Blink resolve their authored ground destinations.
+        let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
+        app.insert_resource(crate::ground::GroundMap::new(
+            &crate::ground::ground_data_dir(),
+            std::collections::HashMap::from([(map_id, wdt)]),
+        ));
+    }
     maps.raid_creature_encounters.insert((map_id, entry), bit);
     if map_id == 43 {
         // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
@@ -364,7 +411,7 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if [ADAROGG, 61412, SLAGMAW, 61528].contains(&entry)
+        let near = if [ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203].contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
         {
             // Keep these hostile source actors idle until their fixture explicitly pulls.
@@ -5066,11 +5113,10 @@ fn achievements_criteria_dungeon_difficulty_credits_only_the_copy_difficulty() {
 
 #[test]
 fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
-    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    use crate::achievement::PlayerAchievementState;
     let (mut h, boss, map) = bound_boss_at_difficulty(102263, 1530, 1, 14, None);
-    let conn = Connection::open(world_db_path()).unwrap();
     h.app
-        .insert_resource(load_achievement_catalog(&conn).unwrap());
+        .insert_resource(crate::test_data::achievement_catalog());
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
@@ -5174,11 +5220,10 @@ fn assert_copy_difficulty_credit(
     credited: u32,
     criteria: &[u32],
 ) {
-    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    use crate::achievement::PlayerAchievementState;
     let (mut h, boss, map) = bound_boss_at_difficulty(entry, map_id, bit, difficulty, None);
-    let conn = Connection::open(world_db_path()).unwrap();
     h.app
-        .insert_resource(load_achievement_catalog(&conn).unwrap());
+        .insert_resource(crate::test_data::achievement_catalog());
     let database_file = tempfile::NamedTempFile::new().unwrap();
     h.app.insert_resource(crate::persistence::GameDatabase {
         db: redb::Database::create(database_file.path()).unwrap(),

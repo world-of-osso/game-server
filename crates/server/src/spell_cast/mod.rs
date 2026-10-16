@@ -37,6 +37,8 @@ mod bonus_armor_tests;
 mod bonus_stat_tests;
 #[cfg(test)]
 mod cast_while_moving_tests;
+#[cfg(test)]
+mod caster_school_damage_tests;
 mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
@@ -844,6 +846,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
             crate::achievement::record_player_killed_by(world, victim, killer);
             let owner = combat_event_owner(world, killer);
             crate::pvp::record_battleground_player_kill(world, owner, victim);
+            crate::pvp::reward_world_player_kill(world, owner, victim);
             crate::quest::record_player_kill(world, owner, victim);
         }
     }
@@ -1768,10 +1771,11 @@ pub(crate) fn applicable_costs(
         // cannot turn an originally positive cost into a grant or vice versa.
         let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
-        let optional = cost.optional_cost.max(0) as f32;
+        let additional = resources::additional_optional_cost(world, caster, spell, cost.power_type);
+        let optional = (cost.optional_cost as f32 + additional).max(0.0);
         let optional = if optional > 0.0 {
             match SpellModOp::power_cost(cost.order_index) {
-                Some(op) => modify(world, caster, spell, op, optional).max(0.0),
+                Some(op) => spell_mods::modify_percent(world, caster, spell, op, optional).max(0.0),
                 None => optional,
             }
         } else {
@@ -3035,6 +3039,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 }
 
 #[cfg(test)]
+mod additional_optional_power_tests;
+#[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]
 mod line_of_sight_tests;
@@ -3046,6 +3052,8 @@ mod mechanics_talent_tests;
 mod mechanics_tests;
 #[cfg(test)]
 mod new_class_tests;
+#[cfg(test)]
+mod optional_flat_cost_tests;
 #[cfg(test)]
 mod override_queue_tests;
 #[cfg(test)]
