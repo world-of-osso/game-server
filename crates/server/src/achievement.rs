@@ -1029,6 +1029,13 @@ pub(crate) fn event_conditions(
 ) -> PlayerConditions {
     let mut conditions = player_conditions(world, player);
     if let Some(reference) = conditions.player.as_mut() {
+        if events
+            .iter()
+            .any(|event| matches!(event, CriteriaEvent::BeSpellTarget(_)))
+        {
+            reference.map_player_count =
+                map_player_count(world, world.get::<InMap>(player).copied());
+        }
         // Login74 already rebuilds these facts from this character's persisted rewards.
         reference.rewarded_quests = events
             .iter()
@@ -1144,7 +1151,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .is_some_and(|state| state.account.is_some()),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
         scenario_step: map.and_then(|map| scenario::current_step_id(world, map)),
-        map_player_count: map_player_count(world, map),
+        map_player_count: None,
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),

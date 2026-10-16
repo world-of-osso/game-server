@@ -77,6 +77,25 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     );
     let fourth_player = spawn_counted_peer(&mut h.app, fourth, InMap::continent(1));
     h.advance(1);
+    assert_eq!(
+        event_conditions(h.app.world(), h.caster, &[CriteriaEvent::ReachLevel(10)])
+            .player
+            .unwrap()
+            .map_player_count,
+        None,
+        "unrelated event does not request map-roster authority"
+    );
+    assert_eq!(
+        event_conditions(
+            h.app.world(),
+            h.caster,
+            &[CriteriaEvent::BeSpellTarget(INVASION_SPELL)]
+        )
+        .player
+        .unwrap()
+        .map_player_count,
+        Some(2)
+    );
     h.cast(INVASION_SPELL, Some(h.caster));
     h.advance(30); // Authored spell178544 RecoveryTime is1000ms.
     assert!(
