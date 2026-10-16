@@ -1,3 +1,4 @@
+- [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
@@ -19,6 +20,7 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16) — authentic private vision lifecycle,138/138 Toy regression and17-file body closure; procedural8605 rendering remains open.
 - [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import, learned-use lifecycle and137/137 Toy regression; private70391 five-asset closure verified, native pixels separate.
 
 - [Shrine server per-target stat conversion](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16) — actual-use missing-table RED→source level/armor/damage/health conversion19 controls; actual attack/client HP proof separate.

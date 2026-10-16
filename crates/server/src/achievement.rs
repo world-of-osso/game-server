@@ -47,6 +47,9 @@ pub struct PlayerAchievementState {
     /// Presentation-only aggregate; never serialized into character contributions.
     #[serde(skip)]
     pub account: Option<Box<PlayerAchievementState>>,
+    /// Disposable derived tree results; excluded from persistence and logical equality.
+    #[serde(skip)]
+    pub(crate) evaluation: catalog::EvaluationCache,
 }
 
 /// One-time migration of the six former level placeholders. Counter-bearing rows
