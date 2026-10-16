@@ -162,8 +162,10 @@ fn encounter_coverage_thermaplugg_normal_linked_walking_bomb_pair() {
     assert!(h.inbox(1).ends.is_empty());
     h.advance(29.9);
     assert_eq!(h.app.world().resource::<WalkingBombBirths>().0.len(), 2);
-    h.advance(0.1);
+    // TC UpdateTimer fires when timer < diff, not <=; the repeat needs one more50ms tick.
+    h.advance(0.15);
     let births = &h.app.world().resource::<WalkingBombBirths>().0;
+    eprintln!("THERMAPLUGG repeated pair by60.05s: {births:?}");
     assert_eq!(
         births.len(),
         4,
