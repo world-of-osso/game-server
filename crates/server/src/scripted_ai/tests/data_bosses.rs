@@ -214,6 +214,7 @@ fn encounter_fixture(
         SLAGMAW => Some(prepare_encounter_database("slagmaw")),
         13282 => Some(prepare_encounter_database("noxxion")),
         12225 => Some(prepare_encounter_database("celebras")),
+        12201 => Some(prepare_encounter_database("theradras")),
         _ => None,
     };
     let path = prepared
