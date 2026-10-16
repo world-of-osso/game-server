@@ -16,3 +16,7 @@ Mainline `GuildNews.lua` / `GuildUtil.lua` defines rendering, filters and CanEdi
 
 - [Guild lifecycle](guild-lifecycle.md) — separate real invite/join/rank/remove/quit ledger.
 - [Banks](banks.md) — separate item/money history and authority.
+
+## Private native/UDP milestone
+
+At engine3304bcace/server205f1d2b/protocol9bb88b6, real Lillehoff purchases/sales and both-skin native physical overflow pass. Original private history is retained through an explicit fixture continuation after its monitor budget expired; the continuation queries durable IDs and performs only68 missing acquisitions to target261. Actual retained rows are12–261 (250), with one native sticky. Initiate receives Permissions for sticky; actual quit then receives empty NotInGuild news. Native query/filter/context/sticky ACKs also pass. No news or catalog rows are seeded. Evidence: `/home/osso/.worktrees/logs/guild-news-2026-10-15-run1/`; fresh-process readback and final consumer/integration gates remain pending.
