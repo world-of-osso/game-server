@@ -47,6 +47,6 @@ fn explode_expired_frost_bomb(
 
 fn cast_frost_bomb_child(world: &mut World, caster: Entity, target: Entity, spell: u32) {
     if let Err(error) = crate::spell_cast::creature_cast(world, caster, spell, Some(target), true) {
-        warn!("Azure Frost Bomb child{spell} from{caster} to{target} failed: {error:?}");
+        warn!("Azure Frost Bomb child {spell} from {caster} to {target} failed: {error:?}");
     }
 }
