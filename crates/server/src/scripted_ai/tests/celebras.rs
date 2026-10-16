@@ -183,6 +183,11 @@ fn encounter_coverage_celebras_source_spells_summons_and_isolated_credit() {
             < 0.01,
         "redeemed at death position"
     );
+    assert!(
+        (h.app.world().get::<Rotation>(redeemed).unwrap().y - std::f32::consts::FRAC_PI_2).abs()
+            < 0.001,
+        "source redeemed WoW orientation0"
+    );
     let template = &h.app.world().resource::<WorldData>().templates[&13716];
     assert_eq!(
         template.health_modifier, 35.0,
