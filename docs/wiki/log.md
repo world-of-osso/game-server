@@ -1,4 +1,9 @@
 ## 2026-10-15 — Read-only follower group reward receipts
+## 2026-10-16 — Shrine server per-target conversion
+
+[Source stat table](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16): real learned-use actor has client viewer20 but server level30/armor155 RED. Retain raw difficulty DamageModifier and build the existing per-level ExpectedStat table for final summon tuning; nineteen focused controls pass concrete level/armor/dealt/loss outputs. Final exact seven master regressions plus whole-Toy143/143, server all-target check, fmt and maintained build pass. Actual combat hits, client HP and guardian stats remain separate; previous wire evidence is not relabeled.
+
+## 2026-10-15 — Shrine viewer-level projection
 
 [Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
 ## 2026-10-16 — Additional optional resource cost
@@ -26,6 +31,8 @@
 
 [Source callbacks](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) port Hello/Select and events1–3 without synthesizing flags/menu options/5232. Genuine missing-Hello RED→controlled2/2 GREEN56.54s, including real flag0 InteractNpc rejection and physical first-path movement. Missing NpcInteractionPlugin/faction initialization caused earlier empty/panicking ingress fixtures; no transport behavior changed to fix those fixtures. Integrated3a035ee1/protocol1707389: controlled2/2(60.82s), ordinary NPC controls9/9, first-camp regression1/1(25.18s), scoped check without warnings and fmt/diff pass. Natural positive activation and full escort/native clear remain open.
 ## 2026-10-16 — Touch of Death primary damage and native flags
+
+- 2026-10-16: [Slow native fixtures](investigations/slow-native-test-fixtures.md): three measured RED→GREEN profiles; master6403a988 integration passes14/14 unchanged gameplay/isolation/imported-copy controls410.83s and warning-freecheck11.37s. Arena residual>60s and full-suite timing remain separate.
 
 [Health damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16): native999-health/zero-damage RED→GREEN100%/35% maximum-health outcomes with actual armor, school modifiers and Can'tCrit. Shared source attribute consumers honor caster-percent/victim/armor exclusions; ordinary-modifier and adjacent controls62/62 pass. PvP/Stagger/mastery/follow-up talents and fresh bot acceptance remain open.
 

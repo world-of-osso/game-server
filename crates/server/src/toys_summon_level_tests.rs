@@ -43,7 +43,7 @@ fn toyfx55_wild_use_creature_level_keeps_region_selected_shrine_level() {
 }
 
 fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8)]) {
-    use crate::level_scaling::CreatureArmor;
+    use crate::level_scaling::{CreatureArmor, UnitScaling, damage_dealt, health_loss};
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Health, Npc, UnitLevel};
     let directory = tempfile::tempdir().unwrap();
@@ -53,6 +53,7 @@ fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8
             .unwrap();
     let mut observed = Vec::new();
     let mut viewer_levels = Vec::new();
+    let mut server_projections = Vec::new();
     for &(owner_level, expected) in cases {
         let (mut h, character) = setup(
             &directory
@@ -112,6 +113,29 @@ fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8
                 expected
             };
             viewer_levels.push((owner_level, viewer, projected, expected_view));
+            let viewer_level = UnitLevel(viewer);
+            let observer = UnitScaling::from_item((Some(&viewer_level), None, None));
+            let summon = UnitScaling::of(world, actor);
+            let actual = (
+                summon.level_against(&observer),
+                summon.armor_against(levels[0].2, &observer),
+                damage_dealt(&summon, &observer, 100.0),
+                health_loss(&observer, &summon, 100.0),
+            );
+            // Installed ExpectedStat1/20/30: ceil HP78/2404/4379,
+            // armor50/135/155 and DPS4.75353193/86.6685715/162.622925.
+            // Source ratios truncate converted100 damage after division/multiplication.
+            let expected_stats = if item == 245942 {
+                match viewer {
+                    1 => (1, 50.0, 2.0, 5614.0),
+                    20 => (20, 135.0, 53.0, 182.0),
+                    80 => (30, 155.0, 100.0, 100.0),
+                    _ => unreachable!(),
+                }
+            } else {
+                (expected, levels[0].2, 100.0, 100.0)
+            };
+            server_projections.push((owner_level, viewer, actual, expected_stats));
         }
         // Installed ExpectedStat IDs20/30 (ExpansionID -2), class mod4=1,
         // no ContentTuning73 mods; Podium HealthModifier20, Shrine1.
@@ -139,5 +163,11 @@ fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8
             .iter()
             .all(|(_, _, actual, expected)| actual == expected),
         "item{item}: (owner, viewer, projected level, source expected) {viewer_levels:?}"
+    );
+    assert!(
+        server_projections
+            .iter()
+            .all(|(_, _, actual, expected)| actual == expected),
+        "item{item}: (owner, viewer, actual(level,armor,dealt,loss), source expected) {server_projections:?}"
     );
 }

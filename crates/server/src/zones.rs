@@ -873,6 +873,7 @@ mod tests {
             tuning: None,
             armor: 0.0,
             armor_modifier: 1.0,
+            damage_modifier: 1.0,
             health_scaling_expansion: 0,
             mana_modifier: 1.0,
             regenerates_power: false,

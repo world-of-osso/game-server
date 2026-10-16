@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Shrine server per-target stat conversion (2026-10-16)
+
+A replicated viewer range alone is insufficient for server `UnitScaling`, which pairs it with per-level `ScaledStats`. Wild initialization now builds that existing table from final summon tuning and source difficulty modifiers; raw DamageModifier is retained for regionally tuned templates too. Actual learned Shrine RED observes server level30/armor155 against viewer20; nineteen focused controls now pass level20/armor135 and source damage/health conversion outputs while Podium stays unscaled. [Exact output matrix and proof scope](../../toy-effects14-coverage.md#shrine-server-per-target-stat-conversion-2026-10-16) distinguish this actor-state CPU proof from actual combat hits, client HP display, guardian stats and native rendering.
+
 ## Shrine viewer-level projection (2026-10-15)
 
 UseCreatureLevel retains the initial source regional `LevelScaling`; wild initialization carries its range and once-rolled delta instead of dropping them after native selection. Unflagged player-owned Podium inherits zero tuning and stays native for every viewer. Actual learned Shrine use reproduces viewer20→30, then passes viewer1/20/80→1/20/30 while preserving native30 and initialized stats. [Claim-specific evidence and open server-combat/HP-projection boundaries](../../toy-effects14-coverage.md#shrine-viewer-level-projection-2026-10-15) own verification scope; no complete combat or new native-rendering certificate.
