@@ -28,6 +28,13 @@ fn encounter_coverage_theradras_source_clocks_effects_spirit_and_credit() {
     let mut fear_seen = false;
     let mut dust_seen = false;
     for tick in 1..=1700 {
+        // Controlled kiting fixture: real melee pursuit otherwise closes to2yd
+        // and correctly rejects every Boulder (DB2 min5yd). Not movement proof.
+        let boss_position = *h.app.world().get::<Position>(boss).unwrap();
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: boss_position.x + 8.0,
+            ..boss_position
+        });
         blocked.push((
             (tick - 1) as f32 * 0.05,
             h.app.world().get::<CastState>(boss).is_some(),
@@ -43,17 +50,6 @@ fn encounter_coverage_theradras_source_clocks_effects_spirit_and_credit() {
         dust_seen |= h.has_aura(boss, 21909);
     }
     eprintln!("THERADRAS source casts={casts:?}, dust={dust_seen}, fear={fear_seen}");
-    if !casts.iter().any(|(spell, _, _)| *spell == 21832) {
-        eprintln!(
-            "Boulder admission boundary: boss={:?}, player={:?}, threat={:?}",
-            h.app.world().get::<Position>(boss),
-            h.app.world().get::<Position>(player),
-            h.app.world().get::<shared::components::ThreatTable>(boss)
-        );
-        let admission =
-            crate::spell_cast::creature_cast(h.app.world_mut(), boss, 21832, Some(player), false);
-        eprintln!("Boulder admission result: {admission:?}");
-    }
     for (spell, first, repeat, cast_time, target) in [
         (21909, (20.0, 25.0), (20.0, 25.0), 0.0, boss),
         (21832, (20.0, 30.0), (15.0, 25.0), 2.0, player),
