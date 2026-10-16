@@ -8,6 +8,8 @@ use shared::components::{Health, Mounted, MovementControl, Position, Rotation, V
 use shared::protocol::{BoardVehicle, ExitVehicle};
 use std::collections::HashMap;
 
+pub(crate) mod isle;
+
 const CAN_ENTER_OR_EXIT: u32 = 0x02000000;
 const CAN_CONTROL: u32 = 0x00000800;
 const BOARD_DISTANCE: f32 = 5.0;
@@ -22,6 +24,7 @@ pub(crate) struct VehicleStore {
     pub vehicles: HashMap<u32, [u32; 8]>,
     pub seats: HashMap<u32, Seat>,
     creature_vehicles: HashMap<u32, u32>,
+    npc_vehicles: HashMap<u32, u32>,
     /// Seat position in the unit frame, including model alignment, scale and DB2 offset.
     seat_offsets: HashMap<(u32, u32), Vec3>,
 }
@@ -163,6 +166,7 @@ pub(crate) fn exit(world: &mut World, passenger: Entity) {
     world
         .entity_mut(passenger)
         .remove::<(VehiclePassenger, PassengerOrigin)>();
+    isle::release_seat(world, passenger, seat);
     set_control(world, passenger, false);
     mark_dirty(world, driver);
 }
@@ -174,6 +178,11 @@ fn valid_seat(
     origin: &PassengerOrigin,
 ) -> bool {
     let driver = Entity::from_bits(seat.driver);
+    if world.get::<isle::NpcVehicle>(driver).is_some() {
+        return alive(world, passenger)
+            && world.get::<InMap>(passenger) == Some(&origin.map)
+            && isle::valid_seat(world, passenger, seat, origin);
+    }
     let mounted = world.get::<Mounted>(driver);
     alive(world, passenger)
         && alive(world, driver)
@@ -182,6 +191,14 @@ fn valid_seat(
         && mounted.is_some_and(|mount| {
             mount.mount_display_id == origin.display
                 && mount.seats[usize::from(seat.seat_index)] == Some(passenger.to_bits())
+        })
+}
+
+fn is_current_passenger(world: &World, passenger: Entity, driver: Entity, index: usize) -> bool {
+    world
+        .get::<VehiclePassenger>(passenger)
+        .is_some_and(|seat| {
+            seat.driver == driver.to_bits() && usize::from(seat.seat_index) == index
         })
 }
 
@@ -201,6 +218,7 @@ pub(crate) fn reconcile_passengers(world: &mut World) {
             exit(world, passenger)
         }
     }
+    isle::clear_departed_passengers(world);
     // Despawned passengers cannot call Exit; free their driver's occupied slot.
     let drivers: Vec<_> = world
         .query::<(Entity, &Mounted)>()
@@ -211,11 +229,8 @@ pub(crate) fn reconcile_passengers(world: &mut World) {
     for (driver, seats) in drivers {
         for (index, occupant) in seats.into_iter().enumerate() {
             if let Some(occupant) = occupant {
-                let seated = world
-                    .get::<VehiclePassenger>(Entity::from_bits(occupant))
-                    .is_some_and(|seat| {
-                        seat.driver == driver.to_bits() && usize::from(seat.seat_index) == index
-                    });
+                let seated =
+                    is_current_passenger(world, Entity::from_bits(occupant), driver, index);
                 if !seated {
                     world.get_mut::<Mounted>(driver).unwrap().seats[index] = None;
                     mark_dirty(world, driver);
@@ -231,9 +246,11 @@ fn update_passenger_position(world: &mut World, passenger: Entity, seat: Vehicle
     let rotation = *world
         .get::<Rotation>(driver)
         .expect("Driver must have rotation");
-    let mount = world.get::<Mounted>(driver).unwrap();
+    let origin = world
+        .get::<PassengerOrigin>(passenger)
+        .expect("Seated rider has a vehicle origin");
     let store = world.resource::<VehicleStore>();
-    let seat_offset = store.seat_offsets[&(mount.mount_display_id, seat.seat_id)];
+    let seat_offset = store.seat_offsets[&(origin.display, seat.seat_id)];
     let point = vec(&position) + Quat::from_rotation_y(rotation.y) * seat_offset;
     world.entity_mut(passenger).insert((
         Position {
@@ -340,6 +357,7 @@ fn load_store(root: &std::path::Path, conn: &rusqlite::Connection) -> Result<Veh
         store.creature_vehicles.insert(creature, vehicle);
     }
     load_mount_poses(root, conn, &mut store)?;
+    isle::load_catalog(root, conn, &mut store)?;
     Ok(store)
 }
 
@@ -474,4 +492,4 @@ fn read_mount_attachment(data: &[u8], seat_enum: i32) -> Result<Vec3, String> {
 
 #[cfg(test)]
 #[path = "vehicle_tests.rs"]
-mod tests;
+pub(crate) mod tests;

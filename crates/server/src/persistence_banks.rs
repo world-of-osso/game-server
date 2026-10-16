@@ -204,7 +204,11 @@ pub fn load_account_bank(db: &Database, account_id: u64) -> BankData {
 }
 
 pub fn load_guild(db: &Database, guild_id: u32) -> GuildData {
-    read(db, GUILDS, guild_id)
+    let mut guild: GuildData = read(db, GUILDS, guild_id);
+    // TC a352b1fa Guild::RankInfo::LoadFromDB: never lose Guild Master rights.
+    // Monetary rights have separate authoritative booleans; do not change those.
+    guild.ranks[0].rights |= default_social_rights(true);
+    guild
 }
 
 pub fn load_guild_bank_usage(db: &Database, character_id: u64) -> GuildBankUsage {
@@ -354,7 +358,13 @@ impl From<GuildDataV1> for GuildData {
 
 /// Persist the ordered rank list and all affected member positions atomically.
 /// Callers materialize implicit lowest-rank members before adding/removing ranks.
-pub fn save_guild_ranks(db: &Database, guild_id: u32, guild: &GuildData, members: &[(u64, u8)]) {
+pub fn save_guild_ranks(
+    db: &Database,
+    guild_id: u32,
+    guild: &GuildData,
+    members: &[(u64, u8)],
+    event: Option<shared::protocol::GuildEventKind>,
+) {
     let txn = db.begin_write().expect("Failed to begin guild ranks write");
     write(&txn, GUILDS, guild_id, guild);
     {
@@ -363,7 +373,11 @@ pub fn save_guild_ranks(db: &Database, guild_id: u32, guild: &GuildData, members
             table.insert(character, rank).expect("write member rank");
         }
     }
-    txn.commit().expect("Failed to commit guild ranks");
+    if let Some(event) = event {
+        crate::guild_event_log::record_in(&txn, guild_id, event);
+    }
+    txn.commit()
+        .expect("Failed to commit guild ranks and lifecycle event");
 }
 
 impl From<GuildDataV0> for GuildData {

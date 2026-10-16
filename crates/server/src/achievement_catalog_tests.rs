@@ -1,6 +1,90 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_absent_aura_requires_authored_metadata() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "CREATE TABLE spell (ID INTEGER PRIMARY KEY); INSERT INTO spell VALUES (196665);",
+    )
+    .unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(-8, 115013)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(-8, 196665), (-8, 196666)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "one missing companion disables the complete predicate"
+    );
+    let facts = load_criteria_facts(&conn, &[(-8, 196665)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (known, present, expected) in [
+        (false, false, false),
+        (false, true, false),
+        (true, false, true),
+        (true, true, false),
+    ] {
+        let player = ReferencePlayer {
+            auras_known: known,
+            auras: if present {
+                [196665].into_iter().collect()
+            } else {
+                BTreeSet::new()
+            },
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(
+                &player,
+                CriteriaEvent::KillCreature(96028),
+                &BTreeMap::new()
+            ),
+            expected
+        );
+    }
+}
+
+#[test]
+fn achievements_criteria_unknown_spell_needs_complete_absence_and_authored_metadata() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "CREATE TABLE spell (ID INTEGER PRIMARY KEY); INSERT INTO spell VALUES (264616);",
+    )
+    .unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(-104, 264211)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    let facts = load_criteria_facts(&conn, &[(-104, 264616)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (complete, known, expected) in [
+        (false, false, false),
+        (false, true, false),
+        (true, false, true),
+        (true, true, false),
+    ] {
+        let player = ReferencePlayer {
+            known_spells: if known {
+                [264616].into_iter().collect()
+            } else {
+                BTreeSet::new()
+            },
+            spell_knowledge_complete: complete,
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(&player, CriteriaEvent::Login, &BTreeMap::new()),
+            expected
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_unearned_snapshot_rejects_missing_earned_component() {
     let mut world = World::new();
     world.insert_resource(catalog());
@@ -1193,9 +1277,25 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5495 + eleven complete root area17/zone41 Some definitions.
-    // Structural union, not full achievements, terrain travel or acquisition proof.
-    assert_eq!(union.len(), 5506);
+    // Installed70391: 5511 + nested-All encounter definition11660.
+    // Structural union, not full boss content, recipe repair, travel or acquisition proof.
+    assert_eq!(union.len(), 5512);
+    assert!(
+        union.contains(&11660),
+        "complete nested encounter conjunction"
+    );
+    for achievement in [7257, 10458] {
+        assert!(
+            union.contains(&achievement),
+            "absent-aura kill {achievement}"
+        );
+    }
+    for achievement in [13166, 13167, 13169] {
+        assert!(
+            union.contains(&achievement),
+            "unknown-spell login {achievement}"
+        );
+    }
     for achievement in [
         1785, 3557, 6558, 6559, 6560, 9248, 9264, 9463, 9487, 9630, 9924,
     ] {

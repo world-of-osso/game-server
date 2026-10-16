@@ -87,19 +87,27 @@ pub(crate) struct CriteriaCredit {
     pub event: CriteriaEvent,
 }
 
+/// Native class/profession merge and account mount load must precede once-only Login74.
+#[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct InitializeSpellKnowledge;
+
 pub struct AchievementPlugin;
 
 impl Plugin for AchievementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::maps::ServerClock>();
         app.add_message::<CriteriaCredit>();
+        app.configure_sets(
+            Update,
+            InitializeSpellKnowledge.after(crate::auth::process_select_character),
+        );
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(PostUpdate, kills::publish_rewarded_creature_kills);
         app.add_systems(
             Update,
             (
-                send_initial_achievement_snapshot,
+                send_initial_achievement_snapshot.after(InitializeSpellKnowledge),
                 process_level_achievement_updates,
                 process_skill_achievement_updates,
                 process_known_spell_achievement_updates,
@@ -1055,6 +1063,22 @@ fn known_player_spell_ids(world: &World, player: Entity) -> BTreeSet<u32> {
         .collect()
 }
 
+fn spell_knowledge_complete(world: &World, player: Entity) -> bool {
+    let class_known = world
+        .get::<crate::class_progression::KnownSpells>(player)
+        .is_some();
+    let professions_known = world
+        .get::<crate::profession::PlayerProfessions>(player)
+        .is_some();
+    let mounts_known = world
+        .get::<crate::mount_journal::AccountMounts>(player)
+        .zip(world.get_resource::<crate::mount_journal::MountCatalog>())
+        .is_some_and(|(mounts, catalog)| {
+            mounts.0.keys().all(|id| catalog.entries.contains_key(id))
+        });
+    class_known && professions_known && mounts_known
+}
+
 /// TC BattlePetTeamLevel1935–1939 uses the equipped journal slots, not every owned pet.
 fn battle_pet_team_min_level(world: &World, player: Entity) -> Option<u8> {
     let journal = &world
@@ -1085,7 +1109,9 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .into_iter()
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
+        auras_known: world.get::<crate::auras::ActiveAuras>(player).is_some(),
         known_spells: known_player_spell_ids(world, player),
+        spell_knowledge_complete: spell_knowledge_complete(world, player),
         earned_achievements: earned_player_achievement_ids(world, player),
         account_achievements_known: world
             .get::<PlayerAchievementState>(player)
@@ -1545,8 +1571,17 @@ fn query_comparison_target(
 }
 
 #[cfg(test)]
+#[path = "achievement_absent_aura_tests.rs"]
+mod absent_aura_tests;
+#[cfg(test)]
 #[path = "achievement_creature_type_tests.rs"]
 mod creature_type_tests;
 #[cfg(test)]
+#[path = "achievement_nested_all_tests.rs"]
+mod nested_all_tests;
+#[cfg(test)]
 #[path = "achievement_tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "achievement_unknown_spell_tests.rs"]
+mod unknown_spell_tests;

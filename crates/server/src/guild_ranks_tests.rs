@@ -17,6 +17,285 @@ fn members(db: &redb::Database) -> (u64, u64, u64) {
 }
 
 #[test]
+fn guild_lifecycle_log_records_real_actions_only_and_survives_restart() {
+    use crate::guild_event_log::query;
+    use crate::persistence_character::{accept_pending_guild_invite, set_pending_guild_invite};
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("guild-events.redb");
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    let (master, _, member) = members(&db);
+    let (visitor, _) = create_character(&db, 2, "Visitor", 1, 1).unwrap();
+    let (other, _) = create_character(&db, 3, "Outsider", 1, 1).unwrap();
+    set_character_guild_by_id(&db, other, 9, "Other Guild").unwrap();
+    assert!(
+        query(&db, master).events.is_empty(),
+        "Never reconstruct old history"
+    );
+    assert_eq!(query(&db, visitor).error, Some(GuildRankError::NotInGuild));
+    set_pending_guild_invite(&db, visitor, 7, "Bank Testers", "Master");
+    accept_pending_guild_invite(&db, visitor).unwrap();
+    assert!(accept_pending_guild_invite(&db, visitor).is_err());
+    assert_eq!(
+        apply_rank_request(
+            &db,
+            7,
+            member,
+            GuildRankRequest::Promote {
+                character_name: "Master".into()
+            }
+        ),
+        Err(GuildRankError::Permissions)
+    );
+    for request in [
+        GuildRankRequest::Promote {
+            character_name: "Visitor".into(),
+        },
+        GuildRankRequest::Demote {
+            character_name: "Visitor".into(),
+        },
+        GuildRankRequest::RemoveMember {
+            character_name: "Visitor".into(),
+        },
+        GuildRankRequest::Rename {
+            rank: 3,
+            name: "Renamed Member".into(),
+        },
+        GuildRankRequest::Rename {
+            rank: 4,
+            name: "New Initiate".into(),
+        },
+    ] {
+        apply_rank_request(&db, 7, master, request).unwrap();
+    }
+    apply_rank_request(&db, 7, member, GuildRankRequest::Leave).unwrap();
+    let expected = vec![
+        GuildEventKind::Invite {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+        },
+        GuildEventKind::Join {
+            member: "Visitor".into(),
+        },
+        GuildEventKind::Promote {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+            rank: "Member".into(),
+        },
+        GuildEventKind::Demote {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+            rank: "Initiate".into(),
+        },
+        GuildEventKind::Remove {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+        },
+        GuildEventKind::Quit {
+            member: "Member".into(),
+        },
+    ];
+    let before = query(&db, master);
+    assert_eq!(before.error, None);
+    assert_eq!(
+        before
+            .events
+            .iter()
+            .map(|event| event.kind.clone())
+            .collect::<Vec<_>>(),
+        expected
+    );
+    assert!(
+        before
+            .events
+            .iter()
+            .all(|event| event.timestamp > 0 && event.timestamp <= before.server_time)
+    );
+    assert!(
+        query(&db, other).events.is_empty(),
+        "Cannot query another guild's history"
+    );
+    assert_eq!(query(&db, member).error, Some(GuildRankError::NotInGuild));
+    assert!(query(&db, member).events.is_empty());
+    assert!(crate::persistence::load_character_guild(&db, visitor).is_none());
+    assert!(crate::persistence::load_character_guild(&db, member).is_none());
+    drop(db);
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    assert_eq!(query(&db, master).events, before.events);
+    assert!(crate::persistence::load_character_guild(&db, visitor).is_none());
+}
+
+#[test]
+fn guild_member_notes_are_filtered_per_authenticated_snapshot_recipient() {
+    let db = temp_database();
+    let (master, _, member) = members(&db);
+    crate::persistence_character::save_guild_public_note(&db, member, "Alchemy");
+    crate::persistence_character::save_guild_member_note(
+        &db,
+        member,
+        &crate::persistence_types::GuildMemberNoteData {
+            officer_note: "Raid healer".into(),
+        },
+    );
+    let mut world = World::new();
+    let mut queries = bevy::ecs::system::SystemState::<OnlinePlayers>::new(&mut world);
+    let online = queries.get(&world).expect("read guild online query");
+    let guild = shared::components::GuildMembership {
+        guild_id: 7,
+        guild_name: "Bank Testers".into(),
+    };
+    for (viewer, private) in [(master, "Raid healer"), (member, "")] {
+        let snapshot = visible_guild_snapshot(&db, &guild, &online, viewer);
+        let target = snapshot
+            .members
+            .iter()
+            .find(|m| m.character_name == "Member")
+            .unwrap();
+        assert_eq!(target.public_note, "Alchemy");
+        assert_eq!(target.officer_note, private);
+        assert_eq!(target.is_self, viewer == member);
+        assert_eq!(snapshot.members.iter().filter(|m| m.is_self).count(), 1);
+    }
+}
+
+#[test]
+fn guild_member_notes_preserve_legacy_officer_data_and_public_notes_across_restart() {
+    use crate::persistence_character::{
+        load_guild_member_note, load_guild_public_note, save_guild_member_note,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("notes.redb");
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    let (master, officer, member) = members(&db);
+    save_guild_member_note(
+        &db,
+        member,
+        &crate::persistence_types::GuildMemberNoteData {
+            officer_note: "Raid healer".into(),
+        },
+    );
+    let write = |actor, name: &str, note: &str, officer| {
+        apply_rank_request(
+            &db,
+            7,
+            actor,
+            GuildRankRequest::SetMemberNote {
+                character_name: name.into(),
+                note: note.into(),
+                officer,
+            },
+        )
+    };
+    for rights in [GUILD_RIGHT_CHAT_LISTEN, GUILD_RIGHT_EDIT_PUBLIC_NOTE] {
+        apply_rank_request(
+            &db,
+            7,
+            master,
+            GuildRankRequest::SetPermissions {
+                rank: 1,
+                rights,
+                gold_per_day: 0,
+            },
+        )
+        .unwrap();
+        let result = write(officer, "Member", "Officer assigned alchemist", false);
+        if rights == GUILD_RIGHT_EDIT_PUBLIC_NOTE {
+            result.unwrap();
+            assert_eq!(
+                load_guild_public_note(&db, member),
+                "Officer assigned alchemist"
+            );
+        } else {
+            assert_eq!(result, Err(GuildRankError::Permissions));
+        }
+        assert_eq!(
+            write(officer, "Member", "private without right", true),
+            Err(GuildRankError::Permissions)
+        );
+    }
+    // Mainline permits self-public editing without the general public edit right.
+    write(member, "Member", "Alchemy 100", false).unwrap();
+    assert_eq!(
+        write(member, "Officer", "forbidden", false),
+        Err(GuildRankError::Permissions)
+    );
+    assert_eq!(
+        write(member, "Member", "forbidden", true),
+        Err(GuildRankError::Permissions)
+    );
+    assert_eq!(
+        write(master, "Member", &"界".repeat(32), false),
+        Err(GuildRankError::NoteTooLong)
+    );
+    assert_eq!(
+        write(master, "Member", "line\nbreak", false),
+        Err(GuildRankError::NoteTooLong)
+    );
+    write(master, "Member", &"界".repeat(31), false).unwrap();
+    assert_eq!(
+        load_guild_member_note(&db, member).officer_note,
+        "Raid healer"
+    );
+    write(master, "Officer", "Bank organizer", true).unwrap();
+    let outsider = create_character(&db, 2, "Outsider", 1, 1).unwrap().0;
+    set_character_guild_by_id(&db, outsider, 8, "Other Guild").unwrap();
+    assert_eq!(
+        write(master, "Outsider", "forbidden", false),
+        Err(GuildRankError::MemberNotFound)
+    );
+    assert_eq!(
+        write(outsider, "Member", "forbidden", false),
+        Err(GuildRankError::NotInGuild)
+    );
+    drop(db);
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    assert_eq!(load_guild_public_note(&db, member), "界".repeat(31));
+    assert_eq!(
+        load_guild_member_note(&db, member).officer_note,
+        "Raid healer"
+    );
+    assert_eq!(
+        load_guild_member_note(&db, officer).officer_note,
+        "Bank organizer"
+    );
+    let guild = shared::components::GuildMembership {
+        guild_id: 7,
+        guild_name: "Bank Testers".into(),
+    };
+    assert!(
+        update_officer_note(
+            &db,
+            &guild,
+            SetGuildOfficerNote {
+                character_name: "Officer".into(),
+                note: "x".repeat(32),
+            }
+        )
+        .is_err()
+    );
+    update_officer_note(
+        &db,
+        &guild,
+        SetGuildOfficerNote {
+            character_name: "Officer".into(),
+            note: "  Raid healer  ".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        load_guild_member_note(&db, officer).officer_note,
+        "  Raid healer  "
+    );
+    apply_rank_request(&db, 7, member, GuildRankRequest::Leave).unwrap();
+    set_character_guild_by_id(&db, member, 7, "Bank Testers").unwrap();
+    assert_eq!(load_guild_public_note(&db, member), "");
+    assert_eq!(load_guild_member_note(&db, member).officer_note, "");
+}
+
+#[test]
 fn guild_lifecycle_leave_and_remove_enforce_hierarchy_and_survive_restart() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("lifecycle.redb");
