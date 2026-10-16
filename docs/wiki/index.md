@@ -494,3 +494,5 @@ Debug logs and root cause analyses.
 - [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port) — schedules, two guardian waves/death cleanup, manual redeemed actor/isolated credit GREEN; copy-only redeemed base replaces legacy stats.
 
 - [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
+
+- [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — authenticated schedules/fixed death spirit and actual TDB Normal projection; runtime gate pending.
