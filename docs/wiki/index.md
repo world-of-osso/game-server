@@ -1,3 +1,11 @@
+- [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
+# Wiki Index
+
+- [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
+
+- [Crowd Pummeler source clock](systems/boss-scripts.md#gnomeregan-crowd-pummeler-source-clock--2026-10-16) — authenticated6229→381/bit4 copy-only binding and real three-spell first/repeat/damage/death-credit proof; knockback/interrupt and native acceptance remain separate.
+
+- [Electrocutioner primary and source mana gap](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16) — authenticated6235/380/bit3 binding and controlled death credit; ordinary SAI Shock fails authored mana admission, named mechanics acceptance remains open.
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
@@ -85,6 +93,7 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Wailing controlled gossip/start](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) — source callbacks/events1–3, real flag0 ingress rejection and physical first path2/2; natural positive activation remains data-blocked.
 - [Wailing targeted aggro Say](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) — attacker-name substitution, unchanged25yd broadcast, controlled native-server proof; natural activation/native clear open.
 
 - [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
