@@ -86,9 +86,9 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
     let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
     actor_data(&mut h);
     let caster = h.caster;
-    // Child228562 selects32: the native primary destination is3yd front-left,
-    // not the caster. Center the dummy there so secondary5yd scatter stays in
-    // melee range without teleporting actors or depending on chase support.
+    // Native70391 child228562 selects65: 3yd behind the explicit target.
+    // Summon behind the original NPC, then attack the dummy at that destination.
+    // Casting at this dummy instead would move the summon center another3yd.
     let child = world_db().unwrap().store.get(228562).unwrap();
     let destination =
         super::targets::effect_dest(h.app.world(), caster, Some(h.npc), &child.effects[0], None)
@@ -111,15 +111,20 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
             .get::<crate::creature_scripts::TrainingDummy>(dummy)
             .is_some()
     );
+    h.cast_and_deliver(51533, Some(h.npc));
     h.select(Some(dummy));
     h.attack(dummy);
     h.advance(4);
-    h.cast_and_deliver(51533, Some(dummy));
-    h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let wolves = actors(&mut h, 29264);
     assert_eq!(wolves.len(), 2);
-    h.advance(60);
+    // Exercise the same native swing clock with shorter simulation frames.
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(10),
+        ));
+    h.inbox.log.clear();
+    advance_wolf_swing_periods(&mut h, &wolves);
     for wolf in &wolves {
         assert_eq!(
             super::effects::power_stats(h.app.world(), *wolf, false),
@@ -138,9 +143,27 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         .iter()
         .map(|wolf| largest_wolf_hit(&h, *wolf, dummy))
         .collect();
+    let swing_diagnostics: Vec<_> = wolves
+        .iter()
+        .map(|wolf| {
+            let position = h.app.world().get::<shared::components::Position>(*wolf);
+            let attack = h.app.world().get::<crate::combat::AutoAttack>(*wolf);
+            let events: Vec<_> = h
+                .inbox
+                .log
+                .iter()
+                .filter(|event| {
+                    event.source == Some(wolf.to_bits()) && event.target == Some(dummy.to_bits())
+                })
+                .collect();
+            format!("{wolf:?}: position={position:?}, attack={attack:?}, events={events:?}")
+        })
+        .collect();
     assert!(
         before.iter().all(|damage| *damage > 0),
-        "initial wolf hits {before:?}; primary destination {destination:?}"
+        "initial wolf hits {before:?}; primary destination {destination:?}; dummy {:?}; fixed elapsed {:?}; wolves {swing_diagnostics:?}",
+        h.app.world().get::<shared::components::Position>(dummy),
+        h.app.world().resource::<Time<Fixed>>().elapsed()
     );
     h.inbox.log.clear();
     // Change only the real owner's melee AP, never actor stats or RNG. The
@@ -150,7 +173,7 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         .get_mut::<crate::stats::CharacterStats>(caster)
         .unwrap()
         .attack_power *= 100.0;
-    h.advance(80);
+    advance_wolf_swing_periods(&mut h, &wolves);
     assert_eq!(
         super::effects::power_stats(h.app.world(), dummy, false),
         (0.0, 0.0)
@@ -166,6 +189,27 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
             "wolf {wolf:?}: owner AP100→10000, hit {before}→{after}, power {:?}",
             super::effects::power_stats(h.app.world(), wolf, false)
         );
+    }
+}
+
+/// Four native 1500ms swing periods per AP phase fit within the 15s summon.
+/// Wait on the Fixed clock consumed by auto-attacks, regardless of frame size.
+fn advance_wolf_swing_periods(h: &mut Harness, wolves: &[Entity]) {
+    let swing_period = wolves
+        .iter()
+        .map(|wolf| {
+            let wolf = h
+                .app
+                .world()
+                .get::<super::guardian::SpiritWolf>(*wolf)
+                .unwrap();
+            std::time::Duration::from_secs_f32(wolf.weapon.speed)
+        })
+        .max()
+        .unwrap();
+    let deadline = h.app.world().resource::<Time<Fixed>>().elapsed() + swing_period * 4;
+    while h.app.world().resource::<Time<Fixed>>().elapsed() < deadline {
+        h.advance(1);
     }
 }
 
