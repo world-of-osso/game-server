@@ -19,19 +19,25 @@ pub(crate) struct Seat {
     pub flags: u32,
     pub offset: Vec3,
 }
+#[derive(Clone, Copy)]
+pub(crate) struct VehicleMovement {
+    pub flags: u32,
+    pub turn_speed: f32,
+}
 #[derive(Resource, Default)]
 pub(crate) struct VehicleStore {
     pub vehicles: HashMap<u32, [u32; 8]>,
     pub seats: HashMap<u32, Seat>,
+    pub movement: HashMap<u32, VehicleMovement>,
     creature_vehicles: HashMap<u32, u32>,
-    npc_vehicles: HashMap<u32, u32>,
+    pub(crate) npc_vehicles: HashMap<u32, u32>,
     /// Seat position in the unit frame, including model alignment, scale and DB2 offset.
     seat_offsets: HashMap<(u32, u32), Vec3>,
 }
 #[derive(Component)]
-struct PassengerOrigin {
-    map: InMap,
-    display: u32,
+pub(crate) struct PassengerOrigin {
+    pub map: InMap,
+    pub display: u32,
 }
 
 pub(crate) struct VehiclePlugin;
@@ -311,7 +317,7 @@ fn load_vehicle_store(mut commands: Commands) {
 fn load_vehicle_catalog(conn: &rusqlite::Connection) -> Result<VehicleStore, String> {
     let mut store = VehicleStore::default();
     let mut query = conn
-        .prepare("SELECT ID,SeatID_0,SeatID_1,SeatID_2,SeatID_3,SeatID_4,SeatID_5,SeatID_6,SeatID_7 FROM vehicle")
+        .prepare("SELECT ID,SeatID_0,SeatID_1,SeatID_2,SeatID_3,SeatID_4,SeatID_5,SeatID_6,SeatID_7,Flags,TurnSpeed FROM vehicle")
         .map_err(|error| format!("world.db vehicle: {error}"))?;
     let rows = query
         .query_map([], |row| {
@@ -319,12 +325,24 @@ fn load_vehicle_catalog(conn: &rusqlite::Connection) -> Result<VehicleStore, Str
             for (index, seat) in seats.iter_mut().enumerate() {
                 *seat = row.get(index + 1)?;
             }
-            Ok((row.get(0)?, seats))
+            let movement = VehicleMovement {
+                flags: row.get::<_, i64>(9)? as u32,
+                turn_speed: row.get(10)?,
+            };
+            Ok((row.get::<_, u32>(0)?, seats, movement))
         })
         .map_err(|error| error.to_string())?;
-    store.vehicles = rows
-        .collect::<Result<_, _>>()
-        .map_err(|error| error.to_string())?;
+    for row in rows {
+        let (id, seats, movement) = row.map_err(|error| error.to_string())?;
+        if !movement.turn_speed.is_finite() || movement.turn_speed < 0.0 {
+            return Err(format!(
+                "Vehicle {id}: invalid TurnSpeed {}",
+                movement.turn_speed
+            ));
+        }
+        store.vehicles.insert(id, seats);
+        store.movement.insert(id, movement);
+    }
     store.seats = load_seats(conn)?;
     Ok(store)
 }

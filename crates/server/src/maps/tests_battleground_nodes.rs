@@ -642,6 +642,10 @@ fn install_isle_input_sender(h: &mut Harness, actor: &Traveler) {
 }
 
 fn send_isle_mover_input(h: &mut Harness, actor: &Traveler, position: Position) {
+    send_isle_facing_input(h, actor, position, std::f32::consts::FRAC_PI_2);
+}
+
+fn send_isle_facing_input(h: &mut Harness, actor: &Traveler, position: Position, yaw: f32) {
     let epoch = h
         .app
         .world()
@@ -654,8 +658,8 @@ fn send_isle_mover_input(h: &mut Harness, actor: &Traveler, position: Position) 
         .unwrap()
         .send::<InputChannel>(PlayerInput {
             transport: None,
-            direction: [1.0, 0.0, 0.0],
-            facing_yaw: std::f32::consts::FRAC_PI_2,
+            direction: [yaw.sin(), 0.0, yaw.cos()],
+            facing_yaw: yaw,
             jumping: false,
             running: true,
             swimming: false,
@@ -712,17 +716,27 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
     let initial_facing =
         Quat::from_rotation_y(h.app.world().get::<Rotation>(demolisher).unwrap().y);
     let local_seat = initial_facing.inverse() * relative;
-    send_isle_mover_input(
+    let vehicle_yaw = h.app.world().get::<Rotation>(demolisher).unwrap().y;
+    // A no-strafe vehicle moves along its authored initial facing. The report does
+    // not demand the instantaneous eastward turn an ordinary player can make.
+    send_isle_facing_input(
         h,
         actor,
         Position {
-            x: vehicle_start.x + 0.25,
+            x: vehicle_start.x + vehicle_yaw.sin() * 0.25,
+            z: vehicle_start.z + vehicle_yaw.cos() * 0.25,
             ..vehicle_start
         },
+        vehicle_yaw,
     );
     let vehicle_after = *h.app.world().get::<Position>(demolisher).unwrap();
     assert!(
-        vehicle_after.x > vehicle_start.x + 0.15,
+        Vec2::new(
+            vehicle_after.x - vehicle_start.x,
+            vehicle_after.z - vehicle_start.z
+        )
+        .length()
+            > 0.15,
         "source seat5766 controlling input was processed, but the Demolisher did not move: {vehicle_start:?} -> {vehicle_after:?}"
     );
     let rider_after = *h.app.world().get::<Position>(actor.player).unwrap();

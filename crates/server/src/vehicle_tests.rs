@@ -138,7 +138,7 @@ fn vehicle_catalog_names_missing_world_tables() {
             .unwrap()
             .contains("world.db vehicle:")
     );
-    conn.execute_batch("CREATE TABLE vehicle (ID INTEGER, SeatID_0 INTEGER, SeatID_1 INTEGER, SeatID_2 INTEGER, SeatID_3 INTEGER, SeatID_4 INTEGER, SeatID_5 INTEGER, SeatID_6 INTEGER, SeatID_7 INTEGER)").unwrap();
+    conn.execute_batch("CREATE TABLE vehicle (ID INTEGER, SeatID_0 INTEGER, SeatID_1 INTEGER, SeatID_2 INTEGER, SeatID_3 INTEGER, SeatID_4 INTEGER, SeatID_5 INTEGER, SeatID_6 INTEGER, SeatID_7 INTEGER, Flags INTEGER, TurnSpeed REAL)").unwrap();
     assert!(
         super::load_vehicle_catalog(&conn)
             .err()

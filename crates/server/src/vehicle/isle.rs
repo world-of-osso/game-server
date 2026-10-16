@@ -14,8 +14,27 @@ struct Occupant {
 }
 
 #[derive(Component, Default)]
-pub(super) struct NpcVehicle {
+pub(crate) struct NpcVehicle {
     seats: [Option<Occupant>; 8],
+}
+
+impl NpcVehicle {
+    pub(crate) fn owns_control_aura(
+        &self,
+        passenger: Entity,
+        index: u8,
+        auras: &ActiveAuras,
+    ) -> bool {
+        let Some(Some(occupant)) = self.seats.get(usize::from(index)) else {
+            return false;
+        };
+        occupant.passenger == passenger
+            && auras.iter().any(|aura| {
+                aura.instance_id == occupant.aura_id
+                    && aura.caster == passenger
+                    && control_effect(aura).is_some()
+            })
+    }
 }
 
 /// One checked row from the shared source-model query.

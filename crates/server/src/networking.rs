@@ -544,6 +544,7 @@ pub(crate) struct PlayerInputParams<'w, 's> {
         ),
     >,
     players: Query<'w, 's, PlayerMovement, With<Player>>,
+    drivers: DriverInputs<'w, 's>,
     /// A player in a map transfer (no `InMap`) does not move.
     on_map: Query<'w, 's, (), (With<Player>, With<InMap>)>,
     death_states: Query<'w, 's, &'static crate::death::PlayerDeathState>,
@@ -610,8 +611,13 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
         let Some(latest) = inputs.last().cloned() else {
             continue;
         };
-        // The server drives a controlled player (taxi flight); its input is dropped.
-        let controlled = control.controlled;
+        // A controlled rider may name a validated NPC mover. Taxi and non-driving
+        // passengers remain held; their reports never move their seated body.
+        let mover = control
+            .controlled
+            .then(|| params.drivers.authorized_mover(link.0))
+            .flatten();
+        let controlled = control.controlled && mover.is_none();
         // A corpse (dead, not yet released) does not move.
         let corpse = params
             .death_states
@@ -646,6 +652,26 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                     world.entity_mut(player).remove::<Mounted>();
                 }
             });
+        }
+        if let Some(mover) = mover {
+            let changes = params.drivers.apply_inputs(
+                &mover,
+                link.0,
+                &inputs,
+                &mut params.clocks,
+                params.ground.as_deref_mut(),
+            );
+            params.clocks.track(link.0, latest, changes.behind);
+            params.commands.entity(link.0).insert(Moving(moving));
+            if changes.position_changed {
+                mark_interest_position_changed(params.dirty_queue.as_deref(), mover.entity);
+            }
+            if changes.replicated_state_changed
+                && let Some(queue) = params.replication_dirty.as_deref()
+            {
+                queue.mark(mover.entity);
+            }
+            continue;
         }
         let map = params.maps.get(link.0).copied().ok();
         let mut changes = MovementChanges::default();

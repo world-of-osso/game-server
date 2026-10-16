@@ -9,6 +9,10 @@ use crate::auras::AuraStatMods;
 use crate::ground::{GroundMap, GroundProbe};
 use crate::maps::InMap;
 
+#[path = "networking_vehicle.rs"]
+mod vehicle;
+pub(crate) use vehicle::DriverInputs;
+
 pub(super) const DEFAULT_RUN_SPEED: f32 = 7.0;
 pub(super) const DEFAULT_WALK_SPEED: f32 = 2.5;
 pub(super) const DEFAULT_SWIM_SPEED: f32 = shared::movement::SWIM_SPEED;

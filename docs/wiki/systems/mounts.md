@@ -156,3 +156,7 @@ Skyriding's 85% speed outside the Dragon Isles (Warcraft Wiki), `AreaTable.Mount
 ## See also
 
 - [[auras]], [[networking]], [[swimming-and-breath]], [[professions]]
+
+### NPC driver movement (implementation, proof pending)
+
+Normal PlayerInput can target the NPC only while its living rider owns the source controlling seat and exact live control aura in the same map copy. Rider epochs and the existing movement clock remain authoritative; the seated body is never moved as a player. Vehicle.Flags restrict strafe/jump/fixed-position movement, Vehicle.TurnSpeed bounds turning, and SpawnPoint template multipliers select NPC walk/run speed. Source: TC a352b1fa Vehicle.cpp:640–650,895–899 and VehicleDefines.h:68–76. The real-channel driver RED is retained; GREEN, client input, firing and native pixels remain pending.
