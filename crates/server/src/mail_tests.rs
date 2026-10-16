@@ -62,10 +62,15 @@ fn toyfx66_katy_source_mailbox_npc_opens_mail_and_sends_without_gossip_substitut
                 && opened.kind == InteractionKind::Role(NpcRole::Mailbox)),
         "authentic mailbox flag opens mail, not an invented gossip option"
     );
+    let contents = h.take::<MailboxContents>();
     assert!(
-        h.take::<MailboxContents>()
+        contents
             .iter()
-            .any(|mailbox| mailbox.object == katy.to_bits() && mailbox.mails.is_empty())
+            .any(|mailbox| mailbox.object == katy.to_bits() && mailbox.mails.is_empty()),
+        "contents={contents:?}, active={:?}",
+        h.app
+            .world()
+            .get::<crate::npc_interaction::ActiveInteraction>(h.connection)
     );
     send(&mut h, katy, letter("Katymailb"));
     assert!(failures(&mut h).is_empty());
