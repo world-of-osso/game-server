@@ -10,6 +10,58 @@ const MEGAVOLT: u32 = 11082;
 const CHAIN_BOLT: u32 = 11085;
 
 #[test]
+fn encounter_coverage_electrocutioner_real_death_credit_without_resource_override() {
+    let (mut h, boss, map) = bound_boss(ELECTROCUTIONER, MAP, BIT);
+    h.engage(boss);
+    h.advance(0.1);
+    assert!(
+        h.inbox(0)
+            .starts
+            .iter()
+            .any(|start| start.encounter_id == ENCOUNTER)
+    );
+    assert!(h.inbox(1).starts.is_empty());
+    let player = h.player();
+    assert!(matches!(
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, SHOCK, Some(player), false),
+        Err(crate::spell_cast::CastFailure::NotEnoughPower(
+            shared::components::PowerType::Mana
+        ))
+    ));
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .filter(|end| end.encounter_id == ENCOUNTER && end.success)
+            .count(),
+        1
+    );
+    assert!(h.inbox(1).ends.is_empty());
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        1 << BIT
+    );
+    h.advance(1.0);
+    assert_eq!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .filter(|end| end.encounter_id == ENCOUNTER && end.success)
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn encounter_coverage_electrocutioner_real_sai_spells_and_copy_isolated_credit() {
     let (mut h, boss, map) = bound_boss(ELECTROCUTIONER, MAP, BIT);
     let player = h.player();
