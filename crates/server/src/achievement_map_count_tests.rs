@@ -78,7 +78,7 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     let fourth_player = spawn_counted_peer(&mut h.app, fourth, InMap::continent(1));
     h.advance(1);
     h.cast(INVASION_SPELL, Some(h.caster));
-    h.advance(4);
+    h.advance(30); // Authored spell178544 RecoveryTime is1000ms.
     assert!(
         h.inbox
             .go
@@ -111,7 +111,7 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
         255
     ));
     h.cast(INVASION_SPELL, Some(h.caster));
-    h.advance(4);
+    h.advance(30);
     assert_eq!(
         h.inbox
             .go
@@ -135,7 +135,7 @@ fn achievements_criteria_map_count171_native_spell_hit_uses_exact_current_copy_p
     let date = state.earned_at[&9244];
     h.app.world_mut().entity_mut(fourth_player).insert(map);
     h.cast(INVASION_SPELL, Some(h.caster));
-    h.advance(4);
+    h.advance(30);
     assert_eq!(
         h.inbox
             .go
