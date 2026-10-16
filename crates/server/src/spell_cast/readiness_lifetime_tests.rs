@@ -108,3 +108,50 @@ fn native_readiness_real_sixty_second_owner_lifetime_survives_slow_frames() {
     overpower.assert_recovered();
     glaive.assert_recovered();
 }
+
+#[test]
+fn native_fury_slam_gcd_recovers_during_slow_real_frames() {
+    use crate::auras::{AuraApplication, AuraSource, apply_aura};
+
+    let mut h = harness(Vec::new(), &[1464, 137050], 1).unwrap();
+    let caster = h.caster;
+    // Native Fury137050e8 removes Slam's Rage cost; no resource/stat injection.
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 137050,
+            effect_mask: 1 << 8,
+            source: AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(1464, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let gcd = h.inbox.cooldowns.iter().find(|timer| timer.is_gcd).unwrap();
+    assert_eq!(gcd.duration_ms, 1500);
+    h.inbox.log.clear();
+    h.app.insert_resource(TimeUpdateStrategy::Automatic);
+    let started = Instant::now();
+    let mut requested = false;
+    while started.elapsed() < Duration::from_secs(10) {
+        std::thread::sleep(Duration::from_millis(800));
+        h.advance(1);
+        if !requested && started.elapsed() >= Duration::from_secs(2) {
+            h.cast(1464, Some(h.npc));
+            requested = true;
+        }
+    }
+    assert!(requested);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(1464) && event.kind == CombatLogKind::CastSuccess
+            })
+            .count(),
+        1
+    );
+}
