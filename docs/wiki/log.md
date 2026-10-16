@@ -1,6 +1,6 @@
 ## 2026-10-15 — Guild invitation decline FIFO
 
-[Decline](investigations/server-tick-lag.md#guild-invitation-decline-fifo--2026-10-15): preserve no-ack packet semantics while queueing the original character's fresh pending-row consumption. Pending/missing/prefix creation/replacement, following accept, relog and real writer-error controls pass8/8;2 incoming NPC-inspection controls pass separately after constructor adaptation. Current runtime check pending; create/accept/charter and global release/HOL proof remain separate.
+[Decline](investigations/server-tick-lag.md#guild-invitation-decline-fifo--2026-10-15): preserve no-ack packet semantics while queueing the original character's fresh pending-row consumption. Pending/missing/prefix creation/replacement, following accept, relog and real writer-error controls pass8/8;2 incoming NPC-inspection controls pass separately after constructor adaptation. Stronger malformed-row presence/reopen assertions pass8/8 in1.91s; current feature check passes4.76s without warnings, format/diff pass. Create/accept/charter and global release/HOL proof remain separate.
 
 ## 2026-10-15 — Guild profile/note FIFO
 
