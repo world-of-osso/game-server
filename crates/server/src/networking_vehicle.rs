@@ -266,7 +266,9 @@ fn finish_vehicle_step(
             z: next.z,
         },
         yaw,
-        speed: if moved { speed } else { 0.0 },
+        // MovementSpeed is gait capability, not instantaneous velocity. A stop
+        // changes CreatureMotion but must not look like a root to the driver.
+        speed,
         motion,
         behind,
     }
