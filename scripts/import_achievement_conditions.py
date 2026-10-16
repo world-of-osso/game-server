@@ -142,9 +142,24 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
         node = modifiers[child]
         if children[child]:
             ids = some_difficulties(child, modifiers, children, legacy)
-            if ids is None:
+            if ids is not None:
+                allowed = ids if allowed is None else allowed & ids
+                continue
+            if criteria_type != 165 or int(node['Operator']) != ALL:
                 return None
-            allowed = ids if allowed is None else allowed & ids
+            # TC All1733–1737: every nested conjunction must hold in full.
+            nested = tree_conditions(child, modifiers, children, legacy, criteria_type)
+            if nested is None:
+                return None
+            difficulty, nested_facts = nested
+            facts.extend(nested_facts)
+            if difficulty is not None:
+                positive, values = difficulty
+                if positive:
+                    ids = frozenset(values)
+                    allowed = ids if allowed is None else allowed & ids
+                else:
+                    excluded |= frozenset(values)
             continue
         kind, operator = int(node['Type']), int(node['Operator'])
         if not plain(node):
@@ -154,6 +169,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
             allowed = ids if allowed is None else allowed & ids
         elif kind in DIFFICULTY_TYPES and operator == SINGLE_FALSE:
             excluded |= difficulty_ids(node, legacy)
+        elif criteria_type == 0 and kind == 8 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
+            # TC SingleFalse1730 / PlayerHasAura1798 reads the actual killer's aura authority.
+            facts.append((-8, int(node['Asset'])))
         elif criteria_type == 29 and kind == 87 and operator == SINGLE_FALSE and int(node['Asset']) > 0:
             # TC SingleFalse1730 negates scoped HasAchieved2200; signed compiled kind, not a raw DB2 kind.
             facts.append((-87, int(node['Asset'])))
@@ -262,7 +280,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.',
         '// native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.',
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
-        '// Native CastSpell29 SingleFalse87 and Login74 SingleFalse104 use signed compiled kinds; raw DB2 kinds stay unchanged.',
+        '// Native KillCreature0 SingleFalse8, CastSpell29 SingleFalse87 and Login74 SingleFalse104 use signed compiled kinds; raw DB2 kinds stay unchanged.',
         '// Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.',
         '// Native kill78 CreatureType30 preserves the actual eligible victim type.',
         '// Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.',
