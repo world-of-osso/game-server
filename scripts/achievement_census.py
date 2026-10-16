@@ -189,7 +189,10 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         identities = load_identity_condition_ids(db)
         item_rows = dict(db.execute('SELECT ID, Quality FROM content_item'))
         qualities = set(item_rows.values())
-        authored_facts = {19: set(item_rows), 15: qualities,
+        tuning_ranges = {row[0] for row in db.execute(
+            'SELECT ID FROM content_tuning_level WHERE minlevel BETWEEN 1 AND 255 '
+            'AND maxlevel BETWEEN minlevel AND 255')}
+        authored_facts = {268: tuning_ranges, 19: set(item_rows), 15: qualities,
                           14: set(range(max(qualities, default=-1) + 1)),
                           110: {row[0] for row in db.execute('SELECT ID FROM content_quest_template')},
                           82: {row[0] + 1 for row in db.execute('SELECT DISTINCT OrderIndex FROM scenario_step WHERE OrderIndex >= 0')}}
