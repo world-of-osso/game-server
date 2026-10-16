@@ -1,11 +1,14 @@
 //! TC a352b1fa instance_wailing_caverns.cpp four-druid DONE notification and
-//! wailing_caverns.cpp Disciple DoAction0, combat and escort events4–27. Gossip
-//! remains unported. Targeted aggro Say preserves the nearby audience. Escort
+//! wailing_caverns.cpp Disciple DoAction0, gossip, combat and escort events1–27.
+//! Natural gossip eligibility remains source-data gated. Targeted aggro Say
+//! preserves the nearby audience. Escort
 //! events use their separate out-of-combat clock.
 use bevy::prelude::*;
 use shared::components::{
     CombatStatus, Health, Npc, Rotation, StandState, UnitFactionTemplate, UnitPose,
 };
+
+use shared::protocol::NpcFlags;
 
 use super::event_map::EventMap;
 
@@ -47,6 +50,13 @@ struct Disciple {
 }
 
 const PATH_FIRST_CAMP: u32 = 367800;
+const MARK_OF_THE_WILD: u32 = 5232;
+const GOSSIP_MENU_EVENT: u32 = 202;
+const EVENT_START: u32 = 1;
+const EVENT_START_SPEECH: u32 = 2;
+const EVENT_START_PATH: u32 = 3;
+const SAY_START: u8 = 1;
+const FACTION_ESCORTEE: u32 = 250;
 const PATH_SECOND_CAMP: u32 = 367801;
 const PATH_NARALEX_CHAMBER: u32 = 367802;
 const EVENT_FIRST_CAMP_SPEECH: u32 = 4;
@@ -107,6 +117,9 @@ impl Disciple {
         self.escort_events.update(u64::from(diff_ms));
         while let Some(event) = self.escort_events.execute_event() {
             match event {
+                EVENT_START | EVENT_START_SPEECH | EVENT_START_PATH => {
+                    self.run_start_event(ctx, event)
+                }
                 EVENT_FIRST_CAMP_SPEECH
                 | EVENT_FIRST_CAMP_SUMMONS
                 | EVENT_CONTINUE_SPEECH
@@ -130,6 +143,30 @@ impl Disciple {
                 EVENT_OWL_FORM | EVENT_FLIGHT | EVENT_DESPAWN => self.run_exit_event(ctx, event),
                 _ => unreachable!("Disciple escort event {event}"),
             }
+        }
+    }
+
+    fn run_start_event(&mut self, ctx: &mut Ctx, event: u32) {
+        match event {
+            EVENT_START => {
+                ctx.world
+                    .entity_mut(ctx.me)
+                    .insert(UnitFactionTemplate(FACTION_ESCORTEE));
+                ctx.world
+                    .get_mut::<NpcFlags>(ctx.me)
+                    .expect("Disciple NPC flags")
+                    .0 &= !NpcFlags::GOSSIP;
+                mark_replication_dirty(ctx.world, ctx.me);
+                self.escort_events.schedule(EVENT_START_SPEECH, 10_000);
+            }
+            EVENT_START_SPEECH => {
+                ctx.talk(SAY_START);
+                self.escort_events.schedule(EVENT_START_PATH, 3_500);
+            }
+            EVENT_START_PATH => {
+                super::waypoint_path::move_path(ctx.world, ctx.me, PATH_FIRST_CAMP);
+            }
+            _ => unreachable!("Disciple start event {event}"),
         }
     }
 
@@ -351,6 +388,32 @@ fn face_continue_path(ctx: &mut Ctx) {
 }
 
 impl CreatureAi for Disciple {
+    fn gossip_hello(&mut self, ctx: &mut Ctx, player: Entity) -> bool {
+        ctx.do_cast_at(Some(player), MARK_OF_THE_WILD, false);
+        let map = *ctx.world.get::<InMap>(ctx.me).expect("Disciple map");
+        let ready = ctx
+            .world
+            .resource::<InstanceScripts>()
+            .0
+            .get(&map)
+            .is_some_and(all_druids_done);
+        if ready {
+            crate::npc_interaction::prepare_gossip_menu(
+                ctx.world,
+                player,
+                ctx.me,
+                GOSSIP_MENU_EVENT,
+            );
+        }
+        ready
+    }
+
+    fn gossip_select(&mut self, ctx: &mut Ctx, player: Entity) -> bool {
+        crate::npc_interaction::close_gossip_menu(ctx.world, player, ctx.me);
+        self.escort_events.schedule(EVENT_START, 0);
+        false
+    }
+
     fn reset(&mut self, _ctx: &mut Ctx) {
         self.combat_events.reset();
     }

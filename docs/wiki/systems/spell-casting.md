@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Native damage prerequisite fixtures — 2026-10-16
+
+Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.
+
+These damage-only fixtures now use existing `harness_with_native_enemy_dodge_reduction`: actual Sunwell Radiance45769 effect1 applies native aura251/-20 enemy dodge. No spell attributes, production evade guard, kit, stat formula or hit resolver change. Dedicated avoidance tests retain the ordinary harness. The bounded repeated-hit regression asserts positive source-derived heal input while retaining actual combat logs on failure; it does not retry missed hits or fabricate damage. Named regression results live in the follower master-RED proof ledger; no full-suite acceptance follows from these focused tests.
+
 ## Readiness clock isolation — 2026-10-15
 
 `history_now` reads Bevy `Time<Real>` for SpellHistory deadlines, owner snapshots, charge recovery, queue GCD admission, school lockouts, rate changes, resets and ready-time credit. Generic `now`, aura time, cast/channel delta and missile clocks remain unchanged. No global simulation clamp change. [Contract](../../specs/class-completeness.md#readiness-elapsed-time).
@@ -99,6 +105,24 @@ Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood'
 ## Wildfire primary variance fixture
 
 Current native source values replace stale golden constants, not runtime coefficients or variance tolerance. A legitimate upper primary draw reproduced the master red; bounded real casts now cover the full source interval while distinct AP/RAP preserve owned bleed and splash limits. [Source, exact failure and merged proof](../../class-completeness6.md#wildfire-primary-variance-master-red--batch61).
+
+## Touch of Death primary damage — 2026-10-16
+
+70391 root322109 fields s4/s3 supply100%/35% of the caster's live maximum health for weaker creatures/other admitted primary targets, matching pinned SimC76f8118 `monk/sc_monk.cpp:2698-2724`. Native metadata supplies Can'tCrit and ignore-caster-percent/ignore-victim-modifier attributes. TC a352b1fa `Unit.cpp:6922-6929,7033-7063,1209-1214` defines those exclusions; the shared supported school/caster/versatility and armor consumers now honor them. Unmodeled mechanic-specific damage-taken auras remain unproved, not silently certified by the attribute guard.
+
+Actual ordinary322109 on an eligible999-health creature originally logs Damage0 and leaves999 health. After the health-based amount hook and native flag consumers, both999→0 and improved1400→1050 pass despite authentic NPC6 level10 armor, Enrage8599 effect0, Shield Wall871 effect0 and a deliberate100% caster crit input. No RNG override, template edits or guessed coefficient. Native admission/damage tests pass3/3 (20.52s). Disjoint ordinary Fire Blast/Vengeance/Shield Wall control plus base armor, creature-type, crit and defensive cases pass62/62 (52.65s): unflagged modifiers remain active. Source/proof receipts `data/class-completeness6-2026-10-12/touch-of-death-damage-{source,proof-ledger}.json`; [contract](../../specs/class-completeness.md#touch-of-death-admission). PvP integration, Stagger purification, mastery/follow-up talents, equality-source discrepancy and fresh UDP bot acceptance remain separate.
+
+## Touch of Death target admission — 2026-10-16
+
+70391 root322109's description requires a weaker creature, or passive322113 and a target below its authored15% threshold. Pinned SimC76f8118 `monk/sc_monk.cpp:2675-2688` compares target current health against the Monk's maximum and uses a strict percentage comparison for the improved rank. Its baseline uses `<=`, unlike the DB2 description's literal “less”; this implementation uses the description's strict baseline boundary, not a claimed native equality observation. Checked TC a352b1fa `spell_monk.cpp` contains no corresponding script.
+
+The ordinary validation path now rejects ineligible targets before CastSuccess and cooldown publication. Two real HostClient tests cover seven cases: healthy stronger creature with/without rank;14% without/with the actually synchronized native passive;15% and16% with rank; and a creature below the Monk's maximum without rank. RED accepts healthy/untalented stronger creatures; GREEN2/2 at8cf90f31 (11.49s) preserves eligible casts and rejects invalid ones. No resource, crit, armor or damage override is introduced. The subsequent [primary-damage slice](#touch-of-death-primary-damage--2026-10-16) supplies the zero-base effect's missing amount; PvP integration, Stagger removal and follow-up talents remain separate. [Contract](../../specs/class-completeness.md#touch-of-death-admission); source/proof receipts `data/class-completeness6-2026-10-12/touch-of-death-admission-{source,proof-ledger}.json`.
+
+## Beast Mastery Kill Command pet damage — 2026-10-16
+
+70391 spell34026's description names83381; effect23978 is Dummy0, while83381 effect83776 is physical damage with native AP coefficient2.47199988. Pinned SimC76f8118 `sc_hunter.cpp:6587-6588,7549` executes the main pet's83381 action. Checked TC a352b1fa `spell_hunter.cpp` has no corresponding handler; no TC binding is implied. The root's hit hook now shares Survival's owned-persistent-pet bridge, selecting83381 instead of259277. The actual pet remains damage source, not the Hunter.
+
+Ordinary HostClient34026 after native Call Pet883/creature299 reproduces owner CastSuccess with no pet hit, then passes with one positive83381 damage event attributed to that called pet and matching victim health loss. Triggered children do not require a separate CastSuccess event. Native BM plus unchanged Survival and both foreign-owner exclusions pass3/3. An intermediate Survival zero-damage failure remains recorded without a confirmed cause; its assertion now includes actual outcomes. No RNG/stat changes or retry-until-pass test loop was added. Animal Companion, pet charging, additional talent consumers and full admission remain outside this bounded bridge. [Contract](../../specs/spell-dummy-scripts.md#fourteenth-batch-local-hit-actor-and-periodic-consumers); source/proof receipts `data/class-completeness6-2026-10-12/bm-kill-command-{source,proof-ledger}.json`. Fresh UDP bot behavior remains unproved for this fix.
 
 ## Fourteenth batch: owned hits and native clocks
 

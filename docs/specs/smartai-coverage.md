@@ -7,7 +7,7 @@ Interpret TDB `smart_scripts` rather than hand-written quest scripts. Semantics 
 - [x] Quest-accept rows invoke timed action lists, store targets, remove questgiver flags and start the authored TDB waypoint path (Erland 1978 / quest 435 / path 15825).
 - [x] Advance authored waypoint nodes; execute reached events and pause/resume without skipping the next node.
 - [x] Support WP_STOP, waypoint paused/resumed/stopped/ended events and quest accept/reward hooks.
-- [ ] Support summon, follow, faction/NPC flag changes, quest completion, despawn and escort failure on death/distance.
+- [x] Support tested summon/follow, faction/NPC flag changes, quest completion, despawn and escort failure on death/distance subsets. Feero4484 additionally exercises counters63/event77, immunity145 and attack49; [Alliance escort proof and native gaps](escort-quests.md). This is not full SmartAI parity.
 - [x] Report unsupported action/event/target types once per type, including timed lists.
 - [x] Broaden support by script-row and quest-linked impact rankings (orientation66/emote17 and summon hooks; [census](../smartai-census.md)).
 - [x] Prove a complete private UDP 5780 legacy escort with both client skins and inspected PNGs; exact authentic source-fixture boundary in [census](../smartai-census.md#live-proof-boundary).

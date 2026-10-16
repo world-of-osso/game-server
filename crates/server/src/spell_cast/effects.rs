@@ -1015,10 +1015,7 @@ fn creature_type_damage_multiplier(
     target: Entity,
     spell: &SpellInfo,
 ) -> f32 {
-    const IGNORE_CASTER_MODIFIERS: u32 = 0x2000_0000;
-    if super::attributes(spell, 3) & IGNORE_CASTER_MODIFIERS != 0
-        || super::attributes(spell, 6) & IGNORE_CASTER_MODIFIERS != 0
-    {
+    if ignores_caster_damage_modifiers(spell) {
         return 1.0;
     }
     let Some(mods) = stat_mods(world, caster).filter(|mods| mods.has_damage_done_versus()) else {
@@ -1059,6 +1056,13 @@ fn spell_block_percent(world: &World, caster: Entity, target: Entity) -> f32 {
     stats.defense.blocked_pct(constant)
 }
 
+/// TC Unit.cpp6922–6929: these attributes exclude percent-done modifiers.
+fn ignores_caster_damage_modifiers(spell: &SpellInfo) -> bool {
+    const IGNORE_CASTER_MODIFIERS: u32 = 0x2000_0000;
+    super::attributes(spell, 3) & IGNORE_CASTER_MODIFIERS != 0
+        || super::attributes(spell, 6) & IGNORE_CASTER_MODIFIERS != 0
+}
+
 fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
@@ -1089,7 +1093,7 @@ fn deal_damage_and_report(
         super::scripts::damage_amount(ctx.spell.id)
             .map_or(amount, |modify| modify(world, ctx.caster, target, amount))
     };
-    let done = if resolved_source {
+    let done = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
         1.0
     } else {
         stat_mods(world, bonus_caster).map_or(1.0, |mods| mods.damage_done(school))
@@ -1119,7 +1123,9 @@ fn deal_damage_and_report(
     } else {
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, false, amount)
     };
-    let amount = if reduced_by_armor(ctx.spell) {
+    let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
+        && reduced_by_armor(ctx.spell)
+    {
         armor_reduced(world, ctx.caster, target, amount)
     } else {
         amount

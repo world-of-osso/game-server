@@ -9,12 +9,16 @@ use std::sync::OnceLock;
 
 use serde::Deserialize;
 
+/// ChrRaces.Alliance: Alliance0, Horde1, Neutral2.
+const NEUTRAL_RACE_ALLIANCE: u8 = 2;
+
 /// ChrClasses IDs with class spell data.
 pub const PLAYABLE_CLASSES: [u8; 13] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
 struct PlayableRace {
     id: u8,
     race_bit: u8,
+    neutral: bool,
     classes: BTreeSet<u8>,
 }
 
@@ -28,6 +32,8 @@ struct RaceMetadataRow {
     id: u8,
     #[serde(rename = "PlayableRaceBit")]
     race_bit: i16,
+    #[serde(rename = "Alliance")]
+    alliance: u8,
 }
 
 #[derive(Deserialize)]
@@ -57,6 +63,7 @@ fn decode_playable_race(row: RaceMetadataRow) -> Result<Option<PlayableRace>, St
     Ok(Some(PlayableRace {
         id: row.id,
         race_bit,
+        neutral: row.alliance == NEUTRAL_RACE_ALLIANCE,
         classes: BTreeSet::new(),
     }))
 }
@@ -96,6 +103,12 @@ fn read_class_memberships(
                 row.race
             )
         })?;
+        // Retail CharacterCreate:GetCreateCharacterFaction requires faction choice
+        // for neutral DKs; CharBaseInfo/ChrClassRaceSex also describe the neutral model.
+        // Only the chosen faction identity is a creatable DK (TDB25/6 and26/6).
+        if race.neutral && row.class == CLASS_DEATH_KNIGHT {
+            continue;
+        }
         race.classes.insert(row.class);
     }
     Ok(())
@@ -114,6 +127,7 @@ fn insert_skyborne_races(races: &mut BTreeMap<u8, PlayableRace>) -> Result<(), S
             PlayableRace {
                 id,
                 race_bit,
+                neutral: false,
                 classes: classes.iter().copied().collect(),
             },
         );
@@ -255,7 +269,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn race_source_installed_char_base_info_pairs_are_admitted() {
+    fn race_source_installed_creatable_pairs_are_admitted() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../data/db2/active/CharBaseInfo.csv");
         let mut reader = csv::Reader::from_path(path).unwrap();
@@ -272,6 +286,11 @@ mod tests {
             }
         }
         assert!(pairs.contains(&(3, 7)), "installed Dwarf/Shaman source row");
+        assert!(
+            pairs.remove(&(24, 6)),
+            "installed neutral DK model membership"
+        );
+        assert_eq!(pairs.len(), 282);
         for (race, class) in pairs {
             assert_eq!(
                 validate_race_class(race, class),
@@ -282,20 +301,33 @@ mod tests {
     }
 
     #[test]
+    fn race_source_neutral_dk_requires_faction_but_neutral_monk_remains_creatable() {
+        assert_eq!(
+            validate_race_class(24, 6),
+            Err("Class 6 is not available for race 24".into())
+        );
+        for pair in [(25, 6), (26, 6), (24, 10), (3, 7)] {
+            assert_eq!(validate_race_class(pair.0, pair.1), Ok(()));
+            assert!(playable_pairs().any(|offered| offered == pair));
+        }
+        assert!(!playable_pairs().any(|pair| pair == (24, 6)));
+    }
+
+    #[test]
     fn race_source_missing_or_empty_installed_tables_do_not_use_static_defaults() {
         let directory = tempfile::tempdir().unwrap();
         let result = load_playable_races(directory.path());
         assert!(matches!(result, Err(error) if error.contains("ChrRaces.csv")));
         std::fs::write(
             directory.path().join("ChrRaces.csv"),
-            "ID,PlayableRaceBit\n3,2\n",
+            "ID,PlayableRaceBit,Alliance\n3,2,0\n",
         )
         .unwrap();
         let result = load_playable_races(directory.path());
         assert!(matches!(result, Err(error) if error.contains("CharBaseInfo.csv")));
         std::fs::write(
             directory.path().join("ChrRaces.csv"),
-            "ID,PlayableRaceBit\n",
+            "ID,PlayableRaceBit,Alliance\n",
         )
         .unwrap();
         std::fs::write(
