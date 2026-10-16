@@ -1,5 +1,20 @@
 # Toy effects14 — active whole-goal coverage
 
+## Shrine server per-target stat conversion (2026-10-16)
+
+Actual learned Shrine use at c8a791f8 retains correct client projection but server `UnitScaling::level_against` returns native30 because it requires both `LevelScaling` and `ScaledStats`. Genuine source-area RED for owners20/80 observes server(level30,armor155,dealt100,loss100) against viewer20 instead of(20,135,53,182); Podium's no-scaling control passes. Source TC a352b1fa Creature.cpp3173–3257 defines per-target level and ExpectedStat ratios.
+
+450a85de builds the existing per-level table using the summon’s final content tuning, actual template expansion/class/HP/armor/DamageModifier, and installed ExpectedStats. Raw DamageModifier is retained even for templates with zero tuning; regionally tuned summons cannot invent it. Ordinary NPC selection, global conversion denominators, guardian initialization, clocks and destination handling are unchanged.
+
+| Boundary | Concrete proof / remaining |
+|---|---|
+| Real Shrine initialized actor, owners20/80 | Against viewers1/20/80, server(level,armor,dealt100,loss100) is(1,50,2,5614)/(20,135,53,182)/(30,155,100,100). Source HP ceilings78/2404/4379 and DPS4.75353193/86.6685715/162.622925 anchor truncation. CPU integration setup uses actual bag learning and UseToy, then evaluates server conversion consumers on that actor. |
+| Podium zero tuning | Native20/30 and armor135/155 remain unchanged for every viewer;100 damage stays100 in either conversion direction. |
+| Focused regression | Nineteen actual-use, signed-delta, guardian/Podium and existing level-scaling controls pass82.49s at450a85de. Final exact seven master regressions plus whole `toys:: --test-threads 2` pass143/143, zero ignored722.30s at450a85de. Server all-target check, fmt and maintained build EXIT0 at docs-equivalent86d26423/engine035700cd9/protocoldc30250; unchanged engine proof is reused without a duplicate build. |
+| Not certified | No new actual attack/cast/AI stimulus, three rendered observers, client HP display or full combat/AP/guardian-stat parity. Scaling56 wire remains its own literal earlier binary proof, not a new server-conversion wire certificate. |
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `scaling57-active-goal.json`, `scaling57-proof-ledger.json`, `scaling57-server-{red,green}.log`, `scaling57-whole-proof.json`, `scaling57-server-{scope,results}.json` and manual readability audit. No new wire/native run: previous scaling56 receipts retain their exact binaries. No new item admission or Full1166 completion claim.
+
 ## Shrine viewer-level projection (2026-10-15)
 
 TC a352b1fa `Creature::HasScalableLevels` requires nonzero ContentTuningID. `TempSummon::InitStats` skips owner-tuning replacement for UseCreatureLevel; Shrine therefore retains Area9/CT73[1,30], delta0. Unflagged player-owned Podium inherits zero tuning and must not scale merely because its initial native level came from that region.
@@ -10,7 +25,7 @@ TC a352b1fa `Creature::HasScalableLevels` requires nonzero ContentTuningID. `Tem
 | Selected regional viewer range/delta | 4dd65bab retains the same once-rolled delta and range before wild initialization; shared viewer projection1/20/80→1/20/30 passes in actual UseToy CPU fixtures. |
 | Unflagged player-owned Podium | All viewer levels remain its initialized native20/30. Negative control passes; no blanket regional scaling. |
 | Focused/whole regression | Nine source-level, mana, missing-region, guardian and Podium tests pass88.75s; whole `-- toys:: --test-threads 2` passes136/136, zero ignored554.81s at4dd65bab/protocoldc30250. Current six build/check/fmt gates all EXIT0 at docs-equivalent749d4984/359c8e521/dc30250. |
-| Unproved boundaries | Server combat `UnitScaling` additionally requires `ScaledStats`; region-only Shrine has no such table yet. Damage/health/armor combat scaling, exact client HP projection, pixels and wall expiry are not certified by viewer-text assertions. |
+| Unproved boundaries | At this packet's literal scope, server combat `UnitScaling` additionally requires `ScaledStats` and region-only Shrine has no such table; [later server conversion proof](#shrine-server-per-target-stat-conversion-2026-10-16) addresses that separately. Damage/health/armor combat scaling, exact client HP projection, pixels and wall expiry are not certified by viewer-text assertions. |
 
 Fresh private5911 actual UseItem→UseToy wire passes at server749d49849bdd48cc072d517c33b5e325bfd850f0, peer359c8e521a8b8ea0fbadaed30f4c03539fd410d5 and protocoldc30250f22c09dacdcd5266034ac6c4c22292fd4. Shrine owners20/80 each receive one native30/HP4379 actor with CT73/min1/max30/delta0; the shared client consumer projects viewers1/20/80→1/20/30. Podium receives one native20/30 actor, HP48066/87576 and no scaling: all projections stay native. Default Scarab control receives26/28 actors, all native20/30/no scaling, positive HP1 only—not full guardian-stat parity. These are projections from replicated fields, not three rendered observer clients or target-frame pixels.
 

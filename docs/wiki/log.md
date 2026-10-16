@@ -1,4 +1,9 @@
 ## 2026-10-15 — Read-only follower group reward receipts
+## 2026-10-16 — Shrine server per-target conversion
+
+[Source stat table](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16): real learned-use actor has client viewer20 but server level30/armor155 RED. Retain raw difficulty DamageModifier and build the existing per-level ExpectedStat table for final summon tuning; nineteen focused controls pass concrete level/armor/dealt/loss outputs. Final exact seven master regressions plus whole-Toy143/143, server all-target check, fmt and maintained build pass. Actual combat hits, client HP and guardian stats remain separate; previous wire evidence is not relabeled.
+
+## 2026-10-15 — Shrine viewer-level projection
 
 [Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
 ## 2026-10-16 — Autoattack-only critical chance
