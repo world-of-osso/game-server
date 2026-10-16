@@ -1,3 +1,4 @@
+- [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 authentic four-death RED; counter63/event77 implementation, native acceptance pending.
 # Wiki Index
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
