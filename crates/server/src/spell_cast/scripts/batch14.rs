@@ -70,12 +70,23 @@ fn landed(world: &World, caster: Entity, spell: u32, target: Entity) -> bool {
 
 ///259489 names259277; the actual owned pet is the damage caster, not the owner.
 pub(super) fn command_pet(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    cast_pet_command(world, caster, target, COMMAND_DAMAGE, depth);
+}
+
+/// 70391 spell34026 names83381; SimC76f8118 executes that attack on the owned pet.
+///Animal Companion, charging and the other talent consumers are separate paths.
+pub(super) fn command_beast(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    const BEAST_COMMAND_DAMAGE: u32 = 83381;
+    cast_pet_command(world, caster, target, BEAST_COMMAND_DAMAGE, depth);
+}
+
+fn cast_pet_command(world: &mut World, caster: Entity, target: Entity, spell: u32, depth: u8) {
     if let Some(pet) = crate::hunter_pet::summoned_pet(world, caster).filter(|&pet| {
         world
             .get::<crate::hunter_pet::HunterPet>(pet)
             .is_some_and(|pet| pet.owner == caster)
     }) {
-        spell_cast::cast_triggered(world, pet, COMMAND_DAMAGE, Some(target), depth + 1);
+        spell_cast::cast_triggered(world, pet, spell, Some(target), depth + 1);
     }
 }
 
