@@ -10,6 +10,7 @@ use std::time::Duration;
 const QUEST: u32 = 72360;
 const AWARD: u32 = 17495;
 const LOGIN_CRITERION: u32 = 58438;
+const LOGIN_PEER_OFFSET: u64 = 100;
 
 fn create_login_app(db: redb::Database, conn: &Connection) -> App {
     let mut app = App::new();
@@ -48,7 +49,7 @@ fn insert_login_resources(app: &mut App, db: redb::Database, conn: &Connection) 
 fn spawn_login_connection(app: &mut App, account: u64, character: u64) -> Entity {
     app.world_mut()
         .spawn((
-            RemoteId(PeerId::Local(character + 100)),
+            RemoteId(PeerId::Local(character + LOGIN_PEER_OFFSET)),
             Connected,
             HostClient { buffer: Vec::new() },
             Authenticated {
