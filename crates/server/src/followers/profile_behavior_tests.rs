@@ -12,6 +12,16 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     entry: u32,
     configure: impl FnOnce(&mut App),
 ) -> (Harness, Entity, Profile) {
+    let (mut h, unit, profile) = selected_profile_fixture(entry, configure);
+    h.attack(h.npc);
+    h.advance(3);
+    (h, unit, profile)
+}
+
+fn selected_profile_fixture(
+    entry: u32,
+    configure: impl FnOnce(&mut App),
+) -> (Harness, Entity, Profile) {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -54,6 +64,82 @@ pub(super) fn spawn_profile_fixture_with_plugins(
         .unwrap()
         .0 = Some(h.npc);
     (h, unit, profile)
+}
+
+#[test]
+fn follower_selection_is_not_engagement_but_native_attack_is() {
+    let (mut h, unit, _) = selected_profile_fixture(209059, |_| {});
+    let enemy = h.npc;
+    let before = h.health(enemy);
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(unit)
+        .unwrap();
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert_eq!(h.health(enemy), before, "selection alone must not pull");
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Position>(unit)
+            .unwrap(),
+        position
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .is_some()
+    );
+    h.attack(enemy);
+    h.advance(3);
+    assert!(
+        h.inbox
+            .attack_starts
+            .iter()
+            .any(|event| event.attacker == h.caster.to_bits())
+    );
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(unit.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "real owner attack must engage follower"
+    );
+}
+
+#[test]
+fn follower_party_threat_engages_without_selection_or_owner_auto_attack() {
+    let (mut h, unit, _) = selected_profile_fixture(209059, |_| {});
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let mut threat = shared::components::ThreatTable::default();
+    threat.add_threat(h.caster.to_bits(), 100.0);
+    h.app.world_mut().entity_mut(enemy).insert(threat);
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(unit.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "party threat from landed combat must engage follower"
+    );
 }
 
 #[test]
