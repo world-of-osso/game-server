@@ -79,6 +79,8 @@ The built-in selection uses `STARTER_BUILD_LOADOUT_ID` (`u32::MAX`, outside allo
 
 Source receipt: engine `data/diagnostics/talent-import-export-2026-10-15/source/receipt.json`; a352b1fa `src/server/game/Spells/TraitMgr.cpp` SHA256 `b1477eb159576a833ccc0779903585a2399d4f454e86155b7883da95209fa3e9`. Installed Retail `Blizzard_ClassTalentsFrame.lua:475–531,793–803,1084–1117,1171–1217` grounds availability, built-in/noneditable selection and deviation handling. Native presentation contract remains in the [engine talent-loadout spec](../../../../game-engine/docs/specs/talent-loadouts.md).
 
+Verified2026-10-15: [scoped acceptance](../../specs/talent-starter-build.md#proof--2026-10-15) covers installed-class level legality, exact Arms apex gates, named isolation/rejection/spec persistence and actual private both-skin level-up/relog/deactivation. No reference-data or default-realm edits.
+
 ## Persistence and messages
 
 - **Storage (2026-10-10):** `character_trait_loadouts_v1` stores per-spec unnamed defaults, selected IDs and named purchase lists, plus a character-wide monotonically increasing ID counter. Only purchased ranks are stored. On first load, legacy `character_traits` single allocations migrate to each spec's default and persist in the new table; subsequent reads never consult the old row. Both rows are removed with the character.
