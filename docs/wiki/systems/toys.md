@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Sightless detection consumer (2026-10-16)
+
+Sightless Eye153293/254568 already has its target aura152 consumer in native `AggroDistance`. Real hostile-acquisition controls prove ordinary12yd acquisition versus protected12yd non-acquisition and protected7yd acquisition before registry admission. Actual journal RED rejects152;574d45f5 recognizes that existing consumer without changing aggro math. Actual bag learning/UseToy and native aggro pass2/2; source group5454/instant10min aura/5min recovery and ordinary expiry remain unchanged. [Exact revisions, proof and open gates](../../toy-effects14-coverage.md#sightless65-native-detection-consumer-2026-10-16) distinguish server behavior from native rendering/wire and preceding unimplemented remote-view/possession roots.
+
 ## Waywatcher source lifecycle (2026-10-16)
 
 130249/195806 consumes the currently published source99572 template, choosing63609or63606 without a new importer admission. Actual bag learning/UseToy acceptance passes1/1: terrain-backed Val'sharah7558 admission/Northshire refusal, source instant cast/15s duration/+200% speed/241 and900s recovery, then ordinary expiry restores native display/health/flags/speed. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#waywatcher64-source-lifecycle-2026-10-16) separate this existing-handler acceptance from eighteen authenticated privately published body assets/four aliases. Actual private Rust loader, whole-Toy141/141, server binary/tests check and fmt pass at recorded64 revisions. Native rendering remains separate; no manufactured RED or canonical publication claim.
