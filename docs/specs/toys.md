@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Enchanted Stone Whistle129279/193687 requires authentic TDB98300/Petrified Sand Piper with display71056. Source63 selects the requested unit, then86 samples within its3yd disk; summon exactly one stationary non-pet actor for60000ms. Preserve owner/map, caster body/health, instant cast and60000ms item recovery. Property1362 does not designate following or a combat-pet frame; no AI/click action is inferred. Authenticated native assets/rendering remain separate from server import/use acceptance.
+
 - Winner's Podium239018/1227063 requires authentic240220/display127527, one stationary non-pet actor for1200000ms with preserved owner/map/body/health. Its47→138 destination uses authored1.25yd front radius clamped to the caster's scaled combat reach, then resolves actual map height at that destination rather than retaining airborne caster height. Preserve the source1000ms cast and1200000ms item recovery; no invented interaction or timer reset. Native rendering acceptance remains a separate per-skin gate.
 
 - Direct destination selectors86/91 initialize an absent prior destination from the caster before applying their source offset, matching native CheckDst. Fisherman's Folly199894/388259 uses91 with a fixed2yd radius, not placement at the caster's feet.
