@@ -125,6 +125,8 @@ pub(crate) mod guardian;
 mod guardian_tests;
 mod hit;
 #[cfg(test)]
+mod readiness_lifetime_tests;
+#[cfg(test)]
 mod warrior_stun_tests;
 mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
