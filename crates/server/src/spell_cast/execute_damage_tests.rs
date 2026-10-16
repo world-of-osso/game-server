@@ -10,19 +10,27 @@ const PROTECTION: u32 = 137048;
 const ARMS: u32 = 137049;
 
 fn setup(spec: u32) -> Harness {
-    let mut h =
-        harness_with_native_enemy_dodge_reduction(Vec::new(), &[EXECUTE, DAMAGE, spec], 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[EXECUTE, DAMAGE, spec, 29725, 52437],
+        1,
+    )
+    .unwrap();
+    apply(&mut h, spec);
+    h
+}
+
+fn apply(h: &mut Harness, spell_id: u32) {
     crate::auras::apply_aura(
         h.app.world_mut(),
         &AuraApplication {
             caster: h.caster,
             target: h.caster,
-            spell_id: spec,
+            spell_id,
             effect_mask: u32::MAX,
             source: AuraSource::Cast,
         },
     );
-    h
 }
 
 fn take_damage(h: &mut Harness) -> f32 {
@@ -68,13 +76,17 @@ fn assert_rage_damage(spec: u32, rage: f32, expected_spend: f32, multiplier: f32
     assert_eq!(h.power(PowerType::Rage), rage - expected_spend);
     assert!(h.health(h.npc) < health);
     let amount = take_damage(&mut h);
+    assert_multiplier(baseline, amount, multiplier);
+}
+
+fn assert_multiplier(baseline: f32, amount: f32, multiplier: f32) {
     // Two independent native Variance0.05 rolls, each in [0.975,1.025].
     // Two points cover integer rounding of damage and blocked amounts.
     let low = baseline * multiplier * 0.975 / 1.025 - 2.0;
     let high = baseline * multiplier * 1.025 / 0.975 + 2.0;
     assert!(
         (low..=high).contains(&amount),
-        "spec={spec},rage={rage},baseline={baseline},amount={amount},expected={low}..={high}"
+        "baseline={baseline},amount={amount},multiplier={multiplier},expected={low}..={high}"
     );
 }
 
@@ -93,6 +105,21 @@ fn execute_damage_native_protection_base_partial_and_full_actual_rage() {
 #[test]
 fn execute_damage_native_arms_shares_actual_rage_formula() {
     assert_rage_damage(ARMS, 400.0, 400.0, 2.0);
+}
+
+#[test]
+fn execute_damage_native_sudden_death_uses_authored_rage_without_spending() {
+    let mut h = setup(PROTECTION);
+    let baseline = unscaled_child(&mut h);
+    apply(&mut h, 29725);
+    apply(&mut h, 52437);
+    h.set_power(PowerType::Rage, 100.0);
+    h.cast_and_deliver(EXECUTE, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == EXECUTE));
+    assert_eq!(h.power(PowerType::Rage), 100.0);
+    let amount = take_damage(&mut h);
+    assert_multiplier(baseline, amount, 2.0);
 }
 
 #[test]
