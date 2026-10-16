@@ -78,6 +78,23 @@ fn toyfx66_katy_source_mailbox_npc_opens_mail_and_sends_without_gossip_substitut
     assert!(failures(&mut h).contains(&MailError::NotInteracting));
     assert_eq!(load_mailbox(h.db(), recipient).len(), 1);
     assert_eq!(h.gold(), 70);
+    h.move_player(0.0);
+    h.send::<_, InteractionChannel>(InteractNpc {
+        npc: katy.to_bits(),
+    });
+    assert!(
+        h.take::<InteractionOpened>()
+            .iter()
+            .any(|opened| opened.kind == InteractionKind::Role(NpcRole::Mailbox))
+    );
+    h.app.world_mut().get_mut::<Health>(katy).unwrap().current = 0.0;
+    for _ in 0..3 {
+        h.app.update();
+    }
+    send(&mut h, katy, letter("Katymailb"));
+    assert!(failures(&mut h).contains(&MailError::NotInteracting));
+    assert_eq!(load_mailbox(h.db(), recipient).len(), 1);
+    assert_eq!(h.gold(), 70);
 }
 
 #[test]
