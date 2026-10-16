@@ -117,7 +117,7 @@ fn follower_passive_stats_owned_evade_preserves_native_spec_and_threat_auras() {
         .world_mut()
         .entity_mut(unit)
         .insert(crate::creature_ai::CreatureState::Pursuing {
-            target: h.target.to_bits(),
+            target: h.npc.to_bits(),
         });
     // Production no-path/leash lifecycle entry, followed by real aura/stat systems.
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), unit);
