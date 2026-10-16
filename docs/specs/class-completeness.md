@@ -103,6 +103,11 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] When a player stops knowing Dual Wield (spec/talent change), TC moves the off-hand weapon to the bags or mails it (OffhandCheckAtSpellUnlearn defaults on). Not yet modelled.
 - [x] Knowing any of the six native SPELL_EFFECT_PARRY (22) spells enables parry; without one, parry chance never applies.
 
+## Touch of Death admission
+
+- [x] Native322109 refuses a healthy stronger target before CastSuccess or cooldown publication. Its baseline admits creatures whose current health is strictly below the caster's maximum health; learned passive322113 additionally admits targets strictly below its authored health percentage. The native15% threshold is exclusive. PvP integration, Stagger removal and other follow-up talents remain separate, uncertified paths.
+- [x] Native322109 primary damage uses the caster's live maximum health and authored100%/35% fields for weaker creatures/other admitted targets. Native Can'tCrit, ignore caster percent damage modifiers, and ignore victim school/caster/versatility modifiers plus armor retain their source exclusions. These flags do not disable ordinary spells' modifiers. Mechanic-specific damage-taken auras, PvP integration, Stagger removal and other follow-up talents remain separate.
+
 ## Melee attack speed
 
 - [x] Native aura319 multiplies melee swing time by 100/(100+amount) per aura (negative amounts by (100−amount)/100) for players and creatures, independently of haste and cast time.
@@ -205,6 +210,11 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] Commit/push batches, regenerate census counts, merge origin/master and run targeted tests/check/fmt before final report.
 
 Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast suite and unfiltered server tests are prohibited. [Continuation proof](../class-completeness2.md).
+
+## Readiness elapsed time
+
+- [x] Spell/category cooldowns, GCDs, school lockouts and charge recovery use real elapsed server time, including slow frames, matching owner timer milliseconds. Existing rate modifiers, charge restoration, readiness credit and cooldown resets use that same clock. Simulation catch-up, cast/channel progression, aura expiry and missiles retain their existing clocks.
+- Source: TC a352b1fa `SpellHistory.cpp:834–855` consumes charges against GameTime. Native70391 Overpower7384/category1680 recovers one charge in12000ms; Throw Glaive185123/category1612 in9000ms; both and Slam1464 use GCD category133/1500ms before existing modifiers.
 
 ## Category charge-recovery rates
 

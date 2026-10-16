@@ -179,7 +179,7 @@ fn read_context(world: &World, owner: Entity, slot: u8) -> Result<SelectionConte
     let old_spell = old
         .and_then(|id| world.resource::<Catalog>().talents.get(id))
         .and_then(|t| world.resource::<SpellStore>().get(t.spell));
-    let now = world.resource::<Time<Virtual>>().elapsed_secs_f64();
+    let now = crate::spell_cast::history_now(world);
     let old_on_cooldown = old_spell.is_some_and(|spell| {
         world
             .get::<crate::spell_cast::SpellHistory>(owner)
