@@ -553,6 +553,15 @@ fn generate_corpse_loot(
         );
         let (loot, shared) =
             groups.distribute(corpse, npc.template_id, difficulty_id, &rewarded, &rolls);
+        bevy::log::debug!(
+            corpse = corpse.to_bits(),
+            entry = npc.template_id,
+            rewarded = ?rewarded,
+            personal = ?loot,
+            shared_loot = shared.has_loot(),
+            pending_rolls = shared.has_pending_rolls(),
+            "generated corpse loot"
+        );
         if loot.looters.is_empty() && !shared.has_loot() {
             corpse_looted(&mut decay, &mut death);
         }
