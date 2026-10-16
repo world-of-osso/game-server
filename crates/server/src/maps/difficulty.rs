@@ -528,6 +528,10 @@ pub(crate) struct AdminInstances<'w, 's> {
             &'static InMap,
             Option<&'static shared::components::UnitLevel>,
             Option<&'static crate::zones::CreatureDifficulty>,
+            Option<&'static crate::stats::CharacterStats>,
+            Option<&'static crate::level_scaling::CreatureArmor>,
+            Option<&'static crate::networking::CombatTarget>,
+            Option<&'static shared::components::ThreatTable>,
         ),
     >,
 }
@@ -623,20 +627,32 @@ impl AdminInstances<'_, '_> {
                 let lines = self
                     .creatures
                     .iter()
-                    .filter(|(_, npc, _, in_map, _, _)| {
-                        **in_map == map && npc.template_id == *entry
-                    })
-                    .map(|(entity, npc, health, _, level, difficulty)| {
-                        format!(
-                            "{} (entity {}) level {} health {}/{} difficulty {}",
-                            npc.name,
-                            entity.to_bits(),
-                            level.map_or(0, |level| level.0),
-                            health.current,
-                            health.max,
-                            difficulty.map_or(0, |difficulty| difficulty.0)
-                        )
-                    })
+                    .filter(|(_, npc, _, in_map, ..)| **in_map == map && npc.template_id == *entry)
+                    .map(
+                        |(
+                            entity,
+                            npc,
+                            health,
+                            _,
+                            level,
+                            difficulty,
+                            stats,
+                            armor,
+                            target,
+                            threat,
+                        )| {
+                            format!(
+                                "{} (entity {}) level {} health {}/{} difficulty {} combat={}",
+                                npc.name,
+                                entity.to_bits(),
+                                level.map_or(0, |level| level.0),
+                                health.current,
+                                health.max,
+                                difficulty.map_or(0, |difficulty| difficulty.0),
+                                npc_combat_metrics(stats, armor, target, threat)
+                            )
+                        },
+                    )
                     .collect();
                 AdminResponse::NpcInfoList { lines }
             }
@@ -677,5 +693,150 @@ impl AdminInstances<'_, '_> {
             }
             _ => return None,
         })
+    }
+}
+
+fn npc_combat_metrics(
+    stats: Option<&crate::stats::CharacterStats>,
+    armor: Option<&crate::level_scaling::CreatureArmor>,
+    target: Option<&crate::networking::CombatTarget>,
+    threat: Option<&shared::components::ThreatTable>,
+) -> serde_json::Value {
+    let stats = stats.map(|stats| {
+        serde_json::json!({
+            "strength": stats.primary.strength,
+            "intellect": stats.primary.intellect,
+            "spell_power": stats.spell_power,
+            "healing_power": stats.healing_power,
+            "attack_power": stats.attack_power,
+            "crit_pct": stats.crit_pct,
+            "haste_pct": stats.haste_pct,
+            "versatility_pct": stats.versatility_pct,
+        })
+    });
+    let threat = threat.map(|table| {
+        table
+            .entries()
+            .iter()
+            .map(|entry| serde_json::json!({"entity": entry.entity, "amount": entry.threat}))
+            .collect::<Vec<_>>()
+    });
+    serde_json::json!({
+        "stats": stats,
+        "creature_armor": armor.map(|armor| armor.0),
+        "victim": target.and_then(|target| target.0).map(Entity::to_bits),
+        "threat": threat,
+    })
+}
+
+#[cfg(test)]
+mod admin_npc_combat_tests {
+    use super::*;
+    use bevy::ecs::system::SystemState;
+    use shared::components::{Health, Npc, ThreatTable};
+
+    fn inspect(world: &mut World) -> serde_json::Value {
+        let db = GameDatabase {
+            db: crate::persistence::temp_database(),
+        };
+        let mut state = SystemState::<AdminInstances>::new(world);
+        let response = state
+            .get_mut(world)
+            .unwrap()
+            .dispatch(
+                &crate::admin_types::AdminRequest::NpcInfo {
+                    map_id: 34,
+                    instance_id: 1,
+                    entry: 209057,
+                },
+                &db,
+            )
+            .unwrap();
+        let crate::admin_types::AdminResponse::NpcInfoList { lines } = response else {
+            panic!("npc-info did not return its live rows");
+        };
+        assert_eq!(lines.len(), 1);
+        let (_, metrics) = lines[0]
+            .split_once(" combat=")
+            .expect("native combat metrics");
+        serde_json::from_str(metrics).unwrap()
+    }
+
+    fn spawn_npc(world: &mut World) -> Entity {
+        world
+            .spawn((
+                Npc {
+                    template_id: 209057,
+                    name: "Captain Garrick".into(),
+                },
+                Health {
+                    current: 7500.0,
+                    max: 10584.0,
+                },
+                InMap {
+                    map_id: 34,
+                    instance_id: 1,
+                },
+            ))
+            .id()
+    }
+
+    #[test]
+    fn npc_info_exposes_native_stats_victim_threat_without_mutating_them() {
+        let mut world = World::new();
+        let victim = world.spawn_empty().id();
+        let npc = spawn_npc(&mut world);
+        let mut table = ThreatTable::default();
+        table.add_threat(victim.to_bits(), 450.0);
+        let stats = crate::stats::CharacterStats {
+            spell_power: 73.0,
+            healing_power: 75.0,
+            attack_power: 214.0,
+            haste_pct: 4.0,
+            ..Default::default()
+        };
+        world.entity_mut(npc).insert((
+            stats,
+            crate::networking::CombatTarget(Some(victim)),
+            table,
+            crate::level_scaling::CreatureArmor(1234.0),
+        ));
+        let metrics = inspect(&mut world);
+        assert_eq!(metrics["stats"]["spell_power"], 73.0);
+        assert_eq!(metrics["stats"]["healing_power"], 75.0);
+        assert_eq!(metrics["stats"]["attack_power"], 214.0);
+        assert_eq!(metrics["stats"]["haste_pct"], 4.0);
+        assert_eq!(metrics["creature_armor"], 1234.0);
+        assert_eq!(metrics["victim"], victim.to_bits());
+        assert_eq!(
+            metrics["threat"],
+            serde_json::json!([
+                {"entity": victim.to_bits(), "amount": 450.0}
+            ])
+        );
+        assert_eq!(
+            *world.get::<crate::stats::CharacterStats>(npc).unwrap(),
+            stats
+        );
+        assert_eq!(
+            world
+                .get::<ThreatTable>(npc)
+                .unwrap()
+                .threat_for(victim.to_bits()),
+            450.0
+        );
+        assert_eq!(world.get::<Health>(npc).unwrap().current, 7500.0);
+    }
+
+    #[test]
+    fn npc_info_does_not_fabricate_missing_player_stats_or_threat() {
+        let mut world = World::new();
+        spawn_npc(&mut world);
+        assert_eq!(
+            inspect(&mut world),
+            serde_json::json!({
+                "stats": null, "creature_armor": null, "victim": null, "threat": null
+            })
+        );
     }
 }
