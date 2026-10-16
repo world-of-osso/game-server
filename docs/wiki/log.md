@@ -1576,3 +1576,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) trace Charred/Rampage intermittent failures to actual NPC dodge and qualify damage-only fixtures with existing native aura; evade guard unchanged.
 
 - 2026-10-16: Rotgrip copy-only binding and real source clocks/self-damage/Puncture/isolated credit; preserved DB2SELF versus TDBvictim mismatch, no fabricated correction. See [boss scripts](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16).
+
+- 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
