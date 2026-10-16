@@ -3,6 +3,8 @@ use super::*;
 
 #[path = "smart_feero_combat_tests.rs"]
 mod combat;
+#[path = "smart_feero_quest_tests.rs"]
+mod quests;
 use crate::scripted_ai::{CreatureAiState, Hook, MotionType, dispatch};
 use shared::components::{Health, UnitFactionTemplate, UnitFlags};
 
@@ -33,6 +35,7 @@ fn feero() -> (tempfile::TempDir, World, Entity, Entity) {
         ..Default::default()
     });
     world.insert_resource(scripts);
+    world.insert_resource(Time::<()>::default());
     let map = crate::maps::InMap::continent(1);
     world.entity_mut(creature).insert((
         Npc {
