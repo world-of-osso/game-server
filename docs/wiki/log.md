@@ -1,3 +1,7 @@
+## 2026-10-16 — Authoritative target LOS
+
+[Cast receipt boundary](systems/spell-casting.md#authoritative-target-los--2026-10-16): moving-target ordinary loopback RED reproduces stale-client-endpoint refusal with clear authoritative sight. Validation now searches from authoritative caster/target positions; client geometry and chosen endpoint tolerances are removed from cast admission/queue. Wall controls and fresh release-server acceptance remain verification gates.
+
 ## 2026-10-16 — Call Pet missing-storage refusal
 
 [Pet lifecycle](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16): absent PetStable admitted883 success then effect returned without a pet. Actual native-target fresh-storage RED→GREEN; four controls and copied real character47 storage probe pass. No saved pet exists. Pinned creation-cast data has no Human hunter pet row; named source gap, no granted kit. Authenticated real-profile follower melee death already reaches its owner exactly once in a separate baseline test; terminal native delivery ordering remains under investigation rather than adding duplicate events.
