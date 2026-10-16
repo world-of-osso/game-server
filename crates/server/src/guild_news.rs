@@ -282,6 +282,10 @@ mod tests {
         app.world_mut()
             .entity_mut(connection)
             .insert(crate::auth::Authenticated { account_id: 1 });
+        app.world_mut()
+            .get_mut::<MessageSender<GuildNewsRequest>>(connection)
+            .unwrap()
+            .send::<GuildChannel>(GuildNewsRequest::Query);
         for _ in 0..4 {
             app.update();
         }
