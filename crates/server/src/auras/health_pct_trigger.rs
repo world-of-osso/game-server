@@ -25,9 +25,34 @@ struct Watch {
     trigger: u32,
 }
 
-pub(super) fn trigger_on_health_pct(world: &mut World) {
-    let units: Vec<(Entity, f32, f32, Vec<Watch>)> = world
-        .query::<(Entity, &ActiveAuras, &Health)>()
+/// Indexed at aura membership changes, not by scanning every world unit.
+#[derive(Component)]
+#[require(ObservedHealth)]
+pub(super) struct HealthPercentWatch;
+
+pub(super) fn reconcile(world: &mut World, unit: Entity) {
+    let watches = world
+        .get::<ActiveAuras>(unit)
+        .is_some_and(|auras| auras.has_type(TRIGGER_SPELL_ON_HEALTH_PCT));
+    let indexed = world.get::<HealthPercentWatch>(unit).is_some();
+    match (watches, indexed) {
+        (true, false) => {
+            world.entity_mut(unit).insert(HealthPercentWatch);
+        }
+        (false, true) => {
+            world
+                .entity_mut(unit)
+                .remove::<(HealthPercentWatch, ObservedHealth)>();
+        }
+        _ => {}
+    }
+}
+
+type HealthWatches =
+    QueryState<(Entity, &'static ActiveAuras, &'static Health), With<HealthPercentWatch>>;
+
+pub(super) fn trigger_on_health_pct(world: &mut World, watched: &mut HealthWatches) {
+    let units: Vec<(Entity, f32, f32, Vec<Watch>)> = watched
         .iter(world)
         .filter_map(|(unit, auras, health)| {
             let watches: Vec<_> = auras

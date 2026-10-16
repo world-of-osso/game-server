@@ -93,3 +93,13 @@ Durable logs and harness: `game-engine/data/diagnostics/server-tick-perf-2026-10
 - [[swimming-and-breath]] — breath timers count fixed-step time
 - [[recurring-loop-elimination]] — earlier recurring-scan reductions
 - [[persistence]] — save boundaries
+
+## Current full-population profile (2026-10-16)
+
+Private UDP5831 uses a SQLite backup of canonical world data, isolated redb, and no tick/timer/profile changes. Debug `ce4b18cb` (includes official `7f7c8875` and achievement fix `790ce401`) reproduces idle catch-up collapse: slow windows mean280–430ms/frame, 11.6–15.2ticks/s. Seven complete diagnostic windows rank health-percent aura observation23.96ms/fixed-step, detection geometry12.51ms, NPC resize8.42ms, collision sync5.37ms and threat replication2.96ms. Each outer frame can repeat fixed work five times; these are per-step costs, not outer-frame totals.
+
+Release `c55b5e2c` with system-timings and eleven genuine UDP peers instead held19.7–20.3ticks/s for eight complete windows, means18.1–29.4ms/frame, max174.9ms. All eleven entered, then stayed90s. Server CPU39.76s over89.04s sampled wall. Source/profile/host conditions differ, so this is not a paired optimization speedup or plain-release budget acceptance. Use plain release for production and live timing acceptance; debug and trace-enabled release are attribution tools.
+
+Health-percent aura468 observation still scanned every unit and allocated empty watcher vectors. Index watcher membership from `auras_changed`, the shared apply/remove/refresh boundary, and keep a cached filtered query. Removing the last matching aura removes its observations, so a new already-below-threshold aura still fires on application. Crossing direction, thresholds and actual triggered casts remain unchanged. The250000-unit/five-catch-up regression reproduced118.707ms before indexing; native171393→171397/171404 crossing/reapply behavior passed before the optimization. Post-change evidence remains pending.
+
+Evidence: `game-engine/data/diagnostics/server-live-frame-cost-2026-10-16/`, including `debug-idle-*`, `release-independent-*` and `health-watch-red.*`. The peer example is [tick_perf_peers.rs](../../../crates/client/examples/tick_perf_peers.rs). Replicon client receive resources are app-global: eleven connections require eleven independent Apps; sharing one App reproduced a mutate-tick panic, not a server performance failure. No rendered clients or saved auth tokens are used.
