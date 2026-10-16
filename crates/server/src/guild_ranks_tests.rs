@@ -17,6 +17,116 @@ fn members(db: &redb::Database) -> (u64, u64, u64) {
 }
 
 #[test]
+fn guild_lifecycle_log_records_real_actions_only_and_survives_restart() {
+    use crate::guild_event_log::query;
+    use crate::persistence_character::{accept_pending_guild_invite, set_pending_guild_invite};
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("guild-events.redb");
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    let (master, _, member) = members(&db);
+    let (visitor, _) = create_character(&db, 2, "Visitor", 1, 1).unwrap();
+    let (other, _) = create_character(&db, 3, "Outsider", 1, 1).unwrap();
+    set_character_guild_by_id(&db, other, 9, "Other Guild").unwrap();
+    assert!(
+        query(&db, master).events.is_empty(),
+        "Never reconstruct old history"
+    );
+    assert_eq!(query(&db, visitor).error, Some(GuildRankError::NotInGuild));
+    set_pending_guild_invite(&db, visitor, 7, "Bank Testers", "Master");
+    accept_pending_guild_invite(&db, visitor).unwrap();
+    assert!(accept_pending_guild_invite(&db, visitor).is_err());
+    assert_eq!(
+        apply_rank_request(
+            &db,
+            7,
+            member,
+            GuildRankRequest::Promote {
+                character_name: "Master".into()
+            }
+        ),
+        Err(GuildRankError::Permissions)
+    );
+    for request in [
+        GuildRankRequest::Promote {
+            character_name: "Visitor".into(),
+        },
+        GuildRankRequest::Demote {
+            character_name: "Visitor".into(),
+        },
+        GuildRankRequest::RemoveMember {
+            character_name: "Visitor".into(),
+        },
+        GuildRankRequest::Rename {
+            rank: 3,
+            name: "Renamed Member".into(),
+        },
+        GuildRankRequest::Rename {
+            rank: 4,
+            name: "New Initiate".into(),
+        },
+    ] {
+        apply_rank_request(&db, 7, master, request).unwrap();
+    }
+    apply_rank_request(&db, 7, member, GuildRankRequest::Leave).unwrap();
+    let expected = vec![
+        GuildEventKind::Invite {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+        },
+        GuildEventKind::Join {
+            member: "Visitor".into(),
+        },
+        GuildEventKind::Promote {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+            rank: "Member".into(),
+        },
+        GuildEventKind::Demote {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+            rank: "Initiate".into(),
+        },
+        GuildEventKind::Remove {
+            actor: "Master".into(),
+            member: "Visitor".into(),
+        },
+        GuildEventKind::Quit {
+            member: "Member".into(),
+        },
+    ];
+    let before = query(&db, master);
+    assert_eq!(before.error, None);
+    assert_eq!(
+        before
+            .events
+            .iter()
+            .map(|event| event.kind.clone())
+            .collect::<Vec<_>>(),
+        expected
+    );
+    assert!(
+        before
+            .events
+            .iter()
+            .all(|event| event.timestamp > 0 && event.timestamp <= before.server_time)
+    );
+    assert!(
+        query(&db, other).events.is_empty(),
+        "Cannot query another guild's history"
+    );
+    assert_eq!(query(&db, member).error, Some(GuildRankError::NotInGuild));
+    assert!(query(&db, member).events.is_empty());
+    assert!(crate::persistence::load_character_guild(&db, visitor).is_none());
+    assert!(crate::persistence::load_character_guild(&db, member).is_none());
+    drop(db);
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    assert_eq!(query(&db, master).events, before.events);
+    assert!(crate::persistence::load_character_guild(&db, visitor).is_none());
+}
+
+#[test]
 fn guild_member_notes_are_filtered_per_authenticated_snapshot_recipient() {
     let db = temp_database();
     let (master, _, member) = members(&db);
