@@ -219,6 +219,118 @@ mod tests {
     use super::*;
     use shared::protocol::GuildNewsRequest;
 
+    #[derive(bevy::prelude::Resource, Default)]
+    struct Inbox(Vec<GuildNewsState>);
+
+    fn collect_news(
+        mut receivers: bevy::prelude::Query<
+            &mut lightyear::prelude::MessageReceiver<GuildNewsState>,
+        >,
+        mut inbox: bevy::prelude::ResMut<Inbox>,
+    ) {
+        for mut receiver in &mut receivers {
+            inbox.0.extend(receiver.receive());
+        }
+    }
+
+    #[test]
+    fn guild_news_authenticated_host_query_refusal_and_committed_live_update() {
+        use bevy::prelude::*;
+        use lightyear::prelude::*;
+        use shared::protocol::*;
+        let db = crate::persistence::temp_database();
+        let (id, _) = crate::persistence::create_character(&db, 1, "Member", 1, 1).unwrap();
+        crate::persistence_character::set_character_guild_by_id(&db, id, 7, "News Guild").unwrap();
+        crate::persistence::banks::save_guild_member_rank(&db, id, 4);
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: std::time::Duration::from_millis(50),
+        });
+        app.add_plugins(ProtocolPlugin);
+        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.init_resource::<Inbox>();
+        app.add_plugins(crate::guild::GuildPlugin);
+        app.add_systems(First, collect_news);
+        app.finish();
+        app.cleanup();
+        let connection = app
+            .world_mut()
+            .spawn((
+                RemoteId(PeerId::Local(1)),
+                Connected,
+                lightyear::connection::host::HostClient { buffer: Vec::new() },
+                crate::auth::InWorld { character_id: id },
+                MessageSender::<GuildNewsRequest>::default(),
+                MessageReceiver::<GuildNewsRequest>::default(),
+                MessageSender::<GuildNewsState>::default(),
+                MessageReceiver::<GuildNewsState>::default(),
+            ))
+            .id();
+        app.world_mut()
+            .get_mut::<MessageSender<GuildNewsRequest>>(connection)
+            .unwrap()
+            .send::<GuildChannel>(GuildNewsRequest::Query);
+        for _ in 0..4 {
+            app.update();
+        }
+        assert!(
+            app.world().resource::<Inbox>().0.is_empty(),
+            "unauthenticated requests stay unread"
+        );
+        app.world_mut()
+            .entity_mut(connection)
+            .insert(crate::auth::Authenticated { account_id: 1 });
+        for _ in 0..4 {
+            app.update();
+        }
+        let replies = std::mem::take(&mut app.world_mut().resource_mut::<Inbox>().0);
+        assert_eq!(replies.len(), 1, "authenticated query must answer");
+        assert!(replies[0].entries.is_empty());
+        let db = &app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db;
+        let template =
+            crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap();
+        record_purchase(
+            db,
+            id,
+            50335,
+            template
+                .get(shared::item_data::ItemDefinitionSource::Retail, 50335)
+                .unwrap(),
+        );
+        app.world_mut()
+            .resource_mut::<crate::gold::GoldUpdateQueue>()
+            .record_items(id);
+        for _ in 0..4 {
+            app.update();
+        }
+        let replies = std::mem::take(&mut app.world_mut().resource_mut::<Inbox>().0);
+        assert_eq!(
+            replies.len(),
+            1,
+            "committed acquisition broadcasts without another query"
+        );
+        let news_id = replies[0].entries[0].id;
+        app.world_mut()
+            .get_mut::<MessageSender<GuildNewsRequest>>(connection)
+            .unwrap()
+            .send::<GuildChannel>(GuildNewsRequest::SetSticky {
+                id: news_id,
+                sticky: true,
+            });
+        for _ in 0..4 {
+            app.update();
+        }
+        let replies = std::mem::take(&mut app.world_mut().resource_mut::<Inbox>().0);
+        assert_eq!(replies.len(), 1);
+        assert_eq!(replies[0].error, Some(GuildNewsError::Permissions));
+        assert!(!replies[0].entries[0].sticky);
+    }
+
     #[test]
     fn guild_news_retention_sticky_permissions_and_abort_survive_reopen() {
         let directory = tempfile::tempdir().unwrap();
