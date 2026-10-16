@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Readiness clock isolation — 2026-10-15 (verification pending)
+
+`history_now` reads Bevy `Time<Real>` for SpellHistory deadlines, owner snapshots, charge recovery, queue GCD admission, school lockouts, rate changes, resets and ready-time credit. Generic `now`, aura time, cast/channel delta and missile clocks remain unchanged. No global simulation clamp change. [Contract](../../specs/class-completeness.md#readiness-elapsed-time).
+
+Original native-equal-budget2 server frames averaged358–790ms; Bevy0.19's default virtual clock cap retains at most250ms/frame. Native local timers advance independently, so received charges still toggle0/1 but readiness can precede server admission. Actual70391 categories require12000ms Overpower and9000ms Throw Glaive. A real60-second AutomaticTime/400ms-frame HostClient lifetime RED rejects an Overpower recast after its recovery plus two real seconds. This is owner-message/lifetime proof, not UDP, rendered/audio or full-class acceptance. GREEN remains pending.
+
 ## Warrior effect-hit stuns
 
 `warrior_stuns` runs the pinned Shockwave46968/Storm Bolt107570 effect0 SCHOOL_DAMAGE hooks before the default damage handler, after target/effect immunity filtering. Shockwave casts132168 with ordinary validation except cast-in-progress and suppressed owner errors; Storm Bolt casts132169 fully triggered. Child missile speed/duration remain native. The separate Storm Bolt destination-area filter keeps only its explicit target without caster-owned436162, and otherwise retains native area selection. Other effects and unbound Dummy fields remain separate gaps. Source: TC a352b1fa `spell_warrior.cpp:1792–1856`, `Spell.cpp:5719–5734`; [contract](../../specs/class-completeness.md).
