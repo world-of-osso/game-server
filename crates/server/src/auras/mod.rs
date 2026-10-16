@@ -1379,6 +1379,12 @@ pub fn damage_taken_multiplier(
     attacker: Entity,
     spell: &SpellInfo,
 ) -> f32 {
+    // TC Unit.cpp7033: only mechanic damage modifiers survive this attribute.
+    // This function's supported modifiers are school/caster/versatility, not mechanic.
+    const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x0000_0100;
+    if attributes(spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0 {
+        return 1.0;
+    }
     let versatility = damage_resilience_multiplier(world, target, spell);
     let school_mask = spell.school_mask();
     let taken = world
