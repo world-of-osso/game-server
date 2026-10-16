@@ -7,7 +7,7 @@
 
 ## 2026-10-16 — Touch of Death primary damage and native flags
 
-- 2026-10-16: [Slow native fixtures](investigations/slow-native-test-fixtures.md): three measured RED→GREEN profiles, eleven unchanged gameplay tests pass separately and2 isolation controls pass; disk-backed source follow-up/currentcheck pending, full-suite timing separate.
+- 2026-10-16: [Slow native fixtures](investigations/slow-native-test-fixtures.md): three measured RED→GREEN profiles; master6403a988 integration passes14/14 unchanged gameplay/isolation/imported-copy controls410.83s and warning-freecheck11.37s. Arena residual>60s and full-suite timing remain separate.
 
 [Health damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16): native999-health/zero-damage RED→GREEN100%/35% maximum-health outcomes with actual armor, school modifiers and Can'tCrit. Shared source attribute consumers honor caster-percent/victim/armor exclusions; ordinary-modifier and adjacent controls62/62 pass. PvP/Stagger/mastery/follow-up talents and fresh bot acceptance remain open.
 

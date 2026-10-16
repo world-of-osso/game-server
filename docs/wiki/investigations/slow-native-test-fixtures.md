@@ -44,7 +44,9 @@ Atb2df8d8e atop master2dadf94e, all eleven named tests pass separately with unch
 
 The first three use matching49Hz CPU profiling on both sides. This is not an eleven-test combined invocation or proof that every test is below60s; arena remains above that threshold. The baseline used379c2c6b; current green also includes the intervening master2dadf94e source changes. Logs and `green-duration-ledger.json` preserve exact revisions, commands, admission snapshots and test-versus-runner durations. Full-suite timing/host contention remain lead-owned; no62→17minute claim.
 
-Two isolation tests pass36.82s, proving app creature/catalog/class changes do not alter cached authority and the imported class snapshot rejects SQL writes. Follow-up45ff1598 changes only the snapshot's scratch location to disk-backed target; current prepared-source controls and feature check pending. Unrelated canonical caches/profiles are not rerun for that filesystem-only change.
+Two isolation tests pass36.82s, proving app creature/catalog/class changes do not alter cached authority and the imported class snapshot rejects SQL writes. Follow-up45ff1598 changes only the snapshot's scratch location to disk-backed target. All5 prepared-source/isolation controls pass125.49s, including actual follower tap, six demon summon/dismiss/reopens and a separately imported Golden Serpent encounter; feature check passes2m43s without warnings. Unrelated canonical caches/profiles were not rerun for that filesystem-only change.
+
+After merging master6403a988 (combat/aggro/script changes) atedd15fd6, the complete bounded set passes together: **14/14 in410.83s** (eleven named tests plus two isolation controls and the imported encounter-copy control). Compile/package-lock time is separately recorded3m13s; current feature check passes11.37s without warnings. This merge intersects gameplay consumers, so the bounded rerun is new integration proof, not a ceremonial repeat. Formatting/diff and manual changed-Rust readability checks pass. Full-server suite timing and independent verification remain lead-owned.
 
 ## Related
 
