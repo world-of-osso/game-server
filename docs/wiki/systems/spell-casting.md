@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Execute actual-Rage damage — 2026-10-16
+
+TC a352b1fa `spell_warrior.cpp743–832` passes Execute163201's raw base/optional costs and actual paid Rage to child260798. Child damage multiplies by `(spent-base)/optional+1`; an applicable Sudden Death52437 modifier instead uses talent29725 effect0 ×10 raw Rage. Native70391 has three200-base/200-optional rows; the runtime had spent the optional Rage but left the child at its minimum damage. Genuine ordinary HostClient RED atd38ada7d: Protection300 Rage still dealt459 instead of1.5× its473 standalone baseline; Arms400 and native Sudden Death likewise lacked their2× multiplier (1pass/3fail). These are two independent native variance rolls, not root-ID attribution failures.
+
+The successful-launch spell clone now retains the multiplier before payment/refund; only the root's effect0 passes it to its native child, where it multiplies the calculated damage before critical and taken-damage handling. Standalone child casts retain their native amount. Scalar/effect/power rows equal the installed70391 source; Execute description differs only in CRLF/LF. Target health admission, other Execute variants, exact child trigger-flag parity, complete talent/legal-build and fresh UDP acceptance remain separate. Targeted GREEN/check proofs pending. [Contract](../../specs/class-completeness.md); evidence `data/class-completeness6-2026-10-12/protection-execute-{source,native-equality,proof-ledger}.json`.
+
 ## Native damage prerequisite fixtures — 2026-10-16
 
 Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.

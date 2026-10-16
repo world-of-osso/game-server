@@ -788,7 +788,8 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
-    ) * ctx.chain_multiplier;
+    ) * ctx.chain_multiplier
+        * ctx.spell.cast_execute_multiplier.unwrap_or(1.0);
     let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, amount);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
@@ -1512,6 +1513,9 @@ fn cast_destination_missile_child(
 }
 
 fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if super::scripts::cast_execute_damage(world, ctx, effect, target) {
+        return;
+    }
     super::cast_triggered_with_item_level(
         world,
         ctx.caster,

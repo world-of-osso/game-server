@@ -87,6 +87,11 @@ pub(super) fn snapshot(
     costs: &[(CostPool, f32)],
 ) -> SpellInfo {
     let mut spell = source.clone();
+    if spell.id == 163201 {
+        spell.cast_execute_multiplier = Some(super::scripts::execute_multiplier(
+            world, caster, &spell, costs,
+        ));
+    }
     let combo = spent(costs, PowerType::ComboPoints);
     if combo > 0.0
         && let Some(misc) = &mut spell.misc

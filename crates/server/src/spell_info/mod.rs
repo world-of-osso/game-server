@@ -81,6 +81,9 @@ pub struct SpellInfo {
     /// Successful-launch charged modifiers; None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
+    /// Execute's launch-time Rage formula, carried only to its native damage child.
+    #[serde(skip)]
+    pub(crate) cast_execute_multiplier: Option<f32>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,

@@ -109,6 +109,19 @@ pub(crate) fn class_mask_affects(
         && (0..4).any(|word| options.spell_class_mask[word] & effect.class_mask[word] != 0)
 }
 
+/// Whether this recipient's aura contributes a modifier for the given operation.
+pub(crate) fn aura_modifies(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    aura_id: u32,
+    op: SpellModOp,
+) -> bool {
+    world
+        .get::<ActiveAuras>(caster)
+        .is_some_and(|auras| matching(auras, spell, op).any(|(aura, _)| aura.spell_id == aura_id))
+}
+
 /// `Unit::HasAuraTypeWithAffectMask` (Unit.cpp:4852-4858): `unit` has an `aura_type`
 /// effect whose class mask affects `spell`.
 pub fn has_aura_type_affecting(

@@ -13,6 +13,9 @@ pub(super) const REND: u32 = 772;
 const REND_BLEED: u32 = 388539;
 const EXECUTE: u32 = 163201;
 const EXECUTE_RANK: u32 = 316405;
+const SUDDEN_DEATH: u32 = 29725;
+const SUDDEN_DEATH_BUFF: u32 = 52437;
+const RAW_RAGE_PER_POINT: f32 = 10.0;
 pub(super) const SHADOW_WORD_DEATH: u32 = 32379;
 const DEATHSPEAKER: u32 = 364675;
 pub(crate) const RAPID_FIRE: u32 = 257044;
@@ -45,6 +48,79 @@ fn apply_owned_aura(world: &mut World, caster: Entity, target: Entity, spell_id:
             source: AuraSource::Cast,
         },
     );
+}
+
+/// TC warrior743–832: retain actual paid Rage, or the applied Sudden Death
+/// talent's authored damage budget. Raw native costs stay independent of discounts.
+pub(in crate::spell_cast) fn execute_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(CostPool, f32)],
+) -> f32 {
+    let spent = sudden_death_rage(world, caster, spell)
+        .unwrap_or_else(|| spell_cast::resources::spent(costs, PowerType::Rage));
+    raw_execute_multiplier(spell, spent)
+}
+
+fn raw_execute_multiplier(spell: &SpellInfo, spent: f32) -> f32 {
+    let cost = spell
+        .power_costs
+        .iter()
+        .find(|cost| cost.power_type == PowerType::Rage as i32)
+        .expect("native Execute requires a Rage cost row");
+    if cost.optional_cost <= 0 {
+        return 1.0;
+    }
+    (spent - cost.mana_cost as f32) / cost.optional_cost as f32 + 1.0
+}
+
+fn sudden_death_rage(world: &World, caster: Entity, spell: &SpellInfo) -> Option<f32> {
+    use crate::auras::{
+        ActiveAuras,
+        spell_mods::{self, SpellModOp},
+    };
+    let modifies_cost = spell.power_costs.iter().any(|cost| {
+        let active = cost.required_aura_spell_id == 0
+            || crate::auras::has_aura(world, caster, cost.required_aura_spell_id);
+        active
+            && SpellModOp::power_cost(cost.order_index).is_some_and(|op| {
+                spell_mods::aura_modifies(world, caster, spell, SUDDEN_DEATH_BUFF, op)
+            })
+    });
+    if !modifies_cost {
+        return None;
+    }
+    let talent = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == SUDDEN_DEATH)?;
+    let effect = talent.effects.iter().find(|effect| effect.index == 0)?;
+    Some(effect.amount.trunc() * RAW_RAGE_PER_POINT)
+}
+
+pub(in crate::spell_cast) fn cast_execute_damage(
+    world: &mut World,
+    ctx: &effects::EffectCtx,
+    effect: &crate::spell_info::SpellEffect,
+    target: Entity,
+) -> bool {
+    if ctx.spell.id != EXECUTE || effect.index != 0 {
+        return false;
+    }
+    let Some(mut child) =
+        spell_cast::load_triggered_spell(world, effect.trigger_spell, ctx.depth + 1)
+    else {
+        return true;
+    };
+    // Triggered parents pay no Rage; direct child casts have no TriggerArgs.
+    child.cast_execute_multiplier = Some(
+        ctx.spell
+            .cast_execute_multiplier
+            .unwrap_or_else(|| raw_execute_multiplier(ctx.spell, 0.0)),
+    );
+    spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1);
+    true
 }
 
 ///163201 and its260798 damage child both have native Speed0. Refund after that

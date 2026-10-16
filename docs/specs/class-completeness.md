@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] Native Execute163201 snapshots actual paid Rage and scales child260798 by `(spent - native base cost) / native optional cost + 1`. Protection and Arms share the source formula; refunds do not change the already-launched damage budget. An applicable Sudden Death52437 cost modifier uses native talent29725's authored Rage budget without spending it. Standalone child casts have no parent multiplier. Health-state admission, complete child trigger flags, other Execute variants and full talent/legal/native acceptance remain separate.
+
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Optional percentage costs, flat-spellmod exclusion and full talent/finisher acceptance remain separate.
 
 - [x] Native aura334 adds signed attacker-owned percentage points only to autoattack critical chance, summing applied amounts/stacks before the nonnegative clamp. Removal ends its contribution; victim-only auras and magic/weapon spell crit remain independent. Avenging Wrath31884 also has aura290, which continues through normal stat computation; this consumer does not replace or double-count it. Full talent amount bindings, legal gear and fresh native acceptance remain separate.
