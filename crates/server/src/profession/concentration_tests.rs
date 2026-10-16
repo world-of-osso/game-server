@@ -24,7 +24,13 @@ fn missing_wallet_entry_is_unknown_not_an_initial_zero_or_full_grant() {
     let snapshot = catalog.snapshot(2830, &wallet).unwrap();
     assert_eq!(snapshot.quantity, None);
     assert_eq!(snapshot.recharge_origin, Err(ConcentrationOriginGap));
-    assert!(snapshot.recharge_origin.unwrap_err().to_string().starts_with("CRAFTING_CONCENTRATION_ORIGIN:"));
+    assert!(
+        snapshot
+            .recharge_origin
+            .unwrap_err()
+            .to_string()
+            .starts_with("CRAFTING_CONCENTRATION_ORIGIN:")
+    );
     assert!(wallet.entries.is_empty());
 }
 
@@ -32,7 +38,13 @@ fn missing_wallet_entry_is_unknown_not_an_initial_zero_or_full_grant() {
 fn existing_quantity_is_read_only_and_does_not_establish_recharge_origin() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
     let catalog = ConcentrationCatalog::load(&dir).unwrap();
-    let wallet = CurrencyWallet { entries: vec![shared::currency::CurrencyEntry { id: 3049, amount: 137, week_earned: 0 }] };
+    let wallet = CurrencyWallet {
+        entries: vec![shared::currency::CurrencyEntry {
+            id: 3049,
+            amount: 137,
+            week_earned: 0,
+        }],
+    };
     let snapshot = catalog.snapshot(2830, &wallet).unwrap();
     assert_eq!(snapshot.quantity, Some(137));
     assert_eq!(snapshot.recharge_origin, Err(ConcentrationOriginGap));
@@ -48,24 +60,59 @@ fn concentration_query_requires_learned_line_and_never_creates_wallet_entries() 
         add_inbox::<ProfessionConcentrationUpdate>(app);
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
         app.insert_resource(ConcentrationCatalog::load(&dir).unwrap());
-    }).unwrap();
-    h.app.world_mut().entity_mut(h.connection).insert((pair::<ProfessionConcentrationRequest>(), pair::<ProfessionConcentrationUpdate>()));
-    h.app.world_mut().entity_mut(h.player).insert(PlayerCurrencies::default());
+    })
+    .unwrap();
+    h.app.world_mut().entity_mut(h.connection).insert((
+        pair::<ProfessionConcentrationRequest>(),
+        pair::<ProfessionConcentrationUpdate>(),
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerCurrencies::default());
     h.send::<_, ProfessionChannel>(ProfessionConcentrationRequest { skill_line: 2830 });
-    let rejected = h.take::<ProfessionConcentrationUpdate>().pop().expect("unlearned-line reply");
-    assert_eq!(rejected.error.as_deref(), Some("Profession skill line is not learned"));
+    let rejected = h
+        .take::<ProfessionConcentrationUpdate>()
+        .pop()
+        .expect("unlearned-line reply");
+    assert_eq!(
+        rejected.error.as_deref(),
+        Some("Profession skill line is not learned")
+    );
     assert!(rejected.snapshot.is_none());
     let mut professions = h.professions();
-    professions.lines.push(shared::profession::ProfessionSkillLine { skill_line: 2830, step: 1, rank: 25, max_rank: 100 });
+    professions
+        .lines
+        .push(shared::profession::ProfessionSkillLine {
+            skill_line: 2830,
+            step: 1,
+            rank: 25,
+            max_rank: 100,
+        });
     h.app.world_mut().entity_mut(h.player).insert(professions);
     h.send::<_, ProfessionChannel>(ProfessionConcentrationRequest { skill_line: 2830 });
-    let update = h.take::<ProfessionConcentrationUpdate>().pop().expect("learned-line reply");
+    let update = h
+        .take::<ProfessionConcentrationUpdate>()
+        .pop()
+        .expect("learned-line reply");
     assert_eq!(update.error, None);
     let snapshot = update.snapshot.unwrap();
     assert_eq!(snapshot.currency.cap, 1000);
     assert_eq!(snapshot.currency.recharge_cycle_ms, 345600);
     assert_eq!(snapshot.quantity, None);
     assert_eq!(snapshot.recharge_origin, Err(ConcentrationOriginGap));
-    assert!(h.app.world().get::<PlayerCurrencies>(h.player).unwrap().0.entries.is_empty());
-    assert!(persistence::load_currencies(h.db(), h.character_id).entries.is_empty());
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerCurrencies>(h.player)
+            .unwrap()
+            .0
+            .entries
+            .is_empty()
+    );
+    assert!(
+        persistence::load_currencies(h.db(), h.character_id)
+            .entries
+            .is_empty()
+    );
 }
