@@ -156,7 +156,6 @@ struct Inbox {
     spell_gos: Vec<shared::protocol::SpellGo>,
     opened: Vec<shared::protocol::InteractionOpened>,
     closed: Vec<shared::protocol::InteractionClosed>,
-    failed: Vec<shared::protocol::InteractionFailed>,
 }
 
 struct Harness {
@@ -450,12 +449,6 @@ impl Harness {
                 inbox
                     .closed
                     .extend(drain::<shared::protocol::InteractionClosed>(
-                        world,
-                        *connection,
-                    ));
-                inbox
-                    .failed
-                    .extend(drain::<shared::protocol::InteractionFailed>(
                         world,
                         *connection,
                     ));
