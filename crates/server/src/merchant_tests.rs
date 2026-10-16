@@ -98,11 +98,11 @@ fn guild_news_records_only_successful_source_qualified_vendor_purchases() {
     let item = inventories[0]
         .items
         .iter()
-        .find(|item| item.item_id == 44133)
+        .find(|item| item.item_id == 50335)
         .unwrap();
     let slot = item.slot;
     h.set_gold(0);
-    h.buy(vendor, slot, 44133, 1);
+    h.buy(vendor, slot, 50335, 1);
     assert_eq!(h.take::<MerchantFailed>().len(), 1);
     assert!(
         crate::guild_news::query(&h.app.world().resource::<GameDatabase>().db, h.character_id)
@@ -110,11 +110,11 @@ fn guild_news_records_only_successful_source_qualified_vendor_purchases() {
             .is_empty()
     );
     h.set_gold(1_000_000);
-    h.buy(vendor, slot, 44133, 1);
+    h.buy(vendor, slot, 50335, 1);
     assert!(h.take::<MerchantFailed>().is_empty());
     let inventory =
         persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id);
-    assert!(inventory.items.iter().any(|item| item.item_id == 44133));
+    assert!(inventory.items.iter().any(|item| item.item_id == 50335));
     let news =
         crate::guild_news::query(&h.app.world().resource::<GameDatabase>().db, h.character_id);
     assert_eq!(
@@ -126,7 +126,7 @@ fn guild_news_records_only_successful_source_qualified_vendor_purchases() {
         news.entries[0].kind,
         shared::protocol::GuildNewsKind::ItemPurchased {
             member: "Shopper".into(),
-            item_id: 44133
+            item_id: 50335
         }
     );
     // Godric's real ordinary-quality shield is a purchase, not guild-news loot.
