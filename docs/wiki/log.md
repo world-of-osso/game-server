@@ -1,3 +1,7 @@
+## 2026-10-15 — Guild invitation acceptance FIFO
+
+[Acceptance](investigations/server-tick-lag.md#guild-invitation-acceptance-fifo--2026-10-15): fresh shared-FIFO acceptance with atomic membership/rank/petition cleanup and receipt-bound component/reply/member publication. Seven held-writer REDs, two premature refusals and tick decode failure become15/15 native passes including legacy gameplay assertions, relog/rebound/departure and mid-transaction rollback. Initial fixture receiver/early-reply failures remain archived; invite creation, charters and global release/HOL proof remain open.
+
 ## 2026-10-15 — Guild invitation decline FIFO
 
 [Decline](investigations/server-tick-lag.md#guild-invitation-decline-fifo--2026-10-15): preserve no-ack packet semantics while queueing the original character's fresh pending-row consumption. Pending/missing/prefix creation/replacement, following accept, relog and real writer-error controls pass8/8;2 incoming NPC-inspection controls pass separately after constructor adaptation. Stronger malformed-row presence/reopen assertions pass8/8 in1.91s; current feature check passes4.76s without warnings, format/diff pass. Create/accept/charter and global release/HOL proof remain separate.

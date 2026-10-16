@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Guild acceptance FIFO](investigations/server-tick-lag.md#guild-invitation-acceptance-fifo--2026-10-15) — owned authenticated intent, atomic fresh acceptance and receipt-bound membership/replies;12 wire/FIFO plus3 retained controls pass15/15, release proof remains open.
+
 - [Guild decline FIFO](investigations/server-tick-lag.md#guild-invitation-decline-fifo--2026-10-15) — owned character intent, no-ack packet and fresh pending row;5 held-writer REDs plus tick decode error become8 native passes,2 incoming admin controls pass separately; current warning-free check passes.
 
 - [Guild profile/note FIFO](investigations/server-tick-lag.md#guild-motdinfoofficer-note-fifo--2026-10-15) — actual MOTD/info fields and legacy officer notes, fresh edit/view authority at write/publication;7 held-writer REDs plus tick error become10 native passes; warning-free check passes, release pending.
