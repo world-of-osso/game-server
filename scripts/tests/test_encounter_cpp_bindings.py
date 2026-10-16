@@ -173,6 +173,47 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_gizlock_primary_uses_db2_bit_not_tc_ordinal(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('gizlock')
+        self.assertIsNotNone(profile, 'pinned Gizlock primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(427,349,5);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES(13601,'','SmartAI');
+            INSERT INTO raid_encounter_creature VALUES(349,13282,422,0,423,993,11172);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=349 ORDER BY bit').fetchall(),
+            [(13282,422,0,423,993,11172),(13601,427,5,425,995,7125)])
+        self.db.execute('UPDATE dungeon_encounter SET Bit=2 WHERE ID=427')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
+    def test_noxxion_primary_preserves_other_maraudon_credit(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('noxxion')
+        self.assertIsNotNone(profile, 'pinned Noxxion primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(422,349,0);
+            INSERT INTO tdb_creature_template VALUES(13282,'boss_noxxion');
+            INSERT INTO raid_encounter_creature VALUES(349,13596,428,6,430,1000,13589);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=349 ORDER BY bit').fetchall(),
+            [(13282,422,0,423,993,11172),(13596,428,6,430,1000,13589)])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=13282")
+        with self.assertRaisesRegex(ValueError, 'creature script identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_rotgrip_primary_preserves_razorlash_and_authored_ai(self):
         import encounter_cpp_bindings as bindings
         profile = bindings.PROFILES.get('rotgrip')
