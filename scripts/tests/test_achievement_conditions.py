@@ -26,6 +26,28 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_hug_retains_player_dead_and_hostile_target_companions(self):
+        criteria = {2379: dict(self.criteria[1], Type='54', Asset='56', ModifierTreeId='1080')}
+        mods = {1080: node(0, 4, amount=1),
+                1081: node(1080, 2, 5, 0, amount=1),
+                1082: node(1080, 2, 6, 0, amount=1),
+                1083: node(1080, 2, 7, 0, amount=1)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {2379: [None, ((5, 0), (6, 0), (7, 0))]})
+        self.assertEqual(self.compile({**mods, 1084: node(1080, 2, 8, 196665)}, criteria),
+                         {2379: [None, ((5, 0), (6, 0), (7, 0), (8, 196665))]})
+        self.assertEqual(self.compile({**mods, 1084: node(1080, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '28', '29', '74', '110', '165'):
+            criteria[2379]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[2379]['Type'] = '54'
+        for leaf in (1081, 1082, 1083):
+            for field, value in [('Operator', '3'), ('Asset', '1'),
+                                 ('SecondaryAsset', '1'), ('TertiaryAsset', '1')]:
+                invalid = copy.deepcopy(mods)
+                invalid[leaf][field] = value
+                self.assertEqual(self.compile(invalid, criteria), {})
+
     def test_native_kill_scenario_step_preserves_complete_positive_companions(self):
         criteria = {60015: dict(self.criteria[1], Type='0', Asset='204799', ModifierTreeId='6710')}
         mods = {6710: node(0, 4), 6711: node(6710, 2, 82, 3)}
@@ -446,8 +468,11 @@ class Conditions(unittest.TestCase):
         emote[1]['Type'] = '54'
         self.assertEqual(self.compile(modifiers, emote), {1: [None, ((4, 1412),)]})
         self.assertEqual(self.compile(modifiers), {}, 'other producers have no target snapshot')
-        modifiers[11] = node(10, 2, 5, 0)
-        self.assertEqual(self.compile(modifiers, emote), {}, 'player/dead/faction targets remain unsupported')
+        for kind in (5, 6, 7):
+            modifiers[11] = node(10, 2, kind, 0)
+            self.assertEqual(self.compile(modifiers, emote), {1: [None, ((kind, 0),)]},
+                             'native emote retains the complete requested-unit qualifier')
+            self.assertEqual(self.compile(modifiers), {}, 'kill event has no emote target authority')
 
     def test_arena_player_facts_on_all_gated_events(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 24, 2), 12: node(10, 2, 60, 0)}

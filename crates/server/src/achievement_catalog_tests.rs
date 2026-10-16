@@ -1352,9 +1352,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5513 + four account-only authored scenario-ordinal definitions.
+    // Installed70391: 5517 + native targeted Hug247 with all three qualifiers.
     // Structural union, not full boss content, recipe repair, travel or acquisition proof.
-    assert_eq!(union.len(), 5517);
+    assert_eq!(union.len(), 5518);
+    assert!(union.contains(&247), "native dead hostile player Hug");
     for achievement in [18202, 18203, 18205, 18206] {
         assert!(
             union.contains(&achievement),
