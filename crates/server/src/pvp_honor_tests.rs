@@ -29,6 +29,12 @@ fn honor_kill_keeps_lifetime_xp_without_inventing_level_or_wallet_award() {
         ));
     }
     world.get_mut::<Player>(victim).unwrap().race = 2;
+    world
+        .entity_mut(killer)
+        .insert(shared::components::CurrentPvpFaction(2));
+    world
+        .entity_mut(victim)
+        .insert(shared::components::CurrentPvpFaction(1));
     hit(&mut world, killer, victim, 1.0);
     assert_eq!(serialized_progress(&world, killer)["lifetime_honor_xp"], 0);
     hit(&mut world, killer, victim, 1000.0);
