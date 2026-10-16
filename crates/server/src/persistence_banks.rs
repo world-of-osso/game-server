@@ -358,7 +358,13 @@ impl From<GuildDataV1> for GuildData {
 
 /// Persist the ordered rank list and all affected member positions atomically.
 /// Callers materialize implicit lowest-rank members before adding/removing ranks.
-pub fn save_guild_ranks(db: &Database, guild_id: u32, guild: &GuildData, members: &[(u64, u8)]) {
+pub fn save_guild_ranks(
+    db: &Database,
+    guild_id: u32,
+    guild: &GuildData,
+    members: &[(u64, u8)],
+    event: Option<shared::protocol::GuildEventKind>,
+) {
     let txn = db.begin_write().expect("Failed to begin guild ranks write");
     write(&txn, GUILDS, guild_id, guild);
     {
@@ -367,7 +373,11 @@ pub fn save_guild_ranks(db: &Database, guild_id: u32, guild: &GuildData, members
             table.insert(character, rank).expect("write member rank");
         }
     }
-    crate::persistence_commit::commit(txn).expect("Failed to commit guild ranks");
+    if let Some(event) = event {
+        crate::guild_event_log::record_in(&txn, guild_id, event);
+    }
+    crate::persistence_commit::commit(txn)
+        .expect("Failed to commit guild ranks and lifecycle event");
 }
 
 impl From<GuildDataV0> for GuildData {

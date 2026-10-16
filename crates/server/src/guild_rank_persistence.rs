@@ -15,6 +15,7 @@ pub(super) struct Owner {
 #[derive(Clone)]
 enum Publication {
     Owner(GuildRanksState),
+    EventLog(GuildEventLog),
     Changed {
         guild: u32,
         previous_members: BTreeSet<u64>,
@@ -47,6 +48,9 @@ pub(super) fn enqueue(
 }
 
 fn apply_request(db: &redb::Database, character: u64, request: GuildRankRequest) -> Publication {
+    if matches!(request, GuildRankRequest::QueryEventLog) {
+        return Publication::EventLog(crate::guild_event_log::query(db, character));
+    }
     let Some(membership) = persistence::load_character_guild(db, character) else {
         return Publication::Owner(snapshot(db, character, Some(GuildRankError::NotInGuild)));
     };
@@ -94,6 +98,14 @@ fn publish_writes(world: &mut World) {
             Ok(Publication::Owner(state)) => {
                 if owns_session(world, owner) {
                     send_state(world, owner.connection, state);
+                }
+            }
+            Ok(Publication::EventLog(log)) => {
+                if owns_session(world, owner)
+                    && let Some(mut sender) =
+                        world.get_mut::<MessageSender<GuildEventLog>>(owner.connection)
+                {
+                    sender.send::<GuildChannel>(log);
                 }
             }
             Ok(Publication::Changed {

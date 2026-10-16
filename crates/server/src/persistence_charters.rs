@@ -384,10 +384,15 @@ fn write_created_guild(txn: &WriteTransaction, created: &CreatedGuild, now: u64)
         .expect("open guild dates")
         .insert(created.guild_id, now)
         .expect("write actual creation date");
-    write_founders(txn, created, &guild);
+    write_founders(txn, created, &guild, now);
 }
 
-fn write_founders(txn: &WriteTransaction, created: &CreatedGuild, guild: &super::banks::GuildData) {
+fn write_founders(
+    txn: &WriteTransaction,
+    created: &CreatedGuild,
+    guild: &super::banks::GuildData,
+    now: u64,
+) {
     let membership = bitcode::encode(&GuildMembershipData {
         guild_id: created.guild_id,
         guild_name: created.guild_name.clone(),
@@ -412,6 +417,16 @@ fn write_founders(txn: &WriteTransaction, created: &CreatedGuild, guild: &super:
             .expect("open invites")
             .remove(member)
             .expect("clear founding invite");
+        crate::guild_event_log::append_in(
+            txn,
+            created.guild_id,
+            shared::protocol::GuildEvent {
+                timestamp: now,
+                kind: shared::protocol::GuildEventKind::Join {
+                    member: crate::guild_event_log::character_name_in(txn, member),
+                },
+            },
+        );
     }
 }
 

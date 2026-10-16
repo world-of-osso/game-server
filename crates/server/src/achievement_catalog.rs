@@ -499,6 +499,8 @@ pub(crate) struct SpellHitPlayer {
 pub(crate) struct ReferencePlayer {
     /// Spell IDs of active auras.
     pub auras: BTreeSet<u32>,
+    /// Missing ActiveAuras is unknown, not proof that an aura is absent.
+    pub auras_known: bool,
     /// IDs in existing class/profession knowledge and the owning mount journal.
     pub known_spells: BTreeSet<u32>,
     /// Absence is meaningful only after class, profession and account mount sources are complete.
@@ -531,6 +533,7 @@ enum CriteriaFact {
     /// Bounded native PlayerCondition2 class/race rule; all other fields reject at load.
     Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
+    NotAura(u32),
     KnownSpell(u32),
     NotKnownSpell(u32),
     EarnedAchievement(u32),
@@ -600,6 +603,7 @@ impl CriteriaFact {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
+            Self::NotAura(spell) => player.auras_known && !player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
             Self::NotKnownSpell(spell) => {
                 player.spell_knowledge_complete && !player.known_spells.contains(spell)
@@ -1539,6 +1543,7 @@ fn load_criteria_facts(
             4 => Some(CriteriaFact::TargetCreature(asset)),
             5 => Some(CriteriaFact::TargetIsPlayer),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
+            -8 => exists("spell")?.then_some(CriteriaFact::NotAura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
             87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
             -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
@@ -1594,7 +1599,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
+                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
                 )
             }
         };

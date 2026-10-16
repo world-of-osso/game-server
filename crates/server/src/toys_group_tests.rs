@@ -24,6 +24,8 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
         1,
         class,
     );
+    // Guardian properties require the actual destination's regional level source.
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
     h.app.insert_resource(shared_world_data(&path));

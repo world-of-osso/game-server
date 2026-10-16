@@ -374,13 +374,127 @@ fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
     assert_eq!(creatures_in(h, copy, 13359), 16, "flag-0 tower guards stay");
 }
 
-/// TC a352b1fa GameObject::Use goober Data10 spell (GameObject.cpp:2930-2932, 3563-3567):
-/// a captured Workshop's TDB group1227/1230 Seaforium Bombs195237 cast66265, which creates
-/// item46847 for the user in that battleground copy only.
 #[test]
-fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
+fn isle_channel_match_team_hostility_overrides_race_without_changing_open_world() {
+    use crate::spell_cast::targets::{Relation, relation_matches};
+    use shared::components::UnitFactionTemplate;
+    let mut entered = enter_source_match_with(
+        &shared::battleground::isle_of_conquest(),
+        [1299, 1245],
+        |app| {
+            app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        },
+    );
+    for team in [BgTeam::A, BgTeam::B] {
+        let mut allies = entered
+            .players
+            .iter()
+            .zip(&entered.teams)
+            .filter(|(_, assigned)| **assigned == team)
+            .map(|(player, _)| player.player);
+        let actor = allies.next().unwrap();
+        let ally = allies.next().unwrap();
+        let enemy = entered
+            .players
+            .iter()
+            .zip(&entered.teams)
+            .find(|(_, assigned)| **assigned != team)
+            .unwrap()
+            .0
+            .player;
+        for actor_race in [1, 2] {
+            for target_race in [1, 2] {
+                let world = entered.h.app.world_mut();
+                world.entity_mut(actor).insert(UnitFactionTemplate(
+                    crate::faction::faction_template_for_race(actor_race),
+                ));
+                for target in [ally, enemy] {
+                    world.entity_mut(target).insert(UnitFactionTemplate(
+                        crate::faction::faction_template_for_race(target_race),
+                    ));
+                }
+                assert!(
+                    relation_matches(world, actor, enemy, Relation::Enemy),
+                    "accepted opposing team is attackable: {team:?}, races{actor_race}/{target_race}"
+                );
+                assert!(!relation_matches(world, actor, ally, Relation::Enemy));
+                assert!(relation_matches(world, actor, ally, Relation::Ally));
+                assert!(!relation_matches(world, actor, enemy, Relation::Ally));
+            }
+        }
+        let foreign = InMap {
+            instance_id: entered.copy.instance_id + 1,
+            ..entered.copy
+        };
+        let world = entered.h.app.world_mut();
+        world.entity_mut(enemy).insert(foreign);
+        assert!(!relation_matches(world, actor, enemy, Relation::Enemy));
+        world.entity_mut(enemy).insert(entered.copy);
+        let snapshot = world
+            .get::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .clone();
+        world
+            .get_mut::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .accepted = false;
+        assert!(!relation_matches(world, actor, enemy, Relation::Enemy));
+        world.entity_mut(enemy).insert(snapshot.clone());
+        world
+            .get_mut::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .phase = BgPhase::Waiting;
+        assert!(
+            !relation_matches(world, actor, enemy, Relation::Enemy),
+            "a player outside the active phase is not attackable"
+        );
+        world.entity_mut(enemy).insert(snapshot.clone());
+        world
+            .get_mut::<crate::pvp::PlayerPvpState>(enemy)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .match_id += 1;
+        assert!(
+            !relation_matches(world, actor, enemy, Relation::Enemy),
+            "different matches cannot attack even with matching physical map IDs"
+        );
+        world.entity_mut(enemy).insert(snapshot);
+    }
+    let first = entered.h.spawn(9001, STORMWIND, entered.origin);
+    let second = entered.h.spawn(9002, STORMWIND, entered.origin);
+    let world = entered.h.app.world_mut();
+    world
+        .entity_mut(first.player)
+        .insert(UnitFactionTemplate(1));
+    world
+        .entity_mut(second.player)
+        .insert(UnitFactionTemplate(2));
+    assert!(
+        !relation_matches(world, first.player, second.player, Relation::Enemy),
+        "existing unflagged open-world player PvP stays rejected"
+    );
+    world
+        .entity_mut(second.player)
+        .insert(UnitFactionTemplate(1));
+    assert!(relation_matches(
+        world,
+        first.player,
+        second.player,
+        Relation::Ally
+    ));
+}
+
+fn enter_isle_bomb_match() -> EnteredMatch {
     let template = shared::battleground::isle_of_conquest();
-    let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
+    enter_source_match_with(&template, [1299, 1245], |app| {
         let db = &app
             .world()
             .resource::<crate::persistence::GameDatabase>()
@@ -391,6 +505,9 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
             "native inventory owner matches the first channel actor"
         );
         assert!(crate::persistence::inventory_store::load_inventory_record(db, owner).is_some());
+        let mut character = crate::persistence::load_character(db, owner).unwrap();
+        character.level = u16::from(TRAVELER_LEVEL);
+        crate::persistence::save_character(db, owner, &character);
         let path = crate::test_data::world_db_path();
         let source = rusqlite::Connection::open_with_flags(
             &path,
@@ -402,15 +519,440 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
         app.insert_resource(templates);
         app.insert_resource(crate::merchant::load_vendor_catalog(&source).unwrap());
         app.insert_resource(crate::quest_data::load_quest_db(&path).unwrap());
+        app.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+        app.insert_resource(crate::toy_catalog::load(&source).unwrap());
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        app.insert_resource(crate::game_objects::summoned::load_templates(&source).unwrap());
         app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.add_systems(Update, crate::inventory::process_use_requests);
         let data = crate::spell_cast::test_harness::world_db().unwrap();
         app.insert_resource(crate::spell_info::SpellStore::fixture(
-            [21651, 66265]
+            [21651, 66265, 66268, 66676, 66669, 66674, 66672]
                 .into_iter()
                 .map(|id| data.store.get(id).unwrap().clone())
                 .collect(),
         ));
+    })
+}
+
+/// TC npc_four_car_garage / source34775 spellclick66245: aura236 boards the
+/// Demolisher's Vehicle509 driver seat5766 after normal Workshop capture.
+fn enter_and_board_isle_demolisher() -> (EnteredMatch, Entity) {
+    let template = shared::battleground::isle_of_conquest();
+    let mut entered = enter_source_match_with(&template, [1299, 1245], |app| {
+        let source = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let click: (u32, u8, u16) = source
+            .query_row(
+                "SELECT spell_id,cast_flags,user_type FROM tdb_npc_spellclick_spells WHERE npc_entry=34775",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(click, (66245, 1, 0));
+        // Isolate the runtime aura boundary from the separately missing publication.
+        let fixture = Connection::open_in_memory().unwrap();
+        fixture.execute_batch("CREATE TABLE content_npc_spellclick_spells (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER)").unwrap();
+        fixture
+            .execute(
+                "INSERT INTO content_npc_spellclick_spells VALUES (34775,?1,?2,?3)",
+                rusqlite::params![click.0, click.1, click.2],
+            )
+            .unwrap();
+        app.insert_resource(crate::npc_interaction::load_spellclick_catalog(&fixture).unwrap());
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        let data = crate::spell_cast::test_harness::world_db().unwrap();
+        app.insert_resource(crate::spell_info::SpellStore::fixture(
+            [21651, 66245]
+                .into_iter()
+                .map(|id| data.store.get(id).unwrap().clone())
+                .collect(),
+        ));
+        crate::vehicle::tests::install_source_vehicle_runtime(app);
     });
+    let actor = &entered.players[0];
+    let h = &mut entered.h;
+    use_second_frames(h);
+    let (banner, position) = objects_in(h, entered.copy, 195133)[0];
+    h.walk_to(actor, position);
+    use_object(h, actor, banner);
+    h.advance(8);
+    h.advance(60);
+    let (demolisher, _) = find_alterac_source_npc(h, entered.copy, 34775);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(demolisher)
+            .unwrap()
+            .0,
+        1732,
+        "TC OnCreatureCreate must apply this Alliance spawn's authored StringId faction"
+    );
+    let position = wow(h.app.world().get::<Position>(demolisher).unwrap());
+    h.walk_to(actor, position);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    let source_aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(demolisher)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 66245 && aura.caster == actor.player)
+        })
+        .expect("the actual spellclick must apply the rider's source aura to the vehicle");
+    assert!(
+        source_aura
+            .effects
+            .iter()
+            .any(|effect| effect.aura_type == 236)
+    );
+    let rider = h
+        .app
+        .world()
+        .get::<shared::components::VehiclePassenger>(actor.player)
+        .expect("normal authored Demolisher spellclick must board its driver seat");
+    assert_eq!(rider.driver, demolisher.to_bits());
+    assert_eq!(rider.seat_index, 0);
+    assert_eq!(rider.seat_id, 5766);
+    (entered, demolisher)
+}
+
+#[test]
+fn isle_channel_workshop_demolisher_driver_seat_exits_and_leaves_through_real_requests() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let actor = &entered.players[0];
+    let h = &mut entered.h;
+    let position = wow(h.app.world().get::<Position>(demolisher).unwrap());
+    assert!(
+        h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    let vehicle_position = h.app.world().get::<Position>(demolisher).unwrap();
+    let rider_position = h.app.world().get::<Position>(actor.player).unwrap();
+    let yaw = h.app.world().get::<Rotation>(demolisher).unwrap().y;
+    let relative = Quat::from_rotation_y(-yaw)
+        * Vec3::new(
+            rider_position.x - vehicle_position.x,
+            rider_position.y - vehicle_position.y,
+            rider_position.z - vehicle_position.z,
+        );
+    // Source123367 M2 attachment39=(-3.84265995,0,6.19728518), DB2scale0.75;
+    // VehicleSeat5766 attachment13 maps to39 with zero offset, model aligns -90deg.
+    assert!(
+        relative.distance(Vec3::new(0.0, 4.647964, -2.881995)) < 0.002,
+        "{relative:?}"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(actor.connection)
+        .insert(pair::<shared::protocol::ExitVehicle>());
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::ExitVehicle>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::ExitVehicle);
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
+
+    // Reentry must reuse the freed driver seat, not a later passenger seat.
+    h.walk_to(actor, position);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .unwrap()
+            .seat_index,
+        0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<LeaveBattleground>>(actor.connection)
+        .unwrap()
+        .send::<PvpChannel>(LeaveBattleground {
+            match_id: entered.match_id,
+        });
+    h.receive_pvp_updates(5);
+    h.ack(actor);
+    h.receive_pvp_updates(5);
+    assert_eq!(h.map_of(actor), Some(STORMWIND));
+    assert!(close(h.position(actor), entered.origin));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
+}
+
+#[test]
+fn isle_channel_workshop_demolisher_seats_keep_independent_riders_and_refuse_overfill() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let team = entered.teams[0];
+    let allies: Vec<_> = entered
+        .teams
+        .iter()
+        .enumerate()
+        .filter(|(index, candidate)| *index != 0 && **candidate == team)
+        .take(3)
+        .map(|(index, _)| index)
+        .collect();
+    assert_eq!(allies.len(), 3);
+    let driver = &entered.players[0];
+    let h = &mut entered.h;
+    let position = wow(h.app.world().get::<Position>(demolisher).unwrap());
+    for (index, expected_seat) in [(allies[0], 2), (allies[1], 3)] {
+        let rider = &entered.players[index];
+        h.walk_to(rider, position);
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::InteractNpc>>(rider.connection)
+            .unwrap()
+            .send::<InteractionChannel>(shared::protocol::InteractNpc {
+                npc: demolisher.to_bits(),
+            });
+        h.receive_pvp_updates(5);
+        let seated = h
+            .app
+            .world()
+            .get::<shared::components::VehiclePassenger>(rider.player)
+            .expect("another friendly rider must occupy the next source seat");
+        assert_eq!(seated.driver, demolisher.to_bits());
+        assert_eq!(seated.seat_index, expected_seat);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::VehiclePassenger>(driver.player)
+                .unwrap()
+                .seat_index,
+            0
+        );
+    }
+    let overflow = &entered.players[allies[2]];
+    h.walk_to(overflow, position);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(overflow.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(overflow.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(overflow.player)
+            .unwrap()
+            .controlled
+    );
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(demolisher)
+        .unwrap();
+    assert_eq!(
+        auras.iter().filter(|aura| aura.spell_id == 66245).count(),
+        3
+    );
+    assert!(
+        !auras
+            .iter()
+            .any(|aura| aura.spell_id == 66245 && aura.caster == overflow.player)
+    );
+
+    let leaving = &entered.players[allies[0]];
+    h.app
+        .world_mut()
+        .entity_mut(leaving.connection)
+        .insert(pair::<shared::protocol::ExitVehicle>());
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::ExitVehicle>>(leaving.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::ExitVehicle);
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(leaving.player)
+            .is_none()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(driver.player)
+            .unwrap()
+            .seat_index,
+        0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(overflow.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.receive_pvp_updates(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(overflow.player)
+            .unwrap()
+            .seat_index,
+        2
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(entered.players[allies[1]].player)
+            .unwrap()
+            .seat_index,
+        3
+    );
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(demolisher)
+        .unwrap();
+    assert_eq!(
+        auras.iter().filter(|aura| aura.spell_id == 66245).count(),
+        3
+    );
+    assert!(
+        !auras
+            .iter()
+            .any(|aura| aura.spell_id == 66245 && aura.caster == leaving.player)
+    );
+}
+
+#[test]
+fn isle_channel_workshop_demolisher_death_releases_its_living_driver() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let enemy_index = entered
+        .teams
+        .iter()
+        .position(|team| *team != entered.teams[0])
+        .unwrap();
+    let actor = &entered.players[0];
+    let enemy = &entered.players[enemy_index];
+    let h = &mut entered.h;
+    let health = h.app.world().get::<Health>(demolisher).unwrap().current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), enemy.player, demolisher, health + 1.0);
+    h.advance(2);
+    assert_eq!(
+        h.app.world().get::<Health>(demolisher).unwrap().current,
+        0.0
+    );
+    assert!(h.app.world().get::<Health>(actor.player).unwrap().current > 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
+}
+
+#[test]
+fn isle_channel_workshop_demolisher_driver_death_releases_the_living_vehicle() {
+    let (mut entered, demolisher) = enter_and_board_isle_demolisher();
+    let enemy_index = entered
+        .teams
+        .iter()
+        .position(|team| *team != entered.teams[0])
+        .unwrap();
+    let actor = &entered.players[0];
+    let enemy = &entered.players[enemy_index];
+    let h = &mut entered.h;
+    let health = h.app.world().get::<Health>(actor.player).unwrap().current;
+    let vehicle_health = h.app.world().get::<Health>(demolisher).unwrap().current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), enemy.player, actor.player, health + 1.0);
+    h.advance(2);
+    assert_eq!(
+        h.app.world().get::<Health>(actor.player).unwrap().current,
+        0.0
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(demolisher).unwrap().current,
+        vehicle_health
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(actor.player)
+            .unwrap()
+            .controlled
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), demolisher, 66245));
+}
+
+/// TC a352b1fa GameObject::Use goober Data10 spell (GameObject.cpp:2930-2932, 3563-3567):
+/// a captured Workshop's TDB group1227/1230 Seaforium Bombs195237 cast66265, which creates
+/// item46847 for the user in that battleground copy only.
+#[test]
+fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
+    let mut entered = enter_isle_bomb_match();
     let actor = &entered.players[0];
     use_second_frames(&mut entered.h);
     // TDB groups1227/1230 expose195237 only after normal Workshop capture.
@@ -464,6 +1006,288 @@ fn isle_channel_normal_seaforium_pickup_creates_owned_item_only_in_its_copy() {
         count(&entered.h),
         1,
         "normal authored goober use must create item46847"
+    );
+}
+
+/// TC EffectTransmitted50: normal item46847 use casts66268 and owns trap195235.
+#[test]
+fn isle_channel_normal_seaforium_use_arms_then_detonates_once_in_its_copy() {
+    assert_isle_bomb_lifecycle(false, false);
+}
+
+#[test]
+fn isle_channel_normal_seaforium_disarm_cancels_the_owned_fuse_only_in_its_copy() {
+    assert_isle_bomb_lifecycle(false, true);
+}
+
+#[test]
+fn isle_channel_huge_seaforium_use_arms_then_detonates_once_in_its_copy() {
+    assert_isle_bomb_lifecycle(true, false);
+}
+
+#[test]
+fn isle_channel_huge_seaforium_disarm_cancels_the_owned_fuse_only_in_its_copy() {
+    assert_isle_bomb_lifecycle(true, true);
+}
+
+fn assert_isle_bomb_disarm(
+    h: &mut Harness,
+    copy: InMap,
+    bomb: (u32, Entity),
+    victim: (&Traveler, f32),
+    foreign: (&Traveler, f32),
+) {
+    let (bomb_entry, object) = bomb;
+    let (victim, before) = victim;
+    let (foreign, foreign_before) = foreign;
+    for user in [foreign, victim] {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<UseGameObject>>(user.connection)
+            .unwrap()
+            .send::<InteractionChannel>(UseGameObject {
+                object: object.to_bits(),
+            });
+        let mut errors = Vec::new();
+        for _ in 0..3 {
+            h.advance(1);
+            errors.extend(
+                h.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<shared::protocol::InteractionFailed>>(
+                        user.connection,
+                    )
+                    .unwrap()
+                    .receive(),
+            );
+        }
+        if user.player == foreign.player {
+            assert_eq!(
+                errors.len(),
+                1,
+                "the foreign request must actually be processed before the control is accepted"
+            );
+            assert_eq!(
+                errors[0].error,
+                shared::protocol::InteractionError::InvalidTarget
+            );
+            assert_eq!(
+                objects_in(h, copy, bomb_entry).len(),
+                1,
+                "another copy cannot disarm the bomb"
+            );
+        } else {
+            assert!(
+                errors.is_empty(),
+                "normal in-copy disarm rejected: {errors:?}"
+            );
+        }
+    }
+    assert!(
+        objects_in(h, copy, bomb_entry).is_empty(),
+        "normal in-copy bomb use must run source disarm during the arming period"
+    );
+    h.advance(12);
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        before,
+        "disarm cancels the pending explosion, not only its model"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(foreign.player).unwrap().current,
+        foreign_before
+    );
+}
+
+fn assert_isle_bomb_lifecycle(huge: bool, disarm: bool) {
+    let mut entered = enter_isle_bomb_match();
+    let actor = &entered.players[0];
+    let owner_team = entered.teams[0];
+    let (item_id, pickup_entry, bomb_entry, deployment_spell, damage_percent) = if huge {
+        (
+            47030,
+            if owner_team == BgTeam::A {
+                195332
+            } else {
+                195333
+            },
+            195331,
+            66674,
+            60.0,
+        )
+    } else {
+        (46847, 195237, 195235, 66268, 25.0)
+    };
+    let mut opponents = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .filter_map(|(player, team)| (*team != owner_team).then_some(player));
+    let victim = opponents.next().unwrap();
+    let foreign = opponents.next().unwrap();
+    use_second_frames(&mut entered.h);
+    let (banner, position) = objects_in(&mut entered.h, entered.copy, 195133)[0];
+    entered.h.walk_to(actor, position);
+    use_object(&mut entered.h, actor, banner);
+    entered.h.advance(8);
+    entered.h.advance(60);
+    let (pickup, position) = objects_in(&mut entered.h, entered.copy, pickup_entry)[0];
+    entered.h.walk_to(actor, position);
+    use_object(&mut entered.h, actor, pickup);
+    let h = &mut entered.h;
+    // Both targets stand inside the source blast radius before the item cast begins.
+    h.walk_to(victim, position);
+    h.walk_to(foreign, position);
+    h.app.world_mut().entity_mut(foreign.player).insert(InMap {
+        map_id: entered.copy.map_id,
+        instance_id: entered.copy.instance_id + 1,
+    });
+    let inventory = crate::inventory::load_model(
+        &h.app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+        h.app
+            .world()
+            .resource::<crate::item_templates::ItemTemplates>(),
+        1,
+    )
+    .unwrap()
+    .inventory_snapshot();
+    let location = inventory
+        .bags
+        .iter()
+        .find_map(|bag| {
+            bag.items
+                .iter()
+                .find(|slot| slot.item.item_id == item_id)
+                .map(|slot| ItemLocation::Bag {
+                    bag: bag.bag,
+                    slot: slot.slot,
+                })
+        })
+        .expect("authored pile pickup creates the owned bomb used below");
+    h.app.world_mut().entity_mut(actor.connection).insert((
+        pair::<UseItem>(),
+        pair::<InventoryError>(),
+        pair::<CastFailed>(),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(actor.connection)
+        .unwrap()
+        .send::<InventoryChannel>(UseItem {
+            location,
+            target: None,
+        });
+    let before = h.app.world().get::<Health>(victim.player).unwrap().current;
+    let foreign_before = h.app.world().get::<Health>(foreign.player).unwrap().current;
+    let mut inventory_errors = Vec::new();
+    let mut cast_errors = Vec::new();
+    for _ in 0..5 {
+        h.advance(1);
+        inventory_errors.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<InventoryError>>(actor.connection)
+                .unwrap()
+                .receive(),
+        );
+        cast_errors.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<CastFailed>>(actor.connection)
+                .unwrap()
+                .receive(),
+        );
+        if !objects_in(h, entered.copy, bomb_entry).is_empty() {
+            break;
+        }
+    }
+    assert!(
+        inventory_errors.is_empty(),
+        "normal item use: {inventory_errors:?}"
+    );
+    assert!(
+        cast_errors.is_empty(),
+        "normal deployment cast: {cast_errors:?}"
+    );
+    let remaining = crate::persistence::load_inventory(
+        &h.app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+        1,
+    )
+    .items
+    .iter()
+    .filter(|item| item.item_id == item_id)
+    .map(|item| item.stack_count)
+    .sum::<u32>();
+    assert_eq!(
+        remaining, 0,
+        "the authored expendable item is consumed by normal use"
+    );
+    let bombs = objects_in(h, entered.copy, bomb_entry);
+    assert_eq!(
+        bombs.len(),
+        1,
+        "normal owned item use must deploy one authored bomb"
+    );
+    let summoned = h
+        .app
+        .world()
+        .get::<crate::game_objects::summoned::SummonedObject>(bombs[0].0)
+        .unwrap();
+    assert_eq!(summoned.owner, Some(actor.player));
+    assert_eq!(summoned.spell_id, deployment_spell);
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        before,
+        "planting does not detonate immediately"
+    );
+    if disarm {
+        assert_isle_bomb_disarm(
+            h,
+            entered.copy,
+            (bomb_entry, bombs[0].0),
+            (victim, before),
+            (foreign, foreign_before),
+        );
+        return;
+    }
+    h.advance(9);
+    assert_eq!(
+        objects_in(h, entered.copy, bomb_entry).len(),
+        1,
+        "no detonation before ten seconds"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        before
+    );
+    h.advance(1);
+    assert!(
+        objects_in(h, entered.copy, bomb_entry).is_empty(),
+        "authored bomb deactivates after detonation"
+    );
+    // Native effect165 is25%/60% max health; its0.001 variance rounds at100HP.
+    let after = h.app.world().get::<Health>(victim.player).unwrap().current;
+    assert_eq!(
+        after,
+        before * (100.0 - damage_percent) / 100.0,
+        "normal timed source explosion damages the actual enemy"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(foreign.player).unwrap().current,
+        foreign_before,
+        "another map copy is untouched"
+    );
+    h.advance(5);
+    assert_eq!(
+        h.app.world().get::<Health>(victim.player).unwrap().current,
+        after,
+        "explosion happens once"
     );
 }
 

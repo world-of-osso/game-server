@@ -39,6 +39,7 @@ fn summon_at_rune_weapon_is_owned_and_expires() {
 #[test]
 fn toyfx32_native_wild_count_scatters_secondary_actors_in_primary_radius() {
     let mut h = harness(Vec::new(), &[6122], 8).unwrap();
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let db = world_db().unwrap();
     let conn = rusqlite::Connection::open_with_flags(
         &db.powers_db,

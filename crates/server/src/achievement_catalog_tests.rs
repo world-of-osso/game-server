@@ -1,6 +1,53 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_absent_aura_requires_authored_metadata() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "CREATE TABLE spell (ID INTEGER PRIMARY KEY); INSERT INTO spell VALUES (196665);",
+    )
+    .unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(-8, 115013)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(-8, 196665), (-8, 196666)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "one missing companion disables the complete predicate"
+    );
+    let facts = load_criteria_facts(&conn, &[(-8, 196665)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (known, present, expected) in [
+        (false, false, false),
+        (false, true, false),
+        (true, false, true),
+        (true, true, false),
+    ] {
+        let player = ReferencePlayer {
+            auras_known: known,
+            auras: if present {
+                [196665].into_iter().collect()
+            } else {
+                BTreeSet::new()
+            },
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(
+                &player,
+                CriteriaEvent::KillCreature(96028),
+                &BTreeMap::new()
+            ),
+            expected
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_unknown_spell_needs_complete_absence_and_authored_metadata() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(
@@ -1230,9 +1277,19 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5506 + three character-only negative104 Login definitions.
-    // Structural union, not full content, recipe repair, terrain travel or acquisition proof.
-    assert_eq!(union.len(), 5509);
+    // Installed70391: 5511 + nested-All encounter definition11660.
+    // Structural union, not full boss content, recipe repair, travel or acquisition proof.
+    assert_eq!(union.len(), 5512);
+    assert!(
+        union.contains(&11660),
+        "complete nested encounter conjunction"
+    );
+    for achievement in [7257, 10458] {
+        assert!(
+            union.contains(&achievement),
+            "absent-aura kill {achievement}"
+        );
+    }
     for achievement in [13166, 13167, 13169] {
         assert!(
             union.contains(&achievement),

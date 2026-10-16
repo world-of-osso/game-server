@@ -1119,6 +1119,7 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
             .into_iter()
             .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
             .collect(),
+        auras_known: world.get::<crate::auras::ActiveAuras>(player).is_some(),
         known_spells: known_player_spell_ids(world, player),
         spell_knowledge_complete: spell_knowledge_complete(world, player),
         earned_achievements: earned_player_achievement_ids(world, player),
@@ -1625,8 +1626,14 @@ fn query_comparison_target(
 }
 
 #[cfg(test)]
+#[path = "achievement_absent_aura_tests.rs"]
+mod absent_aura_tests;
+#[cfg(test)]
 #[path = "achievement_creature_type_tests.rs"]
 mod creature_type_tests;
+#[cfg(test)]
+#[path = "achievement_nested_all_tests.rs"]
+mod nested_all_tests;
 #[cfg(test)]
 #[path = "achievement_tests.rs"]
 mod tests;

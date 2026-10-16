@@ -71,10 +71,14 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
+#[path = "toys_podium_tests.rs"]
+mod podium;
 #[path = "toys_scarab_tests.rs"]
 mod scarab;
 #[path = "toys_shrine_tests.rs"]
 mod shrine;
+#[path = "toys_summon_level_tests.rs"]
+mod summon_levels;
 
 const FIGURINE: u32 = 32782;
 const TRANSFORM: u32 = 41301;
@@ -1027,6 +1031,7 @@ fn toyfx_visual_audit_requires_binding_and_no_extra_effects() {
 fn toyfx_wild_brazier_spawns_owned_with_template_faction() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch(
         "CREATE TABLE summon_properties (
@@ -1308,6 +1313,7 @@ fn toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel() {
 fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
@@ -1362,15 +1368,20 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
     };
     apply(h.app.world_mut(), h.caster); // Refresh does not make another tent.
     assert_eq!(summons(h.app.world_mut()), first);
-    let other = spawn_player(&mut h.app, 8, 10.0);
-    h.app
-        .world_mut()
-        .entity_mut(other)
-        .insert(shared::components::Rotation {
+    let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+    let other_position = Position {
+        x: origin.x + 10.0,
+        ..origin
+    };
+    let other = spawn_player(&mut h.app, 8, other_position.x);
+    h.app.world_mut().entity_mut(other).insert((
+        other_position,
+        shared::components::Rotation {
             x: 0.0,
             y: std::f32::consts::PI,
             z: 0.0,
-        });
+        },
+    ));
     apply(h.app.world_mut(), other);
     let both = summons(h.app.world_mut());
     assert_eq!(both.len(), 2);
@@ -1380,8 +1391,8 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
         .world()
         .get::<shared::components::Position>(rotated)
         .unwrap();
-    assert!((pos.x - 10.0).abs() < 0.001);
-    assert!((pos.z - 2.0).abs() < 0.001);
+    assert!((pos.x - other_position.x).abs() < 0.001);
+    assert!((pos.z - other_position.z - 2.0).abs() < 0.001);
     crate::auras::remove_auras(
         h.app.world_mut(),
         h.caster,
@@ -2264,6 +2275,7 @@ fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
         let race = if item == 163986 { 2 } else { 1 };
         let (mut h, character) =
             setup_for_race(&directory.path().join(format!("{item}.redb")), race);
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -2295,11 +2307,12 @@ fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
         }
         let caster_position = *h.app.world().get::<Position>(h.caster).unwrap();
         let is_sign = item == 197719;
-        // Retail radius16 = 1yd for war banners; radius7 = 2yd for seasonal banners.
+        // Target47 clamps the source1yd war-banner radius to player reach1.5yd;
+        // seasonal banners retain their authored2yd radius.
         let forward_distance = if is_sign {
             0.0
         } else if matches!(item, 163986 | 163987) {
-            1.0
+            1.5
         } else {
             2.0
         };
@@ -2949,10 +2962,12 @@ fn toyfx11_sweeper_and_trophy_learn_spawn_and_expire() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     for (item, spell, entry, display, radius) in [
-        (147867, 243209, 121762, 76543, 1.0_f32),
+        // Target47 clamps the source1yd radius to the default player's1.5yd reach.
+        (147867, 243209, 121762, 76543, 1.5_f32),
         (169865, 362988, 183727, 92396, 1.5_f32),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_world_data(&path));
         h.app
@@ -3460,6 +3475,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (279590, 1306978, 270689, 146432, 60000),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("scenery-{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -3694,6 +3710,7 @@ fn toyfx14_ground_toy_waits_for_a_clicked_destination() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("ground.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
     h.app.insert_resource(shared_world_data(&path));
@@ -3969,6 +3986,7 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
         (276229, 1299034, 267634, 145135, 1.5),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("scaled-{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -4063,6 +4081,7 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
         (204405, 405204, 203158, vec![111821], 1.0),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("statue-{item}.redb")));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));
@@ -4112,45 +4131,6 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
         h.advance(100);
         assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
     }
-}
-
-fn place_toy_caster_on_source_area(h: &mut Harness, fdid: u32, point: [f32; 2], area: u32) {
-    place_toy_caster_on_source_map_area(h, 0, fdid, point, area);
-}
-
-fn place_toy_caster_on_source_map_area(
-    h: &mut Harness,
-    map: u32,
-    fdid: u32,
-    point: [f32; 2],
-    area: u32,
-) {
-    let data = std::fs::read(crate::ground::ground_data_dir().join(format!("terrain/{fdid}.adt")))
-        .unwrap();
-    let terrain = crate::terrain_height::parse_adt_heights(&data).unwrap();
-    assert_eq!(terrain.area_at(point[0], point[1]), Some(area));
-    let height = terrain.height_at(point[0], point[1]).unwrap();
-    let position = Position {
-        x: point[0],
-        y: height,
-        z: -point[1],
-    };
-    let tile = crate::ground::bevy_to_tile(position.x, position.z);
-    h.app
-        .insert_resource(crate::ground::GroundMap::with_terrain_on(
-            map, tile, terrain,
-        ));
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::area_table::load_area_table(&conn).unwrap());
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert((position, crate::maps::InMap::continent(map)));
 }
 
 #[test]
@@ -6063,6 +6043,7 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("linked-fire.redb"));
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
         h.app.insert_resource(store.clone());
         h.app.world_mut().entity_mut(h.caster).insert((
             UnitScale(1.0),
@@ -6079,7 +6060,8 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
             .effects
             .iter()
             .any(|effect| effect.implicit_targets.contains(&87));
-        let destination = cursor.then_some([3.0, 0.0, 0.0]);
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        let destination = cursor.then_some([origin.x + 3.0, origin.y, origin.z]);
         assert_eq!(
             activate_at(&mut h, item, destination)[0].error,
             None,
