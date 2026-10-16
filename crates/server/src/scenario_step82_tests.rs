@@ -24,23 +24,35 @@ fn create_arena_fixture() -> (Harness, tempfile::NamedTempFile, u64, u64) {
     h.app.insert_resource(catalog);
     let store = crate::maps::store::load_map_store(&conn).unwrap();
     let mut instances = crate::maps::InstanceManager::default();
-    let map = instances
-        .create_map(
-            &store,
-            1031,
-            crate::maps::instances::InstanceEntrant {
-                character_id: character,
-                leader: character,
-                difficulty_id: 11,
-                ..Default::default()
-            },
-            crate::maps::instances::Now {
-                elapsed: 0.0,
-                unix: 1791763200,
-            },
-        )
-        .unwrap()
-        .map;
+    let admission = instances.create_map(
+        &store,
+        1031,
+        crate::maps::instances::InstanceEntrant {
+            character_id: character,
+            leader: character,
+            difficulty_id: 11,
+            ..Default::default()
+        },
+        crate::maps::instances::Now {
+            elapsed: 0.0,
+            unix: 1791763200,
+        },
+    );
+    assert!(matches!(
+        admission,
+        Err(shared::protocol::TransferAbortReason::MapNotAllowed)
+    ));
+    // Native scenario admission is not implemented. Explicitly bind only the authored
+    // run for component-level event proof; no map-entry or research-content claim.
+    let map = InMap {
+        map_id: 1031,
+        instance_id: 7,
+    };
+    h.app
+        .world_mut()
+        .resource_mut::<ScenarioRuns>()
+        .0
+        .insert(map, (58, ScenarioRun::default()));
     h.app.insert_resource(store);
     h.app.insert_resource(instances);
     h.app.insert_resource(GameDatabase { db });
