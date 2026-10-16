@@ -127,7 +127,10 @@ impl CreatureAi for Celebras {
             .world
             .get::<shared::components::Position>(ctx.me)
             .expect("boss position");
-        ctx.summon_creature(CELEBRAS_REDEEMED, [position.x, position.y, position.z, 0.0]);
+        ctx.summon_creature(
+            CELEBRAS_REDEEMED,
+            [position.x, -position.z, position.y, 0.0],
+        );
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
