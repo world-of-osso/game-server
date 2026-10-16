@@ -54,6 +54,9 @@ mod arena_sight;
 #[path = "pvp_kill_criteria.rs"]
 mod kill_criteria;
 pub(crate) use kill_criteria::record_battleground_player_kill;
+#[path = "pvp_honor.rs"]
+mod honor;
+pub(crate) use honor::reward_world_player_kill;
 
 #[path = "pvp_isle.rs"]
 pub(crate) mod isle;
@@ -109,6 +112,11 @@ pub struct PlayerPvpBracketState {
 
 #[derive(Component, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlayerPvpProgress {
+    /// Lifetime XP is not spendable Honor1792; HONOR_LEVEL_XP_CURVE is unresolved.
+    #[serde(default)]
+    pub lifetime_honor_xp: u64,
+    #[serde(default)]
+    pub honor_level: Option<u32>,
     pub honor: u32,
     pub honor_max: u32,
     pub conquest: u32,
@@ -123,6 +131,8 @@ pub struct PlayerPvpProgress {
 impl Default for PlayerPvpProgress {
     fn default() -> Self {
         Self {
+            lifetime_honor_xp: 0,
+            honor_level: None,
             honor: 0,
             honor_max: HONOR_CAP,
             conquest: 0,
