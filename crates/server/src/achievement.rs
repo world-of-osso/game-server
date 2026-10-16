@@ -1212,6 +1212,14 @@ fn update_player_events(
                 },
             ));
         }
+        if !toasts.is_empty()
+            && let Some((_, character)) = owner
+        {
+            world.init_resource::<crate::gold::GoldUpdateQueue>();
+            world
+                .resource_mut::<crate::gold::GoldUpdateQueue>()
+                .record_news(character);
+        }
         let snapshot = catalog.snapshot(&state, race);
         world.entity_mut(player).insert(state);
         Some((snapshot, toasts))
