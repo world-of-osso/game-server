@@ -31,6 +31,50 @@ pub(crate) struct WorldData {
     pub(crate) powers_db: PathBuf,
 }
 
+pub(crate) fn place_toy_caster_on_source_area(
+    h: &mut Harness,
+    fdid: u32,
+    point: [f32; 2],
+    area: u32,
+) {
+    place_toy_caster_on_source_map_area(h, 0, fdid, point, area);
+}
+
+pub(crate) fn place_toy_caster_on_source_map_area(
+    h: &mut Harness,
+    map: u32,
+    fdid: u32,
+    point: [f32; 2],
+    area: u32,
+) {
+    let data = std::fs::read(crate::ground::ground_data_dir().join(format!("terrain/{fdid}.adt")))
+        .unwrap();
+    let terrain = crate::terrain_height::parse_adt_heights(&data).unwrap();
+    assert_eq!(terrain.area_at(point[0], point[1]), Some(area));
+    let height = terrain.height_at(point[0], point[1]).unwrap();
+    let position = Position {
+        x: point[0],
+        y: height,
+        z: -point[1],
+    };
+    let tile = crate::ground::bevy_to_tile(position.x, position.z);
+    h.app
+        .insert_resource(crate::ground::GroundMap::with_terrain_on(
+            map, tile, terrain,
+        ));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((position, crate::maps::InMap::continent(map)));
+}
+
 /// What an effect with `Variance` 0.05 and an amount of `base` deals or
 /// heals: `base` ± 2.5%, rounded (SpellEffectInfo::CalcValue).
 pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
