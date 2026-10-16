@@ -1,7 +1,7 @@
 use super::*;
 use crate::networking::PlayerLink;
 use lightyear::prelude::*;
-use redb::{ReadableDatabase, ReadableTable};
+use redb::ReadableDatabase;
 use std::time::{Duration, Instant};
 
 struct Fixture {
