@@ -149,6 +149,14 @@ impl GroupRolls {
             complete: false,
             delivered: false,
         };
+        bevy::log::debug!(
+            corpse = snapshot.corpse,
+            roll_id = snapshot.roll_id,
+            item_id,
+            count,
+            eligible_players = ?members,
+            "started group loot roll"
+        );
         self.remember(&snapshot);
         self.active.insert(
             snapshot.roll_id,

@@ -1,3 +1,10 @@
+## 2026-10-15 — Read-only follower group reward receipts
+
+[Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
+## 2026-10-16 — Autoattack-only critical chance
+
+[Native334](systems/auras.md#autoattack-only-critical-chance-2026-10-16): TC Unit2387 traces Avenging Wrath's separate334/290 effects. Ordinary native100/-999 endpoint casts reproduce missing positive/negative swing modifiers; shared attacker-only consumer passes4/4, including cancellation, victim ownership and spell isolation. Adjacent attack/critical-damage controls36/36; workspace/all-target check and fmt pass. No native stat/RNG/clock edits; full Wings/talents/legal builds and fresh bot UDP remain open.
+
 ## 2026-10-16 — Touch of Death primary damage and native flags
 
 - 2026-10-16: [Slow native fixtures](investigations/slow-native-test-fixtures.md): three measured RED→GREEN profiles, eleven unchanged gameplay tests pass separately and2 isolation controls pass; disk-backed source follow-up/currentcheck pending, full-suite timing separate.
@@ -1520,9 +1527,26 @@ Replaced area-only Some projection with typed17/41 alternatives and strict compl
 
 Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/8(59.21s), compiler41/41, census5506/1824 with all243/same7hashes. Native cached254 selfie27968/refused/outside/idle/reopen; no full grants/travel/acquisition/UI claim.
 
+- 2026-10-15: documented read-only Stockade proximity acquisition receipts and pinned TC social/link distinctions; native cause remains under investigation.
+
+- 2026-10-15: recorded native14.5yd Stockade proximity boundary and Moloch source-UI Transmog click/delivered63346 proof; no gameplay change/full-clear claim.
+
+- 2026-10-16 UTC: recorded Stockaggro70 diagnostic3/3, actual earned loot/expected-empty context, complete27067-event measurement and owned-process cleanup; Greed/Hogger-voting and full-spec parity gaps retained.
 - 2026-10-15: Feral Spirit owner-power RED and approved owner/weapon-only implementation; intrinsic AP remains named gap; GREEN pending.
 - 2026-10-15: Added bounded Login74 negative104 contract and native spell-completeness/initialization boundary; source TC HasSpell/SingleFalse. Focused proof pending.
 
 - 2026-10-15: Negative104 actual SelectCharacter RED724af71c exposed missing selection-to-knowledge edge; fix408f0a3b passes unchanged native handler plus8 scoped controls,43.44s. Census5509/1824, only3hidden character roots, all243/same7sourcehashes.
 
 - 2026-10-15: Feral Spirit owner/weapon-only repair f135c4a8+28859d64, merged afc0e5e5/protocol62865c23:24/24 scoped controls, check/fmt/readability clean; intrinsic AP and full-stat acceptance remain open.
+
+- 2026-10-15: Feero4484 counter63/event77 first-wave RED and queued cross-creature implementation; native acceptance pending.
+
+- 2026-10-15: counter first-wave GREEN1; Feero immunity/ambusher-target RED2, action145/49 implementation.
+
+- 2026-10-16: Feero authored escort gate passes after master integration; both-skin native accept/speech/movement/first-wave partial evidence and completion/data gaps recorded in escort contract.
+
+- 2026-10-16: Corrected70391 Regrowth8936 native cast restores Feero236→484 without admin healing; missing ambusher receipt/completion boundary remains open.
+
+- 2026-10-16: Feero976 both native skins earn credit after all three waves; authenticated missing receipt-index entries resolved without substitutions; same-coordinate grid RED→GREEN8 fixes active escort dormancy beyond spawn grid. Eighteen inspected1920x1080 earned-run PNGs; cosmetic roar, native death-failure and unrelated renderer parity remain separate. See [escort contract](../specs/escort-quests.md).
+- 2026-10-16: [Caster-owned school amplification](systems/auras.md#caster-owned-school-amplification--2026-10-16): native Haunt aura270 omission reproduced through ordinary casts; shared owner/school consumer, with pet381/unknown380/full-ability proof separate.
+- 2026-10-16: [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) trace Charred/Rampage intermittent failures to actual NPC dodge and qualify damage-only fixtures with existing native aura; evade guard unchanged.

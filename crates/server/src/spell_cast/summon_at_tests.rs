@@ -121,12 +121,35 @@ fn summon_at_barrier_spawns_once_and_expires_without_invented_trigger() {
     assert!(h.app.world().get_entity(triggers[0].0).is_err());
 }
 
+/// Retain the original3yd/20yd geometry on actual terrain now that destination138
+/// resolves map ground rather than silently retaining synthetic caster height.
+fn place_purging_breath_actors_on_ground(h: &mut Harness) -> (Entity, Position, Position) {
+    place_toy_caster_on_source_area(h, 778027, [-8949.95, -132.493], 9);
+    let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+    let inside = Position {
+        x: origin.x + 3.0,
+        ..origin
+    };
+    let outside_position = Position {
+        x: origin.x + 20.0,
+        ..origin
+    };
+    h.app.world_mut().entity_mut(h.npc).insert(inside);
+    let outside = spawn_npc(&mut h.app, outside_position.x);
+    h.app
+        .world_mut()
+        .entity_mut(outside)
+        .insert(outside_position);
+    (outside, inside, outside_position)
+}
+
 #[test]
 fn summon_at_data_bound_purging_breath_hits_inside_not_outside() {
     // Real E179 MiscValue 42145 -> EffectTriggerSpell 1287711, radius 2,
     // duration 6000 ms. This is engine proof, NOT a missing matrix binding.
     let mut h = harness(Vec::new(), &[1287715, 1287711], 8).unwrap();
-    let outside = spawn_npc(&mut h.app, 20.0);
+    let (outside, inside_position, outside_position) =
+        place_purging_breath_actors_on_ground(&mut h);
     h.cast_and_deliver(1287715, None);
     h.advance(31); // Its real SpellCastTimes record is 1500 ms.
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -168,17 +191,9 @@ fn summon_at_data_bound_purging_breath_hits_inside_not_outside() {
         health_after_enter,
         "on-enter trigger must not reapply every fixed tick"
     );
-    h.app.world_mut().entity_mut(h.npc).insert(Position {
-        x: 20.0,
-        y: 0.0,
-        z: 0.0,
-    });
+    h.app.world_mut().entity_mut(h.npc).insert(outside_position);
     h.advance(2);
-    h.app.world_mut().entity_mut(h.npc).insert(Position {
-        x: 3.0,
-        y: 0.0,
-        z: 0.0,
-    });
+    h.app.world_mut().entity_mut(h.npc).insert(inside_position);
     h.advance(2);
     assert!(
         h.app
@@ -200,7 +215,7 @@ fn summon_at_periodic_configuration_ticks_only_inside() {
     let mut spell = world_db().unwrap().store.get(1287715).unwrap().clone();
     spell.effects[0].aura_period_ms = 200;
     let mut h = harness(vec![spell], &[1287711], 8).unwrap();
-    let outside = spawn_npc(&mut h.app, 20.0);
+    let (outside, _, _) = place_purging_breath_actors_on_ground(&mut h);
     h.cast_and_deliver(1287715, None);
     h.advance(36);
     let first = h

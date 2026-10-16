@@ -178,6 +178,12 @@ pub enum Hook {
         path_id: u32,
     },
     DoAction(i32),
+    /// SmartScript::StoreCounter on a selected SmartAI creature.
+    StoreCounter {
+        id: u32,
+        value: u32,
+        reset: bool,
+    },
     UpdateAi(u32),
     QuestAccepted {
         player: Entity,
@@ -218,6 +224,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, _path_id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
     fn do_action(&mut self, _ctx: &mut Ctx, _action: i32) {}
+    fn store_counter(&mut self, _ctx: &mut Ctx, _id: u32, _value: u32, _reset: bool) {}
     fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     /// `ScriptedAI::UpdateAI`: keep the victim current.
@@ -468,6 +475,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
             ai.waypoint_path_ended(&mut ctx, node_id, path_id)
         }
         Hook::DoAction(action) => ai.do_action(&mut ctx, action),
+        Hook::StoreCounter { id, value, reset } => ai.store_counter(&mut ctx, id, value, reset),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
         Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),
