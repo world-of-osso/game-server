@@ -24,7 +24,7 @@ impl Plugin for CollisionIndexPlugin {
 
 // GameObjectInfo and map membership are installed/replaced as components; movement,
 // visibility and collision enablement remain live reads of the indexed objects.
-fn index_collision_model(
+pub(crate) fn index_collision_model(
     event: On<Insert, (GameObjectInfo, InMap)>,
     objects: Query<(&GameObjectInfo, &InMap)>,
     catalog: Option<Res<crate::pvp::arena::Catalog>>,
@@ -210,7 +210,6 @@ impl HullCache {
 pub(crate) fn sync_live_objects(
     ground: Option<ResMut<GroundMap>>,
     los: Option<ResMut<LineOfSight>>,
-    catalog: Option<Res<crate::pvp::arena::Catalog>>,
     objects: Objects,
     mut cache: Local<HullCache>,
 ) {
@@ -220,13 +219,8 @@ pub(crate) fn sync_live_objects(
     let mut active = LiveHulls::new();
     cache.placed.retain(|entity, _| objects.contains(*entity));
     for (entity, map, position, rotation, info, collision, visible) in &objects {
-        let arena = catalog
-            .as_ref()
-            .is_some_and(|catalog| catalog.contains_map(map.map_id));
-        let arena_model = arena && matches!(info.go_type, 0 | 5 | 6 | 35);
-        let transport_model = info.go_type == 15;
         let enabled = collision.0 && visible.is_none_or(|v| v.0);
-        if !((arena_model || transport_model) && enabled) {
+        if !enabled {
             continue;
         }
         let placement = Placement {
