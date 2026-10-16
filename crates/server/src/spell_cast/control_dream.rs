@@ -45,7 +45,7 @@ fn ability_key(spell_id: u32) -> Option<u32> {
 
 /// A newly acquired ability was not available during earlier talent time.
 pub(crate) fn sync_known_ready_credit(world: &mut World, unit: Entity, spells: &[u32]) {
-    let now = super::now(world);
+    let now = super::history_now(world);
     let Some(mut readiness) = world.get_mut::<DreamReadiness>(unit) else {
         return;
     };

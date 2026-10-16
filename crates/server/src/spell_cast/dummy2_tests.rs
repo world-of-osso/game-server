@@ -51,7 +51,7 @@ fn dummy2_hunter_cobra_shot_does_not_create_a_kill_command_cooldown() {
             .world()
             .get::<super::SpellHistory>(h.caster)
             .unwrap()
-            .on_cooldown(kill_command, super::now(h.app.world()))
+            .on_cooldown(kill_command, super::history_now(h.app.world()))
     );
     assert!(
         !h.inbox

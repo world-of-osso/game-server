@@ -98,7 +98,7 @@ fn arena_item_cast_time_category_survives_completion_then_resets() {
         "real cast-time damage must complete"
     );
     let history = h.app.world().get::<SpellHistory>(h.caster).unwrap();
-    assert!(history.category_ready_at[&9999] > now(h.app.world()));
+    assert!(history.category_ready_at[&9999] > history_now(h.app.world()));
     h.inbox.cooldowns.clear();
     reset_arena_cooldowns(h.app.world_mut(), h.caster);
     h.advance(1);

@@ -241,10 +241,13 @@ pub(crate) fn load_trait_tree(conn: &Connection, skill_line: u32) -> rusqlite::R
         [skill_line],
         |r| uint(r, 0),
     )?;
-    load_trait_tree_by_id(conn, tree_id)
+    let mut tree = load_trait_tree_by_id(conn, tree_id)?;
+    // Starter builds are keyed by class specialization, not profession tree variants.
+    tree.starter_builds = load_starter_builds(conn, tree_id)?;
+    Ok(tree)
 }
 
-/// Load one explicitly selected class or profession tree, without choosing a variant.
+/// Load one explicit tree's shared rules, without class-specialization Starter builds.
 pub(crate) fn load_trait_tree_by_id(
     conn: &Connection,
     tree_id: u32,
@@ -315,7 +318,7 @@ pub(crate) fn load_trait_tree_by_id(
         nodes,
         groups,
         sub_trees: load_sub_trees(conn, tree_id)?,
-        starter_builds: load_starter_builds(conn, tree_id)?,
+        starter_builds: Vec::new(),
     })
 }
 
