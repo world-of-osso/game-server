@@ -231,3 +231,8 @@ Own server :5085 (world.db = `world-stockadebosses-20260927.db`, copied game.red
 Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/death/save fixtures; private both-skin Skum3674/encounter589 lifecycle captures at UDP5830. Controlled admin damage exercises production damage/death boundaries, not ordinary solo balance. Skum display4203 remains outside imported appearance coverage; no replacement model or mechanics are introduced.
 
 - Existing BossAi summon ownership hooks are preserved: JustSummoned tracks owned summons; evade/death cleanup despawns them, and SummonedCreatureDespawn removes ownership. This adds no summon ability.
+
+## Razorlash source binding — 2026-10-16
+
+- Admit only pinned TC a352b1fa Razorlash12258→423/Normal349/bit1, authenticated by installed Journal70391 encounter424/actor994/display12389. Produce copy-only SQL; preserve unrelated bindings. Reject AI/DB2 identity drift.
+- Keep authored SmartAI probabilities (Thrash70%, Cleave/Puncture85%), resources, targeting and timers. Controlled proof may stage player survival health; ordinary balance, extra-attack parity, native clear, loot/persistence and canonical publication remain separate.

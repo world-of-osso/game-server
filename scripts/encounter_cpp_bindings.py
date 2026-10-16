@@ -180,7 +180,23 @@ THERMAPLUGG_PRIMARY = dict(
     actor_id=992,
     display_id=36563,
 )
+MARAUDON_SOURCES = {
+    "Kalimdor/Maraudon/maraudon.h": "c4b5a0d7278887ab361f2336b01bfd0f9695d66dad5c7ce48e1f6b53bc452ea0",
+    "Kalimdor/Maraudon/instance_maraudon.cpp": "d1b011494852577a78feae6894acdb8b5b33a5619785c4d9bf1009ef9f7f9524",
+}
+RAZORLASH_PRIMARY = dict(
+    map_id=349,
+    entry=12258,
+    encounter_id=423,
+    bit=1,
+    script="",
+    ai="SmartAI",
+    journal_id=424,
+    actor_id=994,
+    display_id=12389,
+)
 PROFILES = {
+    "razorlash": (RAZORLASH_PRIMARY, MARAUDON_SOURCES),
     "thermaplugg": (THERMAPLUGG_PRIMARY, GNOMEREGAN_SOURCES),
     "crowd-pummeler": (PUMMELER_PRIMARY, GNOMEREGAN_SOURCES),
     "electrocutioner": (ELECTROCUTIONER_PRIMARY, GNOMEREGAN_SOURCES),
