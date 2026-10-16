@@ -86,6 +86,7 @@ pub struct SpellInfo {
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
+    pub aura_restrictions: Option<Box<SpellAuraRestrictions>>,
     pub categories: Option<Box<SpellCategories>>,
     pub cooldowns: Option<Box<SpellCooldownInfo>>,
     pub levels: Option<Box<SpellLevels>>,
@@ -295,6 +296,23 @@ pub struct SpellInterrupts {
     pub interrupt_flags: u32,
     pub aura_interrupt_flags: [u32; 2],
     pub channel_interrupt_flags: [u32; 2],
+}
+
+/// Raw required/excluded state, spell and aura-type IDs from `spell_aura_restrictions`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellAuraRestrictions {
+    pub caster_aura_state: u32,
+    pub target_aura_state: u32,
+    pub exclude_caster_aura_state: u32,
+    pub exclude_target_aura_state: u32,
+    pub caster_aura_spell: u32,
+    pub target_aura_spell: u32,
+    pub exclude_caster_aura_spell: u32,
+    pub exclude_target_aura_spell: u32,
+    pub caster_aura_type: u32,
+    pub target_aura_type: u32,
+    pub exclude_caster_aura_type: u32,
+    pub exclude_target_aura_type: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]

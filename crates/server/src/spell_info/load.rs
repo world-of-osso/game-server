@@ -174,6 +174,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     super::immunity::attach_definitions(conn, &mut spells)?;
     load_power_costs(conn, &mut spells)?;
     load_aura_options(conn, &lookups, &mut spells)?;
+    load_aura_restrictions(conn, &mut spells)?;
     load_categories(conn, &mut spells)?;
     load_cooldowns(conn, &mut spells)?;
     load_levels(conn, &mut spells)?;
@@ -517,6 +518,35 @@ fn load_interrupts(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<(
             })
         },
         |spell, interrupts| spell.interrupts = Some(Box::new(interrupts)),
+    )
+}
+
+fn load_aura_restrictions(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<()> {
+    fill(
+        conn,
+        spells,
+        "SELECT SpellID, CasterAuraState, TargetAuraState, ExcludeCasterAuraState,
+                ExcludeTargetAuraState, CasterAuraSpell, TargetAuraSpell, ExcludeCasterAuraSpell,
+                ExcludeTargetAuraSpell, CasterAuraType, TargetAuraType, ExcludeCasterAuraType,
+                ExcludeTargetAuraType
+         FROM spell_aura_restrictions WHERE DifficultyID = 0",
+        |r| {
+            Ok(SpellAuraRestrictions {
+                caster_aura_state: uint(r, 1)?,
+                target_aura_state: uint(r, 2)?,
+                exclude_caster_aura_state: uint(r, 3)?,
+                exclude_target_aura_state: uint(r, 4)?,
+                caster_aura_spell: uint(r, 5)?,
+                target_aura_spell: uint(r, 6)?,
+                exclude_caster_aura_spell: uint(r, 7)?,
+                exclude_target_aura_spell: uint(r, 8)?,
+                caster_aura_type: uint(r, 9)?,
+                target_aura_type: uint(r, 10)?,
+                exclude_caster_aura_type: uint(r, 11)?,
+                exclude_target_aura_type: uint(r, 12)?,
+            })
+        },
+        |spell, restrictions| spell.aura_restrictions = Some(Box::new(restrictions)),
     )
 }
 
