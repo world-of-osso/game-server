@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — measured arena/aura/orb profiles, repeated immutable input parsing and isolated read-only caches; bounded GREEN pending, no suite/runtime budget claim.
+
 - [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; [health-based damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16) and native modifier exclusions covered separately; PvP/follow-up talents open.
 
 - [BM Kill Command pet damage](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16) — actual Call Pet/owner intent RED→GREEN for34026→83381; native damage attribution and foreign ownership, not charging/full talent coverage.
