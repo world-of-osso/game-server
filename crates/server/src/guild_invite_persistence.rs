@@ -95,18 +95,7 @@ fn persist_invite(
 ) -> Result<Invitation, String> {
     let inviter =
         persistence::load_character(db, character).ok_or("Inviter player entity missing")?;
-    let guild = persistence::load_character_guild(db, character)
-        .ok_or(shared::protocol::GuildRankError::NotInGuild.message())?;
-    if !crate::guild::character_has_right(
-        db,
-        character,
-        guild.guild_id,
-        shared::protocol::GUILD_RIGHT_INVITE,
-    ) {
-        return Err(shared::protocol::GuildRankError::Permissions
-            .message()
-            .into());
-    }
+    let guild = load_inviter_guild(db, character)?;
     let target = load_eligible_target(db, character, &request.target_character_name, online)?;
     let pending = PendingGuildInviteData {
         guild_id: guild.guild_id,
@@ -121,6 +110,22 @@ fn persist_invite(
         &pending.inviter_name,
     );
     Ok(Invitation { target, pending })
+}
+
+fn load_inviter_guild(db: &redb::Database, character: u64) -> Result<GuildMembership, String> {
+    let guild = persistence::load_character_guild(db, character)
+        .ok_or(shared::protocol::GuildRankError::NotInGuild.message())?;
+    if !crate::guild::character_has_right(
+        db,
+        character,
+        guild.guild_id,
+        shared::protocol::GUILD_RIGHT_INVITE,
+    ) {
+        return Err(shared::protocol::GuildRankError::Permissions
+            .message()
+            .into());
+    }
+    Ok(guild)
 }
 
 fn load_eligible_target(
@@ -210,14 +215,18 @@ fn notify_target(world: &mut World, invitation: &Invitation) {
         if !same_character || rebound_original {
             continue;
         }
-        if let Some(mut sender) =
-            world.get_mut::<MessageSender<shared::protocol::GuildInvitation>>(target.connection)
-        {
-            sender.send::<AuthChannel>(shared::protocol::GuildInvitation {
-                guild_id: invitation.pending.guild_id,
-                guild_name: invitation.pending.guild_name.clone(),
-                inviter_name: invitation.pending.inviter_name.clone(),
-            });
-        }
+        send_invitation(world, target.connection, &invitation.pending);
+    }
+}
+
+fn send_invitation(world: &mut World, connection: Entity, pending: &PendingGuildInviteData) {
+    if let Some(mut sender) =
+        world.get_mut::<MessageSender<shared::protocol::GuildInvitation>>(connection)
+    {
+        sender.send::<AuthChannel>(shared::protocol::GuildInvitation {
+            guild_id: pending.guild_id,
+            guild_name: pending.guild_name.clone(),
+            inviter_name: pending.inviter_name.clone(),
+        });
     }
 }

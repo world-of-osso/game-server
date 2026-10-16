@@ -766,6 +766,8 @@ mod tests {
                 MessageReceiver::<GuildInviteRequest>::default(),
                 MessageSender::<GuildInviteResponse>::default(),
                 MessageReceiver::<GuildInviteResponse>::default(),
+            ))
+            .insert((
                 MessageSender::<shared::protocol::GuildInvitation>::default(),
                 MessageReceiver::<shared::protocol::GuildInvitation>::default(),
             ))
