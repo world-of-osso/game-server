@@ -195,7 +195,19 @@ RAZORLASH_PRIMARY = dict(
     actor_id=994,
     display_id=12389,
 )
+ROTGRIP_PRIMARY = dict(
+    map_id=349,
+    entry=13596,
+    encounter_id=428,
+    bit=6,
+    script="",
+    ai="SmartAI",
+    journal_id=430,
+    actor_id=1000,
+    display_id=13589,
+)
 PROFILES = {
+    "rotgrip": (ROTGRIP_PRIMARY, MARAUDON_SOURCES),
     "razorlash": (RAZORLASH_PRIMARY, MARAUDON_SOURCES),
     "thermaplugg": (THERMAPLUGG_PRIMARY, GNOMEREGAN_SOURCES),
     "crowd-pummeler": (PUMMELER_PRIMARY, GNOMEREGAN_SOURCES),
