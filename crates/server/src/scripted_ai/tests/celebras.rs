@@ -3,7 +3,7 @@ use super::*;
 
 /// Feasible due-time interval, not previous dispatch: TaskContext::Repeat anchors
 /// to due time even when the casting validator deferred that dispatch.
-fn follows_task_deadlines(
+pub(super) fn follows_task_deadlines(
     times: &[f32],
     first: (f32, f32),
     repeat: (f32, f32),
