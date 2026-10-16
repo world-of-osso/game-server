@@ -1603,6 +1603,9 @@ mod completed_quest_tests;
 #[path = "achievement_creature_type_tests.rs"]
 mod creature_type_tests;
 #[cfg(test)]
+#[path = "achievement_map_count_tests.rs"]
+mod map_count_tests;
+#[cfg(test)]
 #[path = "achievement_nested_all_tests.rs"]
 mod nested_all_tests;
 #[cfg(test)]
