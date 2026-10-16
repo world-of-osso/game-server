@@ -10,6 +10,8 @@
 //!
 //! `crate::spell_cast` resolves casts from these records.
 
+#[cfg(test)]
+mod aura_restrictions_tests;
 mod class_data;
 mod immunity;
 #[cfg(test)]
