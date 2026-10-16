@@ -160,6 +160,8 @@ pub const MOD_REGEN_DURING_COMBAT: u32 = 116;
 pub const MOD_HEALING_PCT: u32 = 118;
 pub const MOD_SPEED_ALWAYS: u32 = 129;
 pub const MOD_MOUNTED_SPEED_ALWAYS: u32 = 130;
+/// TC Unit.cpp8816: strongest positive mounted bonus, not stacked with aura130.
+pub const MOD_MOUNTED_SPEED_NOT_STACK: u32 = 172;
 pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
 pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
 pub const REDUCE_PUSHBACK: u32 = 149;
@@ -177,6 +179,8 @@ pub const LEARN_SPELL: u32 = 195;
 pub const FLY: u32 = 201;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
+/// TC Unit.cpp8854: strongest positive flight bonus.
+pub const MOD_FLIGHT_SPEED_NOT_STACK: u32 = 211;
 pub const ADV_FLYING: u32 = 446;
 /// Unit::SpellCriticalDamageBonus / CalculateMeleeDamage, school-mask multiplier.
 pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
@@ -343,7 +347,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_HEALTH_REGEN_IN_COMBAT
         | MOD_INCREASE_MOUNTED_SPEED
         | MOD_MOUNTED_SPEED_ALWAYS
+        | MOD_MOUNTED_SPEED_NOT_STACK
         | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
+        | MOD_FLIGHT_SPEED_NOT_STACK
         | MOD_DODGE_PERCENT
         | MOD_PARRY_PERCENT
         | MOD_BLOCK_PERCENT
