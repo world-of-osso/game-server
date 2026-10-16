@@ -1,7 +1,7 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
-- [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import and actual learned-use lifecycle;137/137 Toy regression, native assets/pixels separate.
+- [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import, learned-use lifecycle and137/137 Toy regression; private70391 five-asset closure verified, native pixels separate.
 
 - [Shrine server per-target stat conversion](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16) — actual-use missing-table RED→source level/armor/damage/health conversion19 controls; actual attack/client HP proof separate.
 

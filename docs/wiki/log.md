@@ -1,6 +1,6 @@
 ## 2026-10-16 — Stone Whistle source admission
 
-[Enchanted Stone Whistle](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16): actual importer and learned-use RED reproduce missing98300. Add only authentic Petrified Sand Piper through the maintained importer; existing destination/lifetime handlers are unchanged. Five importer controls, actual learned-use lifecycle, whole-Toy137/137 and server check/fmt pass; prepared classification adds only129279 to384/1166. Native assets/rendering and guardian HP remain separate.
+[Enchanted Stone Whistle](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16): actual importer and learned-use RED reproduce missing98300. Add only authentic Petrified Sand Piper through the maintained importer; existing destination/lifetime handlers are unchanged. Five importer controls, actual learned-use lifecycle, whole-Toy137/137 and server check/fmt pass; prepared classification adds only129279 to384/1166. Follow-up60 authenticates five70391 model/texture/skin assets and privately publishes them with two runtime aliases through the maintained importer; rebuilt graph is complete. Canonical publication, native rendering and guardian HP remain separate.
 
 ## 2026-10-16 — Shrine server per-target conversion
 
