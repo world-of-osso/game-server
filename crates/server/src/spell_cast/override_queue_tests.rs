@@ -22,7 +22,7 @@ fn spell_override_queue_resolves_after_aura_expiry_not_at_admission() {
         },
     );
     h.advance(235);
-    let now = super::now(h.app.world());
+    let now = super::history_now(h.app.world());
     let mut history = super::SpellHistory::default();
     history.gcd_ready_at.insert(133, now + 0.4);
     h.app.world_mut().entity_mut(h.caster).insert(history);
