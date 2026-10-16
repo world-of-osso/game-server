@@ -731,8 +731,8 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
         .expect("controlling seat must publish its authored NPC mover capabilities");
     assert_eq!(capabilities.flags, 1594726007);
     assert!((capabilities.turn_speed - 1.04719758).abs() < 0.00001);
-    assert!((capabilities.walk_speed - 3.0).abs() < 0.00001);
-    assert!((capabilities.run_speed - 0.98571 * 7.0).abs() < 0.00001);
+    assert!((capabilities.walk_speed - 2.5).abs() < 0.00001);
+    assert!((capabilities.run_speed - 1.71429 * 7.0).abs() < 0.00001);
     let vehicle_start = *h.app.world().get::<Position>(demolisher).unwrap();
     let rider_start = *h.app.world().get::<Position>(actor.player).unwrap();
     let relative = Vec3::new(
