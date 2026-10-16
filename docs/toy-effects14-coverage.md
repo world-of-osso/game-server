@@ -6,7 +6,21 @@ Guardian health remains read-only. Pinned TC `Guardian::InitStatsForLevel` uses 
 
 Earlier root refusals remain in the [effects12 identity/reason table](toy-effects12-coverage.md#exact-retained-gaps) and [effects13 refinements](toy-effects13-coverage.md#exact-retained-gaps), except identities explicitly closed by later packets here. Arrival of the Naaru64456/91752 is not admitted: TDB51200/display35543 resolves model124640, `creature/invisiblestalker/invisiblestalker.m2`, not a recording model. The local root has only its summon effect; template addon, AI/script, creature spells and SmartAI bindings are empty. The recording action is not established by publishing this invisible actor. This is a local source gap, not proof that Retail has no action.
 
-Next source-closed candidate: Enchanted Stone Whistle129279/193687 summons Petrified Sand Piper98300/display71056, with source63→86 selecting a3yd disk around the selected unit, one actor and60000ms lifetime. Property1362 is wild/default, not a pet/follow designation. No TDB AI/addon/creature-spell/click/native root-script binding was found. Genuine RED at5228c1d7/docs-equivalent9770e896 reproduces missing98300 in the real importer and actual bag-learning/UseToy refusal(0/1,49.46s). The only production change adds98300 to the maintained source importer; GREEN and whole-Toy gates are pending. Neither admission nor native pixels are certified yet. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
+[Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
+
+## Enchanted Stone Whistle server proof (2026-10-16)
+
+[Contract](specs/toys.md#contract) owns129279/193687→98300/display71056. Genuine RED at5228c1d7/docs-equivalent9770e896 reproduces missing98300 in the real importer and actual bag-learning/UseToy refusal(0/1,49.46s). Production3e5772a6 adds only98300 to the maintained source importer; no runtime Rust/Cargo, destination, AI, stat, clock or cooldown implementation changes.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Authentic import | Five real CLI importer controls pass14.301s on disposable copies, including exact source template/model preservation, idempotence and existing missing-source rollback controls. Canonical data is untouched. |
+| Actual learned use | One CPU integration test passes36.35s: source actor71056 near the selected unit in its3yd disk, not the caster's disk; correct owner/map, no pet/follow designation, stationary after actual caster movement, unchanged caster body/health and natural60000ms simulation expiry through the ordinary50ms harness. |
+| Regression | Whole `toys:: --test-threads 2` passes137/137, zero ignored671.73s at3e5772a6/engine035700cd9/protocoldc30250. Server all-target check and fmt EXIT0; manual changed-Rust readability audit has no findings. No redundant native rebuild: production Rust/Cargo is unchanged from the prior packet. |
+| Catalog classification | Prepared1166 scan finds384 admissible/782 unavailable: exactly+129279, zero removals against the recorded Podium383 prepared checkpoint. This is not384 complete toys or canonical publication. |
+| Remaining | No new UDP/native pixels, client interaction or native wall-expiry certificate; no full NPC/guardian-stat parity. Native1394881 body matches the wow70391 resolver content key, but full dependency authentication/publication and both-skin rendering are still unproved. The existing indexed body receipt is Classic Beta and is not relabeled as a Modern render proof. |
+
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `whistle59-{active-goal,readonly-source,proof-ledger,final-scope,final-results,census-delta,readability}.json`, importer/use RED/GREEN logs and `whistle59-whole-toys.log`. No new effect handler, invented script, data publication or Full1166 completion claim.
 
 ## Shrine server per-target stat conversion (2026-10-16)
 
