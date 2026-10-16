@@ -123,7 +123,8 @@ fn heartbreaker(rank: bool) {
     if rank {
         ids.push(221536);
     }
-    let mut h = harness(Vec::new(), &ids, 6).unwrap();
+    // Every chain target must hit; avoidance has separate native tests.
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 6).unwrap();
     let near = spawn_npc(&mut h.app, 4.0);
     let far = spawn_npc(&mut h.app, 40.0);
     let ally = spawn_player(&mut h.app, 6, 4.0);
