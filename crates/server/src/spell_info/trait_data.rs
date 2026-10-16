@@ -150,6 +150,20 @@ pub struct TraitSubTree {
     pub name: String,
 }
 
+/// Authored cumulative purchased rank at one `TraitTreeLoadoutEntry.OrderIndex`.
+#[derive(Debug, Clone, Serialize)]
+pub struct StarterPurchase {
+    pub node_id: u32,
+    pub entry_id: u32,
+    pub ranks: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StarterBuild {
+    pub spec_id: u32,
+    pub purchases: Vec<StarterPurchase>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct TraitTree {
     pub tree_id: u32,
@@ -160,6 +174,7 @@ pub struct TraitTree {
     /// Sorted by ID.
     pub groups: Vec<TraitNodeGroup>,
     pub sub_trees: Vec<TraitSubTree>,
+    pub starter_builds: Vec<StarterBuild>,
 }
 
 impl TraitTree {
@@ -300,6 +315,7 @@ pub(crate) fn load_trait_tree_by_id(
         nodes,
         groups,
         sub_trees: load_sub_trees(conn, tree_id)?,
+        starter_builds: load_starter_builds(conn, tree_id)?,
     })
 }
 
@@ -520,6 +536,37 @@ fn load_currencies(conn: &Connection, tree_id: u32) -> rusqlite::Result<Vec<Trai
             .collect::<rusqlite::Result<_>>()?;
     }
     Ok(currencies)
+}
+
+fn load_starter_builds(conn: &Connection, tree_id: u32) -> rusqlite::Result<Vec<StarterBuild>> {
+    let mut statement = conn.prepare(
+        "SELECT ID, ChrSpecializationID FROM trait_tree_loadout WHERE TraitTreeID = ?1 ORDER BY ID",
+    )?;
+    let loadouts = statement.query_map([tree_id], |row| Ok((uint(row, 0)?, uint(row, 1)?)))?;
+    let mut builds: Vec<StarterBuild> = Vec::new();
+    let mut entries = conn.prepare(
+        "SELECT SelectedTraitNodeID, SelectedTraitNodeEntryID, NumPoints
+         FROM trait_tree_loadout_entry WHERE TraitTreeLoadoutID = ?1 ORDER BY OrderIndex, ID",
+    )?;
+    for loadout in loadouts {
+        let (id, spec_id): (u32, u32) = loadout?;
+        let purchases = entries
+            .query_map([id], |row| {
+                Ok(StarterPurchase {
+                    node_id: uint(row, 0)?,
+                    entry_id: uint(row, 1)?,
+                    ranks: uint(row, 2)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        if purchases.is_empty() {
+            continue;
+        }
+        // TraitMgr::Load keeps the last populated authored loadout per specialization.
+        builds.retain(|build| build.spec_id != spec_id);
+        builds.push(StarterBuild { spec_id, purchases });
+    }
+    Ok(builds)
 }
 
 fn load_sub_trees(conn: &Connection, tree_id: u32) -> rusqlite::Result<Vec<TraitSubTree>> {

@@ -37,6 +37,17 @@
 ## 2026-10-15 — Owned IoC bomb lifecycle channel proof
 
 [Timed Seaforium](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14): normal/huge real pickup→owned item→UseItem, ten-second25%/60% one-shot/copy isolation and acknowledged normal disarm/cancellation pass5/5. Authoritative BG team relation regression passes1/1 across racial factions; reproduced/fixed NPC-path regression passes existing AV captain1/1 without changing stats, arena lifecycle remains1/1. Native activation, siege and victory remain pending. Earlier too-early/transient-reply fixture observations are not genuine disarm RED; corrected pre-fix replay is retained separately.
+## 2026-10-15 — Authored talent Starter builds
+
+[Starter Build](systems/talents.md#starter-build): authored cumulative ranks, normal eligibility and built-in selection in existing redb encoding. Five scoped Starter proofs pass, including installed-class legality and Arms apex deferred until authored levels; check/build have no warnings. Real private both-skin level10→11→80, exact relog projections and confirmed deactivation pass. No reference-data/default-realm mutation; coupled landing remains lead-owned.
+## 2026-10-15 — Nested encounter conjunction
+
+[Native165 nested All](systems/dungeon-achievements.md#nested-encounter-conjunction) preserves complete companions and scoped prerequisites. Compiler44/44, genuine native-handler RED→GREEN3/3, exact structural5512/1824 adds only11660. Required integrated four-filter205/0/1ignored plus site-export1/1 at299b09a9; checks/fmt pass. Initial missing fixture-env setup failures retained, corrected invocation green without source changes. No boss combat or prerequisite acquisition certificate.
+
+## 2026-10-15 — Absent-player-aura kill guard
+
+[Bounded SingleFalse8](systems/dungeon-achievements.md#absent-player-aura-kill-guard) on KillCreature0 requires known actor aura authority and complete authored companions. Compiler43/43, genuine native RED, structural5511/1824; native/catalog/prior-positive/pinned GREEN5/5(39.10s) at2dc751cc. Native counters, genuine actor mark casts and DB reopen pass; controlled boss identities do not certify encounters or full-map grants.
+
 ## 2026-10-15 — Installed race/class source
 
 [Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Installed283-pair/missing-source/actual admin kit+persistence regressions pass3/3; post-master race/mask/start/Forever controls10/10 and scoped check/fmt pass. Source95/96 contracts, start-level and visage policy remain separate and unchanged; rendered Dwarf login is not claimed. No realm5000 operation or stat tuning.

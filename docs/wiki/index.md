@@ -11,6 +11,10 @@
 - [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, source-tag/boarding/lifetime/occupancy gates pass.
 
 - [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — owned normal/huge lifecycle/disarm GREEN5, BG/NPC/arena controls checked; Modern83/Forever88 native four-phase/20-player return pass; render/framing/timing remain separate.
+- [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
+
+- [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native/catalog5/5, controlled boss identities and counters are not full encounter/map grants.
+
 - [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
 
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
@@ -366,7 +370,7 @@ Server gameplay systems.
 | [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1; labelled Forever Zephras overlay, source masks/XP, captured NPC displays, labelled missing-class/health estimates, client asset needs and completion gaps |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
 | [[class-progression]] | Race/class validation including Monk/DH/Evoker, new-character levels and temporary starts, Initial spec below 10, known spells, action bars and progression persistence |
-| [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
+| [[talents]] | DB2 trait trees, condition/budget validation, named loadouts and authored Starter selection/level allocation, owner snapshots and talent spells in KnownSpells |
 | [[spell-info]] | SpellStore (every DB2 spell, all effects/costs/options at DifficultyID 0, charge categories), ClassSpells, raw power-cost units, load cost |
 | [[character-stats]] | Retail 12.x player stats: SimC class/race base stats, CASC hppersta/basemp/combatratings, spec main stat and mastery, `StatModifiers` aura fold-in, base-mana costs, gaps (no gear/weapon data) |
 | [[spell-casting]] | [Third local-Retail class script batch](systems/spell-casting.md#third-batch-local-retail-rows), TDB1210-authored fixed destinations and Retail nullable facing, spell teleports/leaps, aura overrides, tested class spell scripts (Dummy bridges, damage/crit modifiers, target plans, removal rewards and live armor), cast pipeline, single-slot 750 ms spell queue with start-time costs, cast bars/channels, GCD/cooldowns/charges, targets/effects, temporary summons and data-bound spell area triggers, combat log, fractional power/rune replication and known-spell check |
