@@ -49,8 +49,9 @@
 [Bounded SingleFalse8](systems/dungeon-achievements.md#absent-player-aura-kill-guard) on KillCreature0 requires known actor aura authority and complete authored companions. Compiler43/43, genuine native RED, structural5511/1824; native/catalog/prior-positive/pinned GREEN5/5(39.10s) at2dc751cc. Native counters, genuine actor mark casts and DB reopen pass; controlled boss identities do not certify encounters or full-map grants.
 
 ## 2026-10-15 — Wild summon initial-state source RED
+## 2026-10-15 — Wild summon initial-state source and wire proof
 
-[Wild55](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15): actual learned Podium/Shrine source RED proves legacy level1/HP20-or1/armor50, instead of Northshire source level20/30 with corresponding ExpectedStat HP/armor. Source terrain precedes SelectLevel, then property flags control owner clamp. Minimal wild initialization updates level/HP/armor/mana; unknown-source refusal and retained lifecycle checks are under verification. No broader scaling/combat-stat or previous-native recertification claim.
+[Wild55](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15): genuine learned-use RED corrects regional level with matching HP/armor/mana, and NPC-child RED removes fabricated owner1. Authentic terrain/relative fixture geometry closes ty232/ty239; entire toys:: filter passes, followed by current server check/format/build and fresh private Podium/Shrine/default-Scarab initialized-field wire. Exact revisions, hashes and retained failures live in the linked coverage ledger. Broader scaling/combat-stat and older pixel/lifetime recertification remain open.
 
 ## 2026-10-15 — Winner's Podium source placement
 
