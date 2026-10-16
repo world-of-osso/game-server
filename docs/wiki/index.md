@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
+
 - [Crowd Pummeler source clock](systems/boss-scripts.md#gnomeregan-crowd-pummeler-source-clock--2026-10-16) — authenticated6229→381/bit4 copy-only binding and real three-spell first/repeat/damage/death-credit proof; knockback/interrupt and native acceptance remain separate.
 
 - [Electrocutioner primary and source mana gap](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16) — authenticated6235/380/bit3 binding and controlled death credit; ordinary SAI Shock fails authored mana admission, named mechanics acceptance remains open.
