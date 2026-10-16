@@ -154,6 +154,9 @@ struct Inbox {
     timeline: Vec<shared::protocol::EncounterTimelineEvent>,
     log: Vec<CombatLogEvent>,
     spell_gos: Vec<shared::protocol::SpellGo>,
+    opened: Vec<shared::protocol::InteractionOpened>,
+    closed: Vec<shared::protocol::InteractionClosed>,
+    failed: Vec<shared::protocol::InteractionFailed>,
 }
 
 struct Harness {
@@ -326,6 +329,8 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
                 MessageReceiver::<EncounterDisengageUnit>::default(),
             ),
             (
+                MessageSender::<shared::protocol::InteractNpc>::default(),
+                MessageReceiver::<shared::protocol::InteractNpc>::default(),
                 MessageSender::<shared::protocol::UseGameObject>::default(),
                 MessageReceiver::<shared::protocol::UseGameObject>::default(),
                 MessageSender::<shared::protocol::InteractionOpened>::default(),
@@ -436,6 +441,24 @@ impl Harness {
                 inbox
                     .spell_gos
                     .extend(drain::<shared::protocol::SpellGo>(world, *connection));
+                inbox
+                    .opened
+                    .extend(drain::<shared::protocol::InteractionOpened>(
+                        world,
+                        *connection,
+                    ));
+                inbox
+                    .closed
+                    .extend(drain::<shared::protocol::InteractionClosed>(
+                        world,
+                        *connection,
+                    ));
+                inbox
+                    .failed
+                    .extend(drain::<shared::protocol::InteractionFailed>(
+                        world,
+                        *connection,
+                    ));
             }
         }
     }
