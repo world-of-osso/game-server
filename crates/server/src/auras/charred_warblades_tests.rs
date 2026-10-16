@@ -2,7 +2,8 @@
 //! native effect0 percentage for the next PERIODIC_DUMMY heal, then resets.
 use super::*;
 use crate::spell_cast::test_harness::{
-    Harness, drain, harness_with_native_enemy_dodge_reduction, spawn_peer_connection, spawn_player,
+    Harness, apply_native_enemy_dodge_reduction_to, drain,
+    harness_with_native_enemy_dodge_reduction, spawn_peer_connection, spawn_player,
 };
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
@@ -126,6 +127,7 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
     let expected_owner = expected_heal(&h, owner_damage);
     assert!(expected_owner > 0);
     let other = spawn_player(&mut h.app, 12, 2.0);
+    apply_native_enemy_dodge_reduction_to(&mut h, other);
     let other_connection = spawn_peer_connection(&mut h.app, other, 2);
     h.app.world_mut().get_mut::<Health>(other).unwrap().current = 400.0;
     apply_aura(

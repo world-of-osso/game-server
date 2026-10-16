@@ -1431,12 +1431,22 @@ fn arena_all_sixteen_active_source_maps_play_authored_starts_gates_orbs_and_retu
         16,
         "local BattlemasterList/Map/WDT source census"
     );
-    for map_id in maps {
-        exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, map_id);
-        println!(
-            "SOURCE_ARENA_MAP_PASS {map_id}: authored starts/gates, preparation, physical orb, scored elimination, exact returns"
-        );
-    }
+    const MAX_WORKERS: usize = 4;
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = maps.chunks(maps.len().div_ceil(MAX_WORKERS))
+            .map(|batch| scope.spawn(move || {
+                for &map_id in batch {
+                    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, map_id);
+                    println!(
+                        "SOURCE_ARENA_MAP_PASS {map_id}: authored starts/gates, preparation, physical orb, scored elimination, exact returns"
+                    );
+                }
+            }))
+            .collect();
+        for worker in workers {
+            worker.join().expect("every source arena fixture must pass");
+        }
+    });
 }
 
 #[test]
