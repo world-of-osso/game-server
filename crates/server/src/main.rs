@@ -53,6 +53,8 @@ mod group;
 mod guild;
 mod guild_bank;
 mod guild_event_log;
+mod guild_news;
+mod guild_news_network;
 mod guild_tabards;
 mod housing;
 mod housing_acquisition;
