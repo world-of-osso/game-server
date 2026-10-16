@@ -299,12 +299,18 @@ fn follower_missing_spell_metadata_never_substitutes_melee_combat() {
         .0 = Some(h.npc);
     h.attack(h.npc);
     h.advance(3);
-    let before = h.health(h.npc);
+    let before = h.inbox.log.len();
     for _ in 0..60 {
         update_ai(h.app.world_mut());
         h.advance(1);
     }
-    assert_eq!(h.health(h.npc), before);
+    assert!(
+        !h.inbox.log[before..].iter().any(|event| {
+            event.source == Some(unit.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }),
+        "missing metadata must not cause follower damage; owner attacks remain real"
+    );
     assert!(
         h.app
             .world()
