@@ -31,6 +31,7 @@ struct EvaluationMemo {
 }
 
 #[derive(Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub(super) struct EvaluationIndex {
     identity: Arc<()>,
     criteria_definitions: HashMap<u32, BTreeSet<u32>>,
