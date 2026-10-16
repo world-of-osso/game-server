@@ -27,7 +27,7 @@ fn cast_at_health(current: f32, maximum: f32, improved: bool) -> Harness {
     h
 }
 
-fn apply_native_damage_modifiers(h: &mut Harness) {
+fn insert_native_target_armor(h: &mut Harness) {
     let data = load_native_creature_world(&[6]);
     let armor = data.creature_armor_at(6, 0, 10).unwrap();
     assert!(armor > 0.0);
@@ -42,6 +42,10 @@ fn apply_native_damage_modifiers(h: &mut Harness) {
     .unwrap();
     h.app
         .insert_resource(crate::world_data::load_expected_stats(&conn).armor_constants());
+}
+
+fn apply_native_damage_modifiers(h: &mut Harness) {
+    insert_native_target_armor(h);
     for (target, spell) in [(h.caster, 8599), (h.npc, 871)] {
         crate::auras::apply_aura(
             h.app.world_mut(),
@@ -54,6 +58,10 @@ fn apply_native_damage_modifiers(h: &mut Harness) {
             },
         );
     }
+    assert_native_percent_modifiers(h);
+}
+
+fn assert_native_percent_modifiers(h: &Harness) {
     assert!(
         h.app
             .world()
@@ -69,6 +77,55 @@ fn apply_native_damage_modifiers(h: &mut Harness) {
             .unwrap()
             .damage_taken(1)
             < 1.0
+    );
+}
+
+#[test]
+fn touch_of_death_flag_control_ordinary_fire_blast_keeps_damage_modifiers() {
+    let mut damages = Vec::new();
+    for modified in [false, true] {
+        let mut h = harness(Vec::new(), &[108853, 8599, 871, 8602], 10).unwrap();
+        if modified {
+            apply_native_damage_modifiers(&mut h);
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 8602,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<crate::auras::AuraStatMods>(h.caster)
+                    .unwrap()
+                    .damage_done(4),
+                2.0
+            );
+        }
+        h.cast_and_deliver(108853, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        damages.push(5000.0 - h.health(h.npc));
+    }
+    let spell = world_db().unwrap().store.get(108853).unwrap();
+    let variance = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 2)
+        .unwrap()
+        .variance;
+    let low_roll = 1.0 - variance / 2.0;
+    let high_roll = 1.0 + variance / 2.0;
+    // Vengeance8602 doubles all-school damage; Shield Wall871 leaves60%.
+    // Allow each independent native variance roll and final integer rounding.
+    let lower = (damages[0] * 2.0 * 0.6 * low_roll / high_roll).floor() - 1.0;
+    let upper = (damages[0] * 2.0 * 0.6 * high_roll / low_roll).ceil() + 1.0;
+    assert!(
+        damages[0] > 0.0 && (lower..=upper).contains(&damages[1]),
+        "ordinary damage {damages:?}, bounds {lower}..{upper}"
     );
 }
 
