@@ -86,12 +86,13 @@ fn dummy14_survival_kill_command_routes_named_damage_from_owned_pet() {
     let pet = pet(&mut h);
     let target = h.npc;
     execute(&mut h, 259489, Some(target));
+    h.advance(1);
     assert_eq!(
         h.health(target),
         4934.0,
-        "3AP from actual pet, native22AP inherited from fixture owner"
+        "3AP from actual pet, native22AP inherited from fixture owner; outcomes {:?}",
+        h.inbox.log
     );
-    h.advance(1);
     let hits: Vec<_> = h
         .inbox
         .log

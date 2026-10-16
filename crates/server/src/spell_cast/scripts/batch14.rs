@@ -73,7 +73,7 @@ pub(super) fn command_pet(world: &mut World, caster: Entity, target: Entity, dep
     cast_pet_command(world, caster, target, COMMAND_DAMAGE, depth);
 }
 
-///7039134026 names83381; pinned SimC76f8118 executes that attack on the owned pet.
+/// 70391 spell34026 names83381; SimC76f8118 executes that attack on the owned pet.
 ///Animal Companion, charging and the other talent consumers are separate paths.
 pub(super) fn command_beast(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     const BEAST_COMMAND_DAMAGE: u32 = 83381;
