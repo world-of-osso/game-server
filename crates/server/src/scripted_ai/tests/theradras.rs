@@ -9,7 +9,8 @@ fn encounter_coverage_theradras_source_clocks_effects_spirit_and_credit() {
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert((
         Position {
-            x: origin.x + 3.0,
+            // DB2 Monster Shoot range54: Boulder requires at least5yd.
+            x: origin.x + 8.0,
             ..origin
         },
         Health {
