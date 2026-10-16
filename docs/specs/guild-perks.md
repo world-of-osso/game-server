@@ -17,7 +17,9 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 | File | Role |
 |---|---|
-| `crates/server/src/class_progression.rs` | Existing authoritative known-spell and owner notification boundary |
+| `crates/server/src/class_progression.rs` | Baseline/PvP/guild knowledge composition and rebuild preservation |
+| `crates/server/src/guild_perks.rs` | Installed catalog and membership-derived owner learn/unlearn updates |
+| `crates/server/src/main.rs` | Required startup catalog load |
 
 ## Tests asserting this spec
 
@@ -25,7 +27,7 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 ## Known gaps (current cycle)
 
-- [ ] Membership reconciliation and authentic effect coverage remain unimplemented/unverified.
+- [ ] Membership reconciliation is implemented, awaiting focused GREEN; authentic effect coverage remains separate.
 - [ ] Private real-UDP/native join/leave/relog acceptance and independent consumer gates.
 
 ## Out of scope

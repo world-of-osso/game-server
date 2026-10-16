@@ -1,3 +1,7 @@
+## 2026-10-16 — Guild perk membership knowledge
+
+[Perks](systems/guild-perks.md): actual persisted join RED reproduced no perk grants. Membership-derived known IDs now remain separate from class/profession learning and survive ordinary spec rebuilds; owner deltas follow Update membership changes. Focused GREEN and real UDP/native/effect proof remain open.
+
 ## 2026-10-16 — Guild news real producers and private readback
 
 [News](systems/guild-news.md): actual achievement, loot-slot, CREATE_ITEM24 and vendor boundaries; authenticated query/sticky and live subscriptions. Backend6/6 and final consumer/wire/check gates pass. Genuine private Lillehoff acquisitions drive250-row native both-skin retention; real permission/post-quit refusals and exact fresh-process history/sticky readback pass. No synthetic history or catalog changes; independent lead integration remains separate.
