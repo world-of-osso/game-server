@@ -68,6 +68,11 @@ fn save_fixture_pets(journal: &PetJournal, states: &BTreeMap<u64, serde_json::Va
     assert_eq!(&decoded, journal);
 }
 
+#[test]
+fn seed_owned_private_effect_journal() {
+    main();
+}
+
 fn main() {
     let world = Connection::open_with_flags("data/world.db", OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("Open private current-build world copy read-only");
