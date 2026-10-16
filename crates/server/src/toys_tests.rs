@@ -1060,6 +1060,7 @@ fn toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel() {
 fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
@@ -1114,15 +1115,20 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
     };
     apply(h.app.world_mut(), h.caster); // Refresh does not make another tent.
     assert_eq!(summons(h.app.world_mut()), first);
-    let other = spawn_player(&mut h.app, 8, 10.0);
-    h.app
-        .world_mut()
-        .entity_mut(other)
-        .insert(shared::components::Rotation {
+    let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+    let other_position = Position {
+        x: origin.x + 10.0,
+        ..origin
+    };
+    let other = spawn_player(&mut h.app, 8, other_position.x);
+    h.app.world_mut().entity_mut(other).insert((
+        other_position,
+        shared::components::Rotation {
             x: 0.0,
             y: std::f32::consts::PI,
             z: 0.0,
-        });
+        },
+    ));
     apply(h.app.world_mut(), other);
     let both = summons(h.app.world_mut());
     assert_eq!(both.len(), 2);
@@ -1132,8 +1138,8 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
         .world()
         .get::<shared::components::Position>(rotated)
         .unwrap();
-    assert!((pos.x - 10.0).abs() < 0.001);
-    assert!((pos.z - 2.0).abs() < 0.001);
+    assert!((pos.x - other_position.x).abs() < 0.001);
+    assert!((pos.z - other_position.z - 2.0).abs() < 0.001);
     crate::auras::remove_auras(
         h.app.world_mut(),
         h.caster,
@@ -3451,6 +3457,7 @@ fn toyfx14_ground_toy_waits_for_a_clicked_destination() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (mut h, character) = setup(&directory.path().join("ground.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
     h.app.insert_resource(shared_world_data(&path));
