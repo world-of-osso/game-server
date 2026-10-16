@@ -1,6 +1,10 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; [health-based damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16) and native modifier exclusions covered separately; PvP/follow-up talents open.
+
+- [BM Kill Command pet damage](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16) — actual Call Pet/owner intent RED→GREEN for34026→83381; native damage attribution and foreign ownership, not charging/full talent coverage.
+
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
