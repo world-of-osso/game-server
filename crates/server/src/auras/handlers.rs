@@ -199,6 +199,8 @@ pub const MOD_MELEE_HASTE_3: u32 = 319;
 pub const SCREEN_EFFECT: u32 = 260;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
 pub const MOD_ARMOR_PCT_FROM_STAT: u32 = 268;
+/// TC a352b1fa Unit.cpp7056/8178: victim aura owner and incoming school mask.
+pub const MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER: u32 = 270;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 /// TC a352b1fa Unit::SpellDamageBonusTaken: owner + SpellLabel match.
 pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
@@ -378,7 +380,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
-        MOD_SPELL_DAMAGE_FROM_CASTER | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
+        MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER
+        | MOD_SPELL_DAMAGE_FROM_CASTER
+        | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
         MOD_MAX_CHARGES
         | MOD_CHARGE_RECOVERY_RATE
         | CHARGE_RECOVERY_MOD

@@ -14,6 +14,18 @@
 ## 2026-10-15 — Controlled Disciple gossip/start
 
 [Source callbacks](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) port Hello/Select and events1–3 without synthesizing flags/menu options/5232. Genuine missing-Hello RED→controlled2/2 GREEN56.54s, including real flag0 InteractNpc rejection and physical first-path movement. Missing NpcInteractionPlugin/faction initialization caused earlier empty/panicking ingress fixtures; no transport behavior changed to fix those fixtures. Integrated3a035ee1/protocol1707389: controlled2/2(60.82s), ordinary NPC controls9/9, first-camp regression1/1(25.18s), scoped check without warnings and fmt/diff pass. Natural positive activation and full escort/native clear remain open.
+## 2026-10-16 — Touch of Death primary damage and native flags
+
+[Health damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16): native999-health/zero-damage RED→GREEN100%/35% maximum-health outcomes with actual armor, school modifiers and Can'tCrit. Shared source attribute consumers honor caster-percent/victim/armor exclusions; ordinary-modifier and adjacent controls62/62 pass. PvP/Stagger/mastery/follow-up talents and fresh bot acceptance remain open.
+
+## 2026-10-16 — Touch of Death admission
+
+[Target policy](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16):70391 weaker-creature/improved15% admission; seven actual rank/health cases RED→GREEN2. Reject before CastSuccess/cooldowns. Strict description boundary retained with SimC equality discrepancy documented; damage/PvP/follow-up talent consumers remain open.
+
+## 2026-10-16 — BM Kill Command owned pet damage
+
+[Source bridge](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16):70391 names83381 and pinned SimC identifies its pet caster. Actual Call Pet/owner intent reproduces missing damage before the bridge; native BM/Survival/foreign-owner controls pass3/3. Extra talent/charging/admission and fresh UDP acceptance remain open.
+
 ## 2026-10-16 — Neutral DK faction creation policy
 
 [Source creation boundary](systems/race-class-eligibility.md#neutral-pandaren-death-knight-creation--2026-10-16):70391 neutral24/DK6 model rows are valid, but Retail explicitly requires early faction choice for DK. TDB has25/6 and26/6 Icecrown starts, no24/6. Reject neutral identity without inventing a start; faction DKs/neutral Monk/Dwarf Shaman preserved. Exact master all-pairs creation test reproduced RED before fix; scoped gates pending.
@@ -1530,3 +1542,13 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-15: Feral Spirit owner/weapon-only repair f135c4a8+28859d64, merged afc0e5e5/protocol62865c23:24/24 scoped controls, check/fmt/readability clean; intrinsic AP and full-stat acceptance remain open.
 
 - 2026-10-16: [Razorlash](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) real180s SAI proof1/1 PASS; source chance preserved, strict timer expiry and fixture visibility corrected; production check/fmt pass, native/extra-attack parity remain open.
+- 2026-10-15: Feero4484 counter63/event77 first-wave RED and queued cross-creature implementation; native acceptance pending.
+
+- 2026-10-15: counter first-wave GREEN1; Feero immunity/ambusher-target RED2, action145/49 implementation.
+
+- 2026-10-16: Feero authored escort gate passes after master integration; both-skin native accept/speech/movement/first-wave partial evidence and completion/data gaps recorded in escort contract.
+
+- 2026-10-16: Corrected70391 Regrowth8936 native cast restores Feero236→484 without admin healing; missing ambusher receipt/completion boundary remains open.
+
+- 2026-10-16: Feero976 both native skins earn credit after all three waves; authenticated missing receipt-index entries resolved without substitutions; same-coordinate grid RED→GREEN8 fixes active escort dormancy beyond spawn grid. Eighteen inspected1920x1080 earned-run PNGs; cosmetic roar, native death-failure and unrelated renderer parity remain separate. See [escort contract](../specs/escort-quests.md).
+- 2026-10-16: [Caster-owned school amplification](systems/auras.md#caster-owned-school-amplification--2026-10-16): native Haunt aura270 omission reproduced through ordinary casts; shared owner/school consumer, with pet381/unknown380/full-ability proof separate.

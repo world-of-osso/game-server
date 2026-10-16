@@ -37,6 +37,8 @@ mod bonus_armor_tests;
 mod bonus_stat_tests;
 #[cfg(test)]
 mod cast_while_moving_tests;
+#[cfg(test)]
+mod caster_school_damage_tests;
 mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
@@ -126,6 +128,8 @@ mod guardian_tests;
 mod hit;
 #[cfg(test)]
 mod readiness_lifetime_tests;
+#[cfg(test)]
+mod touch_of_death_tests;
 #[cfg(test)]
 mod warrior_stun_tests;
 mod warrior_stuns;
