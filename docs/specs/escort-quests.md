@@ -18,12 +18,15 @@ Extend the existing [SmartAI escort interpreter](smartai-escort.md), not a paral
 | Counter63/event77 cross-creature death flow | Server GREEN | Real four-death gate plus all three waves/credit |
 | Attack-start49, immunity145 | Server GREEN | RED2→GREEN2 at appearance/acceptance hooks |
 | Emote5 | Named cosmetic gap | Authored second-camp roar15 not yet delivered to client |
-| Both-skin native acceptance/speech/walking/first ambush | Partial, inspected1920x1080 | Modern and Forever real accounts on5931; no completion override |
-| Both-skin native complete run | BLOCKED | Required ambusher textures lack verified receipts; no earned native completion |
+| Both-skin native acceptance/speech/walking/all three waves/credit | Earned completion, inspected1920x1080 | Modern and Forever real level80 accounts on5931; ordinary casts, no976 override |
+| Escort grid lifecycle | RED→GREEN8, native GREEN both skins | Same3756.44 second-camp boundary; active paths stay awake; ordinary dormancy controls unchanged |
+| Native death failure | Not exercised by successful runs | Automated death-hook failure proof only |
 
 Final merged-server gate:36 escort interpreter tests passed,1 explicit private-account setup test ignored; server cargo check and both workspace format checks passed. All three authored waves/credit and death failure are server-tested, not native completion proof.
 
-Native receipts missing for source-selected assassin textures923044/919332/1105445. Private70391 appearance import fixes eleven display-admission rows, but cannot manufacture verified payload receipts from CSVs. Earlier harness Healing Touch5185 was also absent from70391 and produced Unknown spell; corrected to Regrowth8936, independently present with heal10/periodic-heal8 in local SpellEffect. Corrected Regrowth native casting restored Feero236/484→484/484 with no admin healing (`regrowth-health-before-after.json`); full native completion remains open. No model substitution or fabricated receipt is permitted. Evidence: engine `data/diagnostics/escort-quests-2026-10-15/`; inspected partial PNGs under `/syncthing/AgentShared/2026-10-15/escort-quests/`.
+Texture files923044/919332/1105445 were already present and byte-identical to fresh lead local-CASC extraction. Runtime rejected absent ModelAssetIndex receipts, not missing files or appearance rows. Existing importer authenticated payload MD5s against frozen installed334a36cf resolution and published slot-private namespaced assets/index; canonical publication remains lead-owned. Unblocked native testing then exposed spawn-grid dormancy at the second camp: active ScriptedPath actors must keep combat cleanup, continuation and range-failure timers running. The same-coordinate RED and grid GREEN8 cover that fix.
+
+Both native fixtures subsequently printed PASS ESCORT976 after all five authored identities and server credit. Eighteen inspected original1920x1080 PNGs are published as modern-earned-* / forever-earned-* under `/syncthing/AgentShared/2026-10-15/escort-quests/`. Logs, frozen receipt package and runtime hashes: engine `data/diagnostics/escort-quests-2026-10-16/`. Both players were level80; no actor stats, scripts or976 objectives changed. Ordinary Regrowth8936 replaced absent70391 Healing Touch5185; separate native236→484 healing proof remains in2026-10-15 diagnostics. Missing player texture/VFX receipts and cosmetic emote5 remain separate visual gaps; these runs do not certify universal renderer parity.
 
 No canonical DB writes, guessed missing actions, source replacement, master push or unrelated UI redesign. Other unsupported SmartAI actions/events remain named gaps; this is not full SmartAI parity.
 
