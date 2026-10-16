@@ -24,7 +24,10 @@ fn install_katy_mailbox_service(h: &mut Harness, conn: &rusqlite::Connection) {
     ));
 }
 
-fn open_katy_mailbox(h: &mut Harness, actor: Entity) -> Vec<InteractionOpened> {
+fn open_katy_mailbox(
+    h: &mut Harness,
+    actor: Entity,
+) -> (Vec<InteractionOpened>, Vec<MailboxContents>) {
     h.app
         .world_mut()
         .get_mut::<MessageSender<InteractNpc>>(h.connection)
@@ -32,8 +35,14 @@ fn open_katy_mailbox(h: &mut Harness, actor: Entity) -> Vec<InteractionOpened> {
         .send::<InteractionChannel>(InteractNpc {
             npc: actor.to_bits(),
         });
-    h.advance(7);
-    drain::<InteractionOpened>(&mut h.app, h.connection)
+    let mut opened = Vec::new();
+    let mut contents = Vec::new();
+    for _ in 0..7 {
+        h.advance(1);
+        opened.extend(drain::<InteractionOpened>(&mut h.app, h.connection));
+        contents.extend(drain::<MailboxContents>(&mut h.app, h.connection));
+    }
+    (opened, contents)
 }
 
 #[test]
@@ -115,7 +124,7 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
         (599.0..=600.0).contains(&remaining),
         "source600s summon: {remaining}"
     );
-    let opened = open_katy_mailbox(&mut h, actor);
+    let (opened, contents) = open_katy_mailbox(&mut h, actor);
     assert_eq!(
         opened.last().map(|event| &event.kind),
         Some(&InteractionKind::Role(NpcRole::Mailbox)),
@@ -130,7 +139,6 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
             .world()
             .get::<crate::npc_interaction::ActiveInteraction>(h.connection)
     );
-    let contents = drain::<MailboxContents>(&mut h.app, h.connection);
     assert!(
         contents
             .iter()
@@ -146,13 +154,13 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
             .is_none()
     );
     assert!(
-        open_katy_mailbox(&mut h, actor).is_empty(),
+        open_katy_mailbox(&mut h, actor).0.is_empty(),
         "distance guard remains active"
     );
     assert_eq!(h.app.world().get::<Position>(actor), Some(&actor_position));
     *h.app.world_mut().get_mut::<Position>(caster).unwrap() = player_position;
     assert_eq!(
-        open_katy_mailbox(&mut h, actor).last().unwrap().kind,
+        open_katy_mailbox(&mut h, actor).0.last().unwrap().kind,
         InteractionKind::Role(NpcRole::Mailbox)
     );
     let remaining = expires_at - crate::auras::aura_now(h.app.world());
@@ -166,7 +174,7 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
             .is_none()
     );
     assert!(
-        open_katy_mailbox(&mut h, actor).is_empty(),
+        open_katy_mailbox(&mut h, actor).0.is_empty(),
         "expired source actor cannot reopen mail"
     );
     h.app
@@ -178,13 +186,14 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
             mail_id: 1,
             action: MailAction::TakeMoney,
         });
-    h.advance(7);
-    assert!(
-        drain::<MailFailed>(&mut h.app, h.connection)
-            .iter()
-            .any(|failed| failed.object == actor.to_bits()
-                && failed.error == MailError::NotInteracting)
-    );
+    let mut failures = Vec::new();
+    for _ in 0..7 {
+        h.advance(1);
+        failures.extend(drain::<MailFailed>(&mut h.app, h.connection));
+    }
+    assert!(failures.iter().any(
+        |failed| failed.object == actor.to_bits() && failed.error == MailError::NotInteracting
+    ));
     assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
     assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), display);
     assert_eq!(
