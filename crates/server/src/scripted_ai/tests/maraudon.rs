@@ -160,6 +160,16 @@ fn encounter_coverage_rotgrip_source_spells_damage_and_isolated_credit() {
         puncture_seen |= h.has_aura(player, 15976);
     }
     eprintln!("ROTGRIP successful source casts: {casts:?}");
+    eprintln!(
+        "ROTGRIP health player={:?} boss={:?}, source events={:?}",
+        h.health(player),
+        h.health(boss),
+        h.inbox(0)
+            .log
+            .iter()
+            .filter(|event| [Some(16495), Some(15976)].contains(&event.spell_id))
+            .collect::<Vec<_>>()
+    );
     for (spell, first_min, first_max, repeat_min, repeat_max) in
         [(16495, 6.0, 6.0, 12.0, 12.0), (15976, 6.0, 8.0, 13.0, 18.0)]
     {
