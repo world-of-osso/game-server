@@ -266,6 +266,12 @@ Owner replies follow receipts and the same account/character/player binding. Suc
 
 The three real HostClient regressions waited252.886/254.188/252.922ms in RED (`housing-layout-access-fifo-red.log`). GREEN preserves one stored copy across two queued placements, exact request/error order, visitor privacy after editor departure, and access revocation before the visitor's next layout read. All19 affected native controls pass23.50s ated0b41ec, including prior collection/purchase, source catalog and actual map/editor/dye cases (`housing-layout-access-fifo-green-ed0b41ec.log`); the saved log also retains9m46s cold dependency compilation. Feature-enabled runtime check passes1m15s without warnings and workspace formatting passes (`housing-layout-access-runtime-check-ed0b41ec.log`); release gameplay for this slice remains unproved. This does not resolve the separate native grid performance guard or complete all writers/HOL/full-session acceptance.
 
+## Guild lifecycle integration (2026-10-15)
+
+Master379c2c6b lifecycle records now remain inside the same instrumented transactions as rank changes, invitations, acceptance and member removal. Rank mutations still execute on the shared FIFO; QueryEventLog now executes at its FIFO position and publishes only to the captured authenticated session after completion. Its HostClient regression holds a prior promotion for250ms, observes no early history, then receives exactly the committed Promote record.
+
+At09885980, the targeted `guild` filter passes75 controls; one incidental raid-history test fails before gameplay because `SITE_DATA_WORLD_COPY` is absent. No full-suite pass is claimed. After adding the history consumer, all8 rank FIFO controls pass atcc695aa9 (2.21s); the feature-enabled runtime check passes50.66s without warnings. Incoming achievement/admin fixtures use `GameDatabase::new` rather than obsolete literals. Evidence: `guild-profile-master-{lifecycle-green,rank-log,check}.log` in the existing server-tick-perf diagnostics. Release/full-session/HOL acceptance remains open.
+
 ## Sources
 
 - [crates/server/src/frame_stats.rs](../../../crates/server/src/frame_stats.rs) — frame work and fixed-step report
