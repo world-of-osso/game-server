@@ -1372,6 +1372,81 @@ fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
 }
 
 #[test]
+fn toyfx71_rezan_roar_real_learning_cast_event_and_source_recovery() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    const ITEM: u32 = 160509;
+    const SPELL: u32 = 272071;
+    const RECOVERY_MS: u32 = 90_000;
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("roar.redb"));
+    let path = crate::test_data::world_db_path();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let health_before = *h.app.world().get::<Health>(h.caster).unwrap();
+    let target_health = *h.app.world().get::<Health>(h.npc).unwrap();
+    let model_before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+    learn_effect_toy(&mut h, character, ITEM);
+    assert_eq!(
+        activate(&mut h, ITEM)[0].error,
+        None,
+        "real Roar learned-use"
+    );
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.spell_id == SPELL && go.caster == h.caster.to_bits())
+    );
+    assert!(h.inbox.cooldowns.iter().any(|cooldown| {
+        cooldown.spell_id == SPELL && cooldown.duration_ms == RECOVERY_MS && !cooldown.is_gcd
+    }));
+    assert_eq!(
+        *h.app.world().get::<Health>(h.caster).unwrap(),
+        health_before
+    );
+    assert_eq!(*h.app.world().get::<Health>(h.npc).unwrap(), target_health);
+    assert_eq!(
+        h.app.world().get::<ModelDisplay>(h.caster),
+        model_before.as_ref()
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .is_none_or(|auras| auras.auras.iter().all(|aura| aura.spell_id != SPELL))
+    );
+    assert_eq!(
+        h.app
+            .world_mut()
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(h.app.world())
+            .count(),
+        0
+    );
+    let first_cast_count = h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count();
+    assert!(
+        activate(&mut h, ITEM)[0]
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("Cooldown"))
+    );
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
+        first_cast_count
+    );
+    h.advance(1_801); // Harness advances50ms/frame: source90s recovery elapses normally.
+    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
+        first_cast_count + 1
+    );
+}
+
+#[test]
 fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
     for (item, spell, payload) in [
         (158149, 264091, [3569, 53]), // Overtuned Corgi Goggles
