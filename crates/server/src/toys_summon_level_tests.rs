@@ -52,6 +52,7 @@ fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let mut observed = Vec::new();
+    let mut viewer_levels = Vec::new();
     for &(owner_level, expected) in cases {
         let (mut h, character) = setup(
             &directory
@@ -93,6 +94,25 @@ fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8
             1,
             "one source actor from actual learned UseToy"
         );
+        let actor = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .find(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .unwrap()
+            .0;
+        let native = *world.get::<UnitLevel>(actor).unwrap();
+        let scaling = world.get::<shared::level_scaling::LevelScaling>(actor);
+        for viewer in [1, 20, 80] {
+            let projected = shared::level_scaling::level_for_viewer(native, scaling, viewer);
+            // HasScalableLevels requires nonzero tuning. UseCreatureLevel retains
+            // Area9 CT73; unflagged Podium inherits its player's zero tuning.
+            let expected_view = if item == 245942 {
+                viewer.clamp(1, 30)
+            } else {
+                expected
+            };
+            viewer_levels.push((owner_level, viewer, projected, expected_view));
+        }
         // Installed ExpectedStat IDs20/30 (ExpansionID -2), class mod4=1,
         // no ContentTuning73 mods; Podium HealthModifier20, Shrine1.
         let expected_health = match (item, expected) {
@@ -113,5 +133,11 @@ fn assert_wild_source_levels(item: u32, spell: u32, entry: u32, cases: &[(u8, u8
             .iter()
             .all(|(_, level, expected)| level == expected),
         "item{item}: (owner, actual(level,HP,armor), source expected) {observed:?}"
+    );
+    assert!(
+        viewer_levels
+            .iter()
+            .all(|(_, _, actual, expected)| actual == expected),
+        "item{item}: (owner, viewer, projected level, source expected) {viewer_levels:?}"
     );
 }
