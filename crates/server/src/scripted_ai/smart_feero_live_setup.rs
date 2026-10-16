@@ -49,8 +49,8 @@ fn smartai_feero_prepare_private_accounts() {
             &kit.kit(),
         )
         .unwrap();
-        (character.x, character.y, character.z) =
-            crate::terrain_height::wow_to_bevy(spawn.0, spawn.1, spawn.2);
+        // CharacterData persists WoW coordinates; login converts to runtime axes.
+        (character.x, character.y, character.z) = spawn;
         character.level = 30;
         character_store::save_character(&db, id, &character);
         quest_store::save_quest_log(
