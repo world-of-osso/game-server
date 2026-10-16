@@ -22,9 +22,9 @@ Server-owned built-in talent allocation from installed `TraitTreeLoadout`/`Trait
 - `crates/server/src/trait_config_tests.rs`: real Paladin/Mage authored ranks and level budgets.
 
 ## Proof — 2026-10-15
-Starter5 passes are scoped across unchanged allocator production code:4 passes at a3c95c40 (including every installed class build at10/11/70/80/90), plus the corrected exact Arms assertion atc5704b30. Arms apex110407 is absent at70/80, then has2/3/4 purchased ranks at81/84/90. Earlier22 talent/persistence regressions remain applicable outside the changed Starter allocator. Current scoped check and server build pass without warnings.
+Post-master servere6456ad6/shared8b9a489 passes all5 Starter tests together, including every installed class build at10/11/70/80/90. Arms apex110407 is absent at70/80, then has2/3/4 purchased ranks at81/84/90. Earlier22 talent/persistence regressions remain applicable outside the changed Starter allocator. Current scoped check/build and workspace format check pass without warnings; engine4508af57e UI12/UDP2/native build and protocol roundtrip1 also pass.
 
-Real private UDP5881 with protocol8c90bfc and engine2eebb1ea4 passes both skins' level10→11→80 allocation, complete relog projections and confirmed edit deactivation. Evidence lives in engine `data/diagnostics/talent-import-export-2026-10-15/starter-*`; [client contract and captures](../../../game-engine/docs/specs/talent-loadouts.md#starter-proof--2026-10-15). No world/reference data edits or realm5000 operations.
+Real private UDP5881 at serverc5704b30/protocol8c90bfc/engine2eebb1ea4 passes both skins' level10→11→80 allocation, complete relog projections and confirmed edit deactivation. Evidence lives in engine `data/diagnostics/talent-import-export-2026-10-15/starter-*`; [client contract and captures](../../../game-engine/docs/specs/talent-loadouts.md#starter-proof--2026-10-15). No world/reference data edits or realm5000 operations. All task source/test/fixture paths remain identical after master reconciliation; source-scope and command/revision receipts are retained with the proof.
 
 ## Known gaps (current cycle)
 - [ ] Lead-owned coupled integration/landing gate; scoped source and both-skin native acceptance pass.
