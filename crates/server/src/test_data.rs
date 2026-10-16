@@ -113,7 +113,7 @@ pub(crate) fn assert_idle_updates_are_bounded(app: &mut bevy::prelude::App, labe
         .unwrap();
     eprintln!("{label}: 250000 units/4096 layouts/five updates {fastest:?}");
     assert!(
-        fastest < std::time::Duration::from_millis(1),
+        fastest < std::time::Duration::from_micros(100),
         "idle {label} still depends on full world population/layouts: {fastest:?}"
     );
 }
