@@ -38,7 +38,9 @@
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
 - [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
 
-- [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
+- [Guild lifecycle history](systems/guild-lifecycle.md) — member-scoped six-action/founder ledger, separate from bank/news history.
+- [Guild news](systems/guild-news.md) — actual qualified producers, durable member query/sticky authority and native proof ledger.
+- [Guild perks](systems/guild-perks.md) — installed definitions and membership-derived knowledge; effect coverage remains distinct.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
 
