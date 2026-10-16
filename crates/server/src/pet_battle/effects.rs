@@ -1015,6 +1015,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             });
             return Ok(());
         }
+        let follows_active_ally = effect.property == 63 && effect.aura != 267;
+        let shared_across_team = effect.property == 150 || matches!(effect.aura, 189 | 333 | 1904);
         let mut aura = Aura {
             serial: self.battle.next_aura,
             ability: effect.aura,
@@ -1024,9 +1026,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             turn: 1,
             applied_round: self.battle.round,
             tick_first,
-            team_bound: effect.property == 63 && effect.aura != 267
-                || effect.property == 150
-                || matches!(effect.aura, 189 | 333 | 1904),
+            team_bound: follows_active_ally || shared_across_team,
             weather: effect.property == 80,
             charges: self
                 .catalog
