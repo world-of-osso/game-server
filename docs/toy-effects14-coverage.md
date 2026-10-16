@@ -19,10 +19,10 @@ Actual journal153293/254568 RED at077ed8f6 rejects `unsupported toy spell: aura 
 | Boundary | Exact result / proof level |
 |---|---|
 | Focused GREEN | Both actual bag-learning/UseToy and real hostile acquisition pass2/2, zero ignored42.78s. Source Val'sharah7558 terrain accepts group5454, instant cast/600000ms aura and300000ms recovery remain authored. Ordinary50ms simulation expiry removes the aura with original body/health retained. Northshire9 refuses without spending, then valid terrain permits use after ordinary recovery expiry. No clock/duration/cooldown reset. |
-| Current gates | Whole-Toy, current server binary/tests check, fmt and affected aggro controls pending. No new assets/native pixels/wire/audio/wall-lifetime or complete-toy claim. |
+| Current gates | At server2e936278/engine48fcd9625/protocol07a8faa, whole `toys:: --test-threads 2` passes142/142, zero ignored792.86s; native creature-aggro controls30/30 pass118.42s. Server binary/tests check passes5m34s and fmt passes; no compile warnings/manual readability findings. Canonical runtime catalog classification369→370 adds only153293, zero removals; not370 completed toys or the separate prepared-import basis. No new assets/native pixels/wire/audio/wall-lifetime or complete-toy claim. |
 | Preceding source gaps |153193 zero-entry mount action remains unresolved.153194 effect72 creates a farsight DynamicObject/viewpoint;153204 uses bind-sight1/stalked68;153253 property65 Control3 requires possessed128391, not a wild actor. These capabilities remain unimplemented and are not admitted by152 recognition. |
 
-Evidence root below: `sightless65-{active-goal,proof-ledger,source-preflight}.json`, genuine journal RED, pre-admission aggro proof and focused GREEN logs; local pinned TC `Creature.cpp::GetAttackDistance` and `SpellAuraEffects.cpp`152 consumer mapping. `after-waywatcher64-root-metadata.json` preserves preceding source identities.
+Evidence root below: `sightless65-{active-goal,proof-ledger,source-preflight}.json`, genuine journal RED, pre-admission aggro proof, focused GREEN and final fmt/check/aggro/whole-Toy logs plus `sightless65-{final-results,readability,census-delta}.json`; local pinned TC `Creature.cpp::GetAttackDistance` and `SpellAuraEffects.cpp`152 consumer mapping. `after-waywatcher64-root-metadata.json` preserves preceding source identities.
 
 ## Waywatcher64 source lifecycle (2026-10-16)
 
