@@ -498,7 +498,8 @@ fn class_completeness_native_mass_resurrection_offers_to_group_corpse_not_ghost_
 
 #[test]
 fn class_completeness_native_enemy_cone_hits_front_not_allies_back_or_far() {
-    let mut h = harness(Vec::new(), &[FISTS_OF_FURY_DAMAGE], 10).unwrap();
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[FISTS_OF_FURY_DAMAGE], 10).unwrap();
     let back = spawn_npc(&mut h.app, -4.0);
     let far = spawn_npc(&mut h.app, 30.0);
     let side = spawn_npc(&mut h.app, 0.0);
@@ -879,6 +880,8 @@ fn apply_native_immunity(h: &mut Harness, id: u32) {
 fn class_completeness_native80_shadowfrost_partial_immunity_still_generates_runic() {
     use shared::components::PowerType;
     let mut h = native80_fixture(&[343294, 137005], 6, 252);
+    // Partial-immunity control requires a hit; avoidance is covered separately.
+    apply_native_enemy_dodge_reduction(&mut h);
     h.set_power(PowerType::RunicPower, 0.0);
     apply_native_immunity(&mut h, 7940); // Authored Frost16, not Shadow32.
     h.cast_and_deliver(343294, Some(h.npc));

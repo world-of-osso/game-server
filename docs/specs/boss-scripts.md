@@ -23,6 +23,19 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Gizlock source boundary
+
+- [x] Prepare13601→427/Normal349bit5 from pinned TC Maraudon header/instance, TDB SmartAI and Journal70391 CSV425/995/display7125. TC ordinal2 is not DB2 bit5. Preserve Noxxion credit and refuse ordinal/bit drift; output remains copy-only SQL.
+- [ ] Gate unchanged SAI Shoot16100, Flash Bomb29419, Goblin Dragon Gun21833, Bomb9143 and aggro Talk0 against actual DB2 targeting/channel/effect data, then isolated controlled death credit. No invented source timers/resources/targets.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
+## Maraudon Noxxion source port
+
+- [x] Prepare13282→422/Normal349bit0 using pinned TC boss/header/instance and actual Journal70391 CSV423/993/display11172; preserve other credit, write SQL only.
+- [x] Gate source combat: Toxic Volley21687 self first5–10s/repeat15–20s; Uppercut22916 victim first15–20s/repeat20–30s; Summon Dummy21708 self first30–40s/repeat50–60s. Advance only with UpdateVictim; defer dispatch while casting; TaskContext repeats anchor to their prior due time, not dispatch time.
+- [x] Gate21708 effect0/DUMMY apply: creature passive/uninteractible and triggered21707; remove: aggressive/selectable. Actual21707 summons five13456 actors using authored Normal stats; BossAI tracks/despawns them. No fabricated timer, target, chance, resource or difficulty rows.
+- [ ] Ordinary/native clear, knockback movement, loot, persistence and canonical publication remain separate from controlled survival/death-credit proof.
+
 ## Maraudon Rotgrip source boundary
 
 - [x] Prepare only13596→428/Normal349bit6 from pinned TC Maraudon header/instance, TDB1210 SmartAI and actual Journal70391 CSV430/actor1000/display13589. SQL stays copy-only, idempotent, preserves Razorlash and refuses AI/bit drift.
