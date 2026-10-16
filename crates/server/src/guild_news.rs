@@ -219,6 +219,33 @@ mod tests {
     use super::*;
     use shared::protocol::GuildNewsRequest;
 
+    /// Offline prerequisites only: no news, inventory, guild or earned-state writes.
+    #[test]
+    #[ignore = "private5891 runtime setup; requires GUILD_NEWS_PRIVATE_DB"]
+    fn guild_news_private_lillehoff_prerequisites() {
+        use redb::ReadableTable;
+        let path = std::env::var("GUILD_NEWS_PRIVATE_DB").expect("explicit private redb");
+        assert!(path.starts_with("/home/osso/.worktrees/logs/guild-news-"));
+        let db = Database::open(path).expect("open stopped private server database");
+        let ids = {
+            let read = db.begin_read().unwrap();
+            let table = read.open_table(crate::persistence::CHARACTERS).unwrap();
+            table.iter().unwrap().filter_map(|row| {
+                let (id, value) = row.unwrap();
+                let character: crate::persistence_types::CharacterData = bitcode::decode(value.value()).unwrap();
+                character.name.starts_with("Gcnews").then_some(id.value())
+            }).collect::<Vec<_>>()
+        };
+        assert_eq!(ids.len(), 3, "only the three private news characters");
+        for id in ids {
+            let mut reputation = shared::reputation::CharacterReputation::default();
+            reputation.set_rep(1119, shared::reputation::threshold_for_standing(shared::reputation::Standing::Exalted));
+            crate::persistence::save_reputation(&db, id, &reputation);
+            crate::maps::persistence::save_character_map(&db, id, 571);
+            assert!(query(&db, id).entries.is_empty(), "setup never fabricates news");
+        }
+    }
+
     #[derive(bevy::prelude::Resource, Default)]
     struct Inbox(Vec<GuildNewsState>);
 
