@@ -59,20 +59,22 @@ fn unblocked_swings(h: &mut Harness) -> Vec<CombatLogEvent> {
 }
 
 fn cast_spell_damage(h: &mut Harness, spell_id: u32) -> CombatLogEvent {
-    h.inbox.log.clear();
-    h.cast_and_deliver(spell_id, Some(h.npc));
-    h.advance(80);
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    h.inbox
-        .log
-        .iter()
-        .find(|event| {
+    // Native weapon spells can miss: sample bounded ordinary requests, not RNG.
+    for _ in 0..8 {
+        h.inbox.log.clear();
+        h.cast_and_deliver(spell_id, Some(h.npc));
+        h.advance(80);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let damage = h.inbox.log.iter().find(|event| {
             event.kind == CombatLogKind::Damage
                 && event.spell_id == Some(spell_id)
                 && event.amount > 0
-        })
-        .expect("ordinary native spell damage")
-        .clone()
+        });
+        if let Some(damage) = damage {
+            return damage.clone();
+        }
+    }
+    panic!("no native{spell_id} damage after eight ordinary requests");
 }
 
 #[test]
@@ -110,8 +112,32 @@ fn class_completeness_native_negative_334_removes_autoattack_not_spell_crit() {
         .get_mut::<CharacterStats>(h.caster)
         .unwrap()
         .crit_pct = 100.0;
+    cast_buff(&mut h, MASTER_ASSASSINS_MARK);
     cast_buff(&mut h, SHADOW_CORRUPTION);
     let swings = unblocked_swings(&mut h);
     assert!(swings.iter().all(|event| !event.crit), "{swings:?}");
     assert!(cast_spell_damage(&mut h, FIREBALL).crit);
+}
+
+#[test]
+fn class_completeness_native_334_on_victim_does_not_grant_attacker_crit() {
+    let mut h = native_harness();
+    let npc = h.npc;
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        npc,
+        MASTER_ASSASSINS_MARK,
+        Some(npc),
+        true,
+    )
+    .expect("native NPC self-buff");
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(npc)
+            .unwrap()
+            .has_spell(MASTER_ASSASSINS_MARK)
+    );
+    assert!(unblocked_swings(&mut h).iter().all(|event| !event.crit));
 }
