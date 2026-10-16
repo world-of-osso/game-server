@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] Native Devastator236279's successful melee-swing proc retains its default236282 damage and independently rolls native effect1's25% chance only while Shield Slam23922 has a running cooldown. Success clears that spell cooldown, publishes owner readiness and casts native224324 on the aura recipient. Ready cooldowns and absent passives do not produce a reset/marker. Preserve GCDs, unrelated cooldowns and other units; full marker semantics, trigger-flag parity, proc ordering and legal/native acceptance remain separate.
+
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
 
 - [x] Optional resource spend ignores flat spell modifiers while retaining percentage modifiers for the native cost order, family/mask and caster. Practiced Strikes429647 discounts only Protection Execute's base cost; native Sudden Death52437 effect5 still makes order1 base/optional spend free without changing Arms order0. Existing available-resource clamping remains unchanged.

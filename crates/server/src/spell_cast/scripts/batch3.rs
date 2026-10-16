@@ -20,10 +20,56 @@ const THUNDER_CLAP_SLOW: u32 = 435203;
 const SHRED_RANK: u32 = 231063;
 const SHIELD_SLAM: u32 = 23922;
 const SHIELD_SLAM_RANK: u32 = 231834;
+pub(crate) const DEVASTATOR: u32 = 236279;
+const SHIELD_SLAM_MARKER: u32 = 224324;
 const STEALTH: u32 = 1784;
 const GARROTE_RANK: u32 = 196861;
 const GARROTE_SILENCE: u32 = 1330;
 const GARROTE_DAMAGE_REDUCTION: u32 = 256148;
+
+/// TC warrior686–709: the default damage proc remains independent of this roll.
+pub(crate) fn reset_devastator_cooldown(
+    world: &mut World,
+    unit: Entity,
+    _aura: &crate::auras::AuraInstance,
+    _other: Option<Entity>,
+) {
+    let Some(chance) = running_devastator_chance(world, unit) else {
+        return;
+    };
+    if rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..100.0) >= chance {
+        return;
+    }
+    world
+        .get_mut::<spell_cast::SpellHistory>(unit)
+        .expect("Devastator checked the running cooldown")
+        .spell_ready_at
+        .remove(&SHIELD_SLAM);
+    super::send_reduced_cooldown(world, unit, SHIELD_SLAM, 0);
+    spell_cast::cast_triggered(world, unit, SHIELD_SLAM_MARKER, Some(unit), 1);
+}
+
+fn running_devastator_chance(world: &World, unit: Entity) -> Option<f32> {
+    let store = world.resource::<SpellStore>();
+    let sources = (
+        store.get(DEVASTATOR),
+        store.get(SHIELD_SLAM),
+        store.get(SHIELD_SLAM_MARKER),
+    );
+    let (Some(talent), Some(slam), Some(_)) = sources else {
+        warn!("Devastator requires native236279,23922 and224324");
+        return None;
+    };
+    let Some(effect) = talent.effects.iter().find(|effect| effect.index == 1) else {
+        warn!("Devastator requires native effect1 chance");
+        return None;
+    };
+    let now = spell_cast::history_now(world);
+    world
+        .get::<spell_cast::SpellHistory>(unit)
+        .is_some_and(|history| history.on_cooldown(slam, now))
+        .then_some(effect.base_points)
+}
 
 /// 8921 explicitly names 164812s1/o2/d. Resolve the two base effects, not
 /// unauthored optional debuffs (notably the child's effect7 snare).

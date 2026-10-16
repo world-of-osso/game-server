@@ -420,6 +420,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        crate::spell_cast::scripts::DEVASTATOR,
+        AuraScript {
+            on_proc: Some(crate::spell_cast::scripts::reset_devastator_cooldown),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         POWER_STRIKE_PROC,
         AuraScript {
             on_proc: Some(energize_power_strike),

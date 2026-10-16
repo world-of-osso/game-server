@@ -22,6 +22,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+pub(crate) use batch3::{DEVASTATOR, reset_devastator_cooldown};
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 

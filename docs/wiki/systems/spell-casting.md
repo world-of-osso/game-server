@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Devastator running-cooldown reset — 2026-10-16
+
+TC a352b1fa `spell_warrior.cpp686–709` adds a separate native effect1 roll to236279's ordinary melee proc. Its100% default236282 damage remains; only an already-running Shield Slam23922 cooldown permits the25% reset roll. Success clears that spell's deadline, publishes zero remaining time and casts224324 on the aura recipient. Native70391 effect/proc/cooldown scalars match the installed catalog. Marker contents and exact trigger flags/global proc-hook ordering remain unproved; the existing post-default `AuraScript.on_proc` dispatch is unchanged.
+
+At b59e6435 the actual HostClient Shield Slam plus two native unarmed swings per64 fresh actors produce113 Devastator hits but zero resets (genuine RED2pass/1fail,18.50s); ready-cooldown and absent-passive controls pass. Tests preserve native chance/RNG, verify owner packets, and attempt a real recast before the original9sec cooldown ends on success. They do not estimate the25% distribution. Production now binds the existing OnProc hook; targeted GREEN/check pending. [Contract](../../specs/class-completeness.md); source/proof at `data/class-completeness6-2026-10-12/devastator-reset-{source,native-equality,proof-ledger}.json`.
+
 ## Native damage prerequisite fixtures — 2026-10-16
 
 Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.
