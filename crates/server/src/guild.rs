@@ -95,6 +95,7 @@ pub struct GuildPlugin;
 impl Plugin for GuildPlugin {
     fn build(&self, app: &mut App) {
         guild_ranks::install_persistence(app);
+        charters::install(app);
         profile_actor::install(app);
         crate::messaging::guild_accept::install(app);
         crate::messaging::guild_invite::install(app);

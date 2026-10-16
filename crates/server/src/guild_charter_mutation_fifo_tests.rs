@@ -2,7 +2,6 @@ use super::*;
 use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::merchant::{VendorCatalog, VendorGoods};
 use lightyear::prelude::*;
-use shared::protocol::*;
 use std::time::{Duration, Instant};
 
 struct Fixture {

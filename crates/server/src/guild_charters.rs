@@ -17,6 +17,10 @@ use shared::protocol::{
 #[path = "guild_charter_mutation_fifo_tests.rs"]
 mod mutation_fifo_tests;
 
+#[path = "guild_charter_mutation_persistence.rs"]
+mod mutation_actor;
+pub(super) use mutation_actor::install;
+
 #[derive(Clone, Copy)]
 struct Actor {
     connection: Entity,
@@ -110,11 +114,14 @@ fn require_petitioner(world: &World, actor: Actor, bits: u64) -> Result<String, 
         .map_err(|error| error.message().to_string())
 }
 fn require_owner(world: &World, actor: Actor, guid: u64) -> Result<(), String> {
-    let db = &world.resource::<GameDatabase>().db;
-    if store::owner_of(db, guid)? != actor.character {
+    require_persisted_owner(&world.resource::<GameDatabase>().db, actor.character, guid)
+}
+
+fn require_persisted_owner(db: &redb::Database, character: u64, guid: u64) -> Result<(), String> {
+    if store::owner_of(db, guid)? != character {
         return Err("You are not the petition owner.".into());
     }
-    let record = persistence::load_inventory(db, actor.character);
+    let record = persistence::load_inventory(db, character);
     if !record
         .items
         .iter()
@@ -210,24 +217,19 @@ fn offer(world: &mut World, actor: Actor, guid: u64, name: &str) -> Result<(), S
 }
 
 fn sign(world: &mut World, actor: Actor, guid: u64) -> Result<(), String> {
-    let db = &world.resource::<GameDatabase>().db;
-    let owner = store::owner_of(db, guid)?;
-    store::sign(db, guid, actor.character, actor.account)?;
-    send_petition(world, actor, guid)?;
-    if let Some(owner) = find_online_actor(world, owner) {
-        send_petition(world, owner, guid)?;
-    }
+    mutation_actor::enqueue(world, actor, mutation_actor::Change::Sign(guid));
     Ok(())
 }
 fn rename(world: &mut World, actor: Actor, guid: u64, name: &str) -> Result<(), String> {
-    require_owner(world, actor, guid)?;
-    store::rename(
-        &world.resource::<GameDatabase>().db,
-        guid,
-        actor.character,
-        name,
-    )?;
-    send_petition(world, actor, guid)
+    mutation_actor::enqueue(
+        world,
+        actor,
+        mutation_actor::Change::Rename {
+            guid,
+            name: name.into(),
+        },
+    );
+    Ok(())
 }
 
 fn turn_in(world: &mut World, actor: Actor, npc: u64, guid: u64) -> Result<(), String> {
