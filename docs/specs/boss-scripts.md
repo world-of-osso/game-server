@@ -27,7 +27,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 
 - [x] Prepare12225→425/Normal349bit3 (TCordinal4), pinned Celebras/header/instance, TDB script identity and Journal70391 CSV428/998/display12350. Preserve other credit;13743/13716 must not acquire primary credit. SQL only.
 - [x] Port source21807 victim first0–6/repeat4–8s,12747 victim first0–5/repeat20s,21968 self first30/repeat20s; preserve actual class2 mana/costs, TaskScheduler casting validator and due-anchored repeats.
-- [ ] Gate real21968 summon13743, death summon13716 at boss position/orientation0/manual despawn and isolated controlled425bit3 credit.13743 uses its actual Normal1 row;13716 has only TDB base0 (Health35/Mana5.3615/Damage7.5, ContentTuning0), replacing legacy Health8/Mana4 through copy-only projection; never fabricate Normal1. Regional level-scaling parity of the manual death summon is not certified.
+- [x] Gate real21968 summon13743, death summon13716 at boss position/orientation0/manual despawn and isolated controlled425bit3 credit.13743 uses its actual Normal1 row;13716 has only TDB base0 (Health35/Mana5.3615/Damage7.5, ContentTuning0), replacing legacy Health8/Mana4 through copy-only projection; never fabricate Normal1. Regional level-scaling parity of the manual death summon is not certified.
 - [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
 
 ## Maraudon Lord Vyletongue source boundary
