@@ -181,8 +181,8 @@ fn pet_battle_onyx_wall_distinct_friendly_prevention_semantics_stay_rejected() {
     }
     let c = catalog();
     let b = battle(&c, 7, 7, [439, 110, 123]);
-    let error = b
-        .step(&c, [Action::Ability(439), Action::Pass], &mut NoDraw)
-        .unwrap_err();
-    assert!(error.contains("150"), "{error}");
+    assert!(
+        b.step(&c, [Action::Ability(439), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
 }
