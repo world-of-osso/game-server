@@ -176,16 +176,16 @@ fn encounter_fixture(
     let data = data().expect("world.db fixture");
     let mut app = stockade_app_with(data, |app| {
         app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
-        // Explicitly spawned actor fixtures also exercise real NPC ingress.
+        // Install ingress and its source faction resource before the first update.
+        app.insert_resource(
+            crate::faction::world_db_faction_templates().expect("world.db faction templates"),
+        );
         app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
         if populate {
             let connection =
                 Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
                     .unwrap();
             app.insert_resource(crate::gathering::load_data(&connection).unwrap());
-            app.insert_resource(
-                crate::faction::world_db_faction_templates().expect("world.db faction templates"),
-            );
         }
     });
     if let Some(catalog) = catalog {
