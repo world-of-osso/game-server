@@ -220,7 +220,20 @@ NOXXION_SOURCES = {
     **MARAUDON_SOURCES,
     "Kalimdor/Maraudon/boss_noxxion.cpp": "1ccc69132bb6a4dc95bb9b0ce4e9d81586447e59ca494d575e95b36f1ee8f211",
 }
+# TC ordinal2 is not the installed Normal427 completion bit5.
+GIZLOCK_PRIMARY = dict(
+    map_id=349,
+    entry=13601,
+    encounter_id=427,
+    bit=5,
+    script="",
+    ai="SmartAI",
+    journal_id=425,
+    actor_id=995,
+    display_id=7125,
+)
 PROFILES = {
+    "gizlock": (GIZLOCK_PRIMARY, MARAUDON_SOURCES),
     "noxxion": (NOXXION_PRIMARY, NOXXION_SOURCES),
     "rotgrip": (ROTGRIP_PRIMARY, MARAUDON_SOURCES),
     "razorlash": (RAZORLASH_PRIMARY, MARAUDON_SOURCES),
