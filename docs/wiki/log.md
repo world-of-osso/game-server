@@ -1,3 +1,7 @@
+## 2026-10-16 — Two-way pet-wall150 charges
+
+[Seven source-qualified pairs](../pet-battle-effect-coverage.md#two-way-walls150--bounded-proof2026-10-16): actual unsupported150 RED6→GREEN88, canonical journal3/wild12/PvP9 and check/fmt;1749→1756/2829 rows (61.82→62.07%),993→1006 graphs. Both-skin private5961 Ice Barrier479 physically blocks incoming then outgoing attacks, expires, and exposes subsequent45/65critical damage; six fullHD originals inspected. Conditional123/126 is bounded to six auras; Onyx, multi-wall order and exact Retail/VFX feedback remain gaps. Subject model/texture receipts match the current local root; owned-process cleanup passes.
+
 ## 2026-10-16 — Call Pet missing-storage refusal
 
 [Pet lifecycle](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16): absent PetStable admitted883 success then effect returned without a pet. Actual native-target fresh-storage RED→GREEN; four controls and copied real character47 storage probe pass. No saved pet exists. Pinned creation-cast data has no Human hunter pet row; named source gap, no granted kit. Authenticated real-profile follower melee death already reaches its owner exactly once in a separate baseline test; terminal native delivery ordering remains under investigation rather than adding duplicate events.
@@ -11,6 +15,22 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 - 2026-10-16: [Arena residual](investigations/slow-native-test-fixtures.md#arena-residual-bounded-independent-fixtures-2026-10-16): LEAD-approved cap4 workers; all sixteen native cases pass52.70s with unchanged assertions/frames/50msstep; sampled CPU113.70s versus52.90s wall, full-suite separate.
+## 2026-10-16 — Sightless detection consumer
+
+[Sightless153293](systems/toys.md#sightless-detection-consumer-2026-10-16): journal RED rejects152 despite an existing native target-detected-range consumer. Real hostile12yd/7yd controls pass before minimal registry admission; actual learning/UseToy plus aggro GREEN2/2 retain source group5454/600s aura/300s recovery and ordinary expiry. Whole-Toy142/142, creature-aggro30/30, binary/tests check and fmt pass; canonical classification369→370 adds only153293. Native delivery/rendering remains separate; remote-view/possession roots unimplemented.
+
+## 2026-10-16 — Waywatcher source lifecycle
+
+[Waywatcher130249](systems/toys.md#waywatcher-source-lifecycle-2026-10-16): actual Val'sharah terrain/learning/instant use/source model choices/15s expiry/900s recovery pass1/1 using existing published99572, superseding the old missing-template snapshot. Eighteen same70391 assets and four aliases authenticate/publish privately; canonical ownership absent before publication. Actual private Rust loader, whole-Toy141/141, server binary/tests check and fmt pass; native rendering remains separate.
+
+## 2026-10-16 — Grizzlesnout source lifecycle
+
+[Grizzlesnout129965](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16): actual learning, terrain-backed Northrend admission,1500ms cast, source9287/3.5/241/15s expiry and600s recovery pass1/1. Test-only existing-handler acceptance; twelve canonical body receipts/two aliases authenticate without new publication. Actual canonical Rust loader, whole-Toy140/140, server binary/tests check and fmt pass; native rendering remains separate. Next130249 now has published99572, superseding the earlier missing-template snapshot.
+
+## 2026-10-16 — Forced-forward flag boundary
+
+[Aura241 flag](systems/toys.md#forced-forward-flag-boundary-2026-10-16): source148626/194807 overlap/removal RED→GREEN1/1 preserves unrelated bits. Generic native input35/35 and whole-Toy139/139 pass at the recorded62 revisions; actual104329 mount/body/lifecycle remains deferred for missing73689. No complete-toy claim.
+
 ## 2026-10-16 — Ysera source admission and private body closure
 
 [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16): genuine importer/use RED, authentic99518 admission, six importer controls and actual private-owner/front-offset/static120s simulation lifecycle pass. Whole-Toy138/138 and check/fmt pass after module-order-only formatting repair. Seventeen70391 body dependencies plus four aliases authenticate/publish privately; procedural8605/type22 remains unrendered. Prepared classification adds only130170 to385/1166, not complete-toy parity; earlier interaction and guardian HP gaps remain.
@@ -1627,6 +1647,12 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
 
+- 2026-10-16: [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port): real no-Wrath RED, redeemed legacy stats replaced from base0, guardian summoner lifecycle failure reproduced; runtime gate pending.
 - 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
 
 - 2026-10-16: Noxxion real channel-aware clock/phase/ten-add/damage/isolated-credit acceptance GREEN3/3 at8e544d86; source21708 channel deferral explains compressed due-anchored repeat intervals. Native/ordinary acceptance remains separate.
+
+- 2026-10-16: Celebras controlled runtime GREEN2/2 in30.73s, including two source guardian waves, cleanup/manual redeemed actor, due clocks and isolated credit. Actual base0 projection GREEN; native/ordinary/regional manual-summon scaling remain separate.
+
+- 2026-10-16: [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) follows authenticated binder19/19/SQL and real no-casts RED; casting-aware timer/threshold port implemented, runtime gate pending.
+- 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].

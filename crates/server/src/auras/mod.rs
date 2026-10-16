@@ -1286,6 +1286,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         world.entity_mut(unit).insert(stats);
     }
     unit_state::reconcile(world, unit);
+    health_pct_trigger::reconcile(world, unit);
     crate::spell_cast::refresh_cast_movement_permission(world, unit);
 }
 
