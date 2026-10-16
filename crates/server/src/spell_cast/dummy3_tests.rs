@@ -289,7 +289,8 @@ fn devastate_reset(chance: f32, rank: bool) -> (f64, f64, bool) {
         passive.effects[0].base_points = chance;
         extra.push(passive);
     }
-    let mut h = harness(extra, &[20243, 23922], 1).expect("real world.db");
+    let mut h = harness_with_native_enemy_dodge_reduction(extra, &[20243, 23922], 1)
+        .expect("real world.db");
     h.cast_and_deliver(23922, Some(h.npc));
     h.advance(35);
     let before = h
