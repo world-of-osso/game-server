@@ -818,6 +818,55 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
         actual.distance(expected) < 0.001,
         "driver follows the moved vehicle instead of applying its report as body position: {actual:?} vs {expected:?}"
     );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<PlayerInput>>(actor.connection)
+        .unwrap()
+        .send::<InputChannel>(PlayerInput {
+            transport: None,
+            direction: [0.0; 3],
+            facing_yaw: vehicle_yaw,
+            jumping: false,
+            running: true,
+            swimming: false,
+            flying: false,
+            position: [vehicle_after.x, vehicle_after.y, vehicle_after.z],
+            epoch: driver_epoch,
+        });
+    h.advance(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CreatureMotion>(demolisher),
+        Some(&shared::components::CreatureMotion::Still)
+    );
+    assert!(
+        (h.app
+            .world()
+            .get::<shared::components::MovementSpeed>(demolisher)
+            .unwrap()
+            .0
+            - authored_run)
+            .abs()
+            < 0.0001,
+        "a vehicle stop must retain gait capability; zero would permanently root client prediction"
+    );
+    send_isle_facing_input(
+        h,
+        actor,
+        Position {
+            x: vehicle_after.x + vehicle_yaw.sin() * 0.25,
+            z: vehicle_after.z + vehicle_yaw.cos() * 0.25,
+            ..vehicle_after
+        },
+        vehicle_yaw,
+    );
+    let resumed = *h.app.world().get::<Position>(demolisher).unwrap();
+    assert!(
+        Vec2::new(resumed.x - vehicle_after.x, resumed.z - vehicle_after.z).length() > 0.15,
+        "driver input resumes after a full stop without exiting the seat"
+    );
+    let vehicle_after = resumed;
     h.walk_to(passenger, wow(&vehicle_after));
     h.app
         .world_mut()
