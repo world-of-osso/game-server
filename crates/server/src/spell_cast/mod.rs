@@ -3052,6 +3052,8 @@ mod mechanics_tests;
 #[cfg(test)]
 mod new_class_tests;
 #[cfg(test)]
+mod optional_flat_cost_tests;
+#[cfg(test)]
 mod override_queue_tests;
 #[cfg(test)]
 mod queue_tests;
