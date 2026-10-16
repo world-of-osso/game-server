@@ -285,7 +285,7 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 - [x] Authenticate12201→429/Normal349bit7 (TCordinal7), Journal70391 CSV431/1001/display12292; copy-only binding preserves Landslide and excludes Zaetar12238.
 - [x] Port21909 self20–25s/repeat20–25s,21832 random threat target20–30s/repeat15–25s,3391 self10–20s/repeat10–20s,21869 self25–35s/repeat30–40s; preserve actual mana, casting validator and due clocks.
 - [x] Project Zaetar12238 from actual TDB base0 and Normal1/CT281 rows; preserve other templates, placements and credit. Copy-only producer must be idempotent and reject source identity drift.
-- [ ] Gate Dust Field damage/aura, Boulder damage, Repulsive Gaze fear and isolated controlled429bit7 credit and manual death summon12238 at authored WoW(28.1887,62.3964,-123.161,4.31096), actual base/Normal source projection. Thrash3391 dispatch is not proof of its unsupported extra-attacks effect19. Ordinary/native, loot, persistence and spirit quest/gossip remain separate.
+- [x] Gate Dust Field damage/aura, Boulder damage, Repulsive Gaze fear and isolated controlled429bit7 credit and manual death summon12238 at authored WoW(28.1887,62.3964,-123.161,4.31096), actual base/Normal source projection. Controlled fixture uses initial survival HP and maintains an8yd target gap (melee pursuit otherwise correctly rejects Boulder below its5yd minimum). Thrash3391 dispatch is not proof of its unsupported extra-attacks effect19. Ordinary/native, loot, persistence and spirit quest/gossip remain separate.
 
 
 ## Ramparts Gargolmar source boundary
