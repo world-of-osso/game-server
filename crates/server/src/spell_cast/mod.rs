@@ -799,6 +799,7 @@ fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -
         || cosmetic::is_visual_only(spell)
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
+        || warrior_stuns::is_rumbling_earth_effect(spell, effect)
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
@@ -2260,6 +2261,7 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
+    let shockwave_hits = warrior_stuns::count_shockwave_targets(world, spell, plan);
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
@@ -2345,6 +2347,10 @@ fn resolve_effects(
         for &unit in units {
             if crate::auras::effect_immunity::blocks_effect(world, unit, spell, effect) {
                 effects::log_mechanic_immune(world, &ctx, unit);
+                continue;
+            }
+            if warrior_stuns::is_rumbling_earth_effect(spell, effect) {
+                warrior_stuns::reduce_shockwave_cooldown(world, caster, shockwave_hits);
                 continue;
             }
             if let Some(handler) = handler

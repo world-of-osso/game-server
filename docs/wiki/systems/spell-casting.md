@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Rumbling Earth original hit count — 2026-10-16
+
+TC a352b1fa `spell_warrior.cpp1718–1750` consumes caster275339's live aura effects0/1 (three targets/fifteen seconds) on Shockwave46968's caster-targeted effect1/Script77. `Spell.cpp2712–2718` counts only non-missed targets with the effect0 bit; `2438–2473` removes immune effect bits at selection. Native46968 has zero missile speed/launch delay. The resolver captures that known instant spell's original effect0 count before damage/stun dispatch, preserving killing hits instead of reselecting survivors, then invokes the existing cooldown reducer once at effect1. Only this named Script77 selects targets; there is no generic Script77 no-op. Only275339 fields0/1 are consumed; its separate+6yd radius/op6 remains open.
+
+At8dd59a44 ordinary HostClient native three-target and three-killing-hit casts retain40000ms rather than25000ms (genuine RED2pass/2fail,7.39s). Absent talent and native physical-immunity controls pass. Positive tests retain real cone damage/stun, exact three-target equality and four-target single reduction. Targeted GREEN/check pending; this is not whole talent/legal/fresh UDP or general delayed-spell count proof. [Contract](../../specs/class-completeness.md); evidence `data/class-completeness6-2026-10-12/rumbling-earth-{goal,source-candidate,proof-ledger}.json`.
+
 ## Native damage prerequisite fixtures — 2026-10-16
 
 Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.

@@ -727,7 +727,7 @@ pub(crate) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, 
 }
 
 /// Reduce the currently running recharge or spell cooldown; never start one.
-fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
+pub(super) fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
     let now = super::history_now(world);
     let charge_category = world
         .resource::<crate::spell_info::SpellStore>()

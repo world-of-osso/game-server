@@ -48,6 +48,7 @@ pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 pub const EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT: u32 = 165;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
+pub const EFFECT_SCRIPT_EFFECT: u32 = 77;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;

@@ -7,10 +7,67 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 
 const SHOCKWAVE: u32 = 46968;
 const SHOCKWAVE_STUN: u32 = 132168;
+const RUMBLING_EARTH: u32 = 275339;
 const STORM_BOLT: u32 = 107570;
 const STORM_BOLT_STUN: u32 = 132169;
 const STORM_BOLTS: u32 = 436162;
 const TARGET_UNIT_DEST_AREA_ENEMY: u32 = 16;
+
+/// TC warrior1718–1750: the caster-targeted script effect runs once, after damage.
+pub(super) fn is_rumbling_earth_effect(spell: &SpellInfo, effect: &SpellEffect) -> bool {
+    spell.id == SHOCKWAVE
+        && effect.index == 1
+        && effect.effect == super::effects::EFFECT_SCRIPT_EFFECT
+}
+
+/// TC Spell.cpp2712 counts non-missed effect0 targets, including later killing hits.
+/// Capture effect immunity before any target's damage/stun changes its aura state.
+pub(super) fn count_shockwave_targets(
+    world: &World,
+    spell: &SpellInfo,
+    plan: &super::TargetPlan,
+) -> usize {
+    if spell.id != SHOCKWAVE {
+        return 0;
+    }
+    let Some(planned) = plan
+        .iter()
+        .find(|planned| spell.effects[planned.index].index == 0)
+    else {
+        return 0;
+    };
+    let effect = &spell.effects[planned.index];
+    planned
+        .units
+        .iter()
+        .copied()
+        .filter(|target| {
+            !crate::auras::effect_immunity::blocks_effect(world, *target, spell, effect)
+        })
+        .count()
+}
+
+pub(super) fn reduce_shockwave_cooldown(world: &mut World, caster: Entity, hit_count: usize) {
+    let Some(aura) = world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == RUMBLING_EARTH))
+    else {
+        return;
+    };
+    let fields = (
+        aura.effects.iter().find(|effect| effect.index == 0),
+        aura.effects.iter().find(|effect| effect.index == 1),
+    );
+    let (Some(minimum), Some(reduction)) = fields else {
+        warn!("Rumbling Earth requires native aura effects0/1");
+        return;
+    };
+    if (hit_count as f64) < f64::from(minimum.amount.trunc()) {
+        return;
+    }
+    let seconds = f64::from(reduction.amount);
+    super::scripts::reduce_cooldown(world, caster, SHOCKWAVE, seconds);
+}
 
 /// These source hooks run before the default effect handler, not once per
 /// whole spell: Shockwave also selects its caster through a separate effect.

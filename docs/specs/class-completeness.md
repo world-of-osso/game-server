@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] Native Rumbling Earth275339 consumes its caster-owned threshold/reduction fields when Shockwave46968's caster-targeted effect1 resolves. At least three successful original effect0 targets reduce the current cooldown by fifteen seconds once per cast; killing hits still count, while missed/immune effect0 targets do not. Absent/foreign talents and smaller counts do not reduce it; native damage/stun and full cooldown duration remain independent. The separate native six-yard radius modifier, full talent/legal/native acceptance and general delayed-spell target-count infrastructure remain unproved.
+
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
 
 - [x] Optional resource spend ignores flat spell modifiers while retaining percentage modifiers for the native cost order, family/mask and caster. Practiced Strikes429647 discounts only Protection Execute's base cost; native Sudden Death52437 effect5 still makes order1 base/optional spend free without changing Arms order0. Existing available-resource clamping remains unchanged.
