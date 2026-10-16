@@ -159,12 +159,63 @@ fn achievements_criteria_scenario_step82_native_stage_and_lethal_kill_persist() 
     h.app.world_mut().entity_mut(h.caster).insert(map);
     h.advance(1);
     assert_eq!(snapshot(h.app.world(), map).scenario.unwrap().step_id, 140);
+    let unbound_copy = InMap {
+        map_id: map.map_id,
+        instance_id: map.instance_id + 1,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert(unbound_copy);
+    h.advance(1);
+    kill_controlled_npc(&mut h, 204799);
+    assert_eq!(
+        research_progress(&h),
+        Some(1),
+        "same map in another copy has no borrowed stage"
+    );
+    h.app.world_mut().entity_mut(h.caster).insert(map);
+    h.advance(1);
+    kill_controlled_npc(&mut h, 204071);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&60017),
+        "stage3 cannot supply stage5"
+    );
+    finish_authored_stage(&mut h, 63313, 141);
+    finish_authored_stage(&mut h, 63318, 142);
+    kill_controlled_npc(&mut h, 204071);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&60017),
+        Some(&1),
+        "authored step142 OrderIndex4 supplies stage5"
+    );
+    finish_authored_stage(&mut h, 64894, 0);
+    assert!(snapshot(h.app.world(), map).scenario.unwrap().completed);
+    kill_controlled_npc(&mut h, 204799);
+    assert_eq!(
+        research_progress(&h),
+        Some(1),
+        "finished scenario has no current stage"
+    );
     drop(h);
     let db = redb::Database::open(file.path()).unwrap();
     assert_eq!(
         persistence::load_achievements(&db, character)
             .criteria_progress
             .get(&RESEARCH_CRITERION),
+        Some(&1)
+    );
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&60017),
         Some(&1)
     );
     assert!(
