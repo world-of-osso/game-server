@@ -17,12 +17,12 @@ from pathlib import Path
 import mysql_dump
 
 SPELLS = {119297, 119298, 119424, 119425, 119426, 119428}
-ENCOUNTER_SPELLS = {'ragefire': SPELLS, 'gargolmar': {30642}}
+ENCOUNTER_SPELLS = {'ragefire': SPELLS, 'gargolmar': {30642}, 'omor': {35642, 32185}}
 TABLE_KEYS = {
     'serverside_spell': ('Id', 'DifficultyID'),
     'serverside_spell_effect': ('SpellID', 'EffectIndex', 'DifficultyID'),
 }
-CANONICAL = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
+CANONICAL = Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
 
 
 def read_source_rows(dump, spells=SPELLS):
