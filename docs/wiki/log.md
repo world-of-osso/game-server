@@ -1,3 +1,7 @@
+## 2026-10-16 — Crowd Pummeler source clock and identity
+
+[Crowd Pummeler](systems/boss-scripts.md#gnomeregan-crowd-pummeler-source-clock--2026-10-16): authenticated6229→381/bit4 primary, missing-profile RED→GREEN10/10 and actual SQL generation; real SAI first/repeat clocks and positive damage for8374/5568/10887, isolated controlled death credit and stopped post-death casts GREEN1/1 at9b0e0235. Only player survival health staged; no resource/timer/chance/flag overrides. Ordinary fight, knockback/interrupt, loot, persistence and native clear remain open.
+
 ## 2026-10-16 — Electrocutioner identity and explicit mana gap
 
 [Electrocutioner](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16): copy-only pinned TC/Journal primary6235→380/bit3 RED→GREEN9/9, actual source generation succeeds; controlled death/copy credit GREEN1/1. Real SAI acceptance remains source-data RED at Shock NotEnoughPower(Mana), TDB class1; lead approved named ignore without mana/class/triggered overrides. Blackfathom legacy/modern identity mismatch recorded, no substituted credit.

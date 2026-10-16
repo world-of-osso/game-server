@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Crowd Pummeler source clock](systems/boss-scripts.md#gnomeregan-crowd-pummeler-source-clock--2026-10-16) — authenticated6229→381/bit4 copy-only binding and real three-spell first/repeat/damage/death-credit proof; knockback/interrupt and native acceptance remain separate.
+
 - [Electrocutioner primary and source mana gap](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16) — authenticated6235/380/bit3 binding and controlled death credit; ordinary SAI Shock fails authored mana admission, named mechanics acceptance remains open.
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.

@@ -32,7 +32,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 ## Gnomeregan Crowd Pummeler source boundary
 
 - [x] Prepare only Crowd Pummeler6229/encounter381 Normal map90 bit4 from pinned TC header/instance, installed Journal418/actor989/display36560 and actual TDB SmartAI identity. TC ordinal3 must not replace DB2 bit4. Generated copy-only SQL preserves Electrocutioner and unrelated bindings; no other Gnomeregan actors receive credit from this profile.
-- [ ] Verify real installed SAI Arcing Smash8374 first15s/repeat15–20s, Trample5568 first25s/repeat25–35s, Crowd Pummel10887 first40s/repeat35–60s, victim targets, damage and copy-isolated death credit without timer/chance/resource/flag overrides. Ordinary fight, native clear, loot and persistence remain separate.
+- [x] Verify real installed SAI Arcing Smash8374 first15s/repeat15–20s, Trample5568 first25s/repeat25–35s, Crowd Pummel10887 first40s/repeat35–60s, actual positive damage to the victim and copy-isolated381/bit4 death credit without timer/chance/resource/flag overrides. Observe at least two successes of each over110 simulation seconds using actual50ms updates, then no further casts after death. Controlled high-health survival is not an ordinary fight; Crowd Pummel interrupt/knockback movement, native clear, loot and persistence remain separate.
 
 ## Ragefire Chasm source hooks
 
