@@ -279,7 +279,16 @@ fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
         return json!({"spec": spec.id, "spell": row.id, "missing_store": true});
     };
     spawn_case(h, spec, row);
-    place_ground_case(h, &spell);
+    record_spawned_case(h, spec, row, &spell)
+}
+
+fn record_spawned_case(
+    h: &mut Harness,
+    spec: &Spec,
+    row: &Spell,
+    spell: &crate::spell_info::SpellInfo,
+) -> Value {
+    place_ground_case(h, spell);
     let baseline_warnings = crate::auras::take_unhandled_auras(h.app.world_mut());
     h.app
         .world_mut()
@@ -289,7 +298,7 @@ fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
     let form_prerequisite = cast_form_prerequisite(h, spec, row);
     let before = resources(h);
     if !row.passive {
-        cast_case(h, &spell);
+        cast_case(h, spell);
     }
     let after = resources(h);
     let warnings = crate::auras::take_unhandled_auras(h.app.world_mut());
@@ -381,7 +390,11 @@ fn class_completeness_probe_druid_native_forms_precede_required_abilities() {
             passive: false,
             origin: vec!["SkillLineAbility".into()],
         };
-        let receipt = record_case(&mut h, &spec, &spell);
+        spawn_case(&mut h, &spec, &spell);
+        // Qualify the replacement caster only here; the census stays unchanged.
+        apply_native_enemy_dodge_reduction(&mut h);
+        let native = world_db().unwrap().store.get(id).unwrap();
+        let receipt = record_spawned_case(&mut h, &spec, &spell, native);
         assert_eq!(
             receipt["failed"],
             json!([]),

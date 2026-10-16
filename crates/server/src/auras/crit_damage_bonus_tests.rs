@@ -7,7 +7,9 @@ use shared::protocol::{CombatLogEvent, CombatLogKind};
 use super::*;
 use crate::class_progression::KnownSpells;
 use crate::combat::AutoAttack;
-use crate::spell_cast::test_harness::{Harness, harness, world_db};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_native_enemy_dodge_reduction, world_db,
+};
 use crate::spell_info::SpellStore;
 use crate::stats::CharacterStats;
 
@@ -220,7 +222,7 @@ fn class_completeness_native_know_your_enemy_weapon_crit_orders_spellmod_before_
     // Remove only random variance to distinguish the two native orderings;
     // authored AP coefficient0.736 and every mask remain unchanged.
     weapon_hit.effects[0].variance = 0.0;
-    let mut h = harness(
+    let mut h = harness_with_native_enemy_dodge_reduction(
         vec![weapon_hit],
         &[KNOW_YOUR_ENEMY, HAVOC_CRIT_BONUS],
         DEMON_HUNTER,

@@ -59,6 +59,10 @@ Nevermore522 and Spell Gulp1858 use property168 to apply a two-round enemy-pet a
 
 Mind Games2390 is the choosing pet's own detriment:117 uses one-based slots1/2 and nine-round LockDuration. Its aura174 reference is not a stun application. `Pet.lockouts` stores three independent slot clocks alongside ordinary cooldowns; round-start ticking includes bench pets. Existing wild/PvP snapshot projection publishes actual lockdown and disables that slot, rather than reporting zero. This does not certify the complete Addius replacement/restoration encounter.
 
+### Fade continuation — 2026-10-16
+
+Current70391 has105 referenced property IDs, including new387; canonical's older26 phase-controller rows were not modified. The [current census](../../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16) owns exact deltas. Only Fade1084 establishes random self-swap107: its round-start dodge1083 ends before its round-end reserve choice. Other107 routing remains rejected. Three actual unsupported107 RED cases become81/81 targeted GREEN; current admission1749/2829 (61.82%),993 abilities. Both-skin private5961 real-pointer/log/model captures prove bounded inherited HUD projection; no all-row or exact Retail timing claim.
+
 ### Limits
 
 Handler references are **not** executable or all-row behavioral coverage. The [matrix](../../pet-battle-effect-coverage.md) records recursive admission separately.46 unsupported IDs, unknown OverrideIndex/target routing, most object/special-stat auras and proc events1..4/9/12 (except bounded Leech Life383 and Nevermore/Spell Gulp) remain rejected. Control-duration ordering, exact damage rounding/weak game-table factor and several proc timings remain uncaptured. The separate wild consumer has bounded wire/UI integration; this is not a full Retail parity claim.
