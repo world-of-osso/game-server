@@ -164,6 +164,15 @@ fn moved_target_accepts_authoritative_clear_sight_at_request_receipt() {
     h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.app.world().get::<CastState>(h.caster).is_some());
+    // Advance until the real owner outcome arrives, not merely accepted CastState.
+    for _ in 0..200 {
+        if h.inbox.go.iter().any(|go| go.spell_id == FIREBALL) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == FIREBALL));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
 }
 
 #[test]
