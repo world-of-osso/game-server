@@ -24,14 +24,16 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 ## Tests asserting this spec
 
+- `auras::mount_tests::guild_mount_up_...` — three real-data controls cover ground/flight grants and revocation, stronger Crusader Aura without stacking/swim leakage, and installed battleground/arena map suppression/restoration.
+
 - `class_progression::tests::guild_perks_real_membership_grants_rebuilds_revokes_and_reopens_without_touching_class_spells` — real persisted invite acceptance/quit, knowledge, owner messages, spec rebuild and reopen.
 
 ## Known gaps (current cycle)
 
 - [x] Real persisted join, changed specialization, quit and fresh-process class-knowledge test GREEN1/1 at serveree29a3bd/protoe50b02c.
 - [x] Existing-member login, online forced removal/rejoin and offline removal/reopen controls GREEN2/2 at5dd1cfa9.
-- [ ] Four perk effects remain explicitly unsupported/unproven; Guild Mail retains existing same-guild zero-delay behavior.
-- [ ] Private real-UDP/native join/leave/relog acceptance and independent consumer gates.
+- [ ] Supported Mount Up172/211 requires its separate landing gate;210 remains a named blocked context. Hasty Hearth, Mobile Banking and Quick/Dead remain separately qualified. Guild Mail has a real same-guild zero-delay control.
+- [x] Bounded catalog/membership/UI slice landed; actual UDP invitation/removal/rejoin/quit and native fresh-process owner readback passed.
 
 ## Out of scope
 
@@ -39,11 +41,8 @@ Guild rewards/reputation eligibility and invitation tabards are separate slices.
 
 ## Active effect slice: Mount Up
 
-- [ ] Actual78633 grants10% mounted run/flight speed through authored172/211 effects, with strongest-positive nonstacking semantics (TC Unit.cpp8812–8854). Revocation restores the mounted baseline without removing the mount.
+- [x] Actual78633 grants10% mounted run/flight speed through authored172/211 effects, with strongest-positive nonstacking semantics (TC Unit.cpp8812–8854). Revocation restores the mounted baseline without removing the mount.
 - [ ] **Blocked by explicit lead decision:**210 applies only to player-controlled NPC flight (TC Unit.cpp8833–8844). The local authored vehicle runtime is ground IoC Demolishers; no flying context is fabricated or applied to the mounted player. This is not part of the supported172/211 completion claim.
-- [ ] Source Attr4/8 arena/battleground restrictions suppress the passive effect while preserving knowledge and restore it on leaving.
+- [x] Source Attr4/8 arena/battleground restrictions suppress the passive effect while preserving knowledge and restore it on leaving.
 - [ ] Real native mounted/unmounted and guild-removal proof; do not claim effect completion from visible rows or known IDs.
 
-Development proof: actual Golden Gryphon32235 + expert riding225 baseline is run2.0/flight3.2; Mount Up must produce2.2/3.52. Test33ec603a RED reports actual run2.0, after real passive application. Earlier289dbe3b failure was missing fixture SpellStore metadata, not a product RED.
-
-Map eligibility REDc0f608da: installed map489 is Battleground and559 is Arena; changing InMap left78633 active. Source SpellInfo.cpp2218 / Spell.cpp7158 and Player.cpp26509 require location-driven aura suppression, not unlearning. Passive sync now also observes actual map changes and consults required installed map metadata; isolated spell fixtures load that same source catalog. Ordinary world known-spell authority remains unchanged.
