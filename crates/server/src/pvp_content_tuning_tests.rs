@@ -69,9 +69,10 @@ fn achievements_criteria_content268_full_hundred_settlements_grant_both_factions
             let state = world
                 .get::<PlayerAchievementState>(players[index].1)
                 .unwrap();
-            assert_eq!(state.earned_ids.contains(&earned), count == 100);
+            let account = state.account.as_ref().unwrap();
+            assert_eq!(account.earned_ids.contains(&earned), count == 100);
             assert!(
-                !state.earned_ids.contains(&other),
+                !account.earned_ids.contains(&other),
                 "opposite faction cannot earn"
             );
         }
@@ -82,13 +83,40 @@ fn achievements_criteria_content268_full_hundred_settlements_grant_both_factions
             "no idle replay"
         );
     }
-    drop(world);
+    let dates: Vec<_> = [0, 1]
+        .into_iter()
+        .map(|index| {
+            world
+                .get::<PlayerAchievementState>(players[index].1)
+                .unwrap()
+                .account
+                .as_ref()
+                .unwrap()
+                .earned_at
+                .clone()
+        })
+        .collect();
+    drop(world.remove_resource::<GameDatabase>().unwrap());
     let reopened = redb::Database::open(file.path()).unwrap();
-    for (index, earned) in [(0, 908), (1, 909)] {
+    for index in [0, 1] {
         let stored = crate::persistence::load_achievements(&reopened, players[index].0);
         assert_eq!(stored.criteria_progress.get(&45044), Some(&100));
-        assert!(stored.earned_ids.contains(&earned));
-        assert!(stored.earned_at.get(&earned).is_some_and(|date| *date > 0));
+        world.entity_mut(players[index].1).insert(stored);
+    }
+    world.insert_resource(GameDatabase { db: reopened });
+    for (index, earned) in [(0, 908), (1, 909)] {
+        crate::achievement::record_player_event(
+            &mut world,
+            players[index].1,
+            crate::achievement::CriteriaEvent::Login,
+        );
+        let state = world
+            .get::<PlayerAchievementState>(players[index].1)
+            .unwrap();
+        let account = state.account.as_ref().unwrap();
+        assert!(account.earned_ids.contains(&earned));
+        assert_eq!(account.earned_at[&earned], dates[index][&earned]);
+        assert!(account.earned_at[&earned] > 0);
     }
 }
 
