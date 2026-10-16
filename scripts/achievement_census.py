@@ -73,7 +73,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind in (32, 33, 97) and asset <= 0:
             continue  # TC requires exact map ID, not a zero/all-arena alias.
-        if kind == 54 and asset not in (34, 101, 86, 87, 59, 225):
+        if kind == 54 and asset not in (34, 101, 86, 87, 59, 225, 56):
             continue  # TC TextEmotes for the six native emotes, not animation IDs.
         if kind == 26 and asset not in (0, 1, 2, 6):
             continue  # Native fatigue/drowning/falling/void only, no lava/slime/fire producer.
@@ -129,7 +129,7 @@ def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, autho
         return 1 <= asset <= 15
     if kind == 78:
         return asset in pet_types
-    return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, -104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, -8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+    return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 6: asset == 0, 7: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, -104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, -8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 35: asset == 0, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
