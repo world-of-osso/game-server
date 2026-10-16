@@ -1,8 +1,8 @@
 //! Katy156833: authentic Assistant35 summon and live mailbox requests, not scenery-only.
 use super::*;
 use shared::protocol::{
-    InteractNpc, InteractionChannel, InteractionFailed, InteractionKind, InteractionOpened,
-    MailAction, MailChannel, MailError, MailFailed, MailRequest, MailboxContents, NpcRole,
+    InteractNpc, InteractionChannel, InteractionKind, InteractionOpened, MailAction, MailChannel,
+    MailError, MailFailed, MailRequest, MailboxContents, NpcRole,
 };
 
 fn install_katy_mailbox_service(h: &mut Harness, conn: &rusqlite::Connection) {
@@ -15,8 +15,6 @@ fn install_katy_mailbox_service(h: &mut Harness, conn: &rusqlite::Connection) {
         MessageReceiver::<InteractNpc>::default(),
         MessageSender::<InteractionOpened>::default(),
         MessageReceiver::<InteractionOpened>::default(),
-        MessageSender::<InteractionFailed>::default(),
-        MessageReceiver::<InteractionFailed>::default(),
         MessageSender::<MailboxContents>::default(),
         MessageReceiver::<MailboxContents>::default(),
         MessageSender::<MailRequest>::default(),
@@ -35,19 +33,7 @@ fn open_katy_mailbox(h: &mut Harness, actor: Entity) -> Vec<InteractionOpened> {
             npc: actor.to_bits(),
         });
     h.advance(7);
-    let opened = drain::<InteractionOpened>(&mut h.app, h.connection);
-    eprintln!(
-        "Katy open events={opened:?} failures={:?} flags={:?} faction={:?} active={:?}",
-        drain::<InteractionFailed>(&mut h.app, h.connection),
-        h.app.world().get::<shared::protocol::NpcFlags>(actor),
-        h.app
-            .world()
-            .get::<shared::components::UnitFactionTemplate>(actor),
-        h.app
-            .world()
-            .get::<crate::npc_interaction::ActiveInteraction>(h.connection)
-    );
-    opened
+    drain::<InteractionOpened>(&mut h.app, h.connection)
 }
 
 #[test]
