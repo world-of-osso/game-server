@@ -23,6 +23,13 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Celebras source boundary
+
+- [x] Prepare12225→425/Normal349bit3 (TCordinal4), pinned Celebras/header/instance, TDB script identity and Journal70391 CSV428/998/display12350. Preserve other credit;13743/13716 must not acquire primary credit. SQL only.
+- [ ] Port source21807 victim first0–6/repeat4–8s,12747 victim first0–5/repeat20s,21968 self first30/repeat20s; preserve actual class2 mana/costs, TaskScheduler casting validator and due-anchored repeats.
+- [ ] Gate real21968 summon13743, death summon13716 at boss position/orientation0/manual despawn and isolated controlled425bit3 credit using authentic Normal templates. No source data overrides.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
 ## Maraudon Lord Vyletongue source boundary
 
 - [x] Prepare12236→424/Normal349bit2 using pinned TC Maraudon ordinal3/header/instance, actual TDB SmartAI and Journal70391 CSV427/997/display12334. Preserve Gizlock credit and refuse AI/ordinal-as-bit drift; SQL output only.

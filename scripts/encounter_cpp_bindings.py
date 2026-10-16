@@ -244,7 +244,22 @@ VYLETONGUE_PRIMARY = dict(
     actor_id=997,
     display_id=12334,
 )
+CELEBRAS_PRIMARY = dict(
+    map_id=349,
+    entry=12225,
+    encounter_id=425,
+    bit=3,
+    script="boss_celebras_the_cursed",
+    journal_id=428,
+    actor_id=998,
+    display_id=12350,
+)
+CELEBRAS_SOURCES = {
+    **MARAUDON_SOURCES,
+    "Kalimdor/Maraudon/boss_celebras_the_cursed.cpp": "eb52d44aa838b6012155ceb9214eb3fab7d6b9d459dfdbd70370a65a2328c077",
+}
 PROFILES = {
+    "celebras": (CELEBRAS_PRIMARY, CELEBRAS_SOURCES),
     "vyletongue": (VYLETONGUE_PRIMARY, MARAUDON_SOURCES),
     "gizlock": (GIZLOCK_PRIMARY, MARAUDON_SOURCES),
     "noxxion": (NOXXION_PRIMARY, NOXXION_SOURCES),
