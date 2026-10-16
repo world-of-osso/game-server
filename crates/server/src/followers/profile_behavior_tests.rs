@@ -56,6 +56,39 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     (h, unit, profile)
 }
 
+#[test]
+fn follower_lethal_melee_delivers_one_native_death_to_party_owner() {
+    let (mut h, tank, _) = spawn_profile_fixture(209057);
+    h.app.world_mut().get_mut::<Health>(tank).unwrap().current = 1.0;
+    let enemy = h.npc;
+    h.app.world_mut().entity_mut(enemy).insert((
+        crate::networking::CombatTarget(Some(tank)),
+        crate::combat::AutoAttack::new(tank),
+        crate::auras::AuraStatMods {
+            melee_hit_chance_pct: 100.0,
+            ..Default::default()
+        },
+    ));
+    h.advance(200);
+    assert_eq!(h.health(tank), 0.0);
+    let deaths: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(tank.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        deaths.len(),
+        1,
+        "owner must receive exactly one follower death"
+    );
+    assert_eq!(deaths[0].source, Some(enemy.to_bits()));
+    assert!(deaths[0].timestamp_unix_ms > 0);
+}
+
 /// The real summon starts at the authored template's level, then the bridge
 /// promotes the NPC to its owner's level. Its combat armor must use that level.
 #[test]
