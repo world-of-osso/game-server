@@ -8,6 +8,7 @@ reviewed copies; structural binding is not mechanic or native certification.
 """
 
 import argparse
+import csv
 import hashlib
 import json
 import sqlite3
@@ -168,7 +169,19 @@ PUMMELER_PRIMARY = dict(
     actor_id=989,
     display_id=36560,
 )
+THERMAPLUGG_PRIMARY = dict(
+    map_id=90,
+    entry=7800,
+    encounter_id=382,
+    bit=5,
+    script="",
+    ai="SmartAI",
+    journal_id=422,
+    actor_id=992,
+    display_id=36563,
+)
 PROFILES = {
+    "thermaplugg": (THERMAPLUGG_PRIMARY, GNOMEREGAN_SOURCES),
     "crowd-pummeler": (PUMMELER_PRIMARY, GNOMEREGAN_SOURCES),
     "electrocutioner": (ELECTROCUTIONER_PRIMARY, GNOMEREGAN_SOURCES),
     "silverlaine": (SILVERLAINE_PRIMARY, SHADOWFANG_SOURCES),
@@ -272,21 +285,23 @@ def validate_source_files(source, sources=SOURCES):
 
 
 def validate_journal(journal, creatures, primary=PRIMARY):
-    encounters = read_journal(journal, 0xB88D11CC, 13, {2: 2})
-    actors = read_journal(creatures, 0x81A3C769, 9)
-    if not any(
-        r[4] == primary["journal_id"] and r[6] & 0xFFFF == primary["encounter_id"]
-        for r in encounters
-    ):
+    if journal.suffix == '.csv' and creatures.suffix == '.csv':
+        with journal.open() as stream:
+            encounters = [(int(row['ID']), int(row['DungeonEncounterID']))
+                          for row in csv.DictReader(stream)]
+        with creatures.open() as stream:
+            actors = [(int(row['ID']), int(row['JournalEncounterID']),
+                       int(row['CreatureDisplayInfoID'])) for row in csv.DictReader(stream)]
+    else:
+        encounters = [(row[4], row[6] & 0xFFFF)
+                      for row in read_journal(journal, 0xB88D11CC, 13, {2: 2})]
+        actors = [(row[2], row[3] & 0xFFFF, row[4] & 0xFFFFFFFF)
+                  for row in read_journal(creatures, 0x81A3C769, 9)]
+    if (primary['journal_id'], primary['encounter_id']) not in encounters:
         raise ValueError(
             f"missing journal encounter relation: {primary['encounter_id']}"
         )
-    if not any(
-        r[2] == primary["actor_id"]
-        and r[3] & 0xFFFF == primary["journal_id"]
-        and r[4] & 0xFFFFFFFF == primary["display_id"]
-        for r in actors
-    ):
+    if (primary['actor_id'], primary['journal_id'], primary['display_id']) not in actors:
         raise ValueError(f"missing journal primary actor relation: {primary['entry']}")
 
 
@@ -296,6 +311,7 @@ def main():
     parser.add_argument("--db", type=Path, required=True)
     parser.add_argument("--tc-dir", type=Path, required=True)
     parser.add_argument("--journal", type=Path, required=True)
+    parser.add_argument("--journal-build", required=True)
     parser.add_argument("--creatures", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
@@ -311,7 +327,7 @@ def main():
     args.report.write_text(
         json.dumps(
             dict(
-                build="12.1.0.69933",
+                build=args.journal_build,
                 tc_revision="a352b1fa",
                 source_sha256=sources,
                 primary_actor=primary,

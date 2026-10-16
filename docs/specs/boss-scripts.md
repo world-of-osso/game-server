@@ -34,6 +34,11 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] Prepare only Crowd Pummeler6229/encounter381 Normal map90 bit4 from pinned TC header/instance, installed Journal418/actor989/display36560 and actual TDB SmartAI identity. TC ordinal3 must not replace DB2 bit4. Generated copy-only SQL preserves Electrocutioner and unrelated bindings; no other Gnomeregan actors receive credit from this profile.
 - [x] Verify real installed SAI Arcing Smash8374 first15s/repeat15–20s, Trample5568 first25s/repeat25–35s, Crowd Pummel10887 first40s/repeat35–60s, actual positive damage to the victim and copy-isolated381/bit4 death credit without timer/chance/resource/flag overrides. Observe at least two successes of each over110 simulation seconds using actual50ms updates, then no further casts after death. Controlled high-health survival is not an ordinary fight; Crowd Pummel interrupt/knockback movement, native clear, loot and persistence remain separate.
 
+## Gnomeregan Thermaplugg source boundary
+
+- [x] Prepare only Thermaplugg7800/encounter382 Normal map90 bit5 from pinned TC header/instance, TDB SmartAI and Journal70391 encounter422/actor992/display36563. Copy-only SQL must preserve existing bosses and never credit Walking Bomb7915. `encounter_cpp_bindings.py` accepts explicitly selected paired CSV or WDC5 inputs and requires `--journal-build` so reports do not mislabel70391 as69933.
+- [ ] Verify ordinary SAI10101 first15s/repeat15–35s and11130 first40s/repeat40–60s, real damage, source speech and Normal-only linked pairs of7915 every30s at authored coordinates; controlled death credit/copy isolation. Preserve source templates/flags/resources. Ordinary fight, bomb movement/explosion, knockback movement, loot/persistence and native clear remain separate.
+
 ## Ragefire Chasm source hooks
 
 - [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. No DB2 substitutes or derived effect IDs.
