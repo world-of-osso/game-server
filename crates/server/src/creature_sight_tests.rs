@@ -392,3 +392,36 @@ fn a_player_hitting_an_orc_that_fights_a_soldier_keeps_swinging_until_it_dies() 
         .count();
     assert!(player_swings > 1, "the player swung {player_swings} times");
 }
+
+#[test]
+fn dormant_resize_population_fits_one_catch_up_frame() {
+    let mut app = App::new();
+    app.init_resource::<NpcGrid>().init_resource::<SightPass>();
+    app.add_systems(Update, resize_npcs);
+    app.world_mut().spawn_batch((0..250_000).map(|_| {
+        (
+            Npc,
+            GridDormant,
+            at(0.0),
+            InMap::continent(0),
+            shared::components::ModelDisplay { display_id: 0 },
+            shared::components::UnitScale(1.0),
+        )
+    }));
+    app.update();
+    let fastest = (0..3)
+        .map(|_| {
+            let start = std::time::Instant::now();
+            for _ in 0..5 {
+                app.update();
+            }
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    eprintln!("250000 dormant resize units/five steps: {fastest:?}");
+    assert!(
+        fastest < Duration::from_millis(50),
+        "resize scans exhaust frame: {fastest:?}"
+    );
+}

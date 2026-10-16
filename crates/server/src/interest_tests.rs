@@ -1068,3 +1068,39 @@ fn a_decayed_corpse_is_hidden_from_players_who_arrive_later() {
         "a player arriving later does not see it"
     );
 }
+
+#[test]
+fn dormant_detection_geometry_population_fits_one_catch_up_frame() {
+    let mut app = App::new();
+    app.init_resource::<InterestIndex>();
+    app.add_systems(Update, sync_detection_geometry);
+    app.world_mut().spawn_batch((0..250_000).map(|_| {
+        (
+            Npc,
+            crate::grid_activity::GridDormant,
+            Level(30),
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            UnitScale(1.0),
+        )
+    }));
+    app.update();
+    let fastest = (0..3)
+        .map(|_| {
+            let start = std::time::Instant::now();
+            for _ in 0..5 {
+                app.update();
+            }
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    eprintln!("250000 dormant detection units/five steps: {fastest:?}");
+    assert!(
+        fastest < std::time::Duration::from_millis(50),
+        "detection scans exhaust frame: {fastest:?}"
+    );
+}
