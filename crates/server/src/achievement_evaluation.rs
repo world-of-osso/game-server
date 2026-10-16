@@ -221,32 +221,40 @@ impl AchievementCatalog {
     ) -> Vec<AchievementToastSnapshot> {
         candidates
             .into_iter()
-            .filter_map(|id| {
-                #[cfg(test)]
-                EVALUATION_WORK.with(|work| {
-                    let (definitions, trees) = work.get();
-                    work.set((definitions + 1, trees));
-                });
-                let definition = &self.definitions[&id];
-                if self.window.has_account_flag(id) != boundary.account_scope
-                    || state.earned_ids.contains(&id)
-                    || !self.faction_matches(definition.faction, boundary.race)
-                    || definition
-                        .map_id
-                        .is_some_and(|map| boundary.map != Some(map))
-                    || !memo.progress[&id].completed
-                {
-                    return None;
-                }
-                state.earned_ids.insert(id);
-                Some(AchievementToastSnapshot {
-                    achievement_id: id,
-                    name: definition.name.clone(),
-                    points: definition.points,
-                    icon_fdid: self.window.icon_fdid(id),
-                })
-            })
+            .filter_map(|id| self.grant_candidate(state, memo, id, boundary))
             .collect()
+    }
+
+    fn grant_candidate(
+        &self,
+        state: &mut PlayerAchievementState,
+        memo: &EvaluationMemo,
+        id: u32,
+        boundary: CompletionBoundary,
+    ) -> Option<AchievementToastSnapshot> {
+        #[cfg(test)]
+        EVALUATION_WORK.with(|work| {
+            let (definitions, trees) = work.get();
+            work.set((definitions + 1, trees));
+        });
+        let definition = &self.definitions[&id];
+        if self.window.has_account_flag(id) != boundary.account_scope
+            || state.earned_ids.contains(&id)
+            || !self.faction_matches(definition.faction, boundary.race)
+            || definition
+                .map_id
+                .is_some_and(|map| boundary.map != Some(map))
+            || !memo.progress[&id].completed
+        {
+            return None;
+        }
+        state.earned_ids.insert(id);
+        Some(AchievementToastSnapshot {
+            achievement_id: id,
+            name: definition.name.clone(),
+            points: definition.points,
+            icon_fdid: self.window.icon_fdid(id),
+        })
     }
 
     pub(super) fn cached_progress<'a>(

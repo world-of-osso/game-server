@@ -1636,6 +1636,10 @@ fn achievements_incremental_event_work_is_bounded_and_snapshot_stays_complete() 
     let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None, 1);
     let snapshot = catalog.snapshot(&state, 1);
     let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
+    println!(
+        "warmed character event: {definitions} definitions / {trees} tree nodes / {} snapshot rows",
+        snapshot.progress.len()
+    );
     assert!(toasts.iter().any(|toast| toast.achievement_id == 6));
     assert_eq!(snapshot.progress.len(), baseline.progress.len());
     assert!(
