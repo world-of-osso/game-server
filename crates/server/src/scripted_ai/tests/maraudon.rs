@@ -23,7 +23,7 @@ fn encounter_coverage_razorlash_source_spells_damage_and_isolated_credit() {
         let gos = &h.inbox(0).spell_gos;
         casts.extend(gos[cursor..].iter().filter_map(|go| {
             (go.caster == boss.to_bits() && [12787, 40504, 15976].contains(&go.spell_id))
-                .then_some((go.spell_id, tick as f32 * 0.05, go.hit_targets.clone()))
+                .then_some((go.spell_id, tick as f32 * 0.05, go.target))
         }));
         cursor = gos.len();
         thrash_seen |= h.has_aura(boss, 12787);
@@ -44,11 +44,13 @@ fn encounter_coverage_razorlash_source_spells_damage_and_isolated_credit() {
             times.len() >= 2,
             "missing successful repeat {spell}: {times:?}"
         );
-        // Chance failures skip source timer windows; they must not cause early casts.
+        // TC SmartScript.cpp3794 uses timer < diff. Each repeat consumes one extra50ms tick.
+        // Chance failures skip whole windows without changing the authored interval.
+        let window_interval = repeat + 0.05;
         for time in &times {
-            let window = ((*time - first) / repeat).round();
+            let window = ((*time - first) / window_interval).round();
             assert!(
-                window >= 0.0 && (*time - (first + window * repeat)).abs() <= 0.2,
+                window >= 0.0 && (*time - (first + window * window_interval)).abs() <= 0.1,
                 "off source timer window {spell}: {times:?}"
             );
         }
@@ -56,7 +58,7 @@ fn encounter_coverage_razorlash_source_spells_damage_and_isolated_credit() {
             casts
                 .iter()
                 .filter(|(id, _, _)| *id == spell)
-                .all(|(_, _, targets)| targets.contains(&target.to_bits())),
+                .all(|(_, _, actual)| *actual == Some(target.to_bits())),
             "source target {spell}"
         );
         assert!(
