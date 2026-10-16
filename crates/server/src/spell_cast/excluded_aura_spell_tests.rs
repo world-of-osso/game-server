@@ -6,6 +6,9 @@ use shared::spell_data::CastFailReason;
 use super::test_harness::*;
 
 const STEALTH: u32 = 1784;
+const STEALTH_AURA: u32 = 158185;
+const STEALTH_SHAPESHIFT: u32 = 158188;
+const SANCTUARY: u32 = 98877;
 const SHADOW_DANCE: u32 = 185313;
 const SLOW_FALL: u32 = 130;
 const NO_FEATHER_FALL: u32 = 79636;
@@ -13,7 +16,19 @@ const CUTLASS_SLASH: u32 = 214794;
 const BLOOD_FRENZY: u32 = 214789;
 
 fn rogue() -> Harness {
-    let mut h = harness(Vec::new(), &[STEALTH, SHADOW_DANCE], 4).unwrap();
+    // Keep the real parent's stealth, shapeshift and sanctuary child closure.
+    let mut h = harness(
+        Vec::new(),
+        &[
+            STEALTH,
+            STEALTH_AURA,
+            STEALTH_SHAPESHIFT,
+            SANCTUARY,
+            SHADOW_DANCE,
+        ],
+        4,
+    )
+    .unwrap();
     h.app
         .world_mut()
         .get_mut::<CombatStatus>(h.caster)
