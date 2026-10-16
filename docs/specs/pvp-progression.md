@@ -33,6 +33,10 @@ Pinned raw sources (prefix `https://raw.githubusercontent.com/TrinityCore/Trinit
 - `src/server/game/Entities/Player/Player.h`, SHA256 `9908cb848beaa931b878dcc2d47a016e3fff0288ddb686874163b603d5b08199`:1207–1208.
 - `src/server/game/Spells/Auras/SpellAuraDefines.h`, SHA256 `1784b495ea9704bbe12223c2ad42d9d5fea7d320f0dc6c0055cd090cb7e5498b`:159/212/491 identities; active70391 SpellName identifies43681 as Inactive.
 
+## Private Currency presentation fixture
+
+`cargo run -p server --example pvp_currency_zero_fixture -- <private-redb> <character-id>` is an approved diagnostic only. It accepts only the owned2026-10-16/private5941 database while stopped, requires an existing saved wallet, refuses earned/unrelated balances and adds only a discovered1792 entry with quantity/week-earned0. It does not award Honor, alter lifetime XP or mutate canonical realm data. The native client must separately prove a real empty wallet hides Currency before using this fixture.
+
 ## Gaps
 
 Honor cap15000 is authored. Conquest uses dynamic WorldState31270/AwardCondition146857, not guessed1800/weekly550. Honor/conquest per result and rating policy are not locally derived. PrestigeLevelInfo maps e.g. honor-level5 to achievement12893; no certified Mainline lifetime-XP curve was recovered. The available HonorLevel game table has old Prestige0..32 columns and is not assumed equivalent. Lifetime leveling/reward grants remain blocked by that uncertified curve. Enlisted XP/quest-XP consumers and individual selected spell effects beyond temporary learning remain unproved; aura application and native both-skin selection have bounded proof below.
