@@ -259,6 +259,34 @@ fn collect_hug_receipts(
     }
 }
 
+fn spawn_hug_player(app: &mut App, race: u8, character: u64) -> Entity {
+    use shared::components::{Health, Position, UnitFactionTemplate};
+    app.world_mut()
+        .spawn((
+            Player {
+                name: format!("Hug target {character}"),
+                race,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            Level(1),
+            ClientId(character),
+            crate::maps::InMap::continent(0),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            UnitFactionTemplate(crate::faction::faction_template_for_race(race)),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            PlayerAchievementState::default(),
+        ))
+        .id()
+}
+
 #[test]
 fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
     use shared::components::{Health, Position, UnitFactionTemplate};
@@ -284,56 +312,8 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
             z: 0.0,
         },
     ));
-    let enemy = app
-        .world_mut()
-        .spawn((
-            Player {
-                name: "Horde target".into(),
-                race: 2,
-                class: 1,
-                appearance: CharacterAppearance::default(),
-            },
-            Level(1),
-            ClientId(9001),
-            map,
-            Position {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            UnitFactionTemplate(2),
-            Health {
-                current: 100.0,
-                max: 100.0,
-            },
-            PlayerAchievementState::default(),
-        ))
-        .id();
-    let friendly = app
-        .world_mut()
-        .spawn((
-            Player {
-                name: "Alliance target".into(),
-                race: 1,
-                class: 1,
-                appearance: CharacterAppearance::default(),
-            },
-            Level(1),
-            ClientId(9002),
-            map,
-            Position {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            UnitFactionTemplate(1),
-            Health {
-                current: 100.0,
-                max: 100.0,
-            },
-            PlayerAchievementState::default(),
-        ))
-        .id();
+    let enemy = spawn_hug_player(&mut app, 2, 9001);
+    let friendly = spawn_hug_player(&mut app, 1, 9002);
     // Native damage and death transition create corpses, not hand-written predicate facts.
     for target in [enemy, friendly] {
         assert!(crate::death::apply_health_damage(
@@ -419,6 +399,22 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
             .contains_key(&2379),
         "foreign map"
     );
+    app.world_mut()
+        .entity_mut(enemy)
+        .insert(crate::maps::InMap {
+            map_id: 0,
+            instance_id: 100,
+        });
+    send_emote(&mut app, connection, EmoteKind::Hug, Some(enemy));
+    advance(&mut app);
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&2379),
+        "foreign copy of the same map"
+    );
     app.world_mut().entity_mut(enemy).insert(map);
     app.world_mut().get_mut::<Health>(enemy).unwrap().current = 100.0;
     send_emote(&mut app, connection, EmoteKind::Hug, Some(enemy));
@@ -448,6 +444,21 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
     app.world_mut()
         .entity_mut(enemy)
         .insert(UnitFactionTemplate(2));
+    app.world_mut().entity_mut(enemy).remove::<Health>();
+    send_emote(&mut app, connection, EmoteKind::Hug, Some(enemy));
+    advance(&mut app);
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&2379),
+        "unknown death authority"
+    );
+    app.world_mut().entity_mut(enemy).insert(Health {
+        current: 0.0,
+        max: 100.0,
+    });
     app.world_mut().resource_mut::<HugReceipts>().0.clear();
     // Selection is deliberately wrong; only the message's target qualifies.
     app.world_mut()
