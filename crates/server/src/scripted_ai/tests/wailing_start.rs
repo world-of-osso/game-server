@@ -128,6 +128,7 @@ fn encounter_coverage_wailing_controlled_gossip_hello_uses_four_done_and_real_em
 }
 
 #[test]
+#[ignore = "requires WAILING_NAV_ROOT containing the private authored map43 bake"]
 fn encounter_coverage_wailing_controlled_select_closes_then_starts_authored_first_path() {
     let (mut h, disciple, _, map) = start_fixture();
     let root = std::path::PathBuf::from(
