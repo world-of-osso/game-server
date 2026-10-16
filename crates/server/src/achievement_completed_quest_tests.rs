@@ -178,7 +178,8 @@ fn achievements_criteria_completed_quest_real_login_preserves_character_history_
         .world()
         .get::<PlayerAchievementState>(player)
         .unwrap();
-    assert_eq!(state.criteria_progress.get(&LOGIN_CRITERION), Some(&1));
+    // A real second Login74 is another event; idle updates above remain unchanged.
+    assert_eq!(state.criteria_progress.get(&LOGIN_CRITERION), Some(&2));
     assert_eq!(state.account.as_ref().unwrap().earned_at[&AWARD], date);
 }
 
