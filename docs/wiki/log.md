@@ -1658,5 +1658,6 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: Theradras source port after real missing-casts RED; Zaetar actual base/Normal projection process RED→GREEN. [Details](systems/boss-scripts.md#maraudon-theradras-source-port).
 - 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].
+- 2026-10-16: [Native targeted Hug247](systems/dungeon-achievements.md#native-targeted-hug247); complete qualifiers and native RED→GREEN, census247/1042 only.
 
 - 2026-10-16: Bounded dormant detection/resize RED→GREEN and 43 behaviour controls; irrelevant GO collision RED and membership-index implementation recorded in [[server-tick-lag]].
