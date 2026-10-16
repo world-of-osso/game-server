@@ -144,9 +144,27 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         .iter()
         .map(|wolf| largest_wolf_hit(&h, *wolf, dummy))
         .collect();
+    let swing_diagnostics: Vec<_> = wolves
+        .iter()
+        .map(|wolf| {
+            let position = h.app.world().get::<shared::components::Position>(*wolf);
+            let attack = h.app.world().get::<crate::combat::AutoAttack>(*wolf);
+            let events: Vec<_> = h
+                .inbox
+                .log
+                .iter()
+                .filter(|event| {
+                    event.source == Some(wolf.to_bits()) && event.target == Some(dummy.to_bits())
+                })
+                .collect();
+            format!("{wolf:?}: position={position:?}, attack={attack:?}, events={events:?}")
+        })
+        .collect();
     assert!(
         before.iter().all(|damage| *damage > 0),
-        "initial wolf hits {before:?}; primary destination {destination:?}"
+        "initial wolf hits {before:?}; primary destination {destination:?}; dummy {:?}; fixed elapsed {:?}; wolves {swing_diagnostics:?}",
+        h.app.world().get::<shared::components::Position>(dummy),
+        h.app.world().resource::<Time<Fixed>>().elapsed()
     );
     h.inbox.log.clear();
     // Change only the real owner's melee AP, never actor stats or RNG. The
