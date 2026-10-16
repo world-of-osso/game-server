@@ -12,6 +12,10 @@ const NO_JUMPING: u32 = 0x00000002;
 const FIXED_POSITION: u32 = 0x00200000;
 const CAN_CONTROL: u32 = 0x00000800;
 
+#[cfg(test)]
+#[path = "networking_vehicle_tests.rs"]
+mod tests;
+
 type Rider = (
     &'static VehiclePassenger,
     &'static PassengerOrigin,
