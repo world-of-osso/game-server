@@ -21,6 +21,15 @@
 
 [Source creation boundary](systems/race-class-eligibility.md#neutral-pandaren-death-knight-creation--2026-10-16):70391 neutral24/DK6 model rows are valid, but Retail explicitly requires early faction choice for DK. TDB has25/6 and26/6 Icecrown starts, no24/6. Reject neutral identity without inventing a start; faction DKs/neutral Monk/Dwarf Shaman preserved. Exact master all-pairs creation test reproduced RED before fix; scoped gates pending.
 
+## 2026-10-16 — Authored scenario-step kill guard
+
+[Positive82/native0](systems/dungeon-achievements.md#authored-scenario-step-kill-guard) resolves current authored IDs via OrderIndex=Asset-1, not vector positions. Compiler46/46/generated5783; genuine native component RED→GREEN2/2; structural5517/1824 adds four account roots. Explicit run binding, rejected1031 admission, missing original research content and stages7/14/17 remain named gaps.
+
+## 2026-10-15 — Completed-quest login guard
+
+[Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED→GREEN4/4, census5513/1824 adds only account17495. Integratedbd808152 required four-filter208/0/1ignored plus site-export1/1; server/engine checks and formatting pass warning-free. Existing additive login counters and original account dates preserved; quest acquisition unproven.
+
+## 2026-10-15 — Nested encounter conjunction
 ## 2026-10-15 — Readiness real-time clock
 
 [Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.

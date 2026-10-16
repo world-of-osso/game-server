@@ -117,10 +117,10 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
     return supported
 
 
-def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievement_ids, node_counts, pet_types):
+def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, authored_facts, achievement_ids, node_counts, pet_types):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
-    if kind in item_facts:
-        return asset in item_facts[kind]
+    if kind in authored_facts:
+        return asset in authored_facts[kind]
     if kind in (87, -87):
         return asset in achievement_ids
     if kind == 67:
@@ -189,8 +189,10 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         identities = load_identity_condition_ids(db)
         item_rows = dict(db.execute('SELECT ID, Quality FROM content_item'))
         qualities = set(item_rows.values())
-        item_facts = {19: set(item_rows), 15: qualities,
-                      14: set(range(max(qualities, default=-1) + 1))}
+        authored_facts = {19: set(item_rows), 15: qualities,
+                          14: set(range(max(qualities, default=-1) + 1)),
+                          110: {row[0] for row in db.execute('SELECT ID FROM content_quest_template')},
+                          82: {row[0] + 1 for row in db.execute('SELECT DISTINCT OrderIndex FROM scenario_step WHERE OrderIndex >= 0')}}
     header, overlays = db2_casc.decode(overlays_path.read_bytes())
     if header['layout_hash'] != 0x9A196494:
         raise ValueError('requires pinned WorldMapOverlay layout9A196494')
@@ -200,7 +202,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     condition_trees = {
         row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv')).items()
         if row_id not in single_modifiers
-        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievements, node_counts, pet_types) for kind, asset in facts)
+        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, authored_facts, achievements, node_counts, pet_types) for kind, asset in facts)
     }
     supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, condition_trees)
     by_type = collections.defaultdict(set)
