@@ -1,4 +1,4 @@
-//! Read-only source level inputs for temporary guardians. Ordinary NPC spawning is unchanged.
+//! Read-only level inputs for temporary guardians and wild summons. Ordinary NPC spawning is unchanged.
 use std::collections::HashMap;
 
 use rusqlite::Connection;

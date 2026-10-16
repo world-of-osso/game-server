@@ -25,7 +25,7 @@ fn toyfx42_plain_ally_is_owned_but_not_a_player_controlled_minion() {
 /// to isolate minion ownership. Modified properties are not Scarab source claims.
 fn assert_source_actor_flags(title: i32, flags: u32, owner_is_player: bool, controlled: bool) {
     use crate::spell_cast::summon::SummonedCreature;
-    use shared::components::{Npc, Player, UnitFlags, UnitIsPet, UnitSummonedBy};
+    use shared::components::{Npc, Player, UnitFlags, UnitIsPet, UnitLevel, UnitSummonedBy};
     let directory = tempfile::tempdir().unwrap();
     let path = toyfx8_world();
     let conn =
@@ -48,10 +48,13 @@ fn assert_source_actor_flags(title: i32, flags: u32, owner_is_player: bool, cont
             .world_mut()
             .entity_mut(h.caster)
             .remove::<Player>()
-            .insert(Npc {
-                template_id: 6,
-                name: "NPC owner fixture".into(),
-            });
+            .insert((
+                Npc {
+                    template_id: 6,
+                    name: "NPC owner fixture".into(),
+                },
+                UnitLevel(80),
+            ));
     }
     let caster = h.caster;
     crate::spell_cast::execute_cast(h.app.world_mut(), caster, &spell, None)

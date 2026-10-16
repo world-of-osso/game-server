@@ -566,6 +566,14 @@ fn read_summon_template(
     })
 }
 
+fn read_summoner_level(world: &World, owner: Entity) -> Option<u8> {
+    if world.get::<Player>(owner).is_some() {
+        world.get::<Level>(owner).map(|level| level.0)
+    } else {
+        world.get::<UnitLevel>(owner).map(|level| level.0)
+    }
+}
+
 struct SelectedSummonLevel {
     difficulty: u32,
     level: u8,
@@ -580,7 +588,7 @@ fn roll_summon_level(
     properties: SummonProperties,
     dest: super::targets::Dest,
 ) -> Option<SelectedSummonLevel> {
-    let owner_level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    let owner_level = read_summoner_level(world, owner)?;
     let uses_native_level =
         properties.is_guardian() || (properties.control == CONTROL_WILD && properties.title == 0);
     if !uses_native_level {
