@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Forced-forward flag boundary (2026-10-16)
+
+TC `HandleForceMoveForward` reconciles aura241 into `UnitFlags2::FORCE_MOVEMENT` (0x40), preserving every unrelated bit and retaining the flag until the last241 aura leaves. Genuine source-spell148626/194807 RED observes1 instead of65; the committed handler and shared constant pass the overlap/final-removal control1/1 in6.08s at serverb0a24e7d/protocol07a8faa. Native input, authentic104329 mount admission/body and actual-use lifecycle are still in progress; no whole-Toy, wire, native-pixel or complete-toy claim. [Contract](../../specs/toys.md#contract). Exact stage ledger: `/home/osso/.worktrees/logs/toy-effects14-continuation/force-forward62-proof-ledger.json`.
+
 ## Ysera source summon boundary (2026-10-16)
 
 Ysera's Tear130170/195708 summons one99518/display66207 with property3054: private to its owner, ordinary non-pet wild actor, source47's8yd front offset and120000ms expiry. Authentic template publication was missing: real importer RED finds zero99518; actual learned UseToy RED refuses missing99518. The maintained importer now admits only that source entry; existing placement/privacy/level/lifetime handlers are unchanged. [Contract](../../specs/toys.md#contract). Six importer controls and the real learned-use lifecycle pass; whole-Toy138/138 and current check/fmt pass after a module-order-only correction. [Exact proof](../../toy-effects14-coverage.md#ysera-source-summon-proof-2026-10-16) records literal revisions, private seventeen-asset body closure and prepared classification385/1166, not complete-toy coverage. Native state kit60600→procedural8605/type22 is currently ignored by the renderer; body asset closure and server acceptance do not establish that appearance or complete-toy parity.

@@ -1,6 +1,7 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Forced-forward flag boundary](systems/toys.md#forced-forward-flag-boundary-2026-10-16) — aura241 source overlap/final-removal RED→GREEN1/1; native input and actual Ashhide mount remain active.
 - [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16) — authentic private vision lifecycle,138/138 Toy regression and17-file body closure; procedural8605 rendering remains open.
 - [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import, learned-use lifecycle and137/137 Toy regression; private70391 five-asset closure verified, native pixels separate.
 
