@@ -351,10 +351,14 @@ fn quality_crafting_refuses_before_any_reagent_or_skill_mutation() {
         .unwrap()
         .clone();
     assert!(spell.effects.iter().any(|effect| effect.effect == 288));
-    assert!(matches!(
-        check_cast_items(h.app.world(), h.player, &spell),
-        Err(CastFailure::Unsupported(_))
-    ));
+    let Err(CastFailure::Unsupported(reason)) = check_cast_items(h.app.world(), h.player, &spell)
+    else {
+        panic!("unsourced quality operations must refuse before consuming reagents");
+    };
+    assert!(
+        reason.contains("CRAFTING_OPERATION_COMPOSITION"),
+        "{reason}"
+    );
     h.send::<CraftRecipe, ProfessionChannel>(CraftRecipe {
         spell_id: 375110,
         casts: 1,

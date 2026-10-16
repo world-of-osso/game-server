@@ -530,10 +530,9 @@ pub(crate) fn check_cast_items(
         .iter()
         .any(|effect| matches!(effect.effect, EFFECT_QUALITY_CRAFT | EFFECT_RECRAFT));
     if needs_quality_operation {
-        return Err(CastFailure::Unsupported(
-            "Quality crafting/recrafting is unavailable: authentic operation evaluator is missing"
-                .into(),
-        ));
+        return shared::profession::evaluate_crafted_quality()
+            .map(|_| ())
+            .map_err(|gap| CastFailure::Unsupported(gap.to_string()));
     }
     let Some(data) = world.get_resource::<ProfessionData>() else {
         return Ok(());
