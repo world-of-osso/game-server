@@ -378,3 +378,13 @@ Terrain gravity captures the fall peak before landing resets FallTracker, then q
 - [[boss-scripts]] — encounter state transitions.
 - [[persistence]] — character and instance storage.
 - [[zone-architecture]] — map copies and lock lifecycle.
+
+## Incremental evaluation — 2026-10-16
+
+The live event path previously scanned every definition repeatedly to find completions, then recursively evaluated every tree again for the full snapshot. A warmed level event reproduced 11,034 definition visits and 19,460 tree-node evaluations.
+
+Catalog load now indexes criterion IDs to owning definitions, earned-ID dependencies to criteria, and map boundaries to definitions. A disposable per-state memo compares authoritative counters/visible earned IDs, reevaluates affected roots, and retains full root results for snapshot construction. New awards and pet-battle points reach the same fixed point. Historical edits, removed counters, race/scope changes, and map completion remain explicit invalidations. Account aggregation reuses the previous in-memory account memo; persisted contributions and original earned dates stay authoritative. Catalog identity prevents reusing results across reloads. Cold reconciliation still evaluates all definitions; full snapshots still enumerate their complete row set, without repeated recursive evaluation.
+
+Bounded-work RED: 11,034 definition visits / 19,460 tree nodes. Initial GREEN: three targeted tests pass, including an independent pre-index full-scan oracle across historical/counter/map/faction/scope/catalog-reload boundaries. Warm account event plus complete 5,188-row snapshot: 26 definition visits / 174 tree nodes; repeated unchanged event and account synchronization: zero / zero. Durable account migration, deletion retention, earned dates and native producer regressions remain part of the lead integration gate.
+
+Integrated on server master `681461bd` (feature base `bda55ef5`), source proof `efff4c5d`: required workspace achievement/criteria/statistic/instance filter **214 passed / 0 failed / 1 existing opt-in ignored**, site-export **1/1**, no warnings; server workspace/all-target check and format check pass. Warm character event plus full snapshot: **13 definitions / 87 tree nodes**. Native producers, account migration/deletion retention, dates and historical dependencies passed in that filter. No Stockade live tick-time or independent lead-gate claim.
