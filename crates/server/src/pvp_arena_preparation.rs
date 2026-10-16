@@ -163,7 +163,7 @@ mod tests {
                 .world()
                 .get::<crate::spell_cast::SpellHistory>(h.caster)
                 .unwrap()
-                .on_cooldown(&spell, h.app.world().resource::<Time>().elapsed_secs_f64())
+                .on_cooldown(&spell, crate::spell_cast::history_now(h.app.world()))
         );
         crate::auras::apply_aura(
             h.app.world_mut(),
