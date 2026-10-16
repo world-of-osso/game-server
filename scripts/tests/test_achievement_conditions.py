@@ -26,6 +26,24 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_battleground_participation_retains_complete_content_tuning_range(self):
+        criteria = {45044: dict(self.criteria[1], Type='15', Asset='2106', ModifierTreeId='97933')}
+        mods = {97933: node(0, 4, amount=1),
+                97934: node(97933, 2, 268, 483, amount=1)}
+        self.assertEqual(self.compile(mods, criteria), {45044: [None, ((268, 483),)]})
+        self.assertEqual(self.compile({**mods, 97935: node(97933, 2, 25, 1)}, criteria),
+                         {45044: [None, ((25, 1), (268, 483))]})
+        self.assertEqual(self.compile({**mods, 97935: node(97933, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '28', '29', '54', '74', '152', '165'):
+            criteria[45044]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[45044]['Type'] = '15'
+        for field, value in [('Operator', '3'), ('Asset', '0'),
+                             ('SecondaryAsset', '1'), ('TertiaryAsset', '1')]:
+            invalid = copy.deepcopy(mods)
+            invalid[97934][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+
     def test_native_kill_scenario_step_preserves_complete_positive_companions(self):
         criteria = {60015: dict(self.criteria[1], Type='0', Asset='204799', ModifierTreeId='6710')}
         mods = {6710: node(0, 4), 6711: node(6710, 2, 82, 3)}
