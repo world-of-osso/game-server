@@ -274,7 +274,17 @@ THERADRAS_SOURCES = {
     **MARAUDON_SOURCES,
     "Kalimdor/Maraudon/boss_princess_theradras.cpp": "fb6db01bb7d463145e32c0218504624c7668b1070dd9bf38d07532fd99ad3244",
 }
+GARGOLMAR_PRIMARY = dict(
+    map_id=543, entry=17306, encounter_id=1893, bit=2,
+    script="boss_watchkeeper_gargolmar", journal_id=527, actor_id=1104, display_id=18236,
+)
+GARGOLMAR_SOURCES = {
+    "Outland/HellfireCitadel/HellfireRamparts/hellfire_ramparts.h": "9896de99ab8f2049a445af5168b152387bdd019315d898a44e8bf83d72967bce",
+    "Outland/HellfireCitadel/HellfireRamparts/instance_hellfire_ramparts.cpp": "7f907d01ba05818b1dd4f2e945353433569f56a79773722f5d05a622009af49e",
+    "Outland/HellfireCitadel/HellfireRamparts/boss_watchkeeper_gargolmar.cpp": "bfec0a2e7e3fb7a125047d5c7a7acafa85a6d89a78337219e0d02679284b5df1",
+}
 PROFILES = {
+    "gargolmar": (GARGOLMAR_PRIMARY, GARGOLMAR_SOURCES),
     "theradras": (THERADRAS_PRIMARY, THERADRAS_SOURCES),
     "landslide": (LANDSLIDE_PRIMARY, LANDSLIDE_SOURCES),
     "celebras": (CELEBRAS_PRIMARY, CELEBRAS_SOURCES),
