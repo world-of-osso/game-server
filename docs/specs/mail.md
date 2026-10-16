@@ -8,6 +8,7 @@ Player mail at Mailbox game objects, following Retail with AzerothCore rules (`M
 - [x] Mailboxes (`content_gameobject` rows of type 19 on map 0 with a Retail `GameObjectDisplayInfo` box, 56 of them) spawn beside the Guild Vaults.
 - [x] `UseGameObject` on a mailbox opens `NpcRole::Mailbox` (alive, within 5 yd of the model box) and sends `MailboxContents`: delivered mail, newest first. Every later change to the character's mail sends it again while the mailbox is open.
 - [x] Requests name the open mailbox; any other object answers `NotInteracting`.
+- [x] A creature with source `NpcFlags::MAILBOX`, including Katy's GOSSIP|MAILBOX, opens the existing Mailbox role directly through ordinary live-NPC/map/range validation; no fabricated gossip choice. Same send/read/take requests and persistence apply. Death, range loss or despawn closes service without spending postage on rejected requests (TC `WorldSession::CanOpenMailBox`).
 
 ### Sending
 - [x] Postage is 30c per attached item, 30c for a letter; the sender pays postage plus the money sent (`NotEnoughMoney`).

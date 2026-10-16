@@ -59,6 +59,14 @@ impl GossipCatalog {
     /// nothing to interact with. Quests are listed by the quest system, not as a
     /// gossip option.
     pub(crate) fn open(&self, template_id: u32, flags: NpcFlags) -> Option<Opening> {
+        // TC CanOpenMailBox accepts a creature's MAILBOX flag directly, including
+        // Katy's source GOSSIP|MAILBOX flags; no authored gossip choice is required.
+        if flags.contains(NpcFlags::MAILBOX) {
+            return Some(Opening {
+                kind: InteractionKind::Role(NpcRole::Mailbox),
+                actions: Vec::new(),
+            });
+        }
         let roles = roles_from_flags(flags);
         if !flags.contains(NpcFlags::GOSSIP) && roles.len() == 1 {
             return Some(Opening {

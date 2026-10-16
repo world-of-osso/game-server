@@ -24,6 +24,8 @@ mod scarab;
 mod shrine;
 #[path = "toys_sightless_tests.rs"]
 mod sightless;
+#[path = "toys_stampwhistle_tests.rs"]
+mod stampwhistle;
 #[path = "toys_stone_whistle_tests.rs"]
 mod stone_whistle;
 #[path = "toys_summon_level_tests.rs"]
