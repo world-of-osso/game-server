@@ -84,6 +84,147 @@ fn stat_mods(h: &Harness) -> AuraStatMods {
     h.app.world().get::<AuraStatMods>(h.caster).unwrap().clone()
 }
 
+fn guild_rider(extra: &[u32]) -> Harness {
+    let spells: Vec<_> = [78633].into_iter().chain(extra.iter().copied()).collect();
+    let mut h = rider(225, true, &spells).expect("Actual Golden Gryphon and mount catalog");
+    // The harness loads only requested native spell records into SpellStore.
+    // Keep78633 available there, but derive its knowledge from the guild grant.
+    let baseline = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .iter()
+        .filter(|id| *id != 78633)
+        .collect();
+    let mut known = crate::class_progression::KnownSpells::fixture(baseline);
+    known.set_guild_grants(&[78633]);
+    h.app.world_mut().entity_mut(h.caster).insert(known);
+    h.advance(3);
+    h
+}
+
+#[test]
+fn guild_mount_up_real_spell_grant_modifies_ground_and_flight_then_revokes() {
+    // Active GuildPerkSpells2→78633; SpellEffect68259/68260/102117 are172/211/210.
+    // TC Unit.cpp8812–8854: mounted base multiplier × max(stacking, nonstacking).
+    let mut h = guild_rider(&[]);
+    assert!(
+        has(&h, 78633),
+        "Real known passive is applied, not a fabricated speed aura"
+    );
+    assert_eq!(
+        stat_mods(&h).movement_speed,
+        1.0,
+        "Unmounted running is unchanged"
+    );
+    mount(&mut h);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let mounted = stat_mods(&h);
+    assert!(
+        (mounted.movement_speed - 2.2).abs() < 1e-6,
+        "Actual mounted ground speed: {}",
+        mounted.movement_speed
+    );
+    assert!(
+        (mounted.flight_speed - 3.52).abs() < 1e-6,
+        "Actual mounted flight speed: {}",
+        mounted.flight_speed
+    );
+    h.app
+        .world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .set_guild_grants(&[]);
+    h.advance(3);
+    assert!(!has(&h, 78633));
+    let departed = stat_mods(&h);
+    assert_eq!(departed.movement_speed, 2.0);
+    assert!((departed.flight_speed - 3.2).abs() < 1e-6);
+    assert!(
+        has(&h, GOLDEN_GRYPHON),
+        "Guild departure does not unmount or unlearn class spells"
+    );
+    cancel_mount(&mut h);
+    assert_eq!(stat_mods(&h).movement_speed, 1.0);
+}
+
+#[test]
+fn guild_mount_up_real_crusader_aura_uses_stronger_bonus_without_stacking() {
+    // Actual32223 effects172/211 are20%, stronger than Mount Up's10%.
+    let mut h = guild_rider(&[32223]);
+    mount(&mut h);
+    let swim_without_crusader = stat_mods(&h).swim_speed;
+    h.cast_and_deliver(32223, None);
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has(&h, 32223) && has(&h, 78633));
+    let combined = stat_mods(&h);
+    assert!(
+        (combined.movement_speed - 2.4).abs() < 1e-6,
+        "{}",
+        combined.movement_speed
+    );
+    assert!(
+        (combined.flight_speed - 3.84).abs() < 1e-6,
+        "{}",
+        combined.flight_speed
+    );
+    assert_eq!(
+        combined.swim_speed, swim_without_crusader,
+        "172/211 must not leak into swim speed"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .set_guild_grants(&[]);
+    h.advance(3);
+    assert!(!has(&h, 78633) && has(&h, 32223));
+    assert!((stat_mods(&h).movement_speed - 2.4).abs() < 1e-6);
+}
+
+#[test]
+fn guild_mount_up_real_map_transitions_suppress_and_restore_without_unlearning() {
+    use crate::maps::{
+        InMap,
+        store::{InstanceType, load_map_store},
+    };
+    let mut h = guild_rider(&[]);
+    let data = world_db().expect("Actual installed map catalog");
+    let conn =
+        Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let maps = load_map_store(&conn).unwrap();
+    assert_eq!(
+        maps.map(489).unwrap().instance_type,
+        InstanceType::Battleground
+    );
+    assert_eq!(maps.map(559).unwrap().instance_type, InstanceType::Arena);
+    h.app.insert_resource(maps);
+    mount(&mut h);
+    for (map_id, eligible) in [(489, false), (559, false), (0, true)] {
+        h.app.world_mut().entity_mut(h.caster).insert(InMap {
+            map_id,
+            instance_id: u32::from(map_id != 0),
+        });
+        h.advance(3);
+        assert!(
+            h.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(h.caster)
+                .unwrap()
+                .contains(78633)
+        );
+        assert_eq!(
+            has(&h, 78633),
+            eligible,
+            "Authored passive eligibility on actual map{map_id}"
+        );
+        let expected = if eligible { 2.2 } else { 2.0 };
+        assert!((stat_mods(&h).movement_speed - expected).abs() < 1e-6);
+    }
+}
+
 #[test]
 fn players_entering_the_world_carry_flight_style_steady() {
     let Some(h) = rider(225, true, &[]) else {
