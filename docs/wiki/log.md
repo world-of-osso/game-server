@@ -1,3 +1,7 @@
+## 2026-10-16 — Forced-forward flag boundary
+
+[Aura241 flag](systems/toys.md#forced-forward-flag-boundary-2026-10-16): source148626/194807 overlap/removal RED→GREEN1/1 preserves unrelated bits. Native input and actual104329 mount/body/lifecycle remain active; no whole-Toy or complete-toy claim.
+
 ## 2026-10-16 — Ysera source admission and private body closure
 
 [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16): genuine importer/use RED, authentic99518 admission, six importer controls and actual private-owner/front-offset/static120s simulation lifecycle pass. Whole-Toy138/138 and check/fmt pass after module-order-only formatting repair. Seventeen70391 body dependencies plus four aliases authenticate/publish privately; procedural8605/type22 remains unrendered. Prepared classification adds only130170 to385/1166, not complete-toy parity; earlier interaction and guardian HP gaps remain.
