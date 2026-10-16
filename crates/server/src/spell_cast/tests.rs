@@ -323,7 +323,7 @@ fn kick_interrupts_target_cast_and_locks_its_school_combat_log_metadata() {
         "cast interrupted"
     );
     let history = h.app.world().get::<super::SpellHistory>(h.npc).unwrap();
-    let now = h.app.world().resource::<Time>().elapsed_secs_f64();
+    let now = super::history_now(h.app.world());
     let fire = 4;
     assert!(history.school_locked(fire, now + 5.5), "6 s Fire lockout");
     assert!(!history.school_locked(fire, now + 6.1));
