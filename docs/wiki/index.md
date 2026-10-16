@@ -1,14 +1,28 @@
+- [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
+# Wiki Index
+
+- [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
+
+- [Crowd Pummeler source clock](systems/boss-scripts.md#gnomeregan-crowd-pummeler-source-clock--2026-10-16) — authenticated6229→381/bit4 copy-only binding and real three-spell first/repeat/damage/death-credit proof; knockback/interrupt and native acceptance remain separate.
+
+- [Electrocutioner primary and source mana gap](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16) — authenticated6235/380/bit3 binding and controlled death credit; ordinary SAI Shock fails authored mana admission, named mechanics acceptance remains open.
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls pass, workspace check held by bot live window; full talent/legal/fresh UDP acceptance open.
 
+- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
 - [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) — Charred/Rampage damage-only fixtures use existing sourced dodge reduction; actual Chaos `Miss(Dodge)` reproduces intermittent zero-damage preconditions, no evade/gameplay change.
 
 - [Stockade proximity receipts](investigations/follower-data.md#stockade-proximity-receipts--2026-10-15) — debug-only acquisition positions distinguish proximity from damage; social-assist gaps remain explicit.
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import, learned-use lifecycle and137/137 Toy regression; private70391 five-asset closure verified, native pixels separate.
+
+- [Shrine server per-target stat conversion](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16) — actual-use missing-table RED→source level/armor/damage/health conversion19 controls; actual attack/client HP proof separate.
+
+- [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
 
 - [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; [health-based damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16) and native modifier exclusions covered separately; PvP/follow-up talents open.
 
@@ -20,6 +34,7 @@
 
 - [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
+- [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
 
@@ -92,6 +107,7 @@
 - [Source Toy area lifecycle](systems/toys.md#source-area-group-lifecycle-2026-10-13) —69 root guards, real ADT ancestry/completion, within-group retention, exit interruption and preserved cooldown; both native skins.
 
 - [Current PvP faction / War Banners](systems/toys.md#current-pvp-faction-and-war-banner-proof-2026-10-13) — actual match-entry/return authority, source condition selection, both-faction/both-skin physical combat removal; explicit physics/cloth boundary.
+- [Wailing controlled gossip/start](systems/boss-scripts.md#wailing-controlled-gossipstart--2026-10-15) — source callbacks/events1–3, real flag0 ingress rejection and physical first path2/2; natural positive activation remains data-blocked.
 - [Wailing targeted aggro Say](systems/boss-scripts.md#wailing-targeted-aggro-say--2026-10-15) — attacker-name substitution, unchanged25yd broadcast, controlled native-server proof; natural activation/native clear open.
 
 - [Wailing first awakening wave](systems/boss-scripts.md#wailing-first-awakening-wave--2026-10-14) — source ritual timing, actual6271 self aura and three authored Moccasins; controlled prior arrival, no balance/native-clear claim.
@@ -459,3 +475,5 @@ Debug logs and root cause analyses.
 
 - [Wailing Normal wave projection](systems/boss-scripts.md#wailing-normal-wave-projection--2026-10-15) — copy-only source Normal rows; two process-boundary tests pass, no canonical/balance claim.
 - [Feral Spirit owner contribution](systems/spell-casting.md#feral-spirit-owner-contribution--2026-10-15) — source-backed owner AP and weapon terms; intrinsic AP named gap; native live-owner RED→GREEN and24 scoped controls pass.
+
+- [Rotgrip source mismatch](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16) — authenticated13596→428/bit6, literal Fatal Bite SELF damage versus SAI victim argument, real Puncture and isolated controlled credit; ordinary fight remains uncertified.
