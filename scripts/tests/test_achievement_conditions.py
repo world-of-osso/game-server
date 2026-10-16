@@ -26,6 +26,28 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_hug_retains_player_dead_and_hostile_target_companions(self):
+        criteria = {2379: dict(self.criteria[1], Type='54', Asset='56', ModifierTreeId='1080')}
+        mods = {1080: node(0, 4, amount=1),
+                1081: node(1080, 2, 5, 0, amount=1),
+                1082: node(1080, 2, 6, 0, amount=1),
+                1083: node(1080, 2, 7, 0, amount=1)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {2379: [None, ((5, 0), (6, 0), (7, 0))]})
+        self.assertEqual(self.compile({**mods, 1084: node(1080, 2, 8, 196665)}, criteria),
+                         {2379: [None, ((5, 0), (6, 0), (7, 0), (8, 196665))]})
+        self.assertEqual(self.compile({**mods, 1084: node(1080, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '28', '29', '74', '110', '165'):
+            criteria[2379]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[2379]['Type'] = '54'
+        for leaf in (1081, 1082, 1083):
+            for field, value in [('Operator', '3'), ('Asset', '1'),
+                                 ('SecondaryAsset', '1'), ('TertiaryAsset', '1')]:
+                invalid = copy.deepcopy(mods)
+                invalid[leaf][field] = value
+                self.assertEqual(self.compile(invalid, criteria), {})
+
     def test_native_kill_scenario_step_preserves_complete_positive_companions(self):
         criteria = {60015: dict(self.criteria[1], Type='0', Asset='204799', ModifierTreeId='6710')}
         mods = {6710: node(0, 4), 6711: node(6710, 2, 82, 3)}
