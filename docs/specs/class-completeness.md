@@ -105,7 +105,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## Touch of Death admission
 
-- [x] Native322109 refuses a healthy stronger target before CastSuccess or cooldown publication. Its baseline admits creatures whose current health is strictly below the caster's maximum health; learned passive322113 additionally admits targets strictly below its authored health percentage. The native15% threshold is exclusive. Actual damage, PvP integration, Stagger removal and other follow-up talents remain separate, uncertified paths.
+- [x] Native322109 refuses a healthy stronger target before CastSuccess or cooldown publication. Its baseline admits creatures whose current health is strictly below the caster's maximum health; learned passive322113 additionally admits targets strictly below its authored health percentage. The native15% threshold is exclusive. PvP integration, Stagger removal and other follow-up talents remain separate, uncertified paths.
+- [x] Native322109 primary damage uses the caster's live maximum health and authored100%/35% fields for weaker creatures/other admitted targets. Native Can'tCrit, ignore caster percent damage modifiers, and ignore victim school/caster/versatility modifiers plus armor retain their source exclusions. These flags do not disable ordinary spells' modifiers. Mechanic-specific damage-taken auras, PvP integration, Stagger removal and other follow-up talents remain separate.
 
 ## Melee attack speed
 

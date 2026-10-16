@@ -1,9 +1,18 @@
-//! 70391 target admission; damage and follow-up talent consumers are separate.
+//! 70391 primary-target admission and maximum-health damage; talents remain separate.
 use bevy::prelude::*;
 use shared::components::{Health, Npc};
 
 pub(super) const TOUCH_OF_DEATH: u32 = 322109;
 const IMPROVED_TOUCH_OF_DEATH: u32 = 322113;
+
+/// 70391 root s4/s3 supply 100%/35%; SimC76f8118 sc_monk.cpp2701–2711.
+pub(super) fn damage(world: &World, caster: Entity, target: Entity, _amount: f32) -> f32 {
+    let monk = world.get::<Health>(caster).expect("living Monk health");
+    let victim = world.get::<Health>(target).expect("living target health");
+    let weaker_creature = world.get::<Npc>(target).is_some() && victim.current < monk.max;
+    let index = if weaker_creature { 3 } else { 2 };
+    monk.max * super::script_effect_value(world, caster, TOUCH_OF_DEATH, index) / 100.0
+}
 
 /// 70391 descriptions require a weaker creature, or the learned improved rank
 /// below its authored percentage. SimC76f8118 sc_monk.cpp2685 compares the
