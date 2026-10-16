@@ -235,6 +235,26 @@ CREATE TABLE spell_aura_options (
 );
 CREATE INDEX IF NOT EXISTS spell_aura_options_spell_id ON spell_aura_options(SpellID);
 
+DROP TABLE IF EXISTS spell_aura_restrictions;
+CREATE TABLE spell_aura_restrictions (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  CasterAuraState INTEGER NOT NULL DEFAULT 0,
+  TargetAuraState INTEGER NOT NULL DEFAULT 0,
+  ExcludeCasterAuraState INTEGER NOT NULL DEFAULT 0,
+  ExcludeTargetAuraState INTEGER NOT NULL DEFAULT 0,
+  CasterAuraSpell INTEGER NOT NULL DEFAULT 0,
+  TargetAuraSpell INTEGER NOT NULL DEFAULT 0,
+  ExcludeCasterAuraSpell INTEGER NOT NULL DEFAULT 0,
+  ExcludeTargetAuraSpell INTEGER NOT NULL DEFAULT 0,
+  CasterAuraType INTEGER NOT NULL DEFAULT 0,
+  TargetAuraType INTEGER NOT NULL DEFAULT 0,
+  ExcludeCasterAuraType INTEGER NOT NULL DEFAULT 0,
+  ExcludeTargetAuraType INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_aura_restrictions_spell_id ON spell_aura_restrictions(SpellID);
+
 DROP TABLE IF EXISTS spell_categories;
 CREATE TABLE spell_categories (
   ID INTEGER PRIMARY KEY,

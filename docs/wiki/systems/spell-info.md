@@ -1,5 +1,11 @@
 # Spell Info
 
+## Native aura restrictions producer — 2026-10-16
+
+The maintained `scripts/db2.py import` transaction now includes `SpellAuraRestrictions`, with all fifteen native columns in `spell_aura_restrictions` and the selected `db2_build` receipt. This retains caster/target state IDs, required/excluded spell references and aura types rather than silently discarding the provided CSV. Reimport replaces the prior rows through the normal schema transaction and validates required headers before mutation; non-DB2 tables remain outside replacement.
+
+Native70391 fixtures include Victory Rush34428 caster-state10, Execute163201 target-state2, Massacre281000 target-state13, and170183's nonzero required/excluded aura-spell references. The real maintained CLI originally returned success while omitting all those rows (RED2pass/1fail,8.10s); targeted GREEN/publication checks pending. Test inputs now supply the active-build receipt required by the current CLI and use a genuinely missing required header for rollback coverage, not an allowed extra column. No canonical database was changed. Runtime `SpellInfo` loading/state admission is still separate and does not consume this new table yet; this is not Massacre/Execute gameplay certification. [Contract](../../specs/class-completeness.md); evidence `data/class-completeness6-2026-10-12/aura-restrictions-import-{goal,source,proof-ledger}.json`.
+
 Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` loads two read-only resources from `data/world.db` at startup: `SpellStore` (every spell) and `ClassSpells` (per-class spell lists). Source tables and build: [[world-data]] (DB2 12.1.0.69933). [[spell-casting]] resolves casts from these records.
 
 ## SpellStore

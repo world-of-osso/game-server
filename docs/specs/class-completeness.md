@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [ ] The maintained DB2 importer retains every native SpellAuraRestrictions state, spell-reference, type and exclusion column in `spell_aura_restrictions`, with the selected build receipt and normal header validation/atomic replacement. Reimport replaces prior rows and preserves non-DB2 data. This producer contract does not certify runtime aura-state admission, Massacre/Execute eligibility or canonical publication.
+
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
 
 - [x] Optional resource spend ignores flat spell modifiers while retaining percentage modifiers for the native cost order, family/mask and caster. Practiced Strikes429647 discounts only Protection Execute's base cost; native Sudden Death52437 effect5 still makes order1 base/optional spend free without changing Arms order0. Existing available-resource clamping remains unchanged.
