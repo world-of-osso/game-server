@@ -4,7 +4,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Enchanted Stone Whistle source summon (2026-10-16)
 
-129279/193687 has one source wild/default summon of Petrified Sand Piper98300/display71056. The maintained additive importer copies its authentic template/model; existing63→86 destination selection, ownership, ordinary wild initialization and60000ms expiry remain unchanged. No AI/addon/spell/click/root-script binding supplies another action. [Source-order gaps and exact proof status](../../toy-effects14-coverage.md#source-order-continuation-gaps-2026-10-16) distinguish server acceptance from native assets/pixels; guardian final HP remains read-only.
+129279/193687 has one source wild/default summon of Petrified Sand Piper98300/display71056. The maintained additive importer copies its authentic template/model; existing63→86 destination selection, ownership, ordinary wild initialization and60000ms expiry remain unchanged. No AI/addon/spell/click/root-script binding supplies another action. [Exact server proof and native gaps](../../toy-effects14-coverage.md#enchanted-stone-whistle-server-proof-2026-10-16) distinguish server acceptance from native assets/pixels; guardian final HP remains read-only.
 
 ## Shrine server per-target stat conversion (2026-10-16)
 
