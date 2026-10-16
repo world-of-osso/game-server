@@ -18,12 +18,30 @@ fn encounter_coverage_electrocutioner_real_sai_spells_and_copy_isolated_credit()
         current: 1_000_000.0,
         max: 1_000_000.0,
     });
+    eprintln!(
+        "ELECTROCUTIONER spells={:?} sai_rows={}",
+        [SHOCK, MEGAVOLT, CHAIN_BOLT]
+            .map(|id| (id, h.app.world().resource::<SpellStore>().get(id).is_some())),
+        h.app
+            .world()
+            .resource::<smart_ai::SmartScripts>()
+            .0
+            .get(&ELECTROCUTIONER)
+            .map_or(0, |rows| rows.len())
+    );
     h.engage(boss);
     h.advance(14.5);
     for spell in [SHOCK, MEGAVOLT, CHAIN_BOLT] {
         assert_eq!(h.casts(0, boss, spell), 0, "early cast {spell}");
     }
     h.advance(4.0);
+    eprintln!(
+        "ELECTROCUTIONER after18.5 state={:?} cast={:?} health={:?} logs={:?}",
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss),
+        h.app.world().get::<CastState>(boss),
+        h.health(player),
+        h.inbox(0).log.iter().rev().take(8).collect::<Vec<_>>()
+    );
     assert!(h.casts(0, boss, SHOCK) >= 1);
     assert_eq!(h.casts(0, boss, MEGAVOLT), 0);
     assert_eq!(h.casts(0, boss, CHAIN_BOLT), 0);
