@@ -82,8 +82,10 @@ fn pet(h: &mut Harness) -> Entity {
 }
 #[test]
 fn dummy14_survival_kill_command_routes_named_damage_from_owned_pet() {
-    let mut h = harness(Vec::new(), &[259489, 259277], 3).unwrap();
+    // Named child damage must hit; avoidance has separate native tests.
+    let mut h = harness(Vec::new(), &[259489, 259277, SUNWELL_RADIANCE], 3).unwrap();
     let pet = pet(&mut h);
+    apply_native_enemy_dodge_reduction_to(&mut h, pet);
     let target = h.npc;
     execute(&mut h, 259489, Some(target));
     h.advance(1);
