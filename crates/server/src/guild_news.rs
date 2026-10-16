@@ -230,19 +230,30 @@ mod tests {
         let ids = {
             let read = db.begin_read().unwrap();
             let table = read.open_table(crate::persistence::CHARACTERS).unwrap();
-            table.iter().unwrap().filter_map(|row| {
-                let (id, value) = row.unwrap();
-                let character: crate::persistence_types::CharacterData = bitcode::decode(value.value()).unwrap();
-                character.name.starts_with("Gcnews").then_some(id.value())
-            }).collect::<Vec<_>>()
+            table
+                .iter()
+                .unwrap()
+                .filter_map(|row| {
+                    let (id, value) = row.unwrap();
+                    let character: crate::persistence_types::CharacterData =
+                        bitcode::decode(value.value()).unwrap();
+                    character.name.starts_with("Gcnews").then_some(id.value())
+                })
+                .collect::<Vec<_>>()
         };
         assert_eq!(ids.len(), 3, "only the three private news characters");
         for id in ids {
             let mut reputation = shared::reputation::CharacterReputation::default();
-            reputation.set_rep(1119, shared::reputation::threshold_for_standing(shared::reputation::Standing::Exalted));
+            reputation.set_rep(
+                1119,
+                shared::reputation::threshold_for_standing(shared::reputation::Standing::Exalted),
+            );
             crate::persistence::save_reputation(&db, id, &reputation);
             crate::maps::persistence::save_character_map(&db, id, 571);
-            assert!(query(&db, id).entries.is_empty(), "setup never fabricates news");
+            assert!(
+                query(&db, id).entries.is_empty(),
+                "setup never fabricates news"
+            );
         }
     }
 
