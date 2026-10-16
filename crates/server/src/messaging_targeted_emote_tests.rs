@@ -287,6 +287,29 @@ fn spawn_hug_player(app: &mut App, race: u8, character: u64) -> Entity {
         .id()
 }
 
+fn kill_hug_players(app: &mut App, targets: [Entity; 2]) {
+    for target in targets {
+        assert!(crate::death::apply_health_damage(
+            &mut app
+                .world_mut()
+                .get_mut::<shared::components::Health>(target)
+                .unwrap(),
+            100.0,
+        ));
+        app.world_mut()
+            .write_message(crate::death::PlayerDeathTransition { player: target });
+    }
+    advance(app);
+    for target in targets {
+        let death = app
+            .world()
+            .get::<crate::death::PlayerDeathState>(target)
+            .unwrap();
+        assert_eq!(death.state, shared::death::DeathState::Dead);
+        assert!(death.corpse.is_some());
+    }
+}
+
 #[test]
 fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
     use shared::components::{Health, Position, UnitFactionTemplate};
@@ -315,29 +338,7 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
     let enemy = spawn_hug_player(&mut app, 2, 9001);
     let friendly = spawn_hug_player(&mut app, 1, 9002);
     // Native damage and death transition create corpses, not hand-written predicate facts.
-    for target in [enemy, friendly] {
-        assert!(crate::death::apply_health_damage(
-            &mut app.world_mut().get_mut::<Health>(target).unwrap(),
-            100.0
-        ));
-        app.world_mut()
-            .write_message(crate::death::PlayerDeathTransition { player: target });
-    }
-    advance(&mut app);
-    assert_eq!(
-        app.world()
-            .get::<crate::death::PlayerDeathState>(enemy)
-            .unwrap()
-            .state,
-        shared::death::DeathState::Dead
-    );
-    assert!(
-        app.world()
-            .get::<crate::death::PlayerDeathState>(enemy)
-            .unwrap()
-            .corpse
-            .is_some()
-    );
+    kill_hug_players(&mut app, [enemy, friendly]);
     assert!(crate::spell_cast::targets::is_hostile(
         app.world(),
         player,
