@@ -153,6 +153,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             85 => self.reset_aura_state(p[0] as u32),
+            112 => self.resurrect_reserve(caster, effect),
             111 => {
                 let pet = self.battle.pet_mut(caster);
                 pet.health = pet.stats.health * p[0] / 100;
@@ -446,6 +447,21 @@ impl<R: BattleRng> Runtime<'_, R> {
         for serial in serials {
             self.remove_aura(serial)?;
         }
+        Ok(true)
+    }
+    fn resurrect_reserve(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let recipient = other_team_slot(caster, effect.order + 1);
+        if self.battle.pet(recipient).health > 0
+            || !self.required_states(caster, recipient, effect.params[2], effect.params[3])
+        {
+            return Ok(false);
+        }
+        let dead = self.catalog.state_id("Is_Dead")?;
+        let pet = self.battle.pet_mut(recipient);
+        pet.health = pet.stats.health * effect.params[0] / 100;
+        pet.states.insert(dead, 0);
+        pet.undead_expires = None;
+        self.events.push(Event::Revived(recipient));
         Ok(true)
     }
     fn fade_swap(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {

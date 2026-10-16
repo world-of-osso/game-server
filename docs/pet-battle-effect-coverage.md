@@ -28,6 +28,12 @@ Native d6710a1d/server and6c3c1feda/engine on privateUDP5961 use owned Mr. Biggl
 
 Exact source/artifact hashes, native snapshots, pointer ledger, geometry and image inspection: `/home/osso/.worktrees/logs/petbattle-effects-2026-10-16/`. Native build cohorts were synchronized with master after shared honor/world-quest API changes; the interrupted engine build produced no current artifact and is explicitly invalid, followed by one successful durable-log build. This proves the inherited shared HUD's health/aura/cooldown/log projection for479; it does not certify each wall's 3D visual, all seven native casts, exact Retail timing or damage-block feedback wording. Onyx439 says allied attacks are prevented while two enemy attacks are protected; whether allied attempts consume its charges is not established, so438/439 stay rejected. Multiple opposing walls' interception order and exact Retail expiry/block feedback remain uncertified.
 
+## Bench resurrection112 — implementation2026-10-16
+
+Current70391 Raise Dead2347 and Mass Resurrection2348 both say: “Bring all other friendly pets back to life, returning them to5% health.” Effects4328–4331/property112 supply percentage5, required caster state0, required target state1/Is_Dead; turns3889/3890 each contain two ordered rows. Admission is restricted to those roots, orders1/2 and exact parameter tuples. Each row addresses one inactive friendly slot, never the caster or enemy; living reserves are unchanged. Explicit revival clears Is_Dead and stale undead expiry while retaining once-per-battle passive usage. Owned-pet encounter construction now derives Is_Dead from persisted HP, not the fresh full-health constructor default.
+
+Three real-row RED tests reject unsupported112. A separate redb close/reopen→owned-team load RED reproduces zero-HP reserves with missing dead state before any round. Targeted GREEN, census, native both-skin projection and final gates are pending; no completion/parity claim. Source rows and current CSV hashes: `logs/petbattle-effects-2026-10-16/resurrection-source-rows.json` under the shared worktree log root. Scope excludes generic resurrection selectors, other property111 routes and unrelated HP persistence.
+
 ## Coverage by rows — do not conflate these metrics
 
 | Metric | Before | After |
