@@ -77,6 +77,7 @@ const EVENT_WAYPOINT_PAUSED: u32 = 55;
 const EVENT_WAYPOINT_RESUMED: u32 = 56;
 const EVENT_WAYPOINT_STOPPED: u32 = 57;
 const EVENT_WAYPOINT_ENDED: u32 = 58;
+const EVENT_COUNTER_SET: u32 = 77;
 // `SMART_ACTION`.
 const ACTION_TALK: u32 = 1;
 const ACTION_SET_EMOTE_STATE: u32 = 17;
@@ -100,6 +101,7 @@ const ACTION_SET_RUN: u32 = 59;
 const ACTION_SET_NPC_FLAG: u32 = 81;
 const ACTION_ADD_NPC_FLAG: u32 = 82;
 const ACTION_WP_RESUME: u32 = 65;
+const ACTION_SET_COUNTER: u32 = 63;
 const ACTION_STORE_TARGET_LIST: u32 = 64;
 const ACTION_CALL_TIMED_ACTION_LIST: u32 = 80;
 const ACTION_REMOVE_NPC_FLAG: u32 = 83;
@@ -246,6 +248,7 @@ fn supports_event(kind: u32) -> bool {
             | EVENT_WAYPOINT_RESUMED
             | EVENT_WAYPOINT_STOPPED
             | EVENT_WAYPOINT_ENDED
+            | EVENT_COUNTER_SET
     )
 }
 
@@ -270,6 +273,7 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_WP_PAUSE
             | ACTION_WP_RESUME
             | ACTION_STORE_TARGET_LIST
+            | ACTION_SET_COUNTER
             | ACTION_CALL_TIMED_ACTION_LIST
             | ACTION_REMOVE_NPC_FLAG
             | ACTION_SET_FACTION
@@ -358,6 +362,7 @@ pub(crate) struct SmartAi {
     phase: u32,
     boss: Option<super::boss_ai::BossAi>,
     stored_targets: HashMap<u32, Vec<Entity>>,
+    counters: HashMap<u32, u32>,
     timed_list: Option<TimedList>,
     processing_timed_list: bool,
     escort: Option<paths::EscortPath>,
@@ -392,6 +397,7 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         phase: 0,
         boss,
         stored_targets: HashMap::new(),
+        counters: HashMap::new(),
         timed_list: None,
         processing_timed_list: false,
         escort: None,
@@ -527,6 +533,13 @@ impl SmartAi {
                 {
                     self.recalc_timer(index, event.event_params[1], event.event_params[2]);
                     self.process_action(ctx, index, invoker);
+                }
+            }
+            EVENT_COUNTER_SET => {
+                let [id, value, cooldown_min, cooldown_max, _] = event.event_params;
+                if id == spell && self.counters.get(&id).copied().unwrap_or(0) == value {
+                    self.recalc_timer(index, cooldown_min, cooldown_max);
+                    self.process_action(ctx, index, None);
                 }
             }
             EVENT_ACCEPTED_QUEST | EVENT_REWARD_QUEST => {
@@ -692,6 +705,27 @@ impl SmartAi {
             ACTION_DIE => {
                 if ctx.is_alive() {
                     ctx.kill_self();
+                }
+            }
+            ACTION_SET_COUNTER => {
+                let [id, value, reset, ..] = event.action_params;
+                if targets.is_empty() {
+                    self.store_counter(ctx, id, value, reset != 0);
+                }
+                for target in targets {
+                    if target == ctx.me {
+                        self.store_counter(ctx, id, value, reset != 0);
+                    } else {
+                        super::dispatch(
+                            ctx.world,
+                            target,
+                            super::Hook::StoreCounter {
+                                id,
+                                value,
+                                reset: reset != 0,
+                            },
+                        );
+                    }
                 }
             }
             ACTION_STORE_TARGET_LIST => {
@@ -923,6 +957,16 @@ impl SmartAi {
 }
 
 impl CreatureAi for SmartAi {
+    fn store_counter(&mut self, ctx: &mut Ctx, id: u32, value: u32, reset: bool) {
+        let counter = self.counters.entry(id).or_default();
+        *counter = if reset {
+            value
+        } else {
+            counter.wrapping_add(value)
+        };
+        self.process_events_for(ctx, EVENT_COUNTER_SET, None, id);
+    }
+
     /// TC SmartAI::JustAppeared: RESPawn11 precedes OnReset; evade never emits11.
     fn just_appeared(&mut self, ctx: &mut Ctx) {
         if !crate::spell_cast::targets::is_alive(ctx.world, ctx.me) {
@@ -1038,7 +1082,7 @@ impl CreatureAi for SmartAi {
         self.update_follow(ctx, diff_ms);
         self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
-            if self.tick_summon_hook_cooldown(index, diff_ms) {
+            if self.tick_hook_cooldown(index, diff_ms) {
                 continue;
             }
             let event = &self.events[index];
