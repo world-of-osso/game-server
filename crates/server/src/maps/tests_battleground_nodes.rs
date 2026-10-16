@@ -724,6 +724,15 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
             .unwrap()
             .controlled
     );
+    let capabilities = h
+        .app
+        .world()
+        .get::<shared::components::VehicleDriverMovement>(actor.player)
+        .expect("controlling seat must publish its authored NPC mover capabilities");
+    assert_eq!(capabilities.flags, 1594726007);
+    assert!((capabilities.turn_speed - 1.04719758).abs() < 0.00001);
+    assert!((capabilities.walk_speed - 3.0).abs() < 0.00001);
+    assert!((capabilities.run_speed - 0.98571 * 7.0).abs() < 0.00001);
     let vehicle_start = *h.app.world().get::<Position>(demolisher).unwrap();
     let rider_start = *h.app.world().get::<Position>(actor.player).unwrap();
     let relative = Vec3::new(
@@ -826,6 +835,13 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
             .seat_id,
         5767
     );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehicleDriverMovement>(passenger.player)
+            .is_none(),
+        "passenger seat has no NPC mover capabilities"
+    );
     install_isle_input_sender(h, passenger);
     send_isle_facing_input(
         h,
@@ -857,6 +873,13 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
             .world()
             .get::<shared::components::VehiclePassenger>(actor.player)
             .is_none()
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehicleDriverMovement>(actor.player)
+            .is_none(),
+        "Exit removes NPC movement capabilities before ordinary body input"
     );
     let exited = *h.app.world().get::<Position>(actor.player).unwrap();
     send_isle_mover_input(
