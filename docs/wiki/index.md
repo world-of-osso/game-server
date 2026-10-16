@@ -1,3 +1,4 @@
+- [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
@@ -493,3 +494,7 @@ Debug logs and root cause analyses.
 - [Gizlock source runtime](systems/boss-scripts.md#maraudon-gizlock-source-runtime) — actual ranged pull, channel-aware clocks, cone damage, beast-only Flash Bomb exclusion and isolated bit5 controlled credit; native/ordinary/publication open.
 
 - [Vyletongue range events](systems/boss-scripts.md#maraudon-lord-vyletongue-range-events) — real21390 RED→source EVENT_RANGE9/500ms rechecks, nearby stun and20yd Blink with isolated bit2 controlled credit; native/geometry/publication open.
+
+- [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port) — schedules, two guardian waves/death cleanup, manual redeemed actor/isolated credit GREEN; copy-only redeemed base replaces legacy stats.
+
+- [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
