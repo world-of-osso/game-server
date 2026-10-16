@@ -823,6 +823,62 @@ fn water_breathing_aura_marks_the_target_water_breathing() {
 }
 
 #[test]
+fn health_percent_watch_credits_crossings_and_new_auras_but_not_idle_ticks() {
+    // Authored 171393: below20% casts171397; above21% casts171404.
+    let mut h = harness(Vec::new(), &[171393, 171397, 171404], 5)
+        .expect("local health-percent spell fixtures");
+    h.advance(1);
+    apply(&mut h.app, h.caster, h.caster, 171393);
+    h.advance(1);
+    assert!(auras_of(&h, h.caster, 171397).is_empty());
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h.advance(1);
+    assert_eq!(auras_of(&h, h.caster, 171397).len(), 1);
+    remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 171397,
+    );
+    h.advance(2);
+    assert!(
+        auras_of(&h, h.caster, 171397).is_empty(),
+        "remaining below the threshold is not another crossing"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 1000.0;
+    h.advance(1);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h.advance(1);
+    assert_eq!(auras_of(&h, h.caster, 171397).len(), 1);
+    remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        RemoveReason::Cancelled,
+        |aura| [171393, 171397].contains(&aura.spell_id),
+    );
+    h.advance(1);
+    apply(&mut h.app, h.caster, h.caster, 171393);
+    h.advance(1);
+    assert_eq!(
+        auras_of(&h, h.caster, 171397).len(),
+        1,
+        "new aura already below threshold fires on application"
+    );
+}
+
+#[test]
 fn stored_spells_carry_labels() {
     let Some(data) = world_db() else {
         return;

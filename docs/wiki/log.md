@@ -11,6 +11,18 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 - 2026-10-16: [Arena residual](investigations/slow-native-test-fixtures.md#arena-residual-bounded-independent-fixtures-2026-10-16): LEAD-approved cap4 workers; all sixteen native cases pass52.70s with unchanged assertions/frames/50msstep; sampled CPU113.70s versus52.90s wall, full-suite separate.
+## 2026-10-16 — Waywatcher source lifecycle
+
+[Waywatcher130249](systems/toys.md#waywatcher-source-lifecycle-2026-10-16): actual Val'sharah terrain/learning/instant use/source model choices/15s expiry/900s recovery pass1/1 using existing published99572, superseding the old missing-template snapshot. Eighteen same70391 assets and four aliases authenticate/publish privately; canonical ownership absent before publication. Actual private Rust loader, whole-Toy141/141, server binary/tests check and fmt pass; native rendering remains separate.
+
+## 2026-10-16 — Grizzlesnout source lifecycle
+
+[Grizzlesnout129965](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16): actual learning, terrain-backed Northrend admission,1500ms cast, source9287/3.5/241/15s expiry and600s recovery pass1/1. Test-only existing-handler acceptance; twelve canonical body receipts/two aliases authenticate without new publication. Actual canonical Rust loader, whole-Toy140/140, server binary/tests check and fmt pass; native rendering remains separate. Next130249 now has published99572, superseding the earlier missing-template snapshot.
+
+## 2026-10-16 — Forced-forward flag boundary
+
+[Aura241 flag](systems/toys.md#forced-forward-flag-boundary-2026-10-16): source148626/194807 overlap/removal RED→GREEN1/1 preserves unrelated bits. Generic native input35/35 and whole-Toy139/139 pass at the recorded62 revisions; actual104329 mount/body/lifecycle remains deferred for missing73689. No complete-toy claim.
+
 ## 2026-10-16 — Ysera source admission and private body closure
 
 [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16): genuine importer/use RED, authentic99518 admission, six importer controls and actual private-owner/front-offset/static120s simulation lifecycle pass. Whole-Toy138/138 and check/fmt pass after module-order-only formatting repair. Seventeen70391 body dependencies plus four aliases authenticate/publish privately; procedural8605/type22 remains unrendered. Prepared classification adds only130170 to385/1166, not complete-toy parity; earlier interaction and guardian HP gaps remain.
@@ -1637,3 +1649,4 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) follows authenticated binder19/19/SQL and real no-casts RED; casting-aware timer/threshold port implemented, runtime gate pending.
 
 - 2026-10-16: Theradras source port after real missing-casts RED; Zaetar actual base/Normal projection process RED→GREEN. [Details](systems/boss-scripts.md#maraudon-theradras-source-port).
+- 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].

@@ -123,6 +123,23 @@ fn world_quest_expiry_removes_persisted_task_and_watch_at_exact_window_end_after
 }
 
 #[test]
+fn world_quest_area_loading_reports_missing_source_z_and_reimport_command() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "CREATE TABLE content_world_quest_area (quest_id INTEGER, blob_id INTEGER,
+         map_id INTEGER, ui_map_id INTEGER, point_index INTEGER, x REAL, y REAL);
+         INSERT INTO content_world_quest_area VALUES (82521,514681,2601,2256,0,-2268,-1960);",
+    )
+    .unwrap();
+    let error = crate::world_quests::load_areas(&conn)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("content_world_quest_area.z"), "{error}");
+    assert!(error.contains("scripts/import_world_quests.py"), "{error}");
+    assert!(error.contains("--poi-db2-dir"), "{error}");
+}
+
+#[test]
 fn world_quest_definition_loading_never_supplies_a_guessed_duration() {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     assert!(
