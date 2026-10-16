@@ -62,14 +62,6 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
         ),
     >,
     profiles: ChatProfileQuery<'w, 's>,
-    emote_targets: Query<
-        'w,
-        's,
-        (
-            &'static shared::components::Npc,
-            &'static crate::maps::InMap,
-        ),
-    >,
     presences: Query<
         'w,
         's,
@@ -121,10 +113,7 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
         {
             q.criteria.write(crate::achievement::CriteriaCredit {
                 player: emote.player_entity,
-                event: crate::achievement::CriteriaEvent::DoEmote(
-                    text_emote,
-                    emote_target_entry(emote, &q.profiles, &q.emote_targets),
-                ),
+                event: crate::achievement::CriteriaEvent::DoEmote(text_emote, emote.target_entity),
             });
         }
     }
@@ -220,17 +209,6 @@ struct CollectedEmote {
     event: EmoteEvent,
     player_entity: Entity,
     target_entity: Option<Entity>,
-}
-
-/// TC ObjectAccessor::GetUnit: resolve this request's unit on the sender's map copy.
-fn emote_target_entry(
-    emote: &CollectedEmote,
-    profiles: &ChatProfileQuery,
-    targets: &Query<(&shared::components::Npc, &crate::maps::InMap)>,
-) -> Option<u32> {
-    let (_, _, _, _, _, _, map) = profiles.get(emote.player_entity).ok()?;
-    let (npc, target_map) = targets.get(emote.target_entity?).ok()?;
-    (map == Some(target_map)).then_some(npc.template_id)
 }
 
 /// An online player as seen by chat routing.
@@ -643,6 +621,7 @@ fn retail_text_emote(emote: EmoteKind) -> Option<u32> {
         EmoteKind::Sleep => 87,
         EmoteKind::Kneel => 59,
         EmoteKind::Love => 225,
+        EmoteKind::Hug => 56,
         EmoteKind::MountSpecial => return None,
     })
 }
@@ -655,6 +634,7 @@ fn emote_chat_text(emote: EmoteKind) -> Option<&'static str> {
         EmoteKind::Sleep => "falls asleep.",
         EmoteKind::Kneel => "kneels.",
         EmoteKind::Love => "loves everyone.",
+        EmoteKind::Hug => "needs a hug!",
         EmoteKind::MountSpecial => return None,
     })
 }
@@ -670,6 +650,7 @@ fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
         "/sleep" => Some(EmoteKind::Sleep),
         "/kneel" => Some(EmoteKind::Kneel),
         "/love" => Some(EmoteKind::Love),
+        "/hug" => Some(EmoteKind::Hug),
         "/mountspecial" => Some(EmoteKind::MountSpecial),
         _ => None,
     }
