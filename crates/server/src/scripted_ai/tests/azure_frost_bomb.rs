@@ -56,6 +56,19 @@ fn apply_bomb_aura(h: &mut Harness, telash: Entity) {
     h.advance(0.1);
 }
 
+fn project_authored_ground(h: &mut Harness, map: InMap, mut position: Position) -> Position {
+    let probe = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .ground_in(map, Vec3::new(position.x, position.y, position.z));
+    let crate::ground::GroundProbe::Supported(height) = probe else {
+        panic!("native Azure floor at {position:?}: {probe:?}");
+    };
+    position.y = height;
+    position
+}
+
 fn ground_fields(h: &mut Harness) -> Vec<(Entity, Position, InMap)> {
     h.app
         .world_mut()
@@ -104,17 +117,9 @@ fn azure_frost_bomb_natural_expiry_casts_ground_and_damage_at_current_target_pos
     assert!(ground_fields(&mut h).is_empty());
     // Movement after application must not leave the explosion at the old pose.
     h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1.0;
-    let mut position = *h.app.world().get::<Position>(player).unwrap();
+    let position = *h.app.world().get::<Position>(player).unwrap();
     let map = *h.app.world().get::<InMap>(player).unwrap();
-    let crate::ground::GroundProbe::Supported(height) = h
-        .app
-        .world_mut()
-        .resource_mut::<crate::ground::GroundMap>()
-        .ground_in(map, Vec3::new(position.x, position.y, position.z))
-    else {
-        panic!("native moved-target floor");
-    };
-    position.y = height;
+    let position = project_authored_ground(&mut h, map, position);
     let before = h.app.world().get::<Health>(player).unwrap().current;
     h.advance(0.3);
     assert!(!h.has_aura(player, BOMB_AURA));
@@ -172,6 +177,41 @@ fn azure_frost_bomb_nonexpiry_removal_never_explodes() {
             "unexpected child on{reason:?}"
         );
     }
+}
+
+#[test]
+fn azure_frost_bomb_destination_without_unit_uses_authored_caster_ground() {
+    let (mut h, telash) = fixture();
+    let position = *h.app.world().get::<Position>(telash).unwrap();
+    let map = *h.app.world().get::<InMap>(telash).unwrap();
+    let expected = project_authored_ground(&mut h, map, position);
+    crate::spell_cast::creature_cast(h.app.world_mut(), telash, FROZEN_GROUND, None, true).unwrap();
+    h.advance(0.1);
+    assert_eq!(ground_fields(&mut h), vec![(telash, expected, map)]);
+}
+
+#[test]
+fn azure_frost_bomb_requested_destination_precedes_supplied_unit() {
+    let (mut h, telash) = fixture();
+    let player = h.player();
+    let mut position = *h.app.world().get::<Position>(telash).unwrap();
+    position.x += 5.0;
+    let map = *h.app.world().get::<InMap>(telash).unwrap();
+    let expected = project_authored_ground(&mut h, map, position);
+    let mut spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(FROZEN_GROUND)
+        .unwrap()
+        .clone();
+    // Runtime cast input only: native effect selectors/radius/duration unchanged.
+    spell.cast_destination = Some([position.x, position.y, position.z]);
+    h.app.insert_resource(SpellStore::fixture(vec![spell]));
+    crate::spell_cast::creature_cast(h.app.world_mut(), telash, FROZEN_GROUND, Some(player), true)
+        .unwrap();
+    h.advance(0.1);
+    assert_eq!(ground_fields(&mut h), vec![(telash, expected, map)]);
 }
 
 #[test]
