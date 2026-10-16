@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — measured arena/aura/orb profiles, repeated immutable input parsing and isolated read-only caches; bounded GREEN pending, no suite/runtime budget claim.
+- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
 
 - [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; [health-based damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16) and native modifier exclusions covered separately; PvP/follow-up talents open.
 
