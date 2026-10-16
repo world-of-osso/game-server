@@ -189,6 +189,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0):
             facts.append((-104, int(node['Asset'])))
         elif kind in PLAYER_FACTS and operator == SINGLE_TRUE and int(node['Asset']) > 0:
             facts.append((kind, int(node['Asset'])))
+        elif criteria_type == 54 and kind in (5, 6, 7) and operator == SINGLE_TRUE and int(node['Asset']) == 0:
+            # TC TargetIsPlayer/TargetIsDead/TargetIsOppositeFaction1786–1797 on the requested emote unit.
+            facts.append((kind, 0))
         elif criteria_type == 110 and kind == 5 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
             facts.append((kind, 0))
         elif criteria_type == 110 and kind == 28 and operator == SINGLE_TRUE and 1 <= int(node['Asset']) <= 13:
@@ -288,6 +291,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerHasAura8 or typed area17/zone41 alternatives,',
         '// native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.',
         '// native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.',
+        '// Native DoEmote54 retains complete positive TargetIsPlayer5/TargetIsDead6/TargetIsOppositeFaction7 companions on the requested unit.',
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
         '// Native KillCreature0 SingleFalse8, CastSpell29 SingleFalse87 and Login74 SingleFalse104 use signed compiled kinds; raw DB2 kinds stay unchanged.',
         '// Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.',

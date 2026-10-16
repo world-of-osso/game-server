@@ -97,3 +97,55 @@ fn seed_private_crafting_joint_fixture() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the private modern crafting native run to have stopped"]
+fn assert_private_modern_knowledge_commit_persisted() {
+    let directory = Path::new(
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/modern-crafting-2026-10-16/server/data",
+    );
+    let database = redb::Database::open(directory.join("modern-crafting.redb")).unwrap();
+    let connection = rusqlite::Connection::open_with_flags(
+        directory.join("world.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let catalog = super::load_specialization_data(&connection).unwrap();
+    for name in ["Craftmodern", "Craftforever"] {
+        let id = persistence::find_character_id_by_name(&database, name).unwrap();
+        let professions = persistence::load_professions(&database, id);
+        let currencies = persistence::load_currencies(&database, id);
+        let achievements = [15876].into();
+        let actor = super::SpecializationActor {
+            professions: &professions,
+            currencies: &currencies,
+            achievements: &achievements,
+            completed_quests: Default::default(),
+            level: 80,
+            spec_id: 70,
+        };
+        let state = super::store::load_state(&database, id);
+        let snapshot = super::build_snapshot(&catalog, &state, &actor, 2830).unwrap();
+        let tree = snapshot
+            .trees
+            .iter()
+            .find(|tree| tree.tree_id == 350)
+            .unwrap();
+        let path = tree
+            .nodes
+            .iter()
+            .find(|node| node.entry_id == 36327)
+            .unwrap();
+        assert!(tree.unlocked, "{name} tree350");
+        assert_eq!(path.rank, 1, "{name} leather armor path");
+        assert_eq!(snapshot.knowledge_available, 24, "{name} knowledge");
+        assert_eq!(
+            professions.rank(2830),
+            25,
+            "knowledge spending is not skill gain"
+        );
+        println!(
+            "PRIVATE KNOWLEDGE PERSISTED {name} tree350=unlocked rank=1 knowledge=24 skill2830=25"
+        );
+    }
+}

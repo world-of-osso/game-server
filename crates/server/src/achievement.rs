@@ -1039,24 +1039,72 @@ pub(crate) fn event_conditions(
             .collect();
     }
     for event in events {
-        if let CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) = event {
-            conditions
-                .hit_units
-                .insert(*target, read_spell_hit_unit(world, *target));
+        match event {
+            CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) => {
+                conditions
+                    .hit_units
+                    .insert(*target, read_spell_hit_unit(world, *target));
+            }
+            CriteriaEvent::DoEmote(_, Some(target)) => {
+                if let Some(unit) = read_emote_target(world, player, *target) {
+                    conditions.hit_units.insert(*target, unit);
+                }
+            }
+            _ => {}
         }
     }
     conditions
 }
 
-fn read_spell_hit_unit(world: &World, target: Entity) -> catalog::SpellHitUnit {
-    catalog::SpellHitUnit {
+fn read_spell_hit_unit(world: &World, target: Entity) -> catalog::CriteriaTargetUnit {
+    catalog::CriteriaTargetUnit {
         creature_entry: world
             .get::<shared::components::Npc>(target)
             .map(|npc| npc.template_id),
         auras: world
             .get::<crate::auras::ActiveAuras>(target)
             .map(|auras| auras.iter().map(|aura| aura.spell_id).collect()),
+        ..Default::default()
     }
+}
+
+/// TC GetUnit resolves the requested entity on the reference player's exact map copy.
+fn read_emote_target(
+    world: &World,
+    player: Entity,
+    target: Entity,
+) -> Option<catalog::CriteriaTargetUnit> {
+    let map = world.get::<InMap>(player)?;
+    if world.get::<InMap>(target) != Some(map) {
+        return None;
+    }
+    let is_player = world.get::<Player>(target).is_some();
+    let npc = world.get::<shared::components::Npc>(target);
+    if !is_player && npc.is_none() {
+        return None;
+    }
+    let hostile = emote_target_hostility(world, player, target);
+    Some(catalog::CriteriaTargetUnit {
+        creature_entry: npc.map(|npc| npc.template_id),
+        is_player,
+        dead: world
+            .get::<shared::components::Health>(target)
+            .map(|health| health.current <= 0.0),
+        hostile,
+        ..Default::default()
+    })
+}
+
+/// Missing faction authority is unknown, not a hostile opponent inferred from race.
+fn emote_target_hostility(world: &World, player: Entity, target: Entity) -> Option<bool> {
+    let templates = world.get_resource::<crate::faction::FactionTemplates>()?;
+    let actor = world.get::<shared::components::UnitFactionTemplate>(player)?;
+    let target_faction = world.get::<shared::components::UnitFactionTemplate>(target)?;
+    templates.0.get(&actor.0)?;
+    templates.0.get(&target_faction.0)?;
+    Some(crate::spell_cast::targets::is_hostile(
+        world, player, target,
+    ))
 }
 
 /// Same native learned spell sources used by type34, never SpellStore membership.
