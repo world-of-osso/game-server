@@ -6,7 +6,7 @@ use shared::protocol::CombatLogKind;
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::combat::DeathState;
-use crate::spell_cast::test_harness::{Harness, harness};
+use crate::spell_cast::test_harness::{Harness, harness_with_native_enemy_dodge_reduction};
 
 const MORTAL_STRIKE: u32 = 12294;
 /// Weapon damage plus a 15 s MOD_DECREASE_SPEED aura.
@@ -16,7 +16,8 @@ const DUMMY_HEALTH: f32 = 3.0;
 
 /// The harness NPC turned into Grandmaster's Training Dummy (faction 7).
 fn dummy_harness() -> Option<Harness> {
-    let mut h = harness(Vec::new(), &[MORTAL_STRIKE, HAMSTRING], 1)?;
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[MORTAL_STRIKE, HAMSTRING], 1)?;
     h.app.world_mut().entity_mut(h.npc).insert((
         Npc {
             template_id: 31144,
