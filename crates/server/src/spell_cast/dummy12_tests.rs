@@ -119,6 +119,12 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let wolves = actors(&mut h, 29264);
     assert_eq!(wolves.len(), 2);
+    // Exercise the same native swing clock with shorter simulation frames.
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(10),
+        ));
+    h.inbox.log.clear();
     h.advance(60);
     for wolf in &wolves {
         assert_eq!(
