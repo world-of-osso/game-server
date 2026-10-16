@@ -291,29 +291,17 @@ fn encounter_coverage_gargolmar_request_hits_real_watcher_and_heals() {
             .any(|go| go.target == Some(boss.to_bits())),
         "real SmartAI SpellHit30642 selects action invoker for Heal30643"
     );
-    eprintln!(
-        "WATCHER health before={before} after={:?} casts={:?} logs={:?}",
-        h.app.world().get::<Health>(boss),
-        spell_gos(&h, watcher, 30643),
-        h.inbox(0)
-            .log
-            .iter()
-            .filter(|event| event.source == Some(watcher.to_bits()))
-            .collect::<Vec<_>>()
-    );
+    // log_event sends only to source/target owners, not nearby observers of
+    // two unowned NPCs. Prove the effect through actual health, not that inbox.
+    let healed = h.app.world().get::<Health>(boss).unwrap().current - before;
     assert!(
-        h.inbox(0)
-            .log
-            .iter()
-            .any(|event| event.source == Some(watcher.to_bits())
-                && event.target == Some(boss.to_bits())
-                && event.spell_id == Some(30643)
-                && event.kind == CombatLogKind::Heal
-                && event.amount > 0),
-        "source Heal has a real effect"
+        (29.0..=32.0).contains(&healed),
+        "actual source30±5% heal: {healed}"
     );
-    assert!(
-        h.app.world().get::<Health>(boss).unwrap().current > before,
-        "actual boss health rises"
-    );
+    for other_heal in [8362, 12039] {
+        assert!(
+            spell_gos(&h, watcher, other_heal).is_empty(),
+            "no unrelated healer cast{other_heal}"
+        );
+    }
 }

@@ -296,3 +296,5 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 - [ ] Prove source damage/healer chain/retaliation, reset, isolated1893bit2 credit and silence. Source taunt10–15min is timed, not LoS. Ordinary/native, loot/persistence and remaining Ramparts encounters stay separate.
 
 Gargolmar runtime port uses dispatch-anchored EventMap repeats, incoming-only 40%/20% arm-once thresholds and installed encounter bit2. Idle taunt is timed 10–15min, not LoS. OnSpellCast/slay speech and death sound10336 remain unimplemented hook gaps; no complete encounter claim. Runtime GREEN/effect/healer-chain acceptance remains pending.
+
+Gargolmar acceptance remains open: source charge effect96 must move to the selected distant threat before Surge impact. Keep the concrete20yd failing acceptance, not a cast-only substitute. NPC-to-NPC Watcher Heal30643 effect proof uses actual HP delta (base30±5%); player inbox receives only events owned by source/target and cannot prove absence of that heal.
