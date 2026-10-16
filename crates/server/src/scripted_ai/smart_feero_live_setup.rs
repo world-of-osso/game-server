@@ -4,7 +4,8 @@ use super::*;
 #[test]
 #[ignore = "creates disposable private escort accounts; requires ESCORT_QUEST_LIVE_DB"]
 fn smartai_feero_prepare_private_accounts() {
-    use crate::persistence::{quest_store, register_account};
+    use crate::persistence::quest_store;
+    use crate::persistence_accounts::register_account;
     use crate::persistence_character as character_store;
     let path = std::path::PathBuf::from(std::env::var("ESCORT_QUEST_LIVE_DB").unwrap());
     let parent = path.parent().unwrap().canonicalize().unwrap();
