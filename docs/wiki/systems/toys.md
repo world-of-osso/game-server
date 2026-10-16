@@ -12,7 +12,7 @@ Pinned TC a352b1fa initializes actual terrain area in Creature::Create before Cr
 
 UseCreatureLevel retains source template/map/area tuning for initial stats; unflagged TempSummon inherits its owner's tuning (source zero-initialized when absent). Owner level comes from player Level or non-player UnitLevel; absent state is not a guessed1. This also corrects the existing learned-use group chain's temporary NPC child. Ordinary zone spawning, guardian stat formulas, AI, placement, privacy and lifetime paths are not redesigned.
 
-[Source rows, genuine REDs, exact whole-Toy gate, current build/checks, private initialized-field wire proof and binary hashes](../../toy-effects14-coverage.md#wild-summon-initial-state-proof-2026-10-15) own acceptance evidence. Initial-state CPU and fresh Podium/Shrine/default-Scarab wire now pass. Inherited per-viewer scaling/combat modifiers, attack power and full creature-stat parity remain open; previous native pixels/lifetimes are not recertified. [Contract](../../specs/toys.md).
+[Source rows, genuine REDs, exact whole-Toy gate, current build/checks, private initialized-field wire proof and binary hashes](../../toy-effects14-coverage.md#wild-summon-initial-state-proof-2026-10-15) own acceptance evidence. Initial-state CPU and fresh Podium/Shrine/default-Scarab wire now pass. [Shrine client-level projection](#shrine-viewer-level-projection-2026-10-15) is separately proved; inherited server-combat scaling/modifiers, attack power and full creature-stat parity remain open; previous native pixels/lifetimes are not recertified. [Contract](../../specs/toys.md).
 
 ## Winner's Podium source placement (2026-10-15)
 
