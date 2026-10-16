@@ -406,19 +406,21 @@ impl LootStore<'_> {
         }
         let gold = model.gold();
         save_inventory_record(db, character_id, &model.into_record());
+        if let LootContent::Item { item_id, .. } = content {
+            crate::guild_news::record_item(
+                db,
+                character_id,
+                *item_id,
+                templates
+                    .get(shared::item_data::ItemDefinitionSource::Retail, *item_id)
+                    .expect("committed loot item template"),
+                self.scaling.as_deref(),
+                crate::guild_news::ItemNewsSource::Looted,
+            );
+        }
         self.gold.record(character_id, gold);
         match content {
             LootContent::Item { item_id, count, .. } => {
-                crate::guild_news::record_item(
-                    db,
-                    character_id,
-                    *item_id,
-                    templates
-                        .get(shared::item_data::ItemDefinitionSource::Retail, *item_id)
-                        .expect("committed loot item template"),
-                    self.scaling.as_deref(),
-                    crate::guild_news::ItemNewsSource::Looted,
-                );
                 self.gold.record_acquisition(character_id, *item_id, *count);
                 self.gold
                     .record_looted_item(character_id, *item_id, *count, kind.0);
