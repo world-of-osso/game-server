@@ -1,6 +1,13 @@
 # Wiki Index
 
 - [PvP talent FIFO and Honor publication](investigations/server-tick-lag.md#pvp-talent-preferences-and-honor-publication--2026-10-15) — fresh slot/cooldown checks and ordered preference-only publication preserve later Honor; merged21 controls and warning-free check pass; release/full-session open.
+- [Guild profile/note FIFO](investigations/server-tick-lag.md#guild-motdinfoofficer-note-fifo--2026-10-15) — actual MOTD/info fields and legacy officer notes, fresh edit/view authority at write/publication;7 held-writer REDs plus tick error become10 native passes; warning-free check passes, release pending.
+
+- [Guild rank request FIFO](investigations/server-tick-lag.md#guild-rank-request-fifo--2026-10-15) — fresh rights, ordered queries and receipt-bound member publication; five held-writer REDs plus rebound-account RED become18 native passes; warning-free check passes, release pending.
+
+- [Companion teaching-item FIFO](investigations/server-tick-lag.md#companion-teaching-item-fifo--2026-10-15) — fresh physical-item/journal/GUID atomic commit; real held-writer RED261.8ms becomes GREEN, prior pet/wallet and departed learner/current-peer controls pass; initial merged8 controls/check pass; storage-error follow-up passes9 merged controls and a warning-free current check.
+
+- [st210 toy fixture clock](investigations/server-tick-lag.md#st210-toy-fixture-clock-and-fifo-completion--2026-10-15) — expired summon jump leaked into later network pumping; jobs already committed. Restore one-shot clock, deterministic fixture barriers;21 controls plus3 MountSpecial controls and warning-free runtime check pass.
 
 - [War Mode preference FIFO](investigations/server-tick-lag.md#war-mode-preference-fifo--2026-10-15) — three authentic territory/wire held-writer REDs→five controls; fresh honor and receipt-bound current-instance/departure effects; merged runtime/format pass, release pending.
 - [Titan's Grip FIFO merge](investigations/server-tick-lag.md#titans-grip-fifo-merge--2026-10-15) — owned dual-wield/Titan subclass capability snapshot without synchronous inventory writes;19 merged controls,2 protocol wire controls and warning-free runtime/format checks pass; full branch gate pending.
@@ -25,9 +32,34 @@
 - [Cold population and FIFO catalog snapshots](investigations/server-tick-lag.md#cold-population-and-request-catalog-snapshots--2026-10-14) — dormant aura wake and owned catalog snapshot diagnostics; mount item FIFO/native proof, new release acceptance still open.
 
 - [Pressure-controlled login and FIFO reputation](investigations/server-tick-lag.md#complete-commit-trace-and-residual-login-writers-verified-2026-10-14) — login-only release zero tick commits/p99 proof; fresh durable NPC-kill reputation and gated owner replies, full gameplay remains open.
+- [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
+
+- [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
+
+- [Vehicle movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) — exact installed Flags/TurnSpeed, observed seat-only-catalog omission and explicit upgrade without defaults; importer GREEN3; canonical publication/driving still pending.
+
+- [IoC Demolisher seat lifecycle](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) — driver boarding/source pose/exit/death/departure GREEN3 and deploy closure GREEN4; independent-occupant stacking RED→GREEN1 retains seats0/2/3 and refuses overfill; native vehicle path open.
+
+- [IoC per-spawn script factions](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15) — existing CreatureStringIds drive authored1732/1735 only on628; channel35→1732 RED retained, source-tag/boarding/lifetime/occupancy gates pass.
+
+- [Source-timed Seaforium lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) — owned normal/huge lifecycle/disarm GREEN5, BG/NPC/arena controls checked; Modern83/Forever88 native four-phase/20-player return pass; render/framing/timing remain separate.
+- [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
+
+- [Absent-player-aura kill guard](systems/dungeon-achievements.md#absent-player-aura-kill-guard) — bounded SingleFalse8 on0 requires known actor auras and every companion; native/catalog5/5, controlled boss identities and counters are not full encounter/map grants.
+
+- [Wild summon initial level and stats](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15) — source Create-area ordering and actual learned-use RED for Podium/Shrine; initialized fields under verification, broader scaling parity remains open.
+- [Wild summon initial level and stats](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15) — source Create-area ordering, typed owner level and initialized stats; whole-Toy gate plus fresh private wire pass, broader scaling parity remains open.
+
+- [Winner's Podium placement](systems/toys.md#winners-podium-source-placement-2026-10-15) — source47 scaled player reach and138 actual ground; actual UseToy/template/20min simulation expiry and both-skin native actor/static proof; wall expiry separate.
+- [Source guardian level selection](systems/toys.md#source-guardian-level-selection-2026-10-15) — actual Scarab UseToy20/80, ContentTuning priority/deltas and pre-init clamp; thirteen final controls and private UDP20/30 replication pass; full stats/AI remain open.
+- [Installed race/class eligibility](systems/race-class-eligibility.md) — active Retail CSV memberships/bits, preserved Forever gates; installed/admin regressions3/3, controls10/10 and scoped check/fmt pass.
+
 - [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC follower recomputation from sourced class/spec modifiers; native spec66 health/lifecycle RED, no budget overrides.
+- [Follower passive-derived stats](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15) — shared player/NPC recomputation; [owned-evade retention](investigations/follower-data.md#owned-evade-aura-retention--2026-10-15) preserves existing class/threat auras without budget overrides.
 
 - [Breakable CC targeting](investigations/follower-data.md#breakable-cc-targeting--2026-10-15) — shared follower hold/retarget/cast-stop and authored Attr6 implicit filtering; native118/31935 regressions, dungeon completion still open.
+- [Unknown-spell login guard](systems/dungeon-achievements.md#unknown-spell-login-guard) — bounded negative104 requires complete native spell sources and initialization before Login74; repair side effects remain separate.
+
 - [Typed area/zone alternatives](systems/dungeon-achievements.md#typed-areazone-alternatives) — complete root Some17/41 preserves distinct ancestry/zone semantics; actual selfie RED→GREEN and strict missing-zone controls, integrated8/8; full grants/travel unclaimed.
 
 - [Unearned-achievement cast guard](systems/dungeon-achievements.md#unearned-achievement-cast-guard) — complete SingleFalse87 on native CastSpell29; twenty real1217637 casts/account41707, self-guard/sibling/reopen/date and unknown/partial-account controls, final6/6; no gear acquisition/UI claim.
@@ -88,6 +120,8 @@
 - [Alterac captain combat](investigations/alterac-captain-combat.md) — AV25 source stat budget and incomplete normal combat driver; missing script is not a proven wipe cause.
 
 - [Authored goober spell dispatch](systems/game-objects.md#authored-goober-spell-dispatch--2026-10-14) — native persistent-owner Workshop pickup RED6→GREEN1/1 with leased dependency provenance; timed siege activation remains separate.
+- [C++ script smooth-surface controls](systems/navigation.md#cpp-script-smooth-surface-controls--2026-10-14) — TC default ground waypoint generation; node2 RED/GREEN and49 collision-clear nodes, whole escort/native clear still open.
+
 - [Independent attack power](systems/auras.md#independent-melee-and-ranged-attack-power) — native166/167 percentages and source class RAP base; native13 controls pass, frontend RAP propagation and whole-AP limits remain open.
 
 - [Warrior effect-hit stuns](systems/spell-casting.md#warrior-effect-hit-stuns) — native Shockwave/Storm Bolt children and caster-owned Storm Bolts selector; 12 native controls pass, other Dummy/talent fields remain gaps.
@@ -374,7 +408,7 @@ Server gameplay systems.
 | [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1; labelled Forever Zephras overlay, source masks/XP, captured NPC displays, labelled missing-class/health estimates, client asset needs and completion gaps |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
 | [[class-progression]] | Race/class validation including Monk/DH/Evoker, new-character levels and temporary starts, Initial spec below 10, known spells, action bars and progression persistence |
-| [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
+| [[talents]] | DB2 trait trees, condition/budget validation, named loadouts and authored Starter selection/level allocation, owner snapshots and talent spells in KnownSpells |
 | [[spell-info]] | SpellStore (every DB2 spell, all effects/costs/options at DifficultyID 0, charge categories), ClassSpells, raw power-cost units, load cost |
 | [[character-stats]] | Retail 12.x player stats: SimC class/race base stats, CASC hppersta/basemp/combatratings, spec main stat and mastery, `StatModifiers` aura fold-in, base-mana costs, gaps (no gear/weapon data) |
 | [[spell-casting]] | [Third local-Retail class script batch](systems/spell-casting.md#third-batch-local-retail-rows), TDB1210-authored fixed destinations and Retail nullable facing, spell teleports/leaps, aura overrides, tested class spell scripts (Dummy bridges, damage/crit modifiers, target plans, removal rewards and live armor), cast pipeline, single-slot 750 ms spell queue with start-time costs, cast bars/channels, GCD/cooldowns/charges, targets/effects, temporary summons and data-bound spell area triggers, combat log, fractional power/rune replication and known-spell check |
@@ -435,3 +469,4 @@ Debug logs and root cause analyses.
 - [Wailing wake-up and flight exit](systems/boss-scripts.md#wailing-wake-up-and-flight-exit--2026-10-15) — source21–27 controlled RED/GREEN, real distinct flight endpoints/retirement and ordinary5s Owl cast; lead gate pending.
 
 - [Wailing Normal wave projection](systems/boss-scripts.md#wailing-normal-wave-projection--2026-10-15) — copy-only source Normal rows; two process-boundary tests pass, no canonical/balance claim.
+- [Feral Spirit owner contribution](systems/spell-casting.md#feral-spirit-owner-contribution--2026-10-15) — source-backed owner AP and weapon terms; intrinsic AP named gap; native live-owner RED→GREEN and24 scoped controls pass.

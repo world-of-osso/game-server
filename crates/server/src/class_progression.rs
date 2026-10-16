@@ -10,9 +10,9 @@ use lightyear::prelude::Message;
 use lightyear::prelude::*;
 use shared::components::{Level, Player, UnitLevel};
 use shared::protocol::{
-    ActionBarSnapshot, ActionRef, CommitTraitConfig, KnownSpellsSnapshot, SetActionButton,
-    SetSpecialization, SpecializationChanged, SpellsLearned, SpellsUnlearned, TalentChannel,
-    TraitCommitResult, TraitConfigSnapshot, TraitEntrySelection, TraitLoadoutInfo,
+    ActionBarSnapshot, ActionRef, CommitTraitConfig, KnownSpellsSnapshot, STARTER_BUILD_LOADOUT_ID,
+    SetActionButton, SetSpecialization, SpecializationChanged, SpellsLearned, SpellsUnlearned,
+    TalentChannel, TraitCommitResult, TraitConfigSnapshot, TraitEntrySelection, TraitLoadoutInfo,
     TraitLoadoutOperation, TraitLoadoutRequest, TraitLoadoutsSnapshot,
 };
 
@@ -27,8 +27,8 @@ use crate::profession::PlayerProfessions;
 use crate::race_class::race_mask_allows;
 use crate::spell_info::{ClassInfo, ClassSpells, SpecInfo};
 use crate::trait_config::{
-    ConfigEntry, Purchase, TraitContext, build_config, granted_entries, talent_spell_entries,
-    unspent,
+    ConfigEntry, Purchase, TraitContext, build_config, granted_entries, starter_purchases,
+    talent_spell_entries, unspent,
 };
 
 /// Retail spec choice unlocks at level 10; below it the class "Initial" spec is active.
@@ -157,7 +157,7 @@ impl Plugin for ClassProgressionPlugin {
         app.add_systems(
             Update,
             (
-                init_player_progression,
+                init_player_progression.in_set(crate::achievement::InitializeSpellKnowledge),
                 process_set_specialization,
                 process_commit_trait_config,
                 process_set_action_button,
@@ -597,7 +597,20 @@ fn init_player_progression(
         };
         let stored = load_progression(&db.db, client_id.0);
         let requested = stored.as_ref().map_or(0, |data| data.spec_id);
-        let configs = load_trait_configs(&db.db, client_id.0);
+        let configs = match refresh_starter_trait_configs(
+            &classes,
+            player,
+            level.0,
+            requested,
+            &db,
+            client_id.0,
+        ) {
+            Ok(configs) => configs,
+            Err(reason) => {
+                error!("Cannot restore Starter Build: {reason}");
+                continue;
+            }
+        };
         let evaluated = evaluate(&classes, player, level.0, requested, |spec| {
             configs.spec(spec).to_vec()
         });
@@ -638,7 +651,12 @@ fn init_player_progression(
             send(
                 &mut senders.loadouts,
                 connection,
-                loadout_snapshot(&load_trait_configs(&db.db, client_id.0), spec.0),
+                loadout_snapshot(
+                    &load_trait_configs(&db.db, client_id.0),
+                    spec.0,
+                    &classes,
+                    player,
+                ),
             );
         }
         send(
@@ -769,7 +787,12 @@ fn refresh_player(
         send(
             &mut senders.loadouts,
             connection,
-            loadout_snapshot(&load_trait_configs(&db.db, client_id.0), new_spec.0),
+            loadout_snapshot(
+                &load_trait_configs(&db.db, client_id.0),
+                new_spec.0,
+                classes,
+                player,
+            ),
         );
     }
     if spec_changed || bar_changed {
@@ -816,7 +839,20 @@ fn process_set_specialization(
                 );
                 continue;
             }
-            let configs = load_trait_configs(&db.db, entry.2.0);
+            let configs = match refresh_starter_trait_configs(
+                &classes,
+                entry.0,
+                entry.1.0,
+                request.spec_id,
+                &db,
+                entry.2.0,
+            ) {
+                Ok(configs) => configs,
+                Err(reason) => {
+                    error!("Cannot activate Starter Build specialization: {reason}");
+                    continue;
+                }
+            };
             let evaluated = evaluate(&classes, entry.0, entry.1.0, request.spec_id, |spec| {
                 configs.spec(spec).to_vec()
             });
@@ -969,7 +1005,7 @@ fn process_commit_trait_config(
             send(
                 &mut senders.loadouts,
                 connection,
-                loadout_snapshot(&configs, spec_id),
+                loadout_snapshot(&configs, spec_id, &classes, entry.0),
             );
         }
     }
@@ -990,7 +1026,11 @@ fn update_trait_configs(
     let request = match request {
         TraitMutation::Commit(request) => {
             let purchases = commit_purchases(classes, player, level, active_spec, &request)?;
-            configs.spec_mut(active_spec).replace_active(purchases);
+            let spec = configs.spec_mut(active_spec);
+            if spec.selected_id == STARTER_BUILD_LOADOUT_ID {
+                spec.selected_id = 0;
+            }
+            spec.replace_active(purchases);
             return Ok(true);
         }
         TraitMutation::Loadout(request) => request,
@@ -1025,8 +1065,21 @@ fn update_trait_configs(
             false
         }
         TraitLoadoutOperation::Activate { id } => {
-            configs.activate(active_spec, id)?;
             let class = class_info(classes, player.class).ok_or("Class has no trait tree")?;
+            if id == STARTER_BUILD_LOADOUT_ID {
+                let purchases = starter_purchases(
+                    &class.traits,
+                    TraitContext {
+                        spec_id: active_spec,
+                        level,
+                    },
+                )?;
+                let spec = configs.spec_mut(active_spec);
+                spec.default = purchases;
+                spec.selected_id = STARTER_BUILD_LOADOUT_ID;
+                return Ok(true);
+            }
+            configs.activate(active_spec, id)?;
             build_config(
                 &class.traits,
                 TraitContext {
@@ -1041,11 +1094,23 @@ fn update_trait_configs(
     Ok(refresh_allocation)
 }
 
-fn loadout_snapshot(configs: &TraitConfigsData, spec_id: u32) -> TraitLoadoutsSnapshot {
+fn loadout_snapshot(
+    configs: &TraitConfigsData,
+    spec_id: u32,
+    classes: &ClassSpells,
+    player: &Player,
+) -> TraitLoadoutsSnapshot {
     let spec = configs.specs.iter().find(|spec| spec.spec_id == spec_id);
     TraitLoadoutsSnapshot {
         spec_id,
         selected_id: spec.map_or(0, |spec| spec.selected_id),
+        starter_available: class_info(classes, player.class).is_some_and(|class| {
+            class
+                .traits
+                .starter_builds
+                .iter()
+                .any(|build| build.spec_id == spec_id)
+        }),
         configs: spec.map_or_else(Vec::new, |spec| {
             spec.configs
                 .iter()
@@ -1099,6 +1164,32 @@ fn commit_purchases(
     Ok(purchases)
 }
 
+/// Rebuild the active built-in allocation from authored rows at the current level.
+/// Named allocations and their persistent wire/storage format remain untouched.
+fn refresh_starter_trait_configs(
+    classes: &ClassSpells,
+    player: &Player,
+    level: u8,
+    spec_id: u32,
+    db: &GameDatabase,
+    character_id: u64,
+) -> Result<TraitConfigsData, String> {
+    let mut configs = load_trait_configs(&db.db, character_id);
+    if configs
+        .specs
+        .iter()
+        .any(|spec| spec.spec_id == spec_id && spec.selected_id == STARTER_BUILD_LOADOUT_ID)
+    {
+        let class = class_info(classes, player.class).ok_or("Class has no trait tree")?;
+        let purchases = starter_purchases(&class.traits, TraitContext { spec_id, level })?;
+        if configs.spec(spec_id) != purchases {
+            configs.spec_mut(spec_id).default = purchases;
+            save_trait_configs(&db.db, character_id, &configs);
+        }
+    }
+    Ok(configs)
+}
+
 /// Level changes re-evaluate spec (Initial below the unlock level), the trait
 /// config against the new point budget, and known spells.
 fn sync_level_changes(
@@ -1116,11 +1207,28 @@ fn sync_level_changes(
             continue;
         };
         let current_spec = entry.3.0;
+        let configs = match refresh_starter_trait_configs(
+            &classes,
+            entry.0,
+            entry.1.0,
+            current_spec,
+            &db,
+            entry.2.0,
+        ) {
+            Ok(configs) => configs,
+            Err(reason) => {
+                error!("Cannot update Starter Build: {reason}");
+                continue;
+            }
+        };
+        let starter_active = configs.specs.iter().any(|spec| {
+            spec.spec_id == current_spec && spec.selected_id == STARTER_BUILD_LOADOUT_ID
+        });
         let evaluated = evaluate(&classes, entry.0, entry.1.0, current_spec, |spec| {
-            if spec == current_spec {
+            if spec == current_spec && !starter_active {
                 entry.6.purchases()
             } else {
-                load_trait_configs(&db.db, entry.2.0).spec(spec).to_vec()
+                configs.spec(spec).to_vec()
             }
         });
         refresh_player(

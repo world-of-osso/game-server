@@ -75,12 +75,29 @@ fn guild_charter_purchase_sign_rename_create_and_consumption_survive_database_re
     let created = charters::turn_in(&db, &templates, guid, owner, 300).unwrap();
     assert_eq!(created.guild_name, "Durable Guild");
     assert_eq!(created.founding_members, signers);
+    let expected_joins = ["Charowner", "Sigone", "Sigtwo", "Sigthree", "Sigfour"]
+        .into_iter()
+        .map(|name| shared::protocol::GuildEvent {
+            timestamp: 300,
+            kind: shared::protocol::GuildEventKind::Join {
+                member: name.into(),
+            },
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        crate::guild_event_log::query(&db, owner).events,
+        expected_joins
+    );
     assert!(persistence::load_inventory(&db, owner).items.is_empty());
     assert!(charters::owned_charter_guid(&db, owner).is_none());
     assert!(charters::snapshot(&db, guid, owner, 1).is_err());
     drop(db);
     let db = redb::Database::create(&path).unwrap();
     create_tables(&db);
+    assert_eq!(
+        crate::guild_event_log::query(&db, owner).events,
+        expected_joins
+    );
     let guild = persistence::banks::load_guild(&db, created.guild_id);
     assert_eq!(
         persistence::banks::load_guild_member_rank(&db, &guild, owner),

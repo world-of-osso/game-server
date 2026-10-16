@@ -24,6 +24,8 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
         1,
         class,
     );
+    // Guardian properties require the actual destination's regional level source.
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
     h.app.insert_resource(shared_world_data(&path));
@@ -131,6 +133,12 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
         .expires_at
         .unwrap()
         - world.resource::<Time>().elapsed_secs_f64();
+    let prior_max_delta = h.app.world().resource::<Time<Virtual>>().max_delta();
+    let prior_strategy = h
+        .app
+        .world_mut()
+        .remove_resource::<bevy::time::TimeUpdateStrategy>()
+        .unwrap();
     h.app
         .world_mut()
         .resource_mut::<Time<Virtual>>()
@@ -140,6 +148,11 @@ fn assert_group_source_summon(item: u32, spell: u32, entry: u32, duration: u32, 
             std::time::Duration::from_secs_f64(remaining + 0.2),
         ));
     h.advance(1);
+    h.app.insert_resource(prior_strategy);
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(prior_max_delta);
     for actor in actors {
         assert!(
             h.app.world().get_entity(actor).is_err(),

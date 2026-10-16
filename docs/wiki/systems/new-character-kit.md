@@ -1,6 +1,6 @@
 # New-Character Kit
 
-A new character gets the items and action buttons TrinityCore a352b1fa gives it in `Player::Create`. `player_create_info.rs` loads them at startup (`PlayerCreateInfos`). Character creation, from the client or from the admin `create-character` command, places the items and stores the bar.
+A new character gets the items and action buttons TrinityCore a352b1fa gives it in `Player::Create`. `player_create_info.rs` loads them at startup (`PlayerCreateInfos`). Character creation, from the client or from the admin `create-character` command, places the items and stores the bar. [Installed eligibility and race bits](race-class-eligibility.md) select supported pairs; kit contents and authentic starting locations retain their existing source contracts.
 
 ## Starting location
 

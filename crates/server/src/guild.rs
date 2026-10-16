@@ -18,6 +18,12 @@ use crate::persistence_character::{
 use crate::persistence_types::{GuildMemberNoteData, GuildProfileData};
 use shared::components::Level;
 
+#[path = "guild_profile_persistence.rs"]
+mod profile_actor;
+#[cfg(test)]
+#[path = "guild_profile_fifo_tests.rs"]
+mod profile_fifo_tests;
+
 type NewConnections<'w, 's> = Query<
     'w,
     's,
@@ -52,21 +58,6 @@ type GuildQueryReceivers<'w, 's> = Query<
     ),
     (With<Authenticated>, With<InWorld>),
 >;
-type GuildProfileReceivers<'w, 's, Message> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static PlayerLink,
-        &'static mut MessageReceiver<Message>,
-        &'static InWorld,
-    ),
-    (With<Authenticated>, With<InWorld>),
->;
-type GuildMotdReceivers<'w, 's> = GuildProfileReceivers<'w, 's, SetGuildMotd>;
-type GuildInfoReceivers<'w, 's> = GuildProfileReceivers<'w, 's, SetGuildInfo>;
-type GuildOfficerNoteReceivers<'w, 's> = GuildProfileReceivers<'w, 's, SetGuildOfficerNote>;
-
 #[derive(Clone)]
 struct GuildUpdateMeta {
     message: Option<String>,
@@ -74,23 +65,16 @@ struct GuildUpdateMeta {
 }
 
 trait GuildProfileTextRequest {
-    fn required_right() -> u32;
     fn trimmed_text(&self) -> String;
 }
 
 impl GuildProfileTextRequest for SetGuildMotd {
-    fn required_right() -> u32 {
-        shared::protocol::GUILD_RIGHT_EDIT_MOTD
-    }
     fn trimmed_text(&self) -> String {
         self.text.trim().to_string()
     }
 }
 
 impl GuildProfileTextRequest for SetGuildInfo {
-    fn required_right() -> u32 {
-        shared::protocol::GUILD_RIGHT_EDIT_INFO
-    }
     fn trimmed_text(&self) -> String {
         self.text.trim().to_string()
     }
@@ -110,6 +94,8 @@ pub struct GuildPlugin;
 
 impl Plugin for GuildPlugin {
     fn build(&self, app: &mut App) {
+        guild_ranks::install_persistence(app);
+        profile_actor::install(app);
         app.init_resource::<crate::guild_bank::ChangedGuilds>()
             .add_systems(
                 Update,
@@ -194,209 +180,68 @@ fn process_query_requests(
     }
 }
 
-fn process_profile_text_updates(
-    db: Res<GameDatabase>,
-    mut motd_receivers: GuildMotdReceivers,
-    mut info_receivers: GuildInfoReceivers,
-    connections: ActiveConnections,
-    guilds: GuildMemberships,
-    online_players: OnlinePlayers,
-    mut senders: GuildSenders,
-) {
-    process_profile_text_requests(
-        &db.db,
-        &mut motd_receivers,
-        &connections,
-        &guilds,
-        &online_players,
-        &mut senders,
-        |profile, text| {
-            profile.motd = text;
-            "guild motd updated"
-        },
-    );
-    process_profile_text_requests(
-        &db.db,
-        &mut info_receivers,
-        &connections,
-        &guilds,
-        &online_players,
-        &mut senders,
-        |profile, text| {
-            profile.info_text = text;
-            "guild info updated"
-        },
-    );
+fn process_profile_text_updates(world: &mut World) {
+    receive_profile_text::<SetGuildMotd>(world, profile_actor::Change::Motd);
+    receive_profile_text::<SetGuildInfo>(world, profile_actor::Change::Info);
 }
 
-fn process_profile_text_requests<Request, Apply>(
-    db: &redb::Database,
-    receivers: &mut GuildProfileReceivers<Request>,
-    connections: &ActiveConnections,
-    guilds: &GuildMemberships,
-    online_players: &OnlinePlayers,
-    senders: &mut GuildSenders,
-    apply: Apply,
-) where
+fn receive_profile_text<Request>(world: &mut World, wrap: fn(String) -> profile_actor::Change)
+where
     Request: GuildProfileTextRequest + Send + Sync + 'static,
-    Apply: Fn(&mut GuildProfileData, String) -> &'static str,
 {
-    for (conn_entity, link, mut receiver, world) in receivers.iter_mut() {
-        let requests: Vec<_> = receiver
-            .receive()
-            .map(|request: Request| request.trimmed_text())
-            .collect();
-        if requests.is_empty() {
-            continue;
-        }
-        let Ok(guild) = guilds.get(link.0) else {
-            send_not_in_guild_error(conn_entity, senders);
-            continue;
-        };
-        for text in requests {
-            if !character_has_right(
-                db,
-                world.character_id,
-                guild.guild_id,
-                Request::required_right(),
-            ) {
-                send_guild_update(
-                    conn_entity,
-                    None,
-                    None,
-                    Some(
-                        shared::protocol::GuildRankError::Permissions
-                            .message()
-                            .into(),
-                    ),
-                    senders,
-                );
-                continue;
-            }
-            let mut profile = load_guild_profile(db, guild.guild_id);
-            let success_message = apply(&mut profile, text);
-            save_guild_profile(db, guild.guild_id, &profile);
-            broadcast_guild_update(
-                db,
-                connections,
-                guilds,
-                online_players,
-                guild,
-                GuildUpdateMeta {
-                    message: Some(success_message.into()),
-                    error: None,
-                },
-                senders,
-            );
-        }
+    let mut query = world.query::<(
+        Entity,
+        &Authenticated,
+        &InWorld,
+        &PlayerLink,
+        &mut MessageReceiver<Request>,
+    )>();
+    let requests: Vec<_> = query
+        .iter_mut(world)
+        .flat_map(|(connection, auth, entered, link, mut receiver)| {
+            let owner = profile_actor::Owner {
+                connection,
+                player: link.0,
+                account: auth.account_id,
+                character: entered.character_id,
+            };
+            receiver
+                .receive()
+                .map(|request| (owner, request.trimmed_text()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (owner, text) in requests {
+        profile_actor::enqueue(world, owner, wrap(text));
     }
 }
 
-fn process_set_officer_note_requests(
-    db: Res<GameDatabase>,
-    mut receivers: GuildOfficerNoteReceivers,
-    connections: ActiveConnections,
-    guilds: GuildMemberships,
-    online_players: OnlinePlayers,
-    mut senders: GuildSenders,
-) {
-    for (conn_entity, link, mut receiver, world) in &mut receivers {
-        let requests: Vec<_> = receiver.receive().collect();
-        if requests.is_empty() {
-            continue;
-        }
-        let Ok(guild) = guilds.get(link.0) else {
-            send_not_in_guild_error(conn_entity, &mut senders);
-            continue;
-        };
-        for request in requests {
-            if !character_has_right(
-                &db.db,
-                world.character_id,
-                guild.guild_id,
-                shared::protocol::GUILD_RIGHT_EDIT_OFFICER_NOTE,
-            ) {
-                send_guild_update(
-                    conn_entity,
-                    None,
-                    None,
-                    Some(
-                        shared::protocol::GuildRankError::Permissions
-                            .message()
-                            .into(),
-                    ),
-                    &mut senders,
-                );
-                continue;
-            }
-            match update_officer_note(&db.db, guild, request) {
-                Ok(message) => broadcast_officer_note_update(
-                    &db.db,
-                    &connections,
-                    &guilds,
-                    &online_players,
-                    guild,
-                    message,
-                    &mut senders,
-                ),
-                Err(error) => send_officer_note_error(
-                    &db.db,
-                    &online_players,
-                    guild,
-                    conn_entity,
-                    world.character_id,
-                    error,
-                    &mut senders,
-                ),
-            }
-        }
+fn process_set_officer_note_requests(world: &mut World) {
+    let mut query = world.query::<(
+        Entity,
+        &Authenticated,
+        &InWorld,
+        &PlayerLink,
+        &mut MessageReceiver<SetGuildOfficerNote>,
+    )>();
+    let requests: Vec<_> = query
+        .iter_mut(world)
+        .flat_map(|(connection, auth, entered, link, mut receiver)| {
+            let owner = profile_actor::Owner {
+                connection,
+                player: link.0,
+                account: auth.account_id,
+                character: entered.character_id,
+            };
+            receiver
+                .receive()
+                .map(|request| (owner, request))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (owner, request) in requests {
+        profile_actor::enqueue(world, owner, profile_actor::Change::OfficerNote(request));
     }
-}
-
-fn send_not_in_guild_error(conn_entity: Entity, senders: &mut GuildSenders) {
-    send_guild_update(
-        conn_entity,
-        None,
-        None,
-        Some("not in a guild".into()),
-        senders,
-    );
-}
-
-fn broadcast_officer_note_update(
-    db: &redb::Database,
-    connections: &ActiveConnections,
-    guilds: &GuildMemberships,
-    online_players: &OnlinePlayers,
-    guild: &GuildMembership,
-    message: String,
-    senders: &mut GuildSenders,
-) {
-    broadcast_guild_update(
-        db,
-        connections,
-        guilds,
-        online_players,
-        guild,
-        GuildUpdateMeta {
-            message: Some(message),
-            error: None,
-        },
-        senders,
-    );
-}
-
-fn send_officer_note_error(
-    db: &redb::Database,
-    online_players: &OnlinePlayers,
-    guild: &GuildMembership,
-    conn_entity: Entity,
-    viewer: u64,
-    error: String,
-    senders: &mut GuildSenders,
-) {
-    let snapshot = visible_guild_snapshot(db, guild, online_players, viewer);
-    send_guild_update(conn_entity, Some(snapshot), None, Some(error), senders);
 }
 
 fn update_officer_note(
@@ -420,11 +265,16 @@ fn update_officer_note(
             guild.guild_name, request.character_name
         ));
     }
+    if !shared::protocol::valid_guild_member_note(&request.note) {
+        return Err(shared::protocol::GuildRankError::NoteTooLong
+            .message()
+            .into());
+    }
     save_guild_member_note(
         db,
         character_id,
         &GuildMemberNoteData {
-            officer_note: request.note.trim().to_string(),
+            officer_note: request.note,
         },
     );
     Ok(format!(
@@ -512,7 +362,7 @@ fn visible_guild_snapshot(
     online: &OnlinePlayers,
     viewer: u64,
 ) -> GuildSnapshot {
-    let mut snapshot = build_guild_snapshot(db, guild, online);
+    let mut snapshot = build_guild_snapshot(db, guild, online, viewer);
     if !character_has_right(
         db,
         viewer,
@@ -530,13 +380,19 @@ fn build_guild_snapshot(
     db: &redb::Database,
     guild: &GuildMembership,
     online_players: &OnlinePlayers,
+    viewer: u64,
 ) -> GuildSnapshot {
     let profile = load_guild_profile(db, guild.guild_id);
     let online = online_member_map(online_players, guild.guild_id);
     let ranks = crate::persistence::banks::load_guild(db, guild.guild_id);
     let members = list_guild_members(db, guild.guild_id)
         .into_iter()
-        .map(|member| build_member_snapshot(db, member, &online, &ranks))
+        .map(|member| {
+            let is_self = member.character_id == viewer;
+            let mut snapshot = build_member_snapshot(db, member, &online, &ranks);
+            snapshot.is_self = is_self;
+            snapshot
+        })
         .collect();
     GuildSnapshot {
         tabard: crate::persistence::guild_tabards::load_design(db, guild.guild_id),
@@ -569,6 +425,8 @@ fn build_member_snapshot(
         rank_name: guild.ranks[usize::from(rank)].name.clone(),
         is_online: online_state.is_some(),
         officer_note,
+        public_note: crate::persistence_character::load_guild_public_note(db, member.character_id),
+        is_self: false,
         last_online: if online_state.is_some() {
             "Online".into()
         } else {

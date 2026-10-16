@@ -573,6 +573,327 @@ fn housing_access_waits_for_fifo_and_revokes_visitor_layout_reads() {
     assert!(denied.state.layout.is_none());
 }
 
+fn spawn_companion_eater() -> Eater {
+    use shared::protocol::CollectionStateUpdate;
+    let mut eater = eater_with_spells(&[4401], 2, &[4055], MAGE)
+        .expect("local Mechanical Squirrel item/spell data");
+    eater
+        .h
+        .app
+        .insert_resource(crate::battle_pets::load_test_catalog());
+    bevy::app::Plugin::build(&crate::battle_pets::BattlePetPlugin, &mut eater.h.app);
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(eater.h.caster)
+        .insert(crate::collection::default_collection_state());
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(eater.h.connection)
+        .insert((
+            MessageSender::<CollectionStateUpdate>::default(),
+            MessageReceiver::<CollectionStateUpdate>::default(),
+        ));
+    eater.h.advance(6);
+    drain::<CollectionStateUpdate>(&mut eater.h.app, eater.h.connection);
+    eater
+}
+
+#[test]
+fn companion_item_learning_waits_for_fifo_preserves_prior_wallet_and_pet() {
+    use shared::protocol::CollectionStateUpdate;
+    use std::time::{Duration, Instant};
+    let mut eater = spawn_companion_eater();
+    let connection = eater.h.connection;
+    let owner = eater.h.caster;
+    let account = eater
+        .h
+        .app
+        .world()
+        .get::<Authenticated>(connection)
+        .unwrap()
+        .account_id;
+    let character = eater.character_id;
+    let held = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("prior companion wallet and pet", move |db| {
+            let mut inventory = persistence::load_inventory(db, character);
+            inventory.gold = 777;
+            persistence::save_inventory(db, character, &inventory);
+            let mut journal = crate::battle_pets::load_journal(db, account);
+            journal
+                .add_with_guid(39, 7, shared::pet_battle::PetQuality::Common, 3, 7777)
+                .unwrap();
+            crate::battle_pets::save_journal(db, account, &journal);
+            Ok(())
+        });
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    eater
+        .h
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(connection)
+        .unwrap()
+        .send::<InventoryChannel>(UseItem {
+            location: slot(0),
+            target: None,
+        });
+    let started = Instant::now();
+    eater.h.advance(3);
+    let elapsed = started.elapsed();
+    let premature = drain::<CollectionStateUpdate>(&mut eater.h.app, connection);
+    let live_count = eater
+        .h
+        .app
+        .world()
+        .get::<crate::battle_pets::AccountPetJournal>(owner)
+        .unwrap()
+        .journal
+        .count_species(39);
+    release.join().unwrap();
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "companion learning tick waited: {elapsed:?}"
+    );
+    assert!(premature.is_empty(), "companion reply preceded durability");
+    assert_eq!(live_count, 0, "live pet preceded durability");
+    let (done, wait) = std::sync::mpsc::channel();
+    eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("companion fixture barrier", move |_| {
+            done.send(()).map_err(|error| error.to_string())
+        });
+    wait.recv().unwrap();
+    let mut replies = Vec::new();
+    for _ in 0..6 {
+        eater.h.advance(1);
+        replies.extend(drain::<CollectionStateUpdate>(&mut eater.h.app, connection));
+    }
+    assert!(errors(&mut eater).is_empty());
+    let db = &eater.h.app.world().resource::<GameDatabase>().db;
+    let journal = crate::battle_pets::load_journal(db, account);
+    assert_eq!(journal.count_species(39), 2);
+    assert_eq!(journal.get(7777).unwrap().level, 7);
+    assert_eq!(persistence::load_inventory(db, character).gold, 777);
+    assert_eq!(count_of(&eater, 4401), 1);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::battle_pets::AccountPetJournal>(owner)
+            .unwrap()
+            .journal,
+        journal
+    );
+    assert_eq!(replies.last().unwrap().pet_journal.as_ref(), Some(&journal));
+}
+
+#[test]
+fn companion_item_storage_failure_is_counted_and_consumes_nothing() {
+    use std::sync::atomic::Ordering;
+    let mut eater = spawn_companion_eater();
+    let account = eater
+        .h
+        .app
+        .world()
+        .get::<Authenticated>(eater.h.connection)
+        .unwrap()
+        .account_id;
+    let db = eater.h.app.world().resource::<GameDatabase>();
+    let failed_before = db.writer.metrics.failed.load(Ordering::Relaxed);
+    let txn = db.db.begin_write().unwrap();
+    txn.open_table(crate::battle_pets::ACCOUNT_PET_JOURNALS)
+        .unwrap()
+        .insert(account, b"invalid journal".as_slice())
+        .unwrap();
+    crate::persistence_commit::commit(txn).unwrap();
+    use_slot(&mut eater, 0);
+    let errors = errors(&mut eater);
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert_eq!(errors[0].reason, InventoryErrorReason::InternalBagError);
+    assert!(
+        errors[0]
+            .detail
+            .as_deref()
+            .unwrap()
+            .contains("Decode companion journal")
+    );
+    assert_eq!(count_of(&eater, 4401), 2);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::battle_pets::AccountPetJournal>(eater.h.caster)
+            .unwrap()
+            .journal
+            .count_species(39),
+        0
+    );
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .metrics
+            .failed
+            .load(Ordering::Relaxed),
+        failed_before + 1,
+        "storage failure was treated as an ordinary domain refusal"
+    );
+}
+
+#[test]
+fn companion_item_departure_keeps_old_player_unchanged_and_refreshes_current_account_peer() {
+    use shared::protocol::CollectionStateUpdate;
+    use std::time::Duration;
+    let mut eater = spawn_companion_eater();
+    let connection = eater.h.connection;
+    let departed = eater.h.caster;
+    let account = eater
+        .h
+        .app
+        .world()
+        .get::<Authenticated>(connection)
+        .unwrap()
+        .account_id;
+    let (sibling, _) = persistence::create_character(
+        &eater.h.app.world().resource::<GameDatabase>().db,
+        account,
+        "Petsibling",
+        1,
+        MAGE,
+    )
+    .unwrap();
+    let held = eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    eater
+        .h
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(connection)
+        .unwrap()
+        .send::<InventoryChannel>(UseItem {
+            location: slot(0),
+            target: None,
+        });
+    eater.h.advance(3);
+    assert!(drain::<CollectionStateUpdate>(&mut eater.h.app, connection).is_empty());
+    let replacement = eater
+        .h
+        .app
+        .world_mut()
+        .spawn(crate::collection::default_collection_state())
+        .id();
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(connection)
+        .remove::<InWorld>()
+        .insert((
+            PlayerLink(replacement),
+            InWorld {
+                character_id: sibling,
+            },
+        ));
+    eater.h.advance(1);
+    release.join().unwrap();
+    let (done, wait) = std::sync::mpsc::channel();
+    eater
+        .h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue("departed companion barrier", move |_| {
+            done.send(()).map_err(|error| error.to_string())
+        });
+    wait.recv().unwrap();
+    let mut replies = Vec::new();
+    for _ in 0..6 {
+        eater.h.advance(1);
+        replies.extend(drain::<CollectionStateUpdate>(&mut eater.h.app, connection));
+    }
+    assert!(errors(&mut eater).is_empty());
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::battle_pets::AccountPetJournal>(departed)
+            .unwrap()
+            .journal
+            .count_species(39),
+        0
+    );
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::battle_pets::AccountPetJournal>(replacement)
+            .unwrap()
+            .journal
+            .count_species(39),
+        1
+    );
+    assert_eq!(
+        replies
+            .last()
+            .unwrap()
+            .pet_journal
+            .as_ref()
+            .unwrap()
+            .count_species(39),
+        1
+    );
+    assert_eq!(count_of(&eater, 4401), 1);
+    assert_eq!(
+        crate::battle_pets::load_journal(
+            &eater.h.app.world().resource::<GameDatabase>().db,
+            account
+        )
+        .count_species(39),
+        1
+    );
+}
+
 #[test]
 fn companion_item_learns_three_instances_and_keeps_fourth_item() {
     let mut eater = eater_with_spells(&[4401], 4, &[4055], MAGE)
@@ -613,6 +934,19 @@ fn companion_item_learns_three_instances_and_keeps_fourth_item() {
     use_slot(&mut eater, 0);
     assert_eq!(errors(&mut eater).len(), 1);
     assert_eq!(count_of(&eater, 4401), 1);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .resource::<GameDatabase>()
+            .writer
+            .metrics
+            .failed
+            .load(std::sync::atomic::Ordering::Relaxed),
+        0,
+        "species-cap refusal is not a storage failure"
+    );
 }
 
 const MAGE: u8 = 8;
@@ -1205,7 +1539,13 @@ fn use_slot(eater: &mut Eater, index: u8) {
         eater.errors.extend(errors);
         let pending = crate::toys::persistence_pending(eater.h.app.world())
             || crate::mount_journal::persistence_pending(eater.h.app.world())
-            || crate::housing::persistence_pending(eater.h.app.world());
+            || crate::housing::persistence_pending(eater.h.app.world())
+            || (eater
+                .h
+                .app
+                .world()
+                .contains_resource::<crate::battle_pets::PetCatalog>()
+                && crate::battle_pets::persistence_pending(eater.h.app.world()));
         if pending {
             delivered_frames = 0;
         } else {

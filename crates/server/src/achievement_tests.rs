@@ -327,7 +327,7 @@ fn achievements_criteria_knowledge_pet_uses_the_owned_account_journal_not_cosmet
             .contains_key(&23579)
     );
     assert!(
-        crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 65358, 1).unwrap()
+        crate::battle_pets::learn_companion_fixture(app.world_mut(), player, 65358, 1).unwrap()
     );
     app.update();
     let state = app.world().get::<PlayerAchievementState>(player).unwrap();
@@ -335,7 +335,7 @@ fn achievements_criteria_knowledge_pet_uses_the_owned_account_journal_not_cosmet
     assert!(state.account.as_ref().unwrap().earned_ids.contains(&1017));
     assert_eq!(state.criteria_progress.get(&23579), Some(&1));
     assert!(
-        crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 65358, 1).unwrap()
+        crate::battle_pets::learn_companion_fixture(app.world_mut(), player, 65358, 1).unwrap()
     );
     app.update();
     assert_eq!(
@@ -346,9 +346,7 @@ fn achievements_criteria_knowledge_pet_uses_the_owned_account_journal_not_cosmet
             .get(&23579),
         Some(&1)
     );
-    assert!(
-        crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 4055, 1).unwrap()
-    );
+    assert!(crate::battle_pets::learn_companion_fixture(app.world_mut(), player, 4055, 1).unwrap());
     app.update();
     let (sibling_character, _) = persistence::create_character(
         &app.world().resource::<GameDatabase>().db,
