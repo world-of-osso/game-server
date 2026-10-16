@@ -10,7 +10,7 @@
 
 ## Proof boundary
 
-The real persisted invite-acceptance test reproduced zero perk grants at server64fe5764. Implementation is committed before its focused GREEN run. The test also asserts no unrelated class losses, no perk unlearning during a real spec change, actual quit revocation and fresh-database-process knowledge. Private UDP/native proof and individual effect coverage remain open. Client source list/catalog coverage is tracked in the [client contract](../../../../game-engine/docs/specs/guild-perks.md).
+The real persisted invite-acceptance test reproduced zero perk grants at server64fe5764. Focused GREEN1/1 at serveree29a3bd/protoe50b02c proves no unrelated class losses, exact owner deltas, no perk unlearning during an actually changed specialization, actual quit revocation and fresh-database-process knowledge. A first compile exposed lifetime coupling in the outer ParamSet alias; separate inner query aliases match the existing native system signature. Private UDP/native proof, forced removal and individual effect coverage remain open. Client source list/catalog coverage is tracked in the [client contract](../../../../game-engine/docs/specs/guild-perks.md).
 
 ## Sources
 
