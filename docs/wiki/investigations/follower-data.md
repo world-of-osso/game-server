@@ -20,6 +20,12 @@ During that run Garrick maxHP10584→7840 and spell power68→0. Native command2
 
 Real level32 Garrick initialization→production evade→StatsPlugin regression at0350ec6b fails10584 versus actual7840, matching native ordering. Initial6e5ec7d0 was a fixture field compile error, not RED. At9b3968e8 native lifecycle3/3 plus the separate ordinary unowned dummy-evade control1/1 pass; helper check/build/fmt exit0. The first combined green command's misspelled ordinary-test filter matched none and is not counted for that control. Native post-fix retention remains pending; this does not close independent route/loot gaps.
 
+## Stockade proximity receipts — 2026-10-15
+
+The existing player and creature sight-acquisition branches emit debug-only `player proximity acquisition` / `creature proximity acquisition` receipts with both entity IDs, positions, map copy and center distance. Enable `game_server::creature_aggro=debug,game_server::creature_sight=debug` to distinguish native proximity ingress from damage-driven engagement. Predicates, radii, targeting and movement are unchanged; a queued acquisition is not itself proof of a completed attack.
+
+Pinned TC a352b1fa `Creature.cpp:2555–2656` separates delayed `CallAssistance` (same faction, 10yd absolute 3D radius, 1500ms delay and eligibility recheck) from explicit `CallForHelp(radius)` (friendly faction and LOS to enemy). `GridNotifiers.h:1561–1584` excludes combat reach from assistance distance; `CreatureGroups.cpp:224–260` applies formation assist flags. These social paths remain unimplemented here ([aggro gaps](../../specs/creature-aggro.md)); the retained private Map34 snapshot has no formation rows. Their absence cannot explain excessive chain assistance. Exact live proximity ingress is still under investigation; no aggro-policy or source-position fix is established.
+
 ## Group reward receipts — 2026-10-15
 
 Stockwait67's Moloch native pixels show pending GroupLoot items, while the old diagnostic calls corpse `LootSlot` operations only after walking beyond the kill position. Both post-route `take-loot` calls return no-open-window and inventory remains Hearthstone only; no loot delivery is accepted from those calls. Group rewards must be voted through the real native UI and their actual inventory delivery checked, not manufactured by corpse interaction or item grants.
