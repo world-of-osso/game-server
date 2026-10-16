@@ -481,6 +481,8 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
         "actual targeted native Hug retains all three qualifiers"
     );
     assert!(state.earned_ids.contains(&247));
+    // Number of hugs1042 counts each accepted emote, even non-qualifying targets.
+    assert_eq!(state.criteria_progress.get(&3231), Some(&11));
     let date = state.earned_at[&247];
     assert!(date > 0);
     assert!(
@@ -505,5 +507,6 @@ fn achievements_criteria_hug247_native_dead_hostile_player_and_persistence() {
     let saved = persistence::load_achievements(&reopened, character);
     assert_eq!(saved.criteria_progress.get(&2379), Some(&1));
     assert!(saved.earned_ids.contains(&247));
+    assert_eq!(saved.criteria_progress.get(&3231), Some(&11));
     assert_eq!(saved.earned_at[&247], date);
 }
