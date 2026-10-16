@@ -48,6 +48,14 @@ Two isolation tests pass36.82s, proving app creature/catalog/class changes do no
 
 After merging master6403a988 (combat/aggro/script changes) atedd15fd6, the complete bounded set passes together: **14/14 in410.83s** (eleven named tests plus two isolation controls and the imported encounter-copy control). Compile/package-lock time is separately recorded3m13s; current feature check passes11.37s without warnings. This merge intersects gameplay consumers, so the bounded rerun is new integration proof, not a ceremonial repeat. Formatting/diff and manual changed-Rust readability checks pass. Full-server suite timing and independent verification remain lead-owned.
 
+## Arena residual: bounded independent fixtures (2026-10-16)
+
+The sixteen-map test runs a fresh App and redb for every map. LEAD confirmed no cross-map serial-order contract and authorized at most four workers. Scoped workers now execute all sixteen source cases, join every worker and propagate every fixture panic; source census, gate/orb/combat/return/reopen assertions, frame counts and50ms steps are unchanged. No production catalog experiment or scheduler override is included in this follow-up.
+
+Onbccfa428 (requestedbda55ef5+c86bb318, merged currentmaster4b4e017f), ordinary no-feature native test passes **52.70s**, with sixteen distinct source-map PASS lines. Sampled `/proc/<pid>/stat` CPU is105.41s user+8.29s system over52.90s runner wall time (20ms samples; final CPU counters may undercount the exit tail). This uses normal capacity admission, not a quiet window. `/usr/bin/time` was unavailable; the first timer-wrapper attempt exited127 before starting the test and is preserved as setup failure, not runtime RED.
+
+The serial instrumented diagnostic at400adbd3 was117.06s; flags, master revision and host load differ, so it is not a controlled speedup ratio. The earlier executor/query/catalog experiments remain separately parked and are not merged into this fixture-only candidate. Evidence: `arena-four-workers-{build,native-green}.log/.json` and `arena-four-workers-cpu-samples.json`. Full-suite integration and timing under other contention remain lead-owned.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.

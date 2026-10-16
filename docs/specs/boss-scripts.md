@@ -23,10 +23,24 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Celebras source boundary
+
+- [x] Prepare12225→425/Normal349bit3 (TCordinal4), pinned Celebras/header/instance, TDB script identity and Journal70391 CSV428/998/display12350. Preserve other credit;13743/13716 must not acquire primary credit. SQL only.
+- [x] Port source21807 victim first0–6/repeat4–8s,12747 victim first0–5/repeat20s,21968 self first30/repeat20s; preserve actual class2 mana/costs, TaskScheduler casting validator and due-anchored repeats.
+- [x] Gate real21968 summon13743, death summon13716 at boss position/orientation0/manual despawn and isolated controlled425bit3 credit.13743 uses its actual Normal1 row;13716 has only TDB base0 (Health35/Mana5.3615/Damage7.5, ContentTuning0), replacing legacy Health8/Mana4 through copy-only projection; never fabricate Normal1. Regional level-scaling parity of the manual death summon is not certified.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
+## Maraudon Lord Vyletongue source boundary
+
+- [x] Prepare12236→424/Normal349bit2 using pinned TC Maraudon ordinal3/header/instance, actual TDB SmartAI and Journal70391 CSV427/997/display12334. Preserve Gizlock credit and refuse AI/ordinal-as-bit drift; SQL output only.
+- [x] Gate unchanged Shoot16100/CAST_COMBAT_MOVE64 and21390 ranged damage, self21655 caster-front20yd Blink and7964 Flash (actual1.5s cast), plus isolated424/bit2 controlled death credit. Check pre-Blink victim clocks, self-spell repeat clocks with casting-only deferral, source500ms outside-range rechecks at reach-adjusted lower/strict3D upper boundary, actual nearby stun and ranged pre-Blink exclusion. No invented targets/resources/timers.
+- [x] Interpret EVENT_RANGE9 using an engaged current victim and actual3D distance minus both source combat reaches: inclusive minimum, strict maximum. In-range actions reset their authored repeat; excluded victims recheck after500ms, carrying the victim as invoker. Preserve ordinary cast/channel deferral and source flags.
+- [ ] Native/ordinary fight, Blink wall/floor collision, loot, persistence and canonical publication remain separate. Positive20yd Blink displacement and nearby Flash stun are controlled headless proofs, not native geometry acceptance.
+
 ## Maraudon Gizlock source boundary
 
 - [x] Prepare13601→427/Normal349bit5 from pinned TC Maraudon header/instance, TDB SmartAI and Journal70391 CSV425/995/display7125. TC ordinal2 is not DB2 bit5. Preserve Noxxion credit and refuse ordinal/bit drift; output remains copy-only SQL.
-- [ ] Gate unchanged SAI Shoot16100, Flash Bomb29419, Goblin Dragon Gun21833, Bomb9143 and aggro Talk0 against actual DB2 targeting/channel/effect data, then isolated controlled death credit. No invented source timers/resources/targets.
+- [x] Gate unchanged SAI Shoot16100 first0/repeat2.3–3.9s, Bomb9143 first4/repeat12s (actual2s cast), Dragon Gun21833 first6–9/repeat16–19s (actual8s channel), Flash Bomb29419 self first25/repeat25s and aggro Talk0. Require source-clock repeats with observed casting-only deferrals, genuine16100/9143/21910 damage,21833 self periodic-trigger aura,29419 beast-only exclusion of the human player, isolated427/bit5 controlled credit and post-death silence. Only initial player survival HP/8yd pull position are staged; source flags/resources/targets remain intact.
 - [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
 
 ## Maraudon Noxxion source port
@@ -257,3 +271,25 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 - Admit only pinned TC a352b1fa Razorlash12258→423/Normal349/bit1, authenticated by installed Journal70391 encounter424/actor994/display12389. Produce copy-only SQL; preserve unrelated bindings. Reject AI/DB2 identity drift.
 - Keep authored SmartAI probabilities (Thrash70%, Cleave/Puncture85%), resources, targeting and timers. Controlled proof may stage player survival health; ordinary balance, extra-attack parity, native clear, loot/persistence and canonical publication remain separate.
 - Bounded proof: repeated source-window SpellGo with explicit self/victim targets, actual Thrash/Puncture auras, real Cleave/Puncture damage and isolated423/bit1 controlled death credit. Production interest routing and Thrash extra-attack effect parity are not certified by this fixture.
+
+
+## Maraudon Landslide source boundary
+
+- [x] Authenticate12203→426/Normal349bit4 (TCordinal5), Journal70391 CSV429/999/display12293; copy-only binding preserves Celebras and excludes summons11783.
+- [x] Port18670 victim5–10s/repeat15–25s,5568 self10–15s/repeat10–20s and21808 self immediately upon first incoming hit crossing below50%, then30–40s repeats; reset re-arms once. Preserve source casting validator and due clocks.
+- [x] Gate actual effects/summons and isolated controlled426bit4 credit; ordinary/native, loot and persistence remain separate.
+
+
+## Maraudon Theradras source boundary
+
+- [x] Authenticate12201→429/Normal349bit7 (TCordinal7), Journal70391 CSV431/1001/display12292; copy-only binding preserves Landslide and excludes Zaetar12238.
+- [x] Port21909 self20–25s/repeat20–25s,21832 random threat target20–30s/repeat15–25s,3391 self10–20s/repeat10–20s,21869 self25–35s/repeat30–40s; preserve actual mana, casting validator and due clocks.
+- [x] Project Zaetar12238 from actual TDB base0 and Normal1/CT281 rows; preserve other templates, placements and credit. Copy-only producer must be idempotent and reject source identity drift.
+- [x] Gate Dust Field damage/aura, Boulder damage, Repulsive Gaze fear and isolated controlled429bit7 credit and manual death summon12238 at authored WoW(28.1887,62.3964,-123.161,4.31096), actual base/Normal source projection. Controlled fixture uses initial survival HP and maintains an8yd target gap (melee pursuit otherwise correctly rejects Boulder below its5yd minimum). Thrash3391 dispatch is not proof of its unsupported extra-attacks effect19. Ordinary/native, loot, persistence and spirit quest/gossip remain separate.
+
+
+## Ramparts Gargolmar source boundary
+
+- [x] Authenticate17306→1893/map543bit2 (TCordinal0), Journal70391 CSV527/1104/display18236; copy-only binding preserves Theradras and excludes healer/companion credit.
+- [ ] Port pinned EventMap mortal30641 victim5–10s/repeat5–15s, surge34645 maximum-distance threat target3–5s/repeat15–40s, incoming-damage below40% request30642 once, below20% retaliation22857 then30s repeats; reset re-arms both. Preserve actual casting admission and source speech/death sound.
+- [ ] Prove source damage/healer chain/retaliation, reset, isolated1893bit2 credit and silence. Source taunt10–15min is timed, not LoS. Ordinary/native, loot/persistence and remaining Ramparts encounters stay separate.

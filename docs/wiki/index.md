@@ -1,4 +1,6 @@
 - [Authoritative target LOS](systems/spell-casting.md#authoritative-target-los--2026-10-16) — moving-target receipt boundary replaces stale client endpoint validation; native release acceptance remains separate.
+- [Remaining geometry scans](investigations/server-tick-lag.md#remaining-geometry-scans-2026-10-16) — dormant wake-aware detection/resize and live collision membership indexing; bounded 50-control proof.
+- [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
@@ -11,16 +13,25 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Optional cost spell modifiers](systems/auras.md#optional-cost-spell-modifiers-2026-10-16) — native Practiced Strikes/Protection Execute RED3/2→GREEN38 plus merged5; optional spend excludes flat and retains percentage modifiers; workspace check passes.
+- [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls and current-master workspace check pass; full talent/legal/fresh UDP acceptance open.
 - [Missing-storage Call Pet](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16) — actual character47 has no pet record; native cast RED→refusal, sourced Human starter-pet mapping remains a gap.
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls pass, workspace check held by bot live window; full talent/legal/fresh UDP acceptance open.
 
-- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
+- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — immutable source caches; follow-up four-worker arena52.70s preserves all sixteen cases/assertions/time steps; full-suite timing separate.
 - [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) — Charred/Rampage damage-only fixtures use existing sourced dodge reduction; actual Chaos `Miss(Dodge)` reproduces intermittent zero-damage preconditions, no evade/gameplay change.
 
 - [Stockade proximity receipts](investigations/follower-data.md#stockade-proximity-receipts--2026-10-15) — debug-only acquisition positions distinguish proximity from damage; social-assist gaps remain explicit.
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Sightless detection consumer](systems/toys.md#sightless-detection-consumer-2026-10-16) — actual journal152 RED→GREEN; existing native12yd/7yd hostile acquisition and source10min lifecycle proof, wire/rendering separate.
+
+- [Waywatcher source lifecycle](systems/toys.md#waywatcher-source-lifecycle-2026-10-16) — current99572 learned-use acceptance1/1, source Val'sharah/15s/900s behavior and private18-asset closure; canonical publication/rendering separate.
+
+- [Grizzlesnout source lifecycle](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16) — actual learning/Northrend cast/15s expiry acceptance1/1; twelve canonical body assets/two aliases authenticated, native rendering separate.
+
+- [Forced-forward flag boundary](systems/toys.md#forced-forward-flag-boundary-2026-10-16) — aura241 source overlap/final-removal RED→GREEN1/1; generic native35/35 and whole-Toy139/139 pass, Ashhide mount remains deferred.
 - [Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16) — authentic private vision lifecycle,138/138 Toy regression and17-file body closure; procedural8605 rendering remains open.
 - [Enchanted Stone Whistle source summon](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16) — authentic98300 import, learned-use lifecycle and137/137 Toy regression; private70391 five-asset closure verified, native pixels separate.
 
@@ -388,7 +399,7 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch4](systems/spell-casting.md#fourth-batch-local-retail-rows) — ten bounded paths/eight ranked candidates;17 new native proofs, Dummy roots177→176.
 
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
-- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md) separates row references/admission from Retail proof.
+- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [current105-ID census and bounded Fade/wall proof](../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16) separates row references/admission from Retail proof.
 
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [stationary arch/leash](systems/navigation.md#stationary-arch-and-leash-acceptance) records Retail5s no-path grace and bounded live acceptance; [contract](../specs/navigation.md).
 
@@ -485,3 +496,13 @@ Debug logs and root cause analyses.
 - [Rotgrip source mismatch](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16) — authenticated13596→428/bit6, literal Fatal Bite SELF damage versus SAI victim argument, real Puncture and isolated controlled credit; ordinary fight remains uncertified.
 
 - [Noxxion source port](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16) — pinned scheduler/aura port; three runtime controls pass with channel-aware clocks, ten actual Normal adds, phase lifecycle/damage and isolated credit; native/ordinary acceptance separate.
+
+- [Gizlock source runtime](systems/boss-scripts.md#maraudon-gizlock-source-runtime) — actual ranged pull, channel-aware clocks, cone damage, beast-only Flash Bomb exclusion and isolated bit5 controlled credit; native/ordinary/publication open.
+
+- [Vyletongue range events](systems/boss-scripts.md#maraudon-lord-vyletongue-range-events) — real21390 RED→source EVENT_RANGE9/500ms rechecks, nearby stun and20yd Blink with isolated bit2 controlled credit; native/geometry/publication open.
+
+- [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port) — schedules, two guardian waves/death cleanup, manual redeemed actor/isolated credit GREEN; copy-only redeemed base replaces legacy stats.
+
+- [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
+
+- [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — controlled source clocks/effects/fixed death spirit/credit GREEN and actual TDB Normal projection; extra attacks remain unsupported.

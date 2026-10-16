@@ -11,6 +11,39 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 pub(crate) type LiveHulls = HashMap<InMap, Vec<Arc<LosTile>>>;
 
+#[derive(Component)]
+pub(crate) struct LiveCollisionModel;
+
+pub(crate) struct CollisionIndexPlugin;
+
+impl Plugin for CollisionIndexPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_observer(index_collision_model);
+    }
+}
+
+// GameObjectInfo and map membership are installed/replaced as components; movement,
+// visibility and collision enablement remain live reads of the indexed objects.
+pub(crate) fn index_collision_model(
+    event: On<Insert, (GameObjectInfo, InMap)>,
+    objects: Query<(&GameObjectInfo, &InMap)>,
+    catalog: Option<Res<crate::pvp::arena::Catalog>>,
+    mut commands: Commands,
+) {
+    let Ok((info, map)) = objects.get(event.entity) else {
+        return;
+    };
+    let arena = catalog
+        .as_ref()
+        .is_some_and(|catalog| catalog.contains_map(map.map_id));
+    let relevant = info.go_type == 15 || (arena && matches!(info.go_type, 0 | 5 | 6 | 35));
+    if relevant {
+        commands.entity(event.entity).insert(LiveCollisionModel);
+    } else {
+        commands.entity(event.entity).remove::<LiveCollisionModel>();
+    }
+}
+
 #[cfg(test)]
 #[path = "collision_tests.rs"]
 mod tests;
@@ -26,6 +59,7 @@ type Objects<'w, 's> = Query<
         &'static GameObjectCollision,
         Option<&'static GameObjectVisible>,
     ),
+    With<LiveCollisionModel>,
 >;
 
 #[derive(Clone, PartialEq)]
@@ -176,7 +210,6 @@ impl HullCache {
 pub(crate) fn sync_live_objects(
     ground: Option<ResMut<GroundMap>>,
     los: Option<ResMut<LineOfSight>>,
-    catalog: Option<Res<crate::pvp::arena::Catalog>>,
     objects: Objects,
     mut cache: Local<HullCache>,
 ) {
@@ -186,13 +219,8 @@ pub(crate) fn sync_live_objects(
     let mut active = LiveHulls::new();
     cache.placed.retain(|entity, _| objects.contains(*entity));
     for (entity, map, position, rotation, info, collision, visible) in &objects {
-        let arena = catalog
-            .as_ref()
-            .is_some_and(|catalog| catalog.contains_map(map.map_id));
-        let arena_model = arena && matches!(info.go_type, 0 | 5 | 6 | 35);
-        let transport_model = info.go_type == 15;
         let enabled = collision.0 && visible.is_none_or(|v| v.0);
-        if !((arena_model || transport_model) && enabled) {
+        if !enabled {
             continue;
         }
         let placement = Placement {
