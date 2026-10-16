@@ -675,152 +675,11 @@ fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
     }
 }
 
-pub fn process_guild_invites(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &mut MessageReceiver<GuildInviteRequest>,
-        ),
-        With<crate::auth::Authenticated>,
-    >,
-    players: Query<&shared::components::Player>,
-    guilds: Query<&GuildMembership>,
-    char_ids: Query<&ClientId>,
-    db: Option<Res<GameDatabase>>,
-    mut senders: Query<&mut MessageSender<GuildInviteResponse>>,
-    mut invitees: Query<
-        (
-            &PlayerLink,
-            &mut MessageSender<shared::protocol::GuildInvitation>,
-        ),
-        With<crate::auth::InWorld>,
-    >,
-) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
-        for req in receiver.receive() {
-            let response = handle_guild_invite(&db, &players, &guilds, &char_ids, link.0, &req);
-            if response.success {
-                let target =
-                    persistence::find_character_id_by_name(&db.db, &req.target_character_name)
-                        .expect("successful invite has target");
-                let pending = persistence::load_pending_guild_invite(&db.db, target)
-                    .expect("successful invite persisted");
-                for (target_link, mut sender) in &mut invitees {
-                    if char_ids.get(target_link.0).is_ok_and(|id| id.0 == target) {
-                        sender.send::<AuthChannel>(shared::protocol::GuildInvitation {
-                            guild_id: pending.guild_id,
-                            guild_name: pending.guild_name.clone(),
-                            inviter_name: pending.inviter_name.clone(),
-                        });
-                    }
-                }
-            }
-            if let Ok(mut sender) = senders.get_mut(conn_entity) {
-                sender.send::<AuthChannel>(response);
-            }
-        }
-    }
-}
+#[path = "guild_invite_persistence.rs"]
+pub(crate) mod guild_invite;
 
-fn handle_guild_invite(
-    db: &GameDatabase,
-    players: &Query<&shared::components::Player>,
-    guilds: &Query<&GuildMembership>,
-    char_ids: &Query<&ClientId>,
-    inviter_entity: Entity,
-    req: &GuildInviteRequest,
-) -> GuildInviteResponse {
-    let Ok(inviter_player) = players.get(inviter_entity) else {
-        return GuildInviteResponse {
-            success: false,
-            error: Some("Inviter player entity missing".into()),
-        };
-    };
-    let Ok(inviter_guild) = guilds.get(inviter_entity) else {
-        return GuildInviteResponse {
-            success: false,
-            error: Some(
-                shared::protocol::GuildRankError::NotInGuild
-                    .message()
-                    .into(),
-            ),
-        };
-    };
-
-    if !char_ids.get(inviter_entity).is_ok_and(|id| {
-        crate::guild::character_has_right(
-            &db.db,
-            id.0,
-            inviter_guild.guild_id,
-            shared::protocol::GUILD_RIGHT_INVITE,
-        )
-    }) {
-        return GuildInviteResponse {
-            success: false,
-            error: Some(
-                shared::protocol::GuildRankError::Permissions
-                    .message()
-                    .into(),
-            ),
-        };
-    }
-
-    let Some(target_character_id) =
-        persistence::find_character_id_by_name(&db.db, &req.target_character_name)
-    else {
-        return GuildInviteResponse {
-            success: false,
-            error: Some(format!("\"{}\" not found.", req.target_character_name)),
-        };
-    };
-
-    if let Ok(inviter_char_id) = char_ids.get(inviter_entity)
-        && inviter_char_id.0 == target_character_id
-    {
-        return GuildInviteResponse {
-            success: false,
-            error: Some("You can't invite yourself to a guild.".into()),
-        };
-    }
-
-    if persistence::load_character_guild(&db.db, target_character_id).is_some() {
-        return GuildInviteResponse {
-            success: false,
-            error: Some(format!(
-                "{} is already in a guild.",
-                req.target_character_name
-            )),
-        };
-    }
-    if persistence::load_pending_guild_invite(&db.db, target_character_id).is_some() {
-        return GuildInviteResponse {
-            success: false,
-            error: Some(format!(
-                "{} has already been invited to a guild.",
-                req.target_character_name
-            )),
-        };
-    }
-    if !char_ids.iter().any(|id| id.0 == target_character_id) {
-        return GuildInviteResponse {
-            success: false,
-            error: Some(format!("\"{}\" not found.", req.target_character_name)),
-        };
-    }
-    persistence::set_pending_guild_invite(
-        &db.db,
-        target_character_id,
-        inviter_guild.guild_id,
-        &inviter_guild.guild_name,
-        &inviter_player.name,
-    );
-
-    GuildInviteResponse {
-        success: true,
-        error: None,
-    }
+pub fn process_guild_invites(world: &mut World) {
+    guild_invite::enqueue_requests(world);
 }
 
 #[path = "guild_accept_persistence.rs"]
@@ -869,27 +728,25 @@ mod achievement_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy::ecs::system::RunSystemOnce;
 
-    fn apply_guild_accept(
-        app: &mut App,
-        player: Entity,
-        account: u64,
-    ) -> GuildAcceptInviteResponse {
-        if !app.is_plugin_added::<shared::ProtocolPlugin>() {
-            app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
-            app.add_plugins(lightyear::prelude::server::ServerPlugins {
-                tick_duration: std::time::Duration::from_millis(50),
-            });
-            app.add_plugins(shared::ProtocolPlugin);
-            app.add_plugins(crate::guild::GuildPlugin);
-            app.add_systems(Update, process_guild_accepts);
-            app.finish();
-            app.cleanup();
+    fn install_guild_fixture(app: &mut App) {
+        if app.is_plugin_added::<shared::ProtocolPlugin>() {
+            return;
         }
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: std::time::Duration::from_millis(50),
+        });
+        app.add_plugins(shared::ProtocolPlugin);
+        app.add_plugins(crate::guild::GuildPlugin);
+        app.add_systems(Update, (process_guild_accepts, process_guild_invites));
+        app.finish();
+        app.cleanup();
+    }
+
+    fn guild_fixture_connection(app: &mut App, player: Entity, account: u64) -> Entity {
         let character = app.world().get::<ClientId>(player).unwrap().0;
-        let connection = app
-            .world_mut()
+        app.world_mut()
             .spawn((
                 crate::auth::Authenticated {
                     account_id: account,
@@ -905,18 +762,34 @@ mod tests {
                 MessageReceiver::<GuildAcceptInviteRequest>::default(),
                 MessageSender::<GuildAcceptInviteResponse>::default(),
                 MessageReceiver::<GuildAcceptInviteResponse>::default(),
+                MessageSender::<GuildInviteRequest>::default(),
+                MessageReceiver::<GuildInviteRequest>::default(),
+                MessageSender::<GuildInviteResponse>::default(),
+                MessageReceiver::<GuildInviteResponse>::default(),
+                MessageSender::<shared::protocol::GuildInvitation>::default(),
+                MessageReceiver::<shared::protocol::GuildInvitation>::default(),
             ))
-            .id();
+            .id()
+    }
+
+    fn exchange_guild_request<Request: Send + Sync + 'static, Response: Send + Sync + 'static>(
+        app: &mut App,
+        player: Entity,
+        account: u64,
+        request: Request,
+    ) -> Response {
+        install_guild_fixture(app);
+        let connection = guild_fixture_connection(app, player, account);
         app.world_mut()
-            .get_mut::<MessageSender<GuildAcceptInviteRequest>>(connection)
+            .get_mut::<MessageSender<Request>>(connection)
             .unwrap()
-            .send::<AuthChannel>(GuildAcceptInviteRequest);
+            .send::<AuthChannel>(request);
         let mut responses = Vec::new();
         for _ in 0..3 {
             app.update();
             responses.extend(
                 app.world_mut()
-                    .get_mut::<MessageReceiver<GuildAcceptInviteResponse>>(connection)
+                    .get_mut::<MessageReceiver<Response>>(connection)
                     .unwrap()
                     .receive(),
             );
@@ -925,7 +798,7 @@ mod tests {
         app.world()
             .resource::<GameDatabase>()
             .writer
-            .enqueue("legacy accept fixture barrier", move |_| {
+            .enqueue("guild fixture barrier", move |_| {
                 done.send(()).map_err(|error| error.to_string())
             });
         wait.recv().unwrap();
@@ -933,7 +806,7 @@ mod tests {
             app.update();
             responses.extend(
                 app.world_mut()
-                    .get_mut::<MessageReceiver<GuildAcceptInviteResponse>>(connection)
+                    .get_mut::<MessageReceiver<Response>>(connection)
                     .unwrap()
                     .receive(),
             );
@@ -941,6 +814,14 @@ mod tests {
         app.world_mut().despawn(connection);
         assert_eq!(responses.len(), 1);
         responses.pop().unwrap()
+    }
+
+    fn apply_guild_accept(
+        app: &mut App,
+        player: Entity,
+        account: u64,
+    ) -> GuildAcceptInviteResponse {
+        exchange_guild_request(app, player, account, GuildAcceptInviteRequest)
     }
 
     #[test]
@@ -972,26 +853,17 @@ mod tests {
             ))
             .id();
         let invitee = app.world_mut().spawn(ClientId(target)).id();
+        install_guild_fixture(&mut app);
+        guild_fixture_connection(&mut app, invitee, 2);
         let invite = |app: &mut App| {
-            app.world_mut()
-                .run_system_once(
-                    move |db: Res<GameDatabase>,
-                          players: Query<&Player>,
-                          guilds: Query<&GuildMembership>,
-                          ids: Query<&ClientId>| {
-                        handle_guild_invite(
-                            &db,
-                            &players,
-                            &guilds,
-                            &ids,
-                            actor,
-                            &GuildInviteRequest {
-                                target_character_name: "Invitee".into(),
-                            },
-                        )
-                    },
-                )
-                .unwrap()
+            exchange_guild_request::<_, GuildInviteResponse>(
+                app,
+                actor,
+                1,
+                GuildInviteRequest {
+                    target_character_name: "Invitee".into(),
+                },
+            )
         };
         assert!(invite(&mut app).success);
         let duplicate = invite(&mut app);

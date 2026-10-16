@@ -97,6 +97,7 @@ impl Plugin for GuildPlugin {
         guild_ranks::install_persistence(app);
         profile_actor::install(app);
         crate::messaging::guild_accept::install(app);
+        crate::messaging::guild_invite::install(app);
         app.init_resource::<crate::guild_bank::ChangedGuilds>()
             .add_systems(
                 Update,
