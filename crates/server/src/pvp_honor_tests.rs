@@ -37,6 +37,23 @@ fn honor_kill_keeps_lifetime_xp_without_inventing_level_or_wallet_award() {
         .insert(shared::components::CurrentPvpFaction(1));
     hit(&mut world, killer, victim, 1.0);
     assert_eq!(serialized_progress(&world, killer)["lifetime_honor_xp"], 0);
+    // A lethal same-team kill cannot generate honor.
+    let friendly = players[2].1;
+    world.entity_mut(friendly).insert((
+        InMap::continent(0),
+        shared::components::CurrentPvpFaction(2),
+    ));
+    hit(&mut world, killer, friendly, 1000.0);
+    assert_eq!(serialized_progress(&world, killer)["lifetime_honor_xp"], 0);
+    // Level30 gray cutoff is20; equality is ineligible.
+    let gray = players[3].1;
+    world.entity_mut(gray).insert((
+        InMap::continent(0),
+        Level(20),
+        shared::components::CurrentPvpFaction(1),
+    ));
+    hit(&mut world, killer, gray, 1000.0);
+    assert_eq!(serialized_progress(&world, killer)["lifetime_honor_xp"], 0);
     hit(&mut world, killer, victim, 1000.0);
     assert_eq!(world.get::<Health>(victim).unwrap().current, 0.0);
     // TC ceil(30 * 1.55) =47, with no group/aura multiplier.
