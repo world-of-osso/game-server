@@ -643,6 +643,7 @@ fn retail_text_emote(emote: EmoteKind) -> Option<u32> {
         EmoteKind::Sleep => 87,
         EmoteKind::Kneel => 59,
         EmoteKind::Love => 225,
+        EmoteKind::Hug => 56,
         EmoteKind::MountSpecial => return None,
     })
 }
@@ -655,6 +656,7 @@ fn emote_chat_text(emote: EmoteKind) -> Option<&'static str> {
         EmoteKind::Sleep => "falls asleep.",
         EmoteKind::Kneel => "kneels.",
         EmoteKind::Love => "loves everyone.",
+        EmoteKind::Hug => "needs a hug!",
         EmoteKind::MountSpecial => return None,
     })
 }
@@ -670,6 +672,7 @@ fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
         "/sleep" => Some(EmoteKind::Sleep),
         "/kneel" => Some(EmoteKind::Kneel),
         "/love" => Some(EmoteKind::Love),
+        "/hug" => Some(EmoteKind::Hug),
         "/mountspecial" => Some(EmoteKind::MountSpecial),
         _ => None,
     }
