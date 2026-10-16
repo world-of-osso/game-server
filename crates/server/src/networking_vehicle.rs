@@ -149,7 +149,7 @@ fn move_vehicle(
     mover: &NpcMover,
     player: Entity,
     clocks: &mut MovementClocks,
-    mut terrain: Option<(&mut GroundMap, InMap)>,
+    terrain: Option<(&mut GroundMap, InMap)>,
     position: Position,
     yaw: f32,
     auras: Option<&AuraStatMods>,
@@ -187,40 +187,74 @@ fn move_vehicle(
             -mover.movement.turn_speed * granted,
             mover.movement.turn_speed * granted,
         );
-    let mut target = reported;
-    if mover.movement.flags & FIXED_POSITION != 0 {
-        target = current;
-    } else if mover.movement.flags & NO_STRAFE != 0 {
-        let forward = Vec3::new(next_yaw.sin(), 0.0, next_yaw.cos());
-        let distance = (reported - current).dot(forward);
-        target = current + forward * distance;
+    let target = vehicle_target(current, reported, next_yaw, mover.movement.flags);
+    let (next, behind) = move_toward_reported(current, target, speed, Travel::Ground, |_| granted);
+    let next = ground_vehicle_step(current, next, input, mover.movement.flags, terrain);
+    let turning_behind = yaw_delta.abs() > mover.movement.turn_speed * granted + 0.001;
+    finish_vehicle_step(
+        current,
+        next,
+        next_yaw,
+        speed,
+        input.running,
+        behind || turning_behind,
+    )
+}
+
+fn vehicle_target(current: Vec3, reported: Vec3, yaw: f32, flags: u32) -> Vec3 {
+    if flags & FIXED_POSITION != 0 {
+        return current;
     }
-    let (mut next, behind) =
-        move_toward_reported(current, target, speed, Travel::Ground, |_| granted);
-    if let Some((ground, map)) = terrain.as_mut() {
-        next = ground.clamp_live_movement(*map, current, next);
+    if flags & NO_STRAFE != 0 {
+        let forward = Vec3::new(yaw.sin(), 0.0, yaw.cos());
+        let distance = (reported - current).dot(forward);
+        return current + forward * distance;
+    }
+    reported
+}
+
+fn ground_vehicle_step(
+    current: Vec3,
+    mut next: Vec3,
+    input: &PlayerInput,
+    flags: u32,
+    terrain: Option<(&mut GroundMap, InMap)>,
+) -> Vec3 {
+    if let Some((ground, map)) = terrain {
+        next = ground.clamp_live_movement(map, current, next);
         let envelope = LandEnvelope {
             airborne: None,
-            jumping: input.jumping && mover.movement.flags & NO_JUMPING == 0,
+            jumping: input.jumping && flags & NO_JUMPING == 0,
             feather_fall: false,
         };
-        next.y = if mover.movement.flags & NO_JUMPING != 0 {
+        next.y = if flags & NO_JUMPING != 0 {
             // Unlike players these ground vehicles have no airborne interval/gravity
             // system. Follow the NPC support floor, including descending terrain.
-            match ground.creature_ground_in(*map, next.with_y(current.y)) {
+            match ground.creature_ground_in(map, next.with_y(current.y)) {
                 GroundProbe::Supported(floor) => floor,
                 GroundProbe::Unsupported | GroundProbe::Unloaded => current.y,
             }
         } else {
-            land_height(ground, *map, current, next, envelope)
+            land_height(ground, map, current, next, envelope)
         };
     } else {
         next.y = current.y;
     }
+    next
+}
+
+fn finish_vehicle_step(
+    current: Vec3,
+    next: Vec3,
+    yaw: f32,
+    speed: f32,
+    running: bool,
+    behind: bool,
+) -> VehicleStep {
     let moved = current.xz().distance(next.xz()) > 0.001;
     let motion = if !moved {
         CreatureMotion::Still
-    } else if input.running {
+    } else if running {
         CreatureMotion::Run
     } else {
         CreatureMotion::Walk
@@ -231,9 +265,9 @@ fn move_vehicle(
             y: next.y,
             z: next.z,
         },
-        yaw: next_yaw,
+        yaw,
         speed: if moved { speed } else { 0.0 },
         motion,
-        behind: behind || yaw_delta.abs() > mover.movement.turn_speed * granted + 0.001,
+        behind,
     }
 }
