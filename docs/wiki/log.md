@@ -1,3 +1,7 @@
+## 2026-10-16 — Shrine server per-target conversion
+
+[Source stat table](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16): real learned-use actor has client viewer20 but server level30/armor155 RED. Retain raw difficulty DamageModifier and build the existing per-level ExpectedStat table for final summon tuning; nineteen focused controls pass concrete level/armor/dealt/loss outputs. Whole-Toy-plus-seven and current server gates pending; actual combat hits, client HP and guardian stats remain separate.
+
 ## 2026-10-15 — Shrine viewer-level projection
 
 [Viewer-level boundary](systems/toys.md#shrine-viewer-level-projection-2026-10-15): actual learned Shrine projects30 to viewer20 RED; selected regional range and same rolled delta now survive wild initialization. Nine targeted controls pass, including Podium's zero-tuning native-level behavior. Whole-Toy136/136, six current build/check/fmt gates and fresh replicated Shrine/Podium/default-Scarab viewer projections pass. Admin creation-timeout evidence retained; only unfinished scenarios resumed with new accounts. Server-combat tables and exact client HP remain separate.
