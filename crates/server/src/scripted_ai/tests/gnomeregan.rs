@@ -78,6 +78,21 @@ fn encounter_coverage_thermaplugg_real_spells_and_isolated_credit() {
     assert!(h.inbox(1).ends.is_empty());
 }
 
+#[derive(Resource, Default)]
+struct WalkingBombBirths(Vec<(Position, InMap)>);
+
+fn record_walking_bomb_births(
+    bombs: Query<(&shared::components::Npc, &Position, &InMap), Added<shared::components::Npc>>,
+    mut births: ResMut<WalkingBombBirths>,
+) {
+    births.0.extend(
+        bombs
+            .iter()
+            .filter(|(npc, _, _)| npc.template_id == 7915)
+            .map(|(_, position, map)| (*position, *map)),
+    );
+}
+
 #[test]
 fn encounter_coverage_thermaplugg_normal_linked_walking_bomb_pair() {
     const THERMAPLUGG: u32 = 7800;
@@ -88,6 +103,13 @@ fn encounter_coverage_thermaplugg_normal_linked_walking_bomb_pair() {
         current: 1_000_000.0,
         max: 1_000_000.0,
     });
+    // Observe the actual spawn boundary; the production chase system moves bombs in this tick.
+    h.app.init_resource::<WalkingBombBirths>().add_systems(
+        FixedUpdate,
+        record_walking_bomb_births
+            .after(update_creature_ai)
+            .before(crate::creature_ai::chase_system),
+    );
     let speech = h.app.world().resource::<CreatureTexts>().groups[&THERMAPLUGG][&2][0]
         .male_text
         .clone();
@@ -97,25 +119,14 @@ fn encounter_coverage_thermaplugg_normal_linked_walking_bomb_pair() {
     h.advance(0.1);
     let bombs = h.creatures_of(WALKING_BOMB);
     assert_eq!(bombs.len(), 2, "real linked Normal-only pair must spawn");
-    eprintln!(
-        "THERMAPLUGG bombs at30s {:?}",
-        bombs
-            .iter()
-            .map(|bomb| (
-                bomb,
-                h.app.world().get::<Position>(*bomb),
-                h.app
-                    .world()
-                    .get::<crate::creature_ai::CreatureState>(*bomb)
-            ))
-            .collect::<Vec<_>>()
-    );
+    let births = &h.app.world().resource::<WalkingBombBirths>().0;
+    assert_eq!(births.len(), 2);
+    eprintln!("THERMAPLUGG actual spawn-boundary positions: {births:?}");
     for (x, y, z) in [(-521.934, 693.13, -327.005), (-535.318, 649.987, -326.494)] {
         assert!(
-            bombs.iter().any(|bomb| {
-                let pos = h.app.world().get::<Position>(*bomb).unwrap();
-                Vec3::new(pos.x - x, pos.y - z, pos.z + y).length() < 0.01
-            }),
+            births
+                .iter()
+                .any(|(pos, _)| { Vec3::new(pos.x - x, pos.y - z, pos.z + y).length() < 0.01 }),
             "missing authored bomb position {x}/{y}/{z}"
         );
     }
