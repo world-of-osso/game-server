@@ -98,6 +98,27 @@ impl ExpectedStats {
             .fold(row.get(stat), |value, mods| value * mods.get(stat))
     }
 
+    /// Source base health and armor before template modifiers, including tuning/class mods.
+    pub(crate) fn creature_health_armor(
+        &self,
+        level: u8,
+        health_scaling_expansion: i32,
+        content_tuning_id: u32,
+        unit_class: u8,
+    ) -> (f32, f32) {
+        let expansion = resolve_health_expansion(health_scaling_expansion);
+        (
+            self.evaluate(
+                Stat::Health,
+                level,
+                expansion,
+                content_tuning_id,
+                unit_class,
+            ),
+            self.evaluate(Stat::Armor, level, expansion, content_tuning_id, unit_class),
+        )
+    }
+
     /// Creature::GetBaseArmorForLevel (Creature.cpp:3208-3214) of an untuned
     /// template: ContentTuning 0, HealthScalingExpansion 0.
     pub fn untuned_armor(&self, level: u8, unit_class: u8, armor_modifier: f32) -> f32 {
