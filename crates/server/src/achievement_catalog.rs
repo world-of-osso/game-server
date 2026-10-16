@@ -751,6 +751,7 @@ struct AchievementDef {
 }
 
 #[derive(Resource, Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct AchievementCatalog {
     window: window::WindowData,
     definitions: BTreeMap<u32, AchievementDef>,
