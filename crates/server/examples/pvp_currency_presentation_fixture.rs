@@ -1,16 +1,15 @@
 //! Offline, private UDP5941 presentation fixture. Never awards currency.
 use redb::TableDefinition;
 use shared::currency::{CurrencyEntry, CurrencyWallet, HONOR_CURRENCY_ID};
-use std::{error::Error, path::Path};
+use std::{error::Error, net::UdpSocket};
 
 const PRIVATE_DB: &str = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/pvp-progression-2026-10-16/live/game.redb";
 const HONORPROOF: u64 = 30;
 const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
 
 fn main() -> Result<(), Box<dyn Error>> {
-    if Path::new("/tmp/game-server-admin-5941.sock").exists() {
-        return Err("stop the private server before installing the presentation fixture".into());
-    }
+    // A stale admin socket survives process exit; reserve the actual private realm port.
+    let _private_port = UdpSocket::bind("127.0.0.1:5941")?;
     let mode = std::env::args()
         .nth(1)
         .ok_or("expected empty or discovered")?;
