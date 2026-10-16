@@ -68,6 +68,28 @@ def areas():
 
 
 class WorldQuestImportTests(unittest.TestCase):
+    def test_source_polygon_heights_are_preserved_in_area_rows(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            poi = areas()
+            heights = [-1582, -1614, -1599, -1577]
+            for point, height in zip(poi['points'], heights):
+                point['Z'] = height
+            self.assertEqual(import_definitions(conn, receipt(), poi), [52847])
+            cursor = conn.execute('SELECT * FROM content_world_quest_area ORDER BY point_index')
+            names = [column[0] for column in cursor.description]
+            rows = [dict(zip(names, row)) for row in cursor.fetchall()]
+            self.assertEqual([row.get('z') for row in rows], heights,
+                             'QuestPOIPoint source Z must not be discarded or replaced with zero')
+
+    def test_missing_source_height_is_rejected_not_guessed(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            poi = areas()
+            del poi['points'][0]['Z']
+            with self.assertRaises(KeyError):
+                import_definitions(conn, receipt(), poi)
+
     def test_polygon_policy_duration_and_point_only_exclusion(self):
         with closing(sqlite3.connect(":memory:")) as conn:
             fixture(conn)
