@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Electrocutioner primary and source mana gap](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16) — authenticated6235/380/bit3 binding and controlled death credit; ordinary SAI Shock fails authored mana admission, named mechanics acceptance remains open.
+
 - [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
