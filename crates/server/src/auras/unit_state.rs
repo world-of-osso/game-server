@@ -16,7 +16,7 @@
 
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{ModelDisplay, Position, UnitFlags};
+use shared::components::{ModelDisplay, Position, UnitFlags, UnitFlags2};
 
 use super::handlers::{MOD_CONFUSE, MOD_FEAR, MOD_UNATTACKABLE, TRANSFORM};
 use super::{ActiveAuras, AuraInstance};
@@ -75,6 +75,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let visibility = super::Invisibility::from_auras(auras);
     let stealth = super::stealth::Stealth::from_auras(auras);
     let preparing = has_type(auras, super::handlers::ARENA_PREPARATION);
+    let forced_forward = has_type(auras, super::handlers::FORCE_MOVE_FORWARD);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
     let fear_caster = auras
@@ -89,6 +90,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let feather_fall =
         shared::components::FeatherFall(has_type(auras, super::handlers::FEATHER_FALL));
     reconcile_preparation(world, unit, preparing);
+    reconcile_forced_forward(world, unit, forced_forward);
     reconcile_scale(world, unit);
     reconcile_feather_fall(world, unit, feather_fall);
     if world.get::<super::Invisibility>(unit) != Some(&visibility) {
@@ -111,6 +113,23 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     super::mount::reconcile_can_fly(world, unit, flight);
     reconcile_display(world, unit);
     super::shapeshift::reconcile_display_power(world, unit);
+}
+
+/// TC HandleForceMoveForward: removing one aura retains the flag if another remains.
+fn reconcile_forced_forward(world: &mut World, unit: Entity, forced: bool) {
+    let previous = world.get::<UnitFlags2>(unit).copied().unwrap_or_default();
+    let next = if forced {
+        UnitFlags2(previous.0 | UnitFlags2::FORCE_MOVEMENT)
+    } else {
+        UnitFlags2(previous.0 & !UnitFlags2::FORCE_MOVEMENT)
+    };
+    if next == previous {
+        return;
+    }
+    world.entity_mut(unit).insert(next);
+    if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+        dirty.mark(unit);
+    }
 }
 
 fn reconcile_preparation(world: &mut World, unit: Entity, preparing: bool) {

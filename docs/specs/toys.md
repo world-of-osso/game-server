@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Source aura241 sets replicated `UnitFlags2::FORCE_MOVEMENT` (0x40), preserving unrelated bits. Removing one overlapping241 aura retains the flag; the final removal clears only that bit (TC `HandleForceMoveForward`). Server flag lifecycle alone does not certify native movement or full toy parity.
+
 - Ysera's Tear130170/195708 requires authentic TDB99518/Vision of Ysera with display66207. Summon one stationary non-pet actor at source47's8yd front offset for120000ms; preserve property3054's private owner and source-level selection. Do not replace the caster's body/health. Display66207's state kit60600 references procedural8605/type22; server admission does not certify that currently unsupported native visual or complete-toy parity. Native body dependencies require independent source authentication/publication.
 - Enchanted Stone Whistle129279/193687 requires authentic TDB98300/Petrified Sand Piper with display71056. Source63 selects the requested unit, then86 samples within its3yd disk; summon exactly one stationary non-pet actor for60000ms. Preserve owner/map, caster body/health, instant cast and60000ms item recovery. Property1362 does not designate following or a combat-pet frame; no AI/click action is inferred. Authenticated native assets/rendering remain separate from server import/use acceptance.
 

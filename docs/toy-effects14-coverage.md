@@ -2,11 +2,39 @@
 
 ## Source-order continuation gaps (2026-10-16)
 
+Ashhide104329/148626 remains blocked by the missing mount template73689. Source aura78 names73689; the authentic TDB model row selects display51484 (M2 646374), but the published creature catalog lacks73689. Generic aura241 flag proof does not establish Ashhide learning/use, mount rendering, area acceptance or expiry. Per lead instruction, retain this named gap and continue source order; no substitute mount or importer admission. Unexecuted Ashhide test drafts remain in continuation evidence, not the passing regression suite.
+
+113543/174004 has aura78 with zero creature entry and no matching70391 Mount SourceSpell row; its mount/body action remains unresolved. [Grizzlesnout129965 learned-use proof](#grizzlesnout63-source-lifecycle-2026-10-16) now covers the next source root without closing that gap. Next130249/195806 has current published template99572 with authentic display choices63609/63606; the earlier absent-template snapshot is stale. Actual Waywatcher use/rendering remains unproved. Read-only evidence: `waywatcher64-template-source-preflight.json`.
+
 Guardian health remains read-only. Pinned TC `Guardian::InitStatsForLevel` uses ExpectedStat when pet_levelstats has no matching row; the local TDB archive has2715 rows and none for51113. `SetCreateHealth(uint32)` truncates the computed base, unlike the wild-summon ceiling. Final `UpdateAllStats` also inherits30% of owner stamina. The actual owner-stamina/final-health oracle remains incomplete; prior positive HP1 wire evidence is not parity. Continue other toys without inventing a guardian default.
 
 Earlier root refusals remain in the [effects12 identity/reason table](toy-effects12-coverage.md#exact-retained-gaps) and [effects13 refinements](toy-effects13-coverage.md#exact-retained-gaps), except identities explicitly closed by later packets here. Arrival of the Naaru64456/91752 is not admitted: TDB51200/display35543 resolves model124640, `creature/invisiblestalker/invisiblestalker.m2`, not a recording model. The local root has only its summon effect; template addon, AI/script, creature spells and SmartAI bindings are empty. The recording action is not established by publishing this invisible actor. This is a local source gap, not proof that Retail has no action.
 
 [Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
+
+## Grizzlesnout63 source lifecycle (2026-10-16)
+
+Test-only commit6f02eec4 exercises actual bag learning and journal UseToy129965/194807. Initial run passes1/1 in41.95s, zero ignored; this is acceptance of existing handlers after62, not a new RED→GREEN runtime fix. The source-backed test asserts real ADT parser area/height: Northshire9 refuses area group4446 without spending recovery; Northrend571/area3537 accepts after the authored1500ms cast.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Server lifecycle | Source transform27864 selects9287; flag1 becomes65 without losing the unrelated bit; run speed multiplier3.5 and aura15000ms remain authored. The ordinary50ms simulation expires the aura, restores original display/health/flag1/speed1, and retains the600000ms item recovery. No clock, cooldown or duration reset. |
+| Body ownership | Twelve same70391 body dependencies authenticate by resolution content key/MD5, SHA256 and byte length. Every key already has exactly one canonical owner; both12648700/01.skin aliases are byte-equal to the referenced skins. No new fragment, extraction or canonical mutation. |
+| Current gates | At server5b3a1604/engined6adbe444/protocol07a8faa, whole `toys:: --test-threads 2` passes140/140, zero ignored623.06s. Server binary/tests check passes1m36s; fmt passes. Actual production `ModelAssetIndex::load` accepts the canonical combined namespace and resolves all12 Grizzlesnout receipts/two aliases. No compile warnings; manual changed-Rust readability has no findings. |
+| Remaining | No fresh wire, native input delivery for this particular toy, pixels, audio, wall-clock lifetime or complete-toy parity claim. Generic35/35 native movement proof retains only its62 scope. |
+
+Evidence root below: `grizzlesnout63-{active-goal,proof-ledger,source-metadata,body-source,terrain-source,authenticated-owners,readability}.json` and `grizzlesnout63-initial.log`, `grizzlesnout63-final-results.json`, final gate logs and `grizzlesnout63-canonical-loader.log`. Model43→M2 126487 has seven external animations, two skins and display overrides126492/126493; source display scale1.5 remains separate from server display identity.
+
+## Forced-forward62 generic input proof (2026-10-16)
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Replicated flag | TC aura241 sets `UnitFlags2::FORCE_MOVEMENT`0x40; unrelated bits survive, overlapping auras retain the flag until last removal. Genuine RED0/1 observes1 instead of65; GREEN1/1 passes6.08s at serverb0a24e7d/protocol07a8faa. Existing wire field reused; no new schema. |
+| Native input | Engine8be3b46e8 test genuinely fails forced idle input `[0,0,0]` instead of `[0,0,1]`. Production18625f980 plus numeric-tuple API correctiond6adbe444 consumes replicated0x40 and clamps forward exactly1 while preserving strafe, ordinary mouse/scripted controls and release. Native gameplay controls pass35/35, zero ignored2.84s; compile3m27s. Initial contains-method compile failure is retained separately. |
+| Current regression | Whole `toys:: --test-threads 2` passes139/139, zero ignored418.73s at server2d8fc58e/engined6adbe444/protocol07a8faa; compile24m16s. Native lib check passes2m24s, server binary check4m13s, changed-package engine/server and protocol fmt pass. Manual changed-Rust readability finds no suppressions or new issue. |
+| Classification and gaps | Same shared-data catalog snapshot basis364→369 adds104329/113543/129965/130249/153193, zero removals. This is handler classification, not five complete toys; prior385 prepared-import count is a different DB basis. Missing73689 and zero-entry113543 mount action remain named gaps above; next actual-use candidate129965 has source27864/display9287. No new native wire/pixels, per-toy movement/body/lifetime or guardian-health parity claim. |
+
+Evidence root below: `force-forward62-{proof-ledger,readonly-source,next-source-order,readability,census-delta,final-results}.json`, native/flag RED/GREEN and final logs. Unexecuted Ashhide drafts are archived under `deferred62-*`, not admitted to the active regression suite. [Native input contract](../../game-engine/docs/specs/player-movement-sync.md#forced-forward-aura).
 
 ## Ysera source summon proof (2026-10-16)
 

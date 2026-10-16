@@ -4,7 +4,7 @@ use crate::quest::{QuestStore, quest_player};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Level, Player};
-use shared::protocol::{AvailableWorldQuest, QuestChannel, QuestPoiPoint, WorldQuestAvailability};
+use shared::protocol::{AvailableWorldQuest, QuestChannel, WorldQuestAvailability, WorldQuestPoi};
 
 #[derive(Component)]
 pub(crate) struct SentAvailability(WorldQuestAvailability);
@@ -64,18 +64,10 @@ fn snapshot(
         {
             continue;
         }
-        let Some(area) = quests
-            .world_quest_areas
-            .get(&quest.id)
-            .and_then(|areas| areas.first())
-        else {
+        let Some(areas) = quests.world_quest_areas.get(&quest.id) else {
             continue;
         };
-        let count = area.vertices.len() as f32;
-        let position = QuestPoiPoint {
-            x: (area.vertices.iter().map(|p| p.0).sum::<f32>() / count) as i32,
-            y: (area.vertices.iter().map(|p| p.1).sum::<f32>() / count) as i32,
-        };
+        let pois = areas.iter().map(area_poi).collect();
         let data = quests
             .world_quest_rewards
             .get(&quest.id)
@@ -83,10 +75,8 @@ fn snapshot(
         active.push(AvailableWorldQuest {
             quest_id: quest.id,
             title: quest.title.clone(),
-            map_id: area.map_id,
             zone_id: quest.sort_id.max(0) as u32,
-            ui_map_id: area.ui_map_id,
-            position,
+            pois,
             expires_at: window.expires_at,
             rewards: crate::quest_view::quest_rewards(quests, quest, player),
             xp: crate::world_quest_rewards::xp(quests, quest, player.level),
@@ -97,5 +87,16 @@ fn snapshot(
     WorldQuestAvailability {
         server_time: quests.now.expect("world quest clock initialized"),
         quests: active,
+    }
+}
+
+fn area_poi(area: &crate::world_quests::Area) -> WorldQuestPoi {
+    let count = area.vertices.len() as f32;
+    WorldQuestPoi {
+        map_id: area.map_id,
+        ui_map_id: area.ui_map_id,
+        x: (area.vertices.iter().map(|point| point.0).sum::<f32>() / count) as i32,
+        y: (area.vertices.iter().map(|point| point.1).sum::<f32>() / count) as i32,
+        z: (area.vertices.iter().map(|point| point.2).sum::<f32>() / count) as i32,
     }
 }
