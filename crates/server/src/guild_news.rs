@@ -122,6 +122,12 @@ fn write_history_in(txn: &WriteTransaction, guild: u32, history: &History) {
         .expect("write guild news");
 }
 
+pub(crate) enum ItemNewsSource {
+    Looted,
+    Crafted,
+    Purchased,
+}
+
 /// TC Player.cpp23904: committed vendor purchase uses the template's base level.
 pub(crate) fn record_purchase(
     db: &Database,
@@ -129,26 +135,57 @@ pub(crate) fn record_purchase(
     item_id: u32,
     template: &crate::item_templates::ItemTemplate,
 ) {
+    record_item(
+        db,
+        character,
+        item_id,
+        template,
+        None,
+        ItemNewsSource::Purchased,
+    );
+}
+
+/// Call only after the real item mutation commits, never for inventory moves.
+pub(crate) fn record_item(
+    db: &Database,
+    character: u64,
+    item_id: u32,
+    template: &crate::item_templates::ItemTemplate,
+    scaling: Option<&shared::item_scaling::ItemScalingTables>,
+    source: ItemNewsSource,
+) {
     const EPIC: u8 = 4;
     const MIN_NEWS_ITEM_LEVEL: u16 = 353; // TC Guild.h260.
-    let qualifies = template.scaling.quality > EPIC
-        || (template.scaling.quality == EPIC && template.scaling.item_level >= MIN_NEWS_ITEM_LEVEL);
-    if !qualifies {
+    if template.scaling.quality < EPIC {
         return;
     }
     let Some(membership) = crate::persistence::load_character_guild(db, character) else {
         return;
     };
-    let txn = db.begin_write().expect("begin actual guild purchase news");
+    if template.scaling.quality == EPIC {
+        let level = match source {
+            ItemNewsSource::Purchased => template.scaling.item_level,
+            _ => scaling
+                .expect("guild loot/craft news requires installed item scaling")
+                .item_level(&template.scaling),
+        };
+        if level < MIN_NEWS_ITEM_LEVEL {
+            return;
+        }
+    }
+    persist_item(db, character, membership.guild_id, item_id, source);
+}
+
+fn persist_item(db: &Database, character: u64, guild: u32, item_id: u32, source: ItemNewsSource) {
+    let txn = db.begin_write().expect("begin actual guild item news");
     let member = crate::guild_event_log::character_name_in(&txn, character);
-    append_in(
-        &txn,
-        membership.guild_id,
-        GuildNewsKind::ItemPurchased { member, item_id },
-        crate::guild_bank::unix_now(),
-        false,
-    );
-    txn.commit().expect("commit actual guild purchase news");
+    let kind = match source {
+        ItemNewsSource::Looted => GuildNewsKind::ItemLooted { member, item_id },
+        ItemNewsSource::Crafted => GuildNewsKind::ItemCrafted { member, item_id },
+        ItemNewsSource::Purchased => GuildNewsKind::ItemPurchased { member, item_id },
+    };
+    append_in(&txn, guild, kind, crate::guild_bank::unix_now(), false);
+    txn.commit().expect("commit actual guild item news");
 }
 
 /// Called inside the transaction saving newly earned character/account achievements.
