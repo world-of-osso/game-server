@@ -213,7 +213,11 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         return;
     };
     let entry = effect.misc_values[0] as u32;
-    if properties.control == CONTROL_WILD && properties.title == 0 && !properties.is_guardian() {
+    let uses_default_lifecycle = matches!(
+        (properties.control, properties.title),
+        (CONTROL_WILD, 0) | (CONTROL_WILD | CONTROL_ALLY, TITLE_ASSISTANT)
+    );
+    if uses_default_lifecycle && !properties.is_guardian() {
         let count = roll_summon_count(world, ctx, effect, properties_id);
         for index in 0..count {
             let destination = if index == 0 {

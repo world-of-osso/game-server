@@ -62,6 +62,8 @@ fn toyfx66_katy_source_mailbox_npc_opens_mail_and_sends_without_gossip_substitut
                 && opened.kind == InteractionKind::Role(NpcRole::Mailbox)),
         "authentic mailbox flag opens mail, not an invented gossip option"
     );
+    // As with the existing game-object fixture, contents follow the role by one frame.
+    h.app.update();
     let contents = h.take::<MailboxContents>();
     assert!(
         contents
