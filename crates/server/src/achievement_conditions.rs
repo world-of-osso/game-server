@@ -4,7 +4,7 @@
 // including plain Some requiring one of complete TargetCreatureId4, PlayerMap32, PlayerHasAura8 or typed area17/zone41 alternatives,
 // native loot/obtain event ItemId19 and item-quality14/15; complete Some ItemId19 alternatives.
 // native type110 spell-hit TargetIsPlayer5/TargetHasAura10/TargetRace27/TargetClass28/TargetHealthBelowPercent46; class requires player/race authority.
-// Native DoEmote54 retains complete positive TargetIsPlayer5/TargetIsDead6/TargetIsEnemy7 companions on the requested unit.
+// Native DoEmote54 retains complete positive TargetIsPlayer5/TargetIsDead6/TargetIsOppositeFaction7 companions on the requested unit.
 // alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.
 // Native KillCreature0 SingleFalse8, CastSpell29 SingleFalse87 and Login74 SingleFalse104 use signed compiled kinds; raw DB2 kinds stay unchanged.
 // Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.
