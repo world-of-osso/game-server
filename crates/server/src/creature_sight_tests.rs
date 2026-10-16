@@ -400,7 +400,10 @@ fn dormant_resize_population_fits_one_catch_up_frame() {
     app.add_systems(Update, resize_npcs);
     app.world_mut().spawn_batch((0..250_000).map(|_| {
         (
-            Npc,
+            Npc {
+                template_id: 30,
+                name: "Forest Spider".into(),
+            },
             GridDormant,
             at(0.0),
             InMap::continent(0),
