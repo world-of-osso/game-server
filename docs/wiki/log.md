@@ -1663,3 +1663,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Bounded dormant detection/resize RED→GREEN and 43 behaviour controls; irrelevant GO collision RED and membership-index implementation recorded in [[server-tick-lag]].
 
 - 2026-10-16: Content268 native/catalog GREEN3/3(13.47s), including100 native controlled flag settlements for both908/909 grants, faction/idle guards and database-reopened original dates. Integrated server9aca3c1a, final gate pending.
+
+- 2026-10-16: Content268 integrated gate at a8d4d866 passes217/0/1existingignored +site1/1; serverworkspace/alltargetcheckEXIT0/noRustwarnings. Native100 grants908/909 and strengthened89participation guard pass; readability/independentartifactPASS.
