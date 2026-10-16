@@ -8,6 +8,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::Arc;
 
+pub(crate) mod summon_levels;
+
 use crate::creature_aggro::AggroMode;
 use crate::level_scaling::{
     ArmorConstants, CreatureStats, ExpectedStats, LevelStats, TuningInputs,
@@ -186,6 +188,7 @@ pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 #[derive(Resource, Clone, Default)]
 pub struct WorldData {
     pub templates: HashMap<u32, CreatureTemplate>,
+    pub(crate) summon_levels: summon_levels::SummonLevels,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
     /// at that difficulty (`CreatureTemplate::GetDifficulty`), keyed (entry, difficulty).
     pub difficulty_templates: HashMap<(u32, u32), CreatureTemplate>,
@@ -260,6 +263,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
         .expect("Failed to open world.db");
 
     let expected_stats = load_expected_stats(&conn);
+    let summon_levels = summon_levels::SummonLevels::load(&conn)
+        .expect("Failed to load temporary guardian level inputs");
     let mut templates = load_templates(&conn, &expected_stats);
     load_template_models(&conn, &mut templates);
     let difficulty_templates = load_difficulty_templates(&conn, &expected_stats, &templates);
@@ -298,6 +303,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
 
     WorldData {
         templates,
+        summon_levels,
         difficulty_templates,
         spawns,
         spawns_by_map,

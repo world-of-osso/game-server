@@ -48,6 +48,17 @@
 
 [Bounded SingleFalse8](systems/dungeon-achievements.md#absent-player-aura-kill-guard) on KillCreature0 requires known actor aura authority and complete authored companions. Compiler43/43, genuine native RED, structural5511/1824; native/catalog/prior-positive/pinned GREEN5/5(39.10s) at2dc751cc. Native counters, genuine actor mark casts and DB reopen pass; controlled boss identities do not certify encounters or full-map grants.
 
+## 2026-10-15 — Wild summon initial-state source RED
+
+[Wild55](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15): actual learned Podium/Shrine source RED proves legacy level1/HP20-or1/armor50, instead of Northshire source level20/30 with corresponding ExpectedStat HP/armor. Source terrain precedes SelectLevel, then property flags control owner clamp. Minimal wild initialization updates level/HP/armor/mana; unknown-source refusal and retained lifecycle checks are under verification. No broader scaling/combat-stat or previous-native recertification claim.
+
+## 2026-10-15 — Winner's Podium source placement
+
+[Podium54](systems/toys.md#winners-podium-source-placement-2026-10-15): real-source RED3 for missing240220, scaled player-front minimum and destination138 airborne height; minimal source fix GREEN6/6 at3c2d0bb6, with real learning/use/20min simulation expiry and retained62/Bashiok/Shrine87 controls. Importer3/3, postmerge20/20/check/format/matching builds and both-skin native source/static proofs pass. Final clamp extraction377d5139 rechecks six affected controls58.66s/check/format/build; native receipts retain ed425/fe1d/ab40 scope. Prepared383 adds only239018, not383 complete;20min native wall expiry remains unproved. No runtime clock or cooldown changes.
+
+## 2026-10-15 — Source guardian level selection
+
+[Guardian51](systems/toys.md#source-guardian-level-selection-2026-10-15): actual UseToy owner80 Scarabs RED80→GREEN30, owner20 retained20; template/map/destination-area tuning and difficulty delta precede guardian initialization, explicit UseCreatureLevel. Thirteen final controls pass at0e2c24e8, including retained class/count/follow/expiry/startup fixtures. Merged check/format/build gates pass; fresh private UDP bag-learning/UseToy receives29/26 own Scarabs at20/30 for owners20/80. Exact binary/source ledger linked from the system page. Complete guardian-stat/AI parity remains open.
 ## 2026-10-15 — Installed race/class source
 
 [Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Installed283-pair/missing-source/actual admin kit+persistence regressions pass3/3; post-master race/mask/start/Forever controls10/10 and scoped check/fmt pass. Source95/96 contracts, start-level and visage policy remain separate and unchanged; rendered Dwarf login is not claimed. No realm5000 operation or stat tuning.
