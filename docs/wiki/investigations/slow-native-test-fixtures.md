@@ -20,13 +20,31 @@ Each arena builds a fresh app but reparses the same creature/achievement inputs;
 
 Test-only process caches parse canonical creature and achievement inputs once. The existing native spell fixture supplies complete spell/class copies; new clone implementations exist only under `cfg(test)`. Each app still owns mutable resources, entities and redb files. Achievement progress, dates, inventory, characters and protocol replies remain independent.
 
-Class summon preparation imports one process-owned snapshot before sharing it read-only. Its creature product is cloned before subset selection. Prepared encounter copies retain their own loaders: the canonical cache must never replace a copy's newly imported authority. Orb's producer changes creature/item/map tables, not spells; its spell input remains the unchanged canonical catalog.
+Class summon preparation imports one process-owned snapshot under `target/class-fixtures/` before sharing it read-only. The800MB process-lived file stays off `/tmp` tmpfs and is disposable with the slot's target cache. Its creature product is cloned before subset selection. Prepared encounter copies retain their own loaders: the canonical cache must never replace a copy's newly imported authority. Orb's producer changes creature/item/map tables, not spells; its spell input remains the unchanged canonical catalog.
 
 The affected harnesses already use manual50ms Bevy time. No wall-clock wait or gameplay duration was shortened; all matches, casts, kills, race/sex combinations, cooldowns and durable-reopen assertions remain. No development profile or production loader changed.
 
 ## Verification
 
-Initial implementationb2df8d8e; fixture-isolation and affected gameplay verification pending. Full-suite timing remains lead-owned.
+Atb2df8d8e atop master2dadf94e, all eleven named tests pass separately with unchanged gameplay assertions:
+
+| Case | GREEN test-body duration |
+|---|---:|
+| Sixteen arena maps |124.81s|
+| Absent-player-aura |22.65s|
+| Orb race/sex matrix |54.77s|
+| Six-round Solo Shuffle |56.28s|
+| Gilneas Full Coverage |26.91s|
+| Follower Felguard tap |27.74s|
+| Warlock summon/dismiss/reopen |51.94s|
+| Dungeon difficulty |29.01s|
+| Legacy dungeon difficulty |44.15s|
+| Kresh/Serpentis lifecycle |29.58s|
+| Malygos full roster |57.32s|
+
+The first three use matching49Hz CPU profiling on both sides. This is not an eleven-test combined invocation or proof that every test is below60s; arena remains above that threshold. The baseline used379c2c6b; current green also includes the intervening master2dadf94e source changes. Logs and `green-duration-ledger.json` preserve exact revisions, commands, admission snapshots and test-versus-runner durations. Full-suite timing/host contention remain lead-owned; no62→17minute claim.
+
+Two isolation tests pass36.82s, proving app creature/catalog/class changes do not alter cached authority and the imported class snapshot rejects SQL writes. Follow-up45ff1598 changes only the snapshot's scratch location to disk-backed target; current prepared-source controls and feature check pending. Unrelated canonical caches/profiles are not rerun for that filesystem-only change.
 
 ## Related
 
