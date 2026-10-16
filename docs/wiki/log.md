@@ -1630,3 +1630,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Noxxion real channel-aware clock/phase/ten-add/damage/isolated-credit acceptance GREEN3/3 at8e544d86; source21708 channel deferral explains compressed due-anchored repeat intervals. Native/ordinary acceptance remains separate.
 
 - 2026-10-16: Celebras controlled runtime GREEN2/2 in30.73s, including two source guardian waves, cleanup/manual redeemed actor, due clocks and isolated credit. Actual base0 projection GREEN; native/ordinary/regional manual-summon scaling remain separate.
+
+- 2026-10-16: [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) follows authenticated binder19/19/SQL and real no-casts RED; casting-aware timer/threshold port implemented, runtime gate pending.

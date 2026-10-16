@@ -2,6 +2,47 @@
 use super::*;
 
 #[test]
+fn encounter_coverage_landslide_wipe_rearms_damage_trigger() {
+    let (mut h, boss, map) = bound_boss(12203, 349, 4);
+    let player = h.player();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert((
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+        Health {
+            current: 1_000_000.0,
+            max: 1_000_000.0,
+        },
+    ));
+    h.engage(boss);
+    h.advance(0.1);
+    h.hit_pct(boss, 49.0);
+    h.advance(0.1);
+    assert!(!h.has_aura(boss, 21808), "incoming hit remains above50%");
+    h.hit_pct(boss, 2.0);
+    h.advance(0.1);
+    assert!(h.has_aura(boss, 21808), "first below50 hit triggers");
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 0.0;
+    h.advance(0.2);
+    assert!(!h.has_aura(boss, 21808), "wipe removes source channel");
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 4),
+        Some(EncounterState::NotStarted)
+    );
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1_000_000.0;
+    h.engage(boss);
+    h.advance(0.1);
+    h.hit_pct(boss, 1.0);
+    h.advance(0.1);
+    assert!(
+        h.has_aura(boss, 21808),
+        "reset re-arms incoming damage below50"
+    );
+}
+
+#[test]
 fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
     let (mut h, boss, map) = bound_boss(12203, 349, 4);
     let player = h.player();
