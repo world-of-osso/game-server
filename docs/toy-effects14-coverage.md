@@ -1,5 +1,13 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source-order continuation gaps (2026-10-16)
+
+Guardian health remains read-only. Pinned TC `Guardian::InitStatsForLevel` uses ExpectedStat when pet_levelstats has no matching row; the local TDB archive has2715 rows and none for51113. `SetCreateHealth(uint32)` truncates the computed base, unlike the wild-summon ceiling. Final `UpdateAllStats` also inherits30% of owner stamina. The actual owner-stamina/final-health oracle remains incomplete; prior positive HP1 wire evidence is not parity. Continue other toys without inventing a guardian default.
+
+Earlier root refusals remain in the [effects12 identity/reason table](toy-effects12-coverage.md#exact-retained-gaps) and [effects13 refinements](toy-effects13-coverage.md#exact-retained-gaps), except identities explicitly closed by later packets here. Arrival of the Naaru64456/91752 is not admitted: TDB51200/display35543 resolves model124640, `creature/invisiblestalker/invisiblestalker.m2`, not a recording model. The local root has only its summon effect; template addon, AI/script, creature spells and SmartAI bindings are empty. The recording action is not established by publishing this invisible actor. This is a local source gap, not proof that Retail has no action.
+
+Next source-closed candidate: Enchanted Stone Whistle129279/193687 summons Petrified Sand Piper98300/display71056, with source63→86 selecting a3yd disk around the selected unit, one actor and60000ms lifetime. Property1362 is wild/default, not a pet/follow designation. No TDB AI/addon/creature-spell/click/native root-script binding was found. Test-first work is pending; neither admission nor native pixels are certified yet. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
+
 ## Shrine server per-target stat conversion (2026-10-16)
 
 Actual learned Shrine use at c8a791f8 retains correct client projection but server `UnitScaling::level_against` returns native30 because it requires both `LevelScaling` and `ScaledStats`. Genuine source-area RED for owners20/80 observes server(level30,armor155,dealt100,loss100) against viewer20 instead of(20,135,53,182); Podium's no-scaling control passes. Source TC a352b1fa Creature.cpp3173–3257 defines per-target level and ExpectedStat ratios.
