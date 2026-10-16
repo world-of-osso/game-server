@@ -73,7 +73,26 @@ fn guild_news_records_only_successful_source_qualified_vendor_purchases() {
     )
     .unwrap();
     // Lillehoff's installed slot: Greater Inscription of the Axe, quality7, ilvl30.
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(pair::<shared::protocol::SelectGossipOption>());
     let vendor = h.open(32540);
+    let opened = h.take::<InteractionOpened>();
+    assert_eq!(opened.len(), 1, "Actual Lillehoff interaction: {opened:?}");
+    let InteractionKind::Gossip(menu) = &opened[0].kind else {
+        panic!("Lillehoff's real gossip menu expected: {opened:?}")
+    };
+    let vendor_option = menu
+        .options
+        .iter()
+        .find(|option| option.icon == 1)
+        .expect("authored vendor gossip option")
+        .option_id;
+    h.send::<_, InteractionChannel>(shared::protocol::SelectGossipOption {
+        npc: vendor.to_bits(),
+        option_id: vendor_option,
+    });
     let inventories = h.take::<VendorInventory>();
     assert_eq!(inventories.len(), 1);
     let item = inventories[0]
