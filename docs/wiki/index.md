@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Charter sign/rename FIFO](investigations/server-tick-lag.md#charter-signature-and-rename-fifo--2026-10-15) — fresh eligibility/physical owner checks and receipt-bound signer/owner petitions;9 wire/FIFO plus4 original store controls pass13/13, purchase/turn-in and release remain open.
+
 - [Guild invitation creation FIFO](investigations/server-tick-lag.md#guild-invitation-creation-fifo--2026-10-15) — fresh inviter/target authority and durable notification, source/target session binding;10 wire/FIFO plus3 retained controls pass13/13; release proof remains open.
 
 - [Guild acceptance FIFO](investigations/server-tick-lag.md#guild-invitation-acceptance-fifo--2026-10-15) — owned authenticated intent, atomic fresh acceptance and receipt-bound membership/replies;12 wire/FIFO plus3 retained controls pass15/15, release proof remains open.

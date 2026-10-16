@@ -1,3 +1,7 @@
+## 2026-10-15 — Charter signature and rename FIFO
+
+[Charter mutations](investigations/server-tick-lag.md#charter-signature-and-rename-fifo--2026-10-15):8 held-writer REDs and tick decode panic become fresh queued sign/rename and receipt-bound signer/owner petitions;13/13 wire/store controls pass. Prior invite/join/destruction, duplicate-account signing, departed/rebound source, storage metric and reopened conservation covered. Purchase/turn-in remain separate writers; no all-charter or release/global claim.
+
 ## 2026-10-15 — Guild invitation creation FIFO
 
 [Invitation producer](investigations/server-tick-lag.md#guild-invitation-creation-fifo--2026-10-15):8 held-writer REDs, premature refusal and tick decode panic become fresh FIFO authority and receipt-bound source/target publication;13/13 wire/lifecycle controls pass. Earlier revocation/join/invite/decline, duplicates, departed/rebound source, relogged target, actual failure metric and reopen covered. Initial fixture tuple-limit compile failure is retained separately; charters and global release/HOL proof remain open.
