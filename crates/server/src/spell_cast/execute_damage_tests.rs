@@ -12,7 +12,7 @@ const ARMS: u32 = 137049;
 fn setup(spec: u32) -> Harness {
     let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
-        &[EXECUTE, DAMAGE, spec, 29725, 52437],
+        &[EXECUTE, DAMAGE, spec, 29725, 52437, 316405],
         1,
     )
     .unwrap();
@@ -126,5 +126,23 @@ fn execute_damage_native_sudden_death_uses_authored_rage_without_spending() {
 fn execute_damage_native_standalone_child_does_not_spend_rage() {
     let mut h = setup(PROTECTION);
     h.set_power(PowerType::Rage, 700.0);
-    unscaled_child(&mut h);
+    let before = unscaled_child(&mut h);
+    h.cast_and_deliver(EXECUTE, Some(h.npc));
+    let amount = take_damage(&mut h);
+    assert_multiplier(before, amount, 2.0);
+    let after = unscaled_child(&mut h);
+    assert_multiplier(before, after, 1.0);
+}
+
+#[test]
+fn execute_damage_native_refund_does_not_reduce_launched_damage_budget() {
+    let mut h = setup(ARMS);
+    let baseline = unscaled_child(&mut h);
+    apply(&mut h, 316405);
+    h.set_power(PowerType::Rage, 400.0);
+    h.cast_and_deliver(EXECUTE, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::Rage), 40.0, "native ten-percent refund");
+    let amount = take_damage(&mut h);
+    assert_multiplier(baseline, amount, 2.0);
 }
