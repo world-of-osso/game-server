@@ -1,3 +1,7 @@
+## 2026-10-16 — Ysera source admission and private body closure
+
+[Ysera source boundary](systems/toys.md#ysera-source-summon-boundary-2026-10-16): genuine importer/use RED, authentic99518 admission, six importer controls and actual private-owner/front-offset/static120s simulation lifecycle pass. Whole-Toy138/138 and check/fmt pass after module-order-only formatting repair. Seventeen70391 body dependencies plus four aliases authenticate/publish privately; procedural8605/type22 remains unrendered. Prepared classification adds only130170 to385/1166, not complete-toy parity; earlier interaction and guardian HP gaps remain.
+
 ## 2026-10-16 — Stone Whistle source admission
 
 [Enchanted Stone Whistle](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16): actual importer and learned-use RED reproduce missing98300. Add only authentic Petrified Sand Piper through the maintained importer; existing destination/lifetime handlers are unchanged. Five importer controls, actual learned-use lifecycle, whole-Toy137/137 and server check/fmt pass; prepared classification adds only129279 to384/1166. Follow-up60 authenticates five70391 model/texture/skin assets and privately publishes them with two runtime aliases through the maintained importer; rebuilt graph is complete. Canonical publication, native rendering and guardian HP remain separate.

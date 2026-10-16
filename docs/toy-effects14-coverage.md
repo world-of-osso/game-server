@@ -8,6 +8,19 @@ Earlier root refusals remain in the [effects12 identity/reason table](toy-effect
 
 [Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
 
+## Ysera source summon proof (2026-10-16)
+
+[Contract](specs/toys.md#contract) owns130170/195708→99518/display66207. Genuine importer/use RED4425c34c reproduces zero published99518 and real learned-use refusal for missing99518(0/1,35.81s). Productionb0417165 adds only99518 to the maintained importer; no runtime Rust/Cargo, destination, privacy, stat, clock or cooldown implementation changes. Source has no AI/addon/spell/click/root-script binding;1200000ms item recovery remains unchanged.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Import and learned use | Six real importer controls pass7.046s; actual bag-learning/UseToy passes1/1,33.84s. One66207 actor has the caster's private-owner field and map, source47's8yd front offset, no pet/follow designation, static position after caster movement, unchanged caster body/health and ordinary50ms-harness120000ms expiry. Observer exclusion is not a fresh wire claim. |
+| Regression | Whole `toys:: --test-threads 2` passes138/138, zero ignored605.34s atb0417165/engine826302db5/protocoldc30250. All-target check passes21.80s; initial fmt finds only module declaration ordering. Formatting-only69a826f8 corrects it; fmt and follow-up all-target check pass15.55s. Whole behavior proof is not rerun or relabeled; manual changed-Rust readability has no findings. |
+| Body asset closure | All seventeen70391 model dependencies authenticate against build334a36cf5f3c32a5f7a167405487fa14 resolution/config/root/encoding identities: one532126 M2, five BLPs, seven animations and four skins. Maintained importer privately publishes17 assets and4 runtime aliases; rebuilt namespace graph has zero missing/unresolved dependencies and every byte receipt matches. |
+| Classification and gaps | Prepared classification384→385 adds only130170, zero removals; not385 complete toys or canonical publication. State kit60600→procedural8605/type22(values1,1,0.5,820812) is ignored by current native renderer. No guessed shader, procedural appearance, both-skin pixels, fresh UDP, wall expiry, audio or full NPC/guardian-stat parity claim. |
+
+Evidence root below: `green-aspect60-readonly-source.json`, `green-aspect61-{active-goal,proof-ledger,final-scope,final-results,readability,census-delta}.json`, importer/use RED/GREEN and whole-Toy/check/fmt logs, plus `green-aspect61-native-{closure-preflight,staged,publication,verified}.json`. Earlier interaction roots130191(trap/disarm),130199(portal imp),130209(chest progression) and130232(Moonfeather infection/spread) remain refused: related spells exist but local summon/template rows do not bind their actions.130194 still lacks an ItemSparse identity. Next sourced forced-forward boundary includes earlier104329/113543/129965 as well as130249/153193; no blanket admission.
+
 ## Enchanted Stone Whistle server proof (2026-10-16)
 
 [Contract](specs/toys.md#contract) owns129279/193687→98300/display71056. Genuine RED at5228c1d7/docs-equivalent9770e896 reproduces missing98300 in the real importer and actual bag-learning/UseToy refusal(0/1,49.46s). Production3e5772a6 adds only98300 to the maintained source importer; no runtime Rust/Cargo, destination, AI, stat, clock or cooldown implementation changes.
