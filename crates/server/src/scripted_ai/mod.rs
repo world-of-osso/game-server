@@ -22,6 +22,7 @@ pub mod event_map;
 pub mod instance_script;
 pub(crate) mod jump_movement;
 pub mod kings_rest;
+pub(crate) mod maraudon;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
@@ -77,6 +78,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
+            .add_systems(Startup, maraudon::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
@@ -284,6 +286,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if wailing_caverns::is_creature_script(script_name) {
         return wailing_caverns::creature_ai(world, creature);
     }
+    if maraudon::is_creature_script(script_name) {
+        return maraudon::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -300,6 +305,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || kings_rest::is_creature_script(script_name)
         || ragefire_chasm::is_creature_script(script_name)
         || wailing_caverns::is_creature_script(script_name)
+        || maraudon::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
