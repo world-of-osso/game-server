@@ -64,6 +64,15 @@ fn toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry() {
         None,
         "actual source Assistant35 use"
     );
+    assert!(
+        h.inbox
+            .cooldowns
+            .iter()
+            .any(|cooldown| cooldown.spell_id == 261602
+                && !cooldown.is_gcd
+                && cooldown.duration_ms == 10_800_000
+                && cooldown.category == 2066)
+    );
     let world = h.app.world_mut();
     let actors: Vec<_> = world
         .query::<(Entity, &Npc, &SummonedCreature)>()
