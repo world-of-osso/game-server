@@ -13,6 +13,10 @@ use shared::protocol::{
     GuildRegistrarSnapshot, ItemLocation, NpcRole,
 };
 
+#[cfg(test)]
+#[path = "guild_charter_mutation_fifo_tests.rs"]
+mod mutation_fifo_tests;
+
 #[derive(Clone, Copy)]
 struct Actor {
     connection: Entity,
