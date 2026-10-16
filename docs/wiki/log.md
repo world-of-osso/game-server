@@ -1,3 +1,7 @@
+## 2026-10-16 — BM Kill Command owned pet damage
+
+[Source bridge](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16):70391 names83381 and pinned SimC identifies its pet caster. Actual Call Pet/owner intent reproduces missing damage before the bridge; native BM/Survival/foreign-owner controls pass3/3. Extra talent/charging/admission and fresh UDP acceptance remain open.
+
 ## 2026-10-16 — Neutral DK faction creation policy
 
 [Source creation boundary](systems/race-class-eligibility.md#neutral-pandaren-death-knight-creation--2026-10-16):70391 neutral24/DK6 model rows are valid, but Retail explicitly requires early faction choice for DK. TDB has25/6 and26/6 Icecrown starts, no24/6. Reject neutral identity without inventing a start; faction DKs/neutral Monk/Dwarf Shaman preserved. Exact master all-pairs creation test reproduced RED before fix; scoped gates pending.
