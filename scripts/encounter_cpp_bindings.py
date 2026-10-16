@@ -266,7 +266,16 @@ LANDSLIDE_SOURCES = {
     **MARAUDON_SOURCES,
     "Kalimdor/Maraudon/boss_landslide.cpp": "37e958ab7e2e1cdea078bb39227d209ee42f7bc781c3906ca4d4cc3b7201074b",
 }
+THERADRAS_PRIMARY = dict(
+    map_id=349, entry=12201, encounter_id=429, bit=7,
+    script="boss_princess_theradras", journal_id=431, actor_id=1001, display_id=12292,
+)
+THERADRAS_SOURCES = {
+    **MARAUDON_SOURCES,
+    "Kalimdor/Maraudon/boss_princess_theradras.cpp": "fb6db01bb7d463145e32c0218504624c7668b1070dd9bf38d07532fd99ad3244",
+}
 PROFILES = {
+    "theradras": (THERADRAS_PRIMARY, THERADRAS_SOURCES),
     "landslide": (LANDSLIDE_PRIMARY, LANDSLIDE_SOURCES),
     "celebras": (CELEBRAS_PRIMARY, CELEBRAS_SOURCES),
     "vyletongue": (VYLETONGUE_PRIMARY, MARAUDON_SOURCES),

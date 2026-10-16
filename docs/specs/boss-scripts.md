@@ -278,3 +278,10 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 - [x] Authenticate12203→426/Normal349bit4 (TCordinal5), Journal70391 CSV429/999/display12293; copy-only binding preserves Celebras and excludes summons11783.
 - [x] Port18670 victim5–10s/repeat15–25s,5568 self10–15s/repeat10–20s and21808 self immediately upon first incoming hit crossing below50%, then30–40s repeats; reset re-arms once. Preserve source casting validator and due clocks.
 - [x] Gate actual effects/summons and isolated controlled426bit4 credit; ordinary/native, loot and persistence remain separate.
+
+
+## Maraudon Theradras source boundary
+
+- [x] Authenticate12201→429/Normal349bit7 (TCordinal7), Journal70391 CSV431/1001/display12292; copy-only binding preserves Landslide and excludes Zaetar12238.
+- [ ] Port21909 self20–25s/repeat20–25s,21832 random threat target20–30s/repeat15–25s,3391 self10–20s/repeat10–20s,21869 self25–35s/repeat30–40s; preserve actual mana, casting validator and due clocks.
+- [ ] Gate real spell effects, isolated controlled429bit7 credit and manual death summon12238 at authored WoW(28.1887,62.3964,-123.161,4.31096), actual base/Normal source projection. Ordinary/native, loot, persistence and spirit quest/gossip remain separate.
