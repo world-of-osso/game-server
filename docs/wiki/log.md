@@ -1433,3 +1433,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-15: documented read-only Stockade proximity acquisition receipts and pinned TC social/link distinctions; native cause remains under investigation.
 
 - 2026-10-15: recorded native14.5yd Stockade proximity boundary and Moloch source-UI Transmog click/delivered63346 proof; no gameplay change/full-clear claim.
+
+- 2026-10-16 UTC: recorded Stockaggro70 diagnostic3/3, actual earned loot/expected-empty context, complete27067-event measurement and owned-process cleanup; Greed/Hogger-voting and full-spec parity gaps retained.
