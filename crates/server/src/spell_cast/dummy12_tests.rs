@@ -125,7 +125,7 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
             std::time::Duration::from_millis(10),
         ));
     h.inbox.log.clear();
-    h.advance(60);
+    advance_wolf_swing_periods(&mut h, &wolves);
     for wolf in &wolves {
         assert_eq!(
             super::effects::power_stats(h.app.world(), *wolf, false),
@@ -156,7 +156,7 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         .get_mut::<crate::stats::CharacterStats>(caster)
         .unwrap()
         .attack_power *= 100.0;
-    h.advance(80);
+    advance_wolf_swing_periods(&mut h, &wolves);
     assert_eq!(
         super::effects::power_stats(h.app.world(), dummy, false),
         (0.0, 0.0)
@@ -172,6 +172,27 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
             "wolf {wolf:?}: owner AP100→10000, hit {before}→{after}, power {:?}",
             super::effects::power_stats(h.app.world(), wolf, false)
         );
+    }
+}
+
+/// Four native 1500ms swing periods per AP phase fit within the 15s summon.
+/// Wait on the Fixed clock consumed by auto-attacks, regardless of frame size.
+fn advance_wolf_swing_periods(h: &mut Harness, wolves: &[Entity]) {
+    let swing_period = wolves
+        .iter()
+        .map(|wolf| {
+            let wolf = h
+                .app
+                .world()
+                .get::<super::guardian::SpiritWolf>(*wolf)
+                .unwrap();
+            std::time::Duration::from_secs_f32(wolf.weapon.speed)
+        })
+        .max()
+        .unwrap();
+    let deadline = h.app.world().resource::<Time<Fixed>>().elapsed() + swing_period * 4;
+    while h.app.world().resource::<Time<Fixed>>().elapsed() < deadline {
+        h.advance(1);
     }
 }
 
