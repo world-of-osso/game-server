@@ -23,6 +23,10 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Sightless detection consumer](systems/toys.md#sightless-detection-consumer-2026-10-16) — actual journal152 RED→GREEN; existing native12yd/7yd hostile acquisition and source10min lifecycle proof, wire/rendering separate.
+
+- [Waywatcher source lifecycle](systems/toys.md#waywatcher-source-lifecycle-2026-10-16) — current99572 learned-use acceptance1/1, source Val'sharah/15s/900s behavior and private18-asset closure; canonical publication/rendering separate.
+
 - [Grizzlesnout source lifecycle](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16) — actual learning/Northrend cast/15s expiry acceptance1/1; twelve canonical body assets/two aliases authenticated, native rendering separate.
 
 - [Forced-forward flag boundary](systems/toys.md#forced-forward-flag-boundary-2026-10-16) — aura241 source overlap/final-removal RED→GREEN1/1; generic native35/35 and whole-Toy139/139 pass, Ashhide mount remains deferred.
@@ -393,7 +397,7 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch4](systems/spell-casting.md#fourth-batch-local-retail-rows) — ten bounded paths/eight ranked candidates;17 new native proofs, Dummy roots177→176.
 
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
-- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [current105-ID coverage and bounded Fade107 proof](../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16) separates row references/admission from Retail proof.
+- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [current105-ID census and bounded Fade/wall proof](../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16) separates row references/admission from Retail proof.
 
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [stationary arch/leash](systems/navigation.md#stationary-arch-and-leash-acceptance) records Retail5s no-path grace and bounded live acceptance; [contract](../specs/navigation.md).
 
