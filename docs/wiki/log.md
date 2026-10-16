@@ -15,6 +15,10 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 - 2026-10-16: [Arena residual](investigations/slow-native-test-fixtures.md#arena-residual-bounded-independent-fixtures-2026-10-16): LEAD-approved cap4 workers; all sixteen native cases pass52.70s with unchanged assertions/frames/50msstep; sampled CPU113.70s versus52.90s wall, full-suite separate.
+## 2026-10-16 — Stampwhistle source assistant and mailbox
+
+[Katy156833](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16): genuine importer/template, journal Assistant35 and NPC mailbox REDs; preserve actual default TempSummon flags/faction instead of owned-pet sanitization. Ordinary mail service sends real persisted letters and keeps distance/death guards; full600s summoned lifecycle and service pass2/2 after per-frame transient-message fixture correction. Whole-Toy143/143, affected mail/NPC/summon49/49, importer controls3/3, check/fmt pass. Canonical370 still refuses missing132969; prepared392 is classification, not completed toys. No canonical/native-rendering claim.
+
 ## 2026-10-16 — Sightless detection consumer
 
 [Sightless153293](systems/toys.md#sightless-detection-consumer-2026-10-16): journal RED rejects152 despite an existing native target-detected-range consumer. Real hostile12yd/7yd controls pass before minimal registry admission; actual learning/UseToy plus aggro GREEN2/2 retain source group5454/600s aura/300s recovery and ordinary expiry. Whole-Toy142/142, creature-aggro30/30, binary/tests check and fmt pass; canonical classification369→370 adds only153293. Native delivery/rendering remains separate; remote-view/possession roots unimplemented.
