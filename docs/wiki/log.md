@@ -1644,3 +1644,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) follows authenticated binder19/19/SQL and real no-casts RED; casting-aware timer/threshold port implemented, runtime gate pending.
 - 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].
+
+- 2026-10-16: Bounded dormant detection/resize RED→GREEN and 43 behaviour controls; irrelevant GO collision RED and membership-index implementation recorded in [[server-tick-lag]].
