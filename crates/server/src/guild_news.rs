@@ -13,6 +13,14 @@ struct History {
     entries: Vec<GuildNewsEntry>,
 }
 
+pub(crate) fn apply_request(
+    db: &Database,
+    actor: u64,
+    _request: shared::protocol::GuildNewsRequest,
+) -> GuildNewsState {
+    query(db, actor)
+}
+
 pub(crate) fn query(db: &Database, actor: u64) -> GuildNewsState {
     let membership = crate::persistence::load_character_guild(db, actor);
     let entries = membership.map(|guild| load_entries(db, guild.guild_id));
@@ -97,5 +105,110 @@ pub(crate) fn record_achievements_in(
         if let Some((kind, sticky)) = catalog.build_guild_news_achievement(id, &member) {
             append_in(txn, guild, kind, timestamp, sticky);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared::protocol::GuildNewsRequest;
+
+    #[test]
+    fn guild_news_retention_sticky_permissions_and_abort_survive_reopen() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("news-controls.redb");
+        let db = Database::create(&path).unwrap();
+        crate::persistence::create_tables(&db);
+        let mut ids = Vec::new();
+        for (name, guild, rank) in [("Master", 7, 0), ("Member", 7, 4), ("Outsider", 9, 0)] {
+            let (id, _) = crate::persistence::create_character(&db, 1, name, 1, 1).unwrap();
+            crate::persistence_character::set_character_guild_by_id(&db, id, guild, name).unwrap();
+            crate::persistence::banks::save_guild_member_rank(&db, id, rank);
+            ids.push(id);
+        }
+        let [master, member, outsider] = ids.try_into().unwrap();
+        let (unguilded, _) =
+            crate::persistence::create_character(&db, 2, "Unguilded", 1, 1).unwrap();
+        let event = || GuildNewsKind::ItemLooted {
+            member: "Member".into(),
+            item_id: 61931,
+        };
+        let txn = db.begin_write().unwrap();
+        for _ in 0..251 {
+            append_in(&txn, 7, event(), 100, false);
+        }
+        txn.commit().unwrap();
+        let expected = query(&db, member).entries;
+        assert_eq!(expected.len(), 250);
+        assert_eq!(
+            (expected[0].id, expected[249].id),
+            (2, 251),
+            "Tied-time insertion order and stable identities"
+        );
+        let txn = db.begin_write().unwrap();
+        append_in(&txn, 7, event(), 101, false);
+        txn.abort().unwrap();
+        assert_eq!(query(&db, member).entries, expected);
+        let request = GuildNewsRequest::SetSticky {
+            id: 2,
+            sticky: true,
+        };
+        assert_eq!(
+            apply_request(&db, member, request.clone()).error,
+            Some(GuildNewsError::Permissions)
+        );
+        assert_eq!(
+            query(&db, member).entries,
+            expected,
+            "Refusal cannot mutate history"
+        );
+        assert_eq!(
+            apply_request(&db, outsider, request.clone()).error,
+            Some(GuildNewsError::EntryNotFound)
+        );
+        let refused = apply_request(&db, unguilded, request.clone());
+        assert_eq!(refused.error, Some(GuildNewsError::NotInGuild));
+        assert!(refused.entries.is_empty());
+        let changed = apply_request(&db, master, request);
+        assert_eq!(changed.error, None);
+        assert!(changed.entries[0].sticky);
+        assert!(changed.entries[1..].iter().all(|entry| !entry.sticky));
+        assert_eq!(
+            changed
+                .entries
+                .iter()
+                .map(|entry| entry.id)
+                .collect::<Vec<_>>(),
+            expected.iter().map(|entry| entry.id).collect::<Vec<_>>(),
+            "Sticky changes flags, not stored order or identity"
+        );
+        assert_eq!(
+            apply_request(
+                &db,
+                master,
+                GuildNewsRequest::SetSticky {
+                    id: 1,
+                    sticky: true
+                }
+            )
+            .error,
+            Some(GuildNewsError::EntryNotFound)
+        );
+        drop(db);
+        let db = Database::create(&path).unwrap();
+        crate::persistence::create_tables(&db);
+        assert_eq!(query(&db, member).entries, changed.entries);
+        assert_eq!(
+            apply_request(
+                &db,
+                master,
+                GuildNewsRequest::SetSticky {
+                    id: 2,
+                    sticky: false
+                }
+            )
+            .entries,
+            expected
+        );
     }
 }
