@@ -19,12 +19,13 @@ Real member-scoped guild news, separate from lifecycle/bank history. Source: Mai
 | File | Role |
 |---|---|
 | shared-protocol `src/protocol/guild_news_messages.rs` | Separate member-only news query/sticky request and typed reply |
-| `crates/server/src/guild_news.rs` | Query scaffold; storage/producers pending |
+| `crates/server/src/guild_news.rs` | Member query, additive250-row storage and transactional achievement append |
+| `crates/server/src/achievement_account.rs`, `achievement_window.rs`, `persistence.rs` | Atomic actual-earned producer, installed flags/metadata and initialization |
 | `crates/server/src/achievement_tests.rs` | Actual installed Level50 earn/duplicate/reopen acceptance |
 
 ## Tests asserting this spec
 
-- `achievement_tests.rs::guild_news_real_flagged_player_achievement_commits_once_and_survives_restart` — initial RED pending: actual catalog earning must yield one durable sourced row.
+- `achievement_tests.rs::guild_news_real_flagged_player_achievement_commits_once_and_survives_restart` — RED observed0 news despite actual installed Level50 toast; GREEN pending for durable sourced row/duplicate/reopen controls.
 
 ## Known gaps (current cycle)
 
