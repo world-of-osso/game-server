@@ -180,3 +180,7 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 - After initial reconciliation, an event reevaluates only definitions whose criteria counters or earned-achievement dependencies changed. Unchanged events do not reevaluate criteria trees.
 - Map-completion and faction/scope boundaries must still grant accumulated eligible progress, including historical earned-ID dependencies.
 - Full progress snapshots retain every eligible row. Derived evaluation results are disposable, never persisted, and cannot alter player-state equality or earned dates.
+
+### Native targeted Hug247
+
+Character achievement247 / criterion2379 uses native DoEmote54 TextEmote56. Preserve the complete positive TargetIsPlayer5, TargetIsDead6 and TargetIsEnemy7 conjunction against the requested live unit on the actor's exact map copy. Missing target, health or faction authority cannot satisfy a qualifier. Use actor-to-target native hostility, not faction-name guesses, attack eligibility, honour credit or current selection. Credit belongs only to the entered-world sender and persists with its completion date without idle/login replay. Hug is text-only (installed EmotesText56 EmoteID0); leave animation and stance unchanged. No generic Boolean or negative target expansion.

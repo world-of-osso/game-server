@@ -76,7 +76,7 @@ pub(crate) enum CriteriaEvent {
     TotalHealReceived(u64),
     HighestHealReceived(u64),
     /// TextEmote ID and the same-map NPC entry resolved from this request's unit GUID.
-    DoEmote(u32, Option<u32>),
+    DoEmote(u32, Option<Entity>),
     DeliveredKillingBlow,
     /// One native battleground/arena kill reward; world honor eligibility is separate.
     KillPlayer,
@@ -476,15 +476,18 @@ pub(crate) struct PlayerConditions {
     pub difficulty: u32,
     /// None for map-wide credit, which has no reference player.
     pub player: Option<ReferencePlayer>,
-    /// Live type110 hit entities and their pre-effect unit facts.
-    pub hit_units: BTreeMap<Entity, SpellHitUnit>,
+    /// Actual native spell-hit or requested emote units; never persisted.
+    pub hit_units: BTreeMap<Entity, CriteriaTargetUnit>,
 }
 
 /// Separate actual unit authority: neither NPC entry nor auras imply Player identity.
 #[derive(Debug, Default)]
-pub(crate) struct SpellHitUnit {
+pub(crate) struct CriteriaTargetUnit {
     pub creature_entry: Option<u32>,
     pub auras: Option<BTreeSet<u32>>,
+    pub is_player: bool,
+    pub dead: Option<bool>,
+    pub hostile: Option<bool>,
 }
 
 /// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
@@ -559,6 +562,8 @@ enum CriteriaFact {
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
     TargetIsPlayer,
+    TargetIsDead,
+    TargetIsHostile,
     /// TC TargetHasAura10 on the actual hit unit, independently of Player identity.
     TargetAura(u32),
     /// Accepted only with positive player/race authority; NPC class predicates stay disabled.
@@ -589,11 +594,11 @@ enum CriteriaFact {
 
 fn event_creature_entry(
     event: CriteriaEvent,
-    hit_units: &BTreeMap<Entity, SpellHitUnit>,
+    hit_units: &BTreeMap<Entity, CriteriaTargetUnit>,
 ) -> Option<u32> {
     match event {
-        CriteriaEvent::DoEmote(_, entry) => entry,
-        CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) => {
+        CriteriaEvent::DoEmote(_, Some(target))
+        | CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) => {
             hit_units.get(&target).and_then(|unit| unit.creature_entry)
         }
         _ => None,
@@ -605,7 +610,7 @@ impl CriteriaFact {
         &self,
         player: &ReferencePlayer,
         event: CriteriaEvent,
-        hit_units: &BTreeMap<Entity, SpellHitUnit>,
+        hit_units: &BTreeMap<Entity, CriteriaTargetUnit>,
     ) -> bool {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
@@ -644,9 +649,17 @@ impl CriteriaFact {
             Self::TargetRace(race) => {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _, _) if target.race == *race)
             }
-            Self::TargetIsPlayer => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(_), _, _))
-            }
+            Self::TargetIsPlayer => match event {
+                CriteriaEvent::DoEmote(_, Some(target)) => {
+                    hit_units.get(&target).is_some_and(|unit| unit.is_player)
+                }
+                CriteriaEvent::LandTargetedSpell(_, Some(_), _, _) => true,
+                _ => false,
+            },
+            Self::TargetIsDead => matches!(event, CriteriaEvent::DoEmote(_, Some(target))
+                if hit_units.get(&target).and_then(|unit| unit.dead) == Some(true)),
+            Self::TargetIsHostile => matches!(event, CriteriaEvent::DoEmote(_, Some(target))
+                if hit_units.get(&target).and_then(|unit| unit.hostile) == Some(true)),
             Self::TargetAura(spell) => {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, _, _, Some(target))
                     if hit_units.get(&target).and_then(|unit| unit.auras.as_ref())
@@ -1460,6 +1473,8 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
             5 => Some(CriteriaFact::TargetIsPlayer),
+            6 if asset == 0 => Some(CriteriaFact::TargetIsDead),
+            7 if asset == 0 => Some(CriteriaFact::TargetIsHostile),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             -8 => exists("spell")?.then_some(CriteriaFact::NotAura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
@@ -1713,7 +1728,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 26 && matches!(row.get::<_, i32>(2)?, 0 | 1 | 2 | 6))
                         // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel/Love.
                         // TDB1210 has no criteria_data overlay for these unconditional rows.
-                        || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225))
+                        || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225 | 56))
                         // Current criteria451/447 and authored370/595 map2v2/3v3 to0/1,
                         // unlike old TC ArenaTeam numeric2/3/5; no retired/other bracket inference.
                         || (kind == 39 && matches!(row.get::<_, i32>(2)?, 0 | 1))
