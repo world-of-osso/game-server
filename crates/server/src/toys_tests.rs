@@ -22,6 +22,8 @@ mod scarab;
 mod shrine;
 #[path = "toys_stone_whistle_tests.rs"]
 mod stone_whistle;
+#[path = "toys_ysera_tests.rs"]
+mod ysera;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
 
