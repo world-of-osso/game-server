@@ -110,6 +110,15 @@ fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
         .get_mut::<crate::pet_control::PetCharm>(pet)
         .unwrap()
         .react = shared::protocol::REACT_PASSIVE;
+    // These kick/readiness fixtures model an already engaged owner, not selection.
+    f.h.attack(f.h.npc);
+    f.h.advance(3);
+    assert!(
+        f.h.inbox.attack_starts.iter().any(|event| {
+            event.attacker == f.h.caster.to_bits() && event.victim == f.h.npc.to_bits()
+        }),
+        "Felguard combat fixture requires a real owner AttackStart"
+    );
     (f, pet)
 }
 
