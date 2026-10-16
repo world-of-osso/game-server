@@ -506,3 +506,5 @@ Debug logs and root cause analyses.
 - [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — controlled source clocks/effects/fixed death spirit/credit GREEN and actual TDB Normal projection; extra attacks remain unsupported.
 
 - [Gargolmar runtime and charge gap](systems/boss-scripts.md#ramparts-gargolmar-runtime--2026-10-16) — source clocks/reset/credit, real Watcher response; distant effect96 impact remains RED.
+
+- [Omor source preparation](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) — actual orbital server-side spells and hound base0, no invented Normal row; runtime pending.
