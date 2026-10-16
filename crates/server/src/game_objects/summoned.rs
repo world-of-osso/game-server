@@ -28,6 +28,7 @@ struct ObjectTemplate {
     bounds: Option<GameObjectBounds>,
     chair: Option<crate::chair::Chair>,
     scripted: bool,
+    seaforium_spell: Option<u32>,
     spellcaster: Option<super::spellcaster::SpellcasterObject>,
     cooking_focus: Option<(u32, f32)>,
     extra_focus_payload: bool,
@@ -53,6 +54,13 @@ fn template_from_row(row: &Row, conn: &Connection) -> rusqlite::Result<(u32, Obj
     let entry = row.get(0)?;
     let go_type = row.get(1)?;
     let scale = row.get::<_, f64>(4)? as f32;
+    let ai_name = row.get::<_, String>(7)?;
+    let script_name = row.get::<_, String>(8)?;
+    let source_bomb_script =
+        ai_name.is_empty() && script_name == super::seaforium_bombs::SCRIPT_NAME;
+    let timed_bomb =
+        source_bomb_script && go_type == super::GAMEOBJECT_TYPE_TRAP && row.get::<_, u32>(23)? == 2;
+    let seaforium_spell = timed_bomb.then(|| row.get(22)).transpose()?;
     let geo = |i| row.get::<_, f64>(i).map(|v| v as f32);
     let bounds = row
         .get::<_, Option<u32>>(9)?
@@ -81,7 +89,8 @@ fn template_from_row(row: &Row, conn: &Connection) -> rusqlite::Result<(u32, Obj
                     Ok(crate::chair::Chair::new(row.get(5)?, row.get(6)?))
                 })
                 .transpose()?,
-            scripted: !row.get::<_, String>(7)?.is_empty() || !row.get::<_, String>(8)?.is_empty(),
+            scripted: !ai_name.is_empty() || !script_name.is_empty(),
+            seaforium_spell,
             spellcaster: (go_type == super::spellcaster::GAMEOBJECT_TYPE_SPELLCASTER)
                 .then(|| -> rusqlite::Result<_> {
                     Ok(super::spellcaster::SpellcasterObject {
@@ -114,7 +123,7 @@ pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObje
     let sql = format!("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
         d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
         t.Data0,t.Data1,t.Data2,t.Data5,t.Data8,
-        t.type={focus_type} AND ({additional_focus_fields})<>0
+        t.type={focus_type} AND ({additional_focus_fields})<>0, t.Data3, t.Data4
         FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
         WHERE t.type={focus_type} OR t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect IN ({transmitted},{wild}) AND DifficultyID=0)");
     let mut query = conn.prepare(&sql)?;
@@ -148,6 +157,25 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
             .and_then(|data| data.ritual(entry))
             .is_none()
             .then(|| format!("missing ritual gameobject template {entry}"));
+    }
+    if effect.effect == EFFECT_TRANSMITTED
+        && let Some(spell_id) = template.seaforium_spell
+    {
+        let spell_known = spell_id != 0
+            && world
+                .get_resource::<crate::spell_info::SpellStore>()
+                .is_some_and(|store| store.get(spell_id).is_some());
+        if !spell_known {
+            return Some(format!(
+                "Seaforium gameobject {entry} missing explosion spell {spell_id}"
+            ));
+        }
+        return template.bounds.is_none().then(|| {
+            format!(
+                "Seaforium gameobject {entry} missing display {}",
+                template.info.display_id
+            )
+        });
     }
     if template.scripted {
         return Some(format!("gameobject {entry} requires custom script"));
@@ -320,6 +348,7 @@ fn spawn_object(
             .bounds
             .expect("supported template has display bounds")
     };
+    let seaforium_spell = template.seaforium_spell;
     let linked_trap = (template.linked_trap != 0 && template.cooking_focus.is_some())
         .then(|| world.resource::<SummonedObjectTemplates>().1.clone())
         .flatten();
@@ -354,6 +383,9 @@ fn spawn_object(
         object.insert(spellcaster);
     }
     let parent = object.id();
+    if let Some(spell_id) = seaforium_spell {
+        super::seaforium_bombs::arm(world, parent, spell_id);
+    }
     if let Some(trap) = linked_trap {
         super::cooking_traps::spawn(world, parent, trap);
     }
@@ -372,4 +404,5 @@ pub(crate) fn expire_objects(world: &mut World) {
         world.despawn(entity);
     }
     super::cooking_traps::update(world);
+    super::seaforium_bombs::update(world);
 }
