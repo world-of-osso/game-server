@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Wild summon initial level and stats](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15) — source Create-area ordering and actual learned-use RED for Podium/Shrine; initialized fields under verification, broader scaling parity remains open.
+- [Wild summon initial level and stats](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15) — source Create-area ordering, typed owner level and initialized stats; whole-Toy gate plus fresh private wire pass, broader scaling parity remains open.
 
 - [Winner's Podium placement](systems/toys.md#winners-podium-source-placement-2026-10-15) — source47 scaled player reach and138 actual ground; actual UseToy/template/20min simulation expiry and both-skin native actor/static proof; wall expiry separate.
 - [Source guardian level selection](systems/toys.md#source-guardian-level-selection-2026-10-15) — actual Scarab UseToy20/80, ContentTuning priority/deltas and pre-init clamp; thirteen final controls and private UDP20/30 replication pass; full stats/AI remain open.
