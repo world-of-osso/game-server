@@ -795,6 +795,13 @@ fn spawn_summon(
         ));
     }
     drop(entity);
+    // TC TemporarySummon.cpp: Guardian::InitSummon calls TempSummon::InitSummon,
+    // including the creature summoner's JustSummoned (BossAI's SummonList).
+    world
+        .entity_mut(actor)
+        .insert(crate::zones::TempSummon { summoner: owner });
+    crate::scripted_ai::dispatch(world, actor, crate::scripted_ai::Hook::IsSummonedBy(owner));
+    crate::scripted_ai::dispatch(world, owner, crate::scripted_ai::Hook::JustSummoned(actor));
     super::log_summon(world, owner, actor, ctx.spell);
 }
 
