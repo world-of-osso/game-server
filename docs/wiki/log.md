@@ -1,3 +1,7 @@
+## 2026-10-16 — Guild mounted rates and Hasty charge boundary
+
+[Guild perks](systems/guild-perks.md): supported Mount Up172/211/map suppression landed; living flat-ground native input and real guild removal confirm seven coherent samples in each skin, with ten selected mounted full-HD originals. Controlled-NPC210 remains blocked. Hasty8690/83944 already gives30/15/30-minute new-charge recovery; actual RED exposed joining halving a consumed clock. Preserving that453 consumption boundary passes3/3, including removal→recovery→next30-minute use; native actual-item proof is pending.
+
 ## 2026-10-16 — Two-way pet-wall150 charges
 
 [Seven source-qualified pairs](../pet-battle-effect-coverage.md#two-way-walls150--bounded-proof2026-10-16): actual unsupported150 RED6→GREEN88, canonical journal3/wild12/PvP9 and check/fmt;1749→1756/2829 rows (61.82→62.07%),993→1006 graphs. Both-skin private5961 Ice Barrier479 physically blocks incoming then outgoing attacks, expires, and exposes subsequent45/65critical damage; six fullHD originals inspected. Conditional123/126 is bounded to six auras; Onyx, multi-wall order and exact Retail/VFX feedback remain gaps. Subject model/texture receipts match the current local root; owned-process cleanup passes.

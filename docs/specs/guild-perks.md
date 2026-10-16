@@ -32,7 +32,8 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 - [x] Real persisted join, changed specialization, quit and fresh-process class-knowledge test GREEN1/1 at serveree29a3bd/protoe50b02c.
 - [x] Existing-member login, online forced removal/rejoin and offline removal/reopen controls GREEN2/2 at5dd1cfa9.
-- [ ] Supported Mount Up172/211 requires its separate landing gate;210 remains a named blocked context. Hasty Hearth, Mobile Banking and Quick/Dead remain separately qualified. Guild Mail has a real same-guild zero-delay control.
+- [x] Supported Mount Up172/211 and map suppression landed;210 remains a named blocked context.
+- [ ] Hasty Hearth, Mobile Banking and Quick/Dead remain separately qualified. Guild Mail has a real same-guild zero-delay control.
 - [x] Bounded catalog/membership/UI slice landed; actual UDP invitation/removal/rejoin/quit and native fresh-process owner readback passed.
 
 ## Out of scope
@@ -50,5 +51,5 @@ Guild rewards/reputation eligibility and invitation tabards are separate slices.
 - [x] Actual78633 grants10% mounted run/flight speed through authored172/211 effects, with strongest-positive nonstacking semantics (TC Unit.cpp8812–8854). Revocation restores the mounted baseline without removing the mount.
 - [ ] **Blocked by explicit lead decision:**210 applies only to player-controlled NPC flight (TC Unit.cpp8833–8844). The local authored vehicle runtime is ground IoC Demolishers; no flying context is fabricated or applied to the mounted player. This is not part of the supported172/211 completion claim.
 - [x] Source Attr4/8 arena/battleground restrictions suppress the passive effect while preserving knowledge and restore it on leaving.
-- [ ] Real native mounted/unmounted and guild-removal proof; do not claim effect completion from visible rows or known IDs.
+- [x] Real native mounted/unmounted movement and guild-removal proof passes both skins: seven coherent actual samples each. Ten inspected mounted originals selected; four wall/tree-occluded removed-ground/unmounted frames are not claimed as pixel proof.
 
