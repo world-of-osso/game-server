@@ -1045,6 +1045,10 @@ fn startup_load_world_data(mut commands: Commands) {
         crate::profession::specializations::load_specialization_data(&conn)
             .expect("Failed to load profession specialization references; run scripts/profession_data.py with explicit --db and --source-dir"),
     );
+    commands.insert_resource(
+        shared::concentration::ConcentrationCatalog::load(Path::new("data/db2/active"))
+            .expect("Failed to load local Retail concentration currency CSVs"),
+    );
     let orders = crate::crafting_orders::load_catalog(&conn)
         .expect("Failed to load CraftingOrder reference catalog");
     if orders.0.is_empty() {
