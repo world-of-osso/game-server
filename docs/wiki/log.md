@@ -46,6 +46,10 @@
 [Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED→GREEN4/4, census5513/1824 adds only account17495. Integratedbd808152 required four-filter208/0/1ignored plus site-export1/1; server/engine checks and formatting pass warning-free. Existing additive login counters and original account dates preserved; quest acquisition unproven.
 
 ## 2026-10-15 — Nested encounter conjunction
+## 2026-10-16 — Guild news real producers and private readback
+
+[News](systems/guild-news.md): actual achievement, loot-slot, CREATE_ITEM24 and vendor boundaries; authenticated query/sticky and live subscriptions. Backend6/6 and final consumer/wire/check gates pass. Genuine private Lillehoff acquisitions drive250-row native both-skin retention; real permission/post-quit refusals and exact fresh-process history/sticky readback pass. No synthetic history or catalog changes; independent lead integration remains separate.
+
 ## 2026-10-15 — Readiness real-time clock
 
 [Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.
