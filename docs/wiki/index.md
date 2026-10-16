@@ -1,3 +1,4 @@
+- [Directed radius spell modifiers](systems/spell-casting.md#directed-radius-spell-modifiers--2026-10-16) — sharedop6 native+6/+25 cone bounds RED→GREEN20; removal/recipient/mask and shape/cap/stun controls; remaining radius/base/movement consumers unproved.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index

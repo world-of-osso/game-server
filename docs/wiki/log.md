@@ -1626,6 +1626,7 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Added [incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16), replacing repeated catalog-wide recursive evaluation with affected-root reconciliation and disposable full-snapshot results. Targeted proof pending.
 
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
+- 2026-10-16: [Directed radius spell modifiers](systems/spell-casting.md#directed-radius-spell-modifiers--2026-10-16): native27533910+6/20754712+25 boundaries RED3pass/2fail→GREEN20/0/0; integrated b17dbd6b at a8d608c7/protocola1c02ee passes20/0/0 in9.97s, workspace/all-target check131.653s/0warnings, fmt/manual readability pass. Non-directed/base/movement radius, combat reach and legal/native acceptance remain separate.
 
 - 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
 
