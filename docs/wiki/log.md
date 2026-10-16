@@ -1,3 +1,7 @@
+## 2026-10-16 — Touch of Death admission
+
+[Target policy](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16):70391 weaker-creature/improved15% admission; seven actual rank/health cases RED→GREEN2. Reject before CastSuccess/cooldowns. Strict description boundary retained with SimC equality discrepancy documented; damage/PvP/follow-up talent consumers remain open.
+
 ## 2026-10-16 — BM Kill Command owned pet damage
 
 [Source bridge](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16):70391 names83381 and pinned SimC identifies its pet caster. Actual Call Pet/owner intent reproduces missing damage before the bridge; native BM/Survival/foreign-owner controls pass3/3. Extra talent/charging/admission and fresh UDP acceptance remain open.
