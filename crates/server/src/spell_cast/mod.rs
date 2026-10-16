@@ -24,7 +24,7 @@ pub mod area_trigger;
 mod attack_power_tests;
 #[cfg(test)]
 mod attack_speed_tests;
-mod aura_spell_exclusions;
+mod aura_spell_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
 #[cfg(test)]
@@ -1477,7 +1477,7 @@ fn validate_start(
     }
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
-    aura_spell_exclusions::check_caster(world, caster, spell)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
@@ -1503,7 +1503,7 @@ fn validate_start(
         )));
     }
     let target = validate_target(world, caster, spell, explicit, Sight::Start(witness))?;
-    aura_spell_exclusions::check_target(world, target, spell)?;
+    aura_spell_restrictions::check_target(world, target, spell)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
@@ -1989,11 +1989,11 @@ pub(crate) fn execute_cast(
     }
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
-    aura_spell_exclusions::check_caster(world, caster, spell)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
-    aura_spell_exclusions::check_target(world, explicit, spell)?;
+    aura_spell_restrictions::check_target(world, explicit, spell)?;
     if cast_time_ms(world, caster, spell) > 0 {
         toy_facing::check_cast(world, caster, spell.id, explicit)?;
     }
