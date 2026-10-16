@@ -1,6 +1,6 @@
 ## 2026-10-16 — Waywatcher source lifecycle
 
-[Waywatcher130249](systems/toys.md#waywatcher-source-lifecycle-2026-10-16): actual Val'sharah terrain/learning/instant use/source model choices/15s expiry/900s recovery pass1/1 using existing published99572, superseding the old missing-template snapshot. Eighteen same70391 assets and four aliases authenticate/publish privately; canonical ownership absent before publication. Loader/regression gates and native rendering remain separate.
+[Waywatcher130249](systems/toys.md#waywatcher-source-lifecycle-2026-10-16): actual Val'sharah terrain/learning/instant use/source model choices/15s expiry/900s recovery pass1/1 using existing published99572, superseding the old missing-template snapshot. Eighteen same70391 assets and four aliases authenticate/publish privately; canonical ownership absent before publication. Actual private Rust loader, whole-Toy141/141, server binary/tests check and fmt pass; native rendering remains separate.
 
 ## 2026-10-16 — Grizzlesnout source lifecycle
 

@@ -4,7 +4,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Waywatcher source lifecycle (2026-10-16)
 
-130249/195806 consumes the currently published source99572 template, choosing63609or63606 without a new importer admission. Actual bag learning/UseToy acceptance passes1/1: terrain-backed Val'sharah7558 admission/Northshire refusal, source instant cast/15s duration/+200% speed/241 and900s recovery, then ordinary expiry restores native display/health/flags/speed. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#waywatcher64-source-lifecycle-2026-10-16) separate this existing-handler acceptance from eighteen authenticated privately published body assets/four aliases. Current loader/regression gates and native rendering remain separate; no manufactured RED or canonical publication claim.
+130249/195806 consumes the currently published source99572 template, choosing63609or63606 without a new importer admission. Actual bag learning/UseToy acceptance passes1/1: terrain-backed Val'sharah7558 admission/Northshire refusal, source instant cast/15s duration/+200% speed/241 and900s recovery, then ordinary expiry restores native display/health/flags/speed. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#waywatcher64-source-lifecycle-2026-10-16) separate this existing-handler acceptance from eighteen authenticated privately published body assets/four aliases. Actual private Rust loader, whole-Toy141/141, server binary/tests check and fmt pass at recorded64 revisions. Native rendering remains separate; no manufactured RED or canonical publication claim.
 
 ## Grizzlesnout source lifecycle (2026-10-16)
 
