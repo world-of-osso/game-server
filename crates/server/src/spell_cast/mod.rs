@@ -129,6 +129,8 @@ mod hit;
 #[cfg(test)]
 mod readiness_lifetime_tests;
 #[cfg(test)]
+mod rumbling_earth_tests;
+#[cfg(test)]
 mod touch_of_death_tests;
 #[cfg(test)]
 mod warrior_stun_tests;
