@@ -224,6 +224,12 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, _path_id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
     fn do_action(&mut self, _ctx: &mut Ctx, _action: i32) {}
+    fn gossip_hello(&mut self, _ctx: &mut Ctx, _player: Entity) -> bool {
+        false
+    }
+    fn gossip_select(&mut self, _ctx: &mut Ctx, _player: Entity) -> bool {
+        false
+    }
     fn store_counter(&mut self, _ctx: &mut Ctx, _id: u32, _value: u32, _reset: bool) {}
     fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
@@ -436,6 +442,50 @@ pub(crate) fn dispatch(world: &mut World, creature: Entity, hook: Hook) {
     if let Some(mut state) = world.get_mut::<CreatureAiState>(creature) {
         state.ai = Some(ai);
     }
+}
+
+/// Source callbacks, separate from NPC eligibility and option validation. These
+/// do not bypass the interaction system's authored flags or menu options.
+pub(crate) fn creature_gossip_hello(world: &mut World, player: Entity, creature: Entity) -> bool {
+    call_gossip(world, creature, |ai, ctx| ai.gossip_hello(ctx, player))
+}
+
+pub(crate) fn creature_gossip_select(world: &mut World, player: Entity, creature: Entity) -> bool {
+    call_gossip(world, creature, |ai, ctx| ai.gossip_select(ctx, player))
+}
+
+fn call_gossip(
+    world: &mut World,
+    creature: Entity,
+    callback: impl FnOnce(&mut dyn CreatureAi, &mut Ctx) -> bool,
+) -> bool {
+    let Some(mut state) = world.get_mut::<CreatureAiState>(creature) else {
+        return false;
+    };
+    let Some(mut ai) = state.ai.take() else {
+        warn!(
+            ?creature,
+            "Cannot synchronously invoke gossip while creature AI is running"
+        );
+        return false;
+    };
+    let handled = callback(
+        ai.as_mut(),
+        &mut Ctx {
+            world,
+            me: creature,
+        },
+    );
+    while let Some(hook) = world
+        .get_mut::<CreatureAiState>(creature)
+        .and_then(|mut state| state.pending.pop_front())
+    {
+        run_hook(world, creature, ai.as_mut(), hook);
+    }
+    if let Some(mut state) = world.get_mut::<CreatureAiState>(creature) {
+        state.ai = Some(ai);
+    }
+    handled
 }
 
 fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) {

@@ -2,12 +2,13 @@
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
 Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
-Adarogg, Slagmaw, Gordoth, Wailing Caverns and Silverlaine primaries.
+Adarogg, Slagmaw, Gordoth, Wailing Caverns, Silverlaine, Electrocutioner and Crowd Pummeler primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
 
 import argparse
+import csv
 import hashlib
 import json
 import sqlite3
@@ -140,7 +141,77 @@ SILVERLAINE_PRIMARY = dict(
     actor_id=367,
     display_id=37288,
 )
+GNOMEREGAN_SOURCES = {
+    "EasternKingdoms/Gnomeregan/gnomeregan.h": "d78e089544edb621fab73b8e91aa7e32d53defebeac260376b049995e49b7e68",
+    "EasternKingdoms/Gnomeregan/instance_gnomeregan.cpp": "17e6fdf82b17956d2d9a229da5556a3dfc1f87c87f18b4bff548a4d41e79c8bb",
+}
+# TC DATA_ELECTROCUTIONER is ordinal2; installed Normal encounter380 uses bit3.
+ELECTROCUTIONER_PRIMARY = dict(
+    map_id=90,
+    entry=6235,
+    encounter_id=380,
+    bit=3,
+    script="",
+    ai="SmartAI",
+    journal_id=421,
+    actor_id=991,
+    display_id=36558,
+)
+# TC DATA_CROWD_PUMMELER is ordinal3; installed Normal encounter381 uses bit4.
+PUMMELER_PRIMARY = dict(
+    map_id=90,
+    entry=6229,
+    encounter_id=381,
+    bit=4,
+    script="",
+    ai="SmartAI",
+    journal_id=418,
+    actor_id=989,
+    display_id=36560,
+)
+THERMAPLUGG_PRIMARY = dict(
+    map_id=90,
+    entry=7800,
+    encounter_id=382,
+    bit=5,
+    script="",
+    ai="SmartAI",
+    journal_id=422,
+    actor_id=992,
+    display_id=36563,
+)
+MARAUDON_SOURCES = {
+    "Kalimdor/Maraudon/maraudon.h": "c4b5a0d7278887ab361f2336b01bfd0f9695d66dad5c7ce48e1f6b53bc452ea0",
+    "Kalimdor/Maraudon/instance_maraudon.cpp": "d1b011494852577a78feae6894acdb8b5b33a5619785c4d9bf1009ef9f7f9524",
+}
+RAZORLASH_PRIMARY = dict(
+    map_id=349,
+    entry=12258,
+    encounter_id=423,
+    bit=1,
+    script="",
+    ai="SmartAI",
+    journal_id=424,
+    actor_id=994,
+    display_id=12389,
+)
+ROTGRIP_PRIMARY = dict(
+    map_id=349,
+    entry=13596,
+    encounter_id=428,
+    bit=6,
+    script="",
+    ai="SmartAI",
+    journal_id=430,
+    actor_id=1000,
+    display_id=13589,
+)
 PROFILES = {
+    "rotgrip": (ROTGRIP_PRIMARY, MARAUDON_SOURCES),
+    "razorlash": (RAZORLASH_PRIMARY, MARAUDON_SOURCES),
+    "thermaplugg": (THERMAPLUGG_PRIMARY, GNOMEREGAN_SOURCES),
+    "crowd-pummeler": (PUMMELER_PRIMARY, GNOMEREGAN_SOURCES),
+    "electrocutioner": (ELECTROCUTIONER_PRIMARY, GNOMEREGAN_SOURCES),
     "silverlaine": (SILVERLAINE_PRIMARY, SHADOWFANG_SOURCES),
     "kystia": (PRIMARY, SOURCES),
     "golden-serpent": (GOLDEN_PRIMARY, GOLDEN_SOURCES),
@@ -242,21 +313,23 @@ def validate_source_files(source, sources=SOURCES):
 
 
 def validate_journal(journal, creatures, primary=PRIMARY):
-    encounters = read_journal(journal, 0xB88D11CC, 13, {2: 2})
-    actors = read_journal(creatures, 0x81A3C769, 9)
-    if not any(
-        r[4] == primary["journal_id"] and r[6] & 0xFFFF == primary["encounter_id"]
-        for r in encounters
-    ):
+    if journal.suffix == '.csv' and creatures.suffix == '.csv':
+        with journal.open() as stream:
+            encounters = [(int(row['ID']), int(row['DungeonEncounterID']))
+                          for row in csv.DictReader(stream)]
+        with creatures.open() as stream:
+            actors = [(int(row['ID']), int(row['JournalEncounterID']),
+                       int(row['CreatureDisplayInfoID'])) for row in csv.DictReader(stream)]
+    else:
+        encounters = [(row[4], row[6] & 0xFFFF)
+                      for row in read_journal(journal, 0xB88D11CC, 13, {2: 2})]
+        actors = [(row[2], row[3] & 0xFFFF, row[4] & 0xFFFFFFFF)
+                  for row in read_journal(creatures, 0x81A3C769, 9)]
+    if (primary['journal_id'], primary['encounter_id']) not in encounters:
         raise ValueError(
             f"missing journal encounter relation: {primary['encounter_id']}"
         )
-    if not any(
-        r[2] == primary["actor_id"]
-        and r[3] & 0xFFFF == primary["journal_id"]
-        and r[4] & 0xFFFFFFFF == primary["display_id"]
-        for r in actors
-    ):
+    if (primary['actor_id'], primary['journal_id'], primary['display_id']) not in actors:
         raise ValueError(f"missing journal primary actor relation: {primary['entry']}")
 
 
@@ -266,6 +339,7 @@ def main():
     parser.add_argument("--db", type=Path, required=True)
     parser.add_argument("--tc-dir", type=Path, required=True)
     parser.add_argument("--journal", type=Path, required=True)
+    parser.add_argument("--journal-build", required=True)
     parser.add_argument("--creatures", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
@@ -281,7 +355,7 @@ def main():
     args.report.write_text(
         json.dumps(
             dict(
-                build="12.1.0.69933",
+                build=args.journal_build,
                 tc_revision="a352b1fa",
                 source_sha256=sources,
                 primary_actor=primary,
