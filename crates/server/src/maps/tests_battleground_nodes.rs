@@ -553,16 +553,12 @@ fn enter_and_board_isle_demolisher() -> (EnteredMatch, Entity) {
             )
             .unwrap();
         assert_eq!(click, (66245, 1, 0));
-        // Isolate the runtime aura boundary from the separately missing publication.
-        let fixture = Connection::open_in_memory().unwrap();
-        fixture.execute_batch("CREATE TABLE content_npc_spellclick_spells (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER)").unwrap();
-        fixture
-            .execute(
-                "INSERT INTO content_npc_spellclick_spells VALUES (34775,?1,?2,?3)",
-                rusqlite::params![click.0, click.1, click.2],
-            )
-            .unwrap();
-        app.insert_resource(crate::npc_interaction::load_spellclick_catalog(&fixture).unwrap());
+        let published: (u32, u8, u16) = source.query_row(
+            "SELECT spell_id,cast_flags,user_type FROM content_npc_spellclick_spells WHERE npc_entry=34775",
+            [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).expect("generalized spellclick publication must include the spawned Demolisher");
+        assert_eq!(published, click);
+        app.insert_resource(crate::npc_interaction::load_spellclick_catalog(&source).unwrap());
         app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
         let data = crate::spell_cast::test_harness::world_db().unwrap();
         app.insert_resource(crate::spell_info::SpellStore::fixture(
@@ -685,11 +681,23 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
     let (mut entered, demolisher) = enter_and_board_isle_demolisher();
     let actor = &entered.players[0];
     let ordinary = &entered.players[1];
+    let ally_index = entered
+        .teams
+        .iter()
+        .enumerate()
+        .find(|(index, team)| *index != 0 && **team == entered.teams[0])
+        .unwrap()
+        .0;
+    let passenger = &entered.players[ally_index];
     let h = &mut entered.h;
     h.app
         .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
             Duration::from_millis(50),
         ));
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .set_timestep(Duration::from_millis(50));
     h.app.init_resource::<crate::friends::AutoAfkScheduler>();
     h.app
         .add_systems(FixedUpdate, crate::networking::process_player_inputs);
@@ -782,6 +790,73 @@ fn isle_channel_driver_input_moves_source_demolisher_instead_of_seated_body() {
     assert!(
         actual.distance(expected) < 0.001,
         "driver follows the moved vehicle instead of applying its report as body position: {actual:?} vs {expected:?}"
+    );
+    h.walk_to(passenger, wow(&vehicle_after));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(passenger.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: demolisher.to_bits(),
+        });
+    h.advance(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(passenger.player)
+            .unwrap()
+            .seat_id,
+        5767
+    );
+    install_isle_input_sender(h, passenger);
+    send_isle_facing_input(
+        h,
+        passenger,
+        Position {
+            x: vehicle_after.x + 100.0,
+            ..vehicle_after
+        },
+        vehicle_yaw,
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(demolisher).unwrap(),
+        vehicle_after,
+        "a non-controlling authored passenger cannot drive"
+    );
+
+    h.app
+        .world_mut()
+        .entity_mut(actor.connection)
+        .insert(pair::<shared::protocol::ExitVehicle>());
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::ExitVehicle>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::ExitVehicle);
+    h.advance(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::VehiclePassenger>(actor.player)
+            .is_none()
+    );
+    let exited = *h.app.world().get::<Position>(actor.player).unwrap();
+    send_isle_mover_input(
+        h,
+        actor,
+        Position {
+            x: exited.x + 0.25,
+            ..exited
+        },
+    );
+    assert!(
+        (h.app.world().get::<Position>(actor.player).unwrap().x - exited.x - 0.25).abs() < 0.001,
+        "normal Exit restores body input"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(demolisher).unwrap(),
+        vehicle_after,
+        "departed driver input cannot move the NPC"
     );
 }
 
