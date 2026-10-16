@@ -1,6 +1,6 @@
 # Guild news
 
-[Contract](../../specs/guild-news.md). Implementation currently contains only member-scoped query scaffolding; actual producers/storage remain pending. Test-first acceptance earns installed achievement14782 through the real achievement catalog/update/account-persistence boundary and expects one source-qualified durable row, with duplicate/reopen controls.
+[Contract](../../specs/guild-news.md). The additive JSON history stores a guild's monotonic next ID and latest250 entries; current persisted membership selects queries. Achievement account/contribution transactions compare previous durable character-earned IDs and actual new account toasts, then append only installed0x1000-flagged definitions in that same transaction. Initial sticky comes from0x2000; title/description use existing bounded installed metadata. Test-first acceptance earns installed achievement14782 through the real catalog/update/account-persistence boundary: RED observed zero news despite the real Level50 toast. Producer GREEN and retention/sticky/UDP acceptance remain pending. Item producers and authenticated network handlers are not implemented yet.
 
 ## Sources
 
