@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use std::collections::BTreeSet;
 
-use super::{SpellHistory, now, send_to_owner};
+use super::{SpellHistory, history_now, send_to_owner};
 use crate::auras::{ActiveAuras, AuraInstance, handlers, spell_mods};
 use crate::spell_info::{SpellInfo, SpellStore};
 use shared::protocol::SpellCooldownUpdate;
@@ -124,7 +124,7 @@ fn retime_running_cooldowns(world: &mut World, unit: Entity, aura: &AuraInstance
     let Some(snapshot) = world.get::<SpellHistory>(unit).cloned() else {
         return;
     };
-    let current_time = now(world);
+    let current_time = history_now(world);
     let store = world.resource::<SpellStore>();
     let spell_updates = collect_spell_updates(store, &snapshot, aura, current_time, apply);
     let category_updates = collect_category_updates(store, &snapshot, aura, current_time, apply);
