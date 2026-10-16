@@ -240,6 +240,32 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_vyletongue_primary_keeps_bit_two_not_source_ordinal_three(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('vyletongue')
+        self.assertIsNotNone(profile, 'source Vyletongue primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(424,349,2);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (12236,'','SmartAI'),(12225,'boss_celebras_the_cursed','');
+            INSERT INTO raid_encounter_creature VALUES(349,13601,427,5,425,995,7125);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=349 ORDER BY bit').fetchall(),
+            [(12236,424,2,427,997,12334),(13601,427,5,425,995,7125)])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=12236")
+        with self.assertRaisesRegex(ValueError, 'creature AI identity'):
+            prepare_bindings(self.db, [primary])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='SmartAI' WHERE entry=12236")
+        self.db.execute('UPDATE dungeon_encounter SET Bit=3 WHERE ID=424')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_thermaplugg_primary_preserves_bosses_and_excludes_walking_bombs(self):
         import encounter_cpp_bindings as bindings
         profile = bindings.PROFILES.get('thermaplugg')
