@@ -26,6 +26,67 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_encounter_nested_all_preserves_scoped_award_and_difficulty_some(self):
+        criteria = {36050: dict(self.criteria[1], Type='165', Asset='2051', ModifierTreeId='56522')}
+        mods = {56522: node(0, 4), 56523: node(56522, 4),
+                63594: node(56523, 2, 87, 11611), 56524: node(56522, 8, amount=1),
+                56525: node(56524, 2, 68, 15), 56526: node(56524, 2, 68, 16)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {36050: [(True, (15, 16)), ((87, 11611),)]})
+        for kind in ('0', '28', '29', '74', '110'):
+            criteria[36050]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[36050]['Type'] = '165'
+        for field, value in [('Type', '999'), ('SecondaryAsset', '1'), ('Asset', '1')]:
+            invalid = copy.deepcopy(mods)
+            invalid[56523][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+        self.assertEqual(self.compile({**mods, 63595: node(56523, 2, 999, 1)}, criteria), {})
+        self.assertEqual(self.compile({**mods, 63595: node(56523, 3, 87, 10460)}, criteria), {})
+        mixed_some = copy.deepcopy(mods)
+        mixed_some[56526] = node(56524, 2, 87, 10460)
+        self.assertEqual(self.compile(mixed_some, criteria), {})
+
+    def test_native_kill_absent_aura_keeps_alive_and_difficulty_companions(self):
+        criteria = {20693: dict(self.criteria[1], ModifierTreeId='6635')}
+        mods = {6635: node(0, 4), 6636: node(6635, 2, 16),
+                6637: node(6635, 3, 8, 115013)}
+        self.assertEqual(self.compile(mods, criteria),
+                         {20693: [None, ((-8, 115013), (16, 0))]})
+        self.assertEqual(self.compile({**mods, 6638: node(6635, 2, 999, 1)}, criteria), {})
+        criteria = {29405: dict(self.criteria[1], ModifierTreeId='27075')}
+        mods = {27075: node(0, 4), 27076: node(27075, 3, 8, 196665),
+                27077: node(27075, 3, 8, 196666), 27078: node(27075, 3, 68, 1),
+                27079: node(27075, 3, 68, 2)}
+        expected = {29405: [(False, (1, 2)), ((-8, 196665), (-8, 196666))]}
+        self.assertEqual(self.compile(mods, criteria), expected)
+        for kind in ('8', '29', '74', '78', '110'):
+            criteria[29405]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[29405]['Type'] = '0'
+        for field, value in [('SecondaryAsset', '1'), ('TertiaryAsset', '1'),
+                             ('Asset', '0')]:
+            invalid = copy.deepcopy(mods)
+            invalid[27076][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+
+    def test_native_login_unknown_spell_requires_plain_complete_negation(self):
+        criteria = {43205: dict(self.criteria[1], Type='74', Asset='0',
+                               ModifierTreeId='86619')}
+        mods = {86619: node(0, 4), 86620: node(86619, 3, 104, 264211)}
+        self.assertEqual(self.compile(mods, criteria), {43205: [None, ((-104, 264211),)]})
+        self.assertEqual(self.compile({**mods, 86622: node(86619, 2, 25, 1)}, criteria),
+                         {43205: [None, ((-104, 264211), (25, 1))]})
+        self.assertEqual(self.compile({**mods, 86622: node(86619, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '8', '29', '34', '110'):
+            criteria[43205]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[43205]['Type'] = '74'
+        for field, value in [('SecondaryAsset', '1'), ('TertiaryAsset', '1'), ('Asset', '0')]:
+            invalid = copy.deepcopy(mods)
+            invalid[86620][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+
     def test_native_cast_unearned_achievement_keeps_complete_companions(self):
         criteria = {103451: dict(self.criteria[1], Type='29', Asset='1217637',
                                 ModifierTreeId='392319')}
@@ -323,7 +384,7 @@ class Conditions(unittest.TestCase):
             'unknown legacy value': {10: node(0, 4), 11: node(10, 2, 20, 7)},
             'some needing two': {10: node(0, 8, amount=2), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
             'some of mixed aura/map facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 32, 2)},
-            'negated fact': {10: node(0, 4), 11: node(10, 3, 8, 46598)},
+            'negated map fact': {10: node(0, 4), 11: node(10, 3, 32, 1)},
             'target leaf': {10: node(0, 4), 11: node(10, 2, 4, 448)},
             'nested all': {10: node(0, 4), 11: node(10, 4), 12: node(11, 2, 8, 1)},
             'zero aura asset': {10: node(0, 4), 11: node(10, 2, 8, 0)},

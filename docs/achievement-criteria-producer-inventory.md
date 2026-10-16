@@ -6,9 +6,13 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5506 ordinary (3491 account/2015 character),1824 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5512 ordinary (3491 account/2021 character),1824 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Native DefeatDungeonEncounter165 accepts complete plain nested All4, preserving every supported fact and intersecting difficulty constraints. Exact new character definition11660/criterion36050 requires scoped11611 AND difficulty15or16 at source2051. Compiler44/44/generated5766; census adds only11660 with the same seven input hashes. Native defeat-handler proof is distinct from actual Kil'jaeden combat and artifact acquisition. [Details](wiki/systems/dungeon-achievements.md#nested-encounter-conjunction).
+
+- Native KillCreature0 plain SingleFalse PlayerHasAura8 uses signed -8, authored spell metadata and known actor ActiveAuras; missing authority rejects. Every alive16/difficulty68 companion remains required; no generic negation. Compiler43/43/generated5765(+2); genuine native REDb4656bd9 accepts lethal686 on controlled58739 but leaves20693 absent. At2dc751cc native/catalog/prior-positive/pinned GREEN5/5(39.10s) proves genuine actor mark casts115013/196665/196666, lethal686 counters, removal, direct-applied victim-aura ownership, refused/idle/DB-reopen/foreign controls and metadata/authority/alive/difficulty rejection. Native full-map grants remain unproven; catalog1005 boundary only. Census adds only character7257/10458, no removals or source-hash changes; controlled identities/HP do not certify source boss encounters. [Details](wiki/systems/dungeon-achievements.md#absent-player-aura-kill-guard).
 
 - Complete plain root Some1 area17/zone41 alternatives retain typed leaves and validate every authored asset before unioning accepted current areas.17 follows recursive ancestry;41 uses only the flagged immediate-parent zone. Compiler41/41/generated5759(+22); genuine native selfie181842 RED at8984dbbd has27968None despite a successful cast at controlled cached254. Integrated995acc3c native/catalog/prior17/41/pinned GREEN8/8(59.21s): actual181842/cached254, wrong1519/refused/idle/persisted reopen; typed-member and missing-zone controls. Census5506ordinary(3491account/2015character)/1824statistics adds exactly1785/3557/6558/6559/6560/9248/9264/9463/9487/9630/9924, with no removals or input-hash changes. No full achievement, terrain-travel, acquisition or UI proof. [Details](wiki/systems/dungeon-achievements.md#typed-areazone-alternatives).
 
@@ -90,7 +94,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 
 | Type | Pinned source name | Raw | Current roots | Orphans | State / producer evidence |
 |---:|---|---:|---:|---:|---|
-| 0 | KillCreature | 7403/10169 | 3487/4429 | 3916 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 0 | KillCreature | 7405/10169 | 3489/4429 | 3916 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 1 | WinBattleground | 29/212 | 27/160 | 2 | Native completed-map wins; positive67 loads only exact occupied-node equality OR5717/8656, read from current accepted NodeBattle copy. Native twelve-match5253 ten-win grant passes; other world states/conditions remain disabled. |
 | 3 | CompleteAnyResearchProject | 0/12 | 0/12 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 4 | FindResearchObject | 0/12 | 0/0 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
@@ -162,7 +166,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 71 | CompleteChallengeMode | 0/244 | 0/120 | 0 | Source progress gap: TC CriteriaHandler853 is an explicit unimplemented case through877; native Mythic216/map completion cannot establish71 count/reset semantics. |
 | 72 | CatchFishInFishingHole | 0/38 | 0/36 | 0 | Producer gap: no fishing pool/catch settlement (toy transmitted-object placeholders are not fishing). |
 | 73 | PlayerTriggerGameEvent | 243/817 | 76/598 | 167 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 74 | Login | 13/463 | 12/373 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 74 | Login | 17/463 | 15/373 | 2 | Native Login after complete class/profession/account-mount initialization; bounded SingleFalse104 requires known absence and every companion. Hidden repair tracking does not remove recipes; other conditional/unsupported rows stay disabled. |
 | 75 | LearnSpellFromSkillLine | 15/16 | 2/2 | 13 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 76 | WinDuel | 5/27 | 3/16 | 2 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 77 | LoseDuel | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -246,7 +250,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 162 | ActivelyEarnPetLevel | 24/24 | 0/0 | 24 | Native battle-XP transitions retain actual species; sole positive91 validates authored species and level1–25. All supported rows are outside achievement roots. Qualified positive has catalog/source proof only;1974–1977 lack native combat states, so no native-positive certificate. |
 | 163 | EnterArea | 150/175 | 3/4 | 147 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 164 | LeaveArea | 5/5 | 0/0 | 5 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 165 | DefeatDungeonEncounter | 2501/4376 | 1546/2766 | 955 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 165 | DefeatDungeonEncounter | 2502/4376 | 1547/2766 | 955 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 167 | PlaceGarrisonBuilding | 0/35 | 0/0 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 168 | ActivateAnyGarrisonBuilding | 0/3 | 0/2 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 169 | ActivateGarrisonBuilding | 0/77 | 0/44 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
