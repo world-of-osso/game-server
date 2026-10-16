@@ -492,3 +492,5 @@ Debug logs and root cause analyses.
 - [Vyletongue range events](systems/boss-scripts.md#maraudon-lord-vyletongue-range-events) — real21390 RED→source EVENT_RANGE9/500ms rechecks, nearby stun and20yd Blink with isolated bit2 controlled credit; native/geometry/publication open.
 
 - [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port) — schedules, two guardian waves/death cleanup, manual redeemed actor/isolated credit GREEN; copy-only redeemed base replaces legacy stats.
+
+- [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.

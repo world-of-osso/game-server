@@ -276,5 +276,5 @@ Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/dea
 ## Maraudon Landslide source boundary
 
 - [x] Authenticate12203→426/Normal349bit4 (TCordinal5), Journal70391 CSV429/999/display12293; copy-only binding preserves Celebras and excludes summons11783.
-- [ ] Port18670 victim5–10s/repeat15–25s,5568 self10–15s/repeat10–20s and21808 self immediately upon first incoming hit crossing below50%, then30–40s repeats; reset re-arms once. Preserve source casting validator and due clocks.
+- [x] Port18670 victim5–10s/repeat15–25s,5568 self10–15s/repeat10–20s and21808 self immediately upon first incoming hit crossing below50%, then30–40s repeats; reset re-arms once. Preserve source casting validator and due clocks.
 - [ ] Gate actual effects/summons and isolated controlled426bit4 credit; ordinary/native, loot and persistence remain separate.
