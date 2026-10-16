@@ -43,28 +43,19 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   decision 2026-10-02. `player_displays.tsv` maps race and sex to the
   character display (`ChrRaceXChrModel` → `ChrModel.DisplayID`).
 
-## Player casts: witness ray
-- The client searches for a clear segment from its eye point to any point inside the target's body
-  volume, against the same baked geometry rules. It sends that one segment with the cast.
-- The server accepts it when:
-  1. the start is within a small tolerance of the caster's eye point;
-  2. the end is inside the target's body volume, at the server's current positions with a latency
-     tolerance;
-  3. the segment crosses no baked triangle.
-- No witness ray (or a blocked one) fails with "not in line of sight". There is no fallback search.
-- This is a protocol change: casts carry the witness segment (`SpellCastIntent.witness`,
-  `WitnessRay { start, end }`); the failure is `CastFailReason::LineOfSight` ("Target not in line of
-  sight", `SPELL_FAILED_LINE_OF_SIGHT`).
-- The client searches as creatures do: from its eye point (its drawn position and facing) to the
-  target's eyes, chest and feet (its newest replicated position and facing), over the same bake
-  through `shared::los` (`data/los`), and sends the first clear segment, or none.
-- Body volume: the capsule of radius 0.388 yd (TrinityCore `DEFAULT_PLAYER_BOUNDING_RADIUS`) around
-  the segment from the target's feet to its eye point. Tolerances (chosen, not Retail): start 1 yd
-  from the server's caster eye point; end 2 yd outside the volume (about 0.3 s of running).
-- Checked when a player's cast starts, for unit-targeted spells without
-  `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT`. Not checked again when a cast-time spell finishes (the client's
-  segment describes the start). Casts the server starts for a player without a request (item use,
-  game objects, profession crafts) carry no witness, so at another unit they fail.
+## Player casts: authoritative target visibility
+- At cast processing, the server searches from its authoritative caster eye point to the target's
+  authoritative eyes, chest and feet, using the same baked and live-hull geometry as creature casts.
+  Any clear ray permits LOS; no clear ray fails with `CastFailReason::LineOfSight`.
+- Client-sent `SpellCastIntent.witness` endpoints do not authorize or reject target LOS. Moving more
+  than 2 yd while a request is in transit must not invalidate an otherwise clear cast. Missing,
+  displaced or stale client segments neither bypass a server wall nor block a clear server ray.
+- This replaces the previous chosen endpoint tolerances; it is not a tolerance increase or fallback.
+  The existing wire field remains readable but is not retained in the internal cast queue or validation.
+- Check at player cast start for unit-targeted spells without `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT`;
+  do not recheck player LOS at cast-time completion. Server-started player casts use the same rule.
+- The native client samples local range and cast origin from the same current local player pose;
+  its client-side ray search does not substitute for authoritative validation.
 
 ## Area hits
 - Source-area, destination-area, conditioned area and living raid-area unit selections
