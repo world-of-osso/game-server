@@ -1,4 +1,8 @@
 ## 2026-10-15 — Read-only follower group reward receipts
+## 2026-10-16 — Stone Whistle source admission
+
+[Enchanted Stone Whistle](systems/toys.md#enchanted-stone-whistle-source-summon-2026-10-16): actual importer and learned-use RED reproduce missing98300. Add only authentic Petrified Sand Piper through the maintained importer; existing destination/lifetime handlers are unchanged. Five importer controls, actual learned-use lifecycle, whole-Toy137/137 and server check/fmt pass; prepared classification adds only129279 to384/1166. Follow-up60 authenticates five70391 model/texture/skin assets and privately publishes them with two runtime aliases through the maintained importer; rebuilt graph is complete. Canonical publication, native rendering and guardian HP remain separate.
+
 ## 2026-10-16 — Shrine server per-target conversion
 
 [Source stat table](systems/toys.md#shrine-server-per-target-stat-conversion-2026-10-16): real learned-use actor has client viewer20 but server level30/armor155 RED. Retain raw difficulty DamageModifier and build the existing per-level ExpectedStat table for final summon tuning; nineteen focused controls pass concrete level/armor/dealt/loss outputs. Final exact seven master regressions plus whole-Toy143/143, server all-target check, fmt and maintained build pass. Actual combat hits, client HP and guardian stats remain separate; previous wire evidence is not relabeled.
