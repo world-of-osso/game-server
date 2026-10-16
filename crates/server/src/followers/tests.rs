@@ -77,6 +77,8 @@ fn damage_follower_casts_real_fireball_and_stops_after_enemy_death() {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = Some(enemy);
+    h.attack(enemy);
+    h.advance(3);
     let before = h.health(enemy);
     for _ in 0..90 {
         update_ai(h.app.world_mut());
@@ -140,6 +142,8 @@ fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = Some(h.npc);
+    h.attack(h.npc);
+    h.advance(3);
     for _ in 0..40 {
         update_ai(h.app.world_mut());
         h.advance(1);
@@ -178,6 +182,8 @@ fn follower_combat_ownership_credits_real_spell_kills_to_the_character() {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = Some(h.npc);
+    h.attack(h.npc);
+    h.advance(3);
     for _ in 0..120 {
         update_ai(h.app.world_mut());
         h.advance(1);
@@ -291,12 +297,20 @@ fn follower_missing_spell_metadata_never_substitutes_melee_combat() {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = Some(h.npc);
-    let before = h.health(h.npc);
+    h.attack(h.npc);
+    h.advance(3);
+    let before = h.inbox.log.len();
     for _ in 0..60 {
         update_ai(h.app.world_mut());
         h.advance(1);
     }
-    assert_eq!(h.health(h.npc), before);
+    assert!(
+        !h.inbox.log[before..].iter().any(|event| {
+            event.source == Some(unit.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }),
+        "missing metadata must not cause follower damage; owner attacks remain real"
+    );
     assert!(
         h.app
             .world()
