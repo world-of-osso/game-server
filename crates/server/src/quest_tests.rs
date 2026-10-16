@@ -738,6 +738,60 @@ macro_rules! for_quest_messages {
 }
 
 #[test]
+fn world_quest_availability_preserves_both_authored_floor_areas() {
+    let mut app = setup_app().expect("authentic quest fixture");
+    app.insert_resource(crate::maps::difficulty::ServerClock {
+        fixed_unix: Some(1000),
+        ..Default::default()
+    });
+    app.insert_resource(crate::world_quests::Rotation {
+        epoch: 1000,
+        active_per_zone: 1000,
+        ..Default::default()
+    });
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        assert!(
+            quests.quests.contains_key(&82521),
+            "real Pawns of Dark Masters template"
+        );
+        quests.world_quests.retain(|quest| quest.quest_id == 82521);
+        assert_eq!(
+            quests.world_quests.len(),
+            1,
+            "actual admitted world quest82521"
+        );
+        assert_eq!(quests.world_quest_areas[&82521].len(), 2);
+    }
+    let client = spawn_client(&mut app, 80);
+    enter_world(&mut app, &client);
+    let availability = received::<shared::protocol::WorldQuestAvailability>(&mut app, &client)
+        .pop()
+        .expect("received authoritative task availability");
+    assert_eq!(
+        availability.quests.len(),
+        1,
+        "one logical task, not duplicate quest entries"
+    );
+    assert_eq!(availability.quests[0].quest_id, 82521);
+    let represented_maps: Vec<_> = availability
+        .quests
+        .iter()
+        .map(|quest| quest.ui_map_id)
+        .collect();
+    assert_eq!(
+        represented_maps,
+        vec![2256, 2255],
+        "every authored floor area must be conveyed"
+    );
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82521)
+            .is_none()
+    );
+}
+
+#[test]
 fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     use crate::world_quests::{Area, Definition, Rotation};
     let mut app = setup_app().expect("authentic quest fixture");
