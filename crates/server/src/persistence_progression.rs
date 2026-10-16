@@ -171,7 +171,7 @@ pub struct SpecTraitConfigs {
 }
 impl SpecTraitConfigs {
     pub fn active(&self) -> &[Purchase] {
-        if self.selected_id == 0 {
+        if self.selected_id == 0 || self.selected_id == shared::protocol::STARTER_BUILD_LOADOUT_ID {
             return &self.default;
         }
         &self
@@ -182,7 +182,7 @@ impl SpecTraitConfigs {
             .purchases
     }
     pub fn replace_active(&mut self, purchases: Vec<Purchase>) {
-        if self.selected_id == 0 {
+        if self.selected_id == 0 || self.selected_id == shared::protocol::STARTER_BUILD_LOADOUT_ID {
             self.default = purchases;
         } else {
             self.configs

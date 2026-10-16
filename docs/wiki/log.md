@@ -9,6 +9,44 @@
 ## 2026-10-15 — Absent-player-aura kill guard
 
 [Bounded SingleFalse8](systems/dungeon-achievements.md#absent-player-aura-kill-guard) on KillCreature0 requires known actor aura authority and complete authored companions. Compiler43/43, genuine native RED, structural5511/1824; native/catalog/prior-positive/pinned GREEN5/5(39.10s) at2dc751cc. Native counters, genuine actor mark casts and DB reopen pass; controlled boss identities do not certify encounters or full-map grants.
+## 2026-10-15 — Merged IoC vehicle foundation gates
+
+[Demolisher](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15): serverd414bb03/protocol5ce52e0 pass19 foundation+8bomb/AV/arena controls, runtime check and shared handshake2. Client source/scene/UDP proof linked; no driving/fire/both-skin model claim. Earlier fingerprints runner error and fixture integration compile error remain separate from gameplay RED.
+
+## 2026-10-15 — General promoted-map spellclick publication
+
+[Source spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): lead rejects NPC-specific filtering; authentic map628+559 RED expects nine source rows, got one. Refresh all spawned-entry rows, preserve unrelated entries and transaction rollback on absent source table. Process GREEN4/4 atd0c7a255,168.538s,0skips; no canonical write.
+
+## 2026-10-15 — Normal Demolisher spellclick promotion
+
+[Demolisher source row](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15): authentic copy/map628 promotion RED proves34775→66245 omitted. Exact source-row copy and missing-source rollback added inside normal population transaction; process GREEN pending, no canonical write. [Movement metadata](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15) importer3PASS retains source Flags/TurnSpeed; current driving/native gates remain open.
+
+## 2026-10-15 — Authored vehicle movement metadata
+
+[Vehicle catalog](systems/mounts.md#vehicle-movement-metadata--implementation2026-10-15): actual source Flags/TurnSpeed omission RED, importer projection/seat-only schema upgrade added without synthetic defaults. Fresh/upgrade/idempotence/missing-source preflight controls pending; no canonical publication or movement/native claim.
+
+## 2026-10-15 — Independent vehicle control-aura ownership
+
+[Demolisher seats](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15): driver/source-pose/normal-exit/reentry/departure and vehicle/rider death release pass3/3, deploy closure4/4. A second real friendly caster then reproduces seat0 instead of2 because generic aura replacement ejects the first driver. TC vehicle-control stacking rule added; same occupancy/overfill/seat2-reuse test GREEN1 at31939668. No native movement/fire claim.
+
+## 2026-10-15 — Demolisher boarding implementation, verification pending
+
+[Source NPC seating](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15) adds aura236/Vehicle509 occupancy, source bind-pose placement and lifetime hooks after genuine processed spellclick RED. Faction1732 now passes before the missing-driver assertion. No boarding GREEN, deploy closure, client attachment, movement/fire or native acceptance claim yet; protocol epoch2 needs coordinated server/client gates before landing.
+
+## 2026-10-15 — IoC authored spawn-faction regression
+
+[Source per-spawn faction](systems/factions.md#isle-per-spawn-script-factions--implementation2026-10-15): actual Workshop/Demolisher35→expected1732 RED; existing CreatureStringIds join retained, only TC OnCreatureCreate mapping added. No content schema/import or fixture-only faction. Verification pending; processed66245/aura236 missing-boarding RED remains separate. [Both-skin bomb proof](../../../game-engine/docs/wiki/systems/battlegrounds.md#forever88-functional-bomb-chain--2026-10-15) is complete only at its four-phase/return boundary, not vehicle/siege/victory.
+
+## 2026-10-15 — Modern native activation boundary
+
+[Client-owned native evidence](../../../game-engine/docs/wiki/systems/battlegrounds.md#modern83-functional-bomb-chain--2026-10-15) records normal/huge typed hits, real picked-model disarm and20-player return/save on007/da6/a438/4135 components. Forever and explicit renderer/framing/timing gaps remain; no vehicle/siege/victory certification.
+
+## 2026-10-15 — Owned IoC bomb lifecycle channel proof
+
+[Timed Seaforium](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14): normal/huge real pickup→owned item→UseItem, ten-second25%/60% one-shot/copy isolation and acknowledged normal disarm/cancellation pass5/5. Authoritative BG team relation regression passes1/1 across racial factions; reproduced/fixed NPC-path regression passes existing AV captain1/1 without changing stats, arena lifecycle remains1/1. Native activation, siege and victory remain pending. Earlier too-early/transient-reply fixture observations are not genuine disarm RED; corrected pre-fix replay is retained separately.
+## 2026-10-15 — Authored talent Starter builds
+
+[Starter Build](systems/talents.md#starter-build): authored cumulative ranks, normal eligibility and built-in selection in existing redb encoding. Five scoped Starter proofs pass, including installed-class legality and Arms apex deferred until authored levels; check/build have no warnings. Real private both-skin level10→11→80, exact relog projections and confirmed deactivation pass. No reference-data/default-realm mutation; coupled landing remains lead-owned.
 
 ## 2026-10-15 — Installed race/class source
 
@@ -156,6 +194,10 @@
 ## 2026-10-14 — Alterac captain source diagnosis
 
 [AV25 investigation](investigations/alterac-captain-combat.md) distinguishes current175xHP/35xdamage from the legacy25xHP row, quantifies ordinary melee before mitigation, and records the driver's unused known abilities. Missing captain AI and incomplete fatal-hit attribution remain explicit; no gameplay/stat changes or victory claim.
+
+## 2026-10-14 — Source Seaforium deployment RED
+
+[Timed lifecycle](systems/game-objects.md#source-timed-seaforium-lifecycle--active-2026-10-14) begins with actual owned46847 UseItem rejecting custom-script195235, while normal pickup remains passing. Commit e06cb017 reads source charges/spell, owns the ten-second one-shot GO cast and reads owner reaction without rewriting raw faction0. GREEN/disarm/new native activation remain pending; compile-width failure is separate from the genuine behavioral RED.
 
 ## 2026-10-14 — Native IoC pickup retake
 

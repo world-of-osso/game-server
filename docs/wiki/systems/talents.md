@@ -71,6 +71,16 @@ A config is the purchased `(node, entry, ranks)` list merged with the granted en
 
 The config does not need to spend all its points.
 
+## Starter Build
+
+Contract: [Starter Build](../../specs/talent-starter-build.md). `trait_data` loads populated `trait_tree_loadout` rows per tree/spec, with entries in `OrderIndex` order. Pinned TrinityCore a352b1fa `TraitMgr.cpp:1038–1096` supplies grant initialization, entry-zero resolution, cumulative `NumPoints`, and ordered affordable rows without blocking the other currency. Each candidate also passes normal trait-purchase eligibility before being adopted: installed Arms loadout rows reach apex110407 at OrderIndex56 while spec currency is still affordable, before its level81 availability condition49327. Its group9029 costs one spec point per rank. Currency-only construction therefore failed at level70; eligibility defers this row until its authored level instead of invalidating the whole Starter build. Ordinary level/rank/gate/parent/budget rules remain authoritative. No hero choices are invented when authored rows omit them.
+
+The built-in selection uses `STARTER_BUILD_LOADOUT_ID` (`u32::MAX`, outside allocatable named IDs); purchased ranks live in the existing unnamed-default field, preserving redb encoding. It is not inserted in named config rows. Snapshots explicitly advertise `starter_available`. Login, spec activation and level changes rebuild an active Starter allocation against current budgets. Accepted manual Apply changes selection to default; named create/activate selects that named config. Failed requests do not persist mutations.
+
+Source receipt: engine `data/diagnostics/talent-import-export-2026-10-15/source/receipt.json`; a352b1fa `src/server/game/Spells/TraitMgr.cpp` SHA256 `b1477eb159576a833ccc0779903585a2399d4f454e86155b7883da95209fa3e9`. Installed Retail `Blizzard_ClassTalentsFrame.lua:475–531,793–803,1084–1117,1171–1217` grounds availability, built-in/noneditable selection and deviation handling. Native presentation contract remains in the [engine talent-loadout spec](../../../../game-engine/docs/specs/talent-loadouts.md).
+
+Verified2026-10-15: [scoped acceptance](../../specs/talent-starter-build.md#proof--2026-10-15) covers installed-class level legality, exact Arms apex gates, named isolation/rejection/spec persistence and actual private both-skin level-up/relog/deactivation. No reference-data or default-realm edits.
+
 ## Persistence and messages
 
 - **Storage (2026-10-10):** `character_trait_loadouts_v1` stores per-spec unnamed defaults, selected IDs and named purchase lists, plus a character-wide monotonically increasing ID counter. Only purchased ranks are stored. On first load, legacy `character_traits` single allocations migrate to each spec's default and persist in the new table; subsequent reads never consult the old row. Both rows are removed with the character.

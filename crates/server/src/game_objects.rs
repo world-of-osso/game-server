@@ -15,7 +15,7 @@
 //! the object's rotated model box grown by the interaction distance on every side.
 //! The distance is the blizzlike 5 yd (AzerothCore
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
-//! Game objects have no per-tick systems, so grid activation does not apply.
+//! Static objects stay outside grid activation; summoned lifetimes and bomb fuses tick with spells.
 
 pub(crate) mod collision;
 pub(crate) mod cooking_focus;
@@ -23,6 +23,7 @@ mod cooking_traps;
 pub(crate) mod identity_conditions;
 pub(crate) mod locks;
 pub(crate) mod quest_object;
+pub(crate) mod seaforium_bombs;
 pub(crate) mod spellcaster;
 pub(crate) mod summoned;
 
@@ -43,6 +44,7 @@ use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 
 pub(crate) const GAMEOBJECT_TYPE_BUTTON: u8 = 1;
 pub(crate) const GAMEOBJECT_TYPE_CHEST: u8 = 3;
+pub(crate) const GAMEOBJECT_TYPE_TRAP: u8 = 6;
 pub(crate) const GAMEOBJECT_TYPE_GOOBER: u8 = 10;
 
 /// Retail interaction distance around the model box (yd).
