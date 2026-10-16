@@ -1613,3 +1613,4 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
 
 - 2026-10-16: Noxxion real channel-aware clock/phase/ten-add/damage/isolated-credit acceptance GREEN3/3 at8e544d86; source21708 channel deferral explains compressed due-anchored repeat intervals. Native/ordinary acceptance remains separate.
+- 2026-10-16: [Execute actual-Rage damage](systems/spell-casting.md#execute-actual-rage-damage--2026-10-16): ordinary native RED1/3 and triggered-budget RED5/1 closed; final40/0/0,20.03s at a2a6547d with master7f7c8875/protocol44e6bed. Workspace/all-target check81.150s/0warnings, fmt/readability and independent artifact/source checks pass for the damage scope; triggered316405 refund/admission/full native acceptance remain open.

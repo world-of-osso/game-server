@@ -1,3 +1,4 @@
+- [Execute actual-Rage damage](systems/spell-casting.md#execute-actual-rage-damage--2026-10-16) — Protection/Arms native child scaling, Sudden Death budget and triggered cost-without-payment; six new controls plus34 adjacent pass, workspace check/fmt pass; admission/triggered refund/native acceptance separate.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
