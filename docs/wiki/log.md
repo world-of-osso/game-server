@@ -1,6 +1,6 @@
 ## 2026-10-16 — Native aura restrictions metadata loader
 
-[SpellInfo](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16): dropped metadata/schema RED0/4→GREEN4/0/0, retaining twelve native state/spell/type IDs through the production store. Difficulty0, sparse absence, orphan and missing-source boundaries covered; source publication precedes deployment. State production/admission and post-master/final gates remain open.
+[SpellInfo](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16): dropped metadata/schema RED0/4→GREEN4/0/0, retaining twelve native state/spell/type IDs through the production store. Difficulty0, sparse absence, orphan and missing-source boundaries covered; source publication precedes deployment. Merged39 native controls pass11.45s after owned-slot maintained import and exact10675-row equality; fmt/readability pass, workspace check pending. State production/admission and canonical publication remain open.
 
 ## 2026-10-16 — Two-way pet-wall150 charges
 

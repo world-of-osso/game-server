@@ -4,7 +4,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
-- [ ] `SpellInfo` retains all twelve native required/excluded caster/target aura-state, spell and type IDs from `spell_aura_restrictions` at DifficultyID0. Missing rows stay absent and orphan rows create no spells; missing table/columns fail explicitly instead of silently loading unrestricted metadata. Canonical source publication precedes use of this loader. State production/admission and Massacre/Execute eligibility remain separate.
+- [x] `SpellInfo` retains all twelve native required/excluded caster/target aura-state, spell and type IDs from `spell_aura_restrictions` at DifficultyID0. Missing rows stay absent and orphan rows create no spells; missing table/columns fail explicitly instead of silently loading unrestricted metadata. Canonical source publication precedes use of this loader. State production/admission and Massacre/Execute eligibility remain separate.
 
 - [x] The maintained DB2 importer retains every native SpellAuraRestrictions state, spell-reference, type and exclusion column in `spell_aura_restrictions`, with the selected build receipt and normal header validation/atomic replacement. Reimport replaces prior rows and preserves non-DB2 data. This producer contract does not certify runtime aura-state admission, Massacre/Execute eligibility or canonical publication.
 
