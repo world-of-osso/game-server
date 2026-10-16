@@ -995,7 +995,11 @@ fn guild_news_real_sulfuras_craft_records_only_successful_created_item() {
     h.craft(21160, 1);
     h.finish_crafting();
     assert_eq!(h.bag_count(17182), 0);
-    assert!(crate::guild_news::query(h.db(), h.character_id).entries.is_empty());
+    assert!(
+        crate::guild_news::query(h.db(), h.character_id)
+            .entries
+            .is_empty()
+    );
     // Authored CREATE_ITEM24 Sulfuras recipe: Sulfuron Hammer + Eye of Sulfuras.
     h.give(17193, "Sulfuron Hammer", 1);
     h.give(17204, "Eye of Sulfuras", 1);
@@ -1006,12 +1010,17 @@ fn guild_news_real_sulfuras_craft_records_only_successful_created_item() {
     assert_eq!(h.bag_count(17204), 0);
     let entries = crate::guild_news::query(h.db(), h.character_id).entries;
     assert_eq!(entries.len(), 1);
-    assert!(matches!(&entries[0].kind, shared::protocol::GuildNewsKind::ItemCrafted {
+    assert!(
+        matches!(&entries[0].kind, shared::protocol::GuildNewsKind::ItemCrafted {
         member, item_id: 17182
-    } if member == "Crafter"));
+    } if member == "Crafter")
+    );
     h.craft(21160, 1);
     h.finish_crafting();
-    assert_eq!(crate::guild_news::query(h.db(), h.character_id).entries, entries);
+    assert_eq!(
+        crate::guild_news::query(h.db(), h.character_id).entries,
+        entries
+    );
 }
 
 #[test]
