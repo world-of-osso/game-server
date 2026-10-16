@@ -37,25 +37,17 @@ fn encounter_coverage_noxxion_source_clocks_phase_summons_and_credit() {
         max: 1_000_000.0,
     });
     h.engage(boss);
-    h.advance(11.0);
-    assert!(
-        !spell_gos(&h, boss, 21687).is_empty(),
-        "pinned Toxic Volley first5–10s must cast"
-    );
     let mut cursor = 0;
     let mut casts = Vec::new();
     let mut adds = std::collections::HashSet::new();
     let mut phase_seen = false;
     let mut phase_ended = false;
-    for tick in 1..=2000 {
+    for tick in 1..=2220 {
         h.advance(0.05);
         let gos = &h.inbox(0).spell_gos;
         casts.extend(gos[cursor..].iter().filter_map(|go| {
-            (go.caster == boss.to_bits() && [21708, 21707].contains(&go.spell_id)).then_some((
-                go.spell_id,
-                11.0 + tick as f32 * 0.05,
-                go.target,
-            ))
+            (go.caster == boss.to_bits() && [21687, 22916, 21708, 21707].contains(&go.spell_id))
+                .then_some((go.spell_id, tick as f32 * 0.05, go.target))
         }));
         cursor = gos.len();
         adds.extend(spawned_adds(&mut h, map));
@@ -92,7 +84,10 @@ fn encounter_coverage_noxxion_source_clocks_phase_summons_and_credit() {
             );
         }
     }
-    eprintln!("NOXXION phase casts={casts:?}, unique adds={}", adds.len());
+    eprintln!(
+        "NOXXION successful source casts={casts:?}, unique adds={}",
+        adds.len()
+    );
     let phase_times: Vec<_> = casts
         .iter()
         .filter(|(spell, _, _)| *spell == 21708)
@@ -112,14 +107,40 @@ fn encounter_coverage_noxxion_source_clocks_phase_summons_and_credit() {
     assert!(
         casts
             .iter()
+            .filter(|(spell, _, _)| [21708, 21707].contains(spell))
             .all(|(_, _, target)| *target == Some(boss.to_bits())),
         "source self phase casts"
     );
-    for spell in [21687, 22916] {
+    for (spell, first_min, first_max, target) in
+        [(21687, 5.0, 10.0, boss), (22916, 15.0, 20.0, player)]
+    {
+        let times: Vec<_> = casts
+            .iter()
+            .filter(|(id, _, _)| *id == spell)
+            .map(|(_, time, _)| *time)
+            .collect();
+        assert!(times.len() >= 2, "real spell repeats {spell}");
         assert!(
-            spell_gos(&h, boss, spell).len() >= 2,
-            "real spell repeats {spell}"
+            times[0] >= first_min && times[0] <= first_max + 0.1,
+            "source first clock {spell}: {times:?}"
         );
+        assert!(
+            casts
+                .iter()
+                .filter(|(id, _, _)| *id == spell)
+                .all(|(_, _, actual)| *actual == Some(target.to_bits())),
+            "source cast argument {spell}"
+        );
+        // Uppercut can skip a due window while passive UpdateVictim has stopped
+        // attacking. Volley stays self-targeted and executes every source window.
+        if spell == 21687 {
+            assert!(
+                times
+                    .windows(2)
+                    .all(|pair| (14.9..=20.1).contains(&(pair[1] - pair[0]))),
+                "source Volley repeat clock: {times:?}"
+            );
+        }
         assert!(
             h.inbox(0)
                 .log
