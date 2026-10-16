@@ -794,12 +794,9 @@ fn world_quest_availability_preserves_both_authored_floor_areas() {
         availability.quests[0]
             .pois
             .iter()
-            .map(|poi| poi.position)
+            .map(|poi| (poi.x, poi.y, poi.z))
             .collect::<Vec<_>>(),
-        vec![
-            shared::protocol::QuestPoiPoint { x: -2268, y: -1960 },
-            shared::protocol::QuestPoiPoint { x: -2275, y: -1992 }
-        ],
+        vec![(-2268, -1960, -1591), (-2275, -1992, -1607)],
     );
     assert_eq!(availability.quests[0].expires_at, 87400);
     assert!(
@@ -976,7 +973,12 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
             vec![Area {
                 map_id: 0,
                 ui_map_id: 37,
-                vertices: vec![(10., 10.), (20., 10.), (20., 20.), (10., 20.)],
+                vertices: vec![
+                    (10., 10., 100.),
+                    (20., 10., 100.),
+                    (20., 20., 100.),
+                    (10., 20., 100.),
+                ],
             }],
         );
     }
@@ -988,8 +990,12 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     assert_eq!(availability.quests.len(), 1);
     assert_eq!(availability.quests[0].expires_at, 1100);
     assert_eq!(
-        availability.quests[0].pois[0].position,
-        shared::protocol::QuestPoiPoint { x: 15, y: 15 }
+        (
+            availability.quests[0].pois[0].x,
+            availability.quests[0].pois[0].y,
+            availability.quests[0].pois[0].z
+        ),
+        (15, 15, 100)
     );
     assert!(
         load_quest_log(db(&app), client.character_id)

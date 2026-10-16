@@ -203,12 +203,13 @@ def import_definitions(conn, receipt, poi, policy_duration=86400):
         columns = {row[1] for row in conn.execute('PRAGMA table_info(content_world_quest)')}
         if 'duration_source' not in columns:
             conn.execute("ALTER TABLE content_world_quest ADD COLUMN duration_source TEXT NOT NULL DEFAULT 'authentic'")
-        conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_area (quest_id INTEGER, blob_id INTEGER, map_id INTEGER, ui_map_id INTEGER, point_index INTEGER, x REAL, y REAL)')
-        conn.execute('DELETE FROM content_world_quest_area')
+        # Rebuild the derived area table; old XY-only exports must not supply fake Z0.
+        conn.execute('DROP TABLE IF EXISTS content_world_quest_area')
+        conn.execute('CREATE TABLE content_world_quest_area (quest_id INTEGER, blob_id INTEGER, map_id INTEGER, ui_map_id INTEGER, point_index INTEGER, x REAL, y REAL, z REAL NOT NULL)')
         for quest, *_ in definitions:
             for blob, vertices in areas[quest]:
-                conn.executemany('INSERT INTO content_world_quest_area VALUES (?,?,?,?,?,?,?)',
-                                 [(quest, blob['ID'], blob['MapID'], blob['UiMapID'], n, p['X'], p['Y'])
+                conn.executemany('INSERT INTO content_world_quest_area VALUES (?,?,?,?,?,?,?,?)',
+                                 [(quest, blob['ID'], blob['MapID'], blob['UiMapID'], n, p['X'], p['Y'], p['Z'])
                                   for n, p in enumerate(vertices)])
         for table, key in [("content_quest_template","ID"), ("content_quest_poi","QuestID"), ("content_quest_poi_points","QuestID")]:
             conn.execute(f"DELETE FROM {table} WHERE {key} IN ({quests})")
