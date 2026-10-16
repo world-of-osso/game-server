@@ -3,7 +3,9 @@
 use shared::components::{Health, Position};
 use shared::protocol::CombatLogKind;
 
-use crate::spell_cast::test_harness::{Harness, harness};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_native_enemy_dodge_reduction,
+};
 
 /// Frostbolt: 1.75 s cast, missile `Speed` 35 yd/s; its damage is the triggered 228597.
 const FROSTBOLT: u32 = 116;
