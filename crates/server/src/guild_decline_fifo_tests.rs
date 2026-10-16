@@ -1,6 +1,7 @@
 use super::*;
 use crate::networking::PlayerLink;
 use lightyear::prelude::*;
+use redb::{ReadableDatabase, ReadableTable};
 use std::time::{Duration, Instant};
 
 struct Fixture {
@@ -165,15 +166,8 @@ fn assert_decline(case: Case) {
     let started = Instant::now();
     collect_frames(&mut f, 3);
     let elapsed = started.elapsed();
-    let pending_before = if matches!(case, Case::StorageFailure) {
-        false
-    } else {
-        persistence::load_pending_guild_invite(
-            &f.app.world().resource::<GameDatabase>().db,
-            f.character,
-        )
-        .is_some()
-    };
+    let pending_before =
+        read_pending_presence(&f.app.world().resource::<GameDatabase>().db, f.character);
     if matches!(case, Case::Relog) {
         let replacement = f.app.world_mut().spawn_empty().id();
         f.app
@@ -208,10 +202,7 @@ fn assert_decline(case: Case) {
     );
     assert_eq!(
         pending_before,
-        !matches!(
-            case,
-            Case::Missing | Case::PrefixCreation | Case::StorageFailure
-        )
+        !matches!(case, Case::Missing | Case::PrefixCreation)
     );
     let (done, wait) = std::sync::mpsc::channel();
     f.app
@@ -242,6 +233,11 @@ fn assert_decline(case: Case) {
             .load(std::sync::atomic::Ordering::Relaxed),
         u64::from(matches!(case, Case::StorageFailure))
     );
+    assert_eq!(
+        read_pending_presence(&f.app.world().resource::<GameDatabase>().db, f.character),
+        matches!(case, Case::StorageFailure),
+        "failed decoding must leave its pending row unchanged"
+    );
     if !matches!(case, Case::StorageFailure) {
         let db = &f.app.world().resource::<GameDatabase>().db;
         assert!(persistence::load_pending_guild_invite(db, f.character).is_none());
@@ -256,7 +252,15 @@ fn assert_decline(case: Case) {
     let character = f.character;
     drop(f.app);
     let db = redb::Database::open(f.directory.path().join("decline.redb")).unwrap();
-    if !matches!(case, Case::StorageFailure) {
-        assert!(persistence::load_pending_guild_invite(&db, character).is_none());
-    }
+    assert_eq!(
+        read_pending_presence(&db, character),
+        matches!(case, Case::StorageFailure)
+    );
+}
+
+fn read_pending_presence(db: &redb::Database, character: u64) -> bool {
+    let txn = db.begin_read().unwrap();
+    let table = txn.open_table(persistence::PENDING_GUILD_INVITES).unwrap();
+    let present = table.get(character).unwrap().is_some();
+    present
 }

@@ -1,3 +1,7 @@
+## 2026-10-15 — Guild invitation decline FIFO
+
+[Decline](investigations/server-tick-lag.md#guild-invitation-decline-fifo--2026-10-15): preserve no-ack packet semantics while queueing the original character's fresh pending-row consumption. Pending/missing/prefix creation/replacement, following accept, relog and real writer-error controls pass8/8;2 incoming NPC-inspection controls pass separately after constructor adaptation. Current runtime check pending; create/accept/charter and global release/HOL proof remain separate.
+
 ## 2026-10-15 — Guild profile/note FIFO
 
 [Legacy guild mutations](investigations/server-tick-lag.md#guild-motdinfoofficer-note-fifo--2026-10-15):7 full-plugin HostClient held-writer REDs and malformed-profile tick panic become queued fresh mutations/receipt publication. Current recipient view rights prevent private-note publication after later revocation; field merge, departure/rebind and actual writer failure are covered. Final10/10 native passes; current feature check passes2m10s without warnings, format/diff pass. Invite/creation and global release/HOL coverage remain open.
