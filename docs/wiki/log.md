@@ -1,6 +1,10 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 [Source boundary](investigations/follower-data.md#group-reward-receipts--2026-10-15): opt-in corpse-generation/roll-start traces expose actual eligible state and item IDs, without changing loot. Native Stockade Moloch/Overheat credit2/3 is separate from unclaimed rewards; Overheat's configured row is quest-only. Owned-evade9b lifecycle3+ordinaryNPC1/check/build/fmt pass; native retention/route/loot acceptance remain open.
+## 2026-10-16 — Autoattack-only critical chance
+
+[Native334](systems/auras.md#autoattack-only-critical-chance-2026-10-16): TC Unit2387 traces Avenging Wrath's separate334/290 effects. Ordinary native100/-999 endpoint casts reproduce missing positive/negative swing modifiers; shared attacker-only consumer passes4/4, including cancellation, victim ownership and spell isolation. Adjacent attack/critical-damage controls36/36; workspace/all-target check and fmt pass. No native stat/RNG/clock edits; full Wings/talents/legal builds and fresh bot UDP remain open.
+
 ## 2026-10-16 — Touch of Death primary damage and native flags
 
 [Health damage](systems/spell-casting.md#touch-of-death-primary-damage--2026-10-16): native999-health/zero-damage RED→GREEN100%/35% maximum-health outcomes with actual armor, school modifiers and Can'tCrit. Shared source attribute consumers honor caster-percent/victim/armor exclusions; ordinary-modifier and adjacent controls62/62 pass. PvP/Stagger/mastery/follow-up talents and fresh bot acceptance remain open.

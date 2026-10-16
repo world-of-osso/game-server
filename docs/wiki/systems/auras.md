@@ -1,5 +1,9 @@
 # Auras
 
+## Autoattack-only critical chance (2026-10-16)
+
+Native aura334 folds signed applied amounts/stacks into `AuraStatMods.autoattack_crit_pct`. The swing hit table adds only the attacker's total after ordinary crit and victim187, then clamps nonnegative; spell crit does not read it. Source: TC a352b1fa Unit.cpp2387. Avenging Wrath31884 has separate aura290effect2=20 and334effect5=20; TC SpellAuraEffects.cpp4449–4465 updates weapon/spell stats for290 already, so334 is not another global stat modifier. Native340094 has334=100 without290 and native456718 has334=-999, isolating both endpoints through ordinary casts and attacks. Genuine behavioral RED: positive native buff produced only normal swings and negative native aura retained critical swings. Full Wings/talent bindings, legal rating budgets and fresh bot UDP acceptance remain open. [Contract](../../specs/class-completeness.md).
+
 ## Independent melee and ranged attack power
 
 Native166/167 fold independent percentages into separate `StatModifiers` fields before character AP computation. `ChrClasses.RangedAttackPowerPerAgility` loads with class properties; ranged AP is `(level + max(live Agility,0)) × coefficient`, not melee AP. `CharacterStats.ranged_attack_power` is server-only; existing replicated `DerivedStats.attack_power` still means melee AP. Non-melee ranged-weapon spell AP coefficients and hunter pet owner inheritance consume RAP; AP-to-spell-power remains melee-owned. Source: TC a352b1fa StatSystem.cpp354–414, Unit.cpp6880–6890/9973–9998. [Contract](../../specs/class-completeness.md). Source-backed weapon/flat-AP additions and client RAP display are not certified by this percentage slice.
