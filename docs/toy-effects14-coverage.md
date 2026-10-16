@@ -4,13 +4,25 @@
 
 Ashhide104329/148626 remains blocked by the missing mount template73689. Source aura78 names73689; the authentic TDB model row selects display51484 (M2 646374), but the published creature catalog lacks73689. Generic aura241 flag proof does not establish Ashhide learning/use, mount rendering, area acceptance or expiry. Per lead instruction, retain this named gap and continue source order; no substitute mount or importer admission. Unexecuted Ashhide test drafts remain in continuation evidence, not the passing regression suite.
 
-Next113543/174004 has aura78 with zero creature entry and no matching70391 Mount SourceSpell row; its mount/body action remains unresolved. Continue to129965/194807: source transforms through existing template27864/display9287, forces forward and grants+250% run speed for15000ms with600000ms item recovery. These are source facts, not learned-use or native rendering proof. Evidence: `force-forward62-next-source-order.json`.
+113543/174004 has aura78 with zero creature entry and no matching70391 Mount SourceSpell row; its mount/body action remains unresolved. [Grizzlesnout129965 learned-use proof](#grizzlesnout63-source-lifecycle-2026-10-16) now covers the next source root without closing that gap. Next130249/195806 has current published template99572 with authentic display choices63609/63606; the earlier absent-template snapshot is stale. Actual Waywatcher use/rendering remains unproved. Read-only evidence: `waywatcher64-template-source-preflight.json`.
 
 Guardian health remains read-only. Pinned TC `Guardian::InitStatsForLevel` uses ExpectedStat when pet_levelstats has no matching row; the local TDB archive has2715 rows and none for51113. `SetCreateHealth(uint32)` truncates the computed base, unlike the wild-summon ceiling. Final `UpdateAllStats` also inherits30% of owner stamina. The actual owner-stamina/final-health oracle remains incomplete; prior positive HP1 wire evidence is not parity. Continue other toys without inventing a guardian default.
 
 Earlier root refusals remain in the [effects12 identity/reason table](toy-effects12-coverage.md#exact-retained-gaps) and [effects13 refinements](toy-effects13-coverage.md#exact-retained-gaps), except identities explicitly closed by later packets here. Arrival of the Naaru64456/91752 is not admitted: TDB51200/display35543 resolves model124640, `creature/invisiblestalker/invisiblestalker.m2`, not a recording model. The local root has only its summon effect; template addon, AI/script, creature spells and SmartAI bindings are empty. The recording action is not established by publishing this invisible actor. This is a local source gap, not proof that Retail has no action.
 
 [Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
+
+## Grizzlesnout63 source lifecycle (2026-10-16)
+
+Test-only commit6f02eec4 exercises actual bag learning and journal UseToy129965/194807. Initial run passes1/1 in41.95s, zero ignored; this is acceptance of existing handlers after62, not a new RED→GREEN runtime fix. The source-backed test asserts real ADT parser area/height: Northshire9 refuses area group4446 without spending recovery; Northrend571/area3537 accepts after the authored1500ms cast.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Server lifecycle | Source transform27864 selects9287; flag1 becomes65 without losing the unrelated bit; run speed multiplier3.5 and aura15000ms remain authored. The ordinary50ms simulation expires the aura, restores original display/health/flag1/speed1, and retains the600000ms item recovery. No clock, cooldown or duration reset. |
+| Body ownership | Twelve same70391 body dependencies authenticate by resolution content key/MD5, SHA256 and byte length. Every key already has exactly one canonical owner; both12648700/01.skin aliases are byte-equal to the referenced skins. No new fragment, extraction or canonical mutation. |
+| Remaining | Current whole-Toy/fmt/check and actual Rust loader proof are pending at this checkpoint. No fresh wire, native input delivery for this particular toy, pixels, audio, wall-clock lifetime or complete-toy parity claim. Generic35/35 native movement proof retains only its62 scope. |
+
+Evidence root below: `grizzlesnout63-{active-goal,proof-ledger,source-metadata,body-source,terrain-source,authenticated-owners,readability}.json` and `grizzlesnout63-initial.log`. Model43→M2 126487 has seven external animations, two skins and display overrides126492/126493; source display scale1.5 remains separate from server display identity.
 
 ## Forced-forward62 generic input proof (2026-10-16)
 

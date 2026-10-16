@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Grizzlesnout source lifecycle (2026-10-16)
+
+129965/194807 uses existing transform27864/display9287, aura241 and+250% run speed for15000ms, with600000ms item recovery. Actual bag learning/UseToy acceptance passes1/1 after62: real Northshire terrain refuses group4446 without spending; real Northrend571/3537 accepts the1500ms cast. Ordinary50ms simulation expiry restores native display/health/flags/speed without clearing recovery. This is a new acceptance test of existing behavior, not an invented runtime RED. [Exact proof and remaining boundaries](../../toy-effects14-coverage.md#grizzlesnout63-source-lifecycle-2026-10-16) separate server lifecycle from twelve already-owned authenticated canonical body assets/two aliases and pending actual loader/regression gates. No fresh wire/pixels or complete-toy claim.
+
 ## Forced-forward flag boundary (2026-10-16)
 
 TC `HandleForceMoveForward` reconciles aura241 into `UnitFlags2::FORCE_MOVEMENT` (0x40), preserving every unrelated bit and retaining the flag until the last241 aura leaves. Genuine source-spell148626/194807 RED observes1 instead of65; the committed handler and shared constant pass the overlap/final-removal control1/1 in6.08s at serverb0a24e7d/protocol07a8faa. Native input now passes35/35 gameplay controls after genuine idle-input RED, and whole-Toy passes139/139 at server2d8fc58e/engined6adbe444/protocol07a8faa. [Exact packet scope and named gaps](../../toy-effects14-coverage.md#forced-forward62-generic-input-proof-2026-10-16) separate generic flag/input support from missing104329 mount template73689 and unresolved113543 mount action; no fresh wire, native-pixel or complete-toy claim. [Contract](../../specs/toys.md#contract). Exact stage ledger: `/home/osso/.worktrees/logs/toy-effects14-continuation/force-forward62-proof-ledger.json`.

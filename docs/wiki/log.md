@@ -1,6 +1,10 @@
+## 2026-10-16 — Grizzlesnout source lifecycle
+
+[Grizzlesnout129965](systems/toys.md#grizzlesnout-source-lifecycle-2026-10-16): actual learning, terrain-backed Northrend admission,1500ms cast, source9287/3.5/241/15s expiry and600s recovery pass1/1. Test-only existing-handler acceptance; twelve canonical body receipts/two aliases authenticate without new publication. Current packet gates and native rendering remain separate. Next130249 now has published99572, superseding the earlier missing-template snapshot.
+
 ## 2026-10-16 — Forced-forward flag boundary
 
-[Aura241 flag](systems/toys.md#forced-forward-flag-boundary-2026-10-16): source148626/194807 overlap/removal RED→GREEN1/1 preserves unrelated bits. Native input and actual104329 mount/body/lifecycle remain active; no whole-Toy or complete-toy claim.
+[Aura241 flag](systems/toys.md#forced-forward-flag-boundary-2026-10-16): source148626/194807 overlap/removal RED→GREEN1/1 preserves unrelated bits. Generic native input35/35 and whole-Toy139/139 pass at the recorded62 revisions; actual104329 mount/body/lifecycle remains deferred for missing73689. No complete-toy claim.
 
 ## 2026-10-16 — Ysera source admission and private body closure
 
