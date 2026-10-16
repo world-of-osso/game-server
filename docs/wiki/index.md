@@ -10,9 +10,12 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Optional cost spell modifiers](systems/auras.md#optional-cost-spell-modifiers-2026-10-16) — native Practiced Strikes/Protection Execute RED3/2→GREEN38 plus merged5; optional spend excludes flat and retains percentage modifiers; workspace check passes.
+- [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls and current-master workspace check pass; full talent/legal/fresh UDP acceptance open.
+- [Missing-storage Call Pet](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16) — actual character47 has no pet record; native cast RED→refusal, sourced Human starter-pet mapping remains a gap.
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls pass, workspace check held by bot live window; full talent/legal/fresh UDP acceptance open.
 
-- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — three RED/GREEN profiles, all eleven named gameplay tests pass with isolated read-only caches; arena remains124.81s, full-suite timing separate.
+- [Slow native test fixtures](investigations/slow-native-test-fixtures.md) — immutable source caches; follow-up four-worker arena52.70s preserves all sixteen cases/assertions/time steps; full-suite timing separate.
 - [Native damage prerequisite fixtures](systems/spell-casting.md#native-damage-prerequisite-fixtures--2026-10-16) — Charred/Rampage damage-only fixtures use existing sourced dodge reduction; actual Chaos `Miss(Dodge)` reproduces intermittent zero-damage preconditions, no evade/gameplay change.
 
 - [Stockade proximity receipts](investigations/follower-data.md#stockade-proximity-receipts--2026-10-15) — debug-only acquisition positions distinguish proximity from damage; social-assist gaps remain explicit.
@@ -38,7 +41,9 @@
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
 - [Shrine viewer-level projection](systems/toys.md#shrine-viewer-level-projection-2026-10-15) — real learned-use viewer30 RED, retained regional range/delta and Podium zero-tuning control; server-combat scaling remains separate.
 
-- [Guild lifecycle history](systems/guild-lifecycle.md) — authenticated member-scoped query, additive table and same-transaction six-action/founder producers; backend4/4, native acceptance pending, separate from bank logs/news.
+- [Guild lifecycle history](systems/guild-lifecycle.md) — member-scoped six-action/founder ledger, separate from bank/news history.
+- [Guild news](systems/guild-news.md) — actual qualified producers, durable member query/sticky authority and native proof ledger.
+- [Guild perks](systems/guild-perks.md) — installed definitions and membership-derived knowledge; effect coverage remains distinct.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
 
@@ -384,7 +389,7 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch4](systems/spell-casting.md#fourth-batch-local-retail-rows) — ten bounded paths/eight ranked candidates;17 new native proofs, Dummy roots177→176.
 
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
-- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md) separates row references/admission from Retail proof.
+- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [current105-ID coverage and bounded Fade107 proof](../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16) separates row references/admission from Retail proof.
 
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [stationary arch/leash](systems/navigation.md#stationary-arch-and-leash-acceptance) records Retail5s no-path grace and bounded live acceptance; [contract](../specs/navigation.md).
 
@@ -479,3 +484,9 @@ Debug logs and root cause analyses.
 - [Feral Spirit owner contribution](systems/spell-casting.md#feral-spirit-owner-contribution--2026-10-15) — source-backed owner AP and weapon terms; intrinsic AP named gap; native live-owner RED→GREEN and24 scoped controls pass.
 
 - [Rotgrip source mismatch](systems/boss-scripts.md#maraudon-rotgrip-source-mismatch--2026-10-16) — authenticated13596→428/bit6, literal Fatal Bite SELF damage versus SAI victim argument, real Puncture and isolated controlled credit; ordinary fight remains uncertified.
+
+- [Noxxion source port](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16) — pinned scheduler/aura port; three runtime controls pass with channel-aware clocks, ten actual Normal adds, phase lifecycle/damage and isolated credit; native/ordinary acceptance separate.
+
+- [Gizlock source runtime](systems/boss-scripts.md#maraudon-gizlock-source-runtime) — actual ranged pull, channel-aware clocks, cone damage, beast-only Flash Bomb exclusion and isolated bit5 controlled credit; native/ordinary/publication open.
+
+- [Vyletongue range events](systems/boss-scripts.md#maraudon-lord-vyletongue-range-events) — real21390 RED→source EVENT_RANGE9/500ms rechecks, nearby stun and20yd Blink with isolated bit2 controlled credit; native/geometry/publication open.
