@@ -557,7 +557,7 @@ fn generate_corpse_loot(
             corpse = corpse.to_bits(),
             entry = npc.template_id,
             rewarded = ?rewarded,
-            personal = ?loot,
+            personal_loot = loot.looters.values().any(|slots| slots.iter().any(Option::is_some)),
             shared_loot = shared.has_loot(),
             pending_rolls = shared.has_pending_rolls(),
             "generated corpse loot"
