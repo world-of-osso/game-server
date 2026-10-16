@@ -97,6 +97,19 @@ fn encounter_coverage_thermaplugg_normal_linked_walking_bomb_pair() {
     h.advance(0.1);
     let bombs = h.creatures_of(WALKING_BOMB);
     assert_eq!(bombs.len(), 2, "real linked Normal-only pair must spawn");
+    eprintln!(
+        "THERMAPLUGG bombs at30s {:?}",
+        bombs
+            .iter()
+            .map(|bomb| (
+                bomb,
+                h.app.world().get::<Position>(*bomb),
+                h.app
+                    .world()
+                    .get::<crate::creature_ai::CreatureState>(*bomb)
+            ))
+            .collect::<Vec<_>>()
+    );
     for (x, y, z) in [(-521.934, 693.13, -327.005), (-535.318, 649.987, -326.494)] {
         assert!(
             bombs.iter().any(|bomb| {
