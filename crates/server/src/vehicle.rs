@@ -43,7 +43,11 @@ pub(crate) struct PassengerOrigin {
 pub(crate) struct VehiclePlugin;
 impl Plugin for VehiclePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_vehicle_store);
+        // Diagnose missing ground before loading vehicle attachments from the same cache.
+        app.add_systems(
+            PostStartup,
+            load_vehicle_store.after(crate::ground::open_ground_map),
+        );
         app.add_systems(Update, receive_requests);
         app.add_systems(FixedPostUpdate, reconcile_passengers);
     }
