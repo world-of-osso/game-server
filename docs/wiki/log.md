@@ -1661,3 +1661,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: Content-tuning participation268 bounded to native15; authored min/max, complete companions, generated5809 and census5519/pinned908+909. Native predicate RED genuine, GREEN pending.
 - 2026-10-16: Bounded dormant detection/resize RED→GREEN and 43 behaviour controls; irrelevant GO collision RED and membership-index implementation recorded in [[server-tick-lag]].
+
+- 2026-10-16: Content268 native/catalog GREEN3/3(13.47s), including100 native controlled flag settlements for both908/909 grants, faction/idle guards and database-reopened original dates. Integrated server9aca3c1a, final gate pending.
