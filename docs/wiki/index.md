@@ -1,3 +1,4 @@
+- [Rumbling Earth original hit count](systems/spell-casting.md#rumbling-earth-original-hit-count--2026-10-16) — native inclusive3-target/15sec Shockwave reduction; killing hits retained, immunity/absence controls, initial18 and final4 affected tests pass; radius/op6 remains open.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
