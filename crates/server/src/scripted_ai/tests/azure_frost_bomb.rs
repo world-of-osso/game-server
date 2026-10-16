@@ -140,7 +140,7 @@ fn azure_frost_bomb_nonexpiry_removal_never_explodes() {
 }
 
 #[test]
-fn azure_frost_bomb_missing_caster_expiry_does_not_cast_children() {
+fn azure_frost_bomb_missing_caster_cleanup_does_not_cast_children() {
     let (mut h, telash) = fixture();
     apply_bomb_aura(&mut h, telash);
     assert!(h.has_aura(h.player(), BOMB_AURA));
