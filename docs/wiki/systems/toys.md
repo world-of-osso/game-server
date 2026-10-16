@@ -2,13 +2,17 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Shrine viewer-level projection (2026-10-15)
+
+UseCreatureLevel retains the initial source regional `LevelScaling`; wild initialization carries its range and once-rolled delta instead of dropping them after native selection. Unflagged player-owned Podium inherits zero tuning and stays native for every viewer. Actual learned Shrine use reproduces viewer20→30, then passes viewer1/20/80→1/20/30 while preserving native30 and initialized stats. [Claim-specific evidence and open server-combat/HP-projection boundaries](../../toy-effects14-coverage.md#shrine-viewer-level-projection-2026-10-15) own verification scope; no complete combat or new native-rendering certificate.
+
 ## Wild summon initial level and stats (2026-10-15)
 
 Pinned TC a352b1fa initializes actual terrain area in Creature::Create before CreateFromProto→UpdateEntry→SelectLevel; TempSummon::InitStats then clamps all unflagged summons, not only guardians. Wild E28 reads the same strict destination-level projection before normal zone spawning, then initializes selected UnitLevel/HP/armor/mana before spell summon bookkeeping. Missing regional or required mana-source rows refuse spawning.
 
 UseCreatureLevel retains source template/map/area tuning for initial stats; unflagged TempSummon inherits its owner's tuning (source zero-initialized when absent). Owner level comes from player Level or non-player UnitLevel; absent state is not a guessed1. This also corrects the existing learned-use group chain's temporary NPC child. Ordinary zone spawning, guardian stat formulas, AI, placement, privacy and lifetime paths are not redesigned.
 
-[Source rows, genuine REDs, exact whole-Toy gate, current build/checks, private initialized-field wire proof and binary hashes](../../toy-effects14-coverage.md#wild-summon-initial-state-proof-2026-10-15) own acceptance evidence. Initial-state CPU and fresh Podium/Shrine/default-Scarab wire now pass. Inherited per-viewer scaling/combat modifiers, attack power and full creature-stat parity remain open; previous native pixels/lifetimes are not recertified. [Contract](../../specs/toys.md).
+[Source rows, genuine REDs, exact whole-Toy gate, current build/checks, private initialized-field wire proof and binary hashes](../../toy-effects14-coverage.md#wild-summon-initial-state-proof-2026-10-15) own acceptance evidence. Initial-state CPU and fresh Podium/Shrine/default-Scarab wire now pass. [Shrine client-level projection](#shrine-viewer-level-projection-2026-10-15) is separately proved; inherited server-combat scaling/modifiers, attack power and full creature-stat parity remain open; previous native pixels/lifetimes are not recertified. [Contract](../../specs/toys.md).
 
 ## Winner's Podium source placement (2026-10-15)
 

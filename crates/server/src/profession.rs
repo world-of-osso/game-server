@@ -509,7 +509,21 @@ pub(crate) fn store_created_item(
             bags.character_id,
             (item_id, count),
         )
-        .map(|_| bags.character_id)
+        .map(|_| {
+            let template = bags
+                .templates
+                .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+                .expect("committed craft template");
+            crate::guild_news::record_item(
+                &bags.db.db,
+                bags.character_id,
+                item_id,
+                template,
+                world.get_resource::<crate::item_stats::ItemScalingTables>(),
+                crate::guild_news::ItemNewsSource::Crafted,
+            );
+            bags.character_id
+        })
     })
     .ok_or("caster has no bags")??;
     let mut updates = world.resource_mut::<GoldUpdateQueue>();
