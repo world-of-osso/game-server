@@ -37,6 +37,10 @@ Property copies are keyed by authored map ID and authoritative neighborhood/hous
 
 No verified first-house exterior/interior grant source is available. Do not infer default grants from component membership, UnlockItemID=0 or the placeholder House row. Rank3 may use one bounded authentic vendor-item redemption path backed by world.db/TDB npc_vendor or an authored DB2 item effect (lead approval, 2026-10-11); never turn StartingQuantity into ownership without grant semantics.
 
+## World of Osso policy: cornerstone plot claim grants its house
+
+Approved2026-10-16 project policy, **not a Retail grant claim**: successful purchase/claim through the authored NeighborhoodPlot cornerstone grants the persisted House ownership record tied to that plot. Existing `purchase` commits payment and `OwnedHouse { plot_id, neighborhood_id, owner_character_id, account_id }` together, rejecting wrong-neighborhood, unaffordable, occupied and duplicate ownership. Claiming does not grant decor, a selected exterior component set or an initial room layout. `OwnedHouse.plot_id` is the runtime relationship; no missing static DB2 House template relation is fabricated. Native proof must walk from the authored neighborhood entry and interact with the actual cornerstone, not teleport next to it.
+
 ## Default unlock sources (not a starter layout)
 
 The pinned Retail generated `PlayerHousingConstantsDocumentation.lua` names room UnlockedByDefault4, exterior-type UnlockedByDefault1, fixture IsDefaultFixture1/UnlockedByDefault2, theme UnlockedByDefault1 and wallpaper UnlockedByDefault1. Existing imported Flags fields identify14HouseRoom rows with default-unlock bit4,4default exterior types,17themes and17wallpapers. This narrows the prior source gap: default availability is sourced; first-house instance quantities, initial exterior choice/placement, starting room layout and level/budget thresholds are not established by those flags. Preserve unlock availability separately from storage/grants and assembly. Unknown NeighborhoodPlot vectors and unnamed GameParameter values remain uninterpreted.
