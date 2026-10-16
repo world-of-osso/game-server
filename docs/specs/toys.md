@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Sightless Eye153293/254568 preserves source aura152's target detected-range modifier-15yd for600000ms, instant cast, area group5454 and300000ms item recovery. Use the existing native creature attack-distance calculation, including its minimum/reach clamps and source level/expansion exceptions; do not treat this as stealth, invisibility or untargetability. Ordinary expiry restores detection, not a timer/cooldown reset. Native visual/wire acceptance remains separate.
+
 - Source aura241 sets replicated `UnitFlags2::FORCE_MOVEMENT` (0x40), preserving unrelated bits. Removing one overlapping241 aura retains the flag; the final removal clears only that bit (TC `HandleForceMoveForward`). Server flag lifecycle alone does not certify native movement or full toy parity.
 - Grizzlesnout's Fang129965/194807 requires source Northrend area group4446,1500ms cast and transform27864/display9287 with+250% run speed/241 for15000ms; preserve600000ms item recovery. Waywatcher's Boon130249/195806 requires Val'sharah group4273, instant cast and authentic99572 display choices63609/63606 with+200% run speed/241 for15000ms; preserve900000ms recovery. Area refusal spends no item recovery; ordinary expiry restores native display/health/flags/speed without clearing recovery. Source body assets and native delivery/rendering remain independent acceptance boundaries.
 
