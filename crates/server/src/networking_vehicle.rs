@@ -197,7 +197,16 @@ fn move_vehicle(
             jumping: input.jumping && mover.movement.flags & NO_JUMPING == 0,
             feather_fall: false,
         };
-        next.y = land_height(ground, *map, current, next, envelope);
+        next.y = if mover.movement.flags & NO_JUMPING != 0 {
+            // Unlike players these ground vehicles have no airborne interval/gravity
+            // system. Follow the NPC support floor, including descending terrain.
+            match ground.creature_ground_in(*map, next.with_y(current.y)) {
+                GroundProbe::Supported(floor) => floor,
+                GroundProbe::Unsupported | GroundProbe::Unloaded => current.y,
+            }
+        } else {
+            land_height(ground, *map, current, next, envelope)
+        };
     } else {
         next.y = current.y;
     }
