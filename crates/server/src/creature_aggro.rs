@@ -692,10 +692,16 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
 /// `SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT`.
 const SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT: u32 = 0x0200_0000;
 
-/// `Unit::RemoveAurasOnEvade`: every aura but those that stay after combat
-/// (vehicle and clone-caster auras are not modelled); addon auras come back at
-/// home (`creature_ai::return_to_spawn_system`).
+/// `Unit::RemoveAurasOnEvade` (TC a352b1fa Unit.cpp:4459-4487): player-owned
+/// units keep their auras; ordinary creatures retain only stays-after-combat
+/// auras (vehicle/clone auras unmodelled) and restore addon auras at home.
 fn remove_auras_on_evade(world: &mut World, creature: Entity) {
+    if crate::faction::player_affected(
+        world.get::<Player>(creature).is_some(),
+        world.get::<UnitFlags>(creature),
+    ) {
+        return;
+    }
     let store = world.get_resource::<crate::spell_info::SpellStore>();
     let stays: Vec<u32> = world
         .get::<crate::auras::ActiveAuras>(creature)

@@ -1,3 +1,7 @@
+## 2026-10-15 — Player-owned evade aura retention
+
+[Native source boundary](investigations/follower-data.md#owned-evade-aura-retention--2026-10-15): Stockwait67 credits Moloch/Overheat but later loses all Garrick passives on evade (10584→7840HP,68→0SP). Shared cleanup now follows TC Unit.cpp4461 owned-unit exclusion. Real initialized-spec→evade→stat-refresh RED1 matches7840; GREEN/build/native retention pending. Route/loot gaps keep fullStockade/Azure gates open.
+
 ## 2026-10-15 — Follower passive-derived stat recomputation
 
 [Source boundary](investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15): NPC bridge passives stored modifiers but the player-only query never recomputed them. Native spec66 RED2 proves7840 versus sourced10584/8232 without stat overrides; same production query now accepts follower profile identity and ordinary modifier changes. GREEN/build/live proof remain separate; Stockade0/3 stays open.
