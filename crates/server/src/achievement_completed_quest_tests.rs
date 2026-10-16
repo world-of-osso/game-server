@@ -3,7 +3,6 @@ use super::*;
 use crate::class_progression::ClassProgressionPlugin;
 use crate::mount_journal::MountJournalPlugin;
 use lightyear::connection::host::HostClient;
-use lightyear::prelude::*;
 use rusqlite::Connection;
 use shared::protocol::{AuthChannel, EnterWorldResponse, LoadTerrain, SelectCharacter};
 use std::time::Duration;
