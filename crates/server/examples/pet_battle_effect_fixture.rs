@@ -1,5 +1,5 @@
 //! Seed only the owned private petbattle-effects journal, never a realm database.
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, TableDefinition};
 use rusqlite::{Connection, OpenFlags};
 use server::pet_battle::{Catalog, calculate_stats};
 use shared::pet_battle::{PetJournal, PetQuality};
