@@ -118,7 +118,7 @@ fn assert_private_quality_selection_conserved_reagents_and_skill() {
                 .items
                 .iter()
                 .filter(|entry| entry.item_id == item)
-                .map(|entry| entry.count)
+                .map(|entry| entry.stack_count)
                 .sum();
             assert_eq!(count, expected, "{name} item {item}");
         }
