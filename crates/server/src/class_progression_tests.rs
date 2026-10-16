@@ -94,7 +94,7 @@ fn guild_perks_real_membership_grants_rebuilds_revokes_and_reopens_without_touch
     let owner = create_with_kit(&db, "Perkleader", HUMAN, PALADIN).unwrap();
     let member = create_with_kit(&db, "Perkmember", HUMAN, PALADIN).unwrap();
     crate::persistence_character::set_character_guild_by_id(&db, owner, 7, "Actual Perks").unwrap();
-    let mut app = setup_app(db, class_spells().unwrap());
+    let mut app = setup_progression_app(db, class_spells().unwrap(), false, true);
     let player = spawn_player(&mut app, member, HUMAN, PALADIN, 60);
     let connection = connection_of(&mut app, player);
     app.world_mut()
@@ -188,7 +188,7 @@ fn guild_perks_real_membership_grants_rebuilds_revokes_and_reopens_without_touch
     drop(app);
     let db = redb::Database::open(&path).unwrap();
     assert!(crate::persistence_character::load_character_guild(&db, member).is_none());
-    let mut reopened = setup_app(db, class_spells().unwrap());
+    let mut reopened = setup_progression_app(db, class_spells().unwrap(), false, true);
     let player = spawn_player(&mut reopened, member, HUMAN, PALADIN, 60);
     let connection = connection_of(&mut reopened, player);
     reopened
@@ -261,10 +261,15 @@ fn add_inbox<M: Message + serde::Serialize + serde::de::DeserializeOwned>(app: &
 }
 
 fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
-    setup_progression_app(db, classes, false)
+    setup_progression_app(db, classes, false, false)
 }
 
-fn setup_progression_app(db: redb::Database, classes: ClassSpells, achievements: bool) -> App {
+fn setup_progression_app(
+    db: redb::Database,
+    classes: ClassSpells,
+    achievements: bool,
+    perks: bool,
+) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
@@ -292,6 +297,10 @@ fn setup_progression_app(db: redb::Database, classes: ClassSpells, achievements:
     app.add_plugins(crate::experience::ExperiencePlugin);
     if achievements {
         app.add_plugins(crate::achievement::AchievementPlugin);
+    }
+    if perks {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+        app.add_plugins(crate::guild_perks::GuildPerksPlugin::load(&root).unwrap());
     }
     app.finish();
     app.cleanup();
@@ -574,6 +583,7 @@ fn pruned_create_actions(
         let evaluated = evaluate(classes, &player, level, 0, |_| Vec::new());
         let known = KnownSpells(
             evaluated.known.iter().map(|spell| spell.spell_id).collect(),
+            Vec::new(),
             Vec::new(),
         );
         let actions = &create_info.get(race, class).unwrap().actions;
@@ -1038,7 +1048,7 @@ fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() 
             crate::experience::xp_to_next_level(starting_level) - 1,
         );
         let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
-        let mut app = setup_progression_app(db, class_spells().unwrap(), true);
+        let mut app = setup_progression_app(db, class_spells().unwrap(), true, false);
         app.insert_resource(load_achievement_catalog(&conn).unwrap());
         app.insert_resource(world_with_creature(299, starting_level));
         let player = spawn_player(&mut app, character, HUMAN, PALADIN, starting_level);
@@ -1194,7 +1204,8 @@ fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() 
         );
         if starting_level == 89 {
             let saved = persistence::load_achievements(&reopened, character);
-            let mut restored = setup_progression_app(reopened, class_spells().unwrap(), true);
+            let mut restored =
+                setup_progression_app(reopened, class_spells().unwrap(), true, false);
             restored.insert_resource(load_achievement_catalog(&conn).unwrap());
             let player = spawn_player(&mut restored, character, HUMAN, PALADIN, 90);
             restored.world_mut().entity_mut(player).insert(saved);
