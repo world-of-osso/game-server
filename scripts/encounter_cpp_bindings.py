@@ -2,7 +2,7 @@
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
 Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
-Adarogg, Slagmaw, Gordoth, Wailing Caverns and Silverlaine primaries.
+Adarogg, Slagmaw, Gordoth, Wailing Caverns, Silverlaine and Electrocutioner primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
@@ -140,7 +140,24 @@ SILVERLAINE_PRIMARY = dict(
     actor_id=367,
     display_id=37288,
 )
+GNOMEREGAN_SOURCES = {
+    "EasternKingdoms/Gnomeregan/gnomeregan.h": "d78e089544edb621fab73b8e91aa7e32d53defebeac260376b049995e49b7e68",
+    "EasternKingdoms/Gnomeregan/instance_gnomeregan.cpp": "17e6fdf82b17956d2d9a229da5556a3dfc1f87c87f18b4bff548a4d41e79c8bb",
+}
+# TC DATA_ELECTROCUTIONER is ordinal2; installed Normal encounter380 uses bit3.
+ELECTROCUTIONER_PRIMARY = dict(
+    map_id=90,
+    entry=6235,
+    encounter_id=380,
+    bit=3,
+    script="",
+    ai="SmartAI",
+    journal_id=421,
+    actor_id=991,
+    display_id=36558,
+)
 PROFILES = {
+    "electrocutioner": (ELECTROCUTIONER_PRIMARY, GNOMEREGAN_SOURCES),
     "silverlaine": (SILVERLAINE_PRIMARY, SHADOWFANG_SOURCES),
     "kystia": (PRIMARY, SOURCES),
     "golden-serpent": (GOLDEN_PRIMARY, GOLDEN_SOURCES),

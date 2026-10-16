@@ -23,6 +23,11 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Gnomeregan Electrocutioner source boundary
+
+- [x] Prepare only Electrocutioner6235/encounter380 Normal map90 bit3 from pinned TC header/instance, installed Journal421/actor991/display36558 and actual TDB SmartAI identity. TC ordinal2 must not replace DB2 bit3. Generated SQL remains copy-only and preserves unrelated bindings; other Gnomeregan actors receive no credit from this profile.
+- [ ] Verify actual installed SAI Megavolt11082 (25s/5s), Shock15605 (15s/8s, random hostile) and Chain Bolt11085 (31s/11s, victim), ordinary cast behavior and copy-isolated death credit. No canonical publication or native-clear claim.
+
 ## Ragefire Chasm source hooks
 
 - [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. No DB2 substitutes or derived effect IDs.

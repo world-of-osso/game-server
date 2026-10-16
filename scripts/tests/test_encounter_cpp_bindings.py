@@ -89,6 +89,33 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'creature AI identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_electrocutioner_primary_keeps_db2_bit_not_tc_ordinal(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('electrocutioner')
+        self.assertIsNotNone(profile, 'source Electrocutioner primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(380,90,3);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (6235,'','SmartAI'),(6229,'','SmartAI'),(7800,'','SmartAI');
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=90').fetchall(),
+            [(6235,380,3,421,991,36558)])
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(), [(12118,)])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=6235")
+        with self.assertRaisesRegex(ValueError, 'creature AI identity'):
+            prepare_bindings(self.db, [primary])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='SmartAI' WHERE entry=6235")
+        self.db.execute('UPDATE dungeon_encounter SET Bit=2 WHERE ID=380')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_wailing_primaries_keep_all_eight_authored_normal_bits(self):
         import encounter_cpp_bindings as bindings
         names = ['anacondra', 'cobrahn', 'kresh', 'pythas', 'skum', 'serpentis', 'verdan', 'mutanus']
