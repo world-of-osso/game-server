@@ -15,6 +15,7 @@
 
 mod data;
 mod gathering;
+mod quality_reagents;
 pub(crate) mod specializations;
 mod trainer;
 pub(crate) use gathering::GatherProgress;
@@ -289,7 +290,13 @@ pub struct ProfessionPlugin;
 impl Plugin for ProfessionPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((TrainerPlugin, specializations::SpecializationsPlugin))
-            .add_systems(Update, receive_craft_requests)
+            .add_systems(
+                Update,
+                (
+                    receive_craft_requests,
+                    quality_reagents::receive_allocations,
+                ),
+            )
             .add_systems(
                 FixedUpdate,
                 continue_craft_queues.after(crate::spell_cast::advance_casts),
