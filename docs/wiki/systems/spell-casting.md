@@ -100,6 +100,12 @@ Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood'
 
 Current native source values replace stale golden constants, not runtime coefficients or variance tolerance. A legitimate upper primary draw reproduced the master red; bounded real casts now cover the full source interval while distinct AP/RAP preserve owned bleed and splash limits. [Source, exact failure and merged proof](../../class-completeness6.md#wildfire-primary-variance-master-red--batch61).
 
+## Touch of Death target admission — 2026-10-16
+
+70391 root322109's description requires a weaker creature, or passive322113 and a target below its authored15% threshold. Pinned SimC76f8118 `monk/sc_monk.cpp:2675-2688` compares target current health against the Monk's maximum and uses a strict percentage comparison for the improved rank. Its baseline uses `<=`, unlike the DB2 description's literal “less”; this implementation uses the description's strict baseline boundary, not a claimed native equality observation. Checked TC a352b1fa `spell_monk.cpp` contains no corresponding script.
+
+The ordinary validation path now rejects ineligible targets before CastSuccess and cooldown publication. Two real HostClient tests cover seven cases: healthy stronger creature with/without rank;14% without/with the actually synchronized native passive;15% and16% with rank; and a creature below the Monk's maximum without rank. RED accepts healthy/untalented stronger creatures; GREEN2/2 at8cf90f31 (11.49s) preserves eligible casts and rejects invalid ones. No resource, crit, armor or damage override is introduced. The zero-base school-damage effect remains an explicit separate gap, as do PvP integration, Stagger removal and follow-up talents. [Contract](../../specs/class-completeness.md#touch-of-death-admission); source/proof receipts `data/class-completeness6-2026-10-12/touch-of-death-admission-{source,proof-ledger}.json`.
+
 ## Beast Mastery Kill Command pet damage — 2026-10-16
 
 70391 spell34026's description names83381; effect23978 is Dummy0, while83381 effect83776 is physical damage with native AP coefficient2.47199988. Pinned SimC76f8118 `sc_hunter.cpp:6587-6588,7549` executes the main pet's83381 action. Checked TC a352b1fa `spell_hunter.cpp` has no corresponding handler; no TC binding is implied. The root's hit hook now shares Survival's owned-persistent-pet bridge, selecting83381 instead of259277. The actual pet remains damage source, not the Hunter.

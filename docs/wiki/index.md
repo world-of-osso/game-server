@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Touch of Death admission](systems/spell-casting.md#touch-of-death-target-admission--2026-10-16) — seven native target/rank/percentage cases RED→GREEN; no cooldown on rejection, damage/PvP/talents still open.
+
 - [BM Kill Command pet damage](systems/spell-casting.md#beast-mastery-kill-command-pet-damage--2026-10-16) — actual Call Pet/owner intent RED→GREEN for34026→83381; native damage attribution and foreign ownership, not charging/full talent coverage.
 
 - [Readiness clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15) — real slow-frame charge/GCD owner lifetime RED→GREEN and67 controls; simulation clocks unchanged, fresh native/UDP acceptance open.
