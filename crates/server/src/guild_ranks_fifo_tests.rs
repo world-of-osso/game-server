@@ -75,6 +75,8 @@ fn fixture() -> Fixture {
                 MessageReceiver::<GuildRanksState>::default(),
                 MessageSender::<GuildStateUpdate>::default(),
                 MessageReceiver::<GuildStateUpdate>::default(),
+                MessageSender::<GuildEventLog>::default(),
+                MessageReceiver::<GuildEventLog>::default(),
             ))
             .id()
     });
@@ -120,6 +122,68 @@ fn send(f: &mut Fixture, index: usize, request: GuildRankRequest) {
         .get_mut::<MessageSender<GuildRankRequest>>(f.connections[index])
         .unwrap()
         .send::<GuildChannel>(request);
+}
+
+#[test]
+fn guild_rank_event_log_query_waits_for_prior_fifo_promotion() {
+    let mut f = fixture();
+    let db = f.app.world().resource::<GameDatabase>();
+    let held = db.db.begin_write().unwrap();
+    let master = f.characters[0];
+    let promotion = db
+        .writer
+        .enqueue("prior promotion for log query", move |db| {
+            apply_rank_request(
+                db,
+                7,
+                master,
+                GuildRankRequest::Promote {
+                    character_name: "Member".into(),
+                },
+            )
+            .map_err(|error| format!("{error:?}"))
+        });
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    send(&mut f, 0, GuildRankRequest::QueryEventLog);
+    let started = Instant::now();
+    collect_frames(&mut f, 3);
+    assert!(started.elapsed() < Duration::from_millis(100));
+    let mut logs = f
+        .app
+        .world_mut()
+        .get_mut::<MessageReceiver<GuildEventLog>>(f.connections[0])
+        .unwrap()
+        .receive()
+        .collect::<Vec<_>>();
+    assert!(logs.is_empty(), "History must wait for its FIFO position");
+    release.join().unwrap();
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while logs.is_empty() && Instant::now() < deadline {
+        collect_frames(&mut f, 1);
+        logs.extend(
+            f.app
+                .world_mut()
+                .get_mut::<MessageReceiver<GuildEventLog>>(f.connections[0])
+                .unwrap()
+                .receive(),
+        );
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(promotion.result(), Some(Ok(())));
+    assert_eq!(logs.len(), 1);
+    assert_eq!(logs[0].error, None);
+    assert_eq!(logs[0].events.len(), 1);
+    assert_eq!(
+        logs[0].events[0].kind,
+        GuildEventKind::Promote {
+            actor: "Master".into(),
+            member: "Member".into(),
+            rank: "Member".into(),
+        }
+    );
 }
 
 #[derive(Clone, Copy)]
