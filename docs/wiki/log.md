@@ -1658,3 +1658,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: Theradras source port after real missing-casts RED; Zaetar actual base/Normal projection process RED→GREEN. [Details](systems/boss-scripts.md#maraudon-theradras-source-port).
 - 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].
+
+- 2026-10-16: [Gargolmar](systems/boss-scripts.md#ramparts-gargolmar-runtime--2026-10-16) source clocks/reset/credit and actual Watcher HP; retained distant-charge RED and NPC log-recipient boundary.

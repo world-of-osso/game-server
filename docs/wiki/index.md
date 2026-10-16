@@ -504,3 +504,5 @@ Debug logs and root cause analyses.
 - [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
 
 - [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — controlled source clocks/effects/fixed death spirit/credit GREEN and actual TDB Normal projection; extra attacks remain unsupported.
+
+- [Gargolmar runtime and charge gap](systems/boss-scripts.md#ramparts-gargolmar-runtime--2026-10-16) — source clocks/reset/credit, real Watcher response; distant effect96 impact remains RED.
