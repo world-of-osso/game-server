@@ -18,14 +18,27 @@ fn create_arena_fixture() -> (Harness, tempfile::NamedTempFile, u64, u64) {
         app.add_plugins(AchievementPlugin);
     })
     .unwrap();
-    let catalog = load_achievement_catalog(&conn).unwrap();
+    let map = bind_authored_arena_run(&mut h, &conn, character);
+    h.app.insert_resource(GameDatabase { db });
+    h.app.world_mut().entity_mut(h.caster).insert((
+        map,
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
     h.app
-        .insert_resource(load_scenarios(&conn, &catalog).unwrap());
-    h.app.insert_resource(catalog);
-    let store = crate::maps::store::load_map_store(&conn).unwrap();
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.advance(1);
+    assert_eq!(snapshot(h.app.world(), map).scenario.unwrap().step_id, 138);
+    (h, file, character, foreign)
+}
+
+fn assert_arena_admission_rejected(store: &crate::maps::MapStore, character: u64) {
     let mut instances = crate::maps::InstanceManager::default();
     let admission = instances.create_map(
-        &store,
+        store,
         1031,
         crate::maps::instances::InstanceEntrant {
             character_id: character,
@@ -42,6 +55,15 @@ fn create_arena_fixture() -> (Harness, tempfile::NamedTempFile, u64, u64) {
         admission,
         Err(shared::protocol::TransferAbortReason::MapNotAllowed)
     ));
+}
+
+fn bind_authored_arena_run(h: &mut Harness, conn: &Connection, character: u64) -> InMap {
+    let catalog = load_achievement_catalog(conn).unwrap();
+    h.app
+        .insert_resource(load_scenarios(conn, &catalog).unwrap());
+    h.app.insert_resource(catalog);
+    let store = crate::maps::store::load_map_store(conn).unwrap();
+    assert_arena_admission_rejected(&store, character);
     // Native scenario admission is not implemented. Explicitly bind only the authored
     // run for component-level event proof; no map-entry or research-content claim.
     let map = InMap {
@@ -54,21 +76,9 @@ fn create_arena_fixture() -> (Harness, tempfile::NamedTempFile, u64, u64) {
         .0
         .insert(map, (58, ScenarioRun::default()));
     h.app.insert_resource(store);
-    h.app.insert_resource(instances);
-    h.app.insert_resource(GameDatabase { db });
-    h.app.world_mut().entity_mut(h.caster).insert((
-        map,
-        persistence::ClientId(character),
-        PlayerAchievementState::default(),
-    ));
     h.app
-        .world_mut()
-        .get_mut::<InWorld>(h.connection)
-        .unwrap()
-        .character_id = character;
-    h.advance(1);
-    assert_eq!(snapshot(h.app.world(), map).scenario.unwrap().step_id, 138);
-    (h, file, character, foreign)
+        .insert_resource(crate::maps::InstanceManager::default());
+    map
 }
 
 fn kill_controlled_npc(h: &mut Harness, entry: u32) {
