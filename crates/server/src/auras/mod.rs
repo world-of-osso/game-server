@@ -1372,7 +1372,7 @@ pub(crate) fn damage_resilience_multiplier(
 }
 
 /// Damage taken multiplier of `target`: MOD_DAMAGE_PERCENT_TAKEN (through
-/// `AuraStatMods`) × MOD_SPELL_DAMAGE_FROM_CASTER auras cast by `attacker`.
+/// `AuraStatMods`) × matching school/family/label auras cast by `attacker`.
 pub fn damage_taken_multiplier(
     world: &World,
     target: Entity,
@@ -1399,6 +1399,9 @@ pub fn damage_taken_multiplier(
                 aura.effects
                     .iter()
                     .filter(|effect| match effect.aura_type {
+                        handlers::MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER => {
+                            effect.misc_values[0] as u32 & school_mask != 0
+                        }
                         handlers::MOD_SPELL_DAMAGE_FROM_CASTER => {
                             scripts::affects_incoming_spell(aura, effect, spell)
                         }
@@ -1998,6 +2001,8 @@ mod tests;
 #[cfg(test)]
 mod toy_effects_tests;
 
+#[cfg(test)]
+mod autoattack_crit_tests;
 #[cfg(test)]
 mod bloodsurge_tests;
 #[cfg(test)]

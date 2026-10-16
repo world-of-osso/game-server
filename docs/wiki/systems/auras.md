@@ -1,5 +1,9 @@
 # Auras
 
+## Autoattack-only critical chance (2026-10-16)
+
+Native aura334 folds signed applied amounts/stacks into `AuraStatMods.autoattack_crit_pct`. The swing hit table adds only the attacker's total after ordinary crit and victim187, then clamps nonnegative; spell crit does not read it. Source: TC a352b1fa Unit.cpp2387. Avenging Wrath31884 has separate aura290effect2=20 and334effect5=20; TC SpellAuraEffects.cpp4449–4465 updates weapon/spell stats for290 already, so334 is not another global stat modifier. Native340094 has334=100 without290 and native456718 has334=-999, isolating both endpoints through ordinary casts and attacks. Genuine behavioral RED: positive native buff produced only normal swings and negative native aura retained critical swings. Full Wings/talent bindings, legal rating budgets and fresh bot UDP acceptance remain open. [Contract](../../specs/class-completeness.md).
+
 ## Independent melee and ranged attack power
 
 Native166/167 fold independent percentages into separate `StatModifiers` fields before character AP computation. `ChrClasses.RangedAttackPowerPerAgility` loads with class properties; ranged AP is `(level + max(live Agility,0)) × coefficient`, not melee AP. `CharacterStats.ranged_attack_power` is server-only; existing replicated `DerivedStats.attack_power` still means melee AP. Non-melee ranged-weapon spell AP coefficients and hunter pet owner inheritance consume RAP; AP-to-spell-power remains melee-owned. Source: TC a352b1fa StatSystem.cpp354–414, Unit.cpp6880–6890/9973–9998. [Contract](../../specs/class-completeness.md). Source-backed weapon/flat-AP additions and client RAP display are not certified by this percentage slice.
@@ -408,3 +412,9 @@ Eight native controls plus12 adjacent controls/check/fmt pass at d9d216d9. Three
 ## Damage versus creature type
 
 Aura168 stores `(creature mask,multiplier)` pairs in `AuraStatMods`, combining matching entries multiplicatively on actual spell/periodic and main/off-hand damage, independent of school. The shared `unit_creature_type.rs` resolver uses NPC template type; player positive native form type, else exact race type, and also serves target admission. Runtime loads required `chr_races.CreatureType` through the world connection; `prepare_site_catalog.py` retains the exact selected product CSV field. Canonical59-row equality is verified. No inferred Humanoid or generated source map. Zero masks/amounts do not boost damage; removal/expiry/reapplication, native Attr3/6 exemptions, resolved copies and healing retain their contracts. [Source/behavior receipts and boundaries](../../class-completeness6.md#native-creature-type-damage--batch54), [contract](../../specs/class-completeness.md). Generic tracking44 and whole-ability/talent/rendered acceptance remain separate.
+
+## Caster-owned school amplification — 2026-10-16
+
+Native70391 Haunt48181 effect1 is aura270, amount16, school mask127. The shared victim multiplier handled family271 and label537 but omitted270, so Haunt applied normally without increasing the owner's damage. TC a352b1fa `Unit.cpp:7056–7059/8178–8181` matches both aura caster and incoming school. The same multiplier now handles270 using the existing amount/stack product and IgnoreDamageTakenModifiers boundary. Autoswings do not use this special-spell condition.
+
+Ordinary HostClient Haunt→Fireball reproduces the missing bonus (386 health loss, expected native16% boosted439–461); baseline/foreign/school exclusions and removal/expiry controls pass before the fix. `spell_cast/caster_school_damage_tests.rs` retains this boundary and two actual2000ms Corruption172→146739 ticks, each amplified by16%. Final targeted run at96785a2f passes4/0/0 (8.35s). [Contract](../../specs/class-completeness.md#caster-owned-school-damage-taken). Haunt381/380, optional periodic talents, full Affliction and rendered/UDP parity remain open.
