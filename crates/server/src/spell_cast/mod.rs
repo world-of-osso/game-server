@@ -61,6 +61,8 @@ pub mod creature;
 mod creature_type_damage_tests;
 #[cfg(test)]
 mod critical_block_tests;
+#[cfg(test)]
+mod directed_radius_tests;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
