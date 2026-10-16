@@ -14,9 +14,9 @@ Extend the existing [SmartAI escort interpreter](smartai-escort.md), not a paral
 | Boundary | State | Proof |
 |---|---|---|
 | Existing path/pause/summon/quest machinery | Reused | Previous quest863 proof, not Feero acceptance |
-| Counter63/event77 cross-creature death flow | Implemented; GREEN pending | RED reaches four real deaths, remains paused before fix |
-| Attack-start49, immunity145 | Implemented; GREEN pending | RED: immunity512 retained; appearance failed to select Feero |
-| Emote5 | Pending | Authored second-camp list requires roar15 |
+| Counter63/event77 cross-creature death flow | Server GREEN | Real four-death gate plus all three waves/credit |
+| Attack-start49, immunity145 | Server GREEN | RED2→GREEN2 at appearance/acceptance hooks |
+| Emote5 | Named cosmetic gap | Authored second-camp roar15 not yet delivered to client |
 | Both-skin native complete/death run | Pending | No evidence yet |
 
 No canonical DB writes, guessed missing actions, source replacement, master push or unrelated UI redesign. Other unsupported SmartAI actions/events remain named gaps; this is not full SmartAI parity.
@@ -30,3 +30,7 @@ Pinned URLs and SHA-256 (retrieved2026-10-15; archived in engine data/diagnostic
 - https://raw.githubusercontent.com/TrinityCore/TrinityCore/a352b1fa/src/server/game/AI/SmartScripts/SmartScript.cpp — `957a0a95fb083039b08485ea89f83f2f0c31931c8a8acaf4d2a6a62bbfc6b3b4`
 - https://raw.githubusercontent.com/TrinityCore/TrinityCore/a352b1fa/src/server/game/AI/SmartScripts/SmartAI.cpp — `ee01874e762becccf07c0be1e02fee6eb3927c6fa0b6b040e9bdf88a2af9380f`
 - https://raw.githubusercontent.com/TrinityCore/TrinityCore/a352b1fa/src/server/game/AI/SmartScripts/SmartScriptMgr.h — `0488b4831b643e9a6ec3a48f55b77440357c265df891ec31ee93ffb8a3dd268e`
+
+## Private live setup boundary
+
+Supplied content_creature omits4484 although creature contains authentic spawn32783. Live fixture is a consistent SQLite backup and adds that exact creature row to its content table; canonical/source DB remains read-only. No template stats, quest rules or scripts change. Explicit ignored setup test creates two real fb_escort accounts with ordinary starting kits, level30 Night Elf druids at that source spawn. It seeds only authored prerequisite973 as rewarded;976 remains unaccepted. This setup does not prove prerequisite progression or mixed-Retail population reconciliation.

@@ -3,6 +3,8 @@ use super::*;
 
 #[path = "smart_feero_combat_tests.rs"]
 mod combat;
+#[path = "smart_feero_live_setup.rs"]
+mod live_setup;
 #[path = "smart_feero_quest_tests.rs"]
 mod quests;
 use crate::scripted_ai::{CreatureAiState, Hook, MotionType, dispatch};
