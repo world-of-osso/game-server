@@ -333,3 +333,44 @@ fn arena_live_collision_six_position_query_microbenchmark() {
         );
     }
 }
+
+#[test]
+fn unrelated_world_objects_fit_one_catch_up_frame() {
+    let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let spawn = crate::game_objects::load_game_object_spawns(&db)
+        .unwrap()
+        .0
+        .into_iter()
+        .find(|spawn| spawn.map_id == 0 && spawn.info.go_type != 15)
+        .expect("authored nontransport world object");
+    let mut app = App::new();
+    app.insert_resource(GroundMap::new(&data, HashMap::new()));
+    app.add_systems(Update, sync_live_objects);
+    app.world_mut().spawn_batch((0..250_000).map(|_| {
+        (
+            InMap::continent(0),
+            crate::game_objects::game_object_bundle(&spawn),
+        )
+    }));
+    app.update();
+    let fastest = (0..3)
+        .map(|_| {
+            let start = Instant::now();
+            for _ in 0..5 {
+                app.update();
+            }
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    eprintln!("250000 unrelated objects/five collision updates: {fastest:?}");
+    assert!(
+        fastest < std::time::Duration::from_millis(50),
+        "unrelated objects exhaust collision frame: {fastest:?}"
+    );
+}
