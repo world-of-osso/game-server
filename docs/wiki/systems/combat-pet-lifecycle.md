@@ -8,6 +8,12 @@ Verified: 2026-10-11, pet-lifecycle serverc4ba3ef/protocol203acd3; native runtim
 
 Family default specialization comes from the local `creature_family`/`chr_specialization` join, excluding PetOverrideSpec0x20 as in pinned TrinityCore DB2Stores. Demon records do not receive hunter specs. Changed pet health saves after combat ticks; the queued player logout/despawn boundary takes an immediate snapshot before marking the owner pending removal. Dismiss snapshots health before removing the world pet.
 
+## Missing-storage Call Pet — 2026-10-16
+
+Native BM character47/Bhunbeastm repeatedly received883 CastSuccess without a pet. A unit probe against a copied actual private redb confirms no stored pet record or active callslot1. On login `load_pet_stables` therefore inserts no `PetStable`; `check_summon_pet` incorrectly admitted that absence, while `effect_summon_pet` found no stored slot and returned without spawning/replicating a pet. e016950c rejects it before success with "You do not have a pet to summon". Actual native-target no-storage RED→GREEN plus empty-slot/dismiss/re-call controls pass4; an actual-character47 snapshot probe separately proves the storage and failure/spawn result. Diagnostic probe source/log stay in bot-harness evidence, not permanent environment-dependent tests. Fresh native `native-bm-no-storage1` on built server0f04b64f confirms five exact no-pet errors from five requests in10s, zero883 CastSuccess and no pet in37samples. Native refusal is proven; a functioning pet/rotation is still blocked by the named source gap.
+
+Starting-pet gap: pinned TDB1210.26091 creation-cast table31 rows has no Human-race-bit1/Hunter-class-bit4 match. The importer has no separate starter-pet mapping; `new-character-kit.md` already lists creation-cast pets as unmodelled. **HUMAN_HUNTER_STARTING_PET_SOURCE** remains explicit: no arbitrary pet grant, invented race mapping or changed bot kit. `bm-starter-pet-source-proof.json` retains the extracted SQL/hash and actual storage probe.
+
 ## Stable operations
 
 `PetStableRequest` runs after NPC hello/gossip/close validation. Only an in-world Hunter connection with the matching StableMaster role can list or mutate its own stable. Reliable ordered replies carry actual records, family/name/icon metadata, imported non-override specs and unlocked Call Pet slots.

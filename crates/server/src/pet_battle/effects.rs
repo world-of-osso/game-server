@@ -49,6 +49,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 Ok(true)
             }
             168 => self.add_aura_effect(caster, target, effect),
+            107 => self.fade_swap(caster, effect),
             68 => self.percent_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
@@ -445,6 +446,31 @@ impl<R: BattleRng> Runtime<'_, R> {
         for serial in serials {
             self.remove_aura(serial)?;
         }
+        Ok(true)
+    }
+    fn fade_swap(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let candidates: Vec<_> = (0..3)
+            .filter(|slot| {
+                *slot != caster.slot && self.battle.teams[caster.team].pets[*slot].health > 0
+            })
+            .collect();
+        if candidates.is_empty() {
+            return Ok(false);
+        }
+        let choice = if candidates.len() == 1 {
+            0
+        } else {
+            self.draw() as usize * candidates.len() / super::rules::RANDOM_SCALE as usize
+        };
+        let slot = candidates[choice];
+        if self.validate_swap(caster, slot).is_err() {
+            self.events.push(Event::Immune {
+                effect: effect.id,
+                target: caster,
+            });
+            return Ok(false);
+        }
+        self.swap_pet(caster.team, slot)?;
         Ok(true)
     }
     fn force_swap(&mut self, target: PetRef, effect: &Effect) -> Result<bool, String> {

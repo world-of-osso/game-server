@@ -23,6 +23,33 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Lord Vyletongue source boundary
+
+- [x] Prepare12236→424/Normal349bit2 using pinned TC Maraudon ordinal3/header/instance, actual TDB SmartAI and Journal70391 CSV427/997/display12334. Preserve Gizlock credit and refuse AI/ordinal-as-bit drift; SQL output only.
+- [x] Gate unchanged Shoot16100/CAST_COMBAT_MOVE64 and21390 ranged damage, self21655 caster-front20yd Blink and7964 Flash (actual1.5s cast), plus isolated424/bit2 controlled death credit. Check pre-Blink victim clocks, self-spell repeat clocks with casting-only deferral, source500ms outside-range rechecks at reach-adjusted lower/strict3D upper boundary, actual nearby stun and ranged pre-Blink exclusion. No invented targets/resources/timers.
+- [x] Interpret EVENT_RANGE9 using an engaged current victim and actual3D distance minus both source combat reaches: inclusive minimum, strict maximum. In-range actions reset their authored repeat; excluded victims recheck after500ms, carrying the victim as invoker. Preserve ordinary cast/channel deferral and source flags.
+- [ ] Native/ordinary fight, Blink wall/floor collision, loot, persistence and canonical publication remain separate. Positive20yd Blink displacement and nearby Flash stun are controlled headless proofs, not native geometry acceptance.
+
+## Maraudon Gizlock source boundary
+
+- [x] Prepare13601→427/Normal349bit5 from pinned TC Maraudon header/instance, TDB SmartAI and Journal70391 CSV425/995/display7125. TC ordinal2 is not DB2 bit5. Preserve Noxxion credit and refuse ordinal/bit drift; output remains copy-only SQL.
+- [x] Gate unchanged SAI Shoot16100 first0/repeat2.3–3.9s, Bomb9143 first4/repeat12s (actual2s cast), Dragon Gun21833 first6–9/repeat16–19s (actual8s channel), Flash Bomb29419 self first25/repeat25s and aggro Talk0. Require source-clock repeats with observed casting-only deferrals, genuine16100/9143/21910 damage,21833 self periodic-trigger aura,29419 beast-only exclusion of the human player, isolated427/bit5 controlled credit and post-death silence. Only initial player survival HP/8yd pull position are staged; source flags/resources/targets remain intact.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
+## Maraudon Noxxion source port
+
+- [x] Prepare13282→422/Normal349bit0 using pinned TC boss/header/instance and actual Journal70391 CSV423/993/display11172; preserve other credit, write SQL only.
+- [x] Gate source combat: Toxic Volley21687 self first5–10s/repeat15–20s; Uppercut22916 victim first15–20s/repeat20–30s; Summon Dummy21708 self first30–40s/repeat50–60s. Advance only with UpdateVictim; defer dispatch while casting; TaskContext repeats anchor to their prior due time, not dispatch time.
+- [x] Gate21708 effect0/DUMMY apply: creature passive/uninteractible and triggered21707; remove: aggressive/selectable. Actual21707 summons five13456 actors using authored Normal stats; BossAI tracks/despawns them. No fabricated timer, target, chance, resource or difficulty rows.
+- [ ] Ordinary/native clear, knockback movement, loot, persistence and canonical publication remain separate from controlled survival/death-credit proof.
+
+## Maraudon Rotgrip source boundary
+
+- [x] Prepare only13596→428/Normal349bit6 from pinned TC Maraudon header/instance, TDB1210 SmartAI and actual Journal70391 CSV430/actor1000/display13589. SQL stays copy-only, idempotent, preserves Razorlash and refuses AI/bit drift.
+- [x] Exercise unchanged100% SAI clocks: Fatal Bite16495 first6s/repeat12s; Puncture15976 first6–8s/repeat13–18s, both victim arguments. Installed DB2 makes16495 effect165/50% maximum health with implicit SELF1. Two casts actually reduce Rotgrip's own health; Puncture applies its victim aura and real periodic damage. No spell/target/timer/resource override or per-tick healing. High initial player HP is controlled survival only.
+- [x] Separate controlled player kill after29 simulated seconds grants exactly428/bit6 once, with no other-copy start/casts/credit or post-death Fatal Bite.
+- [ ] Intended victim-damaging Fatal Bite/ordinary fight is not certified: installed spell16495 damages SELF despite the TDB victim argument. Do not replace its ID/implicit target to hide this source mismatch. Native clear, loot, persistence and canonical publication remain separate.
+
 ## Gnomeregan Electrocutioner source boundary
 
 - [x] Prepare only Electrocutioner6235/encounter380 Normal map90 bit3 from pinned TC header/instance, installed Journal421/actor991/display36558 and actual TDB SmartAI identity. TC ordinal2 must not replace DB2 bit3. Generated SQL remains copy-only and preserves unrelated bindings; other Gnomeregan actors receive no credit from this profile.

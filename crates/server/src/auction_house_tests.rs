@@ -282,7 +282,7 @@ mod bounded_slice {
     }
 
     #[test]
-    fn query_300k_listings_under_200ms() {
+    fn query_300k_listings_scans_once_and_materializes_only_the_requested_page() {
         let auctions: HashMap<_, _> = (1..=300_000)
             .map(|id| {
                 let mut a = test_auction(
@@ -307,17 +307,53 @@ mod bounded_slice {
             let mut query = text_query(text);
             query.sort_field = field;
             query.page = page;
-            let start = std::time::Instant::now();
-            let result = search_auctions(&auctions, &query, &|_| {
-                shared::item_data::ItemDefinitionSource::Retail
-            });
-            let elapsed = start.elapsed();
-            eprintln!("300k query text={text:?} field={field:?} page={page}: {elapsed:?}");
+            let visited = std::cell::Cell::new(0_usize);
+            let resolved = std::cell::RefCell::new(Vec::new());
+            let result = super::super::queries::search_auctions_matching(
+                &auctions,
+                &query,
+                &|guid| {
+                    resolved.borrow_mut().push(guid);
+                    shared::item_data::ItemDefinitionSource::Retail
+                },
+                |_| {
+                    visited.set(visited.get() + 1);
+                    true
+                },
+            );
             assert_eq!(result.total_results, 300_000);
             assert_eq!(result.results.len(), 50);
+            assert_eq!(visited.get(), 300_000, "one matching pass for exact counts");
+            assert_eq!(
+                resolved.borrow().len(),
+                50,
+                "only page rows resolve item definitions"
+            );
+            let mut reference: Vec<_> = auctions.values().collect();
+            reference.sort_unstable_by(|a, b| expected_order(a, b, &query));
+            let start = page as usize * 50;
             assert!(
-                elapsed < Duration::from_millis(200),
-                "query took {elapsed:?}"
+                start + 50 < reference.len(),
+                "exercise a complete deep page and its successor"
+            );
+            let expected: Vec<_> = reference[start..start + 50]
+                .iter()
+                .map(|a| a.auction_id)
+                .collect();
+            let actual: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
+            assert_eq!(
+                actual, expected,
+                "text={text:?}, field={field:?}, page={page}"
+            );
+            let expected_guids: Vec<_> = reference[start..start + 50]
+                .iter()
+                .map(|a| a.item.item_guid)
+                .collect();
+            assert_eq!(*resolved.borrow(), expected_guids);
+            eprintln!(
+                "300k query text={text:?} field={field:?} page={page}: visited={}, resolved={}",
+                visited.get(),
+                resolved.borrow().len()
             );
         }
     }

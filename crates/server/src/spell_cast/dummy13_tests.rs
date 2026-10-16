@@ -234,8 +234,9 @@ fn pet(h: &mut Harness) -> Entity {
 
 #[test]
 fn dummy13_bestial_wrath_strike_uses_own_pets_current_target() {
-    let mut h = harness(Vec::new(), &[19574, 344572], 3).unwrap();
+    let mut h = harness(Vec::new(), &[19574, 344572, SUNWELL_RADIANCE], 3).unwrap();
     let own = pet(&mut h);
+    apply_native_enemy_dodge_reduction_to(&mut h, own);
     let target = h.npc;
     let other = spawn_npc(&mut h.app, 4.0);
     h.select(Some(other));

@@ -1056,6 +1056,48 @@ fn modern_crafting_leatherworking_trainer_cast_reagents_skillup_and_persistence(
 }
 
 #[test]
+fn guild_news_real_sulfuras_craft_records_only_successful_created_item() {
+    let mut h = harness(80).unwrap();
+    crate::persistence_character::set_character_guild_by_id(h.db(), h.character_id, 7, "Crafters")
+        .unwrap();
+    let spell = world_db().unwrap().store.get(21160).unwrap().clone();
+    h.app.insert_resource(SpellStore::fixture(vec![spell]));
+    with_learner(h.app.world_mut(), h.player, |learner, profs| {
+        learner.learn_spell(profs, 21160, 0);
+    })
+    .unwrap();
+    h.craft(21160, 1);
+    h.finish_crafting();
+    assert_eq!(h.bag_count(17182), 0);
+    assert!(
+        crate::guild_news::query(h.db(), h.character_id)
+            .entries
+            .is_empty()
+    );
+    // Authored CREATE_ITEM24 Sulfuras recipe: Sulfuron Hammer + Eye of Sulfuras.
+    h.give(17193, "Sulfuron Hammer", 1);
+    h.give(17204, "Eye of Sulfuras", 1);
+    h.craft(21160, 1);
+    h.finish_crafting();
+    assert_eq!(h.bag_count(17182), 1, "real recipe must finish before news");
+    assert_eq!(h.bag_count(17193), 0);
+    assert_eq!(h.bag_count(17204), 0);
+    let entries = crate::guild_news::query(h.db(), h.character_id).entries;
+    assert_eq!(entries.len(), 1);
+    assert!(
+        matches!(&entries[0].kind, shared::protocol::GuildNewsKind::ItemCrafted {
+        member, item_id: 17182
+    } if member == "Crafter")
+    );
+    h.craft(21160, 1);
+    h.finish_crafting();
+    assert_eq!(
+        crate::guild_news::query(h.db(), h.character_id).entries,
+        entries
+    );
+}
+
+#[test]
 fn crafting_two_bolts_consumes_four_linen_and_raises_classic_tailoring_twice() {
     let Some(mut h) = harness(10) else { return };
     h.learn_tailoring();
