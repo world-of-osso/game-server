@@ -132,6 +132,32 @@ fn achievements_criteria_scenario_step82_native_stage_and_lethal_kill_persist() 
         None,
         "stage transitions alone are not research kills"
     );
+    assert!(
+        !crate::spell_cast::try_cast_triggered(
+            h.app.world_mut(),
+            h.caster,
+            DAMAGE_SPELL,
+            Some(h.npc),
+            255
+        ),
+        "refused cast cannot supply a stage-qualified kill"
+    );
+    h.advance(2);
+    assert_eq!(research_progress(&h), None);
+    let catalog = h
+        .app
+        .world_mut()
+        .remove_resource::<ScenarioCatalog>()
+        .unwrap();
+    assert_eq!(
+        player_conditions(h.app.world(), h.caster)
+            .player
+            .unwrap()
+            .scenario_step,
+        None,
+        "missing scenario catalog is unknown"
+    );
+    h.app.insert_resource(catalog);
     kill_controlled_npc(&mut h, 204799);
     assert_eq!(
         research_progress(&h),

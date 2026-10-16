@@ -1,3 +1,7 @@
+## 2026-10-16 — Authored scenario-step kill guard
+
+[Positive82/native0](systems/dungeon-achievements.md#authored-scenario-step-kill-guard) resolves current authored IDs via OrderIndex=Asset-1, not vector positions. Compiler46/46/generated5783; genuine native component RED→GREEN2/2; structural5517/1824 adds four account roots. Explicit run binding, rejected1031 admission, missing original research content and stages7/14/17 remain named gaps.
+
 ## 2026-10-15 — Completed-quest login guard
 
 [Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED→GREEN4/4, census5513/1824 adds only account17495. Integratedbd808152 required four-filter208/0/1ignored plus site-export1/1; server/engine checks and formatting pass warning-free. Existing additive login counters and original account dates preserved; quest acquisition unproven.

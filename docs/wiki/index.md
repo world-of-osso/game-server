@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Authored scenario-step kill guard](systems/dungeon-achievements.md#authored-scenario-step-kill-guard) — native0 positive82 resolves actual current step IDs through authored ordinals; stage3/5 spell/death component proof, scenario admission and original research content remain gaps.
+
 - [Completed-quest login guard](systems/dungeon-achievements.md#completed-quest-login-guard) — bounded positive110 reuses character reward-derived Login74 facts for account17495; no quest acquisition or account-history borrowing.
 
 - [Nested encounter conjunction](systems/dungeon-achievements.md#nested-encounter-conjunction) — complete native165 All retains scoped11611 and difficulty15or16; structural11660 is not artifact acquisition or boss combat.
