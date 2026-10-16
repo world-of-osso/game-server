@@ -23,7 +23,7 @@ pub mod instance_script;
 pub(crate) mod jump_movement;
 pub mod kings_rest;
 pub(crate) mod maraudon;
-mod model_reach;
+pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
 pub(crate) mod ragefire_chasm;
