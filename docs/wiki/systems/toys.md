@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Stampwhistle source assistant and mailbox (2026-10-16)
+
+156833/261602 summons source132969/display68512 through property4203 Control1/Assistant35. Native default TempSummon routing preserves source flags/faction/non-follow identity,3yd front placement and600s duration; source item/category2066 recovery is3h. Authentic mailbox flag opens ordinary mail service directly, not an invented gossip option. Separate genuine importer/journal/mailbox REDs and source-state diagnostics are retained. [Exact coverage and pending gates](../../toy-effects14-coverage.md#stampwhistle66-source-assistant-and-mailbox-2026-10-16) distinguish source import/live service from full summoned expiry, native assets/rendering and canonical publication.
+
 ## Sightless detection consumer (2026-10-16)
 
 Sightless Eye153293/254568 already has its target aura152 consumer in native `AggroDistance`. Real hostile-acquisition controls prove ordinary12yd acquisition versus protected12yd non-acquisition and protected7yd acquisition before registry admission. Actual journal RED rejects152;574d45f5 recognizes that existing consumer without changing aggro math. Actual bag learning/UseToy and native aggro pass2/2; source group5454/instant10min aura/5min recovery and ordinary expiry remain unchanged. Whole-Toy142/142, creature-aggro30/30, current binary/tests check and fmt pass at recorded65 revisions; canonical classification adds only153293 to370, not370 complete toys. [Exact revisions and proof boundaries](../../toy-effects14-coverage.md#sightless65-native-detection-consumer-2026-10-16) distinguish server behavior from native rendering/wire and preceding unimplemented remote-view/possession roots.
