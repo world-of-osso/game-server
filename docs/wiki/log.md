@@ -7,12 +7,14 @@
 [Positive110/Login74](systems/dungeon-achievements.md#completed-quest-login-guard) retains complete companions and authored metadata, reusing actual character reward history. Compiler45/45/generated5768, native real-selection RED→GREEN4/4, census5513/1824 adds only account17495. Integratedbd808152 required four-filter208/0/1ignored plus site-export1/1; server/engine checks and formatting pass warning-free. Existing additive login counters and original account dates preserved; quest acquisition unproven.
 
 ## 2026-10-15 — Nested encounter conjunction
+## 2026-10-15 — Readiness real-time clock
 
-[Native165 nested All](systems/dungeon-achievements.md#nested-encounter-conjunction) preserves complete companions and scoped prerequisites. Compiler44/44, genuine native-handler RED→GREEN3/3, exact structural5512/1824 adds only11660. Required integrated four-filter205/0/1ignored plus site-export1/1 at299b09a9; checks/fmt pass. Initial missing fixture-env setup failures retained, corrected invocation green without source changes. No boss combat or prerequisite acquisition certificate.
+[Clock isolation](systems/spell-casting.md#readiness-clock-isolation--2026-10-15): real60-second slow-frame owner-message RED→GREEN for Overpower/Throw Glaive, sourced Fury Slam GCD lifetime and67 focused controls. SpellHistory uses real elapsed time; simulation/aura/cast/missile clocks unchanged. Fresh native/UDP and independent acceptance remain open.
 
-## 2026-10-15 — Absent-player-aura kill guard
+## 2026-10-15 — Guild lifecycle query boundary
 
-[Bounded SingleFalse8](systems/dungeon-achievements.md#absent-player-aura-kill-guard) on KillCreature0 requires known actor aura authority and complete authored companions. Compiler43/43, genuine native RED, structural5511/1824; native/catalog/prior-positive/pinned GREEN5/5(39.10s) at2dc751cc. Native counters, genuine actor mark casts and DB reopen pass; controlled boss identities do not certify encounters or full-map grants.
+[Lifecycle history](systems/guild-lifecycle.md): additive history table and authenticated actor-guild query; same-transaction six-action/founder producer wiring and100-row insertion-order retention implemented. Actual six-action RED observed an empty history; targeted4/4 now passes six-action/refusal/privacy/reopen, founder join labels,100-row tied-order retention and abort. Actual UDP transport1/1 and both-skin native real-action/privacy/100-row overflow acceptance now pass; fresh server/client processes preserve exact100 raw events/timestamps with identical binary receipts. Eleven inspected full-HD PNGs and durable trial evidence linked in the system page; refreshed-master gates remain separate. No fabricated/backfilled history or bank/news reuse.
+
 ## 2026-10-15 — Merged IoC vehicle foundation gates
 
 [Demolisher](systems/mounts.md#ioc-demolisher-seats--implementation2026-10-15): serverd414bb03/protocol5ce52e0 pass19 foundation+8bomb/AV/arena controls, runtime check and shared handshake2. Client source/scene/UDP proof linked; no driving/fire/both-skin model claim. Earlier fingerprints runner error and fixture integration compile error remain separate from gameplay RED.
@@ -51,10 +53,32 @@
 ## 2026-10-15 — Authored talent Starter builds
 
 [Starter Build](systems/talents.md#starter-build): authored cumulative ranks, normal eligibility and built-in selection in existing redb encoding. Five scoped Starter proofs pass, including installed-class legality and Arms apex deferred until authored levels; check/build have no warnings. Real private both-skin level10→11→80, exact relog projections and confirmed deactivation pass. No reference-data/default-realm mutation; coupled landing remains lead-owned.
+## 2026-10-15 — Nested encounter conjunction
 
+[Native165 nested All](systems/dungeon-achievements.md#nested-encounter-conjunction) preserves complete companions and scoped prerequisites. Compiler44/44, genuine native-handler RED→GREEN3/3, exact structural5512/1824 adds only11660. Required integrated four-filter205/0/1ignored plus site-export1/1 at299b09a9; checks/fmt pass. Initial missing fixture-env setup failures retained, corrected invocation green without source changes. No boss combat or prerequisite acquisition certificate.
+
+## 2026-10-15 — Absent-player-aura kill guard
+
+[Bounded SingleFalse8](systems/dungeon-achievements.md#absent-player-aura-kill-guard) on KillCreature0 requires known actor aura authority and complete authored companions. Compiler43/43, genuine native RED, structural5511/1824; native/catalog/prior-positive/pinned GREEN5/5(39.10s) at2dc751cc. Native counters, genuine actor mark casts and DB reopen pass; controlled boss identities do not certify encounters or full-map grants.
+
+## 2026-10-15 — Wild summon initial-state source RED
+## 2026-10-15 — Wild summon initial-state source and wire proof
+
+[Wild55](systems/toys.md#wild-summon-initial-level-and-stats-2026-10-15): genuine learned-use RED corrects regional level with matching HP/armor/mana, and NPC-child RED removes fabricated owner1. Authentic terrain/relative fixture geometry closes ty232/ty239; entire toys:: filter passes, followed by current server check/format/build and fresh private Podium/Shrine/default-Scarab initialized-field wire. Exact revisions, hashes and retained failures live in the linked coverage ledger. Broader scaling/combat-stat and older pixel/lifetime recertification remain open.
+
+## 2026-10-15 — Winner's Podium source placement
+
+[Podium54](systems/toys.md#winners-podium-source-placement-2026-10-15): real-source RED3 for missing240220, scaled player-front minimum and destination138 airborne height; minimal source fix GREEN6/6 at3c2d0bb6, with real learning/use/20min simulation expiry and retained62/Bashiok/Shrine87 controls. Importer3/3, postmerge20/20/check/format/matching builds and both-skin native source/static proofs pass. Final clamp extraction377d5139 rechecks six affected controls58.66s/check/format/build; native receipts retain ed425/fe1d/ab40 scope. Prepared383 adds only239018, not383 complete;20min native wall expiry remains unproved. No runtime clock or cooldown changes.
+
+## 2026-10-15 — Source guardian level selection
+
+[Guardian51](systems/toys.md#source-guardian-level-selection-2026-10-15): actual UseToy owner80 Scarabs RED80→GREEN30, owner20 retained20; template/map/destination-area tuning and difficulty delta precede guardian initialization, explicit UseCreatureLevel. Thirteen final controls pass at0e2c24e8, including retained class/count/follow/expiry/startup fixtures. Merged check/format/build gates pass; fresh private UDP bag-learning/UseToy receives29/26 own Scarabs at20/30 for owners20/80. Exact binary/source ledger linked from the system page. Complete guardian-stat/AI parity remains open.
 ## 2026-10-15 — Installed race/class source
 
 [Eligibility source](systems/race-class-eligibility.md): real Dwarf3/Shaman7 admin rejection despite installed membership drives removal of the copied Retail matrix. Installed283-pair/missing-source/actual admin kit+persistence regressions pass3/3; post-master race/mask/start/Forever controls10/10 and scoped check/fmt pass. Source95/96 contracts, start-level and visage policy remain separate and unchanged; rendered Dwarf login is not claimed. No realm5000 operation or stat tuning.
+## 2026-10-15 — Player-owned evade aura retention
+
+[Native source boundary](investigations/follower-data.md#owned-evade-aura-retention--2026-10-15): Stockwait67 credits Moloch/Overheat but later loses all Garrick passives on evade (10584→7840HP,68→0SP). Shared cleanup now follows TC Unit.cpp4461 owned-unit exclusion. Real initialized-spec→evade→stat-refresh RED1 matches7840; GREEN/build/native retention pending. Route/loot gaps keep fullStockade/Azure gates open.
 
 ## 2026-10-15 — Follower passive-derived stat recomputation
 

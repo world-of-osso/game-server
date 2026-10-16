@@ -117,7 +117,7 @@ pub(super) fn devastate(world: &mut World, caster: Entity, _target: Entity, _dep
     if rand::random::<f32>() * 100.0 >= chance {
         return;
     }
-    let now = spell_cast::now(world);
+    let now = spell_cast::history_now(world);
     let remaining = world
         .get::<spell_cast::SpellHistory>(caster)
         .and_then(|history| history.spell_ready_at.get(&SHIELD_SLAM))

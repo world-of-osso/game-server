@@ -9,6 +9,7 @@ use crate::stats::{CharacterStats, StatModifiers, StatsPlugin};
 
 const GARRICK: u32 = 209057;
 const AEGIS_OF_LIGHT: u32 = 353367;
+const RIGHTEOUS_FURY: u32 = 25780;
 
 fn spawn_level32_garrick() -> (Harness, Entity) {
     let (mut h, old_unit, profile) = spawn_profile_fixture_with_plugins(GARRICK, |app| {
@@ -98,4 +99,38 @@ fn follower_passive_stats_real_aegis_removal_and_reapply_refresh_max_health() {
     let health = h.app.world().get::<Health>(unit).unwrap();
     assert_eq!(health.max, 10584.0);
     assert_eq!(health.current, health.max);
+}
+
+#[test]
+fn follower_passive_stats_owned_evade_preserves_native_spec_and_threat_auras() {
+    let (mut h, unit) = spawn_level32_garrick();
+    h.advance(3);
+    assert!(crate::auras::has_aura(h.app.world(), unit, RIGHTEOUS_FURY));
+    let spell_power = h
+        .app
+        .world()
+        .get::<shared::components::DerivedStats>(unit)
+        .unwrap()
+        .spell_power;
+    assert!(spell_power > 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(crate::creature_ai::CreatureState::Pursuing {
+            target: h.npc.to_bits(),
+        });
+    // Production no-path/leash lifecycle entry, followed by real aura/stat systems.
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), unit);
+    h.advance(3);
+    assert_eq!(h.app.world().get::<Health>(unit).unwrap().max, 10584.0);
+    assert!(crate::auras::has_aura(h.app.world(), unit, AEGIS_OF_LIGHT));
+    assert!(crate::auras::has_aura(h.app.world(), unit, RIGHTEOUS_FURY));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::DerivedStats>(unit)
+            .unwrap()
+            .spell_power,
+        spell_power
+    );
 }
