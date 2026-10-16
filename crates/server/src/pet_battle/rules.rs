@@ -66,6 +66,7 @@ pub fn supported_property(property: u32) -> bool {
             | 117
             | 129
             | 168
+            | 107
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -274,6 +275,13 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         // Only the two described three-enemy Stench graphs establish these selectors.
         159 => {
             p.iter().all(|v| *v == 0) && matches!(catalog.turns[&effect.turn].ability, 527 | 1010)
+        }
+        // Fade explicitly swaps its user randomly after removing the dodge aura.
+        // Other107 descriptions do not establish random versus selected routing.
+        107 => {
+            catalog.turns[&effect.turn].ability == 1084
+                && p[0] == 100
+                && p[1..].iter().all(|v| *v == 0)
         }
         131 => effect.aura != 0 && p[0] == 0 && p[2] >= 0 && p[3..].iter().all(|v| *v == 0),
         172 => {
