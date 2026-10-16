@@ -13,6 +13,19 @@ fn spawned_adds(h: &mut Harness, map: InMap) -> Vec<Entity> {
 }
 
 #[test]
+fn encounter_coverage_noxxion_delayed_task_repeat_preserves_due_clock() {
+    let mut tasks = super::super::super::EventMap::default();
+    tasks.schedule(21687, 100);
+    tasks.update(150);
+    assert_eq!(tasks.execute_event(), Some(21687));
+    tasks.repeat_from_due_range(100, 100);
+    tasks.update(49);
+    assert_eq!(tasks.execute_event(), None);
+    tasks.update(1);
+    assert_eq!(tasks.execute_event(), Some(21687));
+}
+
+#[test]
 fn encounter_coverage_noxxion_source_clocks_phase_summons_and_credit() {
     let (mut h, boss, map) = bound_boss(13282, 349, 0);
     let player = h.player();
