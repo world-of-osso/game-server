@@ -2,7 +2,7 @@
 //! HandleAuraControlVehicle and Vehicle.cpp AddVehiclePassenger select a source seat.
 use super::*;
 use crate::auras::{ActiveAuras, AuraInstance, RemoveReason, handlers::CONTROL_VEHICLE};
-use shared::components::{ModelDisplay, Npc};
+use shared::components::{ModelDisplay, Npc, VehicleDriverMovement};
 
 const MAP_ID: u32 = 628;
 const DEMOLISHER: u32 = 34775;
@@ -199,6 +199,7 @@ fn board(
 ) -> Result<(), String> {
     let origin = validate_rider(world, passenger, vehicle)?;
     let (index, seat_id) = select_seat(world, vehicle, origin.display, requested_seat)?;
+    let movement = driver_movement(world, vehicle, seat_id)?;
     let seat = VehiclePassenger {
         driver: vehicle.to_bits(),
         seat_index: index as u8,
@@ -209,13 +210,39 @@ fn board(
     }
     world.get_mut::<NpcVehicle>(vehicle).unwrap().seats[index] =
         Some(Occupant { passenger, aura_id });
-    if world.resource::<VehicleStore>().seats[&seat_id].flags & CAN_CONTROL != 0 {
+    if let Some(movement) = movement {
         world.entity_mut(vehicle).insert(NpcDriver(passenger));
+        world.entity_mut(passenger).insert(movement);
     }
     world.entity_mut(passenger).insert((seat, origin));
     set_control(world, passenger, true);
     update_passenger_position(world, passenger, seat);
     Ok(())
+}
+
+fn driver_movement(
+    world: &World,
+    vehicle: Entity,
+    seat: u32,
+) -> Result<Option<VehicleDriverMovement>, String> {
+    let store = world.resource::<VehicleStore>();
+    if store.seats[&seat].flags & CAN_CONTROL == 0 {
+        return Ok(None);
+    }
+    let id = store.npc_vehicles[&DEMOLISHER];
+    let source = store
+        .movement
+        .get(&id)
+        .ok_or("Vehicle movement metadata absent")?;
+    let spawn = world
+        .get::<crate::creature_ai::SpawnPoint>(vehicle)
+        .ok_or("Vehicle NPC movement speeds absent")?;
+    Ok(Some(VehicleDriverMovement {
+        flags: source.flags,
+        turn_speed: source.turn_speed,
+        walk_speed: spawn.speed_walk * shared::movement::WALK_SPEED,
+        run_speed: spawn.speed_run * shared::movement::RUN_SPEED,
+    }))
 }
 
 fn select_seat(
@@ -303,6 +330,9 @@ fn release_driver(world: &mut World, vehicle: Entity, passenger: Entity) {
         .is_some_and(|driver| driver.0 == passenger)
     {
         world.entity_mut(vehicle).remove::<NpcDriver>();
+        if let Ok(mut rider) = world.get_entity_mut(passenger) {
+            rider.remove::<VehicleDriverMovement>();
+        }
     }
 }
 
