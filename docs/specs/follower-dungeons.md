@@ -32,6 +32,10 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 - [ ] Cover the eleven locally labelled followers: Garrick Protection Paladin, Breka Protection Warrior, Crenna Restoration Druid, Henry Holy Priest, Meredy Fire Mage, Shuja Elemental Shaman, Austin Beast Mastery Hunter, Kybel Devastation Evoker, Bo Windwalker Monk, Lantha Demonology Warlock and Ralia Feral Druid. Rogue, Death Knight and Demon Hunter remain gaps: no local follower identity exists.
 - [x] Prove the party fighting on private UDP5750, with inspected Modern and Forever PNGs. Forever remains an art skin of the same behavior.
 
+## Azure sourced partial
+
+Azure2498/map2515 retains its existing encounter ordinals and ordinary follower queue. Telash combat actor186737 (not the header's upper/noncombat199614) must execute Frost Bomb386781 effect0 dummy hits as triggered386881 on each selected unit. Only natural expiry of386881 effect0 dummy casts387149 then386910 from the original caster at the current target; cancellation, dispel, death, evade and missing-caster cleanup must not explode it. This finite hook chain does not establish Telash's energy/jump/rune phases or frozen-ground area actions. Leymor intro/phases, Azureblade, Umbrelskul and full-Azure completion remain open. [Source/proof boundary](../wiki/investigations/follower-data.md#azure-frost-bomb--2026-10-16).
+
 ## How it works
 - [Source audit, importer and runtime boundary](../wiki/investigations/follower-data.md)
 
