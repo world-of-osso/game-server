@@ -40,6 +40,11 @@ fn fixture() -> (Harness, Entity, Entity) {
         app.add_plugins(DeathPlugin);
     })
     .expect("world fixture required");
+    // The common combat fixture keeps rage from decaying; native Redemption is out-of-combat.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::CombatStatus(false));
     let target = spawn_player(&mut h.app, 5, 3.0);
     h.app.world_mut().entity_mut(target).insert((
         PlayerDeathState {
