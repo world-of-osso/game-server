@@ -1,5 +1,16 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source145–149: procedural/control/script and tea-table boundaries (2026-10-17)
+
+| Source row | Exact retained source gap |
+|---|---|
+|145 Detoxified Blight Grenade166785/290225 | Projectile32/target25 triggers290224: zero dummy4,300000ms aura, visual84035/state kit108567. Besides model attachments, the kit authors procedural358152/type1 with Value0=5107264/Value2=1. Complete target-coating behavior remains unproved; neither ordinary projectile transport nor a generic zero-aura admission establishes it. Source parent speed10 and inherited600000ms spell recovery are metadata, not new timing/appearance acceptance. |
+|146 Sentinel's Glaive166787/290247 and147 Shredder Blade166788/290267 | Both pair149640/149646 summons with caster dummy4; property4621 is Control4/Title0/flags1048576. The special control/spinning action remains unimplemented. Source models328(weight0)/70050(weight1) do not authorize an ordinary actor or copied generic caster animation. |
+|148 Highborne Memento166790/290280 | Two zero dummy3 self slots. Authored caster attachments, animation365173 and sounds125986/125987 are not sufficient to establish the described possession script/action. No invented transform, control behavior or visual-only admission. |
+|149 Bewitching Tea Set166808/290483 | Published149865 remains absent and explicitly retained as a gap. Source149865/90552/scale1/weight1 resolves M2 FDID1852946, `8hu_kultiras_tablesmall02.m2`; source47 radius73=1.5yd,300000ms actor duration and900000ms item recovery. Authentic table metadata alone is not publication or passing actual-use evidence. No149865 producer admission, copied database publication, food interaction or native presentation claim. |
+
+Exact roots/authoring fields: `rows145-149-{readonly-source,action-source}.json`; Tea Set source/body/publication preflight: `tea149-readonly-preflight.json`. The pre-instruction positive149 omission probe is diagnostic only, not passing regression evidence or authorization to close the gap. Existing135 table proof is preserved separately; no runtime/importer/canonical change for this source packet and no full-toy/native recertification.
+
 ## Source140–144: Brewfest hearthstone and corpse/appearance boundaries (2026-10-17)
 
 140 Brewfest Reveler's Hearthstone166747/286353 already uses homebind252,10s cast and shared2309 charge, with item recovery-1/spell recovery0/GCD1500. One additional actual bag-learning/UseToy case uses the existing saved-bind fixture: missing bind refuses before spending, a displaced caster returns to the hydrated persisted bind after the authored cast, charge max1/current0/recharge1800000ms is reported, and Fire Eater139 then refuses. Health/model remain unchanged. All seven holiday source cases pass7/7 zero ignored54.85s at0d73204d; no production patch or manufactured RED. Exact command/revision and separate build/format evidence live in `hearth140-proof-ledger.json` and contracts/check/fmt logs; prior135–139/Scarab scopes remain distinct.
