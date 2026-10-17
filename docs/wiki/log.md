@@ -1,6 +1,6 @@
 ## [2026-10-17] systems | Recuperate effect terminology correction
 
-Corrected [immediate self hits](systems/spell-casting.md#immediate-self-hits-alongside-destination-missiles--2026-10-17):1231411 effect179 is `CREATE_AREATRIGGER`, properties38187, not a scene. Timing proof and runtime behavior unchanged; area-trigger behavior/visuals remain outside that proof.
+Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-destination-missiles-2026-10-17):1231411 effect179 is `CREATE_AREATRIGGER`, properties38187, not a scene. Timing proof and runtime behavior unchanged; area-trigger behavior/visuals remain outside that proof.
 
 ## 2026-10-17 — Native power drain8
 
