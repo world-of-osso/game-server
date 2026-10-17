@@ -56,7 +56,13 @@ fn advance_caster(world: &mut World, unit: Entity) -> Result<(), String> {
         return Ok(());
     }
     let (next, speed) = plan_caster_step(world, unit, target, from, to)?;
-    let next = probe_step(world, unit, from, next)?;
+    let next = match probe_step(world, unit, from, next) {
+        Ok(next) => next,
+        Err(error) => {
+            publish_step(world, unit, from, from, to, 0.0);
+            return Err(error);
+        }
+    };
     publish_step(world, unit, from, next, to, speed);
     Ok(())
 }
@@ -176,35 +182,46 @@ fn probe_step(world: &mut World, unit: Entity, from: Vec3, to: Vec3) -> Result<V
 
 fn publish_step(world: &mut World, unit: Entity, from: Vec3, to: Vec3, target: Vec3, speed: f32) {
     let moving = from != to;
-    *world.get_mut::<Position>(unit).expect("moving caster") = Position {
-        x: to.x,
-        y: to.y,
-        z: to.z,
-    };
-    write_bearing(world, unit, to, target, if moving { speed } else { 0.0 });
-    crate::interest::mark_interest_position_changed(
-        world.get_resource::<crate::interest::InterestDirtyQueue>(),
-        unit,
-    );
-    crate::spell_cast::mark_dirty(world, unit);
+    let bearing_changed = write_bearing(world, unit, to, target, if moving { speed } else { 0.0 });
+    if moving {
+        *world.get_mut::<Position>(unit).expect("moving caster") = Position {
+            x: to.x,
+            y: to.y,
+            z: to.z,
+        };
+        crate::interest::mark_interest_position_changed(
+            world.get_resource::<crate::interest::InterestDirtyQueue>(),
+            unit,
+        );
+    }
+    if moving || bearing_changed {
+        crate::spell_cast::mark_dirty(world, unit);
+    }
 }
 
-fn write_bearing(world: &mut World, unit: Entity, to: Vec3, target: Vec3, speed: f32) {
+fn write_bearing(world: &mut World, unit: Entity, to: Vec3, target: Vec3, speed: f32) -> bool {
+    let mut changed = false;
     if let Some(mut motion) = world.get_mut::<CreatureMotion>(unit) {
-        *motion = if speed > 0.0 {
+        let desired = if speed > 0.0 {
             CreatureMotion::Run
         } else {
             CreatureMotion::Still
         };
+        changed |= motion.set_if_neq(desired);
     }
     if let Some(mut movement) = world.get_mut::<MovementSpeed>(unit) {
-        movement.0 = speed;
+        changed |= movement.set_if_neq(MovementSpeed(speed));
     }
     if let Some(mut rotation) = world.get_mut::<shared::components::Rotation>(unit)
         && let Some(facing) = crate::creature_ai::facing_along(target.x - to.x, target.z - to.z)
     {
-        rotation.y = facing;
+        let desired = shared::components::Rotation {
+            y: facing,
+            ..*rotation
+        };
+        changed |= rotation.set_if_neq(desired);
     }
+    changed
 }
 
 #[cfg(test)]
