@@ -2,6 +2,14 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Actual killed-creature level21
+
+TC a352b1fa CriteriaHandler1867–1870 compares the reference player's GetLevel against the actual victim's GetLevel plus the modifier asset, inclusively. KillRewarder177–188 supplies that creature. Native78 now carries its optional UnitLevel alongside its actual template type; each existing eligible recipient evaluates21/0 against their own level. Missing live level cannot satisfy21; generic/type credit remains independent. The compiler admits only complete positive21/0 trees on78, with all companions retained; no negative/nonzero-offset or other-event admission.
+
+Production content views matter: legacy creature_template416 has level5, but content_creature_template416 has ContentTuning482/range1..90 and native spawning gives UnitLevel90. Never replace that with legacy5 or GetLevelForTarget. Lead-approved controlled-placement fixtures use real untuned Lesser Voidwalker418/type3/level20 with actors19/20/21, plus actual416/native90 and non-Demon40 controls. No authored spawn/acquisition claim. Tests-only133f48a7 genuine RED accepts two lethal686 kills/generic2/Demon2 but lacks107647 at equal level (0!=1);25.70s. Earlier stale-protocol compile failure and90!=5 fixture assertion are not RED. Implementation GREEN is pending.
+
+Source census keeps5565 ordinary (3534 account/2031 character), adds only statistic60938 (1845 total),109 enabled types; same seven hashes by basename, no losses. Conditions6105 include23 additional raw78 predicates, not23 achievement roots. [Contract](../../specs/dungeon-achievements.md), [inventory](../../achievement-criteria-producer-inventory.md), evidence `/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/demon-level21-*`.
+
 ## Constant world-state expressions67
 
 TC a352b1fa ConditionMgr3639–3758 and DBCEnums3214 evaluate enabled expressions as signed32-bit constants, arithmetic, relational comparisons and final logic. This slice accepts only exactly15 bytes: two constants, no arithmetic, one of six comparisons and no trailing logic. `import_achievement_node_counts.py` emits the exact21 literal results alongside the unchanged two occupied-node expressions. Compiler calls carry the decoded literal-source IDs explicitly; missing source rejects new native kinds, and occupied-node predicates remain win1/130-only. The catalog folds proven literal truth, rejects proven false and never substitutes zero for missing state. In particular3785 is literally0==1, so roll/kill/encounter definitions guarded by it remain impossible.
