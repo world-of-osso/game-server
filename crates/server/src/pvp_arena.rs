@@ -195,6 +195,7 @@ pub(super) fn create_match(
     let template = arena.template();
     let matched = BgMatch {
         bg_id: template.id,
+        bracket: template.bracket,
         team_a: teams[0].clone(),
         team_b: teams[1].clone(),
     };

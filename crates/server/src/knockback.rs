@@ -52,12 +52,30 @@ pub(crate) fn launch(
     let position = *world
         .get::<Position>(target)
         .ok_or("knockback target has no Position")?;
+    let start = Vec3::new(position.x, position.y, position.z);
+    let velocity = launch_velocity(world, target, start, origin, speed_xy, speed_z)?;
+    launch_directed(world, target, velocity)
+}
+
+/// An explicit world-space impulse, including EffectPullTowards' angle override.
+pub(crate) fn launch_directed(
+    world: &mut World,
+    target: Entity,
+    mut velocity: Vec3,
+) -> Result<(), String> {
+    let position = *world
+        .get::<Position>(target)
+        .ok_or("knockback target has no Position")?;
     let map = *world
         .get::<InMap>(target)
         .ok_or("knockback target has no InMap")?;
     let start = Vec3::new(position.x, position.y, position.z);
     require_ground_and_collision(world, map, start)?;
-    let velocity = launch_velocity(world, target, start, origin, speed_xy, speed_z)?;
+    // MotionMaster makes NPC vertical speed positive; player impulses keep its sign.
+    if world.get::<shared::components::Npc>(target).is_some() {
+        velocity.y = velocity.y.abs();
+    }
+    let speed_xy = Vec2::new(velocity.x, velocity.z).length();
     let mut control = world
         .get::<MovementControl>(target)
         .copied()
@@ -125,13 +143,6 @@ fn launch_velocity(
             .get::<Rotation>(target)
             .ok_or("coincident knockback target has no Rotation")?;
         -Vec3::new(rotation.y.sin(), 0.0, rotation.y.cos())
-    };
-    // TC MotionMaster::MoveKnockbackFrom makes NPC vertical speed positive.
-    // Player packet-driven speed preserves its sign; this realm owns its trajectory.
-    let speed_z = if world.get::<shared::components::Npc>(target).is_some() {
-        speed_z.abs()
-    } else {
-        speed_z
     };
     Ok(direction * speed_xy + Vec3::Y * speed_z)
 }

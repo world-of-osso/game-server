@@ -14,13 +14,14 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
             .min_by_key(|row| (row.level, row.ability))
             .map_or(0, |row| row.ability)
     });
-    if species == 1427 {
-        let refuge = catalog
+    let chosen = (species == 338).then_some(301);
+    if let Some(ability) = chosen {
+        let authored = catalog
             .species_abilities
             .iter()
-            .find(|row| row.species == species && row.ability == 1344 && row.level <= level)
-            .expect("Authored Refuge option must be unlocked");
-        abilities[refuge.slot as usize] = refuge.ability;
+            .find(|row| row.species == species && row.ability == ability && row.level <= level)
+            .expect("Authored Lock-On option must be unlocked");
+        abilities[authored.slot as usize] = authored.ability;
     }
     abilities
 }
@@ -28,8 +29,8 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
 fn seed_fixture_pets(catalog: &Catalog) -> (PetJournal, BTreeMap<u64, serde_json::Value>) {
     let mut journal = PetJournal::default();
     let mut states = BTreeMap::new();
-    for (guid, species) in [(41, 1427), (42, 1427), (43, 39)] {
-        let level = 15;
+    for (guid, species) in [(41, 338), (42, 39), (43, 39)] {
+        let level = 4;
         journal
             .add_with_guid(species, level, PetQuality::Rare, 3, guid)
             .unwrap();
@@ -81,6 +82,6 @@ fn main() {
     let (journal, states) = seed_fixture_pets(&catalog);
     save_fixture_pets(&journal, &states);
     println!(
-        "Seeded private account1: two level15 Frostfur Rat1427 with authored Refuge1344 and Mechanical Squirrel39; not acquisition proof"
+        "Seeded private account1: DarkmoonTonk338/4 LockOn301 and two Squirrel39/4 reserves; not acquisition proof"
     );
 }

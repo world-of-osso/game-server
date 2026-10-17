@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -34,6 +34,9 @@ struct Participant {
 
 pub(super) fn update_battleground_objectives(world: &mut World) {
     let actors = read_participants(world);
+    let arathi_resources = super::honor::read_arathi_resource_counters(world);
+    let isle_resources = super::honor::read_isle_resource_counters(world);
+    let alterac_towers = super::honor::read_alterac_tower_counters(world);
     let changed = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
         state
             .battleground_matches
@@ -43,8 +46,12 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
             })
             .collect::<Vec<_>>()
     });
-    credit_pvp_stats(world);
+    super::honor::award_arathi_resource_gains(world, arathi_resources);
+    super::honor::award_isle_resource_gains(world, isle_resources);
+    super::honor::award_alterac_tower_changes(world, alterac_towers);
+    credit_objective_events(world);
     for match_id in changed {
+        super::honor::award_alterac_survivor_honor(world, match_id);
         credit_completed_match(world, match_id);
         send_match_snapshot(world, match_id);
     }
@@ -54,7 +61,7 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
 /// still in the copy participates; the winning roster also wins. Draws have no winner.
 fn credit_completed_match(world: &mut World, match_id: u64) {
     use shared::battleground::BgOutcome;
-    let (map, roster, winners) = {
+    let (map, roster, winners, bracket) = {
         let state = world.resource::<PvpServerState>();
         let matched = &state.battleground_matches[&match_id];
         if matched.instance.phase != BgPhase::Ended {
@@ -76,7 +83,7 @@ fn credit_completed_match(world: &mut World, match_id: u64) {
             .filter(|id| matched.accepted.contains(id))
             .copied()
             .collect();
-        (map, roster, winners)
+        (map, roster, winners, instance.bracket)
     };
     let players: Vec<_> = world
         .query::<(&Authenticated, &PlayerLink, &InWorld)>()
@@ -88,6 +95,7 @@ fn credit_completed_match(world: &mut World, match_id: u64) {
         .collect();
     for (player, won) in players {
         crate::achievement::record_battleground_end(world, player, map.map_id, won);
+        super::honor::award_battleground_completion(world, player, map.map_id, bracket, won);
     }
 }
 
@@ -126,12 +134,12 @@ fn update_match(
     if matched.instance.phase == BgPhase::Waiting
         && roster_ready(matched, actors, map, template.min_players_per_team as usize)
     {
-        matched.scoreboard.rows = build_scoreboard(matched, actors);
         changed = matched.instance.start();
     }
     if matched.instance.phase != BgPhase::InProgress {
         return changed;
     }
+    changed |= append_arrived_scores(matched, actors, map);
     let delta_ms = world.resource::<Time<Fixed>>().delta().as_millis() as u64;
     if matched.alterac.is_some() {
         return super::pvp_alterac::update_alterac(world, matched, map, delta_ms) || changed;
@@ -447,14 +455,24 @@ pub(super) fn credit(scoreboard: &mut Scoreboard, character_id: u64, stat: u32, 
 }
 
 /// TC BattlegroundScore.cpp:78-80: each PvpStat update credits the connected player once,
-/// whatever the stat amount.
-fn credit_pvp_stats(world: &mut World) {
+/// whatever the stat amount. The same drained capture receipt dispatches per-map Honor.
+fn credit_objective_events(world: &mut World) {
     let credits: Vec<_> = world
         .resource_mut::<PvpServerState>()
         .battleground_matches
-        .values_mut()
-        .filter_map(|matched| Some((matched.map?.map_id, &mut matched.scoreboard.stat_credits)))
-        .flat_map(|(map, credits)| std::mem::take(credits).into_iter().map(move |c| (map, c)))
+        .iter_mut()
+        .filter_map(|(id, matched)| {
+            Some((
+                *id,
+                matched.map?.map_id,
+                &mut matched.scoreboard.stat_credits,
+            ))
+        })
+        .flat_map(|(id, map, credits)| {
+            std::mem::take(credits)
+                .into_iter()
+                .map(move |c| (id, map, c))
+        })
         .collect();
     if credits.is_empty() {
         return;
@@ -464,7 +482,8 @@ fn credit_pvp_stats(world: &mut World) {
         .iter(world)
         .map(|(link, owner)| (owner.character_id, link.0))
         .collect();
-    for (map, (character, stat)) in credits {
+    for (match_id, map, (character, stat)) in credits {
+        super::honor::award_flag_capture_honor(world, match_id, character, stat);
         if let Some(&player) = players.get(&character) {
             crate::achievement::record_pvp_stat(world, player, map, stat);
         }
@@ -493,37 +512,57 @@ fn roster_ready(
     })
 }
 
-fn build_scoreboard(
-    matched: &InvitedBattleground,
+/// TC Battleground::AddPlayer creates PlayerScores on arrival, not only at start.
+fn append_arrived_scores(
+    matched: &mut InvitedBattleground,
     actors: &BTreeMap<u64, Participant>,
-) -> Vec<BattlegroundPlayerScoreSnapshot> {
-    [
+    map: InMap,
+) -> bool {
+    let existing: BTreeSet<_> = matched
+        .scoreboard
+        .rows
+        .iter()
+        .map(|row| row.character_id)
+        .collect();
+    let existing = &existing;
+    let accepted = &matched.accepted;
+    let battleground_map = map_id(matched);
+    let arrived: Vec<_> = [
         (BgTeam::A, &matched.instance.team_a_players),
         (BgTeam::B, &matched.instance.team_b_players),
     ]
     .into_iter()
     .flat_map(|(team, ids)| {
         ids.iter().filter_map(move |id| {
-            actors.get(id).map(|actor| BattlegroundPlayerScoreSnapshot {
-                character_id: *id,
-                name: actor.name.clone(),
-                class: actor.class,
-                level: actor.level,
-                team,
-                killing_blows: 0,
-                deaths: 0,
-                damage_done: 0,
-                healing_done: 0,
-                objective_scores: shared::battleground::pvp_stat_columns(map_id(matched))
-                    .iter()
-                    .map(|column| (column.stat, 0))
-                    .collect(),
-                honorable_kills: None,
-                honor_level: None,
-            })
+            if existing.contains(id) || !accepted.contains(id) {
+                return None;
+            }
+            actors
+                .get(id)
+                .filter(|actor| actor.map == map)
+                .map(|actor| BattlegroundPlayerScoreSnapshot {
+                    character_id: *id,
+                    name: actor.name.clone(),
+                    class: actor.class,
+                    level: actor.level,
+                    team,
+                    killing_blows: 0,
+                    deaths: 0,
+                    damage_done: 0,
+                    healing_done: 0,
+                    objective_scores: shared::battleground::pvp_stat_columns(battleground_map)
+                        .iter()
+                        .map(|column| (column.stat, 0))
+                        .collect(),
+                    honorable_kills: None,
+                    honor_level: None,
+                })
         })
     })
-    .collect()
+    .collect();
+    let changed = !arrived.is_empty();
+    matched.scoreboard.rows.extend(arrived);
+    changed
 }
 
 fn flag_homes(sources: &GameObjectSpawns, map: InMap) -> Option<[GameObjectSpawn; 2]> {

@@ -44,6 +44,7 @@ mod casting_restriction;
 mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
+pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
@@ -126,8 +127,14 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+pub(crate) mod mobile_banking;
+#[cfg(test)]
+mod mobile_banking_tests;
+pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod readiness_lifetime_tests;
+#[cfg(test)]
+mod summon_lifetime_tests;
 #[cfg(test)]
 mod touch_of_death_tests;
 #[cfg(test)]
@@ -271,6 +278,7 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<summon::SummonPropertiesStore>()
             .add_systems(Startup, summon::load_summon_properties_startup)
             .add_systems(Startup, powers::load_power_type_table_startup)
+            .add_systems(FixedPreUpdate, charge::release_finished)
             .add_systems(
                 Update,
                 (receive_cast_requests, receive_stop_requests).chain(),
@@ -284,6 +292,7 @@ impl Plugin for SpellCastPlugin {
                     runes::regenerate_runes,
                     sync_charge_recovery,
                     advance_casts.after(crate::networking::process_player_inputs),
+                    charge::advance,
                     missiles::resolve_due_hits,
                     start_queued_casts,
                     powers::sync_unit_powers,
@@ -1533,6 +1542,7 @@ fn validate_start(
     toy_area::check_cast(world, caster, spell.id)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
+    mobile_banking::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
     if !ignore_cast_in_progress && world.get::<CastState>(caster).is_some() {
@@ -2039,6 +2049,7 @@ pub(crate) fn execute_cast(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
+    mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
@@ -2144,6 +2155,8 @@ struct PlannedEffect {
     chain_multipliers: Vec<(Entity, f32)>,
     /// Native block hit result, retained across flight for these unit targets.
     blocked_units: Vec<Entity>,
+    /// Source per-cast continuation state; retain hit receipts when the hook is suppressed.
+    prevent_hit_script: bool,
 }
 
 impl PlannedEffect {
@@ -2209,6 +2222,7 @@ fn plan_targets(
                 dest: None,
                 chain_multipliers: Vec::new(),
                 blocked_units: Vec::new(),
+                prevent_hit_script: false,
             })
             .collect());
     }
@@ -2225,6 +2239,7 @@ fn plan_targets(
                 dest: None,
                 chain_multipliers: Vec::new(),
                 blocked_units: Vec::new(),
+                prevent_hit_script: false,
             })
             .collect());
     }
@@ -2260,6 +2275,7 @@ fn plan_targets(
                 dest: None,
                 chain_multipliers: Vec::new(),
                 blocked_units: Vec::new(),
+                prevent_hit_script: false,
             });
             continue;
         }
@@ -2289,6 +2305,11 @@ fn plan_targets(
         warrior_stuns::filter_storm_bolt_targets(
             world, caster, spell, effect, explicit, &mut units,
         );
+        let prevent_hit_script = if spell.id == omor_orbital::ORBITAL_TARGET && effect.index == 0 {
+            omor_orbital::filter_targets(world, caster, &mut units)
+        } else {
+            false
+        };
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {
                 Some(multiplier * effect.chain_amplitude)
@@ -2317,6 +2338,7 @@ fn plan_targets(
             dest,
             chain_multipliers,
             blocked_units: Vec::new(),
+            prevent_hit_script,
         });
     }
     hit::remove_defended_targets(world, caster, spell, &mut plan);
@@ -2431,6 +2453,7 @@ fn resolve_effects(
                 handler(world, &ctx, effect, unit);
             }
             if let Some(hook) = hook
+                && !planned.prevent_hit_script
                 && world.get_entity(unit).is_ok()
             {
                 hook(world, caster, unit, depth);
@@ -2834,6 +2857,11 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .cooldowns
         .as_ref()
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let base_recovery_ms = if spell.id == mobile_banking::MOBILE_BANKING {
+        shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
+    } else {
+        base_recovery_ms
+    };
     let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
     let cooldown = |base: u32| {

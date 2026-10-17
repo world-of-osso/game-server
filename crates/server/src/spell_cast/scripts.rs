@@ -43,6 +43,9 @@ pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::Ca
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if spell == super::mobile_banking::MOBILE_BANKING && index == 0 {
+        return Some(super::mobile_banking::summon_chest);
+    }
     if spell == 96538 && index == 0 {
         return Some(crate::pvp::arena_dalaran::cast_pipe_search);
     }
@@ -167,6 +170,7 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
         }
@@ -507,6 +511,7 @@ fn track_switch_plan(
         dest: None,
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 
@@ -540,6 +545,7 @@ fn chain_heal_plan(
         dest: None,
         chain_multipliers,
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 
@@ -707,6 +713,7 @@ fn pyre_explosion_plan(
         }),
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 

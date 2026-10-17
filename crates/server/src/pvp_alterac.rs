@@ -314,6 +314,12 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity, killer:
             .collect::<Vec<_>>()
     });
     for id in changed {
+        if map.map_id == 628 {
+            super::honor::award_isle_commander_honor(world, id);
+        } else if map.map_id == 30 {
+            super::honor::award_alterac_npc_honor(world, id, entry);
+            super::honor::award_alterac_survivor_honor(world, id);
+        }
         super::pvp_objective::send_match_snapshot(world, id);
     }
 }
@@ -354,6 +360,7 @@ pub(crate) fn record_player_death(world: &mut World, player: Entity) {
         apply_player_loss(&mut state, match_id, character, team)
     });
     if changed {
+        super::honor::award_alterac_survivor_honor(world, match_id);
         super::pvp_objective::send_match_snapshot(world, match_id);
     }
 }

@@ -35,7 +35,9 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 - [x] Real persisted join, changed specialization, quit and fresh-process class-knowledge test GREEN1/1 at serveree29a3bd/protoe50b02c.
 - [x] Existing-member login, online forced removal/rejoin and offline removal/reopen controls GREEN2/2 at5dd1cfa9.
 - [x] Supported Mount Up172/211 and map suppression landed;210 remains a named blocked context.
-- [ ] Hasty Hearth, Mobile Banking and Quick/Dead remain separately qualified. Guild Mail has a real same-guild zero-delay control.
+- [x] Hasty Hearth is separately qualified below. Guild Mail has a real same-guild zero-delay control.
+- [ ] Mobile Banking83958: user decision2026-10-17 specifies MOBILE_BANKING_COOLDOWN_2H (7200000ms), overriding installed70448 parent recovery3600000ms. Guild membership/perk authorizes casting; no Friendly cast gate. Installed children88304/88306 summon Alliance206602/Horde206603 for300000ms. Chest users require membership and Friendly faction1168 via existing CharacterReputation; normal guild-bank permissions still apply. Native both-skin acceptance remains pending.
+User clarification2026-10-17: World of Osso has no resurrection guild perk. The Quick and the Dead83950 is excluded from effect scope, not a pending gap. No historical4.3.4 resurrection policy is adopted.
 - [x] Bounded catalog/membership/UI slice landed; actual UDP invitation/removal/rejoin/quit and native fresh-process owner readback passed.
 
 ## Out of scope

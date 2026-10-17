@@ -12,9 +12,9 @@ from import_achievement_modifiers import qualified_mythic_criteria
 from import_achievement_single_modifiers import qualified_single_modifiers
 from import_achievement_conditions import load_identity_condition_ids, legacy_difficulties, qualified_conditions
 import db2_casc
-from import_achievement_node_counts import qualified_node_counts
+from import_achievement_node_counts import qualified_constant_expressions, qualified_node_counts
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 24, 26, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 46, 47, 48, 53, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 70, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 90, 91, 96, 97, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 46, 47, 48, 52, 53, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 70, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 90, 91, 96, 97, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 # shared battleground_columns.rs PvpStat columns credited by native objectives.
 MAX_LEVEL = 90  # crate::experience::MAX_LEVEL
@@ -85,8 +85,12 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue  # TDB1210 orphan aura66303 and holiday404 requirements.
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
-        if kind in (90, 91, 24, 35, 37, 9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56, 78) and asset != 0:
+        if kind in (90, 91, 24, 35, 113, 37, 9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56, 78) and asset != 0:
             continue
+        if kind == 31 and (asset <= 0 or asset not in zones):
+            continue  # Recipient terrain area with authored ancestry; no all-area alias0.
+        if kind == 52 and asset not in range(1, 14):
+            continue  # Eligible native victim's exact positive authored class.
         if kind == 53 and asset not in PLAYABLE_RACES:
             continue  # Eligible native victim's positive authored playable race, not scoreboard identity.
         if kind == 39 and asset not in (0, 1):
@@ -171,7 +175,10 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     criteria = read_rows(db2 / 'Criteria.csv')
     trees = read_rows(db2 / 'CriteriaTree.csv')
     modifiers = read_rows(modifiers_path)
-    node_counts = qualified_node_counts(read_rows(db2 / 'WorldStateExpression.csv'))
+    expressions = read_rows(db2 / 'WorldStateExpression.csv')
+    literal_expressions = qualified_constant_expressions(expressions)
+    node_counts = set(qualified_node_counts(expressions))
+    node_counts.update(expression for expression, value in literal_expressions.items() if value)
     children, modifier_children = index_children(trees), index_children(modifiers)
     with sqlite3.connect(f'{world_db.resolve().as_uri()}?mode=ro', uri=True) as db:
         spells = {row[0] for row in db.execute('SELECT ID FROM spell')}
@@ -205,7 +212,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     mythic_ids = qualified_mythic_criteria(criteria, modifiers)
     single_modifiers = qualified_single_modifiers(criteria, modifiers)
     condition_trees = {
-        row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv')).items()
+        row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv'), literal_expressions).items()
         if row_id not in single_modifiers
         and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, authored_facts, achievements, node_counts, pet_types) for kind, asset in facts)
     }
