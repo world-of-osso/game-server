@@ -1,8 +1,8 @@
-//! Source111–113,178–179 and201: real transforms and source recovery.
+//! Source111–113,178–179,201,234 and240: real transforms and source recovery.
 use super::*;
 
 #[test]
-fn toyfx111_113_178_179_201_disguise_learning_expiry_and_recovery_precedence() {
+fn toyfx_source_disguises_learning_expiry_and_recovery() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
     const DURATION_MS: u32 = 600_000;
     const FRAME_SECONDS: f64 = 0.05;
@@ -57,6 +57,23 @@ fn toyfx111_113_178_179_201_disguise_learning_expiry_and_recovery_precedence() {
             305123,
             156286,
             [92868, 92880, 92874, 92871].as_slice(),
+            3_600_000,
+        ),
+        (
+            183903,
+            343827,
+            174859,
+            [96239, 96240, 96241, 96242, 96243].as_slice(),
+            3_600_000,
+        ),
+        (
+            184223,
+            344795,
+            175221,
+            [
+                92410, 92411, 92412, 92413, 92414, 92415, 92416, 92417, 92418,
+            ]
+            .as_slice(),
             3_600_000,
         ),
     ] {
