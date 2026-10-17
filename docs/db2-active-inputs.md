@@ -10,3 +10,5 @@ DB2_CSV_ROOT=/private/data/db2 python3 scripts/db2.py import --db /private/world
 ```
 
 Tests: `python3 -m unittest scripts.tests.test_db2_active` exercises separate import processes before and after a private active-link switch, concrete spell-name replacement, build receipts, non-DB2 preservation, and refusal to read canonical data when private inputs are absent.
+
+Achievement catalogs use `python3 scripts/import_achievements.py --db2-dir <engine>/data/db2/active --db <private-world.db>`. The importer validates the installed build, active receipt FDIDs/layouts, CSV SHA256s and row counts before its transaction. Columns are selected by name, so CriteriaTree Flags and OrderIndex cannot be interchanged by raw decoder field offsets. Output records the active build key and table receipts, including encrypted-record exclusions. Frozen historical decoder fixtures keep their explicit source directory; live imports never fall back to them.
