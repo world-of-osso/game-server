@@ -480,6 +480,72 @@ fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
 }
 
 #[test]
+fn encounter_coverage_omor_coincident_pull_projects_source_combat_reach() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        origin,
+        shared::components::PlayerMotion::default(),
+    ));
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(player), true)
+        .expect("actual source knock creates falling before any position step");
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(player)
+            .unwrap()
+            .contains(shared::components::PlayerMotion::FALLING)
+    );
+    let before = h.health(player).current;
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30638, Some(player), true)
+        .expect("actual authored child at the coincident position");
+    h.advance(0.1);
+    assert!(
+        h.health(player).current < before,
+        "native child damage precondition"
+    );
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            let authored = event.spell_id == Some(30638) && event.kind == CombatLogKind::Damage;
+            let owned =
+                event.source == Some(boss.to_bits()) && event.target == Some(player.to_bits());
+            authored && owned && event.amount > 0
+        }),
+        "actual target-owned30638 damage"
+    );
+    let position = *h.app.world().get::<Position>(player).unwrap();
+    // TC Position.h136–140 atan2(0,0)=0 projects the caster's reach along WoW+X.
+    assert!(
+        (position.x - origin.x - 1.31).abs() < 0.02 && (position.z - origin.z).abs() < 0.02,
+        "source coincident combat-reach point must pull+X at13.1, not skip/retain outgoing knock: {origin:?} -> {position:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_coincident_caster_retreats_along_source_angle() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((map, origin));
+    h.engage(boss);
+    h.advance(5.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 30686),
+        "actual ordinary source cast completes at coincident target"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        position.x > origin.x + 0.05 && (position.z - origin.z).abs() < 0.02,
+        "source GetAbsoluteAngle(0,0)=0 chooses+X retreat, not zero displacement: {origin:?} -> {position:?}"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_caster_holds_inside_authored_range() {
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
