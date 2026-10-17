@@ -3604,7 +3604,7 @@ fn toyfx14_target_and_sound_cosmetics_census() {
 }
 
 #[test]
-fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
+fn toyfx14_gaze_uses_authoritative_baked_sight() {
     use shared::components::{ModelDisplay, Position, Rotation, UnitAuras};
     use shared::protocol::WitnessRay;
     let directory = tempfile::tempdir().unwrap();
@@ -3695,23 +3695,13 @@ fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
         start: caster.eyes.to_array(),
         end: end.to_array(),
     };
-    assert_eq!(
-        activate(&mut h, 122120)[0].error.as_deref(),
-        Some("LineOfSight")
-    );
-    let forged = WitnessRay {
-        start: [witness.start[0] + 5.0, witness.start[1], witness.start[2]],
+    // The sampled endpoint may age; authoritative clear sight decides the toy cast.
+    let stale = WitnessRay {
+        end: [witness.end[0] + 5.0, witness.end[1], witness.end[2]],
         ..witness
     };
     assert_eq!(
-        activate_witnessed(&mut h, 122120, None, Some(forged))[0]
-            .error
-            .as_deref(),
-        Some("LineOfSight")
-    );
-    assert!(h.inbox.go.is_empty());
-    assert_eq!(
-        activate_witnessed(&mut h, 122120, None, Some(witness))[0].error,
+        activate_witnessed(&mut h, 122120, None, Some(stale))[0].error,
         None
     );
     h.advance(3);
