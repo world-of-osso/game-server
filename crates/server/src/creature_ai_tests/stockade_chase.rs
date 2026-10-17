@@ -551,3 +551,41 @@ fn riverpaw_returns_home_on_the_floor() {
         CreatureMotion::Still
     );
 }
+
+/// Run22 geometry with a constructed valid cached destination (<1yd victim drift).
+/// This is a production chase RED, not a claim that the exact cached route was logged.
+#[test]
+#[ignore = "requires real Stockade navigation and server LOS bake"]
+fn current_victim_stockade_cached_corner_does_not_pass_in_range_visible_victim() {
+    use bevy::ecs::system::RunSystemOnce;
+    let (mut app, victim, chaser, from) = current_victim::fixture();
+    let current = *app.world().get::<Position>(victim).unwrap();
+    let map = crate::maps::InMap::continent(STOCKADE);
+    assert!(
+        Vec3::new(current.x - from.x, current.y - from.y, current.z - from.z).length()
+            < CHASE_REACH
+    );
+    let mut bodies = app.world_mut().query::<crate::line_of_sight::BodyParts>();
+    let world = app.world();
+    assert!(
+        crate::line_of_sight::unit_sees(
+            Some(world.resource::<crate::line_of_sight::LineOfSight>()),
+            map,
+            bodies.get(world, chaser).unwrap(),
+            bodies.get(world, victim).unwrap()
+        ),
+        "current victim has authoritative server LOS"
+    );
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_millis(50));
+    app.world_mut().run_system_once(chase_system).unwrap();
+    let after = *app.world().get::<Position>(chaser).unwrap();
+    assert_eq!(
+        after, from,
+        "already in reach+LOS: cached pre-terminal corners must not move the chaser"
+    );
+}
+
+#[path = "current_victim.rs"]
+mod current_victim;
