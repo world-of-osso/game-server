@@ -80,6 +80,10 @@ impl Catalog {
             .collect()
     }
 
+    pub(super) fn contains_template(&self, id: u32) -> bool {
+        self.0.iter().any(|configured| configured.template.id == id)
+    }
+
     pub(super) fn validate_levels(&self, levels: &[u8]) -> Result<(), String> {
         if self.eligible(levels).is_empty() {
             return Err(

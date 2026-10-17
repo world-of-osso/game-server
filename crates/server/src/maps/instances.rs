@@ -398,6 +398,37 @@ impl InstanceManager {
         Ok(map)
     }
 
+    /// Reserve a whole incoming roster on an existing match-owned copy before invitation.
+    /// Existing reservations include outstanding invitations and offline accepted members.
+    pub fn reserve_battleground_players(
+        &mut self,
+        map: InMap,
+        participants: &[u64],
+    ) -> Result<(), TransferAbortReason> {
+        let copy = self
+            .copies
+            .get(&map)
+            .ok_or(TransferAbortReason::MapNotAllowed)?;
+        let reserved = self
+            .battleground_by_character
+            .values()
+            .filter(|&&assigned| assigned == map)
+            .count();
+        let conflicts = participants
+            .iter()
+            .any(|id| self.battleground_by_character.contains_key(id));
+        if !copy.battleground
+            || conflicts
+            || reserved + participants.len() > copy.max_players as usize
+        {
+            return Err(TransferAbortReason::MapNotAllowed);
+        }
+        for &character in participants {
+            self.battleground_by_character.insert(character, map);
+        }
+        Ok(())
+    }
+
     pub fn unassign_battleground_player(&mut self, map: InMap, character_id: u64) {
         if self.battleground_by_character.get(&character_id) == Some(&map) {
             self.battleground_by_character.remove(&character_id);
