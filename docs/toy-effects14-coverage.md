@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source245–249: critter/passenger/reflection gaps and retained hearth/vesper proof (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|245 Malfunctioning Goliath Gauntlet184396/345669 | Source2500ms cast, script3 with targets18/8,60000ms item recovery. Advertised instant destruction of half the critters within40yd requires authentic critter eligibility/selection/death proof; no guessed rounding/random policy, damage substitute or generic visual snap. |
+|246 Ever-Abundant Hearth184404/345745 | Source2000ms cursor87 effect50→364811/display67976/scale0.5,300000ms duration/item recovery. Retain earlier exact seven-focus actual-use/linked31442 trap/CozyFire7353 versatility/range/expiry/parent-cleanup CPU scope, including this ID; prior Little Wickerman native witness is not a new per-Hearth certificate. |
+|247 Aspirant's Stretcher184410/345753 | Source1500ms target47 summon175569/properties5075 (Control0/Title0/flags67115016),300000ms duration/item recovery. TDB has23980/probability0 and24964/probability1, both scale1; runtime absent. Actual wounded-ally carrying/passenger lifecycle remains unproved; no arbitrary visible model selection, fabricated vehicle ID or inert stretcher prop. |
+|248 Mnemonic Attunement Pane184413/345780 | Self periodic-trigger23 for5000ms triggers345784/target72 missile32→345785, which creates cursor87 summon175581/properties3622 for10000ms. TDB94278/scale0.5 exists but runtime absent. Reflection-specific child placement/appearance/lifecycle remains unproved; do not discard the child chain for a generic pane cosmetic. Item recovery300000ms retained. |
+|249 Soothing Vesper184415/345799 | Source cursor87 summon175582/properties3135,180000ms lifetime and300000ms item recovery; existing runtime display99948/scale1. Retain earlier five-stationary-actor real learning/use/source model/owner/map/lifetime/expiry CPU proof including this ID, with later cursor destination contract kept distinct. No new per-Vesper native model/audio or full effect certificate. |
+
+`rows245-249-{readonly-source,action-source}.json` records70391 roots/casts/durations/children/properties and actual source/runtime model separation. Historical cooking/scenery witnesses remain revision-scoped. No production/data/canonical write, generic script/summon admission, new simulation/native result or unchanged gate rerun.240's single owned capacity-gated job remains tracked separately;149865 Tea Set stays lead-required.
+
 ## Source240–244: pending Dominated helm and coin/launch/linked/covenant gaps (2026-10-17)
 
 240 Helm of the Dominated184223/344795 uses existing175221 with authentic92410–92418 choices. Source self transform56/misc8 lasts600000ms and item-1 inherits3600000ms spell recovery. Test/spec c8feec2e adds this exact nine-display pool to the actual learning/ordinary-expiry/restoration/health/recovery fixture, now eight disguise IDs. Disguise/Oomgut tests and package check remain pending under the single capacity-gated native job; no passing result or new runtime/data/native admission is implied.

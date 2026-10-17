@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source245–249 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source245249-critterpassengerreflection-gaps-and-retained-hearthvesper-proof-2026-10-17):245 half-critter destruction,247 Control0 wounded-ally carrying and248 missile→reflection-summon lifecycle remain gaps.246 Hearth cooking/versatility and249 Vesper stationary actor retain earlier exact CPU scopes, not fresh native/audio certificates. Stretcher/reflection TDB models are absent runtime; no invented outcome/vehicle/model or inert admission.240 owned job remains separately pending; no runtime/data change or repeated gate.
+
 ## 2026-10-17 — Toy source240–244 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17):240 test/spec c8feec2e adds existing175221/nine-display transform/expiry/recovery acceptance; tests/check remain pending under capacity admission. Coin target action, combined health sacrifice/self-launch/geography, linked Krexus child and Kyrian pledge remain gaps. Existing175442/display99668 is not linked lifecycle proof. No runtime/data or new native admission.
