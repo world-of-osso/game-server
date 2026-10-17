@@ -66,6 +66,12 @@ impl CreatureAi for Omor {
         }
     }
 
+    fn on_spell_cast(&mut self, ctx: &mut Ctx, spell_id: u32) {
+        if spell_id == DEMONIC_SHIELD {
+            ctx.talk(5);
+        }
+    }
+
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         self.boss.just_died(ctx);
         ctx.talk(4);
