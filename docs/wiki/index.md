@@ -41,6 +41,8 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16) — exact302746 profile plus parent destination RED→GREEN, actual cooking/CozyFire/cleanup;149 Toy+29 affected pass, native presentation separate.
+
 - [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16) — two authentic identities, real5759 area/cursor pair/300s lifecycle and147 Toy tests; canonical publication/native body/target-dummy combat separate.
 
 - [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16) — actual persisted bind/source10s cast/shared2309 charge;146 Toy tests pass, procedural native appearance and cross-map/wall-recharge separate.

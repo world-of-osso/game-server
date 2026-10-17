@@ -4,6 +4,8 @@ use crate::spell_cast::test_harness::*;
 use shared::components::{CombatStatus, Level, Position};
 use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, UseItem};
 
+#[path = "toys_akunda_tests.rs"]
+mod akunda;
 #[path = "toys_bashiok_tests.rs"]
 mod bashiok;
 #[path = "toys_flute_tests.rs"]
