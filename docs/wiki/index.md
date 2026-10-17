@@ -1,3 +1,4 @@
+- [Lifetime honorable kills113](systems/dungeon-achievements.md#lifetime-honorable-kills113) — persisted per-character authority/absolute login projection; named zero-start policy, native full100/relog/account/pin/BG controls GREEN6/6.
 - [Active70448 achievements](systems/dungeon-achievements.md#active70448-achievement-inputs) — named CSV import, source build/key receipt, no historical fallback; census migration adds/removes no roots.
 - [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — current terrain per eligible world-HK recipient; controlled full50/account/pin GREEN4/4 on canonical70448; native BG credit unimplemented.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
@@ -19,6 +20,8 @@
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Armageddon team damage and sacrifice](systems/pet-battle-engine.md#armageddon1025--2026-10-16) — bounded1025 all living enemies/self-kill/Failsafe suppression; RED1→GREEN8, strict both-skin death/forced-reserve/use proof; final lib118/wild-PvP26/UI12/check/fmt pass.
+- [Invitation appearance delivery](systems/guild-lifecycle.md#invitation-appearance-delivery) — shared immediate/persisted real optional-design loader, request/reopen controls and four actual native invitations/declines; paid private prerequisite and proof exclusions explicit.
 - [Miss-only pet self outcomes194](systems/pet-battle-engine.md#miss-only-self-outcomes194--2026-10-16) — bounded762/989 actual miss versus blocked/successful/unrelated miss; RED2→GREEN8, strict both-skin self-stun/heal and ten fullHD originals; final lib111/wild-PvP25/UI12/check/fmt pass.
 - [Refuge Critter shields223](systems/pet-battle-engine.md#refuge223--2026-10-16) — bounded1344, original caster/explicit friendly wearer and independent Block759; RED→GREEN9, strict both-skin native blocks/non-Critter damage, final lib104/wild-PvP24/UI12/check pass.
 - [Same-species pet damage370](systems/pet-battle-engine.md#same-species-damage370--2026-10-16) — explicit owned/wild identity and bounded2283; RED→GREEN6, strict both-skin85/77 and bounded final gates.
