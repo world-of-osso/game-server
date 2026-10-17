@@ -43,7 +43,7 @@
 
 ## 2026-10-17 — Goldtusk135 and Fire Eater139
 
-[Source135–139 packet](systems/toys.md#goldtusk-table-and-fire-eater-source-contracts-2026-10-17): genuine importer/actual-use omission→one authentic table admission, new Fire Eater saved-bind case and retained bowl/refusal controls. Final9/9, importer3/3, check/fmt clean. Exact48e60d67→8f27e392 dry-run changes only the copy's new149876/model row; canonical publication remains lead-owned after landing. No RC/native/food/ground-collision parity inference.
+[Source135–139 packet](systems/toys.md#goldtusk-table-and-fire-eater-source-contracts-2026-10-17): genuine importer/actual-use omission→one authentic table admission, new Fire Eater saved-bind case and retained bowl/refusal controls. Final9/9, importer3/3, check/fmt clean. Copy receipt, later lead publication and read-only acknowledgment are recorded in coverage; the agent did not publish canonical data. No RC/native/food/ground-collision parity inference.
 
 ## 2026-10-17 — Toy source130–134 retained boundaries
 
