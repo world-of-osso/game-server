@@ -4,6 +4,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+- [x] Native effect8 drains the living target's primary power matching `EffectMiscValue_0`, floors removal at zero, and credits only the actually removed power to a different caster through native Amplitude and caster spell modifiers. Preserve integer base/done/variance/taken boundaries and existing supported damage bonuses, without health damage, crits, armor or absorbs on the drain itself. Keep every imported effect, including Frost Breath16094's separate health damage. Missing/nonprimary pools receive no drain or caster credit. Distinct power-drain execute-log packets and unimplemented damage modifiers remain separate gaps; this does not certify whole spells or legal loadouts.
+
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
 
 - [x] Optional resource spend ignores flat spell modifiers while retaining percentage modifiers for the native cost order, family/mask and caster. Practiced Strikes429647 discounts only Protection Execute's base cost; native Sudden Death52437 effect5 still makes order1 base/optional spend free without changing Arms order0. Existing available-resource clamping remains unchanged.
