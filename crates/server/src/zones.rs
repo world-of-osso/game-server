@@ -583,18 +583,59 @@ fn insert_formation_members(
         let Some(info) = world_data.formations.get(guid) else {
             continue;
         };
-        if info.group_ai & GROUP_AI_FLAG_FOLLOW_LEADER == 0 {
-            continue;
-        }
         let Some(&leader) = entities.get(&info.leader_guid) else {
             continue;
         };
+        commands
+            .entity(member)
+            .queue(move |mut entity: EntityWorldMut| {
+                let mut leader_ids = entity
+                    .world()
+                    .get::<CreatureStringIds>(leader)
+                    .cloned()
+                    .unwrap_or_default();
+                // With no live leader TC reads only authored spawn/template identity.
+                leader_ids.script = None;
+                entity.insert(CreatureGroupMember { leader, leader_ids });
+            });
+        if member == leader || info.group_ai & GROUP_AI_FLAG_FOLLOW_LEADER == 0 {
+            continue;
+        }
         commands.entity(member).insert(FormationMember {
             leader,
             follow_dist: info.follow_dist,
             follow_angle: info.follow_angle,
         });
     }
+}
+
+/// Group membership is independent of movement (`CreatureGroup::AddMember`).
+#[derive(Component, Clone)]
+struct CreatureGroupMember {
+    leader: Entity,
+    leader_ids: CreatureStringIds,
+}
+
+/// `Creature::setDeathState`: notify the copy only after its last living group member dies.
+pub(crate) fn notify_group_depletion(world: &mut World, creature: Entity) {
+    let Some(group) = world.get::<CreatureGroupMember>(creature).cloned() else {
+        return;
+    };
+    let has_living_member = world
+        .query_filtered::<(&CreatureGroupMember, &Health), Without<crate::combat::DeathState>>()
+        .iter(world)
+        .any(|(member, health)| member.leader == group.leader && health.current > 0.0);
+    if has_living_member {
+        return;
+    }
+    let Some(map) = world.get::<crate::maps::InMap>(creature).copied() else {
+        return;
+    };
+    let leader_ids = world
+        .get::<CreatureStringIds>(group.leader)
+        .cloned()
+        .unwrap_or(group.leader_ids);
+    crate::scripted_ai::instance_script::creature_group_depleted(world, map, &leader_ids);
 }
 
 /// `creature_addon.auras` not yet applied to the spawned creature.
