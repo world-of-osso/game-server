@@ -14,6 +14,7 @@
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Miss-only pet self outcomes194](systems/pet-battle-engine.md#miss-only-self-outcomes194--2026-10-16) — bounded762/989 actual miss versus blocked/successful/unrelated miss; RED2→GREEN8, strict both-skin self-stun/heal and ten fullHD originals; final lib111/wild-PvP25/UI12/check/fmt pass.
 - [Refuge Critter shields223](systems/pet-battle-engine.md#refuge223--2026-10-16) — bounded1344, original caster/explicit friendly wearer and independent Block759; RED→GREEN9, strict both-skin native blocks/non-Critter damage, final lib104/wild-PvP24/UI12/check pass.
 - [Same-species pet damage370](systems/pet-battle-engine.md#same-species-damage370--2026-10-16) — explicit owned/wild identity and bounded2283; RED→GREEN6, strict both-skin85/77 and bounded final gates.
 - [Bench pet resurrection112](systems/pet-battle-engine.md#bench-resurrection112--2026-10-16) — bounded2347/2348, real persisted-dead-state boundary, RED4→GREEN4 and both-skin2347; native2348 remains unproved.

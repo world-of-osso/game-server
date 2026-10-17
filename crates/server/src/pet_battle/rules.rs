@@ -85,6 +85,7 @@ pub fn supported_property(property: u32) -> bool {
             | 112
             | 370
             | 223
+            | 194
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -294,9 +295,18 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && p[2] > 0
                 && p[3..].iter().all(|v| *v == 0)
         }
-        // Only the two described three-enemy Stench graphs establish these selectors.
+        // Stench retains its team routing; these two miss branches explicitly select self.
         159 => {
-            p.iter().all(|v| *v == 0) && matches!(catalog.turns[&effect.turn].ability, 527 | 1010)
+            let ability = catalog.turns[&effect.turn].ability;
+            let self_after_miss =
+                matches!(ability, 762 | 989) && effect.order == 3 && effect.aura == 0;
+            p.iter().all(|v| *v == 0) && (matches!(ability, 527 | 1010) || self_after_miss)
+        }
+        194 => {
+            matches!(catalog.turns[&effect.turn].ability, 762 | 989)
+                && effect.order == 2
+                && effect.aura == 0
+                && p.iter().all(|v| *v == 0)
         }
         // Fade explicitly swaps its user randomly after removing the dodge aura.
         // Other107 descriptions do not establish random versus selected routing.
