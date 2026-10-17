@@ -144,6 +144,7 @@ fn new_gnerd_eater(path: &std::path::Path) -> Eater {
         ClientId(character),
         PlayerAchievementState::default(),
         crate::pvp::PlayerPvpState::default(),
+        crate::currency::PlayerCurrencies::default(),
         CurrentPvpFaction(2),
         Level(1),
     ));
