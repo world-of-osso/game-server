@@ -1444,9 +1444,26 @@ fn power_drain(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target:
     if primary != Some(&power) || !super::targets::is_alive(world, target) {
         return;
     }
-    let Some(amount) = power_drain_amount(world, ctx, effect, target) else {
-        return;
+    let variance = roll_power_drain_variance(effect.variance);
+    let amount = match power_drain_amount(world, ctx, effect, target, variance) {
+        Ok(Some(amount)) => amount,
+        Ok(None) => return,
+        Err(failure) => {
+            error!("Spell {} power drain failed: {failure:?}", ctx.spell.id);
+            return;
+        }
     };
+    drain_and_credit_power(world, ctx, effect, target, power, amount);
+}
+
+fn drain_and_credit_power(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    power: PowerType,
+    amount: f32,
+) {
     let Some(change) = super::powers::change_power(world, target, power, -amount) else {
         debug!("Spell {}: drain target has no {power:?} pool", ctx.spell.id);
         return;
@@ -1470,16 +1487,83 @@ fn power_drain_amount(
     ctx: &EffectCtx,
     effect: &SpellEffect,
     target: Entity,
-) -> Option<f32> {
-    // GetEffectValueAsInt truncates before SpellDamageBonusDone adds coefficients.
-    let base = modded_base_points(world, ctx.caster, ctx.spell, effect).trunc();
+    variance: f32,
+) -> Result<Option<f32>, super::CastFailure> {
+    let base_points = power_drain_base_points(world, ctx.caster, ctx.spell, effect)?;
+    // CalcValue applies this same roll before points modifiers and integer rounding.
+    let rolled_points = base_points + base_points * variance;
+    let base = modify_base_points(world, ctx.caster, ctx.spell, effect, rolled_points).round();
     if base < 0.0 {
-        return None;
+        return Ok(None);
     }
     let done = power_drain_bonus_done(world, ctx, effect, target, base);
-    let varied = roll_power_drain(done, effect.variance);
+    let varied = done + (done * variance).trunc();
     let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
-    Some((varied * taken).max(0.0).trunc())
+    Ok(Some((varied * taken).max(0.0).trunc()))
+}
+
+/// Validate before target planning/payment on every ordinary and triggered entry.
+pub(super) fn check_power_drain_inputs(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), super::CastFailure> {
+    for effect in spell
+        .effects
+        .iter()
+        .filter(|effect| effect.effect == EFFECT_POWER_DRAIN)
+    {
+        power_drain_base_points(world, caster, spell, effect)?;
+    }
+    Ok(())
+}
+
+/// TC CalcBaseValue's effect8 ExpectedStat branch; no guessed caster level/raw base.
+fn power_drain_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> Result<f32, super::CastFailure> {
+    let level = world
+        .get::<shared::components::UnitLevel>(caster)
+        .ok_or_else(|| {
+            super::CastFailure::Unsupported(format!(
+                "Spell {} effect8 caster UnitLevel is missing",
+                spell.id
+            ))
+        })?
+        .0;
+    if effect.coefficient != 0.0 {
+        return Ok(calc_base_value(world, caster, spell, effect));
+    }
+    let expected = read_power_drain_expected_stat(world, spell, level)?;
+    let value = expected * effect.base_points / 100.0;
+    let use_float =
+        super::attributes(spell, 12) & SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS != 0;
+    Ok(if use_float { value } else { value.round() })
+}
+
+fn read_power_drain_expected_stat(
+    world: &World,
+    spell: &SpellInfo,
+    level: u8,
+) -> Result<f32, super::CastFailure> {
+    let stats = world
+        .get_resource::<crate::level_scaling::CreatureSpellStats>()
+        .ok_or_else(|| {
+            super::CastFailure::Unsupported(format!(
+                "Spell {} effect8 requires expected_stat data",
+                spell.id
+            ))
+        })?;
+    let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
+    let auto_attack = super::attributes(spell, 0) & SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL != 0;
+    Ok(if auto_attack {
+        stats.evaluate(true, level, tuning)
+    } else {
+        stats.player_mana(level, tuning)
+    })
 }
 
 fn power_drain_bonus_done(
@@ -1508,15 +1592,14 @@ fn power_drain_bonus_done(
         .trunc()
 }
 
-/// Source adds a truncated signed variance contribution to the integer done bonus.
-fn roll_power_drain(done: f32, variance: f32) -> f32 {
+/// Draw once; CalcValue and EffectPowerDrain both consume this signed variance.
+fn roll_power_drain_variance(variance: f32) -> f32 {
     let half_variance = (variance * 0.5).abs();
-    let variance = if half_variance == 0.0 {
+    if half_variance == 0.0 {
         0.0
     } else {
         rand::Rng::gen_range(&mut rand::thread_rng(), -half_variance..=half_variance)
-    };
-    done + (done * variance).trunc()
+    }
 }
 
 /// 30 ENERGIZE: spell-modified base points in raw units of `EffectMiscValue_0`.
@@ -1831,4 +1914,45 @@ fn relocate_unit(world: &mut World, target: Entity, position: Vec3, orientation:
 fn modify_charges(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let count = effect.base_points.round().clamp(0.0, f32::from(u8::MAX)) as u8;
     super::restore_charges(world, target, effect.misc_values[0] as u32, count);
+}
+
+#[cfg(test)]
+mod power_drain_amount_tests {
+    use super::*;
+    use crate::spell_cast::{power_drain_tests, test_harness::world_db};
+
+    #[test]
+    fn native_power_drain_frost_breath_reuses_the_same_signed_variance_in_both_stages() {
+        let (h, target) = power_drain_tests::fixture(8);
+        let spell = world_db().unwrap().store.get(16094).unwrap();
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .unwrap();
+        let ctx = EffectCtx {
+            caster: h.caster,
+            spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        assert_eq!(
+            power_drain_base_points(h.app.world(), h.caster, spell, effect),
+            Ok(284.0)
+        );
+        // Read-only amount calculation at native range endpoints; no RNG seed or
+        // imported variance is changed. Actual cast coverage uses the real roll.
+        let half_variance = effect.variance * 0.5;
+        for (variance, expected) in [
+            (-half_variance, 290.0),
+            (0.0, 384.0),
+            (half_variance, 491.0),
+        ] {
+            assert_eq!(
+                power_drain_amount(h.app.world(), &ctx, effect, target, variance),
+                Ok(Some(expected)),
+            );
+        }
+    }
 }

@@ -1,3 +1,6 @@
+## 2026-10-17 — Power-drain CalcValue source correction
+
+[Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): original117 fixture expectation missed ExpectedStat base evaluation, CalcValue rounding and the initial base-variance phase; raw-base118 is not the full native result either. Native70448 zero class/coefficient fields still enter the pin's ExpectedStat else branch. Real UnitLevel10 yields3405=100,46453=278/floor80, and16094's native auto-DPS base284. Freshmaster887760ff genuineRED6FAIL/2PASS73.91s →8fd5f604/b8589ad6 GREEN9/9/60.29s/206.409s total, including metadata refusals and signed native-variance endpoints290/384/491. Hash-verified70448 selected inputs match runtime rows; old six passes remain historical, not source-parity proof.
 ## [2026-10-17] systems | Recuperate effect terminology correction
 
 Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-destination-missiles-2026-10-17):1231411 effect179 is `CREATE_AREATRIGGER`, properties38187, not a scene. Timing proof and runtime behavior unchanged; area-trigger behavior/visuals remain outside that proof.
@@ -15,13 +18,17 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 ## 2026-10-17 — Starfall/Moon Tears recipient routing
 
 [Bounded258/979](../pet-battle-effect-coverage.md#starfall-and-moon-tears--implementation2026-10-17): exact active70448 seven-row graphs, source-school distinction and existing Moonlight reuse. Actual routing RED4 plus legal Cosmos owned RED1 precede9b958668 slot/cap/dead/miss/owned GREEN; first weather case exposed only a fixture9-versus-existing8 remaining assumption, corrected test-only9c88c925. Corrected focused weather1/1 passes ataf89ac7c; retain unchanged core4+owned1 GREEN at9b958668. Integrated5d23a60d lib145/main33/check1m36/no warnings/fmt pass; fresh reconciled70448 census1811/2829=64.02%/1025 graphs (+14/+2, no removals). Only subsequent docs/census changes; no redundant broad rerun. Lead gate438 lands145+55 before both-skin native Cosmos1972/1:9 damage/9 healing×3/increased reserve bars/Moonlight8. Four individually inspected fullHD originals under `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all phases two framed models/strict tripwire0, geometry91/110 only HP fills/timed floats. Existing7 canonical assets/3-mesh strict loader pass, no publication. Both physical forfeits close, owned processes stop/window clears.979 native and independent Retail timing/VFX remain unproved. No other ambiguous selectors admitted.
+## 2026-10-17 — Memory178–179 lifecycle acceptance
+
+[Exact175–179 matrix](../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17): existing runtime Unshackled/Ankoan transforms gain actual-learning/source-pool/ordinary600000ms restoration and inherited3600000ms recovery acceptance. Eight tests/12IDs120.25s, native check33.49s/no compiler warnings and fmt/readability pass at59d1527ce. No production/data change or fabricated RED. Heart/Trophy earlier scopes retained; Mechagon collection action/native/all-model proof remain separate.
+
 ## 2026-10-17 — Toy source170–174 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17): mixed Alliance Standard, sanctuary script routing, arm-equipment procedural and linked-hologram child remain gaps. Distinguish absent runtime154818 from existing content/source metadata. No data/runtime admission, borrowed prior native proof or redundant code gate.
+[Exact source matrix](../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17): mixed Alliance Standard, sanctuary script routing, arm-equipment procedural and linked-hologram child remain gaps. Judgment154818/92155 exists in actual runtime content tables; absent base-table rows do not establish missing publication. Corrected earlier base/content misclassification; child behavior remains unproved. No data/runtime admission, borrowed prior native proof or redundant code gate.
 
 ## 2026-10-17 — Holographic165 and banner boundaries
 
-[Exact165–169 matrix](../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17): Holographic165 actual learned-use/saved-bind/shared-charge acceptance brings eight variants8/8/62.43s; fmt/readability pass, package check pending capacity. Rustbolt333298 and mixed Horde War Standard remain gaps; source20 War Banner native/combat-removal proof retains its revision scope. No runtime/data admission or whole-Toy/native certificate.
+[Exact165–169 matrix](../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17): Holographic165 actual learned-use/saved-bind/shared-charge acceptance brings eight variants8/8/62.43s; fmt/readability and native package/tests check1m09s/no compiler warnings pass after capacity admission. Rustbolt333298 and mixed Horde War Standard remain gaps; source20 War Banner native/combat-removal proof retains its revision scope. No runtime/data admission or whole-Toy/native certificate.
 
 ## 2026-10-17 — Toy source160–164 boundaries
 

@@ -2,13 +2,17 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Memory transforms and collection boundary (2026-10-17)
+
+[Source175–179 matrix](../../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17) adds actual Unshackled/Ankoan learning, authentic pool membership, ordinary ten-minute restoration and inherited one-hour recovery acceptance. Eight tests/12IDs and check/fmt pass; no runtime/data change. Heart/Trophy retain earlier bounded proof, while the Mechagon figure collection/action remains unresolved despite an existing runtime base. Native bodies/weighted sampling/full recovery passage remain separate.
+
 ## Source standard/insignia/equipment/linked-hologram boundaries (2026-10-17)
 
-[Source170–174 matrix](../../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17) retains mixed Standard action, sanctuary script destinations, arm-equipment procedural and linked-hologram child gaps. Judgment154818 content metadata exists but published runtime availability and successful child/lifecycle behavior do not follow from it. No new admission, invented coordinates or borrowed War Banner/hearthstone proof.
+[Source170–174 matrix](../../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17) retains mixed Standard action, sanctuary script destinations, arm-equipment procedural and linked-hologram child gaps. Judgment154818/92155 already exists in the content tables WorldData actually loads; absent base-table rows are not missing runtime publication. Its linked child/lifecycle behavior remains unproved. No new admission, invented coordinates or borrowed War Banner/hearthstone proof.
 
 ## Holographic Hearthstone and banner boundaries (2026-10-17)
 
-[Source165–169 matrix](../../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17) records eight actual learned-use/saved-bind/shared-charge cases including Holographic165; package check remains pending capacity. Rustbolt333298 publication/placement and mixed Horde War Standard action remain gaps. Earlier source20 War Banner native/combat-removal witnesses retain their original scope; no new runtime/data admission or native certificate.
+[Source165–169 matrix](../../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17) records eight actual learned-use/saved-bind/shared-charge cases including Holographic165; native package/tests check and fmt/readability pass. Rustbolt333298 publication/placement and mixed Horde War Standard action remain gaps. Earlier source20 War Banner native/combat-removal witnesses retain their original scope; no new runtime/data admission or native certificate.
 
 ## Source robot/teleport/whistle boundaries (2026-10-17)
 
