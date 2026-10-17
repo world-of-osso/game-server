@@ -1427,9 +1427,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Imported70391: native Hug, Call to Arms and seven complete type35 roots.
+    // Imported70391: full class245, both race roots, Hug and seven type35 roots.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5529);
+    assert_eq!(union.len(), 5530);
+    assert!(union.contains(&245), "full thirteen-class That Takes Class");
     assert!(
         union.contains(&246) && union.contains(&1005),
         "both full Know Thy Enemy roots"
