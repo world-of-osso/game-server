@@ -1,3 +1,7 @@
+## 2026-10-16 — World honorable-kill35
+
+[Native boundary](systems/dungeon-achievements.md#native-world-honorable-kills35): real lethal47XP/no35 RED and account max-vs-sum RED; minimal event/eligibility split implemented. Actual item/aura ten-kill GREEN and integration gates pending. Local install70448, imported data70391.
+
 ## 2026-10-16 — Two-way pet-wall150 charges
 
 [Seven source-qualified pairs](../pet-battle-effect-coverage.md#two-way-walls150--bounded-proof2026-10-16): actual unsupported150 RED6→GREEN88, canonical journal3/wild12/PvP9 and check/fmt;1749→1756/2829 rows (61.82→62.07%),993→1006 graphs. Both-skin private5961 Ice Barrier479 physically blocks incoming then outgoing attacks, expires, and exposes subsequent45/65critical damage; six fullHD originals inspected. Conditional123/126 is bounded to six auras; Onyx, multi-wall order and exact Retail/VFX feedback remain gaps. Subject model/texture receipts match the current local root; owned-process cleanup passes.
