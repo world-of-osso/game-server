@@ -29,6 +29,9 @@ fn wake_leymor() -> (Harness, Entity) {
         !h.has_aura(leymor, 375729),
         "source intro completed before combat"
     );
+    // Population fixtures otherwise park the player at the Serpent's distant spawn.
+    let position = *h.app.world().get::<Position>(leymor).unwrap();
+    h.app.world_mut().entity_mut(player).insert(position);
     (h, leymor)
 }
 
@@ -36,9 +39,6 @@ fn wake_leymor() -> (Harness, Entity) {
 fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() {
     let (mut h, leymor) = wake_leymor();
     let player = h.player();
-    // Population fixtures otherwise park the player at the Serpent's distant spawn.
-    let position = *h.app.world().get::<Position>(leymor).unwrap();
-    h.app.world_mut().entity_mut(player).insert(position);
     h.engage(leymor);
     h.advance(9.8);
     assert!(h.app.world().get::<Health>(player).unwrap().current > 0.0);
@@ -69,4 +69,24 @@ fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() 
         h.app.world().get::<Health>(player).unwrap().current < before,
         "native Infused Strike damage reaches the victim"
     );
+}
+
+#[test]
+#[ignore = "RED: source Ley-Line Sprouts schedule not implemented"]
+fn azure_leymor_sprouts_starts_at_three_seconds_with_native_cast_time() {
+    const SPROUTS: u32 = 374364;
+    let (mut h, leymor) = wake_leymor();
+    h.engage(leymor);
+    h.advance(2.8);
+    assert_eq!(h.casts(0, leymor, SPROUTS), 0);
+    h.advance(0.3);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(leymor)
+        .expect("source3s Ley-Line Sprouts starts a real native cast");
+    assert_eq!(cast.spell_id, SPROUTS);
+    let remaining = cast.duration - cast.elapsed;
+    h.advance(remaining + 0.2);
+    assert_eq!(h.casts(0, leymor, SPROUTS), 1);
 }
