@@ -303,6 +303,8 @@ Omor primary binding: TC a352b1fa17308/source ordinal1 maps to installed DB2 enc
 
 Omor Orbital Strike Target35642 and Whip32185 must retain every actual TDB1210 server-side spell/effect field via `encounter_serverside_spells.py --encounter omor` on independent copies. Whip source effect0 is aura23/2000ms/trigger30638; target effect0 is dummy3/source-enemy area15/radius33. Import is data preparation, not proof of script behavior.
 
+Wild spell summons, including Omor's property64 hounds, retain their own lifetime after summoner death. Minion owner-death cleanup and authored expiry remain unchanged.
+
 Omor30707 summons Fiendish Hound17540 via authored property64. Copy-only `encounter_summons.py --encounter omor` must replace legacy base/models/addon from actual TDB base0 (CT220, level10–30, Health0.55, Mana2.8568, Damage1), preserving SmartAI and absence of Normal1; existing difficulty rows, population and credit remain unchanged. Authored Heroic2 is not Normal authority.
 
 Omor runtime EventMap port: ShadowBolt30686 immediately then6–10s in actual source melee range or3–4s outside; Treacherous30695 random threat16–23/repeat30–40; Hound30707 self20–23/repeat20–26; OrbitalTarget35642 self25/repeat23–30; incoming-below20 Shield31901 once/reset. Melee predicate uses actual model CombatReach, nominal5yd minimum and aura153 per TC Unit.cpp691–709. Hounds enter zone combat but are deliberately not in BossAi cleanup. CasterAttackStart100yd, OnSpellCast/slay speech and Orbital SpellScript/falling-player AuraScript remain open, not replaced with guessed behavior. Runtime RED confirmed no casts before this port.
