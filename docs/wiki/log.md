@@ -73,6 +73,8 @@
 ## 2026-10-16 — Bench pet resurrection112
 
 [Sourced Raise Dead/Mass Resurrection](../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16): four actual112 rows, inactive-slot routing and zero-HP owned-load state. RED3+persisted-redb1→GREEN4;1756→1760/2829 rows (62.07→62.21%),1006→1008 graphs. Both-skin private5961 actual2347 shows both78/1563 reserves, pointer swap and real147-damage win; eight fullHD originals inspected. Canonical78-asset closure/strict loader readback and final lib91/wild-PvP22/UI12/check/fmt pass; stale sibling `/hug` compilation drift resolved by lead-authorized fast-forward, no gameplay patch. Generic resurrection semantics remain gated.
+- 2026-10-16: [Leymor Sprouts clock](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): genuine3s cast RED→native self-cast/SpellGo GREEN1 at3b856731; unchanged-production Infused control PASS. Repeat/lifecycle runtime, fourteen child summons and fullAzure70448 remain separate; controls/check pending.
+- 2026-10-16: [Leymor Infused Strike](investigations/follower-data.md#azure-leymor-infused-strike--2026-10-16): actual10s missing-cast RED after intro/living-victim checks; sourced finite schedule implemented, native GREEN pending. Intro scoped check passes.
 ## 2026-10-16 — Leymor intro and non-following formation depletion
 
 [Source boundary](investigations/follower-data.md#azure-leymor-intro--2026-10-16): genuine startup/NPC RED4, then startup1PASS/actual-depletion3RED, then source groupAI0 membership/per-copy key4/one-second wake375749 and NPC mask pass. At6ae44dc0, five intro cases include removed leader and copy/reinitialize isolation; three Brand and six Frost controls pass14/14,0ignored. Independent source/artifact/readability and both format gates pass; scopedcheck/protocol unit control pending. Historical70391 proof, not70448 native acceptance or full boss phases.
@@ -1783,3 +1785,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16): real persisted bind/source10s cast and shared2309 charge acceptance,146/146 Toy tests; source type17 appearance/cross-map/wall recharge remain separate.
 
 - 2026-10-16: [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16): authentic paired template import RED→GREEN, real area/cursor/source300s simulation lifecycle,147/147 Toy gate; target-dummy combat and missing native533501 body remain separate.
+
+- 2026-10-16: [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16): separate catalog/child-position REDs, exact302746/display16675, actual cooking/CozyFire/source300s cleanup and source-drift refusals;149 Toy+29 affected gates pass, native appearance/full trigger parity separate.

@@ -16,7 +16,8 @@
 - [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.
 - [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Authoritative target LOS](systems/spell-casting.md#authoritative-target-los--2026-10-16) — moving-target receipt boundary replaces stale client endpoint validation; native release acceptance remains separate.
-- [Leymor Brand expiry](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16) — native6000ms expiry-only374570; genuine RED→native3PASS; shared controls/check queued, full phases/native acceptance pending.
+- [Leymor Sprouts clock](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16) — native first3s cast/completed self-target SpellGo GREEN; child summons/lifecycle and fullAzure70448 remain open.
+- [Leymor Infused Strike](investigations/follower-data.md#azure-leymor-infused-strike--2026-10-16) — real10s cast/DOT/damage RED→GREEN, ordinary15/check/fmt/independent proof; other schedules and native Azure remain open.
 - [Leymor Brand expiry](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16) — native6000ms expiry-only374570; genuine RED→native3PASS; six shared controls/check/fmt pass, full phases/native acceptance pending.
 - [Residual idle indexing](investigations/server-tick-lag.md#residual-idle-indexing-2026-10-16) — five full-population RED→GREEN work bounds and 86 targeted behavior controls; release peer acceptance separate.
 - [Remaining geometry scans](investigations/server-tick-lag.md#remaining-geometry-scans-2026-10-16) — dormant wake-aware detection/resize and live collision membership indexing; bounded 50-control proof.
@@ -29,7 +30,7 @@
 - [Refuge Critter shields223](systems/pet-battle-engine.md#refuge223--2026-10-16) — bounded1344, original caster/explicit friendly wearer and independent Block759; RED→GREEN9, strict both-skin native blocks/non-Critter damage, final lib104/wild-PvP24/UI12/check pass.
 - [Same-species pet damage370](systems/pet-battle-engine.md#same-species-damage370--2026-10-16) — explicit owned/wild identity and bounded2283; RED→GREEN6, strict both-skin85/77 and bounded final gates.
 - [Bench pet resurrection112](systems/pet-battle-engine.md#bench-resurrection112--2026-10-16) — bounded2347/2348, real persisted-dead-state boundary, RED4→GREEN4 and both-skin2347; native2348 remains unproved.
-- [Azure Leymor intro](investigations/follower-data.md#azure-leymor-intro--2026-10-16) — authored groupAI0 depletion, one-second wake/copy lifetime and NPC immunity predicate; five intro +Brand3/Frost6 controls pass14/14, scopedcheck pending; full phases/native70448 acceptance open.
+- [Azure Leymor intro](investigations/follower-data.md#azure-leymor-intro--2026-10-16) — authored groupAI0 depletion, one-second wake/copy lifetime and NPC immunity predicate; five intro +Brand3/Frost6 controls pass14/14, scopedcheck passes; full phases/native70448 acceptance open.
 - [Azure Frost Bomb hooks](investigations/follower-data.md#azure-frost-bomb--2026-10-16) — sourced finite hit/expiry chain and target-derived ground; native6+3 controls/check/fmt pass, full Telash/Leymor phases and full-Azure acceptance open.
 
 - [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
@@ -52,6 +53,8 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16) — exact302746 profile plus parent destination RED→GREEN, actual cooking/CozyFire/cleanup;149 Toy+29 affected pass, native presentation separate.
+
 - [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16) — two authentic identities, real5759 area/cursor pair/300s lifecycle and147 Toy tests; canonical publication/native body/target-dummy combat separate.
 
 - [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16) — actual persisted bind/source10s cast/shared2309 charge;146 Toy tests pass, procedural native appearance and cross-map/wall-recharge separate.
