@@ -17,6 +17,8 @@ use crate::gold::GoldUpdateQueue;
 
 #[path = "npc_interaction/guild_tabard_tests.rs"]
 mod guild_tabard_tests;
+#[path = "npc_interaction/mobile_banking_tests.rs"]
+mod mobile_banking_tests;
 #[path = "transmog_tests.rs"]
 mod transmog_tests;
 

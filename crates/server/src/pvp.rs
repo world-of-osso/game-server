@@ -402,6 +402,7 @@ pub struct PvpPlugin;
 impl Plugin for PvpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PvpServerState>();
+        app.init_resource::<crate::group::GroupRegistry>();
         app.init_resource::<arena::Catalog>();
         app.init_resource::<arena_objects::GateCatalog>();
         app.init_resource::<arena_objects::SightCatalog>();
@@ -526,6 +527,7 @@ fn process_battleground_queue_requests(
     mut players: Query<(&Level, &shared::components::Player, &mut PlayerPvpState)>,
     connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     state: ResMut<PvpServerState>,
+    groups: Res<crate::group::GroupRegistry>,
     time: Res<Time>,
     mut senders: Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
@@ -533,7 +535,17 @@ fn process_battleground_queue_requests(
     let now = current_seconds(&time);
     for (conn_entity, link, in_world, mut receiver) in &mut receivers {
         for request in receiver.receive() {
-            let result = {
+            let result = if groups.leader_of(in_world.character_id).is_some() {
+                queue_battleground_party(
+                    &groups,
+                    &mut players,
+                    &connections,
+                    state,
+                    in_world.character_id,
+                    request.battleground_id,
+                    now,
+                )
+            } else {
                 let Ok((level, _player, mut player_state)) = players.get_mut(link.0) else {
                     send_pvp_error(conn_entity, &mut senders, "pvp unavailable for player");
                     continue;
@@ -546,18 +558,21 @@ fn process_battleground_queue_requests(
                     request.battleground_id,
                     now,
                 )
+                .map(|message| (vec![(conn_entity, link.0)], message))
             };
 
             match result {
-                Ok(message) => {
-                    if let Ok((_level, _player, player_state)) = players.get(link.0) {
-                        send_pvp_update(
-                            conn_entity,
-                            player_state,
-                            Some(message),
-                            None,
-                            &mut senders,
-                        );
+                Ok((members, message)) => {
+                    for (connection, player) in members {
+                        if let Ok((_level, _player, player_state)) = players.get(player) {
+                            send_pvp_update(
+                                connection,
+                                player_state,
+                                Some(message.clone()),
+                                None,
+                                &mut senders,
+                            );
+                        }
                     }
                     resolve_battleground_matches(
                         request.battleground_id,
@@ -642,6 +657,57 @@ fn queue_for_battleground(
         name: template.name.clone(),
     });
     Ok(format!("queued for {}", template.name))
+}
+
+/// TC BattleGroundHandler.cpp189–226: only the leader queues the whole group.
+fn queue_battleground_party(
+    groups: &crate::group::GroupRegistry,
+    players: &mut Query<(&Level, &shared::components::Player, &mut PlayerPvpState)>,
+    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
+    state: &mut PvpServerState,
+    leader: u64,
+    battleground_id: u32,
+    now: u64,
+) -> Result<(Vec<(Entity, Entity)>, String), String> {
+    if groups.leader_of(leader) != Some(leader) {
+        return Err("only the group leader can queue the party".into());
+    }
+    let template = template_by_id(battleground_id)
+        .ok_or_else(|| format!("unknown battleground id {battleground_id}"))?;
+    let members = groups.group_members(leader);
+    if members.len() > usize::from(template.team_size) {
+        return Err("group exceeds the battleground team size".into());
+    }
+    let mut online = Vec::with_capacity(members.len());
+    let mut levels = Vec::with_capacity(members.len());
+    for &character in &members {
+        let (connection, player) = connection_for_character(connections, character)
+            .ok_or_else(|| format!("group member {character} is not in world"))?;
+        let (level, _, player_state) = players
+            .get(player)
+            .map_err(|_| format!("pvp unavailable for group member {character}"))?;
+        if player_state.battleground.is_some() || player_state.queue.is_some() {
+            return Err(format!(
+                "group member {character} is already queued or invited to PvP"
+            ));
+        }
+        levels.push(level.0);
+        online.push((connection, player));
+    }
+    state
+        .battleground_queue
+        .join_group(leader, members, levels, battleground_id, now)
+        .map_err(format_bg_queue_error)?;
+    for &(_, player) in &online {
+        let (_, _, mut player_state) = players
+            .get_mut(player)
+            .expect("validated online party member");
+        player_state.queue = Some(PlayerPvpQueue::Battleground {
+            battleground_id,
+            name: template.name.clone(),
+        });
+    }
+    Ok((online, format!("queued for {}", template.name)))
 }
 
 fn dequeue_player(

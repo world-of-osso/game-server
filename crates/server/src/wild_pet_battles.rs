@@ -114,6 +114,7 @@ impl WildCatalog {
         let mut pet = Pet::new(
             &self.turns,
             identity.species,
+            identity.level,
             stats,
             species.family.into(),
             abilities,

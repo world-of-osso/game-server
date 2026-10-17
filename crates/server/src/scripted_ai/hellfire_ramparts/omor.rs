@@ -43,6 +43,9 @@ impl CreatureAi for Omor {
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
         self.shield_used = false;
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert(super::super::caster_chase::CasterChase::new(100.0));
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
@@ -56,13 +59,18 @@ impl CreatureAi for Omor {
             .events
             .schedule_range(SUMMON_HOUND, 20_000, 23_000);
         self.boss.events.schedule(ORBITAL_TARGET, 25_000);
-        // Source AttackStartCaster(100yd) needs a caster-chase range hook.
     }
 
     fn damage_taken(&mut self, _ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
         if !self.shield_used && damage.health_below_pct_damaged(20.0) {
             self.shield_used = true;
             self.boss.events.schedule(DEMONIC_SHIELD, 0);
+        }
+    }
+
+    fn on_spell_cast(&mut self, ctx: &mut Ctx, spell_id: u32) {
+        if spell_id == DEMONIC_SHIELD {
+            ctx.talk(5);
         }
     }
 

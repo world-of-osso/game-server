@@ -68,6 +68,7 @@ pub fn supported_property(property: u32) -> bool {
             | 67
             | 75
             | 76
+            | 77
             | 96
             | 100
             | 131
@@ -134,13 +135,15 @@ fn validate_ability_graph(
         return Err(format!("missing ability {ability}"));
     }
     if let Some(states) = catalog.ability_states.get(&ability) {
-        for state in states.keys() {
+        for (state, value) in states {
             let name = &catalog.states[state];
             let known_object = matches!(ability, 189 | 294 | 333) || is_two_way_wall(ability);
             if name == "Mechanic_IsObject" && !known_object {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
             let wall_state = is_two_way_wall(ability) && matches!(*state, 123 | 126);
+            let level_health_state =
+                *state == 2 && matches!((ability, *value), (577 | 610, 500) | (1990, 1000));
             if !matches!(
                 *state,
                 21 | 22 | 23 | 24 | 25 | 29 | 30 | 33 | 34 | 35 | 36 | 40 | 41 | 42
@@ -177,6 +180,7 @@ fn validate_ability_graph(
                         | 196
                         | 199
             ) && !wall_state
+                && !level_health_state
             {
                 return Err(format!(
                     "ability {ability}: unsupported aura state {state} {name}"
@@ -249,6 +253,7 @@ fn validate_ability_graph(
                     | 68
                     | 75
                     | 76
+                    | 77
                     | 96
                     | 141
                     | 169
@@ -318,6 +323,13 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && effect.order == 1
                 && effect.aura == 0
                 && p == [100, 0, 0, 0, 0, 0]
+        }
+        // Lock-On marks the enemy for one round before its second-use blast.
+        77 => {
+            catalog.turns[&effect.turn].ability == 301
+                && effect.order == 1
+                && effect.aura == 300
+                && p == [45, 100, 1, 0, 0, 0]
         }
         // Launch Rocket's first use sets up294; its second use launches the rocket.
         75 => {
