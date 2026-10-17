@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Necrolord and retained cooking/quill boundaries (2026-10-17)
+
+[Source225–229 matrix](../../toy-effects14-coverage.md#source225229-pending-necrolord-acceptance-and-retained-cookingquill-scope-2026-10-17) adds225 test/spec e2d1b991 for the actual learned saved-bind/shared-charge path; ten variants and package check remain pending.226 linked cooking/versatility and227 quill retain earlier exact CPU scope, not new native certificates.228 Venthyr pledge and229 Necrolord/Maldraxxus reduced-recovery acceptance remain gaps despite existing229 runtime model94055. No runtime/data admission or invented covenant rule.
+
 ## Source conditional-fall and reagent/random-action boundaries (2026-10-17)
 
 [Source220–224 matrix](../../toy-effects14-coverage.md#source220224-conditional-fall-and-reagentrandom-action-boundaries-2026-10-17) retains black-parasol negative periodic-tick/refusal proof, not actual falling acceptance. Purple/green readiness consumption, Plume's combined slow-fall/turn/area contract and Necronom-i-nom's one-vellum/random-effect action remain gaps. No unconditional trigger, invented random pool, new runtime/data admission or repeated unchanged gate.

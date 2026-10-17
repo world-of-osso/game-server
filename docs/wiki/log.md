@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source225–229 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source225229-pending-necrolord-acceptance-and-retained-cookingquill-scope-2026-10-17):225 test/spec e2d1b991 adds exact learned bind/shared-charge acceptance, ten variants/check pending.226 linked Cookpot/versatility and227 quill retain earlier bounded CPU proof;228 pledge and229 pledge/Maldraxxus recovery remain gaps.229 runtime173467/display94055 exists; no missing-template claim, runtime/data change or new native certificate.
+
 ## 2026-10-17 — Toy source220–224 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source220224-conditional-fall-and-reagentrandom-action-boundaries-2026-10-17): black-parasol negative generic-tick/refusal proof is not a successful falling contract. Purple/green next-fall consumption, combined Plume slow-fall/turn/area and book vellum/random-action remain unproved. Exact38682/count1 reagent retained; no invented outcome pool, new runtime/data admission or repeated gate.
