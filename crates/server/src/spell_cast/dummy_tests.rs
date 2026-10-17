@@ -73,7 +73,7 @@ fn dummy_channel_destination_uses_live_channel_not_unrelated_explicit_unit() {
         .world_mut()
         .get_mut::<super::PendingCastSpell>(h.caster)
         .unwrap()
-        .0
+        .spell
         .cast_destination = Some(requested.to_array());
     assert_eq!(destination(&h, Some(h.npc)).unwrap().position, requested);
     let caster = h.caster;
