@@ -1,4 +1,4 @@
-//! TC a352b1fa Leymor intro/Infused Strike, Brand and Telash Frost Bomb hooks.
+//! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
 //! Other boss schedules, energy/jump phases and rune/ground actions remain unported.
 use bevy::prelude::*;
 use shared::components::UnitFlags;
@@ -24,6 +24,8 @@ const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
 const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
+const LEY_LINE_SPROUTS: u32 = 374364;
+const EVENT_LEY_LINE_SPROUTS: u32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
     name == LEYMOR_SCRIPT
@@ -84,10 +86,12 @@ impl super::boss_ai::BossScript for Leymor {
     }
 
     fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
-        if event_id == EVENT_INFUSED_STRIKE {
-            ctx.do_cast_victim(INFUSED_STRIKE);
-            self.boss.events.repeat(48_000);
+        match event_id {
+            EVENT_INFUSED_STRIKE => ctx.do_cast_victim(INFUSED_STRIKE),
+            EVENT_LEY_LINE_SPROUTS => ctx.do_cast_self(LEY_LINE_SPROUTS),
+            _ => return,
         }
+        self.boss.events.repeat(48_000);
     }
 }
 
@@ -112,6 +116,7 @@ impl super::CreatureAi for Leymor {
 
     fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
+        self.boss.events.schedule(EVENT_LEY_LINE_SPROUTS, 3_000);
         self.boss.events.schedule(EVENT_INFUSED_STRIKE, 10_000);
     }
 
