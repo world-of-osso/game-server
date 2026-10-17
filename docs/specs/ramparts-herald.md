@@ -41,6 +41,8 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ## Tests asserting this spec
 
+- `scripts/tests/test_herald_binding_cli.py` — pinned-source/70448 binding CLI, primary-only preservation and named identity gaps; not yet GREEN.
+- `scripts/tests/fixtures/herald-binding/` — exact pinned TC files and extracted active70448 identity rows, with original source hashes.
 - `scripts/tests/test_encounter_serverside_spells.py` — real CLI fixture for all seven authored spell/effect rows, idempotence, unrelated-data preservation and atomic refusal; producer suite GREEN6/6.
 - `scripts/tests/fixtures/herald-serverside-spells.json` — exact TDB1210 records selected by the pinned script.
 
