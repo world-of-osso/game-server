@@ -1164,6 +1164,10 @@ fn startup_load_world_data(mut commands: Commands) {
         "Load Cage of Carnage entrance areatrigger actions; run scripts/import-battlegrounds.py",
     ));
     commands.insert_resource(
+        crate::pvp::random_bg::Catalog::load(&conn)
+            .expect("Load configured Random32 battleground templates"),
+    );
+    commands.insert_resource(
         crate::pvp::arena::Catalog::load(&conn)
             .expect("Load source-backed arena maps; run scripts/import-arenas.py before startup"),
     );
