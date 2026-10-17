@@ -1,3 +1,7 @@
+## 2026-10-17 — Guild invitation appearance delivery
+
+[Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
+
 ## 2026-10-16 — Eligible victim class52
 
 [Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN2/2; structural5530/1841 adds245 only.
