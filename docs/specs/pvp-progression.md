@@ -98,3 +98,9 @@ Operator prerequisite: `pvp_*` catalogs are required at normal world startup. Ap
 Before restarting the landed realm, run the importer from the merged server checkout against the explicit canonical DB path. No import or restart was performed on UDP5000 by this task. Confirm `SELECT count(*)` for `pvp_currency`/`pvp_talent`/`pvp_talent_category`/`pvp_talent_slot_unlock`/`pvp_honor_reward` yields2/407/3/4/24. The importer must finish transactionally before startup; do not seed numeric reward/rating policies. Honor1792/Conquest1602 balances are preserved by the existing one-way ID migration.
 
 Private native proof uses diagnostics-owned world.db and fresh redb, fb_pvp2/Pvpproof on UDP5790. Both skins select Holy talents86/640 through actual pointer controls and display wallet0; cross-process relog retains War Mode and talent86. Screenshots and exact proof boundaries are owned by the [client contract](../../../game-engine/docs/specs/pvp-progression.md). No lifetime XP, match payout or rating progression claim follows from this proof.
+
+## LIFETIME_HK_TRACKING_STARTS_AT_ZERO
+
+Persist a separate per-character `lifetime_honorable_kills` count in PvP progress. New and pre-existing characters start at0 when no count has been recorded; never backfill from achievement35, Honor XP, wallet balances or scoreboard statistics. This is the named project tracking-start policy, not a claim to recover untracked historical kills.
+
+At the existing eligible world-HK recipient boundary, increment and persist this count before evaluating achievement113 (TC Player6752–6753). Zero Honor XP does not suppress the count. Rejected/nonlethal/dead replay and unrelated recipients cannot increment it. Normal character load restores it; login projects the absolute current value without replaying a kill. No BG/arena eligibility policy is added. See [achievement projection](dungeon-achievements.md#lifetime-honorable-kills113).
