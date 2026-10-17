@@ -264,6 +264,62 @@ fn encounter_coverage_gargolmar_surge_selects_farthest_living_threat() {
 }
 
 #[test]
+#[ignore = "RED: generic effect 96 charge absent (Gargolmar Surge)"]
+fn encounter_coverage_gargolmar_surge_moves_before_distant_impact() {
+    let (mut h, boss, map) = pull_gargolmar();
+    let far = h.players[1].0;
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let destination = Position {
+        x: origin.x + 20.0,
+        ..origin
+    };
+    h.app.world_mut().entity_mut(far).insert((map, destination));
+    crate::creature_aggro::add_threat(h.app.world_mut(), boss, far, 0.1);
+    for _ in 0..120 {
+        h.advance(0.05);
+        if !spell_gos(&h, boss, 34645).is_empty() {
+            break;
+        }
+    }
+    assert_eq!(
+        spell_gos(&h, boss, 34645).last().unwrap().target,
+        Some(far.to_bits())
+    );
+    let at_launch = *h.app.world().get::<Position>(boss).unwrap();
+    let distance = |p: Position| {
+        Vec3::new(p.x, p.y, p.z).distance(Vec3::new(destination.x, destination.y, destination.z))
+    };
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), far).unwrap();
+    assert!(
+        distance(at_launch) > reach + 1.0,
+        "charge must travel, not teleport at launch"
+    );
+    let mut impact = None;
+    for _ in 0..20 {
+        h.advance(0.05);
+        if h.inbox(0).log.iter().any(|event| {
+            event.source == Some(boss.to_bits())
+                && event.target == Some(far.to_bits())
+                && event.spell_id == Some(34645)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }) {
+            impact = Some(*h.app.world().get::<Position>(boss).unwrap());
+            break;
+        }
+    }
+    let at_impact = impact.expect("source Surge must damage selected distant threat after travel");
+    eprintln!(
+        "SURGE launch={at_launch:?}, impact={at_impact:?}, target={destination:?}, reach={reach}"
+    );
+    assert!(
+        distance(at_impact) <= reach + 0.1,
+        "source charge arrives before distant impact: remaining={}",
+        distance(at_impact)
+    );
+}
+
+#[test]
 fn encounter_coverage_gargolmar_request_hits_real_watcher_and_heals() {
     let (mut h, boss, map) = pull_gargolmar();
     let conn =
