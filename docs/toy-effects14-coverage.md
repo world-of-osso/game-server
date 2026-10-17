@@ -1,5 +1,21 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source124–129: garment/anchor/action gaps and Noble Gardener (2026-10-17)
+
+125 Noble Gardener165802/286031 uses source homebind252,10s cast and shared charge2309, with item recovery-1 and spell recovery0/GCD1500. New actual bag-learning/UseToy acceptance reuses the persisted-bind fixture: missing bind refuses before spending, hydrated saved bind receives the displaced caster after the authored cast, charge max1/current0/recharge1800000ms is reported and Lunar Elder165669 refuses afterward. Health/model are unchanged. Native82534 procedural357967/type17/Value1=44803, wire/pixels/audio, cross-map transfer and natural30min recharge remain unproved.
+
+| Source row | Exact retained boundary / proof level |
+|---|---|
+|124 Worn Cloak165791/286277 | Existing audited cosmetic admission is not a new garment proof. Aura4/visual82601 authors procedural357988/357989/357990 type17 with Value1=4322/62816/165792. Cloak/hood presentation remains unresolved; no ordinary attachment substitute or assassin-confusion gameplay inferred from flavor text. |
+|126 Citizens Brigade Whistle166247/287080 | Genuine actual-use refusal is `unsupported toy spell: aura 4`: root linked428 triggers287079, which includes infinite self dummy4 “Personal Anchor” alongside authentic148048/property4536 summon. Available seven-model source data does not establish that marker/action. New actual-learning refusal test proves no root/child cast, aura, actor or recovery spend and unchanged body/health; a proposed positive lifecycle stopped at admission and is not passing evidence. |
+|127 For da Blood God!166308/287688 | Source self transform56 has entry0/misc1=4. No implemented zero-entry mapping establishes its promised blood-troll appearance; do not guess a display or blood/health cost. |
+|128 Gnarlwood Waveboard166461/288758 | Source water-walk104 plus periodic dummy226/250ms. Ordinary water walking does not implement surfing presentation or the described jumping/up-to130% speed script; no script admission from the movement flag alone. |
+|129 Dark Ranger's Spare Cowl166544/291148 | Source self script77 plus dummy4. Dark Ranger appearance action remains unresolved; no substitute cowl/body chosen by name. |
+
+Atf9bd6fdd, five holiday hearthstone cases including125 plus the actual126 refusal pass6/6 zero ignored51.09s; package/tests check24.00s and fmt/manual changed-line readability pass without warnings. These changes were held during Gate412 work, then replayed with byte-identical hearthstone/citizens/module files atad77f6c7; no production-source difference beyond the unrelated Scarab test oracle. Preserve the original f9 proof scope rather than rerunning it or claiming the Scarab merge gate includes125–126. Production, canonical data and importer admissions unchanged.
+
+Evidence: `rows124-next-readonly-source.json`, `rows124-129-action-source.json`, `rows127-129-boundaries.json`, `rows125-126-proof-ledger.json`, focused/final-contracts/check/fmt logs. Positive source126 draft is retained only as `citizens126-unexecuted-lifecycle-draft.rs`, not the passing suite. Current runtime classification, source simulation, native presentation and full-toy parity remain distinct.
+
 ## Gate412: Scarab source-ground metric (2026-10-17)
 
 Exact unchanged gate artifact from merged9979ffe2 (68946414 onto6c0cadc94) reproduces the original full3D `distance <=5.001` failure2/30 times;28 pass. Neither118–123 nor recent destination/missile changes altered this sampler/test: the metric dates to13bc6b124 and horizontal scatter/ground projection to8db0a46a (2026-10-14). Pinned TC `SpellEffects.cpp::SummonGuardian` retains the first destination, then calls `WorldObject::GetRandomPoint`; `Object.cpp`678–705 samples horizontal x/y and independently projects Z onto available ground, not a3D sphere.
