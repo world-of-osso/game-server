@@ -118,7 +118,7 @@ fn azure_leymor_erupting_fissure_starts_at_twenty_seconds_with_native_cast_time(
     }));
 }
 
-fn prepare_leymor_for_later_clock() -> (Harness, Entity) {
+pub(super) fn prepare_leymor_for_later_clock() -> (Harness, Entity) {
     let (mut h, leymor) = wake_leymor();
     let map = *h.app.world().get::<InMap>(leymor).unwrap();
     super::azure_sprouts::prepare_sprout_templates(&mut h);
@@ -136,7 +136,7 @@ fn prepare_leymor_for_later_clock() -> (Harness, Entity) {
     (h, leymor)
 }
 
-fn assert_first_fissure_and_living_victim(h: &mut Harness, leymor: Entity) {
+pub(super) fn assert_first_fissure_and_living_victim(h: &mut Harness, leymor: Entity) {
     assert_eq!(
         h.casts(0, leymor, 386660),
         1,
@@ -155,7 +155,7 @@ fn assert_first_fissure_and_living_victim(h: &mut Harness, leymor: Entity) {
     );
 }
 
-fn count_self_spell_gos(h: &Harness, caster: Entity, spell: u32) -> usize {
+pub(super) fn count_self_spell_gos(h: &Harness, caster: Entity, spell: u32) -> usize {
     h.inbox(0)
         .spell_gos
         .iter()
@@ -168,7 +168,6 @@ fn count_self_spell_gos(h: &Harness, caster: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "Native31s Brand self-target SpellGo GREEN pending after fixture correction"]
 fn azure_leymor_later_clock_brand_starts_at_thirty_one_and_applies_native_aura() {
     const BRAND: u32 = 374567;
     let (mut h, leymor) = prepare_leymor_for_later_clock();
@@ -194,7 +193,6 @@ fn azure_leymor_later_clock_brand_starts_at_thirty_one_and_applies_native_aura()
 }
 
 #[test]
-#[ignore = "Native45s Stomp self-target SpellGo GREEN pending after fixture correction"]
 fn azure_leymor_later_clock_stomp_channels_at_forty_five_with_native_duration() {
     const STOMP: u32 = 374720;
     let (mut h, leymor) = prepare_leymor_for_later_clock();
