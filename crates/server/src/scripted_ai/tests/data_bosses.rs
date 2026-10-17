@@ -1,10 +1,14 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "azure_combat.rs"]
+mod azure_combat;
 #[path = "azure_explosive_brand.rs"]
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
 mod azure_frost_bomb;
+#[path = "azure_intro.rs"]
+mod azure_intro;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "gizlock.rs"]
@@ -306,6 +310,12 @@ fn encounter_fixture(
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
+        // The Azure intro depends on the real non-following tender formation.
+        formations: if populate && map_id == 2515 {
+            crate::test_data::world_data().formations.clone()
+        } else {
+            Default::default()
+        },
         addons: crate::world_data::load_spawn_addons(&conn),
         template_addons: crate::world_data::load_template_addons(&conn),
         class_level_base_hp: hp,
