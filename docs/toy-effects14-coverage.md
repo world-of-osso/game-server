@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source280–284: controlled-cage/steward/realm/customizer boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|280 Jailer's Cage187416/357363 | Self linked-summon428→357358 plus aura312/misc1002 for300000ms,900000ms item recovery. Child permanently summons180453/properties5218 (Control4/flags137224) at self. Runtime101685 exists, but actual entering/controlling/link/cleanup and nonzero312 payload remain unproved; not generic scenery. |
+|281 Adamant Vaults Cell187417/357381 | Source300000ms linked428→357383's permanent self summon180464/properties5217 (Control4/flags137224),900000ms item recovery. Runtime101682 exists; actual deluxe-cell entry/control/linked cleanup remains distinct from280 and unproved. Body availability does not admit either Control4 graph. |
+|282 Steward's First Feather187419/357437 | Permanent transform56→174087/misc8 with targets18/8,180000ms item recovery. Runtime98480 exists, but advertised Kyrian pledge and steward-companion recipient/youthful form/restoration require their own proof; no ordinary caster-disguise shortcut or invented eligibility. |
+|283 Maw-Ocular Viewfinder187420/357459 | Source1500ms linked428/600000ms→357460's2000ms child, permanent target47 summon180479/properties4536 plus self dummy4; inherits3600000ms recovery. Runtime source15092/scale1.4 has probability0 versus invisible11686/scale1 probability1. Miniature shadow-realm child/action/presentation/linked cleanup remains unproved; no visible zero-weight replacement or dummy-slot discard. |
+|284 Rockin' Rollin' Racer Customizer19.9.3 187422/357546 | Source3000ms/300000ms graph summons180547/properties5231 (Control0/faction35), sets aura293/misc2038, effect140→357774's180570/properties492 (Control1), and carries aura37/misc85/base1,25/base1,321/base1 and26. Runtime actors are absent. Source customization choices/state/input/action restoration remain unproved; preserve both actor chains and source model probabilities, not an inert racer or ignored control effects. Item recovery5000ms retained. |
+
+`rows280-284-{readonly-source,action-source}.json` retains exact70391 root/child/control/cast/duration/model probability data and runtime presence. No new cage/recipient/realm/customizer admission, producer/data/canonical write or positive simulation/native certificate.240 remains the single owned native test job; lead gate472 owns its package check, so no own repeat.279's exact item-creation acceptance still awaits that compile before source edits.149865 Tea Set remains lead-required.
+
 ## Source275–279: vesper/transport boundaries and pending offering-kit acceptance (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |

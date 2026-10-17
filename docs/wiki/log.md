@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source280–284 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source280284-controlled-cagestewardrealmcustomizer-boundaries-2026-10-17): Control4 personal/deluxe cages, pledged steward-companion transform, linked shadow realm and complete Racer customization graph remain unproved. Existing101685/101682/98480/source-selected11686 bodies do not establish control/recipient/child cleanup; no zero-weight visible realm substitute. No runtime/data admission or new positive certificate.240 owned test continues; lead472 owns its package check, and279 draft awaits compile completion before source edits.
+
 ## 2026-10-17 — Toy source275–279 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17): Harmony/Clarity/Faith retain distinct missing-runtime actors/scales plus caster dummy slots; Whistle retains fast/tired transport/area script gaps.279 source creates exactly one existing187342 after2s with30s item recovery; bounded actual-use/inventory/reuse test drafted externally, not yet committed/run while240 compiles. No wrapping/gifting assumption, source actor substitution, runtime/data admission or new positive proof.
