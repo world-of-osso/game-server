@@ -23,6 +23,10 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 [Exact source matrix](../toy-effects14-coverage.md#source160164-robotteleportwhistle-boundaries-and-retained-ocean-proof-2026-10-17): Blingtron7000 missing actor/service, Kul Tiras/Zandalar script destinations and whistle transport remain unresolved. Ocean Simulator retains earlier revision-scoped simulation/native/PCM proof, not new current-master certification. Source/doc inspection only; no runtime/data admission or redundant gate.
 
+## 2026-10-17 — Actual killed-creature level21
+
+[Native78/statistic60938](systems/dungeon-achievements.md#actual-killed-creature-level21): TC inclusive actor GetLevel versus actual killed NPC GetLevel, positive21/0 plus complete Demon30/3. Production content view corrects legacy Imp4165 to actual tuned90; approved native41820/actor19,20,21 fixture gives genuine equal-level RED133f48a7. Native/group-own-level/copy/nonDemon/refused/dead/idle/rawpage/reopen/foreign GREEN; missing-level/type/actor/nonzero-offset catalog controls pass. Required integration partitions169/0 at4eadb217e plus73/0/1existing ignored/site1 at e3cb255c (242 unique server tests); no duplicate broad run. Current-master integrationaff7afe17 native/catalog2/2/43.14s, workspace/all-target check/no Rust warnings and fmt/diff pass. Compiler50+census3, all243 inventory rows exact, same7input hashes and only+60938stat1845; ordinary5565 unchanged. Bounded independent artifact/readability PASS, explicit expectation rows remove the accepted arithmetic-naming issue. No template edits, metadata fallback, acquisition/new eligibility policy, UI/fresh-UDP or remote-CI claim.
+
 ## 2026-10-17 — Literal world-state source boundary
 
 [Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN2bcef1424/4 proves both full-five-spell grants/reopened dates plus false/pin/Gilneas controls. Integrated4bcd410a affected workspace240/0/1ignored+site1, one-hour-later relog dates, workspace/all-target check/no Rust warnings and3repo/native-Godot fmt/diff pass. Independent boundedModeB/readability PASS; missing Mephistroth/Warfront/raid availability unclaimed.
@@ -1932,3 +1936,5 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 - 2026-10-17: Omor30707 strict ignoredGREEN1/1/68.03s at15c8e222; enabled ordinary acceptance only after receipt.
 
 - 2026-10-17: Enabled Omor summon/shield/source-clock controls GREEN3/3/146.31s at2a2c0f28; actual successful/rejected/triggered shield, scheduled hounds/credit retained. Full native encounter and sound10277 remain open.
+
+- 2026-10-17: [Current-victim chase stop](systems/creature-ai.md#current-victim-stop-contract--2026-10-17): real Stockade cached-corner production RED and pinned TC contract; live clear remains open.
