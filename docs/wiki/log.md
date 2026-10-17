@@ -1,3 +1,7 @@
+## 2026-10-16 — Queued effect64 recipient admission
+
+[Spell casting](systems/spell-casting.md#queued-effect64-recipient-admission--2026-10-16): actual470411→188389 queued child and actual Death Touch5 reproduce payment and aura on a present corpse, RED0pass/2fail33.06s. Cost-retaining child now runs maintained normal recipient validation before cost/payment/hit planning; generic full-trigger/reflection helpers unchanged. GREEN/final gates pending; no raw health/mana/clock/budget edits.
+
 ## 2026-10-16 — Queued effect64 payment phases
 
 [Spell casting](systems/spell-casting.md#queued-effect64-payment-phases--2026-10-16): source clears child power/reagent ignore bits while native470411 retains parent resources via Attr6=0x20. Actual Flame Shock chain RED1pass/3fail23.12s exposes both wrong payment phases and vanished-target payment; generic full-trigger cost bypass control passes. Shared payment boundary and distinct cost-retaining child route pass merged126/0/0 in58.89s (358.280s wrapper), four new+122 adjacent; workspace/all-target check92.274s/0warnings, fmt and independent artifact/wiring/readability pass. Prior missing-concentration-protocol compiler log retained as invalid proof; landed protocol5e4af62/server9eb0b706 cohort integrated756e8352. No native rows/stat/mana/clock/RNG edits.

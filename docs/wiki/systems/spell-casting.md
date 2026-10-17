@@ -2,6 +2,14 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Queued effect64 recipient admission — 2026-10-16
+
+Native full-mask child flags do not suppress explicit target admission. `SpellInfo.cpp:2455` refuses a dead recipient unless `IsAllowingDeadTarget` permits it;188389 has Attr2=16384 (not ALLOW_DEAD_TARGET bit1), Targets0 and unit selectors. The queue previously discarded missing entities but accepted a present corpse, then spent30 mana and applied Flame Shock: actual native470411 queues188389, actual Death Touch5 kills the NPC before dispatch. Genuine RED7bb23c5d is0pass/2fail33.06s (160.191s wrapper), including9970 mana versus10000 and an observed corpse aura. No health/mana/stat/clock/native-row/RNG edits.
+
+The cost-retaining child route now uses ordinary `validate_target(..., Sight::Start)` after caster aura checks and before target aura checks/payment. It preserves the captured unit for existing self selectors/metadata, rather than discarding it when validation returns None for a self-only spell. Cost/item checks precede hit planning, then payment/launch. Generic full-trigger/reflection helpers and32/140 timing remain unchanged. GREEN/final gates pending; receipt `data/class-completeness6-2026-10-12/queued-trigger64-target-{goal,source,proof-ledger}.json`.
+
+This proves a dead-but-present recipient and no child payment/effect, distinct from prior entity disappearance. Caster death, unconverted allow-dead metadata, other implicit targets and whole flag parity remain separate; range/LOS/other existing recipient predicates have shared-validator/code proof here, not independent new fixtures.
+
 ## Queued effect64 payment phases — 2026-10-16
 
 `SpellEffects.cpp:692–721` removes IGNORE_POWER_COST/IGNORE_REAGENT_COST from full-mask child casts. Native470411 Flame Shock triggers188389: both have0.300000012% base-mana rows, but parent Attr6=0x20 is DoNotConsumeResources. Native TakePower/TakeReagents skip that bit while CheckPower still runs (`Spell.cpp:5451,5618,6104–6109`). Simply charging the child would double-charge the previously paying parent.

@@ -2825,10 +2825,15 @@ fn execute_costed_trigger(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<(), CastFailure> {
-    let plan = plan_triggered_spell(world, caster, spell, explicit, depth)?;
+    druid_transform::before_cast(world, caster, spell, depth)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    // The queue captured the unit; self-only selectors may validate as None.
+    validate_target(world, caster, spell, explicit, Sight::Start)?;
+    aura_spell_restrictions::check_target(world, explicit, spell)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     let prepared = resources::snapshot(world, caster, spell, &costs);
+    let plan = plan_targets(world, caster, &prepared, explicit, true)?;
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);
     missiles::launch(world, caster, &prepared, plan, depth);
