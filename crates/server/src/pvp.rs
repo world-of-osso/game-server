@@ -112,6 +112,9 @@ pub struct PlayerPvpBracketState {
 
 #[derive(Component, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlayerPvpProgress {
+    /// LIFETIME_HK_TRACKING_STARTS_AT_ZERO: no historical backfill or XP/type35 alias.
+    #[serde(default)]
+    pub lifetime_honorable_kills: u64,
     /// Lifetime XP is not spendable Honor1792; HONOR_LEVEL_XP_CURVE is unresolved.
     #[serde(default)]
     pub lifetime_honor_xp: u64,
@@ -131,6 +134,7 @@ pub struct PlayerPvpProgress {
 impl Default for PlayerPvpProgress {
     fn default() -> Self {
         Self {
+            lifetime_honorable_kills: 0,
             lifetime_honor_xp: 0,
             honor_level: None,
             honor: 0,
@@ -227,6 +231,22 @@ pub(crate) fn sync_progress_currencies_from_wallet(
 #[cfg(test)]
 pub(crate) fn forget_matches_for_reconnect_fixture(world: &mut World) {
     world.insert_resource(PvpServerState::default());
+}
+
+/// Controlled pre-terminal baseline; subsequent channel fixtures must produce the actual end.
+#[cfg(test)]
+pub(crate) fn seed_terminal_reinforcements(
+    world: &mut World,
+    match_id: u64,
+    team: shared::battleground::BgTeam,
+    amount: u32,
+) {
+    let mut state = world.resource_mut::<PvpServerState>();
+    let matched = state.battleground_matches.get_mut(&match_id).unwrap();
+    match team {
+        shared::battleground::BgTeam::A => matched.instance.score_a.reinforcements = amount,
+        shared::battleground::BgTeam::B => matched.instance.score_b.reinforcements = amount,
+    }
 }
 
 #[derive(Debug)]

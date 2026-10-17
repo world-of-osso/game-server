@@ -12,7 +12,7 @@ const ORIGINS: [(f32, f32, f32); 7] = [
     (-5114.78, 1277.42, 555.87),
 ];
 
-fn prepare_sprout_templates(h: &mut Harness) {
+pub(super) fn prepare_sprout_templates(h: &mut Harness) {
     let (_directory, path) = prepare_encounter_database("leymor");
     let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = h.app.world().resource::<WorldData>().expected_stats.clone();
@@ -33,7 +33,7 @@ fn prepare_sprout_templates(h: &mut Harness) {
         .expect("prepared native summon level inputs");
 }
 
-fn install_azure_ground(h: &mut Harness, map: InMap) {
+pub(super) fn install_azure_ground(h: &mut Harness, map: InMap) {
     let wdt = h.app.world().resource::<MapStore>().maps[&2515].wdt_file_data_id;
     h.app.insert_resource(crate::ground::GroundMap::new(
         &crate::ground::ground_data_dir(),
@@ -83,6 +83,40 @@ fn prove_native_summon_prerequisite(h: &mut Harness, leymor: Entity) {
     );
     // Remove only the setup control, before observing the parent cast's new actors.
     h.app.world_mut().despawn(children[0]);
+}
+
+#[test]
+#[ignore = "RED: native sprout JustAppeared374161 self-aura unported"]
+fn azure_leymor_sprouts_native_children_apply_their_authored_spawn_aura() {
+    let (mut h, leymor) = super::azure_combat::prepare_leymor_for_later_clock();
+    h.advance(0.1);
+    let map = *h.app.world().get::<InMap>(leymor).unwrap();
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(
+        children.len(),
+        14,
+        "ordinary native children before aura RED"
+    );
+    for &child in &children {
+        assert_eq!(h.app.world().get::<InMap>(child), Some(&map));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::spell_cast::summon::SummonedCreature>(child)
+                .unwrap()
+                .owner,
+            leymor,
+            "actual native summoner prerequisite"
+        );
+    }
+    let missing: Vec<_> = children
+        .into_iter()
+        .filter(|&child| !h.has_aura(child, 374161))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "native374161 self-aura missing on {missing:?}"
+    );
 }
 
 #[test]

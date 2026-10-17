@@ -50,6 +50,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             150 | 168 => self.add_aura_effect(caster, target, effect),
             107 => self.fade_swap(caster, effect),
+            67 => Ok(self.equalize_health(caster, target, effect)),
             68 => self.percent_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
@@ -76,7 +77,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 damage.params[2] = 0;
                 self.damage_effect(caster, target, ability, &damage)
             }
-            76 => self.charged_damage(caster, target, ability, effect),
+            75 | 76 | 77 => self.charged_damage(caster, target, ability, effect),
             370 => self.damage_with_species_bonus(caster, target, ability, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
@@ -352,11 +353,16 @@ impl<R: BattleRng> Runtime<'_, R> {
         ability: u32,
         effect: &Effect,
     ) -> Result<bool, String> {
+        let (wearer, duration) = if effect.property == 77 {
+            (target, effect.params[2])
+        } else {
+            (caster, -1)
+        };
         let charge = self
             .battle
             .auras
             .iter()
-            .find(|a| a.target == caster && a.ability == effect.aura)
+            .find(|a| a.target == wearer && a.ability == effect.aura)
             .map(|a| a.serial);
         if let Some(serial) = charge {
             let hit = self.damage_effect(caster, target, ability, effect)?;
@@ -365,8 +371,23 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         let mut charge = effect.clone();
         charge.property = 26;
-        charge.params[2] = -1;
-        self.add_aura_effect(caster, target, &charge)
+        charge.params[2] = duration;
+        self.add_aura_to_wearer(caster, wearer, &charge)
+    }
+    fn equalize_health(&mut self, caster: PetRef, target: PetRef, effect: &Effect) -> bool {
+        let mut accuracy = effect.clone();
+        accuracy.params[1] = effect.params[0];
+        if !self.hit(caster, target, &accuracy) {
+            return false;
+        }
+        let combined_health =
+            i64::from(self.battle.pet(caster).health) + i64::from(self.battle.pet(target).health);
+        let shared_health = (combined_health / 2) as i32;
+        for recipient in [caster, target] {
+            let pet = self.battle.pet_mut(recipient);
+            pet.health = shared_health.min(pet.stats.health);
+        }
+        true
     }
     fn heal_other_ally(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
         let p = effect.params;
@@ -450,7 +471,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         {
             return Ok(false);
         }
-        let bypass = effect.params[4] != 0 || matches!(ability, 282 | 2429);
+        let bypass = effect.params[4] != 0 || matches!(ability, 282 | 1025 | 2429);
         self.battle.pet_mut(caster).health = 0;
         if bypass {
             self.battle.pet_mut(caster).resurrection_used = true;

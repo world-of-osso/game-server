@@ -85,3 +85,13 @@ fn toyfx78_greatfather_hearthstone_learned_use_returns_to_bind_and_spends_shared
 fn toyfx79_headless_hearthstone_learned_use_returns_to_bind_and_spends_shared_charge() {
     assert_toy_hearthstone_bind_and_shared_charge(163045, 278559, 162973);
 }
+
+#[test]
+fn toyfx116_lunar_elder_hearthstone_learned_use_returns_to_bind_and_blocks_peddlefeet() {
+    assert_toy_hearthstone_bind_and_shared_charge(165669, 285362, 165670);
+}
+
+#[test]
+fn toyfx117_peddlefeet_hearthstone_learned_use_returns_to_bind_and_blocks_lunar_elder() {
+    assert_toy_hearthstone_bind_and_shared_charge(165670, 285424, 165669);
+}

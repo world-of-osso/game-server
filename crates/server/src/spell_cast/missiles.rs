@@ -26,10 +26,9 @@ use crate::spell_info::SpellInfo;
 const SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC: u32 = 0x0000_0010;
 /// `Spell::AddUnitTarget`: distances under 5 yd count as 5 ("@todo this is a hack").
 const MIN_MISSILE_DISTANCE: f32 = 5.0;
-/// The destination targets `targets::selector` handles (`TARGET_DEST_*`: caster 18,
-/// target enemy 53, any 63, back 65, ally 132); `TARGET_SRC_CASTER` 22 is a source, not a
-/// destination (`SpellCastTargets::HasDst`).
-const DEST_TARGETS: [u32; 5] = [18, 53, 63, 65, 132];
+/// Audited destination targets: caster18/front47, enemy53/any63/back65/ally132.
+/// `TARGET_SRC_CASTER`22 is a source, not `SpellCastTargets::HasDst`.
+const DEST_TARGETS: &[u32] = &[18, 47, 53, 63, 65, 132];
 
 /// `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` (SharedDefines.h:602): "Hits area targets over
 /// time instead of all at once".
@@ -97,7 +96,7 @@ pub(super) fn launch(
             return;
         }
     };
-    let mut delays = hit_delays(world, caster, spell, &plan);
+    let (mut delays, destination_delay) = hit_delays(world, caster, spell, &plan);
     if let Some((target, duration_ms)) = charge {
         for (unit, delay) in &mut delays {
             if *unit == target {
@@ -111,7 +110,7 @@ pub(super) fn launch(
     let launched = now(world);
     let (plan, reflected) = split_reflected(plan, &reflections, caster);
     let mut snapshot = None;
-    for (delay, landing) in landings(world, plan, reflected, &delays) {
+    for (delay, landing) in landings(world, plan, reflected, &delays, destination_delay) {
         if delay == 0 {
             land_now(world, caster, spell, depth, landing);
             continue;
@@ -268,6 +267,7 @@ fn landings(
     plan: TargetPlan,
     reflected: Vec<(Entity, TargetPlan)>,
     delays: &[(Entity, u64)],
+    destination_delay: Option<u64>,
 ) -> Vec<(u64, Landing)> {
     let delay_of = |unit: Entity| {
         delays
@@ -279,10 +279,12 @@ fn landings(
     let mut moments: Vec<u64> = units.iter().map(|&unit| delay_of(unit)).collect();
     moments.sort_unstable();
     moments.dedup();
-    let unitless_moment = moments
-        .first()
-        .copied()
-        .unwrap_or_else(|| delays.iter().map(|(_, delay)| *delay).min().unwrap_or(0));
+    let unitless_moment = destination_delay.unwrap_or_else(|| {
+        moments
+            .first()
+            .copied()
+            .unwrap_or_else(|| delays.iter().map(|(_, delay)| *delay).min().unwrap_or(0))
+    });
     if moments.is_empty() && plan.iter().any(|planned| planned.units.is_empty()) {
         moments.push(unitless_moment);
     }
@@ -335,6 +337,7 @@ fn landings(
     landings
 }
 
+/// Unit hit delays plus the independent destination delay, retained even without units.
 /// Each unit target's hit delay in ms (`Spell::AddUnitTarget`, Spell.cpp:2486-2518),
 /// in plan order. Without travel time every delay is 0. A destination spell is one
 /// missile over the caster's exact distance (`CalculateDelayMomentForDst`) for every
@@ -347,7 +350,7 @@ fn hit_delays(
     caster: Entity,
     spell: &SpellInfo,
     plan: &TargetPlan,
-) -> Vec<(Entity, u64)> {
+) -> (Vec<(Entity, u64)>, Option<u64>) {
     let units = super::hit_units(plan);
     let misc = spell.misc.as_ref();
     let speed = misc.map_or(0.0, |misc| misc.speed);
@@ -355,7 +358,7 @@ fn hit_delays(
     let min_duration = misc.map_or(0.0, |misc| misc.min_duration);
     let speed_is_delay = attributes(spell, 9) & SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC != 0;
     if is_channeled(spell) || (speed <= 0.0 && launch_delay <= 0.0 && !speed_is_delay) {
-        return units.into_iter().map(|unit| (unit, 0)).collect();
+        return (units.into_iter().map(|unit| (unit, 0)).collect(), None);
     }
     let travel = |distance: f32| -> f32 {
         if speed_is_delay {
@@ -380,7 +383,10 @@ fn hit_delays(
     if let Some(dest) = dest {
         let distance = origin.map_or(0.0, |origin| origin.distance(dest.position));
         let delay = to_ms(launch_delay + travel(distance));
-        return units.into_iter().map(|unit| (unit, delay)).collect();
+        return (
+            units.into_iter().map(|unit| (unit, delay)).collect(),
+            Some(delay),
+        );
     }
     let bouncy = attributes(spell, 4) & SPELL_ATTR4_BOUNCY_CHAIN_MISSILES != 0;
     let effect_mask = |unit: Entity| -> u64 {
@@ -414,7 +420,7 @@ fn hit_delays(
         let flight = launch + travel(distance.max(MIN_MISSILE_DISTANCE));
         delays.push((unit, start + to_ms(flight)));
     }
-    delays
+    (delays, None)
 }
 
 fn position(world: &World, unit: Entity) -> Option<Vec3> {

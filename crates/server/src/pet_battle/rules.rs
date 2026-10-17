@@ -65,7 +65,10 @@ pub fn supported_property(property: u32) -> bool {
             | 44
             | 59
             | 66
+            | 67
+            | 75
             | 76
+            | 77
             | 96
             | 100
             | 131
@@ -96,6 +99,7 @@ pub(super) fn damages_enemy_team(ability: u32) -> bool {
             | 404
             | 419
             | 923
+            | 1025
             | 1031
             | 1035
             | 1531
@@ -133,7 +137,7 @@ fn validate_ability_graph(
     if let Some(states) = catalog.ability_states.get(&ability) {
         for state in states.keys() {
             let name = &catalog.states[state];
-            let known_object = matches!(ability, 189 | 333) || is_two_way_wall(ability);
+            let known_object = matches!(ability, 189 | 294 | 333) || is_two_way_wall(ability);
             if name == "Mechanic_IsObject" && !known_object {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
@@ -217,7 +221,7 @@ fn validate_ability_graph(
                     "ability {ability}: undetermined team target routing"
                 ));
             }
-            if effect.property == 135 && !matches!(ability, 282 | 663 | 2209) {
+            if effect.property == 135 && !matches!(ability, 282 | 663 | 1025 | 2209) {
                 return Err(format!(
                     "ability {ability}: undetermined kill target/passive semantics"
                 ));
@@ -244,7 +248,9 @@ fn validate_ability_graph(
                     | 62
                     | 66
                     | 68
+                    | 75
                     | 76
+                    | 77
                     | 96
                     | 141
                     | 169
@@ -307,6 +313,27 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && effect.order == 2
                 && effect.aura == 0
                 && p.iter().all(|v| *v == 0)
+        }
+        // Life Exchange has an Accuracy field, not damage/healing Points.
+        67 => {
+            catalog.turns[&effect.turn].ability == 277
+                && effect.order == 1
+                && effect.aura == 0
+                && p == [100, 0, 0, 0, 0, 0]
+        }
+        // Lock-On marks the enemy for one round before its second-use blast.
+        77 => {
+            catalog.turns[&effect.turn].ability == 301
+                && effect.order == 1
+                && effect.aura == 300
+                && p == [45, 100, 1, 0, 0, 0]
+        }
+        // Launch Rocket's first use sets up294; its second use launches the rocket.
+        75 => {
+            catalog.turns[&effect.turn].ability == 293
+                && effect.order == 1
+                && effect.aura == 294
+                && p == [45, 100, 0, 0, 0, 0]
         }
         // Fade explicitly swaps its user randomly after removing the dodge aura.
         // Other107 descriptions do not establish random versus selected routing.
@@ -405,6 +432,9 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
                 && p[4] >= 0
                 && p[5] == 0
+        }
+        135 if catalog.turns[&effect.turn].ability == 1025 => {
+            effect.order == 4 && effect.aura == 0 && p == [200, 100, 0, 0, 0, 0]
         }
         135 => {
             matches!(p[1], 0 | 100) && p[2] == 0 && p[3] == 0 && matches!(p[4], 0 | 1) && p[5] == 0

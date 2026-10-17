@@ -8,8 +8,8 @@ use lightyear::connection::host::HostClient;
 use lightyear::prelude::{AppMessageExt, Connected, Message, PeerId, RemoteId};
 use shared::components::{CharacterAppearance, EquipmentAppearance};
 use shared::protocol::{
-    AbandonQuest, AchievementCatalogPage, AchievementStateUpdate, DestroyItem, EquipItem,
-    EquipmentSnapshot, InventoryDelta, InventoryError, InventorySnapshot, LogXpGain,
+    AbandonQuest, AchievementCatalogPage, AchievementDelta, AchievementStateUpdate, DestroyItem,
+    EquipItem, EquipmentSnapshot, InventoryDelta, InventoryError, InventorySnapshot, LogXpGain,
     PlayerXpUpdate, QueryAchievementCatalog, QuestFailed, QuestFailedReason, QuestGiverAcceptQuest,
     QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello, QuestGiverOfferReward,
     QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails, QuestGiverQuestList,
@@ -331,6 +331,7 @@ fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_dail
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
     let mut app = setup_app_with(|app| {
         app.register_message::<AchievementStateUpdate>();
+        app.register_message::<AchievementDelta>();
         let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
         app.insert_resource(load_achievement_catalog(&conn).unwrap());
         app.add_plugins(AchievementPlugin);
@@ -341,6 +342,7 @@ fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_dail
         .entity_mut(client.player)
         .insert(PlayerAchievementState::default());
     add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    add_message_pair::<AchievementDelta>(&mut app, client.connection);
     enter_world(&mut app, &client);
     let giver = spawn_npc(&mut app, 37675, 0.0);
     accept(&mut app, &client, giver, 24629);
@@ -380,6 +382,7 @@ fn achievements_criteria_quest_money_zone_count_and_abandon_credit_only_committe
     use shared::protocol::AchievementStateUpdate;
     let mut app = setup_app_with(|app| {
         app.register_message::<AchievementStateUpdate>();
+        app.register_message::<AchievementDelta>();
         let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
         app.insert_resource(load_achievement_catalog(&conn).unwrap());
         app.add_plugins(AchievementPlugin);
@@ -390,6 +393,7 @@ fn achievements_criteria_quest_money_zone_count_and_abandon_credit_only_committe
         .entity_mut(client.player)
         .insert(PlayerAchievementState::default());
     add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    add_message_pair::<AchievementDelta>(&mut app, client.connection);
     enter_world(&mut app, &client);
     let progress = |app: &App, criterion: u32| {
         persistence::load_achievements(db(app), client.character_id)
@@ -459,6 +463,7 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
     use shared::protocol::AchievementStateUpdate;
     let mut app = setup_app_with(|app| {
         app.register_message::<AchievementStateUpdate>();
+        app.register_message::<AchievementDelta>();
         let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
         app.insert_resource(load_achievement_catalog(&conn).unwrap());
         app.add_plugins(AchievementPlugin);
@@ -473,6 +478,7 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
         .entity_mut(client.player)
         .insert(PlayerAchievementState::default());
     add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    add_message_pair::<AchievementDelta>(&mut app, client.connection);
     enter_world(&mut app, &client);
     received::<AchievementStateUpdate>(&mut app, &client);
     // Authored Warlock prerequisite and separate giver/ender for Dreadsteed of Xoroth.
@@ -569,6 +575,7 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
     add_message_pair::<SpendCurrency>(&mut app, client.connection);
     add_message_pair::<CurrencyStateUpdate>(&mut app, client.connection);
     add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    add_message_pair::<AchievementDelta>(&mut app, client.connection);
     add_message_pair::<QueryAchievementCatalog>(&mut app, client.connection);
     add_message_pair::<AchievementCatalogPage>(&mut app, client.connection);
     let mut wallet = CurrencyWallet::default();
@@ -665,6 +672,7 @@ fn for_currency_messages(app: &mut App) {
     register::<shared::protocol::SpendCurrency>(app);
     register::<shared::protocol::CurrencyStateUpdate>(app);
     register::<AchievementStateUpdate>(app);
+    register::<AchievementDelta>(app);
     register::<QueryAchievementCatalog>(app);
     register::<AchievementCatalogPage>(app);
 }
