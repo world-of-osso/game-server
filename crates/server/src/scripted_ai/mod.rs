@@ -667,20 +667,16 @@ impl Ctx<'_> {
             .world
             .get::<shared::components::Npc>(self.me)
             .map_or_else(String::new, |npc| npc.name.clone());
-        match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
+        let result =
+            crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered);
+        #[cfg(test)]
+        tests::cast_admission::record(self.world, self.me, spell_id, &result);
+        match result {
             Ok(()) => {
                 info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
                 true
             }
             Err(failure) => {
-                #[cfg(test)]
-                if spell_id == 18670 {
-                    eprintln!(
-                        "LANDSLIDE admission at sim={} real={}: {failure:?}",
-                        self.world.resource::<Time>().elapsed_secs_f64(),
-                        self.world.resource::<Time<Real>>().elapsed_secs_f64()
-                    );
-                }
                 debug!("{name} ({}) cast {spell_id} failed: {failure:?}", self.me);
                 failure == crate::spell_cast::CastFailure::InProgress
             }
