@@ -450,7 +450,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         {
             return Ok(false);
         }
-        let bypass = effect.params[4] != 0 || matches!(ability, 282 | 2429);
+        let bypass = effect.params[4] != 0 || matches!(ability, 282 | 1025 | 2429);
         self.battle.pet_mut(caster).health = 0;
         if bypass {
             self.battle.pet_mut(caster).resurrection_used = true;
