@@ -1537,7 +1537,7 @@ fn load_criteria_facts(
             110 => exists("content_quest_template")?.then_some(CriteriaFact::CompletedQuest(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
-            21 if asset == 0 => Some(CriteriaFact::PlayerLevelAtLeastKilledCreature),
+            21 => (asset == 0).then_some(CriteriaFact::PlayerLevelAtLeastKilledCreature),
             19 => exists("content_item")?
                 .then(|| CriteriaFact::EventItems([asset].into_iter().collect())),
             17 => exists("area_table")?
