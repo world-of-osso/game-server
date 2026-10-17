@@ -2,6 +2,30 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Necrolord and retained cooking/quill boundaries (2026-10-17)
+
+[Source225–229 matrix](../../toy-effects14-coverage.md#source225229-pending-necrolord-acceptance-and-retained-cookingquill-scope-2026-10-17) adds225 test/spec e2d1b991 for the actual learned saved-bind/shared-charge path; ten variants and package check remain pending.226 linked cooking/versatility and227 quill retain earlier exact CPU scope, not new native certificates.228 Venthyr pledge and229 Necrolord/Maldraxxus reduced-recovery acceptance remain gaps despite existing229 runtime model94055. No runtime/data admission or invented covenant rule.
+
+## Source conditional-fall and reagent/random-action boundaries (2026-10-17)
+
+[Source220–224 matrix](../../toy-effects14-coverage.md#source220224-conditional-fall-and-reagentrandom-action-boundaries-2026-10-17) retains black-parasol negative periodic-tick/refusal proof, not actual falling acceptance. Purple/green readiness consumption, Plume's combined slow-fall/turn/area contract and Necronom-i-nom's one-vellum/random-effect action remain gaps. No unconditional trigger, invented random pool, new runtime/data admission or repeated unchanged gate.
+
+## Source stack/bobber/area/vehicle boundaries and vessel proof (2026-10-17)
+
+[Source215–219 matrix](../../toy-effects14-coverage.md#source215219-retained-vessel-proof-and-stackbobberareavehicle-gaps-2026-10-17) keeps215's stack-conditioned shoulders/proc,217's actual bobber override,218's nearby forced-cry area action and219's mixed vehicle/motion/party-devouring graph open. Existing166086/display100400 content is not a missing-template fix.216 retains Batch3's exact learning/use/aura/cancel CPU scope without a fresh per-toy native certificate. No new admission or repeated unchanged gate; Tea Set149865 remains lead-required.
+
+## Source visual/motion/return/class/covenant boundaries (2026-10-17)
+
+[Source210–214 matrix](../../toy-effects14-coverage.md#source210214-visualmotionreturnclasscovenant-boundaries-2026-10-17) retains multi-visual eyes, water-walk/hover, player throw-return, class-armor payload and advertised Night Fae eligibility gaps. Shared2309/homebind metadata or ItemEffect condition0 is not complete Night Fae proof; no invented covenant rule or borrowed earlier hearthstone certificate. No runtime/data admission or new native result.
+
+## Source area/vision/companion boundaries and Aqir proof (2026-10-17)
+
+[Source205–209 matrix](../../toy-effects14-coverage.md#source205209-areavisioncompanion-boundaries-and-retained-aqir-proof-2026-10-17) distinguishes an area-trigger totem, void-perception payload, Control1/Title2 scale2 apple and minipet-target leash from generic scenery/caster cosmetics. Aqir retains earlier actual missile/selected-target/15s-aura CPU proof without new native certification. No runtime/data admission or repeated gate.
+
+## Mogu and companion/equipment/game boundaries (2026-10-17)
+
+[Source200–204 matrix](../../toy-effects14-coverage.md#source200204-mogu-source-acceptance-and-companionequipmentgame-boundaries-2026-10-17) records201's actual exact-source four-model transform/lifecycle/recovery acceptance: two affected tests/seven IDs, native check and fmt/readability pass. Companion possession, headgear procedural, shaving action and skull-game state remain gaps; existing half-scale shaving-kit runtime content is not that interaction. No runtime/data admission, generic substitute or new native certificate.
+
 ## Source motion/faction/appearance/action boundaries (2026-10-17)
 
 [Source195–199 matrix](../../toy-effects14-coverage.md#source195199-motionfactionappearanceaction-boundaries-2026-10-17) retains self-launch/safe-fall, language/faction/self-sacrifice, soul appearance, cocoon action and nonzero shadow-disguise payload gaps. Scroll314988 is the actual TriggerType0 on-use; auxiliary314407/TriggerType7 must not replace it. No cosmetic/actor/transform substitutes, runtime/data admission or new native proof.
