@@ -29,6 +29,8 @@ fn prepare_sprout_templates(h: &mut Harness) {
     let mut data = h.app.world_mut().resource_mut::<WorldData>();
     data.templates.extend(templates);
     data.difficulty_templates.extend(difficulties);
+    data.summon_levels = crate::world_data::summon_levels::SummonLevels::load(&connection)
+        .expect("prepared native summon level inputs");
 }
 
 fn install_azure_ground(h: &mut Harness, map: InMap) {
@@ -84,7 +86,6 @@ fn prove_native_summon_prerequisite(h: &mut Harness, leymor: Entity) {
 }
 
 #[test]
-#[ignore = "RED: once-effect Ley-Line Sprouts destination children not implemented"]
 fn azure_leymor_sprouts_parent_summons_two_native_children_per_authored_origin() {
     let (mut h, leymor) = super::azure_combat::wake_leymor();
     let map = *h.app.world().get::<InMap>(leymor).unwrap();
@@ -94,11 +95,20 @@ fn azure_leymor_sprouts_parent_summons_two_native_children_per_authored_origin()
         h.creatures_of(SPROUT).is_empty(),
         "producer inserts no placements"
     );
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(leymor).insert(visibility);
     prove_native_summon_prerequisite(&mut h, leymor);
-    crate::spell_cast::creature_cast(h.app.world_mut(), leymor, 374364, Some(leymor), true)
-        .expect("native once-effect parent cast");
-    // Native missile18yd/s, minimum1.5s; authored groups are within40yd of Leymor.
+    // Observe the ordinary3s cast, not a manual parent plus the natural combat clock.
+    h.engage(leymor);
     h.advance(6.0);
+    let parents = h
+        .inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == leymor.to_bits() && go.spell_id == 374364)
+        .count();
+    assert_eq!(parents, 1, "one completed ordinary native parent cast");
     let children = h.creatures_of(SPROUT);
     assert_eq!(
         children.len(),
