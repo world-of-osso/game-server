@@ -32,7 +32,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(false);
         }
         match effect.property {
-            22 | 116 | 157 | 158 | 159 | 177 => Ok(true),
+            22 | 116 | 157 | 158 | 159 | 177 | 194 => Ok(true),
             117 => {
                 let lock = &mut self.battle.pet_mut(caster).lockouts[(p[0] - 1) as usize];
                 *lock = (*lock).max(p[1] as u32);
@@ -108,6 +108,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.heal_effect(caster, &heal)
             }
             100 => self.heal_other_ally(caster, effect),
+            223 => self.apply_refuge_shield(caster, effect),
             131 => {
                 let first = self
                     .events
@@ -934,6 +935,17 @@ impl<R: BattleRng> Runtime<'_, R> {
         self.apply_or_refresh_aura(caster, caster, effect, 1, true)?;
         Ok(true)
     }
+    fn apply_refuge_shield(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let wearer = other_team_slot(caster, effect.order);
+        if self.battle.pet(wearer).family + 1 != effect.params[3] as usize {
+            return Ok(false);
+        }
+        let mut shield = effect.clone();
+        shield.property = 26;
+        // 223's family field is not 26's first-round countdown flag.
+        shield.params[3] = 0;
+        self.add_aura_to_wearer(caster, wearer, &shield)
+    }
     fn add_aura_effect(
         &mut self,
         caster: PetRef,
@@ -942,6 +954,14 @@ impl<R: BattleRng> Runtime<'_, R> {
     ) -> Result<bool, String> {
         let positive = matches!(effect.property, 26 | 28 | 63 | 150);
         let wearer = if positive { caster } else { target };
+        self.add_aura_to_wearer(caster, wearer, effect)
+    }
+    fn add_aura_to_wearer(
+        &mut self,
+        caster: PetRef,
+        wearer: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
         // Bend Time1905 uses Accuracy0 for its unconditional next-swap team trigger.
         let unconditional = effect.aura == 1904 && effect.params[1] == 0;
         if self.battle.pet(wearer).health <= 0

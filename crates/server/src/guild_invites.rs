@@ -13,12 +13,147 @@ pub(crate) fn send_pending_invites(
     >,
 ) {
     for (world, mut sender) in &mut connections {
-        if let Some(invite) = persistence::load_pending_guild_invite(&db.db, world.character_id) {
-            sender.send::<AuthChannel>(GuildInvitation {
-                guild_id: invite.guild_id,
-                guild_name: invite.guild_name,
-                inviter_name: invite.inviter_name,
+        if let Some(invite) = load_pending_invitation(&db.db, world.character_id) {
+            sender.send::<AuthChannel>(invite);
+        }
+    }
+}
+
+/// Guild.cpp1727–1738 sends the inviting guild's current registered emblem.
+/// Pending invite storage remains unchanged; resolve its real design at delivery.
+pub(crate) fn load_pending_invitation(
+    db: &redb::Database,
+    character: u64,
+) -> Option<GuildInvitation> {
+    let invite = persistence::load_pending_guild_invite(db, character)?;
+    Some(GuildInvitation {
+        guild_id: invite.guild_id,
+        guild_name: invite.guild_name,
+        inviter_name: invite.inviter_name,
+        tabard: persistence::guild_tabards::load_design(db, invite.guild_id),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared::{components::GuildMembership, guild_creation::GuildTabardDesign, protocol::*};
+
+    fn install_delivery(h: &mut crate::bank_test_harness::Harness) {
+        // GuildPlugin already installs persisted delivery in the real harness.
+        h.app
+            .add_systems(Update, crate::messaging::process_guild_invites);
+    }
+
+    /// Private native-proof prerequisite, not an acceptance test or fabricated invitation.
+    #[test]
+    #[ignore = "requires an explicitly selected closed private realm and installed DB2 catalog"]
+    fn guild_invitation_private_register_source_design() {
+        let path =
+            std::env::var("GUILD_INVITATION_PRIVATE_DB").expect("explicit private realm path");
+        let db2 = std::env::var("GUILD_INVITATION_DB2_ROOT").expect("installed DB2 catalog root");
+        let db = redb::Database::open(path).expect("open existing private realm");
+        let owner = persistence::find_character_id_by_name(&db, "Gcperkslead").unwrap();
+        let guest = persistence::find_character_id_by_name(&db, "Gcperkspeer").unwrap();
+        let guild = persistence::load_character_guild(&db, owner).unwrap();
+        assert_eq!(guild.guild_name, "Guild Perks");
+        assert!(persistence::load_pending_guild_invite(&db, guest).is_none());
+        assert!(persistence::guild_tabards::load_design(&db, guild.guild_id).is_none());
+        let design = GuildTabardDesign {
+            icon: 1,
+            icon_color: 2,
+            border: 3,
+            border_color: 4,
+            background_color: 5,
+        };
+        shared::guild_tabards::GuildTabardCatalog::load(std::path::Path::new(&db2))
+            .unwrap()
+            .validate(design)
+            .unwrap();
+        let mut record = persistence::inventory_store::load_inventory_record(&db, owner).unwrap();
+        let original_gold = record.inventory.gold;
+        // Finance one authored fee in this private fixture, not claimed earned gold.
+        record.inventory.gold += u64::from(shared::guild_creation::TABARD_COST);
+        let before = record.inventory.gold;
+        persistence::inventory_store::save_inventory_record(&db, owner, &record);
+        persistence::guild_tabards::register(&db, owner, design).unwrap();
+        let after = persistence::load_inventory(&db, owner).gold;
+        assert_eq!(after, original_gold);
+        assert_eq!(
+            before - after,
+            u64::from(shared::guild_creation::TABARD_COST)
+        );
+        assert_eq!(
+            persistence::guild_tabards::load_design(&db, guild.guild_id),
+            Some(design)
+        );
+        println!(
+            "PRIVATE_GUILD_TABARD_REGISTERED guild={} before={} after={} design={}",
+            guild.guild_id,
+            before,
+            after,
+            serde_json::to_string(&design).unwrap()
+        );
+    }
+
+    #[test]
+    fn guild_invitation_delivers_registered_optional_tabard_immediately_and_after_reopen() {
+        for registered in [false, true] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("invitations.redb");
+            let mut h = crate::bank_test_harness::harness_at(&path, "Tabardmaster").unwrap();
+            install_delivery(&mut h);
+            let owner = h.character_id;
+            let guest = h.create_alt("Tabardguest");
+            persistence::set_character_guild_by_id(h.db(), owner, 7, "Raid Team").unwrap();
+            persistence::banks::save_guild_member_rank(h.db(), owner, 0);
+            h.app
+                .world_mut()
+                .entity_mut(h.player)
+                .insert(GuildMembership {
+                    guild_id: 7,
+                    guild_name: "Raid Team".into(),
+                });
+            let design = GuildTabardDesign {
+                icon: 1,
+                icon_color: 2,
+                border: 3,
+                border_color: 4,
+                background_color: 5,
+            };
+            if registered {
+                h.set_gold(u64::from(shared::guild_creation::TABARD_COST));
+                persistence::guild_tabards::register(h.db(), owner, design).unwrap();
+                assert_eq!(h.gold(), 0);
+            }
+            let expected = serde_json::to_value(registered.then_some(design)).unwrap();
+            let connection = h.connect_character(guest, "Tabardguest");
+            h.send::<_, AuthChannel>(GuildInviteRequest {
+                target_character_name: "Tabardguest".into(),
             });
+            assert!(h.take::<GuildInviteResponse>()[0].success);
+            let immediate = h.take_for::<GuildInvitation>(connection);
+            assert_eq!(immediate.len(), 1);
+            assert_eq!(
+                serde_json::to_value(&immediate[0]).unwrap()["tabard"],
+                expected
+            );
+            assert_eq!(immediate[0].guild_name, "Raid Team");
+            assert_eq!(immediate[0].inviter_name, "Tabardmaster");
+            drop(h);
+            let mut reopened = crate::bank_test_harness::harness_at(&path, "Tabardreader").unwrap();
+            install_delivery(&mut reopened);
+            let connection = reopened.connect_character(guest, "Tabardguest");
+            for _ in 0..3 {
+                reopened.app.update();
+            }
+            let pending = reopened.take_for::<GuildInvitation>(connection);
+            assert_eq!(pending.len(), 1);
+            assert_eq!(pending[0], immediate[0]);
+            assert_eq!(
+                serde_json::to_value(&pending[0]).unwrap()["tabard"],
+                expected
+            );
         }
     }
 }

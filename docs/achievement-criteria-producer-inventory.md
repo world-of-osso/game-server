@@ -6,7 +6,7 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5527 ordinary (3504 account/2023 character),1841 statistics; 105 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5530 ordinary (3507 account/2023 character),1841 statistics; 107 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -154,8 +154,8 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 49 | EquipItemInSlot | 0/433 | 0/113 | 0 | Source/data mismatch: TC Player.cpp11638/11766 sends slot as miscValue1 and itemID as miscValue2, but ModifierTree3/14/15 read miscValue1 as itemID. Local rows use those qualifiers. No invented argument remap or dropped conditions. |
 | 50 | RollNeed | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 51 | RollGreed | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
-| 52 | DeliverKillingBlowToClass | 0/13 | 0/13 | 0 | World RewardHonor eligibility now exists (type35). Eligible-recipient victim-class event52 is not wired; final blow56 cannot substitute. Remains disabled pending its own native RED. |
-| 53 | DeliverKillingBlowToRace | 0/149 | 0/148 | 0 | World RewardHonor eligibility now exists (type35). Eligible-recipient victim-race event53 is not wired; final blow56 cannot substitute. Remains disabled pending its own native RED. |
+| 52 | DeliverKillingBlowToClass | 13/13 | 13/13 | 0 | Native world eligible-recipient victim Player.class; positive exact1..13 assets and all companions/accountSUM. Full thirteen-class245 grant, nonfinal nearby group recipient, zeroXP and reopened original date proven. No new BG/arena policy or character-creation certification. |
+| 53 | DeliverKillingBlowToRace | 20/149 | 20/148 | 0 | Native world eligible-recipient victim Player.race, not final-blow-only or scoreboard identity; exact positive authored playable race, every companion retained, accountSUM. Both full ten-race246/1005 grants and living-near group receipt/reopened original dates proven; no new BG/arena policy. |
 | 54 | DoEmote | 235/400 | 220/254 | 15 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 55 | HealingDone | 1/16 | 0/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 56 | DeliveredKillingBlow | 42/80 | 27/63 | 15 | Native: authenticated in-world killer on actual lethal health commits, plus genuine HunterPet owner credit (TC Unit::Kill); dead replay/self raw KillUnit idle. See spec. |

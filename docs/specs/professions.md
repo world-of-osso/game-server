@@ -25,3 +25,7 @@ Private acceptance fixture: ignored `profession::modern_crafting_fixture` tests 
 ## Out of scope
 
 Gathering nodes, Dragonflight+ quality/concentration/crafting orders/specializations, recrafting, unlearning, First Aid, reputation price discounts, gossip-menu-specific trainers.
+
+### Concentration metadata boundary
+
+Learned skill-line owner queries expose the authored ProfessionExpansion→CurrencyTypes concentration ID, icon, cap, recharge amount and millisecond cycle. Existing wallet amounts are read-only; absent entries are unknown. `CRAFTING_CONCENTRATION_ORIGIN` blocks initialization and live recharge: no full/zero grant or login/epoch origin is fabricated. Unsupported crafting costs/outcomes remain unavailable.

@@ -174,7 +174,7 @@ pub struct CreatureAddon {
     pub emote_state: u32,
 }
 
-/// `creature_formations` row for a member other than its leader.
+/// `creature_formations` row, including a leader's authored self-membership.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormationInfo {
     pub leader_guid: u32,
@@ -202,7 +202,7 @@ pub struct WorldData {
     pub addons: HashMap<u32, CreatureAddon>,
     /// `creature_template_addon` keyed by template entry.
     pub template_addons: HashMap<u32, CreatureAddon>,
-    /// `creature_formations` keyed by member guid (leaders' own rows omitted).
+    /// `creature_formations` keyed by member guid, including authored leader rows.
     pub formations: HashMap<u32, FormationInfo>,
     /// `content_creature_equip_template` keyed by entry, then ID (ascending, as
     /// ObjectMgr's `_equipmentInfoStore`).
@@ -988,7 +988,7 @@ fn load_formations(conn: &Connection) -> HashMap<u32, FormationInfo> {
             // (CreatureGroup::AddMember), so groups without one never move.
             "SELECT leaderGUID, memberGUID, dist, angle, groupAI
              FROM content_creature_formations member
-             WHERE leaderGUID <> memberGUID AND EXISTS (
+             WHERE EXISTS (
                  SELECT 1 FROM content_creature_formations leader
                  WHERE leader.memberGUID = member.leaderGUID
                    AND leader.leaderGUID = member.leaderGUID
@@ -1044,6 +1044,10 @@ fn startup_load_world_data(mut commands: Commands) {
     commands.insert_resource(
         crate::profession::specializations::load_specialization_data(&conn)
             .expect("Failed to load profession specialization references; run scripts/profession_data.py with explicit --db and --source-dir"),
+    );
+    commands.insert_resource(
+        shared::concentration::ConcentrationCatalog::load(Path::new("data/db2/active"))
+            .expect("Failed to load local Retail concentration currency CSVs"),
     );
     let orders = crate::crafting_orders::load_catalog(&conn)
         .expect("Failed to load CraftingOrder reference catalog");

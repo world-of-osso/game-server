@@ -283,7 +283,17 @@ GARGOLMAR_SOURCES = {
     "Outland/HellfireCitadel/HellfireRamparts/instance_hellfire_ramparts.cpp": "7f907d01ba05818b1dd4f2e945353433569f56a79773722f5d05a622009af49e",
     "Outland/HellfireCitadel/HellfireRamparts/boss_watchkeeper_gargolmar.cpp": "bfec0a2e7e3fb7a125047d5c7a7acafa85a6d89a78337219e0d02679284b5df1",
 }
+OMOR_PRIMARY = dict(
+    map_id=543, entry=17308, encounter_id=1891, bit=0,
+    script="boss_omor_the_unscarred", journal_id=528, actor_id=1105, display_id=18237,
+)
+OMOR_SOURCES = {
+    "Outland/HellfireCitadel/HellfireRamparts/hellfire_ramparts.h": "9896de99ab8f2049a445af5168b152387bdd019315d898a44e8bf83d72967bce",
+    "Outland/HellfireCitadel/HellfireRamparts/instance_hellfire_ramparts.cpp": "7f907d01ba05818b1dd4f2e945353433569f56a79773722f5d05a622009af49e",
+    "Outland/HellfireCitadel/HellfireRamparts/boss_omor_the_unscarred.cpp": "958cac5caa7d131b172988e15943afd5571a48db2013b23010ef50cf3c2bbe2d",
+}
 PROFILES = {
+    "omor": (OMOR_PRIMARY, OMOR_SOURCES),
     "gargolmar": (GARGOLMAR_PRIMARY, GARGOLMAR_SOURCES),
     "theradras": (THERADRAS_PRIMARY, THERADRAS_SOURCES),
     "landslide": (LANDSLIDE_PRIMARY, LANDSLIDE_SOURCES),
