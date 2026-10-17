@@ -54,7 +54,7 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
 /// still in the copy participates; the winning roster also wins. Draws have no winner.
 fn credit_completed_match(world: &mut World, match_id: u64) {
     use shared::battleground::BgOutcome;
-    let (map, roster, winners) = {
+    let (map, roster, winners, bracket) = {
         let state = world.resource::<PvpServerState>();
         let matched = &state.battleground_matches[&match_id];
         if matched.instance.phase != BgPhase::Ended {
@@ -76,7 +76,7 @@ fn credit_completed_match(world: &mut World, match_id: u64) {
             .filter(|id| matched.accepted.contains(id))
             .copied()
             .collect();
-        (map, roster, winners)
+        (map, roster, winners, instance.bracket)
     };
     let players: Vec<_> = world
         .query::<(&Authenticated, &PlayerLink, &InWorld)>()
@@ -88,6 +88,7 @@ fn credit_completed_match(world: &mut World, match_id: u64) {
         .collect();
     for (player, won) in players {
         crate::achievement::record_battleground_end(world, player, map.map_id, won);
+        super::honor::award_battleground_completion(world, player, map.map_id, bracket, won);
     }
 }
 
