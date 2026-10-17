@@ -1749,3 +1749,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-17: [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) reads real current terrain at the existing HK boundary, retains ancestry/companions and account SUM; native/account behavioral RED2/2, full50 GREEN pending. Imported70391 structural census5533/1841 adds only224/1151/12411; area metadata is70448, no reconciled70448 achievement-profile claim.
 
 - 2026-10-17: [Active70448 achievement inputs](systems/dungeon-achievements.md#active70448-achievement-inputs) regenerated from active CSVs; named tree Flags/OrderIndex fixes prior raw offsets. Build/key receipt, active predicates and5533/1841 census reconciled (no root delta from migration). Importer behavioralRED→GREEN4/4; canonical publication lead-owned.
+
+- 2026-10-17: area31 on canonical70448 at18856aaf passes controlled native full50, accountSUM, ancestry/timer and pinned census4/4(13.70s); no registered BG policy/credit added. Required integration/check gates pending.
