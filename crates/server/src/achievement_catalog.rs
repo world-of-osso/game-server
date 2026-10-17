@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use bevy::prelude::*;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use shared::protocol::{
     AchievementProgressSnapshot, AchievementSnapshot, AchievementToastSnapshot,
 };
@@ -590,6 +590,8 @@ enum CriteriaFact {
     MapInstanceType(BTreeSet<u32>),
     MinLevel(u8),
     MaxLevel(u8),
+    /// TC268 uses ContentTuning min/max, never MinLevelWithDelta.
+    ContentTuningLevels(std::ops::RangeInclusive<u8>),
 }
 
 fn event_creature_entry(
@@ -698,6 +700,7 @@ impl CriteriaFact {
             Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
+            Self::ContentTuningLevels(range) => range.contains(&player.level),
         }
     }
 }
@@ -1453,6 +1456,22 @@ fn load_scenario_step_fact(
 }
 
 /// Every leaf must name data the server has, else the tree can never hold (None).
+fn load_content_tuning_fact(
+    conn: &Connection,
+    asset: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let range = conn
+        .prepare_cached("SELECT minlevel, maxlevel FROM content_tuning_level WHERE ID = ?1")?
+        .query_row([asset], |row| {
+            Ok((row.get::<_, Option<u8>>(0)?, row.get::<_, Option<u8>>(1)?))
+        })
+        .optional()?;
+    let Some((Some(min), Some(max))) = range else {
+        return Ok(None);
+    };
+    Ok((min > 0 && min <= max).then_some(CriteriaFact::ContentTuningLevels(min..=max)))
+}
+
 fn load_criteria_facts(
     conn: &Connection,
     leaves: &[(i32, u32)],
@@ -1479,6 +1498,7 @@ fn load_criteria_facts(
             -8 => exists("spell")?.then_some(CriteriaFact::NotAura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
             82 => load_scenario_step_fact(conn, asset)?,
+            268 => load_content_tuning_fact(conn, asset)?,
             87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
             -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
@@ -1534,7 +1554,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/-8/2/4/5/6/7/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122"
+                    "generated facts use only -104/-87/-8/2/4/5/6/7/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122/268"
                 )
             }
         };

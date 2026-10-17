@@ -1,6 +1,51 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_content268_requires_complete_inclusive_authored_range() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER, MinLevelWithDelta INTEGER);
+        INSERT INTO content_tuning_level VALUES (483,90,90,1),(484,85,90,1),(485,NULL,90,1),(486,85,NULL,1),(487,90,85,1),(488,0,90,1);").unwrap();
+    for asset in [0, 485, 486, 487, 488, 999] {
+        assert!(
+            load_criteria_facts(&conn, &[(268, asset)], &HashMap::new())
+                .unwrap()
+                .is_none()
+        );
+    }
+    assert!(
+        load_criteria_facts(&conn, &[(268, 483), (268, 999)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "missing companion disables entire predicate"
+    );
+    for asset in [483, 484] {
+        let facts = load_criteria_facts(&conn, &[(268, asset)], &HashMap::new())
+            .unwrap()
+            .unwrap();
+        for level in [0, 1, 84, 85, 89, 90, 91] {
+            let expected = if asset == 483 {
+                level == 90
+            } else {
+                (85..=90).contains(&level)
+            };
+            let player = ReferencePlayer {
+                level,
+                ..Default::default()
+            };
+            assert_eq!(
+                facts[0].holds(
+                    &player,
+                    CriteriaEvent::ParticipateInBattleground(2106),
+                    &BTreeMap::new()
+                ),
+                expected,
+                "asset={asset}, level={level}; never delta range"
+            );
+        }
+    }
+}
+
+#[test]
 fn achievements_criteria_scenario_step82_requires_authored_ordinals_and_complete_metadata() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE scenario_step (ID INTEGER PRIMARY KEY, OrderIndex INTEGER); INSERT INTO scenario_step VALUES (140,7),(987,2),(1001,2);").unwrap();
@@ -1352,11 +1397,11 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5517 + native targeted Hug247 with all three qualifiers.
-    // Structural union, not full boss content, recipe repair, travel or acquisition proof.
-    assert_eq!(union.len(), 5518);
+    // Installed70391: 5517 + native Hug247 + both faction-specific Call to Arms.
+    // Structural union, not queue/admission, travel or acquisition proof.
+    assert_eq!(union.len(), 5520);
     assert!(union.contains(&247), "native dead hostile player Hug");
-    for achievement in [18202, 18203, 18205, 18206] {
+    for achievement in [908, 909, 18202, 18203, 18205, 18206] {
         assert!(
             union.contains(&achievement),
             "authored scenario ordinal {achievement}"

@@ -1,14 +1,16 @@
 # Retail achievement criteria producer inventory
 
-verified: 2026-10-15
+verified: 2026-10-16
 
 Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras before effect dispatch, with authored spells and complete companions. Native65403/61925 RED→GREEN1/1 proves target-not-caster, refused-depth/launch/missing/idle/NPC-hook/reopen boundaries and3579; compiler34/34. Full required four-thread filter176/0/1ignored plus site-export1/1, server/engine checks and3repofmt pass. No table acquisition/holiday/full vehicle/UI certificate.
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5518 ordinary (3496 account/2022 character),1825 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5520 ordinary (3498 account/2022 character),1825 statistics; 104 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
+
+- Native participation15 admits complete positive PlayerLevelWithinContentTuning268, using existing authored content_tuning_level minlevel/maxlevel (not delta). Tuning483 resolves90..90. Compiler47/47/generated5809(+26); structural census adds only account908/909, no removals and unchanged seven source hashes. Native/catalog3/3 proves both full100-contribution faction grants, reopened dates, winner/loser and rejection controls. Integrated required workspace filter217PASS/0FAIL/1existing opt-in ignored plus site-export1/1; workspace/all-target check and fmt pass. Source/fixture boundary: [content-tuning participation](wiki/systems/dungeon-achievements.md#content-tuning-participation).
 
 - Native targeted Hug56 now carries its requested entity rather than only an NPC entry. Complete positive54 player5/dead6/hostile7 leaves resolve the actual same-copy unit, health and native actor-to-target faction reaction. Compiler47/47/generated5785 (+2379 and63085; the latter's emote asset remains unsupported). Genuine native RED1a520678→GREENf50f29e6 proves actual corpse transition, delivered Hug, full character247 grant, living/friendly/NPC/foreign-copy/missing-authority/wrong-emote/selection isolation and saved date. Targeted emote plus incremental regressions10/10. Census adds only character247 and statistic1042 (unconditional Hug count), no removals, same seven source hashes. No rendered-client/UDP claim. [Details](wiki/systems/dungeon-achievements.md#native-targeted-hug247).
 
@@ -114,7 +116,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 12 | CurrencyGained | 129/337 | 65/204 | 64 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 13 | DamageDealt | 1/18 | 0/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 14 | CompleteDailyQuest | 13/34 | 13/16 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 15 | ParticipateInBattleground | 31/84 | 25/67 | 6 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 15 | ParticipateInBattleground | 57/84 | 44/67 | 13 | Native accepted current-copy terminal settlement; positive268 authored inclusive tuning range with complete companions.908/909 retain100 contributions; no new queue/admission policy. |
 | 16 | DieOnMap | 24/24 | 0/0 | 24 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 17 | DieAnywhere | 23/44 | 6/11 | 17 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 18 | DieInInstance | 10/12 | 8/9 | 2 | Native accepted death with authored IsDungeon and allocated-copy capacity; difficulty/map-type qualifiers remain conjunctive. Party5/raid10/25 and persistence proved; delve content unclaimed. |
