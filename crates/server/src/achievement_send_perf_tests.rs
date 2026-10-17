@@ -16,6 +16,7 @@ struct Peer {
 struct Fixture {
     app: App,
     peers: Vec<Peer>,
+    baselines: Vec<AchievementSnapshot>,
 }
 
 #[derive(Default)]
@@ -80,9 +81,13 @@ fn fixture() -> Fixture {
     let peers = (0..PEERS)
         .map(|index| spawn_peer(&mut app, index))
         .collect();
-    let mut fixture = Fixture { app, peers };
+    let mut fixture = Fixture {
+        app,
+        peers,
+        baselines: Vec::new(),
+    };
     let initial = fixture.advance();
-    for received in initial {
+    for received in &initial {
         assert_eq!(received.guides.len(), 1, "initial full Guide");
         assert_eq!(
             received.achievements.len(),
@@ -95,6 +100,10 @@ fn fixture() -> Fixture {
             "real full catalog"
         );
     }
+    fixture.baselines = initial
+        .into_iter()
+        .map(|received| received.achievements[0].snapshot.clone().unwrap())
+        .collect();
     fixture
 }
 
@@ -310,4 +319,101 @@ fn combat_progress_send_budget_uses_tiny_clock_for_clock_only_guide_changes() {
             "clock byte bound independent of catalog size"
         );
     }
+}
+
+fn apply_delta(snapshot: &mut AchievementSnapshot, delta: AchievementDelta) {
+    if let Some(earned_ids) = delta.earned_ids {
+        snapshot.earned_ids = earned_ids;
+    }
+    let mut progress: BTreeMap<_, _> = snapshot
+        .progress
+        .drain(..)
+        .map(|row| (row.achievement_id, row))
+        .collect();
+    for id in delta.removed_progress_ids {
+        progress.remove(&id);
+    }
+    for row in delta.progress_upserts {
+        progress.insert(row.achievement_id, row);
+    }
+    snapshot.progress = progress.into_values().collect();
+}
+
+#[test]
+fn combat_progress_stream_equals_full_state_and_reconnect_replaces_baseline() {
+    let mut fixture = fixture();
+    let mut projected = fixture.baselines.clone();
+    for damage in [123, 456] {
+        for peer in &fixture.peers {
+            record_criteria_event(
+                fixture.app.world_mut(),
+                peer.player,
+                CriteriaEvent::DamageDealt(damage),
+            );
+        }
+        let received = fixture.advance();
+        for (index, received) in received.into_iter().enumerate() {
+            assert!(
+                received
+                    .achievements
+                    .iter()
+                    .all(|message| message.snapshot.is_none())
+            );
+            assert_eq!(received.deltas.len(), 1);
+            apply_delta(
+                &mut projected[index],
+                received.deltas.into_iter().next().unwrap(),
+            );
+            let world = fixture.app.world();
+            let state = world
+                .get::<PlayerAchievementState>(fixture.peers[index].player)
+                .unwrap();
+            let full = world.resource::<AchievementCatalog>().snapshot(state, 1);
+            assert_eq!(
+                projected[index], full,
+                "stream equals authoritative full state"
+            );
+        }
+    }
+    for peer in fixture.advance() {
+        assert!(peer.achievements.is_empty() && peer.deltas.is_empty());
+    }
+    let connection = fixture.peers[0].connection;
+    let character = fixture
+        .app
+        .world()
+        .get::<InWorld>(connection)
+        .unwrap()
+        .character_id;
+    fixture
+        .app
+        .world_mut()
+        .entity_mut(connection)
+        .remove::<InWorld>();
+    fixture.advance();
+    fixture
+        .app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(InWorld {
+            character_id: character,
+        });
+    let reconnected = fixture.advance();
+    let fulls: Vec<_> = reconnected[0]
+        .achievements
+        .iter()
+        .filter_map(|message| message.snapshot.as_ref())
+        .collect();
+    assert_eq!(
+        fulls,
+        vec![&projected[0]],
+        "reconnect sends current full baseline"
+    );
+    assert!(
+        reconnected[0]
+            .achievements
+            .iter()
+            .all(|message| message.completed.is_none())
+    );
+    assert!(reconnected[0].deltas.is_empty());
 }
