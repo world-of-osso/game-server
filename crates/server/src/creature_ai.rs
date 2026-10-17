@@ -773,10 +773,11 @@ pub(crate) fn chase_system(
     mut ground: Option<ResMut<GroundMap>>,
     mut nav: Option<ResMut<Navigation>>,
     mut commands: Commands,
-    mut units: ParamSet<(ChasingUnits, Query<&Position>)>,
+    los: Option<Res<crate::line_of_sight::LineOfSight>>,
+    mut units: ChaseUnits,
 ) {
     let dt = time.delta_secs();
-    let targets = victim_positions(&mut units);
+    let targets = read_chase_targets(&mut units, los.as_deref());
     for (
         entity,
         mut pos,
@@ -795,6 +796,23 @@ pub(crate) fn chase_system(
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
+        // TC a352b1fa ChaseMovementGenerator: lost victim or current range+LOS
+        // stops the active spline before its cached corridor's final leg.
+        let current_target = targets.get(&entity);
+        if current_target.is_none_or(|target| target.in_reach_and_visible) {
+            if let Some(nav) = nav.as_deref_mut() {
+                nav.cancel_route(entity);
+            }
+            let mut stride = Stride::still(*pos);
+            if let Some(target) = current_target {
+                stride.facing = facing_along(target.position.x - pos.x, target.position.z - pos.z);
+            }
+            queues.apply(entity, &mut pos, bearing, stride);
+            if cannot_reach.is_some() {
+                commands.entity(entity).remove::<CannotReachTarget>();
+            }
+            continue;
+        }
         // MotionMaster initializes a newly-preempting active generator with
         // diff0. The default spline may already have moved before sight/aggro.
         let initializing =
@@ -811,9 +829,7 @@ pub(crate) fn chase_system(
             queues.apply(entity, &mut pos, bearing, stride);
             continue;
         }
-        let Some(target_pos) = targets.get(&Entity::from_bits(target)) else {
-            continue; // target despawned or invalid
-        };
+        let target_pos = &targets[&entity].position;
         let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
         let reach = follower_reach.map_or(CHASE_REACH, |reach| reach.0);
         let mut next_position = match (nav.as_deref_mut(), map) {
@@ -924,27 +940,66 @@ fn no_path_evade_system(
     }
 }
 
-/// Where each chased unit stands at the start of the chase step. A victim may be a
-/// creature that moves in the same step (a soldier and the worg it fights).
-fn victim_positions(
-    units: &mut ParamSet<(ChasingUnits, Query<&Position>)>,
-) -> EntityHashMap<Position> {
-    let victims: Vec<Entity> = units
+type ChaseView = (
+    crate::line_of_sight::BodyParts<'static>,
+    Option<&'static Health>,
+    Has<DeathState>,
+    Option<&'static crate::death::PlayerDeathState>,
+    Option<&'static crate::networking::CombatTarget>,
+    Option<&'static InMap>,
+);
+type ChaseUnits<'w, 's> = ParamSet<'w, 's, (ChasingUnits<'w, 's>, Query<'w, 's, ChaseView>)>;
+
+struct ChaseTarget {
+    position: Position,
+    in_reach_and_visible: bool,
+}
+
+/// Snapshot before any chaser moves: mutual chases see the same tick's poses.
+fn read_chase_targets(
+    units: &mut ChaseUnits,
+    los: Option<&crate::line_of_sight::LineOfSight>,
+) -> EntityHashMap<ChaseTarget> {
+    let chasing: Vec<_> = units
         .p0()
         .iter()
-        .filter_map(|(_, _, _, state, ..)| match *state {
-            CreatureState::Pursuing { target } => Entity::try_from_bits(target),
-            _ => None,
+        .filter_map(|(entity, _, _, state, _, _, _, _, _, _, reach, _)| {
+            let stop_reach = reach.map_or(CHASE_REACH, |reach| reach.0.min(CHASE_REACH));
+            match *state {
+                CreatureState::Pursuing { target } => {
+                    Some((entity, Entity::try_from_bits(target)?, stop_reach))
+                }
+                _ => None,
+            }
         })
         .collect();
-    let positions = units.p1();
-    victims
+    let views = units.p1();
+    chasing
         .into_iter()
-        .filter_map(|victim| {
-            positions
-                .get(victim)
-                .ok()
-                .map(|position| (victim, *position))
+        .filter_map(|(entity, victim, stop_reach)| {
+            let (watcher, _, _, _, current, map) = views.get(entity).ok()?;
+            let (target, health, dead, player_death, _, target_map) = views.get(victim).ok()?;
+            let lost = current.is_some_and(|current| current.0 != Some(victim));
+            let not_alive = dead
+                || health.is_some_and(|health| health.current <= 0.0)
+                || player_death
+                    .is_some_and(|death| death.state != shared::death::DeathState::Alive);
+            if lost || not_alive || map != target_map {
+                return None;
+            }
+            let from = Vec3::new(watcher.2.x, watcher.2.y, watcher.2.z);
+            let to = Vec3::new(target.2.x, target.2.y, target.2.z);
+            let in_reach = from.distance(to) <= stop_reach;
+            let visible = in_reach
+                && map
+                    .is_some_and(|map| crate::line_of_sight::unit_sees(los, *map, watcher, target));
+            Some((
+                entity,
+                ChaseTarget {
+                    position: *target.2,
+                    in_reach_and_visible: visible,
+                },
+            ))
         })
         .collect()
 }

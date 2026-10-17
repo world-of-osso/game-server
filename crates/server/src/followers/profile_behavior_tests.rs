@@ -368,3 +368,100 @@ profile_case!(follower_labelled_kybel_devastation_evoker, 215240);
 profile_case!(follower_labelled_bo_windwalker_monk, 227734);
 profile_case!(follower_labelled_lantha_demonology_warlock, 230861);
 profile_case!(follower_labelled_ralia_feral_druid, 232800);
+
+#[test]
+fn current_victim_garrick_primary_death_without_alternate_returns_to_owner() {
+    use bevy::ecs::system::RunSystemOnce;
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    update_ai(h.app.world_mut());
+    h.advance(3);
+    let primary = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    crate::combat::mark_npc_dead_world(h.app.world_mut(), primary);
+    update_ai(h.app.world_mut());
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(unit)
+            .unwrap(),
+        crate::creature_ai::CreatureState::Idle
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .unwrap()
+            .owner,
+        h.caster
+    );
+    let before = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(unit)
+        .unwrap();
+    h.app
+        .world_mut()
+        .run_system_once(crate::creature_ai::chase_system)
+        .unwrap();
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Position>(unit)
+            .unwrap(),
+        before
+    );
+}
+
+#[test]
+fn current_victim_garrick_primary_death_preserves_live_alternate_party_defence() {
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    update_ai(h.app.world_mut());
+    h.advance(3);
+    let alternate = spawn_npc(&mut h.app, 5.0);
+    let owner = h.caster;
+    crate::creature_aggro::add_threat(h.app.world_mut(), alternate, owner, 100.0);
+    let primary = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    crate::combat::mark_npc_dead_world(h.app.world_mut(), primary);
+    update_ai(h.app.world_mut());
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(unit)
+            .unwrap(),
+        crate::creature_ai::CreatureState::Pursuing {
+            target: alternate.to_bits()
+        }
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(unit)
+            .unwrap()
+            .0,
+        Some(alternate)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .is_none()
+    );
+    let before = h.health(alternate);
+    for _ in 0..45 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.health(alternate) < before,
+        "real sourced Garrick spells still defend the party after the primary dies"
+    );
+}
