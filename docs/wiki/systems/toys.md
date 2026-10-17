@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source critter/cooldown/stage/friends/containment boundaries (2026-10-17)
+
+[Source285–289 matrix](../../toy-effects14-coverage.md#source285289-crittercooldownstagefriendscontainment-boundaries-2026-10-17) retains Venthyr-OR-renown80 critter atonement, Nightborne-specific reduced recovery, controlled dance stage, three separate fuzzy-friend child triggers and Control4 self imprisonment gaps. Large base359469/173426 fields are not executable trigger records or guessed counts; existing containment103058 is not control/cleanup proof. No qualification/cooldown/payload substitution, runtime/data admission or new positive certificate.
+
 ## Source controlled-cage/steward/realm/customizer boundaries (2026-10-17)
 
 [Source280–284 matrix](../../toy-effects14-coverage.md#source280284-controlled-cagestewardrealmcustomizer-boundaries-2026-10-17) keeps Control4 cage entry/link cleanup, pledged steward-companion transformation, invisible-body linked realm and complete Racer customization/control restoration gaps. Existing cage/steward/realm bodies are not new admission; source-selected invisible11686 must not be replaced with zero-weight15092. No ordinary self costume, inert racer or dropped child/control payload, runtime/data write or new positive proof. Lead472 owns240's package gate.
@@ -36,7 +40,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Pending Dominated helm and coin/launch/linked/covenant boundaries (2026-10-17)
 
-[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17) adds240 test/spec c8feec2e for existing175221/nine-display actual learning/ten-minute restoration/inherited recovery; tests/check remain pending under the capacity-gated job. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
+[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17) adds240 test/spec c8feec2e for existing175221/nine-display actual learning/ten-minute restoration/inherited recovery; targeted tests remain pending under the admitted owned job; lead gate472 owns its separate package check, with no own repeat. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
 
 ## Source advice/riding/sentry/atonement boundaries (2026-10-17)
 

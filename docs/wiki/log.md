@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source285–289 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source285289-crittercooldownstagefriendscontainment-boundaries-2026-10-17):285 covenant OR renown80/critter action,286 racial recovery,287 Control4 stage,288 three repeated child casts and289 Control4 imprisonment remain unproved. Preserve literal359469/173426 base fields rather than inventing child/count semantics, and do not collapse repeated triggers or source model scales. Existing103058 is not action acceptance; no runtime/data admission or new positive proof.240 test/lead472check and279 draft remain separately tracked.
+
 ## 2026-10-17 — Toy source280–284 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source280284-controlled-cagestewardrealmcustomizer-boundaries-2026-10-17): Control4 personal/deluxe cages, pledged steward-companion transform, linked shadow realm and complete Racer customization graph remain unproved. Existing101685/101682/98480/source-selected11686 bodies do not establish control/recipient/child cleanup; no zero-weight visible realm substitute. No runtime/data admission or new positive certificate.240 owned test continues; lead472 owns its package check, and279 draft awaits compile completion before source edits.
@@ -32,7 +36,7 @@
 
 ## 2026-10-17 — Toy source240–244 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17):240 test/spec c8feec2e adds existing175221/nine-display transform/expiry/recovery acceptance; tests/check remain pending under capacity admission. Coin target action, combined health sacrifice/self-launch/geography, linked Krexus child and Kyrian pledge remain gaps. Existing175442/display99668 is not linked lifecycle proof. No runtime/data or new native admission.
+[Exact source matrix](../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17):240 test/spec c8feec2e adds existing175221/nine-display transform/expiry/recovery acceptance; targeted tests remain pending under the admitted owned job; package check is lead gate472-owned, not a second own run. Coin target action, combined health sacrifice/self-launch/geography, linked Krexus child and Kyrian pledge remain gaps. Existing175442/display99668 is not linked lifecycle proof. No runtime/data or new native admission.
 
 ## 2026-10-17 — Toy source235–239 boundaries
 
