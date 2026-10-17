@@ -1938,3 +1938,5 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 - 2026-10-17: Enabled Omor summon/shield/source-clock controls GREEN3/3/146.31s at2a2c0f28; actual successful/rejected/triggered shield, scheduled hounds/credit retained. Full native encounter and sound10277 remain open.
 
 - 2026-10-17: [Current-victim chase stop](systems/creature-ai.md#current-victim-stop-contract--2026-10-17): real Stockade cached-corner production RED and pinned TC contract; live clear remains open.
+
+- 2026-10-17: [Run23 diagnostic frames](systems/creature-ai.md#run23-diagnostic-frames): optional per-tick tank/victim/cache records and fixed-clock proximity acquisition stamps; gameplay unchanged.
