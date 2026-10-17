@@ -66,6 +66,11 @@ fn prove_race_achievement(owner_race: u8, achievement: u32, opposite: u32, races
         hit(&mut world, killer, victim, 1000.0);
         assert_eq!(world.get::<Health>(victim).unwrap().current, 0.0);
         assert_eq!(
+            counter(&world, killer, 63413),
+            Some(index as u64 + 1),
+            "eligible native35 precedes missing race credit"
+        );
+        assert_eq!(
             counter(&world, killer, criterion),
             Some(1),
             "actual race{race}"
