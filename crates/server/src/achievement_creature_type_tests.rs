@@ -169,3 +169,173 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
             .is_empty()
     );
 }
+
+// Controlled placement only: entry416 has no authored world spawn. Its immutable
+// template, level, faction, model and health still come from native spawn_creature.
+fn spawn_controlled_native_target(h: &mut Harness, entry: u32) -> Entity {
+    let world = h.app.world_mut();
+    let data = world.resource::<crate::world_data::WorldData>();
+    let template = data.templates.get(&entry).unwrap();
+    let spawn = crate::world_data::CreatureSpawn {
+        guid: 0,
+        template_entry: entry,
+        map: 0,
+        zone_id: 0,
+        position_x: 3.0,
+        position_y: 0.0,
+        position_z: 0.0,
+        orientation: 0.0,
+        wander_distance: 0.0,
+        movement_type: 0,
+        spawntimesecs: 300,
+        display_id: None,
+        unit_flags: None,
+        spawn_difficulties: vec![0],
+        equipment_id: 0,
+    };
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, world);
+    let target = crate::zones::spawn_creature(
+        &mut commands,
+        data,
+        template,
+        InMap::continent(0),
+        false,
+        &spawn,
+        &mut rand::thread_rng(),
+    );
+    queue.apply(world);
+    target
+}
+
+#[test]
+fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let database = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&database);
+    let (character, _) = persistence::create_character(&database, 1, "Demonlevels", 1, 9).unwrap();
+    let (foreign, _) = persistence::create_character(&database, 2, "Foreign", 1, 9).unwrap();
+    let mut h = harness_with_plugins(vec![], &[686], 9, false, |app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .unwrap();
+    h.app.world_mut().despawn(h.npc);
+    h.app.insert_resource(crate::world_data::load_world_data(
+        &crate::test_data::world_db_path(),
+    ));
+    h.app.insert_resource(GameDatabase { db: database });
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::persistence::ClientId(character),
+        PlayerAchievementState::default(),
+    ));
+    // Actual Imp416 is always level5, Demon3; never replace its native level.
+    for (level, expected) in [(4, 0), (5, 1), (6, 2)] {
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::Level(level));
+        let target = spawn_controlled_native_target(&mut h, 416);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::UnitLevel>(target)
+                .unwrap()
+                .0,
+            5
+        );
+        assert_eq!(crate::unit_creature_type::get(h.app.world(), target), 3);
+        assert!(!crate::spell_cast::try_cast_triggered(
+            h.app.world_mut(),
+            h.caster,
+            686,
+            Some(target),
+            u8::MAX
+        ));
+        h.advance(3);
+        let before = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .clone();
+        kill_source_target_with_shadow_bolts(&mut h, target);
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap();
+        assert_eq!(
+            state.criteria_progress.get(&4944),
+            Some(&u64::from(level - 3)),
+            "native generic kill must be accepted before checking21"
+        );
+        assert_eq!(
+            state.criteria_progress.get(&4949),
+            Some(&u64::from(level - 3)),
+            "native Demon30/3 companion remains independent"
+        );
+        assert_eq!(
+            state.criteria_progress.get(&107647).copied().unwrap_or(0),
+            expected,
+            "21/0 must compare actor against actual killed creature, inclusively"
+        );
+        assert_eq!(
+            before.get(&107647).copied().unwrap_or(0),
+            expected.saturating_sub(u64::from(level >= 5))
+        );
+        let counters = state.criteria_progress.clone();
+        h.cast(686, Some(target));
+        h.advance(160);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress,
+            counters,
+            "dead and idle frames cannot replay the victim"
+        );
+    }
+    let target = spawn_controlled_native_target(&mut h, 40);
+    assert_eq!(crate::unit_creature_type::get(h.app.world(), target), 7);
+    kill_source_target_with_shadow_bolts(&mut h, target);
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.caster)
+        .unwrap();
+    assert_eq!(state.criteria_progress.get(&4944), Some(&4));
+    assert_eq!(
+        state.criteria_progress.get(&107647),
+        Some(&2),
+        "non-Demon must not satisfy the conjunction"
+    );
+    let catalog = h.app.world().resource::<AchievementCatalog>();
+    let AchievementCatalogPage::Statistics { achievements, .. } = catalog.page(
+        state,
+        QueryAchievementCatalog::Statistics {
+            category_id: 15562,
+            after_id: 60937,
+        },
+        1,
+    ) else {
+        panic!("expected statistics");
+    };
+    assert_eq!(achievements[0].achievement_id, 60938);
+    assert_eq!(achievements[0].statistic_value, Some(2));
+    assert!(!achievements[0].earned);
+    drop(h);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&reopened, character);
+    assert_eq!(saved.criteria_progress.get(&107647), Some(&2));
+    assert_eq!(saved.criteria_progress.get(&4944), Some(&4));
+    assert!(
+        persistence::load_achievements(&reopened, foreign)
+            .criteria_progress
+            .is_empty()
+    );
+}
