@@ -4,7 +4,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
-- [ ] Queued effect64 children revalidate their captured explicit recipient through maintained normal target admission before payment and hit planning. A native470411→188389 recipient killed by actual Death Touch5 while the callback waits remains present but must receive neither Flame Shock nor a mana charge. Apply caster aura checks before recipient validation, target aura checks afterward, then affordability/items before hit planning. Keep general full-trigger/reflection helper behavior separate; no health or mana fixture overrides.
+- [x] Queued effect64 children revalidate their captured explicit recipient through maintained normal target admission before payment and hit planning. A native470411→188389 recipient killed by actual Death Touch5 while the callback waits remains present but must receive neither Flame Shock nor a mana charge. Apply caster aura checks before recipient validation, target aura checks afterward, then affordability/items before hit planning. Keep general full-trigger/reflection helper behavior separate; no health or mana fixture overrides.
 
 - [x] Ordinary casts carrying native Attr6 `DoNotConsumeResources` still check affordability/items but retain their power/reagents at the payment boundary. Effect64 children retain their own power/reagent costs, unlike the general full-trigger helper. Actual470411→188389 must leave the natural fixture's10000 mana unchanged after the parent, then pay native30 mana at child dispatch; a vanished target must not pay the child. No cooldown/GCD or general triggered-cost exemption changes. Mana-phase fixtures do not certify runes, health, reagents, legal-build or whole trigger-flag parity.
 

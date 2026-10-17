@@ -1,6 +1,6 @@
 ## 2026-10-16 — Queued effect64 recipient admission
 
-[Spell casting](systems/spell-casting.md#queued-effect64-recipient-admission--2026-10-16): actual470411→188389 queued child and actual Death Touch5 reproduce payment and aura on a present corpse, RED0pass/2fail33.06s. Cost-retaining child now runs maintained normal recipient validation before cost/payment/hit planning; generic full-trigger/reflection helpers unchanged. GREEN/final gates pending; no raw health/mana/clock/budget edits.
+[Spell casting](systems/spell-casting.md#queued-effect64-recipient-admission--2026-10-16): actual470411→188389 queued child and actual Death Touch5 reproduce payment and aura on a present corpse, RED0pass/2fail33.06s. Cost-retaining child now runs maintained normal recipient validation before cost/payment/hit planning; generic full-trigger/reflection helpers unchanged. Current9c01c758/master53a59762/protocol6b06680 passes merged128/0/0 in27.84s (314.078s wrapper), two new+126 prior; workspace/all-target check39.710s/0warnings and fmt pass. Independent artifact/wiring/readability inspection's returned-recipient finding was corrected, then main verified current128/check. Prior missing-PvP-bracket protocol compile log retained as invalid proof. No raw health/mana/clock/budget edits.
 
 ## 2026-10-16 — Queued effect64 payment phases
 
