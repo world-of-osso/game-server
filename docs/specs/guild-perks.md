@@ -44,6 +44,7 @@ Guild rewards/reputation eligibility and invitation tabards are separate slices.
 
 - [ ] Actual Hearthstone8690 consumes charge category2309:1800000ms without83944,900000ms with its authored453/-900000ms passive; revocation restores future uses.
 - [ ] Joining or leaving does not retime an already-consumed Hearthstone charge (TC SpellAuraEffects.cpp525 and SpellHistory.cpp834–853).
+- [ ] Preserve actual Human458619: two charges,25-minute nonmember/10-minute guild consumption. Mixed queued uses retain their own durations through join/removal; no racial knowledge is removed to simplify the fixture.
 - [ ] Actual native membership/cast/charge receipts establish both-skin behavior; catalog knowledge alone is insufficient.
 
 ## Supported effect slice: Mount Up

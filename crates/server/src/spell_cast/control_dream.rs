@@ -83,9 +83,9 @@ fn fully_ready_at(history: &super::SpellHistory, spell: &SpellInfo, now: f64) ->
         .as_ref()
         .and_then(|data| history.charges.get(&data.charge_category))
     {
-        let mut charges = *charges;
+        let mut charges = charges.clone();
         charges.refresh(now);
-        if charges.used > 0 {
+        if charges.used() > 0 {
             return None;
         }
         ready = ready.max(charges.fully_ready_at);

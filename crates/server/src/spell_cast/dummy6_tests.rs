@@ -153,7 +153,7 @@ fn bomb_ready(h: &Harness) -> f64 {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat]
-        .next_ready_at
+        .next_ready_at()
 }
 fn butchery(rank: bool, targets: usize) {
     let mut ids = vec![212436, 259495, 265163, 265157, 269747];
