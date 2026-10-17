@@ -9,6 +9,7 @@ fn arathi_completion_mirrors_two_separate_source_bonuses_and_reopens_without_rep
         let template = arathi_basin();
         let (mut world, players, file) = native_flag_match(&template);
         world.init_resource::<Time>();
+        world.init_resource::<Time<Virtual>>();
         world.insert_resource(
             crate::spell_cast::test_harness::world_db()
                 .unwrap()
