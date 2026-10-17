@@ -39,6 +39,56 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_lock_on_uses_authored_tonk_target_mark_and_blast() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 338), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 3, 301)
+        .unwrap();
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    assert_eq!(allies.pets[0].species, 338);
+    assert_eq!(allies.pets[0].abilities[2], 301);
+    let enemies = build_team(
+        &catalog,
+        &std::array::from_fn::<_, 3, _>(|_| Identity {
+            guid: None,
+            species: 39,
+            level: 4,
+            breed: 3,
+            quality: PetQuality::Rare,
+        }),
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let initial = Battle::new([allies, enemies]).unwrap();
+    let actions = [Action::Ability(301), Action::Pass];
+    let (ready, _) = initial
+        .step(&catalog.turns, actions, &mut Fixed(500_000))
+        .unwrap();
+    assert_eq!(
+        ready.teams[1].pets[0].health,
+        initial.teams[1].pets[0].health
+    );
+    assert_eq!(ready.auras[0].ability, 300);
+    assert_eq!(ready.auras[0].target, PetRef { team: 1, slot: 0 });
+    assert_eq!(ready.auras[0].remaining, 1);
+    let (launched, _) = ready
+        .step(&catalog.turns, actions, &mut Fixed(500_000))
+        .unwrap();
+    assert!(launched.teams[1].pets[0].health < initial.teams[1].pets[0].health);
+    assert!(launched.auras.is_empty());
+}
+
+#[test]
 fn wild_pet_battles_life_exchange_uses_legal_sprite_darter_and_persisted_injury() {
     let catalog = catalog();
     let mut journal = PetJournal::default();

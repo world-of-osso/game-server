@@ -22,6 +22,7 @@
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Lock-On target charge](systems/pet-battle-engine.md#lock-on77--2026-10-17) — bounded301/517/300 target mark/expiry/blast; RED5→GREEN6 and5 existing charge regressions, native/final proof pending.
 - [Life Exchange health redistribution](systems/pet-battle-engine.md#life-exchange67--2026-10-17) — bounded277/493, unsupported67 RED3→GREEN4 and strict both-skin HP98/108 projection; Tormented Spirit framing rejected; final lib126/check/fmt pass, Retail rounding/proc feedback unclaimed.
 - [Launch Rocket setup and launch](systems/pet-battle-engine.md#launch-rocket75--2026-10-17) — bounded293/294, real unsupported75 RED3→GREEN4 and wild/PvP27; strict both-skin physical setup/launch win; final lib122/check/fmt pass, prior unchanged UI12 retained.
 - [Armageddon team damage and sacrifice](systems/pet-battle-engine.md#armageddon1025--2026-10-16) — bounded1025 all living enemies/self-kill/Failsafe suppression; RED1→GREEN8, strict both-skin death/forced-reserve/use proof; final lib118/wild-PvP26/UI12/check/fmt pass.
