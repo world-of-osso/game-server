@@ -39,6 +39,53 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_level_health_uses_actual_owned_level_and_clamps_persisted_capacity() {
+    let catalog = catalog();
+    for level in [2, 7, 25] {
+        let mut journal = PetJournal::default();
+        for (guid, species) in [(41, 250), (42, 39), (43, 39)] {
+            journal
+                .add_with_guid(species, level, PetQuality::Rare, 3, guid)
+                .unwrap();
+        }
+        let mut states = owned_states(&catalog, &journal);
+        states
+            .get_mut(&41)
+            .unwrap()
+            .select_ability(&catalog.turns, journal.get(41).unwrap(), 2, 576)
+            .unwrap();
+        let mut encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+        let base_health = encounter.battle.teams[0].pets[0].stats.health;
+        let (state, _) = encounter
+            .battle
+            .step(
+                &catalog.turns,
+                [Action::Ability(576), Action::Pass],
+                &mut Fixed(500_000),
+            )
+            .unwrap();
+        assert_eq!(
+            state.teams[0].pets[0].stats.health,
+            base_health + 5 * i32::from(level)
+        );
+        assert_eq!(
+            state.teams[0].pets[0].health,
+            state.teams[0].pets[0].stats.health
+        );
+        encounter.battle = state;
+        assert_eq!(
+            encounter
+                .owned_health(0)
+                .into_iter()
+                .find(|(guid, _)| *guid == 41)
+                .unwrap()
+                .1,
+            base_health
+        );
+    }
+}
+
+#[test]
 fn wild_pet_battles_lock_on_uses_authored_tonk_target_mark_and_blast() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
