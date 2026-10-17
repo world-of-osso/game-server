@@ -1,5 +1,6 @@
 //! TC Spell.cpp5881: native caster aura-spell identity, not an amount check.
 use shared::components::Health;
+use shared::protocol::SpellCooldownUpdate;
 use shared::spell_data::CastFailReason;
 
 use super::test_harness::*;
@@ -49,6 +50,11 @@ fn cast_sheilun_cloud(h: &mut Harness) {
 }
 
 fn assert_missing_caster_aura(h: &Harness) {
+    assert_caster_aura_failure(h);
+    assert!(h.inbox.cooldowns.is_empty(), "{:?}", h.inbox.cooldowns);
+}
+
+fn assert_caster_aura_failure(h: &Harness) {
     assert_eq!(h.inbox.failed.len(), 1, "{:?}", h.inbox.failed);
     assert_eq!(h.inbox.failed[0].reason, CastFailReason::InvalidTarget);
     assert_eq!(
@@ -56,7 +62,6 @@ fn assert_missing_caster_aura(h: &Harness) {
         Some("SPELL_FAILED_CASTER_AURASTATE")
     );
     assert!(h.inbox.go.is_empty(), "{:?}", h.inbox.go);
-    assert!(h.inbox.cooldowns.is_empty(), "{:?}", h.inbox.cooldowns);
     assert!(h.inbox.charges.is_empty());
 }
 
@@ -166,7 +171,18 @@ fn native_required_caster_aura_lost_during_sheilun_cast_refuses_completion() {
     assert!(h.app.world().get::<super::CastState>(h.caster).is_some());
     remove_caster_aura(&mut h, SHEILUN_CLOUD);
     h.advance(45);
-    assert_missing_caster_aura(&h);
+    assert_caster_aura_failure(&h);
+    // The valid admission already started this native GCD; refusal adds no spell cooldown.
+    assert_eq!(
+        h.inbox.cooldowns,
+        vec![SpellCooldownUpdate {
+            spell_id: SHEILUN_GIFT,
+            category: 133,
+            duration_ms: 1500,
+            remaining_ms: 1500,
+            is_gcd: true,
+        }]
+    );
     assert_eq!(h.health(h.caster), 500.0);
 }
 
