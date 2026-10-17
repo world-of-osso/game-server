@@ -133,6 +133,8 @@ mod hit;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
+mod queued_trigger_target_tests;
+#[cfg(test)]
 mod queued_trigger_tests;
 #[cfg(test)]
 mod readiness_lifetime_tests;
