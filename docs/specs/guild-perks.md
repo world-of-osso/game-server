@@ -24,6 +24,8 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 ## Tests asserting this spec
 
+- `spell_cast::charge_snapshot_tests::guild_hasty_hearth_...` — four actual-spell controls cover isolated30/15/30-minute recovery, consumed-clock preservation, and Human458619 mixed25/10/25-minute queued uses. Ten existing rate and three snapshot controls also pass.
+
 - `auras::mount_tests::guild_mount_up_...` — three real-data controls cover ground/flight grants and revocation, stronger Crusader Aura without stacking/swim leakage, and installed battleground/arena map suppression/restoration.
 
 - `class_progression::tests::guild_perks_real_membership_grants_rebuilds_revokes_and_reopens_without_touching_class_spells` — real persisted invite acceptance/quit, knowledge, owner messages, spec rebuild and reopen.
@@ -42,9 +44,9 @@ Guild rewards/reputation eligibility and invitation tabards are separate slices.
 
 ## Active effect slice: Hasty Hearth
 
-- [ ] Actual Hearthstone8690 consumes charge category2309:1800000ms without83944,900000ms with its authored453/-900000ms passive; revocation restores future uses.
-- [ ] Joining or leaving does not retime an already-consumed Hearthstone charge (TC SpellAuraEffects.cpp525 and SpellHistory.cpp834–853).
-- [ ] Preserve actual Human458619: two charges,25-minute nonmember/10-minute guild consumption. Mixed queued uses retain their own durations through join/removal; no racial knowledge is removed to simplify the fixture.
+- [x] Actual Hearthstone8690 consumes charge category2309:1800000ms without83944,900000ms with its authored453/-900000ms passive; revocation restores future uses.
+- [x] Joining or leaving does not retime an already-consumed Hearthstone charge (TC SpellAuraEffects.cpp525 and SpellHistory.cpp834–853).
+- [x] Preserve actual Human458619: two charges,25-minute nonmember/10-minute guild consumption. Mixed queued uses retain their own durations through join/removal; no racial knowledge is removed to simplify the fixture.
 - [ ] Actual native membership/cast/charge receipts establish both-skin behavior; catalog knowledge alone is insufficient.
 
 ## Supported effect slice: Mount Up
