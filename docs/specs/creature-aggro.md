@@ -42,6 +42,8 @@ World creatures attack players: hostile creatures aggro players that come near, 
 
 ### Chase and melee
 
+- Shared chase stops and drops its cached route when the current victim disappears, is dead/ghost, leaves the map copy, or the actor's explicit attack victim no longer matches that chase. A valid victim already within the existing2yd stop distance (or a smaller existing follower reach) stops movement only with a present server LOS resource and a clear body ray, before advancing cached intermediate corners. Missing LOS authority must not certify this new pre-stop. Do not enlarge melee/aggro radii, bypass blocked LOS or alter companion target reselection. TC a352b1fa `ChaseMovementGenerator.cpp:28–30,44–55,99–110,125–140`; `CreatureAI.cpp:244–261` and `ScriptedFollowerAI.cpp:145–147` preserve selection of a remaining valid attacker after a kill. [Production cached-corner reproduction](../wiki/systems/creature-ai.md#current-victim-stop-contract--2026-10-17).
+
 - [x] The creature runs (`speed_run` × 7 yd/s) toward its target until 2 yards away horizontally, following the target's height, and auto-attacks through the player auto-attack path.
 
 ### Evade (`CreatureAI::EnterEvadeMode`)
