@@ -19,9 +19,36 @@
 ## 2026-10-17 — Guild invitation appearance delivery
 
 [Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
+## 2026-10-17 — Omor sourced pull124
+
+[Omor](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): actual periodic30638 damage precedes physical no-reversal REDbf5659cd. Source handlerb509bd01 passes strict movement1/1/58.80s; enable only after this receipt. Ordinary Omor7/shared knockback9 pass16/16/435.67s at73932f34, including actual-child3D-distance/reach/no-teleport controls; map543 obstacle/Detour/dynamic collision and full native proof remain open.
+
 ## 2026-10-17 — Omor Orbital source hooks
 
 [Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
+## 2026-10-17 — Toy source boundaries89–93
+
+[Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. [94–98 continuation](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retains nearby reaction, spectral/headwear procedural, corpse ritual and return/catch gaps. [99–103 matrix](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) retains historical Cooler/Gong proof and exact missing Kovork/procedural gaps. No runtime admission; merged55-case proof unchanged.
+
+## 2026-10-17 — Oomgut source lifecycle
+
+[Actual learned use](systems/toys.md#oomgut-source-transform-lifecycle-2026-10-17) proves existing transform/ordinary ten-minute expiry and longer recovery without a production change. New plus existing transform2/2 and bounded source-contract14/14 pass; check/fmt clean. Native/all17/wall-clock claims remain excluded; RC105–106 and procedural107 remain gaps.
+
+## 2026-10-17 — Source disguise recovery
+
+[Three existing transforms](systems/toys.md#source-disguise-recovery-precedence-2026-10-17): actual learned-use proves source models, ten-minute ordinary expiry and item/spell recovery precedence. New three-ID test passes; final comparison with Oomgut passes2/2 at69.43s, check/fmt clean. No production change or native/weighted/full-recovery claim; Pennant110 script gap remains.
+
+## 2026-10-17 — Lunar/Peddlefeet learned use
+
+[Two new holiday cases](systems/toys.md#lunarpeddlefeet-hearthstone-learned-use-2026-10-17) prove existing persisted-bind/shared-charge path without production changes; bounded5 tests/seven IDs pass105.95s, check/fmt clean. Native/procedural/cross-map/recharge claims excluded; hiding114/gift115 remain named gaps.
+
+## 2026-10-17 — Forlorn/charge merge
+
+[Focused merge proof](../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17): preserve effect96 movement-duration hit ordering and destination-only flight/front47; merged55/55 pass with actual protocol master. Lead published matching Forlorn template receipt; no new full-suite/native-parity claim.
+
+## 2026-10-17 — Flashback source screen effect
+
+[Flashback88 boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17): retain actual ScreenEffect1473 and chapel9587 source fields without inventing world phasing; actual learned use/native presentation remain open. Docs-only; retained150/49 proofs unchanged.
 
 ## 2026-10-16 — Eligible victim class52
 
@@ -29,6 +56,10 @@
 ## 2026-10-16 — Miss-only pet self outcomes194
 
 [Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
+## 2026-10-17 — Sprout native spawn aura
+
+[Source boundary](investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): genuine eaad1801 native374161 RED38.63s follows all fourteen ordinary child/owner/map prerequisites. Prepared import preserves actual `npc_ley_line_sprouts`; missing runtime factory/non-boss branch, not data identity, is the cause. Minimal script binding/JustAppeared self-aura at39107add passes native1/32.80s with exact48e6/eight-source/frozenHEAD before-after; enabled only after GREEN. Next two native ArcanePower14/unowned92 cases reach genuine2RED55.66s atf15b03a3 after actual self-aura/summoner/capacity99 prerequisites (e87E0596 was test compile-only, not RED). Minimal source374736/native92 path at6b0ab342 passes unowned92 control but exposes real1vs14 native aura count (1PASS/1FAIL55.81s);9e helper-name compile failure was not behavior proof. Core beneficial-other-caster replacement lacked TC's native shared stack-slot rule. That source rule now retains actual caster/capacity without manual stacks or data/stat/geometry changes; c7aa2385 native owned14 GREEN1/53.95s plus native stackcap1/10.93s and periodiccoexist1/9.09s, strict48/ten-source/frozenHEAD guards. Unowned92 priorPASS retained; power tests enabled only after proof, replicated real-child caster/stacks14 check added. OrdinaryStomp276 relative-budget genuineRED835e53d0 is8631vs32797.8 at14stacks; minimal native mechanic consumer99cca08a passes matching Stomp and nonmatching Brand within34AzurePASS/0ignored507.23s/fmt0, exact48/twelve-source/HEAD stable. No damage/stat/HP override. Invalid --bin/check helper combination failed before compiling; corrected96da2b88 check0/zero compilation warnings1m39s, same12source/exact48DB/HEAD stable; independent source and full artifactPASS. No repeated Azure/fmt gate. Diagnostic registry276 classification is a separate source-observed follow-up. ArcanePower death cleanup/aura395/full lifecycle, rune197204/jumps713714 remain open;803defbf clock/child LANDED409/225 targeted.
+
 ## 2026-10-17 — Leymor first Fissure clock
 
 [Source boundary](investigations/follower-data.md#leymor-first-fissure-clock--2026-10-17): e2a87993 reaches genuine missing20s386660 CastState RED27.99s after native floor/templates/fourteen ordinary Sprouts/living-victim/no-early-cast prerequisites. Minimal source event/victim cast/48s after-execution repeat passes native1/32.44s at31b0bbb8, with strict48e6 before/after and four source-native-root SHA matches; first-clock test enabled only after GREEN. Next ignored31sBrand/45sStomp cases pass real prerequisites/firstFissure/living victim then reach genuine missing CastState/Channel RED2/63.46s at828aafd4. Minimal source self-cast clocks/existing48s repeat reach native cast/channel at f733258d;2FAIL61.73s is the fixture's owner-only CastSuccess count for an unowned self-cast boss, not missing clocks. Fixture-only correction observes native visibility-broadcast self SpellGo; no production routing/HP/geometry change. Corrected8823a417 native2PASS48.35s/strict48/four SHA matches; both tests enabled only after GREEN. Next ignored cases reach genuine missing Brand374582 field and natural Stomp374731 damage RED2, with cancellation controlPASS (1PASS/2FAIL66.11s at e2febba9). Minimal nonexclusive Brand once-effect and existing natural-channel-finished callbacks at4a73c1cb pass native3/55.33s: two preserved parent auras, one native field/damage per recipient/750ms expiry, natural finish damage once and cancellation none. Strict48e6 before/after/six same-source native-root SHA matches captured before edits; no native data/timing/amount override. Three tests enabled only after GREEN; next Sprout374161 spawn-aura case ignored pending native RED. Final eaad1801 Azure29PASS/1nextignored116.19s,scopedcheck0/zero warnings2m43s,fmt0 and exact48e6/eight-source hashes/frozen HEAD before-after pass; independent source/readability PASS, final artifact follow-up pending. Separate next Sprout374161 native0/14 self-aura RED38.63s follows all owner/map prerequisites; no Sprout AI production yet. Native374582 is AT25390/750ms plus area damage, not an invented knockback vector; sprout lifecycle remains separate. Source394154 target110 and sprout lifecycle remain unported; no timing, damage, geometry or data override. Frozen Icy candidate eec25f11 remains separate; its final independent artifact follow-up now passes.
@@ -1803,3 +1834,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 ## 2026-10-17 — Pending-only netdelta producer controls
 
 [Combat publication](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17): dedicated marked-peer/quiet-frame proof, real level-stream/reconnect equivalence and Stockade earned-delta/toast isolation now pass alongside repaired transport-free criteria and explicit HostClient fixtures. Detailed source scopes/counts live on the investigation page. Merged engine checks and genuine UDP byte/latency/performance remeasurement remain pending.
+
+- 2026-10-16: [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16): exact ten-model source identity, retained unitless destination flight after genuine early-arrival RED;150 Toy+49 affected+3 importer controls pass, native appearances/publication separate.
