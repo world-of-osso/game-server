@@ -28,8 +28,11 @@ const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
-    /// Actual native NPC victim type; None cannot satisfy a typed predicate.
-    KillAnyCreature(Option<u8>),
+    /// Actual killed NPC authority; missing fields cannot satisfy their predicates.
+    KillAnyCreature {
+        creature_type: Option<u8>,
+        level: Option<u8>,
+    },
     ReachLevel(u8),
     ActivelyReachLevel(u8),
     ReachMaxLevel(u8),
@@ -176,7 +179,7 @@ impl CriteriaEvent {
     fn kind(self) -> u32 {
         match self {
             Self::KillCreature(_) => 0,
-            Self::KillAnyCreature(_) => 78,
+            Self::KillAnyCreature { .. } => 78,
             Self::WinAnyRankedArena(_) => 37,
             Self::PersonalArenaRating { .. } => 39,
             Self::WinArena(_) => 32,
@@ -326,7 +329,7 @@ impl CriteriaEvent {
             Self::LearnedNewPet(species) => {
                 criteria.asset == 0 && criteria.modifier_asset == Some(species)
             }
-            Self::KillAnyCreature(_)
+            Self::KillAnyCreature { .. }
             | Self::DeliveredKillingBlow
             | Self::EarnHonorableKill
             | Self::LifetimeHonorableKills(_)
@@ -580,6 +583,8 @@ enum CriteriaFact {
     TargetCreature(u32),
     /// CreatureType30 on kill78 reads the actual rewarded NPC victim.
     KilledCreatureType(u8),
+    /// TC21/0 reads GetLevel of the actual KillRewarder victim, not viewer scaling.
+    PlayerLevelAtLeastKilledCreature,
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
     TargetIsPlayer,
@@ -711,7 +716,10 @@ impl CriteriaFact {
                 matches!(event, CriteriaEvent::BattlePetReachedLevel { species: id, .. } if species.contains(&id))
             }
             Self::KilledCreatureType(required) => {
-                matches!(event, CriteriaEvent::KillAnyCreature(Some(kind)) if kind == *required)
+                matches!(event, CriteriaEvent::KillAnyCreature { creature_type: Some(kind), .. } if kind == *required)
+            }
+            Self::PlayerLevelAtLeastKilledCreature => {
+                matches!(event, CriteriaEvent::KillAnyCreature { level: Some(level), .. } if player.level >= level)
             }
             Self::EitherTeamNodeCount(required) => player
                 .controlled_node_counts
@@ -1529,6 +1537,7 @@ fn load_criteria_facts(
             110 => exists("content_quest_template")?.then_some(CriteriaFact::CompletedQuest(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
+            21 => (asset == 0).then_some(CriteriaFact::PlayerLevelAtLeastKilledCreature),
             19 => exists("content_item")?
                 .then(|| CriteriaFact::EventItems([asset].into_iter().collect())),
             17 => exists("area_table")?
@@ -1583,7 +1592,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/-8/2/4/5/6/7/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122/268"
+                    "generated facts use only -104/-87/-8/2/4/5/6/7/8/14/15/16/17/19/21/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122/268"
                 )
             }
         };

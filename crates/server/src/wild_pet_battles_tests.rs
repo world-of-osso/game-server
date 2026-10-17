@@ -39,6 +39,85 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_rapid_fire_uses_legal_peddlefeet_level_ten_two_wave_loadout() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 122), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 10, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 1, 774)
+        .unwrap();
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 122);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 111);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(774), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let damage: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(damage, [26, 19]);
+    assert_eq!(state.teams[1].pets[0].health, 102);
+    assert_eq!(
+        state.teams[0].pets[1].health,
+        encounter.battle.teams[0].pets[1].health
+    );
+    assert_eq!(
+        state.teams[0].pets[2].health,
+        encounter.battle.teams[0].pets[2].health
+    );
+}
+
+#[test]
+fn wild_pet_battles_starfall_uses_legal_level_one_cosmos_and_heals_owned_reserves() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 1972), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 1, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    for state in states.values_mut() {
+        state.health = 100;
+    }
+    assert_eq!(states[&41].selected_abilities, [258, 0, 0]);
+    let mut encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 1972);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 11);
+    let (state, _) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(258), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    assert_eq!(state.teams[0].pets.each_ref().map(|p| p.health), [109; 3]);
+    assert_eq!(state.auras[0].ability, 596);
+    encounter.battle = state;
+    assert_eq!(
+        encounter.owned_health(0),
+        vec![(41, 109), (42, 109), (43, 109)]
+    );
+}
+
+#[test]
 fn wild_pet_battles_level_health_uses_actual_owned_level_and_clamps_persisted_capacity() {
     let catalog = catalog();
     for level in [2, 7, 25] {

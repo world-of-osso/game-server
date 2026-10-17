@@ -484,7 +484,10 @@ fn achievements_criteria_killed_creature_type_requires_actual_known_victim() {
         let mut state = PlayerAchievementState::default();
         catalog.update_at(
             &mut state,
-            CriteriaEvent::KillAnyCreature(kind),
+            CriteriaEvent::KillAnyCreature {
+                creature_type: kind,
+                level: None,
+            },
             None,
             1,
             &conditions,
@@ -508,6 +511,59 @@ fn achievements_criteria_killed_creature_type_requires_actual_known_victim() {
                 .is_none()
         );
     }
+}
+
+#[test]
+fn achievements_criteria_demon_level21_requires_live_level_and_every_companion() {
+    let catalog = catalog();
+    for (kind, level, expected) in [
+        (Some(3), None, false),
+        (Some(3), Some(19), true),
+        (Some(3), Some(20), true),
+        (Some(3), Some(21), false),
+        (None, Some(19), false),
+        (Some(7), Some(19), false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let event = CriteriaEvent::KillAnyCreature {
+            creature_type: kind,
+            level,
+        };
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                level: 20,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(
+            catalog
+                .update_at(&mut state, event, None, 1, &conditions)
+                .is_empty(),
+            "a statistic cannot grant an achievement"
+        );
+        assert_eq!(state.criteria_progress.get(&4944), Some(&1));
+        assert_eq!(
+            state.criteria_progress.get(&4949),
+            (kind == Some(3)).then_some(&1)
+        );
+        assert_eq!(state.criteria_progress.get(&107647), expected.then_some(&1));
+        let mut unknown_actor = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut unknown_actor,
+            event,
+            None,
+            1,
+            &PlayerConditions::default(),
+        );
+        assert!(!unknown_actor.criteria_progress.contains_key(&107647));
+    }
+    let conn = Connection::open_in_memory().unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(21, 1)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]

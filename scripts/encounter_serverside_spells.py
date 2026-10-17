@@ -17,7 +17,12 @@ from pathlib import Path
 import mysql_dump
 
 SPELLS = {119297, 119298, 119424, 119425, 119426, 119428}
-ENCOUNTER_SPELLS = {'ragefire': SPELLS, 'gargolmar': {30642}, 'omor': {35642, 32185}}
+ENCOUNTER_SPELLS = {
+    'ragefire': SPELLS,
+    'gargolmar': {30642},
+    'omor': {35642, 32185},
+    'herald': {18430, 20538, 30693, 30694, 30696, 30698, 30699},
+}
 TABLE_KEYS = {
     'serverside_spell': ('Id', 'DifficultyID'),
     'serverside_spell_effect': ('SpellID', 'EffectIndex', 'DifficultyID'),

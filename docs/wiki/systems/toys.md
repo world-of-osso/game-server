@@ -2,6 +2,58 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source motion/faction/appearance/action boundaries (2026-10-17)
+
+[Source195–199 matrix](../../toy-effects14-coverage.md#source195199-motionfactionappearanceaction-boundaries-2026-10-17) retains self-launch/safe-fall, language/faction/self-sacrifice, soul appearance, cocoon action and nonzero shadow-disguise payload gaps. Scroll314988 is the actual TriggerType0 on-use; auxiliary314407/TriggerType7 must not replace it. No cosmetic/actor/transform substitutes, runtime/data admission or new native proof.
+
+## Eternal Traveler and mount/control/portal boundaries (2026-10-17)
+
+[Source190–194 matrix](../../toy-effects14-coverage.md#source190194-eternal-traveler-and-mountcontrolportal-boundaries-2026-10-17) adds Eternal Traveler actual learned-use/saved-bind/shared-charge acceptance: nine variants/check/fmt pass without runtime/data changes. Wild Holly mount/holiday, Control3 RC toys and Shadowlands portal service remain unresolved; source actor/visual metadata is not those actions or native certification.
+
+## Midday source acceptance and interactive boundaries (2026-10-17)
+
+[Source185–189 matrix](../../toy-effects14-coverage.md#source185189-midday-source-acceptance-and-interactive-boundaries-2026-10-17) records Jar187's actual-source day/night aura/cancellation/recovery acceptance: four affected tests/check/fmt pass after one cold-slot compile. Fish-kicking, Gral blessing and memento interaction remain gaps; Sealamp retains earlier exact body/scale/state-kit/natural-expiry witnesses without a new native run. No runtime/data admission or generic interactive substitutes.
+
+## Midnight/sign proof and equipment boundaries (2026-10-17)
+
+[Source180–184 matrix](../../toy-effects14-coverage.md#source180184-retained-midnightsign-proof-and-equipment-gaps-2026-10-17) keeps earlier Shadescale aura/cancellation and both warning-sign actor/native expiry scopes distinct from unproved midnight pixels, message-carving/extended visibility and dining/naga-equipment procedural behavior. No new runtime/data admission, invented interaction or repeated code gate.
+
+## Memory transforms and collection boundary (2026-10-17)
+
+[Source175–179 matrix](../../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17) adds actual Unshackled/Ankoan learning, authentic pool membership, ordinary ten-minute restoration and inherited one-hour recovery acceptance. Eight tests/12IDs and check/fmt pass; no runtime/data change. Heart/Trophy retain earlier bounded proof, while the Mechagon figure collection/action remains unresolved despite an existing runtime base. Native bodies/weighted sampling/full recovery passage remain separate.
+
+## Source standard/insignia/equipment/linked-hologram boundaries (2026-10-17)
+
+[Source170–174 matrix](../../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17) retains mixed Standard action, sanctuary script destinations, arm-equipment procedural and linked-hologram child gaps. Judgment154818/92155 already exists in the content tables WorldData actually loads; absent base-table rows are not missing runtime publication. Its linked child/lifecycle behavior remains unproved. No new admission, invented coordinates or borrowed War Banner/hearthstone proof.
+
+## Holographic Hearthstone and banner boundaries (2026-10-17)
+
+[Source165–169 matrix](../../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17) records eight actual learned-use/saved-bind/shared-charge cases including Holographic165; native package/tests check and fmt/readability pass. Rustbolt333298 publication/placement and mixed Horde War Standard action remain gaps. Earlier source20 War Banner native/combat-removal witnesses retain their original scope; no new runtime/data admission or native certificate.
+
+## Source robot/teleport/whistle boundaries (2026-10-17)
+
+[Source160–164 matrix](../../toy-effects14-coverage.md#source160164-robotteleportwhistle-boundaries-and-retained-ocean-proof-2026-10-17) separates missing Blingtron7000/service behavior, unsourced Kul Tiras/Zandalar destinations and Flight Master's Whistle action from existing Pandaria code. Ocean Simulator retains its earlier revision-scoped simulation/native/PCM witnesses; no new acceptance, physical-output claim or confusion with Hyper-Compressed Ocean. No runtime/data admission.
+
+## Source equipment/light/ocean/gift boundaries (2026-10-17)
+
+[Source155–159 matrix](../../toy-effects14-coverage.md#source155159-equipmentlightoceangift-boundaries-2026-10-17) preserves exact equipment/gift procedural fields, paired light behavior and the Burning Blade banner presentation gap. Hyper-Compressed Ocean152121 remains unpublished; its actual source body is an invisible stalker, not proof of a fishable pool. No generic substitutes, new admissions or native acceptance.
+
+## Azerite real-ground recovery and interaction gaps (2026-10-17)
+
+Already-admitted Azerite151 now has actual Northshire ground/learning and ordinary600s item recovery/reuse acceptance, without new policy. [Exact four-test/check proof and150–154 matrix](../../toy-effects14-coverage.md#source150154-azerite-real-ground-recovery-and-interaction-gaps-2026-10-17) separate server events from native skyward presentation and retain matching-game, rally, jukebox and secret-fish interaction gaps. No database publication.
+
+## Procedural/control/script and Tea Set gaps (2026-10-17)
+
+[Source145–149 matrix](../../toy-effects14-coverage.md#source145149-proceduralcontrolscript-and-tea-table-boundaries-2026-10-17) retains the blight-coating procedural payload, Control4 spinning toys, ambiguous Highborne possession action and unpublished149865 Tea Set. No generic visual/actor substitute or new admission; authentic Tea Set model metadata is not successful gameplay/native proof.135 remains a separate established source contract.
+
+## Brewfest hearthstone and corpse/appearance boundaries (2026-10-17)
+
+Brewfest Reveler140 now has actual saved-bind/shared2309 acceptance alongside six prior holiday roots. [Seven-case proof and exact141–144 boundaries](../../toy-effects14-coverage.md#source140144-brewfest-hearthstone-and-corpseappearance-boundaries-2026-10-17) distinguish enemy-corpse fireworks, the mixed Transmorpher child/service chain and dead-target soul trapping from generic handlers. Runtime/data unchanged; native Brewfest presentation and full recharge remain separate.
+
+## Goldtusk table and Fire Eater source contracts (2026-10-17)
+
+Source135's maintained import and actual-use omissions were reproduced before adding exactly149876 with its authentic90570/half-scale model. New source139 follows the existing saved-bind/shared2309 path;136 bowl retains its Group28 contract, while137–138 RC possession stays unimplemented. [Exact nine-test/importer proof, source/native exclusions and copy-only publication receipt](../../toy-effects14-coverage.md#source135139-goldtusk-table-retained-bowl-rc-gaps-and-fire-eater-2026-10-17) distinguish the added data from Rust handler changes, food interaction and native presentation. The lead completed canonical publication after landing; the linked coverage owns the exact receipt and read-only publication acknowledgment.
+
 ## Source companion/healer/corpse/music boundaries (2026-10-17)
 
 [Source130–134 matrix](../../toy-effects14-coverage.md#source130134-companionweaponhealercorpsemusic-boundaries-2026-10-17) preserves the owned-critter riding target, procedural anchor weapon, Brynja viewer payload versus healer service, fallen-ally forced-child semantics and missing music-box publication/behavior. Actual TDB music-box body resolves to the existing chest01b model; that does not authorize invented presentation/audio. No runtime/data changes or new acceptance claims.

@@ -198,10 +198,11 @@ pub(crate) fn logged_in(world: &mut World, player: Entity, character_id: u64) {
 }
 
 fn restore_member(world: &mut World, player: Entity, character_id: u64, entry: &Entry) {
-    let snapshot = rejoined_snapshot(
+    let snapshot = build_match_snapshot(
         &world.resource::<PvpServerState>().battleground_matches[&entry.match_id],
         entry.match_id,
         character_id,
+        true,
     );
     world
         .resource_mut::<PvpServerState>()
@@ -254,10 +255,11 @@ fn describe_match(matched: &InvitedBattleground) -> (u32, String, u32) {
     }
 }
 
-fn rejoined_snapshot(
+pub(super) fn build_match_snapshot(
     matched: &InvitedBattleground,
     match_id: u64,
     character_id: u64,
+    accepted: bool,
 ) -> BattlegroundSnapshot {
     let (id, name, map_id) = describe_match(matched);
     let (score_a, score_b) = matched.displayed_scores();
@@ -268,7 +270,7 @@ fn rejoined_snapshot(
         map_id,
         team: team_of(matched, character_id).expect("retained battleground member"),
         phase: matched.instance.phase,
-        accepted: true,
+        accepted,
         invitation_time_left_secs: None,
         score_a,
         score_b,

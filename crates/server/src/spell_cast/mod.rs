@@ -2210,6 +2210,7 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
+    effects::check_power_drain_inputs(world, caster, spell)?;
     if open_lock::is_item_cast(spell) {
         return Ok(spell
             .effects
@@ -3149,6 +3150,8 @@ mod new_class_tests;
 mod optional_flat_cost_tests;
 #[cfg(test)]
 mod override_queue_tests;
+#[cfg(test)]
+mod power_drain_tests;
 #[cfg(test)]
 mod queue_tests;
 #[cfg(test)]
