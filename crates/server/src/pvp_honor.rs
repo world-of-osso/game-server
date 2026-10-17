@@ -35,6 +35,8 @@ const AV_SURVIVOR_KILL_EQUIVALENTS: u32 = 2;
 const FLAG_CAPTURE_KILL_EQUIVALENTS: u32 = 2;
 // TC WSG571: type1014 resolves HOLIDAY_NONE, so final-capture victory grants20.
 const WARSONG_CAPTURE_VICTORY_HONOR: u32 = 20;
+// TC AB34/185–187: current type1018→HOLIDAY_NONE selects the normal160 threshold.
+const ARATHI_RESOURCE_HONOR_POINTS: u32 = 160;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -209,6 +211,47 @@ pub(super) fn award_alterac_survivor_honor(world: &mut World, match_id: u64) {
         if units > 0 {
             let amount = calculate_bonus_honor(bracket, units * AV_SURVIVOR_KILL_EQUIVALENTS);
             award_match_team_honor(world, match_id, team, amount);
+        }
+    }
+}
+
+pub(super) fn read_arathi_resource_counters(world: &World) -> Vec<(u64, [u32; 2])> {
+    world
+        .resource::<PvpServerState>()
+        .battleground_matches
+        .iter()
+        .filter_map(|(id, matched)| {
+            if matched.instance.bg_id != 1018 {
+                return None;
+            }
+            Some((*id, matched.nodes.as_ref()?.earned_resource_points()))
+        })
+        .collect()
+}
+
+pub(super) fn award_arathi_resource_gains(world: &mut World, counters: Vec<(u64, [u32; 2])>) {
+    for (match_id, before) in counters {
+        let (after, amount) = {
+            let state = world.resource::<PvpServerState>();
+            let matched = &state.battleground_matches[&match_id];
+            let nodes = matched
+                .nodes
+                .as_ref()
+                .expect("Arathi resource snapshot has node runtime");
+            (
+                nodes.earned_resource_points(),
+                calculate_bonus_honor(matched.instance.bracket, 1),
+            )
+        };
+        for (index, team) in [BgTeam::A, BgTeam::B].into_iter().enumerate() {
+            let previous_grants = before[index] / ARATHI_RESOURCE_HONOR_POINTS;
+            let current_grants = after[index] / ARATHI_RESOURCE_HONOR_POINTS;
+            let grants = current_grants
+                .checked_sub(previous_grants)
+                .expect("Arathi source resource counters cannot decrease");
+            for _ in 0..grants {
+                award_match_team_honor(world, match_id, team, amount);
+            }
         }
     }
 }
