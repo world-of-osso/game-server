@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Self hits alongside destination missiles (2026-10-17)
+
+TC a352b1fa `Spell.cpp:2486–2521,4096–4138` keeps caster-targeted hits at zero delay even when other effects have a traveling destination. `missiles::hit_delays` preserves that separation; unitless effects land at the destination delay, not alongside the early self hit. Native Recuperate1231411 combines a self trigger1231418 with a destination scene and Speed10: delaying the self trigger broke its immediate aura application and full-health termination tests. Shared aura-stack slots are unchanged. Scene playback remains unsupported; this fix addresses timing only.
+
 ## Native damage prerequisite fixtures — 2026-10-16
 
 Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.
