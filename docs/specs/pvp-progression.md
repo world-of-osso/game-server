@@ -8,6 +8,12 @@ Retail Mainline behavior applies to both client art skins. Extend existing PvP/r
 - War Mode changes require authoritative rest-area, combat and instance checks; its source-backed buff and talent activation must follow actual world state.
 - PvP talent selection requires source specialization, slot-mask/unlock, level and PlayerCondition eligibility. Unknown conditions cannot be guessed true.
 
+## Ordinary battleground party queue
+
+A grouped character's QueueForBattleground request is leader-only. Resolve its GroupRegistry roster, validate all members are online, available for PvP and in the same source bracket, then enqueue the whole roster through existing join_group atomically. Reject groups larger than one battleground team. Every queued member receives the normal queue projection; existing matchmaking keeps the party together without changing minimums or capacity.
+
+Pinned TC BattleGroundHandler.cpp189–226 supplies the leader/group admission and per-member queued notification contract. Four ordinary five-player parties must enter one Arathi match with20 players,10 per assigned team, through normal invite/accept, queue and battleground invitation/accept messages. WSG's lower minimum can form earlier; this contract does not delay its queue to force20.
+
 ## Source catalogs and import
 
 `scripts/reference/pvp-12.1.0.69933/` contains locally extracted CASC records. CurrencyTypes contains only1792/1602; PvpTalent407 rows, category3, unlock4, PrestigeLevelInfo24. Values come from Retail build keydcfc90fffd79ba00406ae46f5f657592, exported by game-engine `scripts/export_db2_csv.py` at exact layoutsFA3226AB/BE69BB5A/ECB2C5C2/9685CBCC/6582638F. The local TrinityCore `DB2Structure.h` preserved in game-engine `data/diagnostics/scrap-2026-10-10/` defines field semantics. Numeric source receipts remain in `data/diagnostics/pvp-progression-2026-10-11/db2/`.
