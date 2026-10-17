@@ -170,8 +170,8 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
     );
 }
 
-// Controlled placement only: entry416 has no authored world spawn. Its immutable
-// template, level, faction, model and health still come from native spawn_creature.
+// Controlled placement only, not an authored world spawn/acquisition claim.
+// Immutable template, level, faction, model and health come from native spawn_creature.
 fn spawn_controlled_native_target(h: &mut Harness, entry: u32) -> Entity {
     let world = h.app.world_mut();
     let data = world.resource::<crate::world_data::WorldData>();
@@ -231,20 +231,21 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
         crate::persistence::ClientId(character),
         PlayerAchievementState::default(),
     ));
-    // Actual Imp416 is always level5, Demon3; never replace its native level.
-    for (level, expected) in [(4, 0), (5, 1), (6, 2)] {
+    // The production content view gives Lesser Voidwalker418 an untuned level20.
+    // Legacy Imp416 says5, but native ContentTuning482 makes its actual level90.
+    for (level, expected) in [(19, 0), (20, 1), (21, 2)] {
         h.app
             .world_mut()
             .entity_mut(h.caster)
             .insert(shared::components::Level(level));
-        let target = spawn_controlled_native_target(&mut h, 416);
+        let target = spawn_controlled_native_target(&mut h, 418);
         assert_eq!(
             h.app
                 .world()
                 .get::<shared::components::UnitLevel>(target)
                 .unwrap()
                 .0,
-            5
+            20
         );
         assert_eq!(crate::unit_creature_type::get(h.app.world(), target), 3);
         assert!(!crate::spell_cast::try_cast_triggered(
@@ -270,12 +271,12 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             .unwrap();
         assert_eq!(
             state.criteria_progress.get(&4944),
-            Some(&u64::from(level - 3)),
+            Some(&u64::from(level - 18)),
             "native generic kill must be accepted before checking21"
         );
         assert_eq!(
             state.criteria_progress.get(&4949),
-            Some(&u64::from(level - 3)),
+            Some(&u64::from(level - 18)),
             "native Demon30/3 companion remains independent"
         );
         assert_eq!(
@@ -285,7 +286,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
         );
         assert_eq!(
             before.get(&107647).copied().unwrap_or(0),
-            expected.saturating_sub(u64::from(level >= 5))
+            expected.saturating_sub(u64::from(level >= 20))
         );
         let counters = state.criteria_progress.clone();
         h.cast(686, Some(target));
@@ -300,6 +301,26 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             "dead and idle frames cannot replay the victim"
         );
     }
+    let imp = spawn_controlled_native_target(&mut h, 416);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitLevel>(imp)
+            .unwrap()
+            .0,
+        90
+    );
+    kill_source_target_with_shadow_bolts(&mut h, imp);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&107647),
+        Some(&2),
+        "legacy template level5 must not replace the killed Imp's actual90"
+    );
     let target = spawn_controlled_native_target(&mut h, 40);
     assert_eq!(crate::unit_creature_type::get(h.app.world(), target), 7);
     kill_source_target_with_shadow_bolts(&mut h, target);
@@ -308,7 +329,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
         .world()
         .get::<PlayerAchievementState>(h.caster)
         .unwrap();
-    assert_eq!(state.criteria_progress.get(&4944), Some(&4));
+    assert_eq!(state.criteria_progress.get(&4944), Some(&5));
     assert_eq!(
         state.criteria_progress.get(&107647),
         Some(&2),
@@ -332,7 +353,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
     let reopened = redb::Database::open(file.path()).unwrap();
     let saved = persistence::load_achievements(&reopened, character);
     assert_eq!(saved.criteria_progress.get(&107647), Some(&2));
-    assert_eq!(saved.criteria_progress.get(&4944), Some(&4));
+    assert_eq!(saved.criteria_progress.get(&4944), Some(&5));
     assert!(
         persistence::load_achievements(&reopened, foreign)
             .criteria_progress
