@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source135–139: Goldtusk table, retained bowl, RC gaps and Fire Eater (2026-10-17)
+
+135 Goldtusk Inn Breakfast Buffet166703/289533 has one ordinary source149876/90570 table: faction35/flags0, empty click/AI/script fields, DisplayScale0.5/Probability0 and M2 FDID963107 (`6hu_magetower_table01.m2`). Source instant cast,47/radius15=3yd,300000ms duration and600000ms item recovery. Maintained-importer RED atcc3fa6fc omits149876 (1 failure,4.539s); real bag-learning/UseToy RED refuses `effect 28, missing summon creature 149876` (1 failure,39.14s). Exact one-entry scenery admission at e860a60d preserves the authentic template/model rather than synthesizing table flags, food or interaction.
+
+Importer identity/scale/idempotence passes1/1,2.554s; actual learned use passes1/1,35.58s after aligning the private protocol with actual upstream7a3f9c0. The stale6b protocol produced12 pre-test ABI errors for real AchievementDelta/Guide-clock/Alterac methods, not a runtime RED or an excuse for invented fields. Server simulation now proves one90570 actor/scale0.5, source3yd XZ front offset, owner/map/faction/non-pet/non-follow identity, unchanged placement after owner movement, ordinary50ms-frame retention just before300s expiry and removal afterward, unchanged player body/health and600s recovery still refusing use. Source47 collision/elevation, native table/food presentation, loot/interactions and full-toy parity remain unproved; no destination handler was changed.
+
+136 Bowl of Glowing Pufferfish166704/289536 retains its existing actual Group28 contract (149954/76142, scale0.6, group privacy,300000ms lifetime), refreshed in the bounded gate below.137 Blight Bomber166743/289887 and138 Glaive Tosser166744/289888 author149448/149447 with property428 Control3/faction1616 plus caster37/25/321 auras. They require real remote-control/action-bar attacks, not ordinary actors or caster immobility; no possession admission or replacement.
+
+139 Fire Eater's Hearthstone166746/286331 already uses homebind252, source10s cast and shared2309 charge with item recovery-1/spell recovery0/GCD1500. One new actual bag-learning/UseToy case reuses the saved-bind fixture: missing bind refuses before spending, the displaced player returns after the source cast, charge max1/current0/recharge1800000ms is reported and Noble Gardener125 then refuses. Body/health remain unchanged. Native procedural358001–358004 type17/Value1=35280/35279, wire/pixels/audio, cross-map behavior and full natural30min recharge remain separate.
+
+Atb697271b/protocol7a3f9c0, final bounded9 tests pass zero ignored147.33s:135 table, six holiday hearthstones including139,136 bowl and126 Personal Anchor refusal. Maintained importer preservation/idempotence/rollback controls pass3/3,6.268s; package/tests check2m04s, fmt/manual changed-line readability clean without warnings. No whole-Toy repeat or native certificate. Exact RED/GREEN/final commands/revisions remain in `breakfast135-{proof-ledger,final-proof-ledger,protocol-alignment}.json`, use/import/final-contracts/check/fmt logs and `hearth139-visual-source.json`.
+
+COPY-only dry-run receipt `breakfast135-canonical-copy-receipt.json` starts at canonical SHA25648e60d673ac15e6b4403c95f6c1e8f82708680f402d9e47cc310d23c985098b4 and produces8f27e3923fc8539042627d38098fe5aae6ef482078528ef9cb1f72bbd3c2ca18. Exactly149876 and its one90570/0.5/0.0 model row are added; no existing runtime template/model/addon/item rows are removed or changed, and no addon/item rows are added. Integrity check passes; canonical hash remains48e60d67. Canonical publication remains lead-owned and pending landing, not performed by this agent.
+
 ## Source130–134: companion/weapon/healer/corpse/music boundaries (2026-10-17)
 
 | Source row | Exact retained boundary / proof level |
