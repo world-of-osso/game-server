@@ -1,3 +1,4 @@
+- [Koranthal5s destination delay](systems/boss-scripts.md#koranthal-destination-delay--2026-10-17) — valid-pair hook A/B falsifies hook regression; stale early-impact expectations corrected to sourced5000ms/typed119964, unchanged data/runtime.
 - [Omor caster hold/retreat](systems/boss-scripts.md#omor-caster-hold-and-retreat--2026-10-17) — real20yd hold/3yd retreat/no-melee RED→strict GREEN2/2; direct grounded subset, ordinary affected25/25 GREEN; native/path/timer gaps remain.
 - [Omor Shield cast emote](systems/boss-scripts.md#omor-shield-cast-emote--2026-10-17) — successful natural shield RED→strict GREEN1/1; ordinary/triggered exactly-once, rejection silence and copy isolation; Omor8/missile9 integration GREEN17/17.
 - [Omor Orbital hooks](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17) — source singleton continuation and falling-player/zero-threat periodic damage RED→GREEN3/3; server pull124/native acceptance remain open.
