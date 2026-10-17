@@ -10,6 +10,7 @@ import csv
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import casc_locale
@@ -106,7 +107,7 @@ def read_active_tables(directory, build):
 
 
 def import_tables(database, tables, build):
-    with sqlite3.connect(database) as db:
+    with closing(sqlite3.connect(database)) as db, db:
         db.execute("BEGIN IMMEDIATE")
         for name, (columns, rows) in tables.items():
             table = SQL_NAMES[name]

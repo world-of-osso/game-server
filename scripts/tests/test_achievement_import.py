@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from contextlib import closing
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
@@ -47,7 +48,7 @@ class AchievementImportTests(unittest.TestCase):
                     'rows': 1, 'csv_sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
             (directory / 'receipt.json').write_text(json.dumps(receipt))
             database = root / 'world.db'
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 db.execute('CREATE TABLE db2_build (table_name TEXT PRIMARY KEY, build TEXT)')
             error = None
             with patch.object(importer, 'ACTIVE_DB2', active), patch.object(importer, 'BUILD_INFO', info), patch.object(sys, 'argv', ['import_achievements.py', '--db2-dir', str(active), '--db', str(database)]):
@@ -56,7 +57,7 @@ class AchievementImportTests(unittest.TestCase):
                 except FileNotFoundError as failure:
                     error = failure
             self.assertIsNone(error, 'active CSV import must not require obsolete raw DB2 exports')
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 self.assertEqual(db.execute('SELECT Flags,OrderIndex,Amount FROM criteria_tree WHERE ID=4479').fetchone(), (8193, 2, 50))
                 self.assertEqual(dict(db.execute('SELECT table_name,build FROM db2_build')),
                                  dict.fromkeys(importer.SQL_NAMES.values(), directory.name))
@@ -110,10 +111,10 @@ class AchievementImportTests(unittest.TestCase):
                 shutil.copyfile(source / f"{fdid}.db2", directory / f"{fdid}.db2")
             tables = importer.export_tables(directory)
             database = Path(temporary) / "world.db"
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 db.execute("CREATE TABLE db2_build (table_name TEXT PRIMARY KEY, build TEXT)")
             importer.import_tables(database, tables, directory.name)
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 row = db.execute("SELECT a.Category, a.IconFileID, a.Points, c.Name_lang, c.Parent FROM achievement a JOIN achievement_category c ON c.ID=a.Category WHERE a.ID=633").fetchone()
                 self.assertEqual(row, (14808, 134163, 10, "Classic", 168))
                 self.assertEqual(db.execute("SELECT COUNT(*) FROM achievement_category").fetchone()[0], 243)
