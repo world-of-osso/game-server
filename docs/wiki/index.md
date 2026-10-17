@@ -1,4 +1,4 @@
-- [Omor Shield cast emote](systems/boss-scripts.md#omor-shield-cast-emote--2026-10-17) — successful natural shield RED→strict GREEN1/1; ordinary/triggered exactly-once, rejection silence and copy isolation; integration pending.
+- [Omor Shield cast emote](systems/boss-scripts.md#omor-shield-cast-emote--2026-10-17) — successful natural shield RED→strict GREEN1/1; ordinary/triggered exactly-once, rejection silence and copy isolation; Omor8/missile9 integration GREEN17/17.
 - [Omor Orbital hooks](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17) — singleton/falling-player/zero-threat damage GREEN3/3; actual pull124 motion RED→strict GREEN1/1, direct-ray subset; obstacle/native acceptance open.
 - [Active70448 achievements](systems/dungeon-achievements.md#active70448-achievement-inputs) — named CSV import, source build/key receipt, no historical fallback; census migration adds/removes no roots.
 - [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — current terrain per eligible world-HK recipient; controlled full50/account/pin GREEN4/4 on canonical70448; native BG credit unimplemented.
