@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source285–289: critter/cooldown/stage/friends/containment boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|285 Tome of Small Sins187512/358092 | Source2000ms selected-target25 script3, inherited60000ms spell recovery. Source critter atonement/afterlife action and eligibility explicitly allowing Venthyr covenant members OR Renown80 with Venthyr remain unproved. Do not change that alternative into a current-covenant-only rule, invent output or substitute arbitrary critter death. |
+|286 Nightborne Guard's Vigilance187591/358927 | Self complete-zero dummy4 for2000ms; item-1 inherits180000ms spell recovery. Advertised Nightborne-specific reduced cooldown and suspicious-surroundings presentation remain unproved together; zero-payload shape alone does not authorize cosmetic admission or an invented racial recovery amount. |
+|287 Dance Dance Darkmoon187689/359464 | Source1000ms/300000ms mixed target18 summon181216/properties5235 (Control4/faction35/slot6) with literal base359469 plus self dummy4,1800000ms item recovery. TDB102114/scale0.8 exists, runtime absent. Stage/show/control/action restoration remains unproved; base359469 is not an EffectTriggerSpell record and must not be guessed as an executable child or ordinary actor count. |
+|288 Choofa's Call187705/352289 | Source2000ms/14000ms persistent-area27/dummy4 at target18 plus THREE separate effect64 slots naming352510. That child target72 summons178606/properties1581 (Control1/Title2) for13000ms, with source98628/99697/98623 scales1/1/1.15; runtime absent. Actual repeated child/fuzzy-friend placement/ownership/lifecycle is unproved; graph reachability must not deduplicate away three effect occurrences. Item recovery60000ms retained. |
+|289 Personal Containment Trap187793/359717 | Source300000ms linked428→360395's target18 summon181445/properties5234 (Control4/flags8), literal child base173426. Runtime103058 exists; self imprisonment/control/linked cleanup remains unproved. Item recovery600000ms overrides5000ms spell recovery. No inert cage substitute or interpretation of the non-trigger base as a guessed cast/count. |
+
+`rows285-289-{readonly-source,action-source}.json` preserves exact70391 eligibility text, field representations, child multiplicity, control/cast/duration/recovery and source/runtime model rows. No runtime/data/canonical change, invented rule/cast/count, generic actor/script admission or positive simulation/native proof.240 remains the single owned progressing test; lead472 owns its package check.279's exact creation draft awaits compile completion;149865 Tea Set stays lead-required.
+
 ## Source280–284: controlled-cage/steward/realm/customizer boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
@@ -98,7 +110,7 @@
 
 ## Source240–244: pending Dominated helm and coin/launch/linked/covenant gaps (2026-10-17)
 
-240 Helm of the Dominated184223/344795 uses existing175221 with authentic92410–92418 choices. Source self transform56/misc8 lasts600000ms and item-1 inherits3600000ms spell recovery. Test/spec c8feec2e adds this exact nine-display pool to the actual learning/ordinary-expiry/restoration/health/recovery fixture, now eight disguise IDs. Disguise/Oomgut tests and package check remain pending under the single capacity-gated native job; no passing result or new runtime/data/native admission is implied.
+240 Helm of the Dominated184223/344795 uses existing175221 with authentic92410–92418 choices. Source self transform56/misc8 lasts600000ms and item-1 inherits3600000ms spell recovery. Test/spec c8feec2e adds this exact nine-display pool to the actual learning/ordinary-expiry/restoration/health/recovery fixture, now eight disguise IDs. Disguise/Oomgut tests remain pending under the single admitted native job; lead gate472 owns the separate package check, with no own repeat; no passing result or new runtime/data/native admission is implied.
 
 | Source row | Exact retained source boundary |
 |---|---|
