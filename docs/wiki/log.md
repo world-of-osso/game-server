@@ -33,6 +33,10 @@
 ## 2026-10-17 — Omor Orbital source hooks
 
 [Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
+## 2026-10-17 — Noble Gardener125 and Citizens126 boundary
+
+[Source124–129 packet](systems/toys.md#noble-gardener-and-source-anchor-boundary-2026-10-17): real Noble Gardener saved-bind/shared charge passes; Citizens Personal Anchor remains an explicit no-partial-effects refusal. Six bounded contracts/check/fmt passed at the retained pre-Scarab f9 scope and replayed byte-identically; no invented summon lifecycle, native presentation or new admission.
+
 ## 2026-10-17 — Scarab scatter oracle correction
 
 [Gate412 source-ground metric](systems/toys.md#scarab-source-scatter-metric-2026-10-17): unchanged merged artifact fails2/30; actual778027 outer-ring RED confirms the3D-versus-horizontal mismatch. Keep5.001, exact first destination and separate secondary ground-height assertions. Six focused controls pass; final tightened two-case check/check/fmt pass. Runtime and prior native proof scopes unchanged; lead owns the next merge gate.

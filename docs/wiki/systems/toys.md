@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Noble Gardener and source anchor boundary (2026-10-17)
+
+Noble Gardener125 now has the actual saved-bind/shared2309 contract alongside four prior holiday roots. Citizens126 remains refused at the source child's permanent Personal Anchor dummy; its new actual-learning refusal test proves no partial actor/effect or recovery spending, not a successful summon. [Exact source124–129 matrix and retained proof scopes](../../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17) distinguish these from native garment/surfing/zero-entry/script appearance gaps. No production admission.
+
 ## Scarab source scatter metric (2026-10-17)
 
 The first guardian retains the exact selected destination; secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
