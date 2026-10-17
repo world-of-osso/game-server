@@ -96,6 +96,7 @@ pub(super) fn damages_enemy_team(ability: u32) -> bool {
             | 404
             | 419
             | 923
+            | 1025
             | 1031
             | 1035
             | 1531
@@ -217,7 +218,7 @@ fn validate_ability_graph(
                     "ability {ability}: undetermined team target routing"
                 ));
             }
-            if effect.property == 135 && !matches!(ability, 282 | 663 | 2209) {
+            if effect.property == 135 && !matches!(ability, 282 | 663 | 1025 | 2209) {
                 return Err(format!(
                     "ability {ability}: undetermined kill target/passive semantics"
                 ));
@@ -405,6 +406,9 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
                 && p[4] >= 0
                 && p[5] == 0
+        }
+        135 if catalog.turns[&effect.turn].ability == 1025 => {
+            effect.order == 4 && effect.aura == 0 && p == [200, 100, 0, 0, 0, 0]
         }
         135 => {
             matches!(p[1], 0 | 100) && p[2] == 0 && p[3] == 0 && matches!(p[4], 0 | 1) && p[5] == 0
