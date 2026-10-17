@@ -52,15 +52,15 @@ class HeraldTemplateTests(unittest.TestCase):
             'HealthModifier,ManaModifier,DamageModifier,'
             'lootid,mingold,maxgold,AIName,ScriptName FROM content_creature_template '
             f'WHERE entry IN({ACTORS}) ORDER BY entry').fetchall(),
-            [(17537,10,30,220,2,2,5.4,1.0,7.5,0,0,0,'','boss_vazruden'),
+            [(17537,10,30,220,2,2,5.4,1.0,7.5,0,2865,3746,'','boss_vazruden'),
              (21252,1,90,328,0,0,1.35,1.0,1.0,0,0,0,'','')])
         self.assertEqual(connection.execute(
-            f'SELECT entry,DifficultyID,ContentTuningID,HealthModifier,DamageModifier,lootid '
+            f'SELECT entry,DifficultyID,ContentTuningID,HealthModifier,DamageModifier,lootid,mingold,maxgold '
             'FROM content_creature_template_difficulty '
             'WHERE (entry=17537 AND DifficultyID=2) OR (entry=21252 AND DifficultyID IN(1,2)) '
             'ORDER BY entry,DifficultyID'
-        ).fetchall(), [(17537,2,1065,8.5,13.0,0),
-                       (21252,1,328,1.35,1.0,0),(21252,2,328,1.35,1.0,0)])
+        ).fetchall(), [(17537,2,1065,8.5,13.0,0,5730,7492),
+                       (21252,1,328,1.35,1.0,0,0,0),(21252,2,328,1.35,1.0,0,0,0)])
         self.assertEqual(connection.execute(
             'SELECT * FROM content_creature_template_difficulty WHERE entry=17537 AND DifficultyID=1'
         ).fetchall(), [], 'Vazruden has no authored Normal1 row')
@@ -92,8 +92,10 @@ class HeraldTemplateTests(unittest.TestCase):
         with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.execute("UPDATE tdb_creature_template SET ScriptName='different' WHERE entry=17537")
             connection.execute('UPDATE content_creature_template SET HealthModifier=0.01 WHERE entry=17537')
+        before_refusal = hashlib.sha256(self.db.read_bytes()).hexdigest()
         result = self.run_producer()
         self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(hashlib.sha256(self.db.read_bytes()).hexdigest(), before_refusal)
         self.assertIn('Herald summon17537 source identity', result.stderr)
         with closing(sqlite3.connect(self.db)) as connection:
             self.assertEqual(connection.execute(
