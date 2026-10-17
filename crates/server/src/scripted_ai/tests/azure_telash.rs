@@ -183,7 +183,6 @@ fn azure_telash_frost_bomb_starts_at_three_point_five_and_lands_native_aura() {
 }
 
 #[test]
-#[ignore = "RED: native Icy Devastator first rescheduled14.3s cast not implemented"]
 fn azure_telash_icy_devastator_follows_first_frost_reschedule_and_native_damage() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     let player = h.player();
@@ -221,8 +220,13 @@ fn azure_telash_icy_devastator_follows_first_frost_reschedule_and_native_damage(
         .expect("source firstFrost reschedule starts Icy Devastator at14.3s");
     assert_eq!(cast.spell_id, ICY_DEVASTATOR);
     let remaining = cast.duration - cast.elapsed;
-    // Keep native cast/channel duration and give its1000ms trigger387152 a real tick.
-    h.advance(remaining + 1.2);
+    h.advance(remaining + 0.2);
+    let channel = h.app.world().get::<CastState>(telash).unwrap();
+    assert_eq!(channel.spell_id, ICY_DEVASTATOR);
+    assert_eq!(channel.cast_type, shared::casting::CastType::Channel);
+    assert_eq!(channel.target, player.to_bits());
+    // Keep native channel duration and give its1000ms trigger387152 a real tick.
+    h.advance(1.0);
     assert!(
         h.inbox(0)
             .spell_gos
