@@ -51,13 +51,15 @@ fn assert_toy_hearthstone_bind_and_shared_charge(item: u32, spell: u32, sibling:
         h.app.world().get::<Position>(caster),
         Some(&bind.0.bevy_position())
     );
-    assert!(h.inbox.charges.iter().any(|charge| {
-        charge.spell_id == spell
-            && charge.category == HEARTH_CHARGE_CATEGORY
-            && charge.current == 0
-            && charge.max == 1
-            && charge.recharge_ms == CHARGE_RECOVERY_MS
-    }));
+    let spent_charge = h
+        .inbox
+        .charges
+        .iter()
+        .find(|charge| charge.spell_id == spell && charge.category == HEARTH_CHARGE_CATEGORY)
+        .expect("successful hearthstone publishes its shared charge");
+    assert_eq!(spent_charge.current, 0);
+    assert_eq!(spent_charge.max, 1);
+    assert_eq!(spent_charge.recharge_ms, CHARGE_RECOVERY_MS);
     let cast_count = h.inbox.go.len();
     assert!(activate(&mut h, sibling)[0].error.is_some());
     h.advance(220);
