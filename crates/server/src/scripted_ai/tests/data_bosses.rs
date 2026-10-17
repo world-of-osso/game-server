@@ -1738,6 +1738,54 @@ fn encounter_coverage_koranthal_shadow_storm_dummy_launches_authored_damage() {
     );
 }
 
+/// Diagnostic boundary for gate413: original failing assertions above stay intact.
+/// DB2 119965 speed5 with Attr9 speed-as-delay + TC Spell.cpp:880–896 means5s.
+#[test]
+fn encounter_coverage_koranthal_shadow_storm_five_second_destination_boundary() {
+    let (mut h, boss, _) =
+        encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, false);
+    let boss = boss.unwrap();
+    let target = h.player();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(target).insert(Position {
+        x: origin.x + 3.0,
+        ..origin
+    });
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 119973, None, true)
+        .expect("actual source parent/dummy/missile chain");
+    h.advance(4.9);
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(119964) && event.kind == CombatLogKind::Damage),
+        "no source missile impact before5s"
+    );
+    let before = h.health(target).current;
+    h.advance(0.2);
+    let hits: Vec<_> = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(119964)
+                && event.kind == CombatLogKind::Damage
+                && event.source == Some(boss.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        })
+        .collect();
+    assert_eq!(
+        hits.len(),
+        1,
+        "one actual119964 impact at the authored5s boundary"
+    );
+    assert!(
+        h.health(target).current < before,
+        "actual damage, not missile publication only"
+    );
+}
+
 #[test]
 fn encounter_coverage_koranthal_death_and_evade_use_source_lifecycle() {
     for killed in [false, true] {
