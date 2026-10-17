@@ -21,6 +21,7 @@ const LEYMOR_SCRIPT: &str = "boss_leymor";
 const TELASH_SCRIPT: &str = "boss_telash_greywing";
 const SPROUT_SCRIPT: &str = "npc_ley_line_sprouts";
 const LEY_LINE_SPROUT_AURA: u32 = 374161;
+const ARCANE_POWER: u32 = 374736;
 const TELASH_INITIAL_POWER: f32 = 60.0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
@@ -120,6 +121,7 @@ struct LeyLineSprout;
 impl super::CreatureAi for LeyLineSprout {
     fn just_appeared(&mut self, ctx: &mut super::Ctx) {
         ctx.do_cast_self(LEY_LINE_SPROUT_AURA);
+        ctx.do_cast_at(None, ARCANE_POWER, true);
     }
 }
 

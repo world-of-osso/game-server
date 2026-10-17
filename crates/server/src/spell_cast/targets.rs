@@ -17,7 +17,8 @@
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
 //! effect radius behind it; collision is not modelled), 76 DEST_CHANNEL_TARGET
 //! (the live channel destination), 77 UNIT_CHANNEL_TARGET
-//! (the caster's channel target) and 28 DEST_DYNOBJ_ENEMY (the units a persistent
+//! (the caster's channel target), 92 UNIT_SUMMONER (the native summoned creature's
+//! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). With no group or pet backend, 56 UNIT_CASTER_AREA_RAID
 //! and 120 UNIT_CASTER_AND_SUMMONS resolve to the caster, and 57
 //! UNIT_TARGET_RAID and 118 UNIT_TARGET_ALLY_OR_RAID to the ally target.
@@ -89,6 +90,8 @@ enum Selector {
     ChannelDestination,
     /// The caster's channel target.
     ChannelTarget,
+    /// The native spell-created creature's actual summoner, not an explicit unit.
+    Summoner,
     /// The caster's summoned pet.
     Pet,
     /// Area center = the caster's position moved `angle` (radians from its facing) by
@@ -148,6 +151,7 @@ fn selector(id: u32) -> Option<Selector> {
         65 => Selector::DestTargetBack,
         76 => Selector::ChannelDestination,
         77 => Selector::ChannelTarget,
+        92 => Selector::Summoner,
         24 => Selector::ConeEnemy,
         60 => Selector::ConeEntry,
         104 => Selector::ConeToDest,
@@ -193,6 +197,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
                 Selector::Explicit(_)
                     | Selector::RaidCorpses
                     | Selector::ChannelTarget
+                    | Selector::Summoner
                     | Selector::Pet
                     | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
@@ -473,6 +478,10 @@ pub fn select_targets(
             Selector::ChannelTarget => {
                 selected_any = true;
                 units.extend(channel_target(world, caster));
+            }
+            Selector::Summoner => {
+                selected_any = true;
+                units.extend(find_summoner(world, caster));
             }
             Selector::Pet => {
                 selected_any = true;
@@ -1080,6 +1089,12 @@ fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
 /// direction, moved by this slot's CalcRadius. Terrain/collision is not modelled.
 fn offset_destination(point: Vec3, angle: f32, distance: f32) -> Vec3 {
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
+}
+
+/// TC Spell.cpp:1760–1763: only a TempSummon supplies UNIT_SUMMONER.
+fn find_summoner(world: &World, caster: Entity) -> Option<Entity> {
+    let summoner = world.get::<super::summon::SummonedCreature>(caster)?.owner;
+    same_instance(world, caster, summoner).then_some(summoner)
 }
 
 /// The unit the caster channels at (`Spell::m_targets` of its channel).
