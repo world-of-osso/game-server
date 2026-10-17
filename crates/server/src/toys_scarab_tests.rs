@@ -8,8 +8,10 @@ fn assert_source_guardian_scatter_point(
     map: crate::maps::InMap,
     ground: &mut crate::ground::GroundMap,
 ) {
+    // WoW horizontal x/y is Bevy x/z; terrain elevation is independent of disk radius.
+    let horizontal_distance = (point.x - destination.x).hypot(point.z - destination.z);
     assert!(
-        point.distance(destination) <= 5.001,
+        horizontal_distance <= 5.001,
         "source five-yard scatter: destination={destination:?}, point={point:?}"
     );
     let crate::ground::GroundProbe::Supported(height) = ground.ground_in(map, point) else {
