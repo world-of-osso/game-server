@@ -66,6 +66,7 @@ fn native_triggered_caster_required_ref_removal_and_foreign_recipient_do_not_qua
     let mut h = native_fixture();
     let caster = h.npc;
     ordinary_cast(&mut h, caster, LUNAR_PRODUCER, caster);
+    super::cancel_cast(h.app.world_mut(), caster);
     cancel_aura(&mut h, caster, LUNAR_PRODUCER);
     cancel_aura(&mut h, caster, LUNAR_CHILD);
     let other = spawn_player(&mut h.app, 5, 2.0);
