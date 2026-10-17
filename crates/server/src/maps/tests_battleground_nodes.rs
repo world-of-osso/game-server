@@ -2033,6 +2033,7 @@ fn enter_source_match_with(
     for who in &players {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
+            crate::currency::PlayerCurrencies::default(),
             shared::components::Level(level),
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
             shared::components::CurrentPvpFaction(2),
@@ -2280,6 +2281,29 @@ fn node_match(template: BgTemplate) {
     assert!(score.objective_scores.contains(&(rules.defense_stat, 0)));
     use_second_frames(h);
     h.advance(120);
+    if template.map_id == 2107 {
+        // Source fixture enters at10: its PVPDifficulty maximum19 gives30 per bonus.
+        for (who, team) in entered.players.iter().zip(&entered.teams) {
+            let expected = if *team == BgTeam::A { 60 } else { 30 };
+            let world = h.app.world();
+            assert_eq!(
+                world
+                    .get::<crate::currency::PlayerCurrencies>(who.player)
+                    .unwrap()
+                    .0
+                    .get(1792),
+                expected
+            );
+            let progress = &world
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .progress;
+            assert_eq!(
+                (progress.honor, progress.lifetime_honor_xp),
+                (expected, u64::from(expected))
+            );
+        }
+    }
     win_leave_and_return(&mut entered, 1500);
 }
 
