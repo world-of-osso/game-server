@@ -13,7 +13,6 @@ fn orbital_fixture() -> (Harness, Entity, InMap) {
         crate::line_of_sight::LineOfSight::load(&directory.join("los"))
             .expect("authentic eye tables"),
     );
-    h.app.add_plugins(crate::knockback::KnockbackPlugin);
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
