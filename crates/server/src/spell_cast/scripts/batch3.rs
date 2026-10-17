@@ -48,6 +48,7 @@ pub(super) fn moonfire(world: &mut World, caster: Entity, target: Entity, depth:
             dest: None,
             chain_multipliers: Vec::new(),
             blocked_units: Vec::new(),
+            prevent_hit_script: false,
         })
         .collect();
     spell_cast::hit::remove_defended_targets(world, caster, &child, &mut plan);
@@ -200,6 +201,7 @@ pub(super) fn prayer_plan(
             dest: None,
             chain_multipliers: Vec::new(),
             blocked_units: Vec::new(),
+            prevent_hit_script: false,
         },
         PlannedEffect {
             index: heal,
@@ -207,6 +209,7 @@ pub(super) fn prayer_plan(
             dest: None,
             chain_multipliers: Vec::new(),
             blocked_units: Vec::new(),
+            prevent_hit_script: false,
         },
     ]
 }
