@@ -38,7 +38,7 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
 }
 
 /// BG_END_BONUS_ONCE_PER_MATCH normalizes TC's per-player OnEnd placement.
-/// Arathi OnEnd574–585: one winner bonus, then one completion bonus for everyone.
+/// Arathi OnEnd574–585 / Eye OnEnd437–448: winner1, then everyone1.
 pub(super) fn award_battleground_completion(
     world: &mut World,
     player: Entity,
@@ -46,7 +46,7 @@ pub(super) fn award_battleground_completion(
     bracket: shared::battleground::LevelBracket,
     won: bool,
 ) {
-    if map_id != 2107 {
+    if !matches!(map_id, 2107 | 566) {
         return; // Other per-map callbacks remain unimplemented, not generic rewards.
     }
     let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
