@@ -9,7 +9,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - [ ] Apply named policy `ENCOUNTER_CREDIT_FROM_RETAIL_DUNGEONENCOUNTER`: verify active70448 DungeonEncounter1892/map543/bit1, Journal529/instance248 and actor1106/display18944 against source Herald17307. Do not substitute older Journal data when missing or disagreeing; record named gap `HERALD_RETAIL_IDENTITY_GAP` instead.
 - [ ] Retain source actor roles: Herald17307 becomes Nazan17536 on the same actor;30717 summons Vazruden17537. A shared display alone cannot select a primary or create extra credit bindings.
 - [ ] Prepare only independent database copies from actual TDB1210 templates, difficulty rows, models and addons. Preserve authored fields, population and other encounters; no synthetic Normal row, legacy-stat substitution or admission override.
-- [ ] The `herald` spell producer preserves every field of the seven authored18430/20538/30693/30694/30696/30698/30699 spell/effect pairs, idempotently; missing input refuses atomically without unrelated-data changes.
+- [x] The `herald` spell producer preserves every field of the seven authored18430/20538/30693/30694/30696/30698/30699 spell/effect pairs, idempotently; missing input refuses atomically without unrelated-data changes.
 - [ ] Preserve group357's actual ordinary initial population: Herald and two17517 Sentries, groupFlags0. Its forced reset must not require changing it into a manual-spawn group.
 
 ### Lifecycle and phases
@@ -41,7 +41,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ## Tests asserting this spec
 
-- `scripts/tests/test_encounter_serverside_spells.py` — real CLI fixture for all seven authored spell/effect rows, idempotence, unrelated-data preservation and atomic refusal; not yet GREEN.
+- `scripts/tests/test_encounter_serverside_spells.py` — real CLI fixture for all seven authored spell/effect rows, idempotence, unrelated-data preservation and atomic refusal; producer suite GREEN6/6.
 - `scripts/tests/fixtures/herald-serverside-spells.json` — exact TDB1210 records selected by the pinned script.
 
 No Herald encounter behavioral acceptance exists yet. Source/70448 identity audits and data preparation are not runtime GREEN.
