@@ -3,6 +3,8 @@ use crate::persistence::GameDatabase;
 
 #[path = "pvp_content_tuning_tests.rs"]
 mod content_tuning;
+#[path = "pvp_honor_area_tests.rs"]
+mod honor_area;
 #[path = "pvp_honor_class_tests.rs"]
 mod honor_class;
 #[path = "pvp_honor_tests.rs"]
