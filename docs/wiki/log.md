@@ -1,6 +1,6 @@
 ## 2026-10-16 — Bench pet resurrection112
 
-[Sourced Raise Dead/Mass Resurrection](../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16): four actual112 rows, inactive-slot routing and zero-HP owned-load state. RED3+persisted-redb1→GREEN4;1756→1760/2829 rows (62.07→62.21%),1006→1008 graphs. Both-skin private5961 actual2347 shows both78/1563 reserves, pointer swap and real147-damage win; eight fullHD originals inspected. Canonical78-asset closure/strict loader readback pass, final CPU gates pending. Generic resurrection semantics remain gated.
+[Sourced Raise Dead/Mass Resurrection](../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16): four actual112 rows, inactive-slot routing and zero-HP owned-load state. RED3+persisted-redb1→GREEN4;1756→1760/2829 rows (62.07→62.21%),1006→1008 graphs. Both-skin private5961 actual2347 shows both78/1563 reserves, pointer swap and real147-damage win; eight fullHD originals inspected. Canonical78-asset closure/strict loader readback and final lib91/wild-PvP22/UI12/check/fmt pass; stale sibling `/hug` compilation drift resolved by lead-authorized fast-forward, no gameplay patch. Generic resurrection semantics remain gated.
 
 ## 2026-10-16 — Two-way pet-wall150 charges
 
