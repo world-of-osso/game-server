@@ -1,6 +1,6 @@
 ## 2026-10-17 — Dead-caster native channel coverage
 
-[Spell casting](systems/spell-casting.md#dead-caster-native-channel-coverage--2026-10-17): native55224 has1100ms prepare then8000ms channel/aura12. Concrete actual-death fixtures measure natural dead-start completion, caster-death interruption and Ghost-release interruption, including functional Stunned refusal and aura cleanup. Baseline pending; source values untouched, no production change or fabricated RED claim.
+[Spell casting](systems/spell-casting.md#dead-caster-native-channel-coverage--2026-10-17): native55224 has1100ms prepare then8000ms channel/aura12. Concrete actual-death fixtures measure natural dead-start completion, caster-death interruption and Ghost-release interruption, including functional Stunned refusal and aura cleanup. Baseline9c13da6b already passes3/3 in21.80s (196.412s wrapper), so this is tests/docs-only coverage, no production fix or fabricated RED. Masterc23d4110 integrated433e8ae9 adds only unrelated124 pull dispatch/Omor tests; exact native cases and channel/life/Repop paths unchanged, so retain baseline3 and prior runtime221 within their scopes without replay. Workspace/all-target check37.538s/0warnings and fmt pass. Main-thread readability/command gate for medium test-only work; no new independent verification claim.
 
 ## 2026-10-17 — Dead-start cast progression
 
