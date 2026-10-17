@@ -1770,6 +1770,9 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Residual idle release acceptance: b701f32/11 real UDP peers/full187770-creature population holds20.0–20.1Hz,weightedmean19.93ms; all5RED→GREEN+86controls/check retained, pressure-heavy first run documented in [[server-tick-lag]].
 - 2026-10-16: [Corgi and Rezan source boundaries](systems/toys.md#corgi-and-rezan-source-boundaries-2026-10-16): corrected sparse-fixture learned-use proof; genuine effect3 refusal before exact272071 cosmetic admission; native catalog source resolution, not audible playback. Chili/Enthralling stay named gaps; whole-Toy144/144 and current check/fmt/readability pass. Canonical393 classification includes separate lead template publication, not393 complete toys.
 
+## 2026-10-17 — Combat publication fanout
+
+[Measured fanout](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17): full-catalog/real-message eleven-owner RED11554345B, real five-toast order and clock178118B. Connection-scoped latest-delta/ordered-toast presentation and Guide content/clock coalescing committed; settlement timing unchanged, no new query variant. Producer GREEN/live11-peer comparison remain pending; earlier engine eight targeted RED/GREEN controls are separate evidence.
 - 2026-10-16: [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16): real persisted bind/source10s cast and shared2309 charge acceptance,146/146 Toy tests; source type17 appearance/cross-map/wall recharge remain separate.
 
 - 2026-10-16: [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16): authentic paired template import RED→GREEN, real area/cursor/source300s simulation lifecycle,147/147 Toy gate; target-dummy combat and missing native533501 body remain separate.
@@ -1788,3 +1791,7 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-17: lifetime113 at785c8f1b passes6/6(35.54s): native100 roots238/513/39935, actual40+60 account sum, zero-start JSON policy, reopen/relog and5544 pin plus2 BG merge controls. Original dates survive a one-hour clock advance. Required integration/check pending.
 
 - 2026-10-17: lifetime113 final integration772a3be6 passes required workspace four-filter231/0/1existing ignored(353.60s), site-export1/1, workspace/all-target check and three-repo fmt/diff. Active70448 census5544/1843, all243matrix/pin exact; bounded artifact/readability checks pass. LIFETIME_HK_TRACKING_STARTS_AT_ZERO remains explicit; native higher thresholds/BG/rendered/freshUDP/remoteCI/lead landing are not certified.
+
+## 2026-10-17 — Pending-only netdelta producer controls
+
+[Combat publication](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17): dedicated marked-peer/quiet-frame proof, real level-stream/reconnect equivalence and Stockade earned-delta/toast isolation now pass alongside repaired transport-free criteria and explicit HostClient fixtures. Detailed source scopes/counts live on the investigation page. Merged engine checks and genuine UDP byte/latency/performance remeasurement remain pending.

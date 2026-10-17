@@ -17,6 +17,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+mod network_payloads;
+
 const REPORT_WINDOW: Duration = Duration::from_secs(10);
 const REPORT_TOP: usize = 15;
 
@@ -93,6 +95,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
 
 /// `LogPlugin::custom_layer` hook: installs the layer and its report system.
 pub fn system_timing_layer(app: &mut App) -> Option<BoxedLayer> {
+    network_payloads::install(app);
     let totals = Totals::default();
     app.insert_resource(SystemTimings {
         totals: totals.clone(),
