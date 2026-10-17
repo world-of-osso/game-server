@@ -61,7 +61,9 @@ This checkpoint's OnEnd callbacks cover Arathi, Eye, current Warsong and the Alt
 
 ## Random Battleground admission and reward profile — 70448
 
-Random32 admission uses parent map566's source bracket (first20–29), parent minimum5/team, capacity10/team and maximum party5. Every queued party member and parent match retain original32. This prerequisite creates no concrete instance: Random32 stays queued while current Retail leveling/map-selection research is pending. Later configured selection must exclude missing Deepwind2245 and preserve per-player original32 independently of the selected map. Do not copy cross-range TC indices or change existing payouts before the Retail decision.
+**`RANDOM_BG_LEVEL_ELIGIBLE_MAPS` — project policy based on current Retail level-banded Random BG behavior, not a TC port.** Random32 admission uses parent map566's source bracket (first20–29), parent minimum5/team, capacity10/team and maximum party5. Every player's original32 identity must survive concrete map selection, acceptance, transfer and reconnect.
+
+Select only configured concrete templates linked from70448 BML32, using their existing configured weights (Retail weights are undocumented). Each eligible map must have its own PVPDifficulty bracket containing every queued player's level, within its admission bounds. Reject a requested level range explicitly when no configured eligible map exists. Deepwind2245 stays excluded because its template is missing. A level25 party cannot select Deephaul2656; level80 can. The instance retains the selected map's level-matching bracket, never a copied parent RangeIndex. Existing per-map payouts and minimum-to-start remain unchanged; the parent's5/team matchmaking minimum does not lower a concrete map's start minimum. No new UI map-exclusion behavior.
 
 `RANDOM_BG_WIN_REWARD_PROFILE` remains unresolved: pinned TC a352b1fa defaults and shipped assignments use win first27000/repeat13500 and loss first4500/repeat3500 as kill equivalents, not flat Honor. Reset defaults to06:00 server-local. No amounts, reset authority, first-win/daily state or Random completion grant is adopted.
 
