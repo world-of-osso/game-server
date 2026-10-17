@@ -1,3 +1,4 @@
+- [Scarab source-ground metric](systems/toys.md#scarab-source-scatter-metric-2026-10-17) — unchanged merged artifact reproduces2/30; actual-terrain RED→horizontal5.001 plus independent height/exact first-destination proof, runtime unchanged.
 - [Dragon costume lifecycle118–123](systems/toys.md#dragon-costume-simulation-lifecycle-2026-10-17) — actual learned-use, source displays, natural15min expiry/restoration/reuse; bounded simulation proof, native presentation open.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
 - [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
