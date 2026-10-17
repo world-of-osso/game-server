@@ -74,14 +74,8 @@ pub(super) fn launch(
     plan: TargetPlan,
     depth: u8,
 ) {
-    // Gate413 counterfactual only: restore the normal hook after this A/B run.
-    const COUNTERFACTUAL_KORANTHAL: u32 = 61412;
-    let notify = world
-        .get::<shared::components::Npc>(caster)
-        .is_none_or(|npc| npc.template_id != COUNTERFACTUAL_KORANTHAL);
-    if notify {
-        crate::scripted_ai::on_spell_cast(world, caster, spell.id);
-    }
+    // All successful ordinary/triggered casts reach this once, before flight/hit.
+    crate::scripted_ai::on_spell_cast(world, caster, spell.id);
     let reflections: Vec<(Entity, Reflection)> = super::hit_units(&plan)
         .into_iter()
         .filter_map(|unit| Some((unit, reflect::roll(world, caster, spell, unit)?)))
