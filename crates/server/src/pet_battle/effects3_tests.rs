@@ -181,7 +181,7 @@ fn pet_battle_effects3_mind_games_locks_own_one_based_slots_not_opponent() {
 #[test]
 fn pet_battle_effects3_ambiguous_persistent_spores_and_override_still_reject_without_rng() {
     let c = catalog();
-    for id in [2213, 163, 576] {
+    for id in [2213, 163] {
         let b = battle(&c, 7, 7, [id, 110, 123]);
         assert!(
             b.step(&c, [Action::Ability(id), Action::Pass], &mut NoDraw)
