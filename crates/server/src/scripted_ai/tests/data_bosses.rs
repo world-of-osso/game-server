@@ -23,6 +23,8 @@ mod azure_telash;
 mod celebras;
 #[path = "gargolmar.rs"]
 mod gargolmar;
+#[path = "gargolmar_speech.rs"]
+mod gargolmar_speech;
 #[path = "gizlock.rs"]
 mod gizlock;
 #[path = "gnomeregan.rs"]
