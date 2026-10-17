@@ -788,6 +788,8 @@ pub fn save_currencies(
     txn.commit().expect("Failed to commit currencies save");
 }
 
+/// Offline/test migration helper. Runtime readers use the owned account cache.
+#[cfg(test)]
 pub fn load_achievements(
     db: &Database,
     character_id: u64,
@@ -816,6 +818,7 @@ pub fn load_achievements(
     }
 }
 
+#[cfg(test)]
 pub fn save_achievements(
     db: &Database,
     character_id: u64,

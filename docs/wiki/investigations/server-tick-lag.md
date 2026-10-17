@@ -16,6 +16,20 @@ A second retained live reproduction, bot-harness `native-stockade-fury22-trace-c
 
 The later PvP release20 report describes a10.57s frame around20 WorldPortAcks (exact receipt ordering pending). Source tracing finds no character-save call in `receive_world_port_acks`/`complete_transfer`: the existing periodic saver uses transfer destinations and is already queued here. BG reconnect-entry persistence occurs before ACK in `pvp_entry`, not in the handler; world-map discovery and map-lock writes are separate callers, not automatically attributed to this stall. The new regression exercises20 real channel ACKs into one reserved map with a held writer and a due periodic save, then mutates live entities before drain/reopen. No speculative transfer save was introduced.
 
+#### Reader coherence follow-up
+
+Lead full-workspace gate441 exposed the news fixture reading0 rows immediately after enqueue (server binary3656PASS/1FAIL/113 existing opt-in ignores). The audit found real runtime versions, not only a test race. Held-writer REDs prove an early empty guild query, a consumed/lost subscriber notification, SelectCharacter blocked251.8ms in raw initialization, and a missing-component Guide overwriting queued character progress. Setup-only clock/name-filter failures were excluded.
+
+| Reader | Coherent route after conversion | Proof |
+|---|---|---|
+| Guild news request/sticky and dirty publication | Typed read/mutation jobs on the existing FIFO; receipts precede replies and subscriber comparisons | Separate query/subscriber ordering REDs; GREEN pending |
+| Character selection and Guide missing-component load | Existing AccountProgressCache contribution inserted before enqueue; account ID preserved at selection | Actual SelectCharacter default/legacy and Guide overwrite REDs; GREEN pending |
+| Live achievement window/comparison and account aggregation | PlayerAchievementState components; owned account cache, read-only cold-cache initialization before first enqueue | Existing scope/migration/evaluation controls retained |
+| Raw achievement initialization/migration | Test/offline-only API (`cfg(test)`), unavailable to production callers | Production check plus pending-write login controls |
+| Reopen and site-data export | Ordinary database close drains writer; offline exporter reads supplied COPY through one read transaction | Crash/reopen controls; `SITE_COPY_LIVE_REDB_SNAPSHOT` explicitly deferred |
+
+The site refresh's raw SSH copy has a pre-existing torn-read risk and may lag pending work; lead explicitly accepts website lag and excludes capture/ops/security/deploy changes from this head. The named gap is not represented as a fixed capture boundary.
+
 [Contract](../../specs/fifo-persistence.md). Sources: [`persistence_writer.rs`](../../../crates/server/src/persistence_writer.rs), [`achievement_account.rs`](../../../crates/server/src/achievement_account.rs), [`achievement_writer_tests.rs`](../../../crates/server/src/achievement_writer_tests.rs). Full deferred-topic inventory is a separate diagnostic artifact, not permission to import those topics.
 
 ### Symptom

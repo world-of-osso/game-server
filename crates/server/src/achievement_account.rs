@@ -113,6 +113,26 @@ pub(super) fn save_monthly_contribution(
     enqueue_progress(db, (account, character), character_bytes, saved, None)
 }
 
+pub(super) fn load_character_progress(
+    db: &GameDatabase,
+    account: u64,
+    character: u64,
+) -> PlayerAchievementState {
+    let mut accounts = db
+        .accounts
+        .0
+        .lock()
+        .expect("live account contributions lock");
+    let saved = accounts
+        .entry(account)
+        .or_insert_with(|| load_progress(&db.db, account));
+    saved
+        .contributions
+        .get(&character)
+        .cloned()
+        .unwrap_or_default()
+}
+
 pub(super) fn monthly_contributions(
     db: &GameDatabase,
     account: u64,
