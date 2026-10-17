@@ -299,7 +299,7 @@ Gargolmar runtime port uses dispatch-anchored EventMap repeats, incoming-only 40
 
 Gargolmar acceptance remains open: source charge effect96 must move to the selected distant threat before Surge impact. Keep the concrete20yd failing acceptance, not a cast-only substitute. NPC-to-NPC Watcher Heal30643 effect proof uses actual HP delta (base30±5%); player inbox receives only events owned by source/target and cannot prove absence of that heal.
 
-Omor primary binding: TC a352b1fa17308/source ordinal1 maps to installed DB2 encounter1891/map543bit0, Journal70391 CSV528/1105/display18237. Copy-only binding must preserve Gargolmar17306 and exclude Fiendish Hound17540 from completion credit. Runtime schedules, Orbital scripts, hound lifetime and actual mechanics remain unproven.
+Omor primary binding: TC a352b1fa17308/source ordinal1 maps to installed DB2 encounter1891/map543bit0, Journal70391 CSV528/1105/display18237. Copy-only binding must preserve Gargolmar17306 and exclude Fiendish Hound17540 from completion credit. Bounded runtime schedules, shield, damage, hound engagement/lifetime and isolated credit are proven; Orbital scripts and full native mechanics remain open.
 
 Omor Orbital Strike Target35642 and Whip32185 must retain every actual TDB1210 server-side spell/effect field via `encounter_serverside_spells.py --encounter omor` on independent copies. Whip source effect0 is aura23/2000ms/trigger30638; target effect0 is dummy3/source-enemy area15/radius33. Import is data preparation, not proof of script behavior.
 
