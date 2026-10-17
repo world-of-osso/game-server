@@ -1,10 +1,29 @@
 //! Omor source EventMap and hounds: real Normal-copy admission, not native balance.
 use super::*;
 
+fn orbital_fixture() -> (Harness, Entity, InMap) {
+    let (mut h, boss, map) = bound_boss(17308, 543, 0);
+    let directory = crate::ground::ground_data_dir();
+    let wdt = h.app.world().resource::<MapStore>().maps[&543].wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &directory,
+        std::collections::HashMap::from([(543, wdt)]),
+    ));
+    h.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&directory.join("los"))
+            .expect("authentic eye tables"),
+    );
+    h.app.add_plugins(crate::knockback::KnockbackPlugin);
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    (h, boss, map)
+}
+
 #[test]
 #[ignore = "RED: Omor Orbital target SpellScript not ported"]
 fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_threat() {
-    let (mut h, boss, map) = bound_boss(17308, 543, 0);
+    let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let players = [h.players[0].0, h.players[1].0];
     for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
@@ -17,14 +36,30 @@ fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_thre
             shared::components::PlayerMotion::default(),
         ));
     }
+    for player in players {
+        let position = *h.app.world().get::<Position>(player).unwrap();
+        let ground = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .ground_in(map, Vec3::new(position.x, position.y, position.z));
+        assert!(
+            matches!(ground, crate::ground::GroundProbe::Supported(_)),
+            "authentic Ramparts support at {position:?}: {ground:?}"
+        );
+    }
     h.engage(boss);
     crate::creature_aggro::add_threat(h.app.world_mut(), boss, players[1], 0.1);
-    for _ in 0..600 {
+    for _ in 0..640 {
         h.advance(0.05);
         if h.has_aura(boss, 32185) {
             break;
         }
     }
+    assert!(
+        h.inbox(0).spell_gos.iter().any(|go| go.spell_id == 35642),
+        "actual scheduled Orbital parent reached its hit boundary"
+    );
     assert!(
         h.has_aura(boss, 32185),
         "source Orbital target script must cast actual Whip32185"
@@ -61,6 +96,55 @@ fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_thre
     assert!(
         threat.threat_for(other.to_bits()) > 0.0,
         "unselected threat retained"
+    );
+}
+
+#[test]
+#[ignore = "RED: Omor Whip falling-player periodic AuraScript not ported"]
+fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let players = [h.players[0].0, h.players[1].0];
+    for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
+        h.app.world_mut().entity_mut(player).insert((
+            map,
+            Position {
+                x: origin.x + gap,
+                ..origin
+            },
+            shared::components::PlayerMotion::default(),
+        ));
+        crate::creature_aggro::add_threat(h.app.world_mut(), boss, player, 1.0);
+    }
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(players[0]), true)
+        .expect("authentic source knock");
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(players[0])
+            .unwrap()
+            .contains(shared::components::PlayerMotion::FALLING),
+        "actual knock starts falling"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 32185, Some(boss), true)
+        .expect("authentic source Whip");
+    h.advance(1.9);
+    assert!(
+        !h.inbox(0).spell_gos.iter().any(|go| go.spell_id == 30638),
+        "no early periodic child"
+    );
+    h.advance(0.15);
+    let children: Vec<_> = h
+        .inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.spell_id == 30638)
+        .map(|go| go.target)
+        .collect();
+    assert_eq!(
+        children,
+        vec![players[0].to_bits()],
+        "only falling player threat, never self/grounded player"
     );
 }
 
