@@ -12,6 +12,18 @@ Earlier root refusals remain in the [effects12 identity/reason table](toy-effect
 
 [Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
 
+## Sightless65 native detection consumer (2026-10-16)
+
+Actual journal153293/254568 RED at077ed8f6 rejects `unsupported toy spell: aura 152` (0/1,56.25s). Before production admission, real source-aura hostile-acquisition controls664a50ed pass1/1,37.57s: ordinary level5 spider acquires player at12yd, protected player stays unacquired12yd but is acquired7yd. Existing `AggroDistance::center_radius` already reads target152 before native minimum/reach clamps. Minimal574d45f5 names that constant in the aura registry and recognizes the existing consumer; no aggro formula, stealth, faction, movement or wire change.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Focused GREEN | Both actual bag-learning/UseToy and real hostile acquisition pass2/2, zero ignored42.78s. Source Val'sharah7558 terrain accepts group5454, instant cast/600000ms aura and300000ms recovery remain authored. Ordinary50ms simulation expiry removes the aura with original body/health retained. Northshire9 refuses without spending, then valid terrain permits use after ordinary recovery expiry. No clock/duration/cooldown reset. |
+| Current gates | At server2e936278/engine48fcd9625/protocol07a8faa, whole `toys:: --test-threads 2` passes142/142, zero ignored792.86s; native creature-aggro controls30/30 pass118.42s. Server binary/tests check passes5m34s and fmt passes; no compile warnings/manual readability findings. Canonical runtime catalog classification369→370 adds only153293, zero removals; not370 completed toys or the separate prepared-import basis. No new assets/native pixels/wire/audio/wall-lifetime or complete-toy claim. |
+| Preceding source gaps |153193 zero-entry mount action remains unresolved.153194 effect72 creates a farsight DynamicObject/viewpoint;153204 uses bind-sight1/stalked68;153253 property65 Control3 requires possessed128391, not a wild actor. These capabilities remain unimplemented and are not admitted by152 recognition. |
+
+Evidence root below: `sightless65-{active-goal,proof-ledger,source-preflight}.json`, genuine journal RED, pre-admission aggro proof, focused GREEN and final fmt/check/aggro/whole-Toy logs plus `sightless65-{final-results,readability,census-delta}.json`; local pinned TC `Creature.cpp::GetAttackDistance` and `SpellAuraEffects.cpp`152 consumer mapping. `after-waywatcher64-root-metadata.json` preserves preceding source identities.
+
 ## Waywatcher64 source lifecycle (2026-10-16)
 
 Test-only194e7c82 adds actual bag learning and journal UseToy130249/195806 acceptance. Initial run passes1/1, zero ignored42.09s against the currently published authentic99572 template. No runtime fix, importer change or manufactured RED; earlier absent99572 source evidence is stale.

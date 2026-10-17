@@ -15,6 +15,9 @@
 
 mod data;
 mod gathering;
+#[cfg(test)]
+mod modern_crafting_fixture;
+mod quality_reagents;
 pub(crate) mod specializations;
 mod trainer;
 pub(crate) use gathering::GatherProgress;
@@ -289,7 +292,13 @@ pub struct ProfessionPlugin;
 impl Plugin for ProfessionPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((TrainerPlugin, specializations::SpecializationsPlugin))
-            .add_systems(Update, receive_craft_requests)
+            .add_systems(
+                Update,
+                (
+                    receive_craft_requests,
+                    quality_reagents::receive_allocations,
+                ),
+            )
             .add_systems(
                 FixedUpdate,
                 continue_craft_queues.after(crate::spell_cast::advance_casts),
@@ -544,10 +553,9 @@ pub(crate) fn check_cast_items(
         .iter()
         .any(|effect| matches!(effect.effect, EFFECT_QUALITY_CRAFT | EFFECT_RECRAFT));
     if needs_quality_operation {
-        return Err(CastFailure::Unsupported(
-            "Quality crafting/recrafting is unavailable: authentic operation evaluator is missing"
-                .into(),
-        ));
+        return shared::profession::evaluate_crafted_quality()
+            .map(|_| ())
+            .map_err(|gap| CastFailure::Unsupported(gap.to_string()));
     }
     let Some(data) = world.get_resource::<ProfessionData>() else {
         return Ok(());
