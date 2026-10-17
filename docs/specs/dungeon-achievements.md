@@ -4,6 +4,8 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 
 ## What it must do
 
+- [x] Preserve authored CriteriaTree.Flags on every criterion catalog/continuation/scenario line independently of current/required progress and support. ProgressBar0x1 is a presentation fact, not `required > 1`: actual1017/tree22151 is flag1/amount1,155/tree4716 is flag0/amount100. Do not change counters, thresholds, completion, eligibility, cursor order or unavailable-progress semantics; gate matching protocol/client consumers together. Mainline Constants.lua127 and AchievementUI.lua2009–2070 define the client presentation.
+
 - [x] Read DungeonEncounter map/difficulty/order/bit rows, including negative order indices; isolate defeated encounters per copy.
 - [x] Successful scripted deaths record encounter progress; duplicate DONE does not credit it.
 - [x] Persist scheduled instance boss/encounter masks with existing instance locks; normal-copy checkpoints survive restart without acquiring scheduled reset restrictions and clear on manual reset.
