@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source210–214: visual/motion/return/class/covenant boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|210 All-Seeing Eyes175140/318571 | Self dummy4/600000ms with1800000ms item recovery and27 distinct source visual bindings. Source text explicitly promises weird-looking eyes, not actual future-sight gameplay. Exact visual branches/presentation/lifecycle remain unproved; no future-vision rule or blanket dummy4 admission. |
+|211 Glimmerflies on Strings177951/343958 | Self water-walk104 plus hover106 for30000ms,300000ms item recovery. Floating over land/water and source glimmerfly presentation remain unproved as this toy's combined contract; aura flags alone are not native motion/height/restoration or body proof. No self cosmetic substitute. |
+|212 Wreath-A-Rang178530/326457 | Script77 with target21/ally. Advertised friendly-player throw and automatic return when possible require their own target/return action; no generic projectile, aura or ignored script establishes it. |
+|213 Mirror of Envious Dreams179393/328906 | Self dummy4/nonzero misc8/8,900000ms;21 source visual branches author189 unique procedural records of types17/22. Class-specific armor/appearance choice remains unproved; neither a complete-zero cosmetic policy nor arbitrary transform/display replacement preserves that payload. |
+|214 Night Fae Hearthstone180290/326064 | Source10s homebind252/shared2309 metadata matches the earlier return-home mechanism, but source text additionally advertises Night Fae pledge eligibility. Root ItemEffect PlayerConditionID0 alone neither proves nor disproves that complete rule. Source-specific eligibility/actual-use/native acceptance remains open; no automatic closure from the earlier nine hearthstones or invented covenant gate. |
+
+`rows210-214-{readonly-source,action-source}.json` retains exact root/cast/duration/charge fields and visual/procedural mapping. Pinned `SpellAuraEffects.cpp` identifies104 water-walk/106 hover; `SharedDefines.h` names21 target-ally. These are source boundaries, not new admissions or passing simulation/native results. No runtime/importer/canonical/data changes or repeat of unchanged code gates.
+
 ## Source205–209: area/vision/companion boundaries and retained Aqir proof (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |
@@ -21,7 +33,7 @@ Exact roots, reachable children, properties/durations, visual/procedural data an
 |200 Mayhem Mind Melder174871/316937 | Root uses dummy3/target150 for advertised companion control,1500ms cast/120000ms item recovery. Description references316932's30000ms; that record combines possess aura2/target25 and self dummy4, but the root has no executable trigger edge here. Companion ownership/control/restoration remain unproved; no pet-viewer or player-body substitution. |
 |202 Budget K'thir Disguise174874/298948 | Self dummy4/900000ms with3600000ms item recovery. Visuals87131/138363/138365 author procedural358669/368360/368361 type17/Value1=62814. Specific head-top friend/equipment presentation remains unproved; no ordinary transform or generic attachment admission. |
 |203 Coifcurl's Close Shave Kit174920/317204 | Source47 summon163441/property4493,1000ms cast/120000ms actor and inherited3600000ms spell recovery. Runtime163441/95179/scale0.5 already exists; property4493 is Control1/Title2/flags67592, source npcflag0/empty AI/script. Existing kit metadata does not establish advertised per-user shaving/appearance consequences; no generic stationary actor or invented barber interaction. |
-|204 Void-Touched Skull174921/317210 | Friendly target35 dummy3 with1800000ms spell recovery. Throw/pass/timer/void-energy game state remains unresolved; no generic missile, friendly aura or ignored script completes that game. |
+|204 Void-Touched Skull174921/317210 | Party target35 dummy3 (source description says friendly target) with1800000ms spell recovery. Throw/pass/timer/void-energy game state remains unresolved; no generic missile, friendly aura or ignored script completes that game. |
 
 `rows200-204-{readonly-source,action-source}.json` retains exact roots, reference records, properties/durations, visual/procedural mapping and actual runtime-content models.201 is test/spec only and still pending execution/check; the other named action gaps remain intact. No runtime-policy/importer/canonical/data changes or new native/full-Toy/master certificate.
 
