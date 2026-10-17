@@ -219,6 +219,84 @@ fn alterac_channel_last_leave_with_fresh_npc_death_unloads_without_loot_panic() 
 }
 
 #[test]
+fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match(&template, [611, 610]);
+    use_second_frames(&mut entered.h);
+    assert_team_honor(&entered, 0, 0);
+    let actor = &entered.players[0];
+    let other_copy = InMap {
+        instance_id: entered.copy.instance_id + 1,
+        ..entered.copy
+    };
+    let (outside_captain, _) = find_alterac_source_npc(&mut entered.h, entered.copy, 11949);
+    entered
+        .h
+        .app
+        .world_mut()
+        .entity_mut(outside_captain)
+        .insert(other_copy);
+    kill_alterac_source_npc(&mut entered.h, actor, other_copy, 11949);
+    entered.h.receive_pvp_updates(5);
+    assert_eq!(battleground(&entered.h, actor).score_a, 700);
+    assert_team_honor(&entered, 0, 0);
+
+    let (captain, health) = find_alterac_source_npc(&mut entered.h, entered.copy, 11947);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        captain,
+        health + 1.0,
+    );
+    entered.h.receive_pvp_updates(5);
+    assert_eq!(battleground(&entered.h, actor).score_b, 600);
+    assert_eq!(battleground(&entered.h, actor).phase, BgPhase::InProgress);
+    // The admitted20–79 bracket uses79, not player20; round the entire3-kill bonus once.
+    assert_team_honor(&entered, 368, 0);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        captain,
+        health + 1.0,
+    );
+    entered.h.receive_pvp_updates(5);
+    assert_eq!(battleground(&entered.h, actor).score_b, 600);
+    assert_team_honor(&entered, 368, 0);
+
+    let (general, health) = find_alterac_source_npc(&mut entered.h, entered.copy, 11946);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        general,
+        health + 1.0,
+    );
+    entered.h.receive_pvp_updates(5);
+    assert_eq!(battleground(&entered.h, actor).phase, BgPhase::Ended);
+    // General4 is490, separate from captain3=368; survivor/tower callbacks are not this slice.
+    assert_team_honor(&entered, 858, 0);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        general,
+        health + 1.0,
+    );
+    entered.h.receive_pvp_updates(5);
+    assert_team_honor(&entered, 858, 0);
+    let world = entered.h.app.world();
+    let character = world.get::<ClientId>(actor.player).unwrap().0;
+    let database = world.resource::<crate::persistence::GameDatabase>();
+    assert_eq!(
+        crate::persistence::load_currencies(&database.db, character).get(1792),
+        858
+    );
+    assert_eq!(
+        crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+        858
+    );
+    win_leave_and_return(&mut entered, 700);
+}
+
+#[test]
 fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return() {
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match(&template, [611, 610]);
