@@ -1327,7 +1327,12 @@ fn send_updates(
     toasts: Vec<AchievementToastSnapshot>,
 ) {
     crate::adventure_guide::refresh_for_connection(world, connection);
-    publication::queue_update(world, connection, snapshot, toasts);
+    if world
+        .get::<MessageSender<AchievementStateUpdate>>(connection)
+        .is_some()
+    {
+        publication::queue_update(world, connection, snapshot, toasts);
+    }
 }
 
 /// TC Unit.cpp977-1001/1078: effective totals, raw peaks, no self-hit totals.

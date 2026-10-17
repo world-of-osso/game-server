@@ -395,9 +395,6 @@ fn combat_progress_stream_equals_full_state_and_reconnect_replaces_baseline() {
             );
         }
     }
-    for peer in fixture.advance() {
-        assert!(peer.achievements.is_empty() && peer.deltas.is_empty());
-    }
     let connection = fixture.peers[0].connection;
     let character = fixture
         .app
@@ -487,22 +484,38 @@ fn combat_publication_stream_replaces_earned_ids_and_removes_and_restores_progre
     );
     apply_delta(&mut projected, second.deltas.into_iter().next().unwrap());
     assert_eq!(projected, restored);
-    send_updates(fixture.app.world_mut(), connection, restored, Vec::new());
-    let refreshed = fixture.advance().remove(0);
-    assert!(refreshed.achievements.is_empty());
+}
+
+#[test]
+fn combat_publication_only_pending_peer_gets_delta_then_quiet_frames_send_zero() {
+    let mut fixture = fixture();
+    let connection = fixture.peers[0].connection;
+    let baseline = fixture.baselines[0].clone();
+    send_updates(fixture.app.world_mut(), connection, baseline, Vec::new());
+    let notified = fixture.advance();
     assert_eq!(
-        refreshed.deltas,
+        notified[0].deltas,
         vec![AchievementDelta {
             earned_ids: None,
             progress_upserts: Vec::new(),
-            removed_progress_ids: Vec::new()
+            removed_progress_ids: Vec::new(),
         }],
-        "explicit progress notification still invalidates paginated statistics"
+        "old full-update trigger still refreshes paginated statistics"
     );
     assert!(
-        fixture.advance().remove(0).deltas.is_empty(),
-        "no unsolicited idle refresh"
+        notified.iter().skip(1).all(|peer| peer.deltas.is_empty()),
+        "unmarked peers get no delta"
     );
+    for peer in fixture.advance() {
+        assert!(
+            peer.deltas.is_empty(),
+            "three quiet frames send zero deltas"
+        );
+        assert!(
+            peer.achievements.is_empty(),
+            "no idle full states or toasts"
+        );
+    }
 }
 
 #[test]
