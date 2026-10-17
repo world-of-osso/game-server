@@ -276,7 +276,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
     let recipient = add_level20_group_recipient(&mut h, character, member);
     // The production content view gives Lesser Voidwalker418 an untuned level20.
     // Legacy Imp416 says5, but native ContentTuning482 makes its actual level90.
-    for (level, expected) in [(19, 0), (20, 1), (21, 2)] {
+    for (level, kills, previous, expected) in [(19, 1, 0, 0), (20, 2, 0, 1), (21, 3, 1, 2)] {
         h.app
             .world_mut()
             .entity_mut(h.caster)
@@ -314,12 +314,12 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             .unwrap();
         assert_eq!(
             state.criteria_progress.get(&4944),
-            Some(&u64::from(level - 18)),
+            Some(&kills),
             "native generic kill must be accepted before checking21"
         );
         assert_eq!(
             state.criteria_progress.get(&4949),
-            Some(&u64::from(level - 18)),
+            Some(&kills),
             "native Demon30/3 companion remains independent"
         );
         assert_eq!(
@@ -327,10 +327,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             expected,
             "21/0 must compare actor against actual killed creature, inclusively"
         );
-        assert_eq!(
-            before.get(&107647).copied().unwrap_or(0),
-            expected.saturating_sub(u64::from(level >= 20))
-        );
+        assert_eq!(before.get(&107647).copied().unwrap_or(0), previous);
         let counters = state.criteria_progress.clone();
         let recipient_state = h
             .app
@@ -339,13 +336,10 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             .unwrap();
         assert_eq!(
             recipient_state.criteria_progress.get(&107647),
-            Some(&u64::from(level - 18)),
+            Some(&kills),
             "eligible recipient compares their own20, not killer level"
         );
-        assert_eq!(
-            recipient_state.criteria_progress.get(&4944),
-            Some(&u64::from(level - 18))
-        );
+        assert_eq!(recipient_state.criteria_progress.get(&4944), Some(&kills));
         h.cast(686, Some(target));
         h.advance(160);
         assert_eq!(
