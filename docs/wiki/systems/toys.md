@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Azerite real-ground recovery and interaction gaps (2026-10-17)
+
+Already-admitted Azerite151 now has actual Northshire ground/learning and ordinary600s item recovery/reuse acceptance, without new policy. [Exact four-test/check proof and150–154 matrix](../../toy-effects14-coverage.md#source150154-azerite-real-ground-recovery-and-interaction-gaps-2026-10-17) separate server events from native skyward presentation and retain matching-game, rally, jukebox and secret-fish interaction gaps. No database publication.
+
 ## Procedural/control/script and Tea Set gaps (2026-10-17)
 
 [Source145–149 matrix](../../toy-effects14-coverage.md#source145149-proceduralcontrolscript-and-tea-table-boundaries-2026-10-17) retains the blight-coating procedural payload, Control4 spinning toys, ambiguous Highborne possession action and unpublished149865 Tea Set. No generic visual/actor substitute or new admission; authentic Tea Set model metadata is not successful gameplay/native proof.135 remains a separate established source contract.
