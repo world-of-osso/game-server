@@ -55,6 +55,107 @@ fn arathi_four_normal_five_player_parties_enter_one_twenty_player_match() {
 }
 
 #[test]
+#[ignore = "RED: late WorldPortAck arrivals are missing from the scoreboard"]
+fn arathi_late_party_arrival_gets_one_score_row_without_resetting_existing_scores() {
+    let template = shared::battleground::arathi_basin();
+    let mut previous = Vec::new();
+    let mut entered = enter_source_match_with_arrival(
+        &template,
+        node_rules(template.map_id).unwrap().starts,
+        |_| {},
+        SourceQueueFixture::FourPartiesOfFive,
+        |h, players, index| {
+            if index != players.len() - 1 {
+                return;
+            }
+            let snapshot = battleground(h, &players[0]);
+            assert_eq!(snapshot.phase, BgPhase::InProgress);
+            let actor_team = snapshot.team;
+            let enemy = players
+                .iter()
+                .find(|who| battleground(h, who).team != actor_team)
+                .unwrap();
+            crate::combat::deal_direct_damage(
+                h.app.world_mut(),
+                players[0].player,
+                enemy.player,
+                7.0,
+            );
+            h.receive_pvp_updates(5);
+            previous = h
+                .app
+                .world()
+                .resource::<crate::pvp::PvpServerState>()
+                .battleground_matches[&battleground(h, &players[0]).match_id]
+                .scoreboard
+                .rows
+                .clone();
+            let actor_id = h.app.world().get::<ClientId>(players[0].player).unwrap().0;
+            assert_eq!(
+                previous
+                    .iter()
+                    .find(|row| row.character_id == actor_id)
+                    .unwrap()
+                    .damage_done,
+                7
+            );
+            let late_id = h
+                .app
+                .world()
+                .get::<ClientId>(players[index].player)
+                .unwrap()
+                .0;
+            assert!(previous.iter().all(|row| row.character_id != late_id));
+        },
+    );
+    let late = entered.players.last().unwrap();
+    let late_id = entered
+        .h
+        .app
+        .world()
+        .get::<ClientId>(late.player)
+        .unwrap()
+        .0;
+    for _ in 0..3 {
+        entered.h.receive_pvp_updates(5);
+        let snapshot = battleground(&entered.h, late);
+        assert_eq!(snapshot.players.len(), 20);
+        for row in &previous {
+            assert_eq!(
+                snapshot
+                    .players
+                    .iter()
+                    .find(|score| score.character_id == row.character_id),
+                Some(row)
+            );
+        }
+        let rows: Vec<_> = snapshot
+            .players
+            .iter()
+            .filter(|row| row.character_id == late_id)
+            .collect();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].team, snapshot.team);
+        assert_eq!(
+            (
+                rows[0].damage_done,
+                rows[0].healing_done,
+                rows[0].deaths,
+                rows[0].killing_blows
+            ),
+            (0, 0, 0, 0)
+        );
+        assert!(
+            rows[0]
+                .objective_scores
+                .iter()
+                .all(|(_, value)| *value == 0)
+        );
+    }
+    leave_and_return(&mut entered);
+}
+
+#[test]
 fn warsong_channel_zero_capture_timeout_gets_only_end_honor() {
     let template = shared::battleground::warsong_gulch();
     let rules = shared::battleground::flag_rules(template.map_id).unwrap();
@@ -2660,6 +2761,16 @@ fn enter_source_match_queued(
     setup: impl FnOnce(&mut App),
     queue_fixture: SourceQueueFixture,
 ) -> EnteredMatch {
+    enter_source_match_with_arrival(template, starts, setup, queue_fixture, |_, _, _| {})
+}
+
+fn enter_source_match_with_arrival(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+    queue_fixture: SourceQueueFixture,
+    mut before_arrival: impl FnMut(&mut Harness, &[Traveler], usize),
+) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
     } else if matches!(template.map_id, 727 | 1803) {
@@ -2830,7 +2941,7 @@ fn enter_source_match_queued(
             });
     }
     let updates = h.receive_pvp_updates(5);
-    for (who, invitation) in players.iter().zip(&invitations) {
+    for (index, (who, invitation)) in players.iter().zip(&invitations).enumerate() {
         assert!(
             updates[&who.connection]
                 .iter()
@@ -2866,6 +2977,7 @@ fn enter_source_match_queued(
             }),
             source.position
         ));
+        before_arrival(&mut h, &players, index);
         h.ack(who);
     }
     h.receive_pvp_updates(5);
