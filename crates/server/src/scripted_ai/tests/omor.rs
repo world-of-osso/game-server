@@ -34,7 +34,7 @@ fn read_summon_speech_observer() -> Position {
     Position { x, y, z }
 }
 
-fn summon_speech_fixture() -> (Harness, Entity, InMap) {
+pub(super) fn summon_speech_fixture() -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = orbital_fixture();
     let mut observer = read_summon_speech_observer();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
