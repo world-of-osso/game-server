@@ -903,8 +903,15 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
     let mut roster = Vec::new();
     for index in 0..20_u8 {
         let name = format!("Port{}", char::from(b'a' + index));
-        let (id, _) =
-            create_character(&app.world().resource::<GameDatabase>().db, 1, &name, 1, 1).unwrap();
+        let account = u64::from(index) + 1;
+        let (id, _) = create_character(
+            &app.world().resource::<GameDatabase>().db,
+            account,
+            &name,
+            1,
+            1,
+        )
+        .unwrap();
         roster.push(id);
         let player = app
             .world_mut()
@@ -941,7 +948,9 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
                 RemoteId(PeerId::Local(id)),
                 Connected,
                 HostClient { buffer: Vec::new() },
-                Authenticated { account_id: 1 },
+                Authenticated {
+                    account_id: account,
+                },
                 InWorld { character_id: id },
                 PlayerLink(player),
                 MessageSender::<WorldPortAck>::default(),
