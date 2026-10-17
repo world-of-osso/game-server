@@ -133,6 +133,20 @@ fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() 
         "no early periodic child"
     );
     h.advance(0.15);
+    eprintln!(
+        "WHIP observed aura={:?} threat={:?} motion={:?} pos={:?} health={:?}",
+        h.app.world().get::<crate::auras::ActiveAuras>(boss),
+        h.app.world().get::<shared::components::ThreatTable>(boss),
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(players[0]),
+        h.app.world().get::<Position>(players[0]),
+        h.app.world().get::<Health>(players[0])
+    );
+    eprintln!(
+        "WHIP native30638 admission={:?}",
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30638, Some(players[0]), true)
+    );
     let children: Vec<_> = h
         .inbox(0)
         .spell_gos
