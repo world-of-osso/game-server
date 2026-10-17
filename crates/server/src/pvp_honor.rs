@@ -27,7 +27,16 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
     };
     let recipients = read_world_kill_recipients(world, killer, victim, map);
     for &player in &recipients {
-        let amount = calculate_kill_xp(world, player, victim, victim_level, recipients.len());
+        let Some(level) = eligible_kill_level(world, player, victim, victim_level) else {
+            continue;
+        };
+        // TC RewardHonor updates35 before AddHonorXP's minimum-level/zero-XP checks.
+        crate::achievement::record_player_event(
+            world,
+            player,
+            crate::achievement::CriteriaEvent::EarnHonorableKill,
+        );
+        let amount = calculate_kill_xp(world, player, level, victim_level, recipients.len());
         award_honor(world, player, amount);
     }
 }
@@ -77,35 +86,35 @@ fn read_world_kill_recipients(
         .collect()
 }
 
-fn calculate_kill_xp(
+fn eligible_kill_level(
     world: &World,
     player: Entity,
     victim: Entity,
     victim_level: u8,
-    group_size: usize,
-) -> u32 {
-    let Some(killer_team) = world.get::<CurrentPvpFaction>(player) else {
-        return 0;
-    };
-    let Some(victim_team) = world.get::<CurrentPvpFaction>(victim) else {
-        return 0;
-    };
+) -> Option<u8> {
+    let killer_team = world.get::<CurrentPvpFaction>(player)?;
+    let victim_team = world.get::<CurrentPvpFaction>(victim)?;
     if killer_team == victim_team {
-        return 0;
+        return None;
     }
-    let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
-        return 0;
-    };
+    let level = world.get::<Level>(player)?.0;
     let inactive = world
         .get::<ActiveAuras>(player)
         .is_some_and(|aura| aura.has_spell(INACTIVE));
-    if level < MIN_HONOR_PLAYER_LEVEL || inactive {
+    (!inactive && victim_level > gray_level(level)).then_some(level)
+}
+
+fn calculate_kill_xp(
+    world: &World,
+    player: Entity,
+    level: u8,
+    victim_level: u8,
+    group_size: usize,
+) -> u32 {
+    if level < MIN_HONOR_PLAYER_LEVEL {
         return 0;
     }
     let gray = gray_level(level);
-    if victim_level <= gray {
-        return 0;
-    }
     let base =
         (f32::from(level) * 1.55 * f32::from(victim_level - gray) / f32::from(level - gray)).ceil();
     let divided = base / group_size as f32;

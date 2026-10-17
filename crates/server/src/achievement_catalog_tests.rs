@@ -1,6 +1,16 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_honor_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(3826, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&3826), Some(&7));
+}
+
+#[test]
 fn achievements_criteria_content268_requires_complete_inclusive_authored_range() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER, MinLevelWithDelta INTEGER);
@@ -1397,9 +1407,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5517 + native Hug247 + both faction-specific Call to Arms.
+    // Imported70391: native Hug, Call to Arms and seven complete type35 roots.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5520);
+    assert_eq!(union.len(), 5527);
+    assert!(union.contains(&1261), "authored ten-kill G.N.E.R.D. Rage");
     assert!(union.contains(&247), "native dead hostile player Hug");
     for achievement in [908, 909, 18202, 18203, 18205, 18206] {
         assert!(
