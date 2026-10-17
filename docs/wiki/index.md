@@ -51,7 +51,7 @@
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — member-scoped six-action/founder ledger, separate from bank/news history.
 - [Guild news](systems/guild-news.md) — actual qualified producers, durable member query/sticky authority and native proof ledger.
-- [Guild perks](systems/guild-perks.md) — membership knowledge, landed172/211/map suppression and native mounted/removal proof; Hasty consumed-charge boundary and remaining effect gaps explicit.
+- [Guild perks](systems/guild-perks.md) — membership knowledge, landed172/211/map suppression and native mounted/removal proof; Hasty Human mixed-charge queue and actual both-skin25/10-minute item proof, with remaining effects explicit.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
 
