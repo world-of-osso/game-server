@@ -2942,8 +2942,8 @@ fn node_match(template: BgTemplate) {
     use_second_frames(h);
     h.advance(120);
     if template.map_id == 2107 {
-        // Source fixture enters at10: its PVPDifficulty maximum19 gives30 per bonus.
-        assert_team_honor(&entered, 60, 30);
+        // Source max19 gives30: nine resource thresholds270 + winner/end60, other end30.
+        assert_team_honor(&entered, 330, 30);
     }
     win_leave_and_return(&mut entered, 1500);
 }
@@ -2969,6 +2969,82 @@ fn assert_team_honor(entered: &EnteredMatch, team_a: u32, team_b: u32) {
             (expected, u64::from(expected))
         );
     }
+}
+
+#[test]
+fn arathi_channel_resource_honor_keeps_team_remainders_through_contests() {
+    let template = shared::battleground::arathi_basin();
+    let mut entered = enter_source_match(&template, node_rules(template.map_id).unwrap().starts);
+    use_second_frames(&mut entered.h);
+    let alliance_index = entered
+        .teams
+        .iter()
+        .position(|team| *team == BgTeam::A)
+        .unwrap();
+    let horde_index = entered
+        .teams
+        .iter()
+        .position(|team| *team == BgTeam::B)
+        .unwrap();
+    for (index, entry) in [(alliance_index, 227420), (horde_index, 227536)] {
+        let actor = &entered.players[index];
+        let (object, at) = objects_in(&mut entered.h, entered.copy, entry)[0];
+        entered.h.walk_to(actor, at);
+        use_object(&mut entered.h, actor, object);
+    }
+    entered.h.advance(60);
+    advance_arathi_score(&mut entered, BgTeam::A, 158);
+    assert_team_honor(&entered, 0, 0);
+    entered.h.advance(2);
+    assert_team_honor(&entered, 30, 0);
+    advance_arathi_score(&mut entered, BgTeam::B, 160);
+    assert_team_honor(&entered, 30, 30);
+    let alliance = &entered.players[alliance_index];
+    let horde = &entered.players[horde_index];
+    let (farm, at) = objects_in(&mut entered.h, entered.copy, 227536)[0];
+    entered.h.walk_to(alliance, at);
+    use_object(&mut entered.h, alliance, farm);
+    let paused = battleground(&entered.h, horde).score_b;
+    entered.h.advance(20);
+    assert_eq!(battleground(&entered.h, horde).score_b, paused);
+    assert_team_honor(&entered, 30, 30);
+    entered.h.walk_to(horde, at);
+    use_object(&mut entered.h, horde, farm);
+    advance_arathi_score(&mut entered, BgTeam::B, 318);
+    assert_team_honor(&entered, 60, 30);
+    entered.h.advance(2);
+    assert_team_honor(&entered, 60, 60);
+    for actor in &entered.players {
+        let world = entered.h.app.world();
+        let character = world.get::<ClientId>(actor.player).unwrap().0;
+        let database = world.resource::<crate::persistence::GameDatabase>();
+        assert_eq!(
+            crate::persistence::load_currencies(&database.db, character).get(1792),
+            60
+        );
+        assert_eq!(
+            crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+            60
+        );
+    }
+    leave_and_return(&mut entered);
+}
+
+fn advance_arathi_score(entered: &mut EnteredMatch, team: BgTeam, target: u32) {
+    for _ in 0..400 {
+        let snapshot = battleground(&entered.h, &entered.players[0]);
+        let score = if team == BgTeam::A {
+            snapshot.score_a
+        } else {
+            snapshot.score_b
+        };
+        if score >= target {
+            assert_eq!(score, target);
+            return;
+        }
+        entered.h.advance(1);
+    }
+    panic!("Arathi source resource clock did not reach {target} for {team:?}");
 }
 
 #[test]
