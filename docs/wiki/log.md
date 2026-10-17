@@ -1,6 +1,10 @@
+## 2026-10-16 — Miss-only pet self outcomes194
+
+[Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Final gates and both-skin native proof pending.
+
 ## 2026-10-16 — Refuge Critter shields223
 
-[Bounded1344](../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16): independent Block759 for user/other friendly Critters, explicit wearer/original caster and shared self26 duration policy. Actual unsupported223 RED→GREEN9;1764/2829 rows (62.35%)/1010 graphs,2232/2. Both-skin private5961 independent caller/Critter blocks keep892/892, non-Critter978 takes28/26; eight fullHD originals/ExtractedOnly/tripwire0/canonical4-asset closure pass. Final CPU gates pending; no generic selector/full Retail timing claim.
+[Bounded1344](../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16): independent Block759 for user/other friendly Critters, explicit wearer/original caster and shared self26 duration policy. Actual unsupported223 RED→GREEN9;1764/2829 rows (62.35%)/1010 graphs,2232/2. Both-skin private5961 independent caller/Critter blocks keep892/892, non-Critter978 takes28/26; eight fullHD originals/ExtractedOnly/tripwire0/canonical4-asset closure pass. Final lib104/wild-PvP24/UI12/check/fmt pass; no generic selector/full Retail timing claim.
 
 ## 2026-10-16 — Same-species pet damage370
 
