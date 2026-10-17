@@ -1,5 +1,11 @@
 # Pet battle effect-property coverage
 
+## Life Exchange67 — implementation2026-10-17
+
+Local70391 root277/effect493/turn471/property67 says: “Equalizes the health between the user and his enemy.” and “Health gained cannot exceed the caster's maximum health.” The property's sole named field is Accuracy; the authored tuple is `[100,0,0,0,0,0]`, aura0. Bounded implementation treats this as direct absolute-HP redistribution rather than attack-power-scaled damage or healing: compute the shared average from both pre-effect values, cap health to maximum, preserve reserves and skip both changes on a miss. Reuse ordinary accuracy/dodge admission, mapping property67's first field to Accuracy. Integer division follows the engine's HP convention; independent Retail rounding, damage/heal proc classification and feedback are not certified.
+
+Actual unsupported67 RED3→GREEN4 on dec61f97 covers2000/6000→4000/4000, caster1000/max3000 versus9000→3000/5000, unchanged values on a miss and unqualified-tuple rejection before RNG. Census1778/2829=62.85%,1016 graphs (+1row/+1graph). Source hashes/rows and full RED/GREEN logs: `/home/osso/.worktrees/logs/petbattle-effects-2026-10-16/life-exchange-*`. Authored level4 Tormented Spirit2611 owned-loadout/seeder are committed separately; native/final gates remain pending. Adopted70448 display66620 model1313539 local-CASC closure authenticates6/6 with zero failures, privately staged as6 receipts+2 skin aliases; lead canonical publication requested, not yet acknowledged. No canonical writes or client simulation.
+
 ## Launch Rocket75 — implementation2026-10-17
 
 Local70391 ability293 explicitly says: “First use: Creates a rocket.” and “Second use: Launches the rocket”. Turn488/effect508/property75 supplies `[45,100,0,0,0,0]` and aura294, whose description says “A rocket is ready to launch.” Its only state is69/Mechanic_IsObject=1. Bounded admission reuses existing caster-owned charged-damage machinery: setup creates the ready aura without attacking the enemy; launch uses ordinary Mechanical typed damage and removes the ready aura even on a miss. A third use needs a fresh setup. No generic75 handler, blanket object admission or new combat formula.

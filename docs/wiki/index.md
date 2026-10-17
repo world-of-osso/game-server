@@ -22,6 +22,7 @@
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Life Exchange health redistribution](systems/pet-battle-engine.md#life-exchange67--2026-10-17) — bounded277/493, unsupported67 RED3→GREEN4; native/final proof pending, Retail rounding/proc feedback unclaimed.
 - [Launch Rocket setup and launch](systems/pet-battle-engine.md#launch-rocket75--2026-10-17) — bounded293/294, real unsupported75 RED3→GREEN4 and wild/PvP27; strict both-skin physical setup/launch win; final lib122/check/fmt pass, prior unchanged UI12 retained.
 - [Armageddon team damage and sacrifice](systems/pet-battle-engine.md#armageddon1025--2026-10-16) — bounded1025 all living enemies/self-kill/Failsafe suppression; RED1→GREEN8, strict both-skin death/forced-reserve/use proof; final lib118/wild-PvP26/UI12/check/fmt pass.
 - [Invitation appearance delivery](systems/guild-lifecycle.md#invitation-appearance-delivery) — shared immediate/persisted real optional-design loader, request/reopen controls and four actual native invitations/declines; paid private prerequisite and proof exclusions explicit.
