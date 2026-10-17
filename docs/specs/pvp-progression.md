@@ -51,6 +51,12 @@ Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each gran
 
 This checkpoint implements Arathi and Eye completion only. Resource-threshold/objective awards, other per-map callbacks, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
 
+## Isle commander Honor
+
+Pinned TC Isle `HonorRewards`193–197 and `OnUnitKilled`383–394 grant a literal500 Honor to the opposite team when commander34924 or34922 dies, before ending the match. This is not a bonus-kill multiplier, a generic completion award, or the500 Conquest spell definition. Only an actual source battle-accepted commander death triggers it; the battle's terminal transition rejects dead-target replay. Credit only the winning accepted roster still present in that map copy, with the same positive Honor minimum-level/Inactive checks. Dead eligible recipients remain allowed. Preserve the existing1:1 XP/wallet mirror, holding cap, zero-weekly rule and durable updates.
+
+Resource-node12-per45s awards remain separate unfinished work; winning by reinforcement depletion must not be relabeled as a commander kill. This event does not resolve Arena/Conquest or the lifetime-level curve.
+
 ## Sourced weekly counters — 70391
 
 Honor1792 and Conquest1602 both author MaxEarnablePerWeek0 and do not set ComputedWeeklyMaximum0x4. Following TC Player::GetCurrencyWeeklyCap/ModifyCurrency, zero means no static weekly ceiling and new gains must not increment week_earned. Positive weekly caps still clamp accepted gains and count only the actual accepted amount. Existing historical counters are preserved; no unsourced weekly reset clock or Conquest season limit is introduced. The shared wallet implements this rule; persistence must retain zero counters for new uncapped PvP entries.
