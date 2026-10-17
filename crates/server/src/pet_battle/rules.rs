@@ -95,10 +95,12 @@ pub fn supported_property(property: u32) -> bool {
 pub(super) fn damages_enemy_team(ability: u32) -> bool {
     matches!(
         ability,
-        189 | 299
+        189 | 258
+            | 299
             | 404
             | 419
             | 923
+            | 979
             | 1025
             | 1031
             | 1035
