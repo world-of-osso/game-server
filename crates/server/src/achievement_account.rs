@@ -100,7 +100,7 @@ pub(super) fn save_monthly_contribution(
     account: u64,
     character: u64,
     state: &PlayerAchievementState,
-) {
+) -> crate::persistence_writer::CommitReceipt {
     let mut accounts = db
         .accounts
         .0
@@ -110,7 +110,7 @@ pub(super) fn save_monthly_contribution(
         .entry(account)
         .or_insert_with(|| load_progress(&db.db, account));
     let character_bytes = insert_contribution(saved, character, state);
-    enqueue_progress(db, (account, character), character_bytes, saved, None);
+    enqueue_progress(db, (account, character), character_bytes, saved, None)
 }
 
 pub(super) fn monthly_contributions(
@@ -149,7 +149,7 @@ fn enqueue_progress(
     character_bytes: Vec<u8>,
     saved: &AccountProgress,
     news: Option<OwnedNews>,
-) {
+) -> crate::persistence_writer::CommitReceipt {
     let (account, character) = owner;
     let account_bytes = serde_json::to_vec(saved).expect("encode account contributions");
     db.writer
@@ -178,7 +178,7 @@ fn enqueue_progress(
                 );
             }
             txn.commit().map_err(|error| error.to_string())
-        });
+        })
 }
 
 fn load_progress(db: &redb::Database, account: u64) -> AccountProgress {

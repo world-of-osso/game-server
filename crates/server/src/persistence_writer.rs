@@ -12,10 +12,10 @@ mod tests;
 type WriteOperation = Box<dyn FnOnce(&Database) -> Result<(), String> + Send>;
 
 #[derive(Clone)]
-pub(crate) struct CommitReceipt(Arc<Mutex<Option<Result<(), String>>>>);
+pub(crate) struct CommitReceipt<T = ()>(Arc<Mutex<Option<Result<T, String>>>>);
 
-impl CommitReceipt {
-    pub(crate) fn result(&self) -> Option<Result<(), String>> {
+impl<T: Clone> CommitReceipt<T> {
+    pub(crate) fn result(&self) -> Option<Result<T, String>> {
         self.0.lock().expect("persistence receipt lock").clone()
     }
 }
@@ -30,7 +30,6 @@ pub(crate) struct WriterMetrics {
 struct Job {
     name: &'static str,
     operation: WriteOperation,
-    receipt: CommitReceipt,
 }
 
 pub(crate) struct PersistenceWriter {
@@ -64,11 +63,24 @@ impl PersistenceWriter {
         name: &'static str,
         operation: impl FnOnce(&Database) -> Result<(), String> + Send + 'static,
     ) -> CommitReceipt {
+        self.enqueue_result(name, operation)
+    }
+
+    pub(crate) fn enqueue_result<T: Clone + Send + 'static>(
+        &self,
+        name: &'static str,
+        operation: impl FnOnce(&Database) -> Result<T, String> + Send + 'static,
+    ) -> CommitReceipt<T> {
         let receipt = CommitReceipt(Arc::new(Mutex::new(None)));
+        let completion = receipt.clone();
         let job = Job {
             name,
-            operation: Box::new(operation),
-            receipt: receipt.clone(),
+            operation: Box::new(move |db| {
+                let result = catch_operation(db, operation);
+                let status = result.as_ref().map(|_| ()).map_err(Clone::clone);
+                *completion.0.lock().expect("persistence receipt lock") = Some(result);
+                status
+            }),
         };
         self.metrics.submitted.fetch_add(1, Ordering::Relaxed);
         if self
@@ -87,9 +99,12 @@ impl PersistenceWriter {
     }
 }
 
-fn execute_job(db: &Database, job: Job, metrics: &WriterMetrics) {
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (job.operation)(db)))
-        .unwrap_or_else(|panic| {
+fn catch_operation<T>(
+    db: &Database,
+    operation: impl FnOnce(&Database) -> Result<T, String>,
+) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| operation(db))).unwrap_or_else(
+        |panic| {
             let message = panic
                 .downcast_ref::<String>()
                 .cloned()
@@ -100,8 +115,12 @@ fn execute_job(db: &Database, job: Job, metrics: &WriterMetrics) {
                 })
                 .unwrap_or_else(|| "unknown persistence panic".into());
             Err(message)
-        });
-    match &result {
+        },
+    )
+}
+
+fn execute_job(db: &Database, job: Job, metrics: &WriterMetrics) {
+    match (job.operation)(db) {
         Ok(()) => {
             metrics.committed.fetch_add(1, Ordering::Relaxed);
         }
@@ -110,7 +129,6 @@ fn execute_job(db: &Database, job: Job, metrics: &WriterMetrics) {
             bevy::log::error!(operation = job.name, %error, "Persistence commit failed");
         }
     }
-    *job.receipt.0.lock().expect("persistence receipt lock") = Some(result);
 }
 
 impl Drop for PersistenceWriter {

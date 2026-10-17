@@ -1323,8 +1323,8 @@ pub(crate) fn save_monthly_contribution(
     account: u64,
     character: u64,
     state: &PlayerAchievementState,
-) {
-    account_store::save_monthly_contribution(db, account, character, state);
+) -> crate::persistence_writer::CommitReceipt {
+    account_store::save_monthly_contribution(db, account, character, state)
 }
 pub(crate) fn monthly_contributions(
     db: &GameDatabase,

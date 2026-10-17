@@ -9,6 +9,8 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - [ ] Keep achievement contributions and corresponding guild news atomic, without duplicate news across pending updates or reopen.
 - [ ] Queue the existing 15-second character save and Guide monthly/Tender persistence without changing their gameplay clocks.
 - [ ] Drain ordinary shutdown; a crash must retain acknowledged writes and must not publish queued writes as durable.
+- [ ] Trading Post requests execute after preceding Guide contribution/Tender settlement on the same FIFO; publish replies and collection changes only after their own commit. Same-tick earned Tender must fund a purchase and survive reopen.
+- [ ] Preserve purchase/cart/refund/freeze and UTC-month rollover behavior, including snapshot settlement; no tick-thread write initialization disguised as a read.
 
 ## How it works
 
@@ -20,7 +22,9 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - `crates/server/src/persistence.rs` — database ownership and writer lifetime.
 - `crates/server/src/achievement_account.rs` — pending account contributions and owned atomic character/account/news persistence.
 - `crates/server/src/persistence_runtime.rs` — periodic, exit and departing-character saves; FIFO adaptation remains under verification.
-- `crates/server/src/adventure_guide.rs` — monthly contribution and Tender settlement callers; full tick-path conversion remains under verification.
+- `crates/server/src/adventure_guide.rs` — owned monthly contribution followed by a receipt-dependent Tender settlement.
+- `crates/server/src/trading_post_persistence.rs` — owned validated actions, ordered snapshot settlement and commit-gated per-connection replies.
+- `crates/server/src/trading_post_store.rs` — atomic store operations; account loading is read-only, including missing-table state.
 
 ## Tests asserting this spec
 
@@ -29,6 +33,7 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - `crates/server/src/persistence_tests.rs` — periodic-save contention and stored character/map/corpse state.
 - `crates/server/src/achievement_tests.rs` — account migration, retained dates, character isolation and guild news.
 - `crates/server/src/adventure_guide_tests.rs` — real monthly refresh under a held writer.
+- `crates/server/src/trading_post_tests.rs` — held-writer request responsiveness/no early reply, same-tick real earning→purchase→reopen and existing vendor/purchase/cart/refund/month-reset controls.
 
 ## Known gaps (current cycle)
 
