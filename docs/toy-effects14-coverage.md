@@ -713,3 +713,15 @@ Exact rows: `rows89-93-readonly-source.json`, `witch89-child-source.json`, `rows
 |98 Throw Magic Fun Rock163741/279989 | Effect77/friendly target21 promises automatic return when possible. A launch visual80480 does not implement recipient eligibility or the return/catch exchange; retain source script refusal without a one-way cosmetic substitute. |
 
 Root/visual/procedural sources: `rows94-98-readonly-source.json`, `rows94-98-action-source.json`; prior prepared census records exact dummy/aura/script/missing143666 refusals. Pinned local `spell_item.cpp` name search found none of these actions; that absence alone does not prove Retail lacks scripts. Named gaps remain open; no production/canonical write, fabricated RED or full-toy claim. Merged55 proof remains code-current; docs-only changes require no broad rerun.
+
+## Source99–103: existing contracts versus missing actions (2026-10-17)
+
+| Source row | Exact boundary / proof level |
+|---|---|
+|99 Heartsbane Curse163742/279997 | Self dummy4/visual80489, aura kit103395 has type11 effect819 plus procedural357585 type1/Value0=7171486. Neither generic aura4 nor ordinary model/sound kits implement these unresolved appearance operations. |
+|100 Coldrage's Cooler163744/280053 | Existing [Batch3 caster attachment contract](#batch3-highest-count-aura4-complete-ordinary-model-caster-kits) already tests actual bag learning/use/SpellGo, source300000ms aura field, replication/cancel, unchanged owner/target health/model and no spawned actor. It does not test natural5min wall expiry or per-toy native snowfall pixels/audio. |
+|101 Witherbark Gong163745/280084 | Existing [Group28 proof](#source-group-private-summons--bounded-lifecycle-2026-10-13) includes real learned-use143703/count1/30000ms expiry, source scale0.75/nonpet/private ownership and captured group semantics. Both-skin scaled Gong imagery belongs to historical Group28 native evidence, not a fresh master-merge run. |
+|102 Kovork Kostume163750/280121 | Transform56 names143714/misc1=8, but both canonical content and pinned TDB creature template/model queries have zero143714 rows. No substitute based on another Kovork NPC, guessed display or synthetic importer row. Source appearance identity remains missing. |
+|103 Molok Morion163775/280133 | Self dummy4/visual80534; aura kit103447 includes procedural357590 type17/Value1=9859. Ordinary head model attachments do not establish this operation; retain explicit procedural gap. |
+
+Source/proof records: `rows99-103-{readonly-source,action-source,source-proof-ledger}.json`. The two existing real-ID tests pass in retained85 whole-Toy150 proof (`forlorn85-final-whole-toys.log`, codea6605052); that is not a new post-merge all-Toy/native certificate. Current merged55 focused proof remains separate. No runtime/canonical change or duplicate broad gate.
