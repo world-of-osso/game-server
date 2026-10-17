@@ -19,6 +19,166 @@ fn orbital_fixture() -> (Harness, Entity, InMap) {
     (h, boss, map)
 }
 
+fn read_summon_speech_observer() -> Position {
+    let connection = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("read-only authored Ramparts observer pose");
+    let wow: (f32, f32, f32) = connection
+        .query_row(
+            "SELECT position_x,position_y,position_z FROM content_creature
+         WHERE map=543 AND id1=17306 ORDER BY guid LIMIT 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .expect("actual Gargolmar spawn is a valid distant same-copy observer");
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(wow.0, wow.1, wow.2);
+    Position { x, y, z }
+}
+
+fn summon_speech_fixture() -> (Harness, Entity, InMap) {
+    let (mut h, boss, map) = orbital_fixture();
+    let mut observer = read_summon_speech_observer();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let point = Vec3::new(observer.x, observer.y, observer.z);
+    let distance = point.distance(Vec3::new(origin.x, origin.y, origin.z));
+    assert!(
+        distance > crate::creature_aggro::MAX_AGGRO_RADIUS && distance < 300.0,
+        "authored observer is outside aggro but within source Yell300: {distance}"
+    );
+    let support = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .ground_in(map, point);
+    let crate::ground::GroundProbe::Supported(height) = support else {
+        panic!("authentic Gargolmar observer floor: {support:?}");
+    };
+    observer.y = height;
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((map, observer));
+    // Yell reaches outside normal NPC visibility; do not force a visible-caster receipt.
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(crate::interest::NetworkVisibility::default());
+    (h, boss, map)
+}
+
+fn summon_speech_count(
+    h: &Harness,
+    boss: Entity,
+    texts: &std::collections::HashSet<String>,
+) -> usize {
+    let name = &h
+        .app
+        .world()
+        .get::<shared::components::Npc>(boss)
+        .unwrap()
+        .name;
+    h.inbox(0)
+        .chat
+        .iter()
+        .filter(|line| {
+            let authored = line.channel == shared::protocol::ChatType::MonsterYell(boss.to_bits())
+                && texts.contains(&line.content);
+            let named = &line.sender == name;
+            authored && named
+        })
+        .count()
+}
+
+#[test]
+#[ignore = "source ordinary30707 OnSpellCast30%Talk0 acceptance pending implementation"]
+fn encounter_coverage_omor_summon_cast_speech_has_both_source_chance_outcomes() {
+    let (mut h, boss, map) = summon_speech_fixture();
+    let texts: std::collections::HashSet<_> = h.app.world().resource::<CreatureTexts>().groups
+        [&17308][&0]
+        .iter()
+        .flat_map(|text| [text.male_text.clone(), text.female_text.clone()])
+        .filter(|text| !text.is_empty())
+        .collect();
+    assert!(!texts.is_empty(), "actual authored summon Talk0 text");
+    let mut spoken = 0;
+    let mut quiet = 0;
+    // Both outcomes across128 actual30% rolls; literal30 belongs to source/code review.
+    // Missing all spoken outcomes has probability0.7^128 <1.5e-20.
+    for trial in 0..128 {
+        assert_eq!(
+            h.app.world().get::<crate::creature_ai::CreatureState>(boss),
+            Some(&crate::creature_ai::CreatureState::Idle),
+            "no injected combat/source clocks"
+        );
+        let prior_hounds: std::collections::HashSet<_> =
+            h.creatures_of(17540).into_iter().collect();
+        let prior_speech = summon_speech_count(&h, boss, &texts);
+        let mana_before = h
+            .app
+            .world()
+            .get::<shared::components::Mana>(boss)
+            .unwrap()
+            .current;
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30707, Some(boss), false)
+            .unwrap_or_else(|failure| panic!("ordinary native30707 trial{trial}: {failure:?}"));
+        h.advance(2.1); // Native1s cast + transport sampling, no cast-time override.
+        let newborns: Vec<_> = h
+            .creatures_of(17540)
+            .into_iter()
+            .filter(|hound| !prior_hounds.contains(hound))
+            .collect();
+        assert_eq!(
+            newborns.len(),
+            1,
+            "actual ordinary spell spawns one wild hound, trial{trial}"
+        );
+        assert_eq!(h.app.world().get::<InMap>(newborns[0]), Some(&map));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::UnitSummonedBy>(newborns[0])
+                .unwrap()
+                .0,
+            boss.to_bits(),
+            "actual summoned ownership"
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::Mana>(boss)
+                .unwrap()
+                .current
+                < mana_before,
+            "ordinary cast pays native mana, not FULL_MASK"
+        );
+        let after_speech = summon_speech_count(&h, boss, &texts);
+        let emitted = after_speech - prior_speech;
+        assert!(
+            emitted <= 1,
+            "at most one source summon Yell per successful cast"
+        );
+        spoken += usize::from(emitted == 1);
+        quiet += usize::from(emitted == 0);
+        h.advance(8.1); // Total10.2s funds100 mana via existing22/2s regen plus dispatch guard.
+        assert_eq!(
+            summon_speech_count(&h, boss, &texts),
+            after_speech,
+            "no repeated speech from idle/aura/regen ticks"
+        );
+        let mana = h.app.world().get::<shared::components::Mana>(boss).unwrap();
+        assert_eq!(
+            mana.current, mana.max,
+            "native regeneration funds next ordinary cast"
+        );
+        assert!(
+            h.inbox(1).chat.is_empty(),
+            "other copy cannot hear source Yell"
+        );
+    }
+    assert!(
+        spoken > 0,
+        "source30707 OnSpellCast30% branch must sometimes emit actual Talk0"
+    );
+    assert!(quiet > 0, "source30% chance must sometimes remain silent");
+}
+
 #[test]
 fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_threat() {
     let (mut h, boss, map) = orbital_fixture();
