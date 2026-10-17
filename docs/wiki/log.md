@@ -1,6 +1,6 @@
 ## 2026-10-17 — Telash startup prerequisites
 
-[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored after genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; finite source binding/native primary-pool initialization is committed for targeted GREEN, with rune startup/combat phases still unported.
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test reached genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; native primary-pool binding exposes actual61.5vs60 from unauthored generic regeneration; authored-flag consumer preserves the controlled path and passes native2/2 at933bb833. Both regressions enabled after GREEN; nextnative389453 periodic+2/sec test stays ignored until genuine RED/GREEN. Rune startup/combat phases remain unported.
 
 ## 2026-10-17 — Leymor native Sprouts destination boundary
 
