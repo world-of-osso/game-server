@@ -2523,7 +2523,7 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let mut h = harness_with(|app| {
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::faction::FactionTemplates::default());
         app.insert_resource(crate::game_objects::GameObjectSpawns::default());
         app.add_plugins(crate::pvp::PvpPlugin);
@@ -2613,7 +2613,7 @@ fn enter_source_match_with(
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let mut h = harness_with(|app| {
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(objects);
         if template.map_id == 727 {
             let (world_data, spellclick) = silvershard_source_world();
@@ -3075,7 +3075,7 @@ fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -
     let database = redb::Database::open(path).unwrap();
     let rules = node_rules(template.map_id).unwrap();
     let mut entered = enter_source_match_with(template, rules.starts, |app| {
-        app.insert_resource(crate::persistence::GameDatabase { db: database });
+        app.insert_resource(crate::persistence::GameDatabase::new(database));
         app.insert_resource(crate::test_data::achievement_catalog());
         app.add_plugins(crate::achievement::AchievementPlugin);
     });

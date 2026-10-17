@@ -729,9 +729,7 @@ fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
-    app.insert_resource(GameDatabase {
-        db: temp_database(),
-    });
+    app.insert_resource(GameDatabase::new(temp_database()));
     let db = &app.world().resource::<GameDatabase>().db;
     let (character_id, _) = create_character(db, 1, "Walker", 1, 1).unwrap();
     let player = app
@@ -792,9 +790,7 @@ fn periodic_save_never_waits_for_a_busy_durable_writer() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
-    app.insert_resource(GameDatabase {
-        db: temp_database(),
-    });
+    app.insert_resource(GameDatabase::new(temp_database()));
     let character = spawn_saved_player(&mut app, "Queued", 0, 25.0);
     for _ in 0..299 {
         app.world_mut().run_schedule(FixedUpdate);
@@ -828,9 +824,7 @@ fn periodic_save_writes_every_changed_player_with_map_and_corpse() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
-    app.insert_resource(GameDatabase {
-        db: temp_database(),
-    });
+    app.insert_resource(GameDatabase::new(temp_database()));
     let walker = spawn_saved_player(&mut app, "Walker", 0, 25.0);
     let ghost = spawn_saved_player(&mut app, "Spirit", 1, -40.0);
     let corpse = shared::death::Corpse {

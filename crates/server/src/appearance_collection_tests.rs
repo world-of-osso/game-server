@@ -51,7 +51,7 @@ pub(crate) fn install_database(app: &mut App) {
     let directory = tempfile::tempdir().unwrap();
     let db = redb::Database::create(directory.path().join("game.redb")).unwrap();
     persistence::create_tables(&db);
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(TestDatabasePath(directory));
 }
 

@@ -4,6 +4,14 @@ The :5000 dev server ran its 20 Hz simulation at 55–70% of real time while pla
 
 ## Content
 
+### FIFO persistence core restoration (2026-10-17)
+
+The landed netdelta runtime did not contain the earlier FIFO lane: `c391e8bbb` was not an ancestor of measured server `d9a8e1d8`. Four current-source held-writer controls reproduced 250–253ms tick waits: periodic character saves, achievement account updates, monthly contributions and real Guide/Tender refresh. Native compilation/setup failures were not counted as RED.
+
+The bounded restoration imports the `b80131863` / `c391e8bbb` writer/cache ownership design, not the other unlanded performance branches. Account contributions project pending owned snapshots; one writer commits character/account rows and current-master guild news together. The master evaluation-cache propagation and landed delta/clock publishers remain intact. Periodic/crash lineage `98cfbc490b`, Tender routing and migration controls remain integration/verification work; this entry is not a passing or deployed claim.
+
+[Contract](../../specs/fifo-persistence.md). Sources: [`persistence_writer.rs`](../../../crates/server/src/persistence_writer.rs), [`achievement_account.rs`](../../../crates/server/src/achievement_account.rs), [`achievement_writer_tests.rs`](../../../crates/server/src/achievement_writer_tests.rs). Full deferred-topic inventory is a separate diagnostic artifact, not permission to import those topics.
+
 ### Symptom
 
 `game-server/data/logs-server-20260928d.log` (debug build, :5000): with no player online the `Tick` log advances 200 ticks per 10 s of wall time; with 1–4 players it drops to 0.37–0.78 of real time, for example 00:33:38–00:39:04, 4 000 ticks in 326 s. Players online and machine load (parallel agent builds, Godot clients) varied together, so the log alone does not separate them. Server-time systems slow with the clock: breath timers ([[swimming-and-breath]]), movement banks ([[networking]]), creature chase.

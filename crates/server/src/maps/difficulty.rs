@@ -435,9 +435,7 @@ mod admin_game_object_tests {
             "GameObjectInfo": { "map_id": 0, "instance_id": 0, "entry": entry }
         }))
         .expect("admin IPC accepts game-object-info");
-        let db = GameDatabase {
-            db: crate::persistence::temp_database(),
-        };
+        let db = GameDatabase::new(crate::persistence::temp_database());
         let mut state = SystemState::<AdminInstances>::new(world);
         state
             .get_mut(world)
@@ -736,9 +734,7 @@ mod admin_npc_combat_tests {
     use shared::components::{Health, Npc, ThreatTable};
 
     fn inspect(world: &mut World) -> serde_json::Value {
-        let db = GameDatabase {
-            db: crate::persistence::temp_database(),
-        };
+        let db = GameDatabase::new(crate::persistence::temp_database());
         let mut state = SystemState::<AdminInstances>::new(world);
         let response = state
             .get_mut(world)

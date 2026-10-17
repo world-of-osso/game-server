@@ -1,3 +1,4 @@
+- [FIFO core restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17) — four real held-writer REDs; bounded writer/cache ownership import preserving landed netdelta, verification pending.
 - [Omor Orbital hooks](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17) — source singleton continuation and falling-player/zero-threat periodic damage RED→GREEN3/3; server pull124/native acceptance remain open.
 - [Guild effect authority audit](systems/guild-perks.md#mobile-and-resurrection-authority-audit--2026-10-17) — existing faction1168 reputation authority; contemporary Mobile cast/use distinction and historical resurrection candidates remain unaccepted, with exact effect gaps.
 - [Lifetime honorable kills113](systems/dungeon-achievements.md#lifetime-honorable-kills113) — persisted per-character authority/absolute login projection; named zero-start policy, native full100/relog/account/pin/BG controls GREEN6/6.

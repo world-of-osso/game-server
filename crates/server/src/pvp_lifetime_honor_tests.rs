@@ -180,7 +180,7 @@ fn reopen_and_relog(app: &mut App, (character, player): (u64, Entity), path: &st
     app.world_mut()
         .entity_mut(player)
         .insert((PlayerPvpState::from_progress(progress), achievements));
-    app.world_mut().insert_resource(GameDatabase { db });
+    app.world_mut().insert_resource(GameDatabase::new(db));
     let connection = app
         .world_mut()
         .query::<(Entity, &PlayerLink)>()

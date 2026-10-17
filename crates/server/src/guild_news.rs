@@ -193,8 +193,7 @@ pub(crate) fn record_achievements_in(
     txn: &WriteTransaction,
     character: u64,
     timestamp: i64,
-    achievements: impl Iterator<Item = u32>,
-    catalog: &crate::achievement::AchievementCatalog,
+    achievements: impl Iterator<Item = (GuildNewsKind, bool)>,
 ) {
     let table = txn
         .open_table(crate::persistence::CHARACTER_GUILDS)
@@ -207,10 +206,12 @@ pub(crate) fn record_achievements_in(
         .guild_id;
     let member = crate::guild_event_log::character_name_in(txn, character);
     let timestamp = u64::try_from(timestamp).expect("guild news timestamp precedes Unix epoch");
-    for id in achievements {
-        if let Some((kind, sticky)) = catalog.build_guild_news_achievement(id, &member) {
-            append_in(txn, guild, kind, timestamp, sticky);
+    for (mut kind, sticky) in achievements {
+        match &mut kind {
+            GuildNewsKind::PlayerAchievement { member: actor, .. } => *actor = member.clone(),
+            _ => panic!("account achievement news must describe a player achievement"),
         }
+        append_in(txn, guild, kind, timestamp, sticky);
     }
 }
 
@@ -275,7 +276,7 @@ mod tests {
             tick_duration: std::time::Duration::from_millis(50),
         });
         app.add_plugins(ProtocolPlugin);
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<Inbox>();
         app.add_plugins(crate::guild::GuildPlugin);

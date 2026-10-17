@@ -29,7 +29,7 @@ fn test_db() -> GameDatabase {
     let db = redb::Database::create(&path).expect("db");
     persistence::create_tables(&db);
     std::mem::forget(dir);
-    GameDatabase { db }
+    GameDatabase::new(db)
 }
 
 #[test]
@@ -330,7 +330,7 @@ fn skyborne_real_kits_create_persist_and_select_all_authored_classes() {
             let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
             let maps = crate::maps::store::load_map_store(&conn).expect("scratch map overlay");
             let (app, player) =
-                select_character_with_maps(GameDatabase { db }, 1, character_id, maps);
+                select_character_with_maps(GameDatabase::new(db), 1, character_id, maps);
             let entity = app.world().entity(player);
             assert_eq!(entity.get::<UnitLevel>(), Some(&UnitLevel(1)));
             assert_eq!(entity.get::<Player>().unwrap().race, race);
@@ -728,9 +728,7 @@ fn character_saved_in_wailing_caverns_logs_in_after_server_restart_with_gatherin
         app.insert_resource(world_data);
         app.insert_resource(objects);
         app.insert_resource(crate::gathering::load_data(&conn).unwrap());
-        app.insert_resource(GameDatabase {
-            db: redb::Database::open(&db_path).unwrap(),
-        });
+        app.insert_resource(GameDatabase::new(redb::Database::open(&db_path).unwrap()));
         app.init_resource::<TerrainReplies>();
         app.add_systems(Update, process_select_character);
         app.add_systems(Last, collect_terrain_replies);
@@ -880,9 +878,7 @@ fn log_out(db: &GameDatabase, character_id: u64, health: f32, death: Option<&Pla
 fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("death-login.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 11;
     let (character_id, _) = persistence::create_character(&db.db, account_id, "Spirit", 1, 1)
@@ -890,9 +886,7 @@ fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
     let ghost = ghost_at_graveyard(character_id);
     log_out(&db, character_id, 0.0, Some(&ghost));
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
 
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
@@ -924,9 +918,7 @@ fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
 fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("dead-login.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 12;
     let (character_id, _) =
@@ -947,9 +939,7 @@ fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
     dead.state = DeathState::Dead;
     log_out(&db, character_id, 0.0, Some(&dead));
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
 
     let (app, player) = select_character_in_world(db, account_id, character_id);
@@ -976,9 +966,7 @@ struct PreDeathStateCorpse {
 fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("legacy-death.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 13;
     let (character_id, mut data) =
@@ -1005,9 +993,7 @@ fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
         .unwrap();
     txn.commit().unwrap();
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
     for _ in 0..3 {
@@ -1035,9 +1021,7 @@ fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
 fn character_saved_after_resurrection_logs_in_alive() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("alive-login.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 12;
     let (character_id, _) = persistence::create_character(&db.db, account_id, "Risen", 1, 1)
@@ -1050,9 +1034,7 @@ fn character_saved_after_resurrection_logs_in_alive() {
     );
     log_out(&db, character_id, 50.0, Some(&PlayerDeathState::default()));
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
 
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
