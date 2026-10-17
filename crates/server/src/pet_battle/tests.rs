@@ -31,6 +31,9 @@ mod effects9_tests;
 #[path = "effects10_tests.rs"]
 mod effects10_tests;
 
+#[path = "effects11_tests.rs"]
+mod effects11_tests;
+
 #[path = "effects12_tests.rs"]
 mod effects12_tests;
 

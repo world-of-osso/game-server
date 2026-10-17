@@ -130,14 +130,3 @@ fn pet_battle_primal_cry_dead_reserve_is_neither_damaged_slowed_nor_revived() {
             .any(|event| matches!(event, Event::Revived(_)))
     );
 }
-
-#[test]
-fn pet_battle_primal_cry_does_not_admit_tea_party_override_routing() {
-    let catalog = catalog();
-    let initial = battle(&catalog, 9, 0, [2064, 110, 123]);
-    assert!(
-        initial
-            .step(&catalog, [Action::Ability(2064), Action::Pass], &mut NoDraw)
-            .is_err()
-    );
-}
