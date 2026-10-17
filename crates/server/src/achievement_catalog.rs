@@ -15,10 +15,10 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 32, 33, 35, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59,
-    62, 63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
-    157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220, 221, 245, 246,
-    253,
+    0, 1, 32, 33, 35, 53, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42,
+    59, 62, 63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151,
+    152, 157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220, 221, 245,
+    246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -80,6 +80,8 @@ pub(crate) enum CriteriaEvent {
     DeliveredKillingBlow,
     /// One eligible native world-player kill, independent of its Honor XP amount.
     EarnHonorableKill,
+    /// Actual victim race for an eligible HK recipient, not only the final attacker.
+    HonorableKillRace(u8),
     /// One native battleground/arena kill reward; world honor eligibility is separate.
     KillPlayer,
     UseItem(u32),
@@ -217,6 +219,7 @@ impl CriteriaEvent {
             Self::DeliveredKillingBlow => 56,
             Self::KillPlayer => 70,
             Self::EarnHonorableKill => 35,
+            Self::HonorableKillRace(_) => 53,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -280,6 +283,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::HonorableKillRace(race) => race != 0 && u32::from(race) == criteria.asset,
             Self::FallWithoutDying(distance) => distance > 0 && criteria.asset == 0,
             Self::ObtainAnyItem(item) | Self::LootAnyItem(item) => item > 0 && criteria.asset == 0,
             Self::WinArena(map) | Self::ParticipateInArena(map) => criteria.asset == map,
@@ -1756,6 +1760,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Current criteria451/447 and authored370/595 map2v2/3v3 to0/1,
                         // unlike old TC ArenaTeam numeric2/3/5; no retired/other bracket inference.
                         || (kind == 39 && matches!(row.get::<_, i32>(2)?, 0 | 1))
+                        || (kind == 53 && u8::try_from(row.get::<_, u32>(2)?).ok()
+                            .is_some_and(|race| crate::race_class::race_bit(race).is_some()))
                         // Native rated arena result has a real positive map ID, never an all-map alias0.
                         || (matches!(kind, 32 | 33 | 97) && row.get::<_, i32>(2)? > 0)
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))

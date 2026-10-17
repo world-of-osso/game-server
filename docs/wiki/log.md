@@ -1,3 +1,7 @@
+## 2026-10-16 — Eligible victim race53
+
+[Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Full ten-race GREEN and gates pending.
+
 ## 2026-10-16 — World honorable-kill35
 
 [Native boundary](systems/dungeon-achievements.md#native-world-honorable-kills35): real lethal47XP/no35 RED and account max-vs-sum RED; minimal event/eligibility split implemented. Actual item/aura ten-kill GREEN3/3, reopened quantity/date and summed contributions pass;5527/1841 structural census. Required filter221/0/1existing ignored+site1/1, workspace/all-target check and fmt/diffcheck pass; independent artifact verification complete. Local install70448, imported data70391.
