@@ -184,6 +184,63 @@ fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() 
 }
 
 #[test]
+#[ignore = "source effect124 pull acceptance pending implementation"]
+fn encounter_coverage_omor_whip_pull_reverses_real_airborne_motion() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+        shared::components::PlayerMotion::default(),
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), boss, player, 1.0);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(player), true)
+        .expect("actual source knock30637");
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 32185, Some(boss), true)
+        .expect("actual source periodic Whip32185");
+    h.advance(1.9);
+    let before = *h.app.world().get::<Position>(player).unwrap();
+    h.advance(0.15);
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(30638)
+                && event.target == Some(player.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "actual authored periodic30638 child reached target"
+    );
+    let pulled = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        pulled.x > before.x,
+        "genuine outgoing knock traveled before pull"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(player)
+            .unwrap()
+            .contains(shared::components::PlayerMotion::FALLING),
+        "actual airborne target"
+    );
+    h.advance(0.1);
+    let after = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        after.x < pulled.x,
+        "effect124 must reverse outbound motion toward caster: {pulled:?} -> {after:?}"
+    );
+    assert!(
+        ((pulled.x - after.x) - 1.31).abs() < 0.02,
+        "authored MiscValue131 gives13.1yd/s, not teleport or outgoing15yd/s: {pulled:?} -> {after:?}"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() {
     for gap in [3.0, 25.0] {
         let (mut h, boss, _) = orbital_fixture();
