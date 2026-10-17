@@ -11,7 +11,7 @@ use crate::{
     achievement::{AchievementCatalog, CriteriaEvent, PlayerAchievementState},
     auth::{Authenticated, InWorld},
     networking::PlayerLink,
-    persistence::{self, GameDatabase},
+    persistence::GameDatabase,
 };
 use bevy::prelude::*;
 use catalog::CatalogData;
@@ -113,7 +113,20 @@ fn ensure_month_state(world: &mut World, player: Entity, character: u64) {
     let start = month::month_at(now, 0, now).start_unix;
     let mut state = match world.get::<PlayerAchievementState>(player) {
         Some(state) => state.clone(),
-        None => persistence::load_achievements(&world.resource::<GameDatabase>().db, character),
+        None => {
+            let account = world
+                .query::<(&Authenticated, &InWorld)>()
+                .iter(world)
+                .find_map(|(auth, owner)| {
+                    (owner.character_id == character).then_some(auth.account_id)
+                })
+                .expect("monthly character has an authenticated owner");
+            crate::achievement::load_character_progress(
+                world.resource::<GameDatabase>(),
+                account,
+                character,
+            )
+        }
     };
     match state.monthly.as_mut() {
         Some(monthly) => monthly.reset_at(start, now),

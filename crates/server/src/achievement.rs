@@ -1318,6 +1318,15 @@ fn update_player_events(
     })
 }
 
+/// Runtime loads share the owned snapshots inserted before FIFO submission.
+pub(crate) fn load_character_progress(
+    db: &GameDatabase,
+    account: u64,
+    character: u64,
+) -> PlayerAchievementState {
+    account_store::load_character_progress(db, account, character)
+}
+
 pub(crate) fn save_monthly_contribution(
     db: &GameDatabase,
     account: u64,

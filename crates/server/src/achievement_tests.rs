@@ -3,6 +3,7 @@ use rusqlite::Connection;
 
 #[test]
 fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart() {
+    use redb::{ReadableDatabase, ReadableTable};
     use shared::protocol::GuildNewsKind;
     let connection = Connection::open(crate::test_data::world_db_path()).unwrap();
     let directory = tempfile::tempdir().unwrap();
@@ -40,8 +41,35 @@ fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart(
         },
         PlayerLink(player),
     ));
+    let held = world.resource::<GameDatabase>().db.begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = std::time::Instant::now();
     let (_, toasts) =
         update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(50)], None).unwrap();
+    assert!(started.elapsed() < std::time::Duration::from_millis(50));
+    assert!(
+        crate::guild_news::query(&world.resource::<GameDatabase>().db, character)
+            .entries
+            .is_empty()
+    );
+    {
+        let read = world.resource::<GameDatabase>().db.begin_read().unwrap();
+        let rows = read.open_table(persistence::ACHIEVEMENTS).unwrap();
+        let before = rows
+            .get(character)
+            .unwrap()
+            .map(|row| decode_saved_achievement_state(row.value()).0)
+            .unwrap_or_default();
+        assert!(
+            !before.earned_ids.contains(&14782),
+            "achievement/news pair remains uncommitted"
+        );
+    }
+    release.join().unwrap();
+    crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     assert!(
         toasts.iter().any(|toast| toast.achievement_id == 14782),
         "Earn actual installed Level50"
@@ -68,6 +96,7 @@ fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart(
     );
     assert!(!description.is_empty(), "Actual installed tooltip metadata");
     update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(50)], None).unwrap();
+    crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     assert_eq!(
         crate::guild_news::query(&world.resource::<GameDatabase>().db, character).entries,
         reply.entries,

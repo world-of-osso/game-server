@@ -12,6 +12,8 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - [ ] Drain ordinary shutdown; a crash must retain acknowledged writes and must not publish queued writes as durable.
 - [ ] Trading Post requests execute after preceding Guide contribution/Tender settlement on the same FIFO; publish replies and collection changes only after their own commit. Same-tick earned Tender must fund a purchase and survive reopen.
 - [ ] Preserve purchase/cart/refund/freeze and UTC-month rollover behavior, including snapshot settlement; no tick-thread write initialization disguised as a read.
+- [ ] Guild-news queries/sticky requests and dirty subscriber publications read behind preceding achievement commits on that same FIFO; no early stale reply or consumed-but-lost notification.
+- [ ] Login and missing-component Guide loads read character contributions from the writer-fed account cache. Raw default/migration writes are unavailable in production; ordinary reopen drains the prior writer.
 
 ## How it works
 
@@ -40,7 +42,8 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 
 - [x] Minimal `b80131863` / `c391e8bbb` / `98cfbc490b` import integrated with master b8b6c2f9d and landed netdelta;13 core controls pass within28 affected controls.
 - [x] Periodic/account/Guide/Tender and Trading Post request ordering, crash/reopen and migration controls pass; corrected20-ACK same-frame/due-save/reopen control passes separately.
-- [ ] Independent lead broad gate and post-landing11-peer plain-release acceptance.
+- [ ] Gate441 found one real timing failure (news fixture0vs1) and prompted a production-reader audit. Four runtime ordering REDs prove stale guild request, lost subscriber notification, blocked raw login initialization and stale Guide overwrite; reader conversion GREEN and independent targeted re-gate pending.
+- [ ] Post-landing11-peer plain-release acceptance.
 - [ ] Exact PvP release20 stall attribution; ACK handler has no direct character save. Other synchronous callers are not inferred to be its cause.
 
 ## Out of scope

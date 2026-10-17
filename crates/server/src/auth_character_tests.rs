@@ -161,7 +161,7 @@ fn character_relogin_reads_owned_achievements_while_default_or_migration_write_i
         let (character, _) =
             persistence::create_character(&db.db, 1, "Relogpending", 1, 1).unwrap();
         // Initialize unrelated login tables before isolating the achievement reader.
-        load_selected_character_state(&db, character, 1, 1);
+        load_selected_character_state(&db, 1, character, 1, 1);
         let txn = db.db.begin_write().unwrap();
         {
             let mut rows = txn.open_table(persistence::ACHIEVEMENTS).unwrap();
@@ -233,7 +233,7 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     };
     persistence::save_pvp(&db.db, character_id, &pvp);
 
-    let state = load_selected_character_state(&db, character_id, 1, 1);
+    let state = load_selected_character_state(&db, 1, character_id, 1, 1);
 
     assert_eq!(state.currencies.get(1792), 420);
     assert_eq!(state.currencies.get(1602), 80);

@@ -261,6 +261,14 @@ mod tests {
         }
     }
 
+    fn await_news_update(app: &mut bevy::prelude::App) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while app.world().resource::<Inbox>().0.is_empty() && std::time::Instant::now() < deadline {
+            app.update();
+            std::thread::yield_now();
+        }
+    }
+
     #[test]
     fn guild_news_authenticated_host_query_refusal_and_committed_live_update() {
         use bevy::prelude::*;
@@ -314,9 +322,7 @@ mod tests {
             .get_mut::<MessageSender<GuildNewsRequest>>(connection)
             .unwrap()
             .send::<GuildChannel>(GuildNewsRequest::Query);
-        for _ in 0..4 {
-            app.update();
-        }
+        await_news_update(&mut app);
         let replies = std::mem::take(&mut app.world_mut().resource_mut::<Inbox>().0);
         assert_eq!(replies.len(), 1, "authenticated query must answer");
         assert!(replies[0].entries.is_empty());
@@ -337,9 +343,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<crate::gold::GoldUpdateQueue>()
             .record_items(id);
-        for _ in 0..4 {
-            app.update();
-        }
+        await_news_update(&mut app);
         let replies = std::mem::take(&mut app.world_mut().resource_mut::<Inbox>().0);
         assert_eq!(
             replies.len(),
@@ -354,9 +358,7 @@ mod tests {
                 id: news_id,
                 sticky: true,
             });
-        for _ in 0..4 {
-            app.update();
-        }
+        await_news_update(&mut app);
         let replies = std::mem::take(&mut app.world_mut().resource_mut::<Inbox>().0);
         assert_eq!(replies.len(), 1);
         assert_eq!(replies[0].error, Some(GuildNewsError::Permissions));
