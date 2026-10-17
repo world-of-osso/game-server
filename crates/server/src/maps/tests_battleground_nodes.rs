@@ -325,8 +325,13 @@ fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() 
             assert_eq!(snapshot.phase, BgPhase::Ended);
             assert_eq!(snapshot.outcome, Some(BgOutcome::Winner(winner)));
         }
-        // General4=490, separate from captain3=368; tower/survivor callbacks remain open.
-        assert_rewards(&entered, 858);
+        // General4=490 + captain3=368; survivor OnEnd adds ten equivalents1225.
+        let completed = if winner == BgTeam::A {
+            [2083, 980]
+        } else {
+            [980, 2083]
+        };
+        assert_team_honor(&entered, completed[0], completed[1]);
         crate::combat::deal_direct_damage(
             entered.h.app.world_mut(),
             actor.player,
@@ -334,17 +339,166 @@ fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() 
             health + 1.0,
         );
         entered.h.receive_pvp_updates(5);
-        assert_rewards(&entered, 858);
+        assert_team_honor(&entered, completed[0], completed[1]);
         let world = entered.h.app.world();
         let character = world.get::<ClientId>(actor.player).unwrap().0;
         let database = world.resource::<crate::persistence::GameDatabase>();
         assert_eq!(
             crate::persistence::load_currencies(&database.db, character).get(1792),
-            858
+            2083
         );
         assert_eq!(
             crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
-            858
+            2083
+        );
+        leave_and_return(&mut entered);
+    }
+}
+
+#[test]
+fn alterac_channel_survivor_honor_runs_once_on_tower_and_player_depletion() {
+    for tower_end in [true, false] {
+        let mut entered = enter_source_match(&shared::battleground::alterac_valley(), [611, 610]);
+        use_second_frames(&mut entered.h);
+        let actor = &entered.players[0];
+        let victim = entered
+            .players
+            .iter()
+            .zip(&entered.teams)
+            .find(|(_, team)| **team == BgTeam::B)
+            .unwrap()
+            .0;
+        crate::pvp::seed_terminal_reinforcements(
+            entered.h.app.world_mut(),
+            entered.match_id,
+            BgTeam::B,
+            if tower_end { 75 } else { 1 },
+        );
+        let expected = if tower_end {
+            let (banner, at) = objects_in(&mut entered.h, entered.copy, 178946)[0];
+            entered.h.walk_to(actor, at);
+            use_object(&mut entered.h, actor, banner);
+            entered.h.advance(8);
+            entered.h.advance(240);
+            [1593, 980] // Tower368 +10 survivor equivalents1225; loser8 equivalents980.
+        } else {
+            let (captain, _) = find_alterac_source_npc(&mut entered.h, entered.copy, 11949);
+            crate::combat::deal_direct_damage(
+                entered.h.app.world_mut(),
+                captain,
+                victim.player,
+                1.0e7,
+            );
+            entered.h.receive_pvp_updates(5);
+            assert_eq!(
+                entered
+                    .h
+                    .app
+                    .world()
+                    .get::<Health>(victim.player)
+                    .unwrap()
+                    .current,
+                0.0
+            );
+            crate::combat::deal_direct_damage(
+                entered.h.app.world_mut(),
+                captain,
+                victim.player,
+                1.0e7,
+            );
+            [1225, 1225] // Both teams retain four controlled towers and a living captain.
+        };
+        let snapshot = battleground(&entered.h, actor);
+        assert_eq!(snapshot.phase, BgPhase::Ended);
+        assert_eq!(snapshot.outcome, Some(BgOutcome::Winner(BgTeam::A)));
+        assert_team_honor(&entered, expected[0], expected[1]);
+        entered.h.advance(300);
+        assert_team_honor(&entered, expected[0], expected[1]);
+        let world = entered.h.app.world();
+        let character = world.get::<ClientId>(actor.player).unwrap().0;
+        let database = world.resource::<crate::persistence::GameDatabase>();
+        assert_eq!(
+            crate::persistence::load_currencies(&database.db, character).get(1792),
+            expected[0]
+        );
+        assert_eq!(
+            crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+            u64::from(expected[0])
+        );
+        leave_and_return(&mut entered);
+    }
+}
+
+#[test]
+fn alterac_channel_survivor_honor_counts_controlled_towers_and_living_captains() {
+    for (team, own_captain, enemy_general, tower, contested_tower) in [
+        (BgTeam::A, 11949, 11946, 178946, 178945),
+        (BgTeam::B, 11947, 11948, 178925, 178929),
+    ] {
+        let mut entered = enter_source_match(&shared::battleground::alterac_valley(), [611, 610]);
+        use_second_frames(&mut entered.h);
+        let actor_index = entered
+            .teams
+            .iter()
+            .position(|value| *value == team)
+            .unwrap();
+        let opponent_index = entered
+            .teams
+            .iter()
+            .position(|value| *value != team)
+            .unwrap();
+        let actor = &entered.players[actor_index];
+        let opponent = &entered.players[opponent_index];
+        let (banner, at) = objects_in(&mut entered.h, entered.copy, tower)[0];
+        entered.h.walk_to(actor, at);
+        use_object(&mut entered.h, actor, banner);
+        entered.h.advance(8);
+        entered.h.advance(240);
+        let (banner, at) = objects_in(&mut entered.h, entered.copy, contested_tower)[0];
+        entered.h.walk_to(actor, at);
+        use_object(&mut entered.h, actor, banner);
+        entered.h.advance(8);
+        kill_alterac_source_npc(&mut entered.h, opponent, entered.copy, own_captain);
+        entered.h.receive_pvp_updates(5);
+        assert_team_honor(&entered, 368, 368);
+        let (general, health) =
+            find_alterac_source_npc(&mut entered.h, entered.copy, enemy_general);
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            general,
+            health + 1.0,
+        );
+        entered.h.receive_pvp_updates(5);
+        let snapshot = battleground(&entered.h, actor);
+        assert_eq!(snapshot.phase, BgPhase::Ended);
+        assert_eq!(snapshot.outcome, Some(BgOutcome::Winner(team)));
+        // Attacker: tower368 + general490 +4 controlled towers*2 equivalents980.
+        // Defender: captain368 + (2 controlled towers + living captain)*2 equivalents735.
+        let expected = if team == BgTeam::A {
+            [1838, 1103]
+        } else {
+            [1103, 1838]
+        };
+        assert_team_honor(&entered, expected[0], expected[1]);
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            general,
+            health + 1.0,
+        );
+        entered.h.advance(300);
+        assert_team_honor(&entered, expected[0], expected[1]);
+        let world = entered.h.app.world();
+        let character = world.get::<ClientId>(actor.player).unwrap().0;
+        let database = world.resource::<crate::persistence::GameDatabase>();
+        assert_eq!(
+            crate::persistence::load_currencies(&database.db, character).get(1792),
+            1838
+        );
+        assert_eq!(
+            crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+            1838
         );
         leave_and_return(&mut entered);
     }
