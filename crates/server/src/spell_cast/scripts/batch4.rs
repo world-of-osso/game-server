@@ -47,6 +47,7 @@ pub(super) fn light_of_dawn_plan(
         dest: None,
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 
@@ -138,6 +139,7 @@ pub(super) fn vivify(world: &mut World, caster: Entity, _spell: &SpellInfo) {
         dest: None,
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }];
     spell_cast::hit::remove_defended_targets(world, caster, &child, &mut plan);
     spell_cast::missiles::launch(world, caster, &child, plan, 1);

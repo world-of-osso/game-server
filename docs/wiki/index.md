@@ -1,3 +1,4 @@
+- [Omor Orbital hooks](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17) — source singleton continuation and falling-player periodic dispatch ported after real RED; strict GREEN/native acceptance pending.
 - [Gargolmar charge impact](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16) — actual19yd no-motion RED→source-speed/reach/delayed-impact GREEN; two-point subset, obstacle/native proof separate.
 - [Omor wild summon lifetime](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) — owner-death RED→GREEN with authored expiry/minion controls; strict bounded runtime re-enabled, full native acceptance open.
 - [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.

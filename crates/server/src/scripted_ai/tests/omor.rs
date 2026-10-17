@@ -148,6 +148,41 @@ fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() 
 }
 
 #[test]
+fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() {
+    for gap in [3.0, 25.0] {
+        let (mut h, boss, _) = orbital_fixture();
+        let player = h.player();
+        let origin = *h.app.world().get::<Position>(boss).unwrap();
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: origin.x + gap,
+            ..origin
+        });
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 35642, Some(boss), true)
+            .expect("actual singleton Orbital");
+        h.advance(0.05);
+        let parent = h
+            .inbox(0)
+            .spell_gos
+            .iter()
+            .find(|go| go.spell_id == 35642)
+            .expect("singleton parent publication");
+        assert_eq!(
+            parent.hit_targets,
+            vec![player.to_bits()],
+            "retain source singleton even outside20yd"
+        );
+        assert!(
+            !h.has_aura(boss, 32185),
+            "singleton cannot continue into Whip"
+        );
+        assert!(
+            !h.inbox(0).spell_gos.iter().any(|go| go.spell_id == 30637),
+            "singleton no knock"
+        );
+    }
+}
+
+#[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let (mut h, boss, map) = bound_boss(17308, 543, 0);
     let origin = *h.app.world().get::<Position>(boss).unwrap();

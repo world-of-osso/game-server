@@ -1,3 +1,7 @@
+## 2026-10-17 — Omor Orbital source hooks
+
+[Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Strict GREEN pending; native obstacle/pull/full encounter proof remains separate.
+
 ## 2026-10-16 — Gargolmar source charge impact
 
 [Boss scripts](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16): corrected target-owner/delayed-impact observer exposes actual19yd no-motion RED. Generic two-point effect96 now arrives at source1.5yd reach with real damage, actual42yd/s bound and exact travel time; explicit ignored acceptance1/1 passes64.13s at91df4428, ignore removed. Obstacle paths/transports/native animation remain open. Final72fd14b3 ordinary4-thread filter214/0failed/12ignored571.47s and production check147.45s pass without warnings; fmt/diff/manual readability pass.

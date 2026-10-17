@@ -73,6 +73,7 @@ pub(super) fn healing_wave_plan(
         dest: None,
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 
