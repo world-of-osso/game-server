@@ -73,6 +73,10 @@
 ## 2026-10-16 — Native aura restrictions metadata loader
 
 [SpellInfo](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16): dropped metadata/schema RED0/4→GREEN4/0/0, retaining twelve native state/spell/type IDs through the production store. Difficulty0, sparse absence, orphan and missing-source boundaries covered; source publication precedes deployment. Merged39 native controls pass11.45s after owned-slot maintained import and exact10675-row equality; fmt/readability and workspace/all-target check159.051s/0warnings pass. State production/admission and canonical publication remain open.
+## 2026-10-17 — Queued64 child NoPower qualification
+
+[Affordability fixture](systems/spell-casting.md#queued64-child-affordability-qualification--2026-10-17): prior queued64 stack plus effect8, unchanged enemy3405 exhaustion before native470411→188389 dispatch, living recipient and FULL_MASK control. No raw resource/health/clock edits; baseline pending, no production fix claimed.
+
 ## 2026-10-17 — Native power drain8
 
 [Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): pinned primary-power/integer/actual-removal/Amplitude implementation, unchanged native3405/46453/16094. Four real missing-drain REDs and two exclusion guards; stale-protocol compiler failure is not RED. Native pools/costs retained; merged26f5332a native GREEN6/6 in18.34s/146.040s total, no whole-ability acceptance.

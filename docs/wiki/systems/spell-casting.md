@@ -184,6 +184,12 @@ Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulf
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Queued64 child affordability qualification — 2026-10-17
+
+`queued_trigger_cost_tests.rs` adds a native-only fixture for the previously source-only child NoPower boundary: queue470411, retain the natural10000mana, then execute1000 unchanged enemy Soul Rend3405 casts (10mana each) against both the queued caster and a same-class control before the next normal frame. Both encounter actors retain their original health; the control proves the exact normal-regeneration amount without a queued child. Confirm native188389 affordability returns `NotEnoughPower(Mana)` and the queued callback applies no aura, consumes no mana and sends no suppressed cast error. The distinct full-trigger helper must still apply188389 to that same living recipient without paying its power cost. Normal regeneration remains enabled; its first-frame amount is observed, not overridden. Baseline proof pending; no new production fix or invented RED.
+
+[Contract](../../specs/class-completeness.md); source and planned ordering: `data/class-completeness6-2026-10-12/queued-trigger64-no-power-{goal,proof-ledger}.json`. This branch integrates the prior owned queued64 stack with native effect8; fresh current master still lacked queued64 when effect8 was published. Internal bool-triggered producers do not certify legal Soul Rend/Flame Shock loadouts, whole abilities or full13/40 acceptance.
+
 ## Native power drain8 — 2026-10-17
 
 `effects.rs::power_drain` implements pinned TC a352b1fa `SpellEffects.cpp1146–1180`: target must be alive and its `PowerPools.order` primary must match MiscValue. A stored secondary/legacy Mana component alone is insufficient. The handler truncates the native base before existing supported SP/AP and damage-done modifiers, adds truncated signed native variance, then applies supported damage-taken modifiers with integer truncation. No health, armor, crit or absorb resolution runs for the drain.

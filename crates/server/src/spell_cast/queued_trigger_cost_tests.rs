@@ -1,5 +1,5 @@
 //! Native470411 checks but retains mana; queued188389 pays its own cost.
-use shared::components::Mana;
+use shared::components::{Mana, PowerType};
 
 use super::test_harness::*;
 use crate::auras::has_aura;
@@ -65,6 +65,75 @@ fn native_trigger64_missing_target_does_not_spend_child_mana() {
     h.advance(1);
     assert_eq!(mana(&h), NATURAL_FIXTURE_MANA);
     assert!(h.app.world().get_entity(h.npc).is_err());
+}
+
+#[test]
+fn native_trigger64_child_refuses_unaffordable_dispatch_after_native_enemy_mana_drain() {
+    const SOUL_REND: u32 = 3405;
+    const SOUL_REND_CASTS: usize = 1000;
+    let mut h = harness(
+        Vec::new(),
+        &[FLAME_SHOCK_PARENT, FLAME_SHOCK_CHILD, SOUL_REND],
+        7,
+    )
+    .unwrap();
+    let control = spawn_player(&mut h.app, 7, 0.0);
+    h.advance(1); // Ordinary initialization of the same-class regen control.
+    assert_eq!(mana(&h), NATURAL_FIXTURE_MANA);
+    assert_eq!(
+        h.app.world().get::<Mana>(control).unwrap().current,
+        NATURAL_FIXTURE_MANA
+    );
+    let caster_health = h.health(h.caster);
+    let target_health = h.health(h.npc);
+    cast_parent(&mut h);
+    assert_eq!(mana(&h), NATURAL_FIXTURE_MANA);
+    assert!(!has_aura(h.app.world(), h.npc, FLAME_SHOCK_CHILD));
+    // Actual instant native10-mana enemy casts between enqueue and dispatch;
+    // no frame/regen suppression, raw pool edit or changed imported effect.
+    for target in [h.caster, control] {
+        for _ in 0..SOUL_REND_CASTS {
+            super::creature::creature_cast(h.app.world_mut(), h.npc, SOUL_REND, Some(target), true)
+                .unwrap();
+        }
+    }
+    assert_eq!(mana(&h), 0.0);
+    assert_eq!(h.app.world().get::<Mana>(control).unwrap().current, 0.0);
+    assert_eq!(h.health(h.caster), caster_health);
+    assert_eq!(h.health(h.npc), target_health);
+    let child = world_db().unwrap().store.get(FLAME_SHOCK_CHILD).unwrap();
+    assert!(matches!(
+        super::spell_costs(h.app.world(), h.caster, child),
+        Err(super::CastFailure::NotEnoughPower(PowerType::Mana))
+    ));
+    h.advance(1);
+    let remaining = mana(&h);
+    let control_remaining = h.app.world().get::<Mana>(control).unwrap().current;
+    assert_eq!(
+        remaining, control_remaining,
+        "refused child spends no power beyond normal regen"
+    );
+    assert!((0.0..NATIVE_CHILD_MANA_COST).contains(&remaining));
+    assert!(!has_aura(h.app.world(), h.npc, FLAME_SHOCK_CHILD));
+    assert_eq!(h.health(h.caster), caster_health);
+    assert_eq!(h.health(h.npc), target_health);
+    assert!(
+        h.inbox
+            .failed
+            .iter()
+            .all(|failure| failure.spell_id != FLAME_SHOCK_CHILD)
+    );
+    // The same living recipient remains eligible through the distinct FULL_MASK
+    // helper, which does not pay power; low mana did not manufacture a target failure.
+    assert!(super::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        FLAME_SHOCK_CHILD,
+        Some(h.npc),
+        0,
+    ));
+    assert!(has_aura(h.app.world(), h.npc, FLAME_SHOCK_CHILD));
+    assert_eq!(mana(&h), remaining);
 }
 
 #[test]
