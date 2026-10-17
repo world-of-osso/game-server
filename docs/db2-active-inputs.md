@@ -1,5 +1,15 @@
 # Private active DB2 inputs
 
+## Native Curve type publication
+
+Verified: 2026-10-17. `scripts/db2.py import` publishes readable installed `Curve.csv` rows as `curve(ID, Type, Flags)` alongside `curve_point`, with an explicit `db2_build` receipt. Installed70448 uses pinned WoWDBDefs `d6f50d4f351193e84226aa62a36faa0f58528afa`, `Curve.dbd` layout `D362535A`: ID32, Typeu8, Flags32. Required Type/Flags values are copied from the CSV, never inferred from curve points.
+
+The installed export contains62817 readable rows out of62819 declared records. Curve IDs **121405** and **121406** belong to unknown-key encrypted section `DAC5AA105D0C1B67`; both have `content_authenticated=false` and are omitted, never fabricated or defaulted. Their IDs come from the unencrypted WDC5 encrypted-record-ID list, not guessed zero-filled payloads. A future consumer requesting a missing Curve ID must fail explicitly rather than assume Type0, a radius or another curve. Readable33927 has Type0/Flags0; its consumer remains blocked until the typed catalog is published.
+
+The process/schema regression `python3 -m unittest scripts.tests.test_db2_curves` exercises native8/33927 types/flags, build receipts, replacement on regeneration and retained Retail/Skyborne rows. It uses private fixtures; it does not publish canonical data. A real publication receipt must separately record the COPY-only import's exact command, input/output SHA256, row changes and both excluded IDs. No radius fallback or scale consumer is introduced by this publisher change.
+
+## Private CSV roots
+
 `DB2_CSV_ROOT` selects an isolated root for `scripts/db2.py` and importer tests that use its defaults. Without this setting, the source remains the sibling engine's `data/db2`. `--csv-root` overrides the environment for the DB2 command.
 
 `active/receipt.json` supplies the build at each command startup unless `--build` is explicit. A private root must contain both the build directory and its `active` link; no canonical link needs changing. The server runtime reads imported SQLite catalogs, plus active-source JSON catalogs such as renown; changing CSV links does not reimport a running server's SQLite data.
