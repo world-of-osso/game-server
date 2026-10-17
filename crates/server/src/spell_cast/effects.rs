@@ -112,9 +112,9 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
-        // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
-        // missile's spell hits the unit target, like TRIGGER_SPELL.
         EFFECT_TRIGGER_SPELL => super::queued_triggers::schedule,
+        // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
+        // missile's spell hits the unit target synchronously.
         EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_SEND_EVENT => send_game_event,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
@@ -1458,7 +1458,6 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
     );
 }
 
-/// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
 /// TC EffectTriggerMissileSpell HIT mode (SpellEffects.cpp:757-788), distinct from
 /// the existing HIT_TARGET handler: forward destination, retaining child costs.
 pub(super) fn trigger_missile_at_destination(
