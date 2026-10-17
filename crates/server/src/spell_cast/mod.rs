@@ -2108,9 +2108,7 @@ pub(crate) fn execute_cast(
         // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
         crate::achievement::record_item_use(world, caster, item);
     }
-    spend_costs(world, caster, &costs);
-    scripts::empower_gargoyles(world, caster, &costs);
-    crate::profession::take_reagents(world, caster, spell);
+    take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     log_event(
         world,
@@ -2757,6 +2755,19 @@ fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<Spell
     spell
 }
 
+fn plan_triggered_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> Result<TargetPlan, CastFailure> {
+    druid_transform::before_cast(world, caster, spell, depth)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    aura_spell_restrictions::check_target(world, explicit, spell)?;
+    plan_targets(world, caster, spell, explicit, true)
+}
+
 fn launch_triggered_spell(
     world: &mut World,
     caster: Entity,
@@ -2764,19 +2775,7 @@ fn launch_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> bool {
-    if let Err(failure) = druid_transform::before_cast(world, caster, spell, depth) {
-        warn!("Triggered spell {} skipped: {failure:?}", spell.id);
-        return false;
-    }
-    // Full-trigger flags do not bypass aura metadata. Effect64 is queued so
-    // a native producer finishes before its dependent child's admission.
-    let aura_eligibility = aura_spell_restrictions::check_caster(world, caster, spell)
-        .and_then(|()| aura_spell_restrictions::check_target(world, explicit, spell));
-    if let Err(failure) = aura_eligibility {
-        warn!("Triggered spell {} skipped: {failure:?}", spell.id);
-        return false;
-    }
-    match plan_targets(world, caster, spell, explicit, true) {
+    match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, spell, plan, depth);
@@ -2788,6 +2787,62 @@ fn launch_triggered_spell(
             false
         }
     }
+}
+
+/// Effect64 clears IGNORE_POWER_COST/IGNORE_REAGENT_COST from FULL_MASK.
+pub(super) fn cast_queued_trigger_with_item_level(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    item_level: Option<u16>,
+) -> bool {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return false;
+    };
+    spell.cast_item_level = item_level;
+    match execute_costed_trigger(world, caster, &spell, explicit, depth) {
+        Ok(()) => true,
+        Err(failure) => {
+            warn!("Queued spell {spell_id} skipped: {failure:?}");
+            false
+        }
+    }
+}
+
+fn execute_costed_trigger(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> Result<(), CastFailure> {
+    let plan = plan_triggered_spell(world, caster, spell, explicit, depth)?;
+    let costs = spell_costs(world, caster, spell)?;
+    crate::profession::check_cast_items(world, caster, spell)?;
+    let prepared = resources::snapshot(world, caster, spell, &costs);
+    take_cast_resources(world, caster, &prepared, &costs);
+    crate::achievement::record_spell_cast(world, caster, prepared.id);
+    missiles::launch(world, caster, &prepared, plan, depth);
+    druid_transform::after_cast(world, caster, &prepared);
+    Ok(())
+}
+
+/// Native TakePower/TakeReagents still check costs before this payment boundary.
+fn take_cast_resources(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(CostPool, f32)],
+) {
+    const SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES: u32 = 0x20;
+    if attributes(spell, 6) & SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES != 0 {
+        return;
+    }
+    spend_costs(world, caster, costs);
+    scripts::empower_gargoyles(world, caster, costs);
+    crate::profession::take_reagents(world, caster, spell);
 }
 
 fn spend_costs(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {

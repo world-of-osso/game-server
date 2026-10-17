@@ -2,6 +2,16 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Queued effect64 payment phases — 2026-10-16
+
+`SpellEffects.cpp:692–721` removes IGNORE_POWER_COST/IGNORE_REAGENT_COST from full-mask child casts. Native470411 Flame Shock triggers188389: both have0.300000012% base-mana rows, but parent Attr6=0x20 is DoNotConsumeResources. Native TakePower/TakeReagents skip that bit while CheckPower still runs (`Spell.cpp:5451,5618,6104–6109`). Simply charging the child would double-charge the previously paying parent.
+
+Four actual native fixtures change no mana/base stats, native rows, clocks or RNG. The existing controlled budget is10000: parent incorrectly pays30 immediately; after one ordinary50ms step, baseline regeneration gives9975 while the child is incorrectly free. Genuine RED0b0e8d01 is1pass/3fail23.12s (685.288s cold rebuild): parent-before-dispatch9970≠10000, live-child9975≠9970 and vanished-target9975≠10000. The general full-trigger cost exemption control passes. This is source-qualified payment ordering, not a shaman legal-build/base-mana claim.
+
+Normal and cost-retaining queued casts now share a payment boundary honoring the bit; queued children plan/check aura eligibility and affordability/items before payment, snapshot resource-dependent values and launch without cooldown/GCD. The general full-trigger helper remains cost-exempt. No child spell-ID exception, native-bit rewrite or resource-budget manipulation. GREEN/final gates pending. Receipts `data/class-completeness6-2026-10-12/queued-trigger64-cost-{goal,source-candidate,proof-ledger}.json`.
+
+Actual rune/health/reagent payment fixtures, effect32 cost-path parity and full flag/launch-phase compatibility remain separate.
+
 ## Queued effect64 and required-caster trigger integration — 2026-10-16
 
 Source `SpellEffects.cpp:594–723` schedules effect64 via caster events using native `MiscValue`; `EventProcessor.cpp:37–75` removes and executes one due callback before the next. Rust previously invoked64 synchronously inside the parent's effect loop, before parent aura publication. Native0ms298992→181448 and1ms412677→412680 both reproduce an inline child:7777e02e RED0pass/2fail11.81s,100.507s wrapper.

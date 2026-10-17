@@ -66,7 +66,7 @@ pub(crate) fn resolve_due(world: &mut World) {
         if world.get_entity(trigger.caster).is_err() || world.get_entity(trigger.target).is_err() {
             continue;
         }
-        super::cast_triggered_with_item_level(
+        super::cast_queued_trigger_with_item_level(
             world,
             trigger.caster,
             trigger.spell_id,
