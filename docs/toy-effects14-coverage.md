@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source250–254: stacking/death-view/minipet/chase/multi-slime boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|250 Acrobatic Steward184418/345837 | Source1500ms target72 summon175588/properties3622 for120000ms,300000ms item recovery. TDB has92915/91896/96576/96577 at scale1; runtime absent. Advertised multiple-steward shoulder stacking requires actual cross-actor coordination/height/lifecycle proof, not an ordinary companion or static source model. |
+|251 Mark of Purity184435/345863 | Source2500ms self viewer aura233/misc4076/160 for604800000ms; inherited900000ms spell recovery. Actual spirit-healer replacement with Vesiphone at death, viewer ownership and restoration remain unproved; no global model flip or generic vision/cosmetic substitute. |
+|252 Kevin's Party Supplies184447/345899 | Minipet-target90 complete-zero dummy4 for3600000ms,300000ms item recovery. The source action is getting a slime ready for a party, not decorating the caster or every arbitrary minipet. Appropriate companion eligibility and source-specific recipient appearance/lifecycle remain unestablished. |
+|253 Jiggles's Favorite Toy184449/345897 | Source30000ms mixed graph: script3/target150, persistent-area effect27/dummy4 at cursor87, plus self dummy4;120000ms item recovery. Ground laser and actual pet chasing require their own target/action/motion proof, not generic self art or dropping the script/dynamic object. |
+|254 Regenerating Slime Vial184476/345939 | Source target47 summon175647/properties3076 (Control0/Title0/flags2304), authored count4,600000ms lifetime and3600000ms item recovery. TDB five equally weighted scale1 models99911/99912/99915/99913/99014 exist; runtime content absent. Exact four-actor source-pool placement/ownership/lifecycle is unproved, not a single-actor substitute or metadata-only summon certificate. |
+
+`rows250-254-{readonly-source,action-source}.json` preserves70391 targets/casts/durations/recovery/property flags and TDB/runtime model separation. No new actor/viewer/minipet/script admission, producer/data/canonical writes or positive simulation/native result. The pending240 job remains the sole owned verification; no duplicate/reset or unchanged gate rerun.149865 Tea Set remains lead-required.
+
 ## Source245–249: critter/passenger/reflection gaps and retained hearth/vesper proof (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |
