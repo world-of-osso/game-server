@@ -3,7 +3,7 @@ use rusqlite::Connection;
 
 #[test]
 fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart() {
-    use redb::{ReadableDatabase, ReadableTable};
+    use redb::ReadableDatabase;
     use shared::protocol::GuildNewsKind;
     let connection = Connection::open(crate::test_data::world_db_path()).unwrap();
     let directory = tempfile::tempdir().unwrap();
@@ -49,7 +49,11 @@ fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart(
     let started = std::time::Instant::now();
     let (_, toasts) =
         update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(50)], None).unwrap();
-    assert!(started.elapsed() < std::time::Duration::from_millis(50));
+    let elapsed = started.elapsed();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "cold achievement producer took {elapsed:?}"
+    );
     assert!(
         crate::guild_news::query(&world.resource::<GameDatabase>().db, character)
             .entries
