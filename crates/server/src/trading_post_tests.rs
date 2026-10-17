@@ -141,7 +141,7 @@ fn trading_post_query_never_waits_for_a_busy_durable_writer() {
 #[test]
 fn trading_post_same_tick_earned_tender_funds_purchase_in_fifo_order() {
     let file = tempfile::NamedTempFile::new().unwrap();
-    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderordered").unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderorder").unwrap();
     prepare(&mut h, 1790812900);
     open_tawny(&mut h);
     assert_eq!(request(&mut h, TradingPostRequest::Balance).tender, 0);
