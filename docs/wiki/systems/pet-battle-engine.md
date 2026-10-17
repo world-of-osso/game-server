@@ -75,6 +75,10 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 [Bounded Dragon's Call2283](../../pet-battle-effect-coverage.md#same-species-dragons-call370--implementation2026-10-16) uses literal `Pet.species: u32` passed from owned/wild Identity; unknown species fail explicitly. Additional matching roster pets increase base points before the existing direct-damage pipeline, excluding caster/enemies and never inferring species from family. The literal source has no alive filter; fainted roster identity is retained. Real owned-team RED reproduces unsupported370; GREEN6 passes,1761/2829 rows/1009 graphs. Both-skin private5961 physical2283 with two matching reserves deals85/77 (boosted75–92 range), updates HP/cooldown3 and retains strict asset mode/tripwire0; four fullHD originals inspected. Final gates pass; a later pure test-fixture extraction passes its focused matrix rerun without repeating unaffected scopes. Test-only roots and independent Retail dead-slot/timing certification remain excluded.
 
+### Refuge223 — 2026-10-16
+
+[Bounded1344](../../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16) keeps self26's six-round policy and routes the two other slots only to friendly Critters. A shared explicit-wearer aura function preserves original caster and existing live/charge/refresh semantics; no caster relabeling or shared team shield. Actual unsupported223 RED observed; other selectors and complete Retail timing remain gated. GREEN/native proof pending.
+
 ### Limits
 
 Handler references are **not** executable or all-row behavioral coverage. The [matrix](../../pet-battle-effect-coverage.md) records recursive admission separately.45 unsupported referenced IDs (including undefined sentinel0), unknown OverrideIndex/target routing, unadmitted object/special-stat auras and proc events1..4/9/12 (except bounded Leech Life383 and Nevermore/Spell Gulp) remain rejected. Control-duration ordering, exact damage rounding/weak game-table factor and several proc timings remain uncaptured. The separate wild consumer has bounded wire/UI integration; this is not a full Retail parity claim.

@@ -84,6 +84,7 @@ pub fn supported_property(property: u32) -> bool {
             | 150
             | 112
             | 370
+            | 223
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -310,6 +311,13 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && p[0] == 0
                 && p[1] == 100
                 && p[2..].iter().all(|v| *v == 0)
+        }
+        // Refuge's other two friendly slots require the authored Critter family.
+        223 => {
+            catalog.turns[&effect.turn].ability == 1344
+                && (2..=3).contains(&effect.order)
+                && effect.aura == 759
+                && p == [0, 100, 6, 5, 0, 0]
         }
         // Dragon's Call's authored bonus counts additional teammates of the same species.
         370 => {
