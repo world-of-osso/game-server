@@ -106,6 +106,19 @@ fn seed_private_modern_crafting_fixture() {
 }
 
 #[test]
+#[ignore = "requires the private concentration native run to have stopped"]
+fn assert_private_concentration_display_did_not_initialize_wallet() {
+    let (path, _) = private_paths();
+    let db = redb::Database::open(path).unwrap();
+    for name in ["Craftmodern", "Craftforever"] {
+        let id = persistence::find_character_id_by_name(&db, name).unwrap();
+        let wallet = persistence::load_currencies(&db, id);
+        assert!(wallet.entries.iter().all(|entry| entry.id != 3049));
+        println!("PRIVATE CONCENTRATION {name} currency3049 remains uninitialized");
+    }
+}
+
+#[test]
 #[ignore = "requires the private native run to have stopped and released its database"]
 fn assert_private_quality_selection_conserved_reagents_and_skill() {
     let (path, _) = private_paths();
