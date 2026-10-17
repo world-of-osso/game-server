@@ -33,7 +33,6 @@ fn wake_leymor() -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "RED: source Leymor combat schedule not implemented"]
 fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() {
     let (mut h, leymor) = wake_leymor();
     let player = h.player();
