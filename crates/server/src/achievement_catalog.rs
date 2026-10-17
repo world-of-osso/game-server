@@ -15,8 +15,8 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62,
-    63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
+    0, 1, 32, 33, 35, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59,
+    62, 63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
     157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220, 221, 245, 246,
     253,
 ];
@@ -78,6 +78,8 @@ pub(crate) enum CriteriaEvent {
     /// TextEmote ID and the same-map NPC entry resolved from this request's unit GUID.
     DoEmote(u32, Option<Entity>),
     DeliveredKillingBlow,
+    /// One eligible native world-player kill, independent of its Honor XP amount.
+    EarnHonorableKill,
     /// One native battleground/arena kill reward; world honor eligibility is separate.
     KillPlayer,
     UseItem(u32),
@@ -214,6 +216,7 @@ impl CriteriaEvent {
             Self::DoEmote(_, _) => 54,
             Self::DeliveredKillingBlow => 56,
             Self::KillPlayer => 70,
+            Self::EarnHonorableKill => 35,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -309,6 +312,7 @@ impl CriteriaEvent {
             }
             Self::KillAnyCreature(_)
             | Self::DeliveredKillingBlow
+            | Self::EarnHonorableKill
             | Self::TotalExaltedFactions(_)
             | Self::TotalReveredFactions(_)
             | Self::TotalHonoredFactions(_)
@@ -1769,7 +1773,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 24 | 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 24 | 35 | 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
