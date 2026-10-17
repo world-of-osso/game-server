@@ -1,3 +1,4 @@
+- [Omor summon speech](systems/boss-scripts.md#omor-summon-cast-speech--2026-10-17) —128ordinary native casts reach genuine missingTalk0 RED; source30% branch implemented, strictGREEN pending.
 - [Koranthal5s destination delay](systems/boss-scripts.md#koranthal-destination-delay--2026-10-17) — valid-pair hook A/B falsifies hook regression; stale early-impact expectations corrected to sourced5000ms/typed119964, unchanged data/runtime.
 - [Omor coincident angles](systems/boss-scripts.md#coincident-omor-geometry) — real falling-child/ordinary-caster RED0/2→strict GREEN2/2; source atan2 angle0 restores+X movement; ordinary affected9/9 GREEN.
 - [Omor caster hold/retreat](systems/boss-scripts.md#omor-caster-hold-and-retreat--2026-10-17) — real20yd hold/3yd retreat/no-melee RED→strict GREEN2/2; direct grounded subset, ordinary affected25/25 GREEN; native/path/timer gaps remain.
