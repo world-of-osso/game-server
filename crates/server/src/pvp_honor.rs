@@ -31,6 +31,8 @@ const AV_GENERAL_KILL_EQUIVALENTS: u32 = 4;
 const AV_TOWER_KILL_EQUIVALENTS: u32 = 3;
 // TC AV OnEnd755–790: accumulate two equivalents per controlled tower/living captain.
 const AV_SURVIVOR_KILL_EQUIVALENTS: u32 = 2;
+// TC WSG557 / TwinPeaks526: unconditional reward on actual flag capture.
+const FLAG_CAPTURE_KILL_EQUIVALENTS: u32 = 2;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -131,6 +133,43 @@ pub(super) fn award_alterac_npc_honor(world: &mut World, match_id: u64, entry: u
         .instance
         .bracket;
     let amount = calculate_bonus_honor(bracket, kills);
+    award_match_team_honor(world, match_id, team, amount);
+}
+
+/// Consume an actual source capture receipt, not pickup/return or a generic score delta.
+pub(super) fn award_flag_capture_honor(
+    world: &mut World,
+    match_id: u64,
+    character: u64,
+    stat: u32,
+) {
+    let (team, amount) = {
+        let state = world.resource::<PvpServerState>();
+        let matched = &state.battleground_matches[&match_id];
+        let map = matched.map.expect("objective receipt has an active map");
+        if !matches!(map.map_id, 2106 | 726) {
+            return;
+        }
+        let flags = matched
+            .flags
+            .as_ref()
+            .expect("source flag map has flag battle");
+        if stat != flags.rules.capture_stat {
+            return;
+        }
+        let team = match (
+            matched.instance.team_a_players.contains(&character),
+            matched.instance.team_b_players.contains(&character),
+        ) {
+            (true, false) => BgTeam::A,
+            (false, true) => BgTeam::B,
+            _ => panic!("flag capturer must belong to exactly one assigned team"),
+        };
+        (
+            team,
+            calculate_bonus_honor(matched.instance.bracket, FLAG_CAPTURE_KILL_EQUIVALENTS),
+        )
+    };
     award_match_team_honor(world, match_id, team, amount);
 }
 

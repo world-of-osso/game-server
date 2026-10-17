@@ -12,6 +12,69 @@ struct EnteredMatch {
 }
 
 #[test]
+fn flag_channel_capture_honor_uses_source_brackets_and_both_assigned_teams() {
+    for (template, bonus) in [
+        (shared::battleground::warsong_gulch(), 59),
+        (shared::battleground::twin_peaks(), 121),
+    ] {
+        let rules = shared::battleground::flag_rules(template.map_id).unwrap();
+        let mut entered = enter_source_match(&template, rules.starts);
+        let mut captures = [0, 0];
+        for team in [BgTeam::A, BgTeam::B, BgTeam::A, BgTeam::A] {
+            let index = usize::from(team == BgTeam::B);
+            let actor_index = entered
+                .teams
+                .iter()
+                .position(|value| *value == team)
+                .unwrap();
+            let actor = &entered.players[actor_index];
+            let (enemy_entry, home_entry) = if team == BgTeam::A {
+                (
+                    shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
+                    shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
+                )
+            } else {
+                (
+                    shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
+                    shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
+                )
+            };
+            let (_, home) = objects_in(&mut entered.h, entered.copy, home_entry)[0];
+            let (flag, at) = objects_in(&mut entered.h, entered.copy, enemy_entry)[0];
+            entered.h.walk_to(actor, at);
+            use_object(&mut entered.h, actor, flag);
+            assert_team_honor(&entered, captures[0] * bonus, captures[1] * bonus);
+            entered.h.walk_to(actor, home);
+            entered.h.receive_pvp_updates(5);
+            captures[index] += 1;
+            let snapshot = battleground(&entered.h, actor);
+            assert_eq!([snapshot.score_a, snapshot.score_b], captures);
+            assert_team_honor(&entered, captures[0] * bonus, captures[1] * bonus);
+            entered.h.receive_pvp_updates(5);
+            assert_team_honor(&entered, captures[0] * bonus, captures[1] * bonus);
+        }
+        let snapshot = battleground(&entered.h, &entered.players[0]);
+        assert_eq!(snapshot.phase, BgPhase::Ended);
+        assert_eq!(snapshot.outcome, Some(BgOutcome::Winner(BgTeam::A)));
+        for (actor, team) in entered.players.iter().zip(&entered.teams) {
+            let expected = if *team == BgTeam::A { 3 * bonus } else { bonus };
+            let world = entered.h.app.world();
+            let character = world.get::<ClientId>(actor.player).unwrap().0;
+            let database = world.resource::<crate::persistence::GameDatabase>();
+            assert_eq!(
+                crate::persistence::load_currencies(&database.db, character).get(1792),
+                expected
+            );
+            assert_eq!(
+                crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+                u64::from(expected)
+            );
+        }
+        leave_and_return(&mut entered);
+    }
+}
+
+#[test]
 fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_race() {
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match_with(&template, [611, 610], |app| {

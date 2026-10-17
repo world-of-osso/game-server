@@ -51,6 +51,12 @@ Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each gran
 
 This checkpoint's OnEnd callbacks cover Arathi, Eye and the Alterac survivor contract below. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
 
+## Warsong / Twin Peaks capture Honor
+
+Pinned WSG557 and TwinPeaks526 unconditionally grant current Warsong2106/TwinPeaks726 teams two bonus-kill equivalents on each actual flag capture, including the winning capture. Round the whole two-kill grant once using the retained source bracket: WSG first10–19 gives59; Twin Peaks first30–39 gives121. Credit the assigned accepted team still in the copy through the existing positive-Honor eligibility and durable XP/wallet mirror. Pickup, return, possession and repeated objective updates grant nothing. Consume the source capture PvpStat receipt once; do not infer captures from scores or introduce another timer/queue.
+
+This does not implement WSG's separate final-win flat amount or OnEnd amounts. Those depend on `IsBGWeekend`: WSG20/60 final-win and1/2 versus3/4 end equivalents, Arathi resource160/260 and Eye260/160 thresholds require BG_WEEKEND_AUTHORITY. No normal/weekend branch is silently selected while realm calendar authority is unresolved. Twin Peaks has no additional authored Honor OnEnd producer in the pinned script; no generic win/end award is substituted.
+
 ## Alterac captain/general Honor
 
 Pinned TC AV enum69–72, HonorKillBonus535–539 and OnUnitKilled653–684 give the opposing team three bonus-kill equivalents for captain11949/11947 and four for general11948/11946. Use `ceil(kills × min(instance PVPDifficulty maximum,80) ×1.55)`, preserving the source float multiplication order and rounding the whole grant once. The admitted20–79 bracket gives captain368 and general490, as separate events totaling858 before tower and survivor-end bonuses; neither recipient level20 nor `kills × ceil(one-kill bonus)` substitutes for the source rule.
