@@ -385,6 +385,66 @@ fn encounter_coverage_omor_orbital_exact_two_dimensional_cutoff() {
 }
 
 #[test]
+#[ignore = "source OnSpellCast shield emote acceptance pending implementation"]
+fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
+    let (mut h, boss, _) = bound_boss(17308, 543, 0);
+    let player = h.player();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x + 3.0,
+        ..origin
+    });
+    let speech = h.app.world().resource::<CreatureTexts>().groups[&17308][&5][0]
+        .male_text
+        .clone();
+    assert!(!speech.is_empty(), "actual authored shield text must load");
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    h.engage(boss);
+    h.hit_pct(boss, 81.0);
+    h.advance(4.2);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 31901),
+        "actual health-threshold scheduled shield reaches successful cast boundary"
+    );
+    assert!(
+        h.has_aura(boss, 31901),
+        "actual authored Demonic Shield aura"
+    );
+    let emotes: Vec<_> = h
+        .inbox(0)
+        .chat
+        .iter()
+        .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+        .collect();
+    assert_eq!(
+        emotes.len(),
+        1,
+        "OnSpellCast31901 must speak exactly one authored group5 emote"
+    );
+    assert_eq!(emotes[0].content, speech);
+    assert!(
+        h.inbox(1).chat.is_empty(),
+        "other map copy must not hear shield emote"
+    );
+    h.hit_pct(boss, 1.0);
+    h.advance(1.0);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        1,
+        "further damage/aura ticks cannot repeat an OnSpellCast hook"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let (mut h, boss, map) = bound_boss(17308, 543, 0);
     let origin = *h.app.world().get::<Position>(boss).unwrap();
