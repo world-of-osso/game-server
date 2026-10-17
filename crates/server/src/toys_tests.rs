@@ -10,10 +10,14 @@ mod bashiok;
 mod flute;
 #[path = "toys_force_forward_tests.rs"]
 mod force_forward;
+#[path = "toys_gnoll_barrel_tests.rs"]
+mod gnoll_barrel;
 #[path = "toys_group_inheritance_tests.rs"]
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
 mod group_private;
+#[path = "toys_hearthstone_tests.rs"]
+mod hearthstones;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
 #[path = "toys_podium_tests.rs"]

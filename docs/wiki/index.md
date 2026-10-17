@@ -1,3 +1,4 @@
+- [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
 - [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.
 - [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Authoritative target LOS](systems/spell-casting.md#authoritative-target-los--2026-10-16) — moving-target receipt boundary replaces stale client endpoint validation; native release acceptance remains separate.
@@ -37,6 +38,10 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16) — two authentic identities, real5759 area/cursor pair/300s lifecycle and147 Toy tests; canonical publication/native body/target-dummy combat separate.
+
+- [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16) — actual persisted bind/source10s cast/shared2309 charge;146 Toy tests pass, procedural native appearance and cross-map/wall-recharge separate.
+
 - [Corgi and Rezan source boundaries](systems/toys.md#corgi-and-rezan-source-boundaries-2026-10-16) — viewer233 learned-use and audited roar RED→GREEN/source sound-animation; Chili/Enthralling and native playback/rendering remain separate.
 
 - [Stampwhistle assistant/mailbox](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16) — authentic132969/Assistant35 mailbox service/600s simulation expiry;143 Toy+49 affected+3 importer controls pass, canonical template publication/native rendering separate.
@@ -523,3 +528,11 @@ Debug logs and root cause analyses.
 - [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
 
 - [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — controlled source clocks/effects/fixed death spirit/credit GREEN and actual TDB Normal projection; extra attacks remain unsupported.
+
+- [Gargolmar runtime and charge gap](systems/boss-scripts.md#ramparts-gargolmar-runtime--2026-10-16) — source clocks/reset/credit, real Watcher response; distant effect96 impact remains RED.
+
+- [Omor source preparation](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) — actual orbital server-side spells and hound base0, no invented Normal row; runtime pending.
+
+- [Landslide deterministic admission clock](systems/boss-scripts.md#landslide-deterministic-admission-clock--2026-10-16) — real seed104 RED, source cooldown rejection versus request timing; no timer/tolerance change.
+
+- [SAI protected clock samples](systems/boss-scripts.md#sai-protected-clock-samples--2026-10-16) — actual Vyletongue RED isolates dropped50ms endpoint evidence; no production/tolerance change.
