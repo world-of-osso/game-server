@@ -1834,4 +1834,4 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 
 ## Mobile Banking native acceptance boundary reconciled
 
-All code landed425/425b/455e. Both-skin cast/chest/use/refusal/despawn and Modern7311223ms accepted recast are proven. AccurateForever301649ms despawn and1h refusal stand; its finalreal2hacceptedcast remains missing after transport loss. Docs keep that single remaining acceptance explicit; no new runtime/product changes or completed-proof publication.
+[Native Mobile proof](systems/guild-perks.md#native-mobile-banking-proof): code gates landed; both-skin body controls and Modern real2h recast are proven. Final Forever accepted recast remains unobserved after transport loss, not an effect failure. No completed-proof claim.
