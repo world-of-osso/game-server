@@ -35,6 +35,9 @@ const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
 const ERUPTING_FISSURE: u32 = 386660;
 const EVENT_ERUPTING_FISSURE: u32 = 4;
+const EVENT_EXPLOSIVE_BRAND: u32 = 6;
+const CONSUMING_STOMP: u32 = 374720;
+const EVENT_CONSUMING_STOMP: u32 = 3;
 pub(crate) const LEY_LINE_SPROUTS: u32 = 374364;
 const LEY_LINE_SPROUTS_MISSILE: u32 = 374362;
 const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
@@ -119,6 +122,8 @@ impl super::boss_ai::BossScript for Leymor {
         match event_id {
             EVENT_INFUSED_STRIKE => ctx.do_cast_victim(INFUSED_STRIKE),
             EVENT_ERUPTING_FISSURE => ctx.do_cast_victim(ERUPTING_FISSURE),
+            EVENT_EXPLOSIVE_BRAND => ctx.do_cast_self(EXPLOSIVE_BRAND),
+            EVENT_CONSUMING_STOMP => ctx.do_cast_self(CONSUMING_STOMP),
             EVENT_LEY_LINE_SPROUTS => ctx.do_cast_self(LEY_LINE_SPROUTS),
             _ => return,
         }
@@ -150,6 +155,8 @@ impl super::CreatureAi for Leymor {
         self.boss.events.schedule(EVENT_LEY_LINE_SPROUTS, 3_000);
         self.boss.events.schedule(EVENT_INFUSED_STRIKE, 10_000);
         self.boss.events.schedule(EVENT_ERUPTING_FISSURE, 20_000);
+        self.boss.events.schedule(EVENT_EXPLOSIVE_BRAND, 31_000);
+        self.boss.events.schedule(EVENT_CONSUMING_STOMP, 45_000);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
