@@ -2,6 +2,13 @@
 
 [Guild perks](systems/guild-perks.md): supported Mount Up172/211/map suppression landed; living flat-ground native input and real guild removal confirm seven coherent samples in each skin, with ten selected mounted full-HD originals. Controlled-NPC210 remains blocked. Hasty8690/83944 already gives30/15/30-minute new-charge recovery; actual RED exposed joining halving a consumed clock. Preserving that453 consumption boundary passes3/3, including removal→recovery→next30-minute use; native actual-item proof is pending.
 
+## 2026-10-16 — Bench pet resurrection112
+
+[Sourced Raise Dead/Mass Resurrection](../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16): four actual112 rows, inactive-slot routing and zero-HP owned-load state. RED3+persisted-redb1→GREEN4;1756→1760/2829 rows (62.07→62.21%),1006→1008 graphs. Both-skin private5961 actual2347 shows both78/1563 reserves, pointer swap and real147-damage win; eight fullHD originals inspected. Canonical78-asset closure/strict loader readback and final lib91/wild-PvP22/UI12/check/fmt pass; stale sibling `/hug` compilation drift resolved by lead-authorized fast-forward, no gameplay patch. Generic resurrection semantics remain gated.
+
+## 2026-10-16 — Azure finite Frost Bomb chain
+
+[Source and proof boundary](investigations/follower-data.md#azure-frost-bomb--2026-10-16): source-timed native Telash186737/205 genuine2RED (initial0.1s run invalid), then exact misplaced-ground RED;386781→386881 expiry-only387149+386910 and target-derived destination now pass6 native+3 adjacent controls, including the arena control with its existing fixture env. Scoped check/fmt and independent source/artifact gates pass; native pixels remain separate. No boss phases or unbound ground actions inferred; private225-actor import preserves canonical/Stockade proof snapshots.
 ## 2026-10-16 — Two-way pet-wall150 charges
 
 [Seven source-qualified pairs](../pet-battle-effect-coverage.md#two-way-walls150--bounded-proof2026-10-16): actual unsupported150 RED6→GREEN88, canonical journal3/wild12/PvP9 and check/fmt;1749→1756/2829 rows (61.82→62.07%),993→1006 graphs. Both-skin private5961 Ice Barrier479 physically blocks incoming then outgoing attacks, expires, and exposes subsequent45/65critical damage; six fullHD originals inspected. Conditional123/126 is bounded to six auras; Onyx, multi-wall order and exact Retail/VFX feedback remain gaps. Subject model/texture receipts match the current local root; owned-process cleanup passes.
@@ -1668,6 +1675,10 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].
 - 2026-10-16: [Native targeted Hug247](systems/dungeon-achievements.md#native-targeted-hug247); complete qualifiers and native RED→GREEN, census247/1042 only.
 
+- 2026-10-16: Content-tuning participation268 bounded to native15; authored min/max, complete companions, generated5809 and census5519/pinned908+909. Native predicate RED genuine, GREEN pending.
 - 2026-10-16: Bounded dormant detection/resize RED→GREEN and 43 behaviour controls; irrelevant GO collision RED and membership-index implementation recorded in [[server-tick-lag]].
 
+- 2026-10-16: Content268 native/catalog GREEN3/3(13.47s), including100 native controlled flag settlements for both908/909 grants, faction/idle guards and database-reopened original dates. Integrated server9aca3c1a, final gate pending.
+
+- 2026-10-16: Content268 integrated gate at a8d4d866 passes217/0/1existingignored +site1/1; serverworkspace/alltargetcheckEXIT0/noRustwarnings. Native100 grants908/909 and strengthened89participation guard pass; readability/independentartifactPASS.
 - 2026-10-16: Final geometry proof: 50 controls pass, warning-free check, unchanged 187770-creature idle debug sustains 19.9–20.0 ticks/s; detection 1.891 ms/step, resize/collision out of top15; private published-schema refresh recorded in [[server-tick-lag]].
