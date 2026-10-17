@@ -8,6 +8,7 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - [ ] Queue owned character/account snapshots without waiting for a held database writer; preserve live account aggregation and character-scope contributions.
 - [ ] Keep achievement contributions and corresponding guild news atomic, without duplicate news across pending updates or reopen.
 - [ ] Queue the existing 15-second character save and Guide monthly/Tender persistence without changing their gameplay clocks.
+- [ ] A batch of20 real WorldPortAck arrivals plus a due periodic save must remain below50ms with a250ms held writer, retain all destination maps/positions and submission-time health across FIFO drain/reopen.
 - [ ] Drain ordinary shutdown; a crash must retain acknowledged writes and must not publish queued writes as durable.
 - [ ] Trading Post requests execute after preceding Guide contribution/Tender settlement on the same FIFO; publish replies and collection changes only after their own commit. Same-tick earned Tender must fund a purchase and survive reopen.
 - [ ] Preserve purchase/cart/refund/freeze and UTC-month rollover behavior, including snapshot settlement; no tick-thread write initialization disguised as a read.
