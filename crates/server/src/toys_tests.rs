@@ -6,6 +6,8 @@ use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, 
 
 #[path = "toys_akunda_tests.rs"]
 mod akunda;
+#[path = "toys_azerite_firework_tests.rs"]
+mod azerite_firework;
 #[path = "toys_bashiok_tests.rs"]
 mod bashiok;
 #[path = "toys_breakfast_tests.rs"]
