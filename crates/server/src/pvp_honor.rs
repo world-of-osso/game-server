@@ -22,6 +22,8 @@ const INACTIVE: u32 = 43681;
 const PLAYER_COMBAT_REACH: f32 = 1.5;
 // TC Isle HonorRewards193–197 / OnUnitKilled383–394, not a bonus-kill multiplier.
 const ISLE_COMMANDER_HONOR: u32 = 500;
+// TC Isle OnUpdate324–334: each source resource reinforcement also grants12.
+const ISLE_RESOURCE_HONOR: u32 = 12;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -77,7 +79,18 @@ fn award_battleground_honor(world: &mut World, player: Entity, amount: u32) {
 
 /// Called only after the source Isle battle accepts an actual commander death.
 pub(super) fn award_isle_commander_honor(world: &mut World, match_id: u64) {
-    let (map, roster) = read_isle_winning_roster(world, match_id);
+    let winner = match world.resource::<PvpServerState>().battleground_matches[&match_id]
+        .instance
+        .outcome
+    {
+        Some(BgOutcome::Winner(team)) => team,
+        _ => panic!("accepted Isle commander death must declare a winner"),
+    };
+    award_isle_team_honor(world, match_id, winner, ISLE_COMMANDER_HONOR);
+}
+
+fn award_isle_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount: u32) {
+    let (map, roster) = read_isle_team_roster(world, match_id, team);
     let recipients: Vec<_> = world
         .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
         .iter(world)
@@ -87,24 +100,72 @@ pub(super) fn award_isle_commander_honor(world: &mut World, match_id: u64) {
         .map(|(link, _)| link.0)
         .collect();
     for player in recipients {
-        award_battleground_honor(world, player, ISLE_COMMANDER_HONOR);
+        award_battleground_honor(world, player, amount);
     }
 }
 
-fn read_isle_winning_roster(world: &World, match_id: u64) -> (InMap, Vec<u64>) {
+fn read_isle_team_roster(world: &World, match_id: u64, team: BgTeam) -> (InMap, Vec<u64>) {
     let state = world.resource::<PvpServerState>();
     let matched = &state.battleground_matches[&match_id];
-    let winners = match matched.instance.outcome {
-        Some(BgOutcome::Winner(BgTeam::A)) => &matched.instance.team_a_players,
-        Some(BgOutcome::Winner(BgTeam::B)) => &matched.instance.team_b_players,
-        _ => panic!("accepted Isle commander death must declare a winner"),
+    let members = match team {
+        BgTeam::A => &matched.instance.team_a_players,
+        BgTeam::B => &matched.instance.team_b_players,
     };
-    let roster = winners
+    let roster = members
         .iter()
         .filter(|character| matched.accepted.contains(character))
         .copied()
         .collect();
     (matched.map.expect("accepted Isle match has a map"), roster)
+}
+
+/// A/B counters around the exclusive objective advance, not across combat/death systems.
+pub(super) fn read_isle_resource_counters(world: &World) -> Vec<(u64, [u32; 2])> {
+    world
+        .resource::<PvpServerState>()
+        .battleground_matches
+        .iter()
+        .filter(|(_, matched)| matched.map.is_some_and(|map| map.map_id == 628))
+        .map(|(id, matched)| {
+            (
+                *id,
+                [
+                    matched.instance.score_a.reinforcements,
+                    matched.instance.score_b.reinforcements,
+                ],
+            )
+        })
+        .collect()
+}
+
+pub(super) fn award_isle_resource_gains(world: &mut World, counters: Vec<(u64, [u32; 2])>) {
+    for (match_id, before) in counters {
+        let after = {
+            let state = world.resource::<PvpServerState>();
+            let instance = &state.battleground_matches[&match_id].instance;
+            [
+                instance.score_a.reinforcements,
+                instance.score_b.reinforcements,
+            ]
+        };
+        award_isle_resource_team(world, match_id, BgTeam::A, before[0], after[0]);
+        award_isle_resource_team(world, match_id, BgTeam::B, before[1], after[1]);
+    }
+}
+
+fn award_isle_resource_team(
+    world: &mut World,
+    match_id: u64,
+    team: BgTeam,
+    before: u32,
+    after: u32,
+) {
+    let grants = after
+        .checked_sub(before)
+        .expect("Isle objective advance only adds resource reinforcements");
+    for _ in 0..grants {
+        award_isle_team_honor(world, match_id, team, ISLE_RESOURCE_HONOR);
+    }
 }
 
 fn world_kill_map(world: &World, killer: Entity, victim: Entity) -> Option<InMap> {
