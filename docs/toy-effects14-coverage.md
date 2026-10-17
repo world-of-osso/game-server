@@ -12,6 +12,20 @@ Earlier root refusals remain in the [effects12 identity/reason table](toy-effect
 
 [Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
 
+## Stampwhistle66 source assistant and mailbox (2026-10-16)
+
+156833/261602 authors Katy132969/display68512 with property4203 Control1/Assistant35, source47's3yd front radius,600000ms duration and10800000ms item/category2066 recovery. Pinned TC `EffectSummonType` and `Map::SummonCreature` route Assistant35 through default TempSummon, not minion/guardian. `CanOpenMailBox` accepts her actual MAILBOX flag with the ordinary live-NPC guard, not an invented gossip choice.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Genuine REDs | Maintained import omits132969 (0/1,2.394s); authentic GOSSIP|MAILBOX service opens no Mailbox role; corrected actual bag-learning/UseToy refuses Control1/title35 (0/1,38.35s). Initial late-add_plugins fixture failure is preserved separately, not behavioral RED. |
+| Source changes | Importer copies authentic132969/model68512/flags67108865; exact Assistant35 admission plus default-lifecycle routing retain source flags/faction. Existing mailbox role opens directly from MAILBOX flag with ordinary validation; no mail schema or arithmetic redesign. Initial supported-title-only routing diagnostic proved flags0/faction1 from the old owned path; actual source state after correction confirms flags67108865/faction35/health23642 and active Mailbox. |
+| Focused GREEN | At source-equivalentb41800cc (code0e255646; see ledger exact hash), both service and actual bag-learning/summon/mailbox lifecycle pass2/2, zero ignored40.75s. Source flags/faction/body/non-pet/non-follow/3yd-front/600s expiry and3h category2066 recovery are retained. Actual persisted mail sends with30c postage; range loss/death/despawn close service and reject requests without spending. Ordinary50ms simulation remains unchanged. Maintained importer/idempotence passes1/1. Transient replies are collected per frame, matching existing harness lifetime; initial delayed-receiver fixture failures remain separate. |
+| Current gates | At server269cf209/engine48fcd9625/protocol07a8faa, whole `toys:: --test-threads 2` passes143/143, zero ignored484.12s. Affected real mail/NPC interaction/summon controls pass49/49,68.94s; maintained importer rollback/source-preservation controls3/3,3.024s. Binary/tests check19.14s and fmt pass; no compile warnings/manual readability findings. |
+| Catalog/publication boundary | Canonical runtime classification remains370 and still refuses missing132969; no canonical data was changed. Prepared importer basis is392/1166 with Katy admitted, not392 completed toys; prior385 prepared61 checkpoint is a different recorded stage, not this packet's baseline. Lead owns publication. Native assets/pixels/wire/audio/wall-lifetime and complete-toy parity remain open. |
+
+Evidence root below: `stampwhistle66-{active-goal,proof-ledger,source-preflight,mailbox-source}.json`, importer/journal/mail REDs, source-state, focused development and final gate logs plus `stampwhistle66-{final-results,readability,census-delta}.json`. Pinned MailHandler source SHA256 `c88bb3db1e03bb00e0d3af34f61faf0d86c19e26c89f61705e68191cac8f09b8` is retained only under private engine `data/diagnostics/toy-effects66-2026-10-16/reference/`.
+
 ## Sightless65 native detection consumer (2026-10-16)
 
 Actual journal153293/254568 RED at077ed8f6 rejects `unsupported toy spell: aura 152` (0/1,56.25s). Before production admission, real source-aura hostile-acquisition controls664a50ed pass1/1,37.57s: ordinary level5 spider acquires player at12yd, protected player stays unacquired12yd but is acquired7yd. Existing `AggroDistance::center_radius` already reads target152 before native minimum/reach clamps. Minimal574d45f5 names that constant in the aura registry and recognizes the existing consumer; no aggro formula, stealth, faction, movement or wire change.
