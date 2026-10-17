@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Midday pending acceptance and interactive boundaries (2026-10-17)
+
+[Source185–189 matrix](../../toy-effects14-coverage.md#source185189-midday-acceptance-pending-and-interactive-boundaries-2026-10-17) records Jar187's new source day/night aura/cancellation/recovery fixture as pending native-helper execution, not passing proof. Fish-kicking, Gral blessing and memento interaction remain gaps; Sealamp retains earlier exact body/scale/state-kit/natural-expiry witnesses without a new native run. No runtime/data admission or generic interactive substitutes.
+
+## Midnight/sign proof and equipment boundaries (2026-10-17)
+
+[Source180–184 matrix](../../toy-effects14-coverage.md#source180184-retained-midnightsign-proof-and-equipment-gaps-2026-10-17) keeps earlier Shadescale aura/cancellation and both warning-sign actor/native expiry scopes distinct from unproved midnight pixels, message-carving/extended visibility and dining/naga-equipment procedural behavior. No new runtime/data admission, invented interaction or repeated code gate.
+
 ## Memory transforms and collection boundary (2026-10-17)
 
 [Source175–179 matrix](../../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17) adds actual Unshackled/Ankoan learning, authentic pool membership, ordinary ten-minute restoration and inherited one-hour recovery acceptance. Eight tests/12IDs and check/fmt pass; no runtime/data change. Heart/Trophy retain earlier bounded proof, while the Mechagon figure collection/action remains unresolved despite an existing runtime base. Native bodies/weighted sampling/full recovery passage remain separate.
