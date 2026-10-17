@@ -101,11 +101,20 @@ fn azure_leymor_sprouts_parent_summons_two_native_children_per_authored_origin()
         h.creatures_of(SPROUT).is_empty(),
         "producer inserts no placements"
     );
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(leymor).insert(visibility);
     prove_native_summon_prerequisite(&mut h, leymor);
-    crate::spell_cast::creature_cast(h.app.world_mut(), leymor, 374364, Some(leymor), true)
-        .expect("native once-effect parent cast");
-    // Native missile18yd/s, minimum1.5s; authored groups are within40yd of Leymor.
+    // Observe the ordinary3s cast, not a manual parent plus the natural combat clock.
+    h.engage(leymor);
     h.advance(6.0);
+    let parents = h
+        .inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == leymor.to_bits() && go.spell_id == 374364)
+        .count();
+    assert_eq!(parents, 1, "one completed ordinary native parent cast");
     let children = h.creatures_of(SPROUT);
     assert_eq!(
         children.len(),
