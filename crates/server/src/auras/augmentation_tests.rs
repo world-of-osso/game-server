@@ -1,7 +1,6 @@
 //! Active70448 rows; SimC76f8118 sc_evoker.cpp7611/8538/8968.
 //! Explicit friendly Prescience and the Sands aura boundary only, not auto-target
 //! prioritization, empowered-spell dispatch, E202 or the other dummy fields.
-use bevy::prelude::*;
 use shared::components::{CombatRatings, DerivedStats, Health, Level, UnitStats};
 use shared::protocol::CombatLogKind;
 
