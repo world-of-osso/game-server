@@ -112,6 +112,9 @@ pub struct PlayerPvpBracketState {
 
 #[derive(Component, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlayerPvpProgress {
+    /// LIFETIME_HK_TRACKING_STARTS_AT_ZERO: no historical backfill or XP/type35 alias.
+    #[serde(default)]
+    pub lifetime_honorable_kills: u64,
     /// Lifetime XP is not spendable Honor1792; HONOR_LEVEL_XP_CURVE is unresolved.
     #[serde(default)]
     pub lifetime_honor_xp: u64,
@@ -131,6 +134,7 @@ pub struct PlayerPvpProgress {
 impl Default for PlayerPvpProgress {
     fn default() -> Self {
         Self {
+            lifetime_honorable_kills: 0,
             lifetime_honor_xp: 0,
             honor_level: None,
             honor: 0,

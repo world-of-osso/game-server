@@ -1,3 +1,17 @@
+## 2026-10-17 — Guild effect source authority
+
+[Mobile/resurrection audit](systems/guild-perks.md#mobile-and-resurrection-authority-audit--2026-10-17): existing authenticated faction1168 disproves the missing-reputation-provider assumption. Retrieved and pinned contemporary Mobile and historical resurrection fork candidates; neither establishes Mainline cast/use, resurrection qualification or ghost-stacking policy. No production behavior or effect completion claimed.
+
+## 2026-10-16 — Armageddon team damage and sacrifice
+
+[Armageddon1025](../pet-battle-effect-coverage.md#armageddon1025--bounded-proof2026-10-16): actual team-route rejection RED1→GREEN8, ordinary typed all-enemy routing and bounded self-kill/Failsafe suppression. Authored Rascal-Bot owned loadout covered;1776/2829 rows/1013 graphs. Both-skin strict native61/58 damage/caller321→0/forced reserve/actual use, eight fullHD originals and canonical loader pass. Final lib118/wild-PvP26/UI12/check1m24/fmt pass without warnings; fixed-protocol setup cleaned after proof.
+## 2026-10-17 — Guild invitation appearance delivery
+
+[Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
+## 2026-10-17 — Omor Orbital source hooks
+
+[Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
+
 ## 2026-10-16 — Eligible victim class52
 
 [Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN2/2; structural5530/1841 adds245 only.
@@ -6,7 +20,7 @@
 [Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
 ## 2026-10-17 — Telash startup prerequisites
 
-[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored after genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; no Telash production change.
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test reached genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; native primary-pool binding exposes actual61.5vs60 from unauthored generic regeneration; authored-flag consumer preserves the controlled path and passes native2/2 at933bb833. Both regressions enabled after GREEN;958289d1 affected19+17resource+11guardian cases pass47, check/fmt pass with zero warnings and confirmed48e6 before/after. Nextnative389453 periodic+2/sec test reaches genuine60vs62 RED31.32s; effect0/PERIODIC_DUMMY hook passes native1/1 at37f4821e (30.49s, strict48e6 before/after), with no baseline/tick/capacity override. Enabled only after GREEN; periodic2b839e99 controls20/2nextignored, check/fmt and strict48e6 before/after pass. Nextautomaticengagement/3.5sFrost tests reach genuine RED2/22.78s after floor/living-victim prerequisites, and remain ignored until GREEN. Rune startup/combat phases remain unported.
 
 ## 2026-10-17 — Leymor native Sprouts destination boundary
 
@@ -1761,3 +1775,9 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-17: area31 on canonical70448 at18856aaf passes controlled native full50, accountSUM, ancestry/timer and pinned census4/4(13.70s); no registered BG policy/credit added. Required integration/check gates pending.
 
 - 2026-10-17: area31/current70448 final integration1c67a39c passes required workspace four-filter228/0/1existing ignored(345.74s), site-export1/1, workspace/all-target check, three-repo fmt/diff. Importer/predicate70448 source reconciliation precedes native GREEN. No new BG policy/playability certificate; lead landing/rendered/fresh UDP remain separate.
+
+- 2026-10-17: [Lifetime HK113](systems/dungeon-achievements.md#lifetime-honorable-kills113) implements explicit LIFETIME_HK_TRACKING_STARTS_AT_ZERO and separate persisted count before absolute113. Full100/native40+60/policy RED0/3; GREEN pending. Active70448 structural5544/1843 adds11ordinary/2stats only, same seven source hashes; all thresholds retained.
+
+- 2026-10-17: lifetime113 at785c8f1b passes6/6(35.54s): native100 roots238/513/39935, actual40+60 account sum, zero-start JSON policy, reopen/relog and5544 pin plus2 BG merge controls. Original dates survive a one-hour clock advance. Required integration/check pending.
+
+- 2026-10-17: lifetime113 final integration772a3be6 passes required workspace four-filter231/0/1existing ignored(353.60s), site-export1/1, workspace/all-target check and three-repo fmt/diff. Active70448 census5544/1843, all243matrix/pin exact; bounded artifact/readability checks pass. LIFETIME_HK_TRACKING_STARTS_AT_ZERO remains explicit; native higher thresholds/BG/rendered/freshUDP/remoteCI/lead landing are not certified.
