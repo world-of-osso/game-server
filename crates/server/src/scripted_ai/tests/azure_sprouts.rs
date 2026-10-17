@@ -51,6 +51,38 @@ fn install_azure_ground(h: &mut Harness, map: InMap) {
     }
 }
 
+fn prove_native_summon_prerequisite(h: &mut Harness, leymor: Entity) {
+    let mut spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(374360)
+        .expect("native sprout summon spell")
+        .clone();
+    let (x, y, z) = ORIGINS[0];
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    spell.cast_destination = Some([x, y, z]);
+    crate::spell_cast::execute_cast(h.app.world_mut(), leymor, &spell, None)
+        .expect("native ground-projected summon prerequisite");
+    h.advance(0.1);
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(
+        children.len(),
+        1,
+        "native summon fixture works before parent RED"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::summon::SummonedCreature>(children[0])
+            .expect("native prerequisite child owner")
+            .owner,
+        leymor
+    );
+    // Remove only the setup control, before observing the parent cast's new actors.
+    h.app.world_mut().despawn(children[0]);
+}
+
 #[test]
 #[ignore = "RED: once-effect Ley-Line Sprouts destination children not implemented"]
 fn azure_leymor_sprouts_parent_summons_two_native_children_per_authored_origin() {
@@ -62,6 +94,7 @@ fn azure_leymor_sprouts_parent_summons_two_native_children_per_authored_origin()
         h.creatures_of(SPROUT).is_empty(),
         "producer inserts no placements"
     );
+    prove_native_summon_prerequisite(&mut h, leymor);
     crate::spell_cast::creature_cast(h.app.world_mut(), leymor, 374364, Some(leymor), true)
         .expect("native once-effect parent cast");
     // Native missile18yd/s, minimum1.5s; authored groups are within40yd of Leymor.
