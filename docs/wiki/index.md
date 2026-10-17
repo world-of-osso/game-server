@@ -1,3 +1,4 @@
+- [Omor Orbital hooks](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17) — source singleton continuation and falling-player/zero-threat periodic damage RED→GREEN3/3; server pull124/native acceptance remain open.
 - [Active70448 achievements](systems/dungeon-achievements.md#active70448-achievement-inputs) — named CSV import, source build/key receipt, no historical fallback; census migration adds/removes no roots.
 - [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — current terrain per eligible world-HK recipient; controlled full50/account/pin GREEN4/4 on canonical70448; native BG credit unimplemented.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.

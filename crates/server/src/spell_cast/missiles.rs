@@ -234,6 +234,7 @@ fn split_reflected(
                     dest: planned.dest,
                     chain_multipliers: vec![(caster, planned.chain_multiplier(reflector))],
                     blocked_units: Vec::new(),
+                    prevent_hit_script: planned.prevent_hit_script,
                 })
                 .collect();
             (reflector, turned)
