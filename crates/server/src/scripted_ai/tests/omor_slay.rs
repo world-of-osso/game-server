@@ -12,6 +12,16 @@ fn slay_fixture() -> (Harness, Entity) {
         },
         crate::persistence::ClientId(1001),
     ));
+    install_player_death_transition(&mut h);
+    (h, boss)
+}
+
+fn install_player_death_transition(h: &mut Harness) {
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::persistence::ClientId(1001));
     h.app.init_resource::<crate::death::DeathServerState>();
     h.app
         .init_resource::<crate::death::DeathTransitionCounters>();
@@ -19,7 +29,26 @@ fn slay_fixture() -> (Harness, Entity) {
         FixedUpdate,
         crate::death::process_player_death_transitions.after(crate::combat::auto_attack_system),
     );
-    (h, boss)
+}
+
+fn ordinary_hound_fixture() -> (Harness, Entity, Entity, InMap) {
+    let (mut h, boss, map) = super::omor::summon_speech_fixture();
+    install_player_death_transition(&mut h);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30707, Some(boss), false)
+        .expect("actual ordinary30707 hound admission");
+    h.advance(2.1);
+    let hounds = h.creatures_of(17540);
+    assert_eq!(hounds.len(), 1, "actual source owned Fiendish Hound");
+    let hound = hounds[0];
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitSummonedBy>(hound)
+            .unwrap()
+            .0,
+        boss.to_bits()
+    );
+    (h, boss, hound, map)
 }
 
 fn slay_count(h: &Harness, boss: Entity) -> usize {
@@ -107,4 +136,116 @@ fn encounter_coverage_omor_slay_ordinary_shadow_bolt_speaks_once_on_player_death
         "repeated death/idle ticks cannot replay slay"
     );
     assert!(h.inbox(1).chat.is_empty(), "other copy cannot hear slay");
+}
+
+#[test]
+#[ignore = "source actual NPC kill KilledUnit acceptance pending implementation"]
+fn encounter_coverage_omor_slay_actual_creature_kill_speaks_once() {
+    let (mut h, boss, hound, _) = ordinary_hound_fixture();
+    assert!(h.health(hound).current > 0.0);
+    crate::combat::kill_unit(h.app.world_mut(), boss, hound);
+    h.advance(0.05);
+    assert_eq!(h.health(hound).current, 0.0);
+    assert!(h.app.world().get::<crate::combat::Corpse>(hound).is_some());
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(hound)
+            .is_some()
+    );
+    assert_eq!(
+        slay_count(&h, boss),
+        1,
+        "KilledUnit has no player-victim restriction"
+    );
+    crate::combat::kill_unit(h.app.world_mut(), boss, hound);
+    h.advance(0.1);
+    assert_eq!(
+        slay_count(&h, boss),
+        1,
+        "already-dead target cannot repeat slay"
+    );
+    assert!(h.inbox(1).chat.is_empty());
+}
+
+#[test]
+fn encounter_coverage_omor_slay_fall_death_ignores_stale_last_damager() {
+    let (mut h, boss, _, _) = ordinary_hound_fixture();
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::combat::LastDamager(boss));
+    let world = h.app.world_mut();
+    let mut health = world.get_mut::<Health>(player).unwrap();
+    health.current = 1.0;
+    let fall = crate::death::deal_environmental_damage(
+        player,
+        shared::protocol::EnvironmentalKind::Falling,
+        &mut health,
+        1.0,
+    )
+    .expect("actual environmental fall damage boundary");
+    assert_eq!(fall.source, None, "environmental death has no killer");
+    assert_eq!(health.current, 0.0);
+    crate::spell_cast::log_event(world, fall);
+    world.write_message(crate::death::PlayerDeathTransition { player });
+    h.advance(0.1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(player)
+            .unwrap()
+            .state,
+        shared::death::DeathState::Dead
+    );
+    assert_eq!(
+        slay_count(&h, boss),
+        0,
+        "old nonlethal attacker is not the fall killer"
+    );
+    assert!(h.inbox(1).chat.is_empty());
+}
+
+#[test]
+fn encounter_coverage_omor_slay_owned_hound_kill_does_not_credit_owner() {
+    let (mut h, boss, hound, map) = ordinary_hound_fixture();
+    let player = h.player();
+    let observer = *h.app.world().get::<Position>(player).unwrap();
+    let point = Vec3::new(observer.x + 3.0, observer.y, observer.z);
+    let support = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .ground_in(map, point);
+    let crate::ground::GroundProbe::Supported(height) = support else {
+        panic!("authentic observer-side hound floor: {support:?}");
+    };
+    h.app.world_mut().entity_mut(hound).insert(Position {
+        x: point.x,
+        y: height,
+        z: point.z,
+    });
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1.0;
+    crate::creature_aggro::add_threat(h.app.world_mut(), hound, player, 1.0);
+    h.advance(20.0);
+    assert_eq!(
+        h.health(player).current,
+        0.0,
+        "actual hound melee kills victim"
+    );
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.source == Some(hound.to_bits())
+                && event.target == Some(player.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Death
+        }),
+        "real killing blow belongs to hound, not Omor"
+    );
+    assert_eq!(
+        slay_count(&h, boss),
+        0,
+        "owner rewards do not redirect killer AI speech"
+    );
+    assert!(h.inbox(1).chat.is_empty());
 }
