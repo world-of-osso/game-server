@@ -422,8 +422,21 @@ fn current_victim_garrick_primary_death_preserves_live_alternate_party_defence()
     update_ai(h.app.world_mut());
     h.advance(3);
     let alternate = spawn_npc(&mut h.app, 5.0);
+    h.app.world_mut().entity_mut(alternate).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Idle,
+    ));
     let owner = h.caster;
     crate::creature_aggro::add_threat(h.app.world_mut(), alternate, owner, 100.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(alternate)
+            .unwrap()
+            .0,
+        Some(owner),
+        "fixture must establish real party engagement before primary death"
+    );
     let primary = h.npc;
     h.app
         .world_mut()
