@@ -1,5 +1,9 @@
 # Auras
 
+## Mechanic-specific damage (2026-10-17)
+
+TC a352b1fa `Unit.cpp:6980–6984` adds the sum of aura276 amounts for the damage effect's nonzero mechanic, otherwise the spell mechanic. `spell_cast::effects::mechanic_damage_multiplier` reads actual caster aura amounts × stacks and joins the existing percent-done pipeline; resolved-source and ignored-caster-modifier paths retain their exclusions. Genuine native Leymor RED: fourteen Sprouts produced one ArcanePower374736 aura with14 stacks, but ordinary45s Stomp374731 dealt8631, equal to its unbuffed baseline instead of32797.8 (3.8×). Both native matching Stomp and nonmatching Brand374582 cases pass in the consolidated34-test Azure run at99cca08a (507.23s, no failures or ignored cases); fmt passes. Corrected scoped check at docs-only96da2b88 passes in1m39s with zero compilation warnings; the prior invalid helper --bin/check combination was rejected before compilation. Independent source and final artifact verification pass; twelve source hashes and exact48e60d67 DB remain stable before/after both gates. No native effect-mechanic-precedence proof beyond spell-mechanic22/no-match0. The diagnostic handler registry still lacks276 classification despite its actual damage consumer; no all-runtime-warning-free claim. No global/school bonus, manual stacks, caster rewrite, stat or spell-row override. [Contract](../../specs/follower-dungeons.md).
+
 ## Optional cost spell modifiers (2026-10-16)
 
 TC a352b1fa SpellInfo.cpp4220–4226 explicitly excludes flat spellmods from optional power costs. `spell_mods::modifier_totals` retains the existing live/charged snapshot matching; ordinary `modify` uses `(base+flat)×mult`, while optional `modify_percent` uses only `base×mult`. Native Practiced Strikes429647 effect6/op34 previously subtracted100 from both Protection Execute163201's required and optional Rage: a400 input left200 instead of100. No spell-specific production exception or resource-cap change. Native Sudden Death52437 effect5/op34=-100% and Arms order0 are independent controls. Native OptionalCostPct remains unconsumed. Five native regression/control tests passed within the38-test resource/modifier run (14.74s); after master merge006efb17, all five pass again (14.76s), workspace/all-target check passes64.411s. Independent verification preserves the charged/live matching boundary; no whole-ability/legal-build/fresh-UDP claim. [Contract](../../specs/class-completeness.md).
@@ -35,7 +39,10 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 | Case | Result |
 |---|---|
 | Same spell, same caster, same source | Refresh: new duration, +1 stack up to the maximum, amounts and absorbs reset, tick phase kept. `SPELL_ATTR1_AURA_UNIQUE` auras are not refreshed. |
-| Same spell, other caster | The auras coexist if the aura is harmful, has a periodic effect or has `SPELL_ATTR3_DOT_STACKING_RULE`. Otherwise the new aura replaces the old one. |
+| Native `CumulativeAura >1`, same source, non-channel/non-DOT/non-multislot, other caster | Reapply the same stack slot and add one native stack up to capacity, retaining the existing aura caster. TC `SpellInfo.cpp:1807–1815` / `Unit.cpp:3403–3465`; no manual stack assignment or caster rewrite. |
+| Otherwise same spell, other caster | The auras coexist if the aura is harmful, has a periodic effect or has `SPELL_ATTR3_DOT_STACKING_RULE`. Otherwise the new aura replaces the old one. |
+
+The shared-slot boundary was exposed by [native Sprout Arcane Power](../investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): fourteen actual source casters reached the correct summoner but beneficial replacement retained only one count. Passive/native multislot exceptions, channels and the native DOT rule stay out of shared-slot merging. This rule does not implement aura276's damage modifier.
 
 ### Classification
 
