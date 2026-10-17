@@ -5,6 +5,18 @@
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
+## 2026-10-17 — Stomp stack expectation timing
+
+[Native phase boundary](investigations/follower-data.md#stomp-expected-stack-timing--2026-10-17): unchanged current-master repro matches451; log-only diagnostic proves9 actual live stacks/5 corpses versus stale14 expectation. Test now samples Stomp-time stacks and independently accounts for all native Sprouts. Focused matching/nonmatching2PASS72.31s/check0 2m51s/fmt0, strict8f27/twenty-seven-source/HEAD/clean guards stable; original tolerance and production mechanics unchanged.
+
+## 2026-10-17 — Native Curve type publication
+
+[Curve input contract](../db2-active-inputs.md#native-curve-type-publication): maintained DB2 import/schema now retain installed Curve types/flags and build receipts. Process65651dac RED successfully imports but omits the table (1.197s); Curve-schema/active-root process3/3 passes4.106s at37a87ceb; COPY-only real-data receipt remains pending. Source encrypted exclusions are explicit in the contract, never default rows; scale consumer/native field fixture remain blocked/ignored until publication.
+
+## 2026-10-17 — Native Fissure Sprout hit
+
+[Ordinary Fissure lifecycle](investigations/follower-data.md#native-fissure-sprout-hit--2026-10-17): actual20s parent completion/real qualifying Sprout still-alive RED73.59s→native self-death/owner-stack GREEN1/54.27s, exact8f27/sixteen-source/HEAD guards stable. Initial silent-trigger SpellGo assertion invalidated and attempted implementation reverted before genuine RED; no generic cast-publication change. Test enabled; ordinary/cancellation and Brand/Stomp5 pass, corrected direct entry/front/copy/destination control1PASS58.82s/check0 2m27s/fmt0. Direct fixture samples immediate hit before unrelated cross-copy summon cleanup; production unchanged. Final exact8f27/seventeen-source/HEAD/clean guards pass; no fresh6/6 rerun claim. Visual159239/full Azure remain open.
+
 ## 2026-10-17 — Power-drain CalcValue source correction
 
 [Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): original117 fixture expectation missed ExpectedStat base evaluation, CalcValue rounding and the initial base-variance phase; raw-base118 is not the full native result either. Native70448 zero class/coefficient fields still enter the pin's ExpectedStat else branch. Real UnitLevel10 yields3405=100,46453=278/floor80, and16094's native auto-DPS base284. Freshmaster887760ff genuineRED6FAIL/2PASS73.91s →8fd5f604/b8589ad6 GREEN9/9/60.29s/206.409s total, including metadata refusals and signed native-variance endpoints290/384/491. Hash-verified70448 selected inputs match runtime rows; old six passes remain historical, not source-parity proof.
@@ -29,6 +41,18 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 ## 2026-10-17 — Starfall/Moon Tears recipient routing
 
 [Bounded258/979](../pet-battle-effect-coverage.md#starfall-and-moon-tears--implementation2026-10-17): exact active70448 seven-row graphs, source-school distinction and existing Moonlight reuse. Actual routing RED4 plus legal Cosmos owned RED1 precede9b958668 slot/cap/dead/miss/owned GREEN; first weather case exposed only a fixture9-versus-existing8 remaining assumption, corrected test-only9c88c925. Corrected focused weather1/1 passes ataf89ac7c; retain unchanged core4+owned1 GREEN at9b958668. Integrated5d23a60d lib145/main33/check1m36/no warnings/fmt pass; fresh reconciled70448 census1811/2829=64.02%/1025 graphs (+14/+2, no removals). Only subsequent docs/census changes; no redundant broad rerun. Lead gate438 lands145+55 before both-skin native Cosmos1972/1:9 damage/9 healing×3/increased reserve bars/Moonlight8. Four individually inspected fullHD originals under `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all phases two framed models/strict tripwire0, geometry91/110 only HP fills/timed floats. Existing7 canonical assets/3-mesh strict loader pass, no publication. Both physical forfeits close, owned processes stop/window clears.979 native and independent Retail timing/VFX remain unproved. No other ambiguous selectors admitted.
+## 2026-10-17 — Toy source225–229 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source225229-pending-necrolord-acceptance-and-retained-cookingquill-scope-2026-10-17):225 test/spec e2d1b991 adds exact learned bind/shared-charge acceptance, ten variants/check pending.226 linked Cookpot/versatility and227 quill retain earlier bounded CPU proof;228 pledge and229 pledge/Maldraxxus recovery remain gaps.229 runtime173467/display94055 exists; no missing-template claim, runtime/data change or new native certificate.
+
+## 2026-10-17 — Toy source220–224 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source220224-conditional-fall-and-reagentrandom-action-boundaries-2026-10-17): black-parasol negative generic-tick/refusal proof is not a successful falling contract. Purple/green next-fall consumption, combined Plume slow-fall/turn/area and book vellum/random-action remain unproved. Exact38682/count1 reagent retained; no invented outcome pool, new runtime/data admission or repeated gate.
+
+## 2026-10-17 — Toy source215–219 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source215219-retained-vessel-proof-and-stackbobberareavehicle-gaps-2026-10-17):216 retains earlier actual learning/use/aura/cancel CPU proof;215 stack-conditioned shoulders/proc,217 bobber override,218 forced-cry area action and219 mixed vehicle/motion/party-devouring lifecycle remain gaps. Slime166086/display100400 already exists in runtime content. No new runtime/data admission, native certificate or repeated gate; Tea Set149865 remains lead-required.
+
 ## 2026-10-17 — Toy source210–214 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source210214-visualmotionreturnclasscovenant-boundaries-2026-10-17): multi-visual eyes, combined water-walk/hover, player throw-return, class-armor payload and advertised Night Fae pledge acceptance remain gaps. Condition0/shared2309 does not establish or negate all eligibility; no invented gate or borrowed nine-hearthstone certificate. Also name204's source35 precisely as party-target. No runtime/data change, new admission or duplicate gate.
@@ -39,7 +63,7 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 ## 2026-10-17 — Toy source200–204 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source200204-pending-mogu-acceptance-and-companionequipmentgame-boundaries-2026-10-17):201 exact Mogu pool/lifecycle test/spec924bcde11 remains pending execution/check, fmt/readability pass. Companion-control description reference is not an executable child edge; headgear/shaving/skull-game actions remain gaps. Existing163441/95179 half-scale content is not missing publication or successful interaction. No production/data change or fabricated RED/native proof.
+[Exact source matrix](../toy-effects14-coverage.md#source200204-mogu-source-acceptance-and-companionequipmentgame-boundaries-2026-10-17):201 exact Mogu pool/lifecycle test/spec924bcde11 passes two affected tests/seven IDs107.53s after one14m03s compile; native check2m58s/no compiler warnings and fmt/readability pass. Companion-control description reference is not an executable child edge; headgear/shaving/skull-game actions remain gaps. Existing163441/95179 half-scale content is not missing publication or successful interaction. No production/data change or fabricated RED/native proof.
 
 ## 2026-10-17 — Toy source195–199 boundaries
 

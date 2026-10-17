@@ -120,3 +120,8 @@ fn toyfx165_holographic_hearthstone_learned_use_returns_to_bind_and_blocks_brewf
 fn toyfx190_eternal_traveler_hearthstone_learned_use_returns_to_bind_and_blocks_holographic() {
     assert_toy_hearthstone_bind_and_shared_charge(172179, 308742, 168907);
 }
+
+#[test]
+fn toyfx225_necrolord_hearthstone_learned_use_returns_to_bind_and_blocks_eternal_traveler() {
+    assert_toy_hearthstone_bind_and_shared_charge(182773, 340200, 172179);
+}
