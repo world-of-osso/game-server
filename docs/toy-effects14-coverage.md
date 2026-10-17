@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source215–219: retained vessel proof and stack/bobber/area/vehicle gaps (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|215 Smolderheart180873/335099 | Self complete-zero dummy4,1200000ms duration and300000ms spell recovery, but four visual branches require PlayerConditions86766–86769 reading343642 stacks4/8/10. Source proc mask2/chance100 and aura text also reference being on fire343646. Shoulder-smolder progression/proc/conditional presentation remains unproved; root shape alone is not ordinary unconditional caster-art admission. |
+|216 Tithe Collector's Vessel180947/335276 | Self complete-zero dummy4,900000ms duration; ItemEffect cooldown-1 inherits3600000ms spell recovery. Retain Batch3's exact actual learning/UseToy/SpellGo/lifetime/cancel, unchanged model/health and no-actor CPU scope. Existing attachment fixture includes this ID; this revisit is not a fresh test or per-toy native back-vessel/pixel/audio certificate. |
+|217 Bat Visage Bobber180993/335484 | Source1000ms cast,3600000ms override-summoned-object aura258; both slots name35591 and355518/385553, with trigger131474's self dummy3. Fishing bobber replacement/selection remains unproved, not a caster costume or generic child cast. Item recovery900000ms/category11 retained. |
+|218 Orophea's Lyre181794/337486 | Self area-trigger aura395/misc21312/base10 lasts20000ms; item recovery1800000ms. Advertised nearby-player crying requires recipient/action proof; a lyre visual or root aura alone is not the ten-yard forced-cry behavior. No generic cosmetic substitute. |
+|219 Phial of Ravenous Slime181825/323826 | Source1500ms cast,30000ms mixed11-aura graph includes transform56→166086/misc10, forced-forward241, no-actions321, vehicle296/misc7130 and area-trigger395/misc19783; RequiredAreasID7126 and3600000ms item recovery. Runtime166086/display100400 already exists. Outdoor/Shadowlands eligibility, uncontrollable movement and party-devouring/damage lifecycle remain unproved; authentic model presence is not missing publication or full behavior. |
+
+`rows215-219-{readonly-source,action-source}.json` retains70391 roots, executable trigger child, durations/recovery, visual conditions/events and actual runtime-content rows. Pinned `SpellAuraEffects.cpp` names258 override-summoned-object,395 area-trigger,241 forced-forward,321 no-actions and296 vehicle-ID. No new runtime/data/canonical admission, simulation/native result or repeated unchanged gate. Tea Set149865 remains the separate lead-required named gap.
+
 ## Source210–214: visual/motion/return/class/covenant boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
