@@ -171,6 +171,12 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         {
             crate::spell_cast::scripts::cast_eye_beam_tick(world, tick.caster);
         }
+        PERIODIC_TRIGGER_SPELL
+            if spell.id == crate::spell_cast::omor_orbital::ORBITAL_WHIP
+                && tick.effect_index == 0 =>
+        {
+            crate::spell_cast::omor_orbital::cast_whip_tick(world, unit, tick.trigger_spell);
+        }
         PERIODIC_TRIGGER_SPELL => {
             // TC OnEffectPeriodic runs before the default trigger, even when
             // DB2 has no trigger (the script supplies Mirror Image1264098).

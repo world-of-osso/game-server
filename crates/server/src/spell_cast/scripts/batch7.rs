@@ -91,6 +91,7 @@ pub(super) fn radiance_plan(
         ),
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 
@@ -195,6 +196,7 @@ fn cast_whirlwind_energize(world: &mut World, caster: Entity, amount: f32, depth
         dest: None,
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }];
     spell_cast::missiles::launch(world, caster, &child, plan, depth + 1);
 }
