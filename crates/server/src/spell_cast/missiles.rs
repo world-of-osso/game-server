@@ -74,6 +74,8 @@ pub(super) fn launch(
     plan: TargetPlan,
     depth: u8,
 ) {
+    // All successful ordinary/triggered casts reach this once, before flight/hit.
+    crate::scripted_ai::on_spell_cast(world, caster, spell.id);
     let reflections: Vec<(Entity, Reflection)> = super::hit_units(&plan)
         .into_iter()
         .filter_map(|unit| Some((unit, reflect::roll(world, caster, spell, unit)?)))

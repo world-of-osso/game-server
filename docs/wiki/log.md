@@ -4,6 +4,17 @@
 ## 2026-10-17 — Level-based pet maximum health
 
 [Bounded state2](../pet-battle-effect-coverage.md#level-based-maximum-health--implementation2026-10-17): explicit actual level1..25,5/5/10HP per level, existing percentage/floor/cap and owned-health persistence boundary. Core/owned unsupported-state RED and missing-metadata no-RNG RED precede GREEN; obsolete576 negative removed with remaining negatives retained. All ten fixture tables match active70448; fresh1797/2829/1023 census preserves historical70391. Library139 unchanged passes plus corrected negative1/1, wild/PvP29 plus real-ground configured achievement1/1, check51.00s/no warnings and fmt pass. Initial failures remain documented rather than claiming one all-green broad run. Native proof remains ordered after lead landing.
+## 2026-10-17 — Koranthal destination-delay assertions
+
+[Koranthal timing](systems/boss-scripts.md#koranthal-destination-delay--2026-10-17): gate413 root is stale immediate timing after masterc99830b5, not OnSpellCast. Valid protocol e9b80b8 A/B each retains2 old failures while actual5s boundary passes. Restore diagnostic bypass; strengthen original tests with early exclusion/exact owned119964 impact/HP and unchanged absolute event clocks. Native data/runtime untouched; corrected GREEN pending.
+
+## 2026-10-17 — Omor caster hold/retreat
+
+[Caster movement](systems/boss-scripts.md#omor-caster-hold-and-retreat--2026-10-17): complete pinned UnitAI/MovementDefines/ChaseMovementGenerator establish non-melee ranged attack,100+both-reaches tolerance and contact retreat. Actual20yd approach/no3yd retreat RED2d93e936→strict GREEN2/2/86.49s at51cc638d; direct grounded driver only. Ordinary Omor10/source-range2/Gargolmar4/knockback9 GREEN25/25/539.12s ataa75ea23 includes numeric endpoints; obstacle-generated paths/100ms/native chase parity remain open.
+
+## 2026-10-17 — Omor Shield OnSpellCast
+
+[Shield cast emote](systems/boss-scripts.md#omor-shield-cast-emote--2026-10-17): natural31901/aura/no-emote RED91b61927→strict GREEN1/1/53.34s at15260692. Common successful-cast hook covers ordinary and both triggered routes, rejected requests stay silent; other-copy/repetition controls pass. Ordinary Omor8/missile9 integration GREEN17/17/291.23s atbf090cf6; summon-chance/slay/caster100yd remain open.
 
 ## 2026-10-17 — Lock-On target charge
 
