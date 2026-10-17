@@ -225,49 +225,12 @@ fn encounter_coverage_gargolmar_real_evade_rearms_damage_thresholds() {
 #[ignore = "RED: generic effect 96 charge absent (Gargolmar Surge)"]
 fn encounter_coverage_gargolmar_surge_selects_farthest_living_threat() {
     let (mut h, boss, map) = pull_gargolmar();
-    let victim = h.player();
     let far = h.players[1].0;
-    let origin = *h.app.world().get::<Position>(boss).unwrap();
-    h.app.world_mut().entity_mut(far).insert((
-        map,
-        Position {
-            x: origin.x + 20.0,
-            ..origin
-        },
-    ));
-    crate::creature_aggro::add_threat(h.app.world_mut(), boss, far, 0.1);
-    let mut cast = None;
-    for _ in 0..120 {
-        h.advance(0.05);
-        cast = spell_gos(&h, boss, 34645).last().map(|go| go.target);
-        if cast.is_some() {
-            break;
-        }
-    }
-    assert_eq!(
-        cast,
-        Some(Some(far.to_bits())),
-        "source MaxDistance is not the high-threat melee victim"
+    assert_ne!(
+        far,
+        h.player(),
+        "farthest threat is not the high-threat melee victim"
     );
-    assert_ne!(far, victim);
-    assert!(
-        h.inbox(0)
-            .log
-            .iter()
-            .any(|event| event.source == Some(boss.to_bits())
-                && event.target == Some(far.to_bits())
-                && event.spell_id == Some(34645)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0),
-        "Surge damages selected distant threat"
-    );
-}
-
-#[test]
-#[ignore = "RED: generic effect 96 charge absent (Gargolmar Surge)"]
-fn encounter_coverage_gargolmar_surge_moves_before_distant_impact() {
-    let (mut h, boss, map) = pull_gargolmar();
-    let far = h.players[1].0;
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let destination = Position {
         x: origin.x + 20.0,
@@ -294,9 +257,34 @@ fn encounter_coverage_gargolmar_surge_moves_before_distant_impact() {
         distance(at_launch) > reach + 1.0,
         "charge must travel, not teleport at launch"
     );
+    let speed = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(34645)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .speed;
+    let expected_frames =
+        ((1.0 + (distance(at_launch) - reach) * 1000.0 / speed) / 50.0).ceil() as usize;
+    let mut previous = at_launch;
     let mut impact = None;
-    for _ in 0..20 {
+    for frame in 1..=20 {
         h.advance(0.05);
+        let position = *h.app.world().get::<Position>(boss).unwrap();
+        let traveled = Vec3::new(
+            position.x - previous.x,
+            position.y - previous.y,
+            position.z - previous.z,
+        )
+        .length();
+        assert!(
+            traveled <= speed * 0.05 + 0.001,
+            "charge exceeds authored velocity: {traveled}"
+        );
+        previous = position;
         if h.inbox(1).log.iter().any(|event| {
             event.source == Some(boss.to_bits())
                 && event.target == Some(far.to_bits())
@@ -304,7 +292,11 @@ fn encounter_coverage_gargolmar_surge_moves_before_distant_impact() {
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0
         }) {
-            impact = Some(*h.app.world().get::<Position>(boss).unwrap());
+            assert_eq!(
+                frame, expected_frames,
+                "source spline duration owns impact time"
+            );
+            impact = Some(position);
             break;
         }
     }
