@@ -30,7 +30,7 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
-- [Toy source boundaries89–93](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) — child scripts, owned-critter150 and procedural headwear remain unresolved.
+- [Toy source boundaries89–93](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) — child scripts, owned-critter150 and procedural headwear remain unresolved; [94–98](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) adds source-action/procedural boundaries.
 
 - [Flashback screen-effect boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17) — source260/1473 is not world-phase proof; actual chapel use/native presentation open.
 

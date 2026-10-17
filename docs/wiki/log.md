@@ -1,6 +1,6 @@
 ## 2026-10-17 — Toy source boundaries89–93
 
-[Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. No runtime admission; merged55-case proof unchanged.
+[Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. [94–98 continuation](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retains nearby reaction, spectral/headwear procedural, corpse ritual and return/catch gaps. No runtime admission; merged55-case proof unchanged.
 
 ## 2026-10-17 — Forlorn/charge merge
 
