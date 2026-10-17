@@ -40,11 +40,28 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
         let Some(level) = eligible_kill_level(world, player, victim, victim_level) else {
             continue;
         };
+        // TC Player6752 increments actual lifetime state before evaluating113.
+        increment_and_save_lifetime_kills(world, player);
         // TC RewardHonor updates35 before AddHonorXP's minimum-level/zero-XP checks.
         crate::achievement::record_world_honorable_kill(world, player, victim);
         let amount = calculate_kill_xp(world, player, level, victim_level, recipients.len());
         award_honor(world, player, amount);
     }
+}
+
+fn increment_and_save_lifetime_kills(world: &mut World, player: Entity) {
+    let Some(mut state) = world.get_mut::<PlayerPvpState>(player) else {
+        return; // Without actual PvP state, there is no lifetime authority to project.
+    };
+    state.progress.lifetime_honorable_kills =
+        state.progress.lifetime_honorable_kills.saturating_add(1);
+    let progress = state.progress.clone();
+    drop(state);
+    let character = world
+        .get::<ClientId>(player)
+        .expect("honor recipient identity")
+        .0;
+    persistence::save_pvp(&world.resource::<GameDatabase>().db, character, &progress);
 }
 
 /// BG_END_BONUS_ONCE_PER_MATCH normalizes TC's per-player OnEnd placement.

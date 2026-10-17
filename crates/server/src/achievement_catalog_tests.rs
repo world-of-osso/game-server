@@ -1455,7 +1455,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
         .collect();
     // Active70448: all three area31 roots retain full authored thresholds.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5533);
+    assert_eq!(union.len(), 5544);
+    for id in [238, 239, 509, 512, 513, 515, 516, 869, 870, 5363, 39935] {
+        assert!(union.contains(&id), "full authored lifetime113 root{id}");
+    }
     for id in [224, 1151, 12411] {
         assert!(union.contains(&id), "full authored area31 root{id}");
     }
