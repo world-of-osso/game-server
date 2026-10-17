@@ -10,7 +10,7 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 [Native Sprout deaths](investigations/follower-data.md#sprout-death-stack-consumption--2026-10-17): original-caster-first fourteen-child RED→GREEN1/45.34s; actual owner stack consumption, final replicated removal and duplicate-corpse exclusion. Timer/amount assertions and integration gates pending.
 ## 2026-10-17 — Rapid Fire two-wave recipients
 
-[Bounded774](../pet-battle-effect-coverage.md#rapid-fire--implementation2026-10-17): active70448 six rows repeat the same three enemy slots for points4 then3;2064/920 remain rejected. Actual core4/owned1 routing RED precedes minimal productione04f5e10 and six focused pet GREEN cases, including independent wave misses/first-wave faint without retarget and real Peddlefeet122/10. Three Hunter controls are separate. Final census/check/fmt and post-landing native remain pending.
+[Bounded774](../pet-battle-effect-coverage.md#rapid-fire--implementation2026-10-17): active70448 six rows repeat the same three enemy slots for points4 then3;2064/920 remain rejected. Actual core4/owned1 routing RED precedes minimal productione04f5e10 and six focused pet GREEN cases, including independent wave misses/first-wave faint without retarget and real Peddlefeet122/10. Three Hunter controls are separate. Integrated69653970 lib150/main34/check23.64s/no warnings/fmt pass; fresh reconciled70448 census1817/2829=64.23%/1026 graphs (+6/+1/no removals), with2064/920 still rejected. Subsequent changes docs/census only; post-landing native remains pending.
 
 ## 2026-10-17 — Starfall/Moon Tears recipient routing
 
