@@ -1,8 +1,8 @@
-//! Source111–113: real transforms and item overrides versus spell-owned recovery.
+//! Source111–113 and178–179: real transforms and item versus spell-owned recovery.
 use super::*;
 
 #[test]
-fn toyfx111_113_disguises_real_learning_models_expiry_and_source_recovery_precedence() {
+fn toyfx111_113_and178_179_disguises_real_learning_models_expiry_and_source_recovery_precedence() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
     const DURATION_MS: u32 = 600_000;
     const FRAME_SECONDS: f64 = 0.05;
@@ -13,20 +13,44 @@ fn toyfx111_113_disguises_real_learning_models_expiry_and_source_recovery_preced
             .unwrap();
     let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
     for (item, spell, entry, displays, recovery_ms) in [
-        (164373, 281298, 121865, [11611, 976, 765, 4905], 7_200_000),
+        (
+            164373,
+            281298,
+            121865,
+            [11611, 976, 765, 4905].as_slice(),
+            7_200_000,
+        ),
         (
             164374,
             281302,
             144261,
-            [41083, 78767, 76947, 41724],
+            [41083, 78767, 76947, 41724].as_slice(),
             3_600_000,
         ),
         (
             164375,
             281303,
             144262,
-            [88011, 88009, 88016, 88012],
+            [88011, 88009, 88016, 88012].as_slice(),
             7_200_000,
+        ),
+        (
+            170154,
+            303994,
+            155896,
+            [92513, 92512, 92511, 91369, 32123, 32122, 32121, 31982].as_slice(),
+            3_600_000,
+        ),
+        (
+            170155,
+            303995,
+            155897,
+            [
+                92514, 92515, 92516, 92517, 92518, 92519, 92520, 92521, 92522, 92523, 92524, 92525,
+                92526, 92527, 92528, 92529,
+            ]
+            .as_slice(),
+            3_600_000,
         ),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("disguise-{item}.redb")));
