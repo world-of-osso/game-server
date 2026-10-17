@@ -1,5 +1,18 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source225–229: pending Necrolord acceptance and retained cooking/quill scope (2026-10-17)
+
+225 Necrolord Hearthstone182773/340200 authors source10s homebind252 and shared2309/one charge/1800000ms recharge. Test/spec e2d1b991 adds its actual learned-use/saved-bind/missing-bind-refusal/shared-sibling-refusal case; ten affected hearthstone variants are queued/running under the single maintained native job. Acceptance is pending until that output and package/tests check are recorded; no runtime/data change, fabricated RED, covenant eligibility or native certificate is claimed.
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|226 Muckpool Cookpot182780/340241 | Source2000ms cursor87 effect50→357706/display67291/scale0.5,300000ms object duration and item recovery. Retain earlier seven-focus actual-use/linked31442 trap/CozyFire7353 versatility refresh/range/expiry/cleanup CPU proof, including this exact ID. No generic scenery substitute; prior Little Wickerman native witness is not a new per-Cookpot certificate. |
+|227 Rapid Recitation Quill182890/340276 | Self complete-zero dummy4/180000ms, inherited60000ms spell recovery. Retain Batch3's exact actual learning/use/SpellGo/lifetime/cancel, unchanged model/health/no-actor CPU scope from the existing attachment fixture. Quill/parchment/dictation presentation remains separately native-unproved for this ID; no new run implied. |
+|228 Venthyr Sinstone183716/342122 | Source10s homebind252/shared2309 also explicitly advertises Venthyr pledge eligibility. ItemEffect condition0 does not establish or negate the complete rule. Actual source eligibility/use/native acceptance stays open; neither225's bounded case nor earlier hearthstones closes it. |
+|229 Acolyte's Guise183847/341175 | Source1500ms self transform56→173467/misc8,900000ms duration; item-1 inherits3600000ms spell recovery. Runtime173467/display94055 exists. Advertised Necrolord pledge and Maldraxxus-specific reduced recovery remain unproved with actual learned use/lifecycle; no ordinary-disguise shortcut or inferred cooldown amount. |
+
+`rows225-229-{readonly-source,action-source}.json` preserves actual roots/cast/charge/duration/recovery and runtime-content rows. Retained historical cooking/quill proof is revision-scoped; the new225 proof ledger remains pending. Tea Set149865 stays the separate lead-required named gap, with no producer/publication changes.
+
 ## Source220–224: conditional-fall and reagent/random-action boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |
