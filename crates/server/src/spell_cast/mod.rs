@@ -138,6 +138,8 @@ mod target_aura_type_tests;
 #[cfg(test)]
 mod touch_of_death_tests;
 #[cfg(test)]
+mod triggered_target_aura_tests;
+#[cfg(test)]
 mod warrior_stun_tests;
 mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
