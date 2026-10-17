@@ -1,6 +1,6 @@
 ## 2026-10-16 — Leymor Brand expiry hook
 
-[Source boundary](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16): native Brand374567 applied/expired but omitted374570 in genuine8049cebc RED; two controls passed. Finite source expiry hook5f1418c2 passes native3/3, fmt and independent source/artifact gate; shared Frost controls/check queued. Complete Leymor/native acceptance pending.
+[Source boundary](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16): native Brand374567 applied/expired but omitted374570 in genuine8049cebc RED; two controls passed. Finite source expiry hook5f1418c2 passes native3/3, fmt and independent source/artifact gate; six shared Frost controls and zero-warning server check pass. Complete Leymor/native acceptance pending.
 
 ## 2026-10-16 — Azure finite Frost Bomb chain
 
