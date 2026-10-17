@@ -1,6 +1,6 @@
 ## 2026-10-16 — Miss-only pet self outcomes194
 
-[Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated gates pending.
+[Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
 
 ## 2026-10-16 — Eligible victim race53
 
