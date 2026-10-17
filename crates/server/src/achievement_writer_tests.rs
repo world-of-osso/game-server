@@ -22,7 +22,11 @@ fn assert_guild_news_reader_order(subscribe_first: bool) {
     )
     .unwrap();
     h.app
-        .insert_resource(load_achievement_catalog(&source).unwrap());
+        .insert_resource(load_achievement_catalog(&source).unwrap())
+        .insert_resource(crate::maps::ServerClock {
+            fixed_unix: Some(1_792_118_000),
+            offset_secs: 0,
+        });
     h.app
         .world_mut()
         .entity_mut(h.player)
