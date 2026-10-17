@@ -132,3 +132,5 @@ Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actio
 - Source Overtuned Corgi Goggles158149/264091 preserves viewer aura233 payload[3569,53] through real learning/use and cancellation; never replace it with a global ModelDisplay transform. Source duration600000ms is not a ten-minute native-expiry certificate. Viewer-local payload interpretation/rendering remains unimplemented.
 
 - Roar of Rezan160509/272071 emits the real cast event for authored caster sound/animation visual77572, preserves health/global appearance and creates no summon or aura. Preserve item recovery90000ms and ordinary rejection/reuse. This bounded server contract does not certify native audio/animation playback.
+
+- Greatfather Winter162973/278244 and Headless Horseman163045/278559 hearthstones use the persisted HomeBind through their real learned UseToy path, source10s cast and shared charge category2309 (one charge,1800000ms recharge). Missing bind refuses without fabricated destination or spent charge; one variant spends the charge shared with the other. Same-map CPU acceptance does not certify cross-map wire/presentation or natural30min recharge.
