@@ -1,6 +1,16 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_honor_area31_account_contributions_sum_not_max() {
+    let contributions = [23, 27].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(39747, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&39747), Some(&50));
+}
+
+#[test]
 fn achievements_criteria_honor_class52_account_contributions_sum_not_max() {
     let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
         criteria_progress: [(2359, count)].into(),
