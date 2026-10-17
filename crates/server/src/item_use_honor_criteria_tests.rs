@@ -125,7 +125,7 @@ fn new_gnerd_eater(path: &std::path::Path) -> Eater {
         .h
         .app
         .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
-    eater.h.app.add_plugins(AchievementPlugin);
+    bevy::app::Plugin::build(&AchievementPlugin, &mut eater.h.app);
     eater.h.app.world_mut().entity_mut(eater.h.caster).insert((
         ClientId(character),
         PlayerAchievementState::default(),
