@@ -1,6 +1,6 @@
 use super::test_harness::*;
 use crate::death::{DeathPlugin, PlayerDeathState};
-use crate::spell_info::{SpellEffect, SpellInfo, SpellMisc, SpellRange};
+use crate::spell_info::{SpellEffect, SpellInfo};
 use bevy::prelude::*;
 use shared::components::{Health, Mana, MovementControl, Position, UnitTap};
 use shared::death::DeathState;
@@ -25,29 +25,26 @@ fn capture_first_resurrection(
     }
 }
 
+fn load_native_redemption() -> SpellInfo {
+    world_db()
+        .expect("world fixture")
+        .store
+        .get(7328)
+        .expect("native Redemption with corpse-target metadata")
+        .clone()
+}
+
 fn fixture() -> (Harness, Entity, Entity) {
-    let spell = SpellInfo {
-        id: 7328,
-        name: "Redemption".into(),
-        misc: Some(SpellMisc {
-            range: Some(SpellRange {
-                max_friendly: 40.0,
-                ..default()
-            }),
-            ..default()
-        }),
-        effects: vec![SpellEffect {
-            effect: 18,
-            base_points: 35.0,
-            implicit_targets: [0, 0],
-            ..default()
-        }],
-        ..default()
-    };
+    let spell = load_native_redemption();
     let mut h = harness_with_plugins(vec![spell], &[], 2, false, |app| {
         app.add_plugins(DeathPlugin);
     })
     .expect("world fixture required");
+    // The common combat fixture keeps rage from decaying; native Redemption is out-of-combat.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::CombatStatus(false));
     let target = spawn_player(&mut h.app, 5, 3.0);
     h.app.world_mut().entity_mut(target).insert((
         PlayerDeathState {
@@ -213,23 +210,14 @@ fn rezrtap_resurrect_with_aura_applies_trigger_after_acceptance() {
         .get(15007)
         .expect("resurrection sickness fixture")
         .clone();
-    let spell = SpellInfo {
-        id: 7328,
-        effects: vec![SpellEffect {
-            effect: 172,
-            base_points: 35.0,
-            trigger_spell: 15007,
-            ..default()
-        }],
-        misc: Some(SpellMisc {
-            range: Some(SpellRange {
-                max_friendly: 40.0,
-                ..default()
-            }),
-            ..default()
-        }),
+    let mut spell = load_native_redemption();
+    // Synthetic effect172 acceptance boundary, not a native7328 effect claim.
+    spell.effects = vec![SpellEffect {
+        effect: 172,
+        base_points: 35.0,
+        trigger_spell: 15007,
         ..default()
-    };
+    }];
     h.app
         .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell, aura]));
     let offered = offer(&mut h, target, conn);

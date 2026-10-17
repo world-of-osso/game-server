@@ -139,6 +139,7 @@ impl Plugin for AuraPlugin {
                 )
                     .chain()
                     .after(crate::spell_cast::advance_casts)
+                    .after(crate::spell_cast::queued_triggers::resolve_due)
                     .after(crate::combat::auto_attack_system),
             );
     }
