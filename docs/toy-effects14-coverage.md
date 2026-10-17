@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source265–269: pet-chase/flight/destruction/drag/mixed-shade boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|265 Elusive Pet Treat186985/355215 | Mixed script3/target150 and target47 summon179757/properties61 (Control1/Title2/flags2) for30000ms,600000ms item recovery. TDB81664/scale0.4 exists, runtime absent. Actual companion chasing the bone-wielding golem remains unproved; not an ordinary caster cosmetic or static summon. |
+|266 Forgotten Feather187051/355582 | Actual on-use TriggerType0/slot1 targets minipet90 with aura61 plus effect226/misc582097, permanent duration-1 and10000ms item recovery. Advertised Val'kyr power/flying-alongside behavior requires companion eligibility, motion/appearance/restoration proof; do not infer it from generic self flight or discard either source slot. |
+|267 Box of Rattling Chains187075/355760 | Actual on-use slot1 summons179901/properties64 at target47 for60000ms and triggers101297's2250ms self root26; item recovery1800000ms. TDB101738/scale0.3 exists, runtime absent. Minigrue's nearby-toy destruction/selection/cleanup remains unproved; no arbitrary destruction policy or inert critter substitute. |
+|268 Personal Ball and Chain187113/355953 | Source1000ms linked-summon428/300000ms→355954; child permanent target47 summon179941/properties4447 (Control1/Title0,flags8521994/2) plus self dummy4 and aura33. Runtime179941/display39353 exists. Actual dragging/link/cleanup contract remains unproved; authentic body presence is not a missing-publication fix or generic stationary actor acceptance. |
+|269 Bottled Shade Heart187139/356221 | Source1000ms/600000ms combines transform56→180048/misc8, screen260/misc1917/7 and periodic-trigger23→356235's target32 summon180054/properties5210 for15000ms. Existing runtime180048/97411/scale0.9 does not prove the combined possession/screen/child lifecycle. Missing runtime180054 has authentic source101527/scale1.2/weight2 and101526 at scale1.8/weight3 and scale3/weight1; do not collapse distinct scale rows or drop the periodic child. Item recovery3600000ms retained. |
+
+`rows265-269-{readonly-source,action-source}.json` preserves exact70391 on-use roots, reachable children, cast/duration/property flags and runtime/source weighted model rows. No new pet/script/linked-summon/transform admission, producer/data/canonical writes or positive simulation/native certificate.240 remains the single progressing owned proof;149865 Tea Set stays lead-required and unchanged gates are not repeated.
+
 ## Source260–264: paired trophy/oracle/dance/leash/anima-service boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
