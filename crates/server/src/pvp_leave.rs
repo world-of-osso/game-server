@@ -128,6 +128,7 @@ pub(super) fn remove_participant(state: &mut PvpServerState, match_id: u64, char
         .retain(|id| *id != character_id);
     matched.accepted.remove(&character_id);
     matched.origins.remove(&character_id);
+    matched.original_queues.remove(&character_id);
     if matched.instance.team_a_players.is_empty() && matched.instance.team_b_players.is_empty() {
         state.battleground_matches.remove(&match_id);
     }
