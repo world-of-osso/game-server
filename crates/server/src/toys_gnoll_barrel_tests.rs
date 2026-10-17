@@ -50,9 +50,13 @@ fn toyfx81_gnoll_barrel_real_learning_source_area_cursor_pair_and_expiry() {
     assert_eq!(activate_at(&mut h, ITEM, Some(point))[0].error, None);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.inbox.go.iter().any(|go| go.spell_id == SPELL));
-    assert!(h.inbox.cooldowns.iter().any(|cooldown| {
-        cooldown.spell_id == SPELL && !cooldown.is_gcd && cooldown.duration_ms == 1_800_000
-    }));
+    let recovery = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|cooldown| cooldown.spell_id == SPELL && !cooldown.is_gcd)
+        .expect("successful use publishes source item recovery");
+    assert_eq!(recovery.duration_ms, 1_800_000);
     let world = h.app.world_mut();
     let mut actors: Vec<_> = world
         .query::<(Entity, &Npc, &SummonedCreature)>()
@@ -110,6 +114,11 @@ fn toyfx81_gnoll_barrel_real_learning_source_area_cursor_pair_and_expiry() {
     }
     assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
     assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), display);
+    assert_eq!(
+        activate_at(&mut h, ITEM, Some(point))[0].error.as_deref(),
+        Some("OutOfRange")
+    );
+    *h.app.world_mut().get_mut::<Position>(caster).unwrap() = origin;
     assert_eq!(
         activate_at(&mut h, ITEM, Some(point))[0].error.as_deref(),
         Some("OnCooldown")
