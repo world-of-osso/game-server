@@ -19,7 +19,7 @@ fn create_arena_fixture() -> (Harness, tempfile::NamedTempFile, u64, u64) {
     })
     .unwrap();
     let map = bind_authored_arena_run(&mut h, &conn, character);
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app.world_mut().entity_mut(h.caster).insert((
         map,
         persistence::ClientId(character),

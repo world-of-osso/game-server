@@ -21,7 +21,7 @@ fn order_harness_with(path: Option<&std::path::Path>, extra: impl FnOnce(&mut Ap
         let (id, _) = persistence::create_character(&db, 1, "Crafter", 1, 1).unwrap();
         h.character_id = id;
         h.app.world_mut().get_mut::<ClientId>(h.player).unwrap().0 = id;
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
     }
     h.conn.execute_batch("CREATE TEMP TABLE crafting_order (ID INTEGER PRIMARY KEY, SkillLineAbilityID INTEGER, CraftingOrderHouseID INTEGER, Field_10_0_2_46479_002 INTEGER)").unwrap();
     let csv = include_str!("CraftingOrder.csv");
@@ -440,7 +440,7 @@ fn crafting_orders_claim_and_escrow_survive_database_reopen() {
     let db = redb::Database::open(&path).unwrap();
     persistence::create_tables(&db);
     assert_eq!(orders::all(&db).unwrap()[0].status, 1);
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     orders::begin_fulfill(h.app.world_mut(), worker, id, now).unwrap();
     h.advance(400);
     h.app.world_mut().remove_resource::<GameDatabase>();
