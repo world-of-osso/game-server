@@ -22,6 +22,10 @@ Retail professions on the server: learning at profession trainers and crafting k
 
 Private acceptance fixture: ignored `profession::modern_crafting_fixture` tests create only the fixed 2026-10-16 diagnostics redb, grant concrete test bags/skills/knowledge and verify post-run reagent/skill conservation. Fixture grants are not acquisition evidence.
 
+## Recraft refusal boundary
+
+Effect297 remains unsupported with `CRAFTING_OPERATION_COMPOSITION`; it must not be substituted with fixed-output CREATE_ITEM24. An attempted learned Leatherworking recraft389195 through the existing item-targeted spell intent must refuse without changing the owned inventory instance, reagents, profession ranks/knowledge or currency wallet. Test-granted knowledge/balances and an owned test item do not establish acquisition, recharge origin or recraft eligibility. No new recraft operation/lineage message is introduced.
+
 ## Out of scope
 
 Gathering nodes, Dragonflight+ quality/concentration/crafting orders/specializations, recrafting, unlearning, First Aid, reputation price discounts, gossip-menu-specific trainers.

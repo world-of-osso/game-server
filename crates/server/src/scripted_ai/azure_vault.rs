@@ -1,5 +1,5 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Telash initial/periodic power is ported; combat clocks, jumps and runes remain unported.
+//! Telash power and first Frost clock are ported; remaining clocks, jumps and runes are unported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -21,6 +21,7 @@ const TELASH_SCRIPT: &str = "boss_telash_greywing";
 const TELASH_INITIAL_POWER: f32 = 60.0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
+const EVENT_FROST_BOMB: u32 = 1;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -176,6 +177,19 @@ struct Telash {
     boss: super::boss_ai::BossAi,
 }
 
+impl super::boss_ai::BossScript for Telash {
+    fn boss_ai(&mut self) -> &mut super::boss_ai::BossAi {
+        &mut self.boss
+    }
+
+    fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
+        if event_id == EVENT_FROST_BOMB {
+            ctx.do_cast_self(FROST_BOMB_CAST);
+        }
+        // TC starts with one Frost; the post-phase action/counters remain unported.
+    }
+}
+
 impl super::CreatureAi for Telash {
     fn reset(&mut self, ctx: &mut super::Ctx) {
         self.boss.reset(ctx);
@@ -196,10 +210,16 @@ impl super::CreatureAi for Telash {
 
     fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
+        ctx.do_cast(ICE_POWER_PERIODIC);
+        self.boss.events.schedule(EVENT_FROST_BOMB, 3_500);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
         self.boss.just_died(ctx);
+    }
+
+    fn update_ai(&mut self, ctx: &mut super::Ctx, diff_ms: u32) {
+        super::boss_ai::boss_update_ai(self, ctx, diff_ms);
     }
 }
 
