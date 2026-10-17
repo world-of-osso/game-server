@@ -127,3 +127,5 @@ Follow-up starts on official `d89a3dbc`, protocol master `b701f32`, and preserve
 | JustAppeared | 165.404 µs | no pending hooks, diverse layouts |
 
 Aura initialization, health regeneration and JustAppeared rebuilt exclusive-system `QueryState`s each update, rediscovering world archetypes even with no eligible entities. Persist their existing filtered queries as exclusive-system parameters: Bevy updates matched archetypes when topology changes. The actual initialization, timer subtraction/interval/cast/health rules and deferred JustAppeared dispatch ordering are unchanged. Threat and detection fixes and post-change proof remain pending.
+
+Threat membership change checks now use the active-grid index instead of every dormant threat table. Grid wake publishes the current table before ordinary visibility/replication, even when its edits occurred several dormant ticks earlier; active direct component edits still use change detection and preserve entry order, empty-list clearing and dirty publication. No threat authority, selection, damage or healing calculations change. A concrete wake/clear/re-add regression accompanies existing aggro and threat controls.
