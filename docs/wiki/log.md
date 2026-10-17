@@ -1,6 +1,6 @@
 ## 2026-10-16 — Triggered explicit-target aura eligibility
 
-[Spell casting](systems/spell-casting.md#triggered-explicit-target-aura-eligibility--2026-10-16): native412677→412680 lifetime RED2pass/1fail11.95s exposes forbidden refresh; full-mask flag claim corrected against source. Explicit target checker now wired before triggered launch, relation behavior untouched; GREEN/final gates pending. Caster-trigger/auto-self/state/full flag gaps remain open.
+[Spell casting](systems/spell-casting.md#triggered-explicit-target-aura-eligibility--2026-10-16): native412677→412680 lifetime RED2pass/1fail11.95s exposes forbidden refresh; full-mask flag claim corrected against source. Explicit target checker wired before triggered launch, relation behavior untouched; merged75/0/0 in25.73s includes three new and72 adjacent cases. Workspace/all-target check26.990s/0warnings, fmt and independent read-only artifact/wiring/readability pass. Caster-trigger/auto-self/state/full flag gaps remain open.
 
 ## 2026-10-16 — Native target aura-type admission
 
