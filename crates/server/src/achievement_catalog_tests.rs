@@ -1453,7 +1453,7 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Imported70391: all three area31 roots retain full authored thresholds.
+    // Active70448: all three area31 roots retain full authored thresholds.
     // Structural union, not queue/admission, travel or acquisition proof.
     assert_eq!(union.len(), 5533);
     for id in [224, 1151, 12411] {

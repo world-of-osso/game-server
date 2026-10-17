@@ -6,7 +6,7 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5533 ordinary (3510 account/2023 character),1841 statistics; 108 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in active70448 Criteria.csv. Active build/key and encrypted-record boundaries: [receipt](achievement-active-build-receipt.json). Earlier numbered checkpoints below retain their historical source build. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5533 ordinary (3510 account/2023 character),1841 statistics; 108 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -104,7 +104,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 
 | Type | Pinned source name | Raw | Current roots | Orphans | State / producer evidence |
 |---:|---|---:|---:|---:|---|
-| 0 | KillCreature | 7420/10169 | 3497/4429 | 3923 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 0 | KillCreature | 7426/10175 | 3497/4429 | 3929 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 1 | WinBattleground | 29/212 | 27/160 | 2 | Native completed-map wins; positive67 loads only exact occupied-node equality OR5717/8656, read from current accepted NodeBattle copy. Native twelve-match5253 ten-win grant passes; other world states/conditions remain disabled. |
 | 3 | CompleteAnyResearchProject | 0/12 | 0/12 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 4 | FindResearchObject | 0/12 | 0/0 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
@@ -260,7 +260,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 162 | ActivelyEarnPetLevel | 24/24 | 0/0 | 24 | Native battle-XP transitions retain actual species; sole positive91 validates authored species and level1–25. All supported rows are outside achievement roots. Qualified positive has catalog/source proof only;1974–1977 lack native combat states, so no native-positive certificate. |
 | 163 | EnterArea | 150/175 | 3/4 | 147 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 164 | LeaveArea | 5/5 | 0/0 | 5 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 165 | DefeatDungeonEncounter | 2502/4376 | 1547/2766 | 955 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 165 | DefeatDungeonEncounter | 2503/4377 | 1547/2766 | 956 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 167 | PlaceGarrisonBuilding | 0/35 | 0/0 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 168 | ActivateAnyGarrisonBuilding | 0/3 | 0/2 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 169 | ActivateGarrisonBuilding | 0/77 | 0/44 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
