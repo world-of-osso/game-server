@@ -1,6 +1,10 @@
+## 2026-10-17 — Stomp stack expectation timing
+
+[Native phase boundary](investigations/follower-data.md#stomp-expected-stack-timing--2026-10-17): unchanged current-master repro matches451; log-only diagnostic proves9 actual live stacks/5 corpses versus stale14 expectation. Test now samples Stomp-time stacks and independently accounts for all native Sprouts. Focused matching/nonmatching2PASS72.31s/check0 2m51s/fmt0, strict8f27/twenty-seven-source/HEAD/clean guards stable; original tolerance and production mechanics unchanged.
+
 ## 2026-10-17 — Native Curve type publication
 
-[Curve input contract](../db2-active-inputs.md#native-curve-type-publication): maintained DB2 import/schema now retain installed Curve types/flags and build receipts. Process65651dac RED successfully imports but omits the table (1.197s); focused GREEN and COPY-only real-data receipt remain pending. Source encrypted exclusions are explicit in the contract, never default rows; scale consumer/native field fixture remain blocked/ignored until publication.
+[Curve input contract](../db2-active-inputs.md#native-curve-type-publication): maintained DB2 import/schema now retain installed Curve types/flags and build receipts. Process65651dac RED successfully imports but omits the table (1.197s); Curve-schema/active-root process3/3 passes4.106s at37a87ceb; COPY-only real-data receipt remains pending. Source encrypted exclusions are explicit in the contract, never default rows; scale consumer/native field fixture remain blocked/ignored until publication.
 
 ## 2026-10-17 — Native Fissure Sprout hit
 
