@@ -21,6 +21,7 @@ pub(crate) use catalog::{
 };
 #[path = "achievement_account.rs"]
 mod account_store;
+pub(crate) use account_store::AccountProgressCache;
 #[path = "achievement_publication.rs"]
 mod publication;
 pub(crate) use publication::flush_updates as flush_achievement_updates;
@@ -1291,7 +1292,7 @@ fn update_player_events(
             && let Some(db) = world.get_resource::<GameDatabase>()
         {
             toasts.extend(account_store::sync_account_progress(
-                &db.db,
+                db,
                 &mut state,
                 &catalog,
                 account_store::AccountUpdate {
@@ -1318,7 +1319,7 @@ fn update_player_events(
 }
 
 pub(crate) fn save_monthly_contribution(
-    db: &redb::Database,
+    db: &GameDatabase,
     account: u64,
     character: u64,
     state: &PlayerAchievementState,
@@ -1326,7 +1327,7 @@ pub(crate) fn save_monthly_contribution(
     account_store::save_monthly_contribution(db, account, character, state);
 }
 pub(crate) fn monthly_contributions(
-    db: &redb::Database,
+    db: &GameDatabase,
     account: u64,
 ) -> Vec<PlayerAchievementState> {
     account_store::monthly_contributions(db, account)

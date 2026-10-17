@@ -150,7 +150,7 @@ fn persist_month_state(world: &World, connection: Entity, player: Entity, charac
         .expect("authenticated monthly query")
         .account_id;
     crate::achievement::save_monthly_contribution(
-        &world.resource::<GameDatabase>().db,
+        world.resource::<GameDatabase>(),
         account,
         character,
         state,
@@ -308,7 +308,7 @@ fn monthly_projection(
     let current = world
         .get::<PlayerAchievementState>(player)
         .expect("month state");
-    let db = &world.resource::<GameDatabase>().db;
+    let db = world.resource::<GameDatabase>();
     let mut contributions = crate::achievement::monthly_contributions(db, account);
     let since = contributions
         .iter()

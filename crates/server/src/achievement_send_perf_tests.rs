@@ -72,7 +72,7 @@ fn fixture() -> Fixture {
         AchievementPlugin,
         crate::adventure_guide::AdventureGuidePlugin,
     ));
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(criteria);
     app.insert_resource(guide);
     app.insert_resource(crate::maps::ServerClock {

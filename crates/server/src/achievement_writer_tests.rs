@@ -7,7 +7,8 @@ fn achievement_monthly_snapshot_never_waits_for_a_busy_durable_writer() {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 41, "Asyncproof", 1, 1).unwrap();
-    let held = db.begin_write().unwrap();
+    let db = GameDatabase::new(db);
+    let held = db.db.begin_write().unwrap();
     let blocker = std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(250));
         held.abort().unwrap();
@@ -28,9 +29,10 @@ fn achievement_account_snapshot_never_waits_for_a_busy_durable_writer() {
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 41, "Accountproof", 1, 1).unwrap();
+    let db = GameDatabase::new(db);
     let mut state = PlayerAchievementState::default();
     state.criteria_progress.insert(162, 41);
-    let held = db.begin_write().unwrap();
+    let held = db.db.begin_write().unwrap();
     let blocker = std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(250));
         held.abort().unwrap();
@@ -50,6 +52,7 @@ fn achievement_account_snapshot_never_waits_for_a_busy_durable_writer() {
     );
     let elapsed = started.elapsed();
     blocker.join().unwrap();
+    let db = db.into_database();
     assert!(
         elapsed < std::time::Duration::from_millis(50),
         "account tick waited for writer: {elapsed:?}"

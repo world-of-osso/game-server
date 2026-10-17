@@ -706,7 +706,7 @@ fn achievements_criteria_accept_summon_credits_valid_native_acceptance_once_and_
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
     let target = h.target.player;
     h.offer_summon();

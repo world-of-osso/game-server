@@ -649,9 +649,7 @@ fn rated_pairing_never_manufactures_a_result_or_currency() {
     app.add_plugins(PvpPlugin);
     app.finish();
     app.cleanup();
-    app.insert_resource(GameDatabase {
-        db: crate::persistence::temp_database(),
-    });
+    app.insert_resource(GameDatabase::new(crate::persistence::temp_database()));
     let mut owners = Vec::new();
     for id in [41, 42] {
         let owner = app
@@ -804,7 +802,7 @@ fn native_flag_match_in_world(
         ));
         players.push((character, player));
     }
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     // Fixture flag coordinates are intentionally not an authored spawn-location claim.
     // The final pickup/capture follows the same native flag objective as live matches.
     let homes = [WARSONG_ALLIANCE_FLAG_ENTRY, WARSONG_HORDE_FLAG_ENTRY]

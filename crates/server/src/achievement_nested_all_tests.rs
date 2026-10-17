@@ -73,7 +73,7 @@ fn achievements_criteria_nested_all_native_encounter_respects_prerequisite_and_d
             .get_mut::<InWorld>(h.connection)
             .unwrap()
             .character_id = character;
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
         h.advance(1);
         assert!(
             !h.app

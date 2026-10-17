@@ -254,7 +254,7 @@ fn spawn_native_guardian_progression() -> Harness {
         },
     );
     let mut h = harness_with_plugins(Vec::new(), &[BEAR_FORM], DRUID, true, move |app| {
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         app.add_plugins(ClassProgressionPlugin);
     })
     .unwrap();

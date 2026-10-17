@@ -133,7 +133,7 @@ fn prove_race_achievement(owner_race: u8, achievement: u32, opposite: u32, races
         assert_eq!(reopened.criteria_progress.get(&criterion), Some(&1));
     }
     world.entity_mut(killer).insert(reopened);
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     crate::achievement::record_player_event(
         &mut world,
         killer,
