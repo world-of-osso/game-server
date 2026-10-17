@@ -2,6 +2,14 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Native target aura-type admission — 2026-10-16
+
+Ordinary resolved-unit admission/completion now consumes `TargetAuraType` and `ExcludeTargetAuraType` after the existing aura-spell references. The target's actual `ActiveAuras.has_type` result supplies presence, without amount interpretation, source-ID exceptions or borrowing another unit's auras. Failure retains the source TargetAuraState/detail contract; type checks are outside vehicle/owner state exemptions in the reference (`SpellInfo.cpp:2513–2517`).
+
+Native1293603/1293610 require69/39;440490/448026 exclude485. Normal server-scripted casts exercise the passive/internal highlight rows rather than pretending they are client-learnable abilities. Real Power Word: Shield/Divine Shield casts supply the types, including caster/other-unit mismatch and eight-second removal/expiry controls. Genuine RED410436a0 is2pass/5fail6.21s (189.060s wrapper); positive shield/caster-only controls pass. Production33db2c7c is committed; GREEN/final gates pending. [Contract](../../specs/class-completeness.md); receipts `data/class-completeness6-2026-10-12/target-aura-types-{goal,source,proof-ledger}.json`.
+
+This is metadata eligibility, not the indicators' UI/dummy implementation, actual Wrecking/Shattering Throw, Headlock/state1 completeness or aura485's own effect semantics. No handler was added to label an unknown effect as working. All four explicit fixture rows are instant; completion reachability has shared caller/source evidence, not a fabricated cast-time fixture. Caster types, other implicit/area targets, target-required references, health states and full-trigger target validation remain separate.
+
 ## Native required caster aura-spell admission — 2026-10-16
 
 `aura_spell_restrictions::check_caster` now checks nonzero native `CasterAuraSpell` before the existing excluded-caster reference. Existing ordinary admission/completion callers therefore require the actual caster's active spell identity; a different unit's aura does not qualify. Missing state uses the existing CasterAuraState/detail failure and full-trigger helper bypass is unchanged. The internal module was renamed from exclusions to restrictions; no compatibility path or protocol change.

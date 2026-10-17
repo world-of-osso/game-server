@@ -1,3 +1,7 @@
+## 2026-10-16 — Native target aura-type admission
+
+[Spell casting](systems/spell-casting.md#native-target-aura-type-admission--2026-10-16): ordinary scripted-unit required69/39 and excluded485 RED2pass/5fail6.21s precede the shared type consumer. Native shield, recipient and expiry controls; no invented indicator client ability or unhandled effect registration. GREEN/final gates pending; caster/area/full-trigger/health-state boundaries remain open.
+
 ## 2026-10-16 — Health aura-state source qualification
 
 [Investigation](investigations/health-aura-state-admission.md): two waves of five bounded read-only explorers reconciled against primary files/native70391. Exact thresholds, seven IDs, packet-before-unit/queued-after-own-unit phases and passive gain/loss qualified; incorrect numeric, missing-data, write-through and broad fractional-stats claims rejected. Missing pinned map/session/opcode sources cached with SHA receipts. No health code or runtime proof; integration/ownership/passive-source seams remain open while independent ledger work continues.
