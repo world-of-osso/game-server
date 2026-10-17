@@ -169,6 +169,7 @@ fn create_refuge_battle(catalog: &Catalog) -> Battle {
         Pet::new(
             catalog,
             species,
+            1,
             stats,
             family,
             [1344, 110, 123],
@@ -238,7 +239,8 @@ fn pet_battle_refuge_routes_other_friendly_slots_for_both_teams_and_every_active
             initial.teams[0].pets.rotate_right(active);
             initial.teams[0].active = active;
             let stats = initial.teams[1].pets[0].stats;
-            let enemy = Pet::new(&catalog, 1427, stats, 4, [110, 119, 123], States::new()).unwrap();
+            let enemy =
+                Pet::new(&catalog, 1427, 1, stats, 4, [110, 119, 123], States::new()).unwrap();
             initial.teams[1].pets = [enemy.clone(), enemy.clone(), enemy];
             if team == 1 {
                 initial.teams.swap(0, 1);
@@ -310,6 +312,7 @@ fn pet_battle_refuge_other_caster_refreshes_without_stacking_and_preserves_sourc
     initial.teams[0].pets[0] = Pet::new(
         &catalog,
         1427,
+        1,
         initial.teams[0].pets[0].stats,
         4,
         [1344, 110, 123],

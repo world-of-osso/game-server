@@ -1,12 +1,39 @@
 use super::effects2_tests::use_ability;
 use super::*;
 
-fn level_health_battle(catalog: &Catalog, ability: u32, level: i32) -> Battle {
+fn level_health_battle(catalog: &Catalog, ability: u32, level: u8) -> Battle {
     let mut initial = battle(catalog, 9, 4, [ability, 404, 123]);
-    initial.teams[0].pets[0]
-        .states
-        .insert(catalog.state_id("Internal_InitialLevel").unwrap(), level);
+    let pet = &initial.teams[0].pets[0];
+    initial.teams[0].pets[0] = Pet::new(
+        catalog,
+        pet.species,
+        level,
+        pet.stats,
+        pet.family,
+        pet.abilities,
+        pet.states.clone(),
+    )
+    .unwrap();
     initial
+}
+
+#[test]
+fn pet_battle_level_health_constructor_validates_and_records_actual_level() {
+    let catalog = catalog();
+    let stats = calculate_stats(&catalog, 39, 3, 3, 7).unwrap();
+    let level_state = catalog.state_id("Internal_InitialLevel").unwrap();
+    for level in [0, 26, u8::MAX] {
+        let result = Pet::new(&catalog, 39, level, stats, 9, [110, 0, 0], States::new());
+        assert_eq!(
+            result.unwrap_err(),
+            format!("invalid battle pet level {level}")
+        );
+    }
+    for level in [1, 7, 25] {
+        let supplied_states = [(level_state, 99)].into();
+        let pet = Pet::new(&catalog, 39, level, stats, 9, [110, 0, 0], supplied_states).unwrap();
+        assert_eq!(pet.state(level_state), i32::from(level));
+    }
 }
 
 #[test]
@@ -18,7 +45,7 @@ fn pet_battle_level_health_bonus_uses_authored_points_per_level_before_healing()
         for level in [1, 7, 25] {
             let initial = level_health_battle(&catalog, ability, level);
             let (state, _) = use_ability(&initial, &catalog, ability);
-            let bonus = points * level;
+            let bonus = points * i32::from(level);
             assert_eq!(state.teams[0].pets[0].stats.health, 10000 + bonus);
             assert_eq!(
                 state.teams[0].pets[0].health,
