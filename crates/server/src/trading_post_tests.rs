@@ -80,6 +80,9 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
         );
         std::thread::yield_now();
     }
+    // Host routing fills receivers after First; let the collection inbox consume
+    // the same committed reply before callers inspect both message types.
+    h.app.update();
     replies.pop().expect("Trading Post server reply")
 }
 
@@ -475,7 +478,8 @@ fn trading_post_purchase_reply_does_not_publish_an_adventure_guide_snapshot() {
         .send::<InstanceChannel>(TradingPostRequest::Purchase { vendor_item_id: 4 });
     let mut replies = Vec::new();
     let mut guide_replies = Vec::new();
-    for _ in 0..10 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while replies.is_empty() && std::time::Instant::now() < deadline {
         h.app.update();
         replies.extend(
             h.app
