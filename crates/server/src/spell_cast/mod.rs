@@ -3198,6 +3198,14 @@ fn npc_event_updates_suspended(world: &World, caster: Entity) -> bool {
         && world.get::<crate::combat::Corpse>(caster).is_none()
 }
 
+fn cast_can_remain_dead(world: &World, caster: Entity) -> bool {
+    world
+        .get::<PendingCastSpell>(caster)
+        .is_some_and(|pending| {
+            !pending.caster_was_alive && ordinary_cast_allows_dead_caster(&pending.spell)
+        })
+}
+
 pub(crate) fn advance_casts(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
     let mut casts = world.query::<(Entity, &CastState)>();
@@ -3214,47 +3222,48 @@ pub(crate) fn advance_casts(world: &mut World) {
         if !alive && npc_event_updates_suspended(world, caster) {
             continue;
         }
-        let dead_start_allowed = world
-            .get::<PendingCastSpell>(caster)
-            .is_some_and(|pending| {
-                !pending.caster_was_alive && ordinary_cast_allows_dead_caster(&pending.spell)
-            });
         let movement_interrupts = !cast_while_moving && moving;
-        let death_interrupts = !alive && !dead_start_allowed;
+        let death_interrupts = !alive && !cast_can_remain_dead(world, caster);
         if movement_interrupts || death_interrupts {
             debug!(caster = ?caster, moving, alive, cast_while_moving, "Cast progress interrupted by movement or death");
             cancel_cast(world, caster);
             continue;
         }
-        if let Some(mut pending) = world.get_mut::<PendingCastSpell>(caster) {
+        if let Some(mut pending) = world.get_mut::<PendingCastSpell>(caster)
+            && pending.caster_was_alive != alive
+        {
             pending.caster_was_alive = alive;
         }
-        let Some(mut cast) = world.get_mut::<CastState>(caster) else {
-            continue;
-        };
-        let result = cast.tick(dt);
-        let spell_id = cast.spell_id;
-        let target = (cast.target != 0)
-            .then(|| Entity::try_from_bits(cast.target))
-            .flatten();
-        mark_dirty(world, caster);
-        match result {
-            // Channel periodic effects tick as auras (`crate::auras`).
-            CastTickResult::InProgress | CastTickResult::ChannelTick => {}
-            CastTickResult::ChannelComplete => {
-                crate::auras::channel_completed(world, caster, spell_id);
-                end_cast(world, caster);
-                crate::scripted_ai::dispatch(
-                    world,
-                    caster,
-                    crate::scripted_ai::Hook::ChannelFinished { spell_id },
-                );
-            }
-            CastTickResult::Completed => {
-                debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
-                world.entity_mut(caster).remove::<CastState>();
-                complete_cast(world, caster, spell_id, target);
-            }
+        tick_and_resolve_cast(world, caster, dt);
+    }
+}
+
+fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
+    let Some(mut cast) = world.get_mut::<CastState>(caster) else {
+        return;
+    };
+    let result = cast.tick(dt);
+    let spell_id = cast.spell_id;
+    let target = (cast.target != 0)
+        .then(|| Entity::try_from_bits(cast.target))
+        .flatten();
+    mark_dirty(world, caster);
+    match result {
+        // Channel periodic effects tick as auras (`crate::auras`).
+        CastTickResult::InProgress | CastTickResult::ChannelTick => {}
+        CastTickResult::ChannelComplete => {
+            crate::auras::channel_completed(world, caster, spell_id);
+            end_cast(world, caster);
+            crate::scripted_ai::dispatch(
+                world,
+                caster,
+                crate::scripted_ai::Hook::ChannelFinished { spell_id },
+            );
+        }
+        CastTickResult::Completed => {
+            debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
+            world.entity_mut(caster).remove::<CastState>();
+            complete_cast(world, caster, spell_id, target);
         }
     }
 }
