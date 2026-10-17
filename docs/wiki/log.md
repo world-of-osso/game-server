@@ -4,7 +4,7 @@
 
 ## 2026-10-17 — Holographic165 and banner boundaries
 
-[Exact165–169 matrix](../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17): Holographic165 actual learned-use/saved-bind/shared-charge acceptance brings eight variants8/8/62.43s; fmt/readability pass, package check pending capacity. Rustbolt333298 and mixed Horde War Standard remain gaps; source20 War Banner native/combat-removal proof retains its revision scope. No runtime/data admission or whole-Toy/native certificate.
+[Exact165–169 matrix](../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17): Holographic165 actual learned-use/saved-bind/shared-charge acceptance brings eight variants8/8/62.43s; fmt/readability and native package/tests check1m09s/no compiler warnings pass after capacity admission. Rustbolt333298 and mixed Horde War Standard remain gaps; source20 War Banner native/combat-removal proof retains its revision scope. No runtime/data admission or whole-Toy/native certificate.
 
 ## 2026-10-17 — Toy source160–164 boundaries
 

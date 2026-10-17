@@ -8,7 +8,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Holographic Hearthstone and banner boundaries (2026-10-17)
 
-[Source165–169 matrix](../../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17) records eight actual learned-use/saved-bind/shared-charge cases including Holographic165; package check remains pending capacity. Rustbolt333298 publication/placement and mixed Horde War Standard action remain gaps. Earlier source20 War Banner native/combat-removal witnesses retain their original scope; no new runtime/data admission or native certificate.
+[Source165–169 matrix](../../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17) records eight actual learned-use/saved-bind/shared-charge cases including Holographic165; native package/tests check and fmt/readability pass. Rustbolt333298 publication/placement and mixed Horde War Standard action remain gaps. Earlier source20 War Banner native/combat-removal witnesses retain their original scope; no new runtime/data admission or native certificate.
 
 ## Source robot/teleport/whistle boundaries (2026-10-17)
 
