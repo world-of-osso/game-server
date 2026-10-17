@@ -4,6 +4,13 @@
 ## 2026-10-16 — Miss-only pet self outcomes194
 
 [Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
+## 2026-10-17 — Telash startup prerequisites
+
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored after genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; no Telash production change.
+
+## 2026-10-17 — Leymor native Sprouts destination boundary
+
+[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask implementation yields one ordinary native parent/fourteen owned children GREEN at8db5f60f on active70448/a0ccc53b. First28-child fixture manually stimulated a second parent; ordinary SpellGo witness corrects this without production changes. Affected17/0failed/1ignored TelashRED, scoped servercheck/fmt and bounded independent source/artifact/readability inspection pass at8ca93220. Lifecycle/full native70448 acceptance remain open.
 
 ## 2026-10-16 — Eligible victim race53
 
