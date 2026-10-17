@@ -89,7 +89,7 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 ### Lock-On77 — 2026-10-17
 
-[Bounded301/517/300](../../pet-battle-effect-coverage.md#lock-on77--implementation2026-10-17) uses a target-worn one-round lock before ordinary direct damage. Existing75/76 self charges retain their wearer/duration; generic aura provenance/refresh unchanged. Unsupported77 RED5→GREEN6, existing Rocket4/Wind-Up1 regressions and1779/2829 rows/1017 graphs pass. Native/final gates pending; GM722 and cross-caster/full timing/VFX certification excluded.
+[Bounded301/517/300](../../pet-battle-effect-coverage.md#lock-on77--implementation2026-10-17) uses a target-worn one-round lock before ordinary direct damage. Existing75/76 self charges retain their wearer/duration; generic aura provenance/refresh unchanged. Unsupported77 RED5→GREEN6, existing Rocket4/Wind-Up1 regressions and1779/2829 rows/1017 graphs pass. Authored Tonk owned/wild-PvP29 and both strict native skins pass first-use enemy lock/no damage, next blast145/143/mark removal; six fullHD originals inspected/all saved phases two framed models. Actual canonical3-mesh loader/4files+fragment hashes pass. Final lib132/check1m02/no warnings/bothfmt pass; prior unchanged UI12 retained. GM722 and cross-caster/full timing/VFX certification excluded.
 
 ### Life Exchange67 — 2026-10-17
 
