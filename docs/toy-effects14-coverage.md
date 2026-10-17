@@ -1,5 +1,15 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate412: Scarab source-ground metric (2026-10-17)
+
+Exact unchanged gate artifact from merged9979ffe2 (68946414 onto6c0cadc94) reproduces the original full3D `distance <=5.001` failure2/30 times;28 pass. Neither118–123 nor recent destination/missile changes altered this sampler/test: the metric dates to13bc6b124 and horizontal scatter/ground projection to8db0a46a (2026-10-14). Pinned TC `SpellEffects.cpp::SummonGuardian` retains the first destination, then calls `WorldObject::GetRandomPoint`; `Object.cpp`678–705 samples horizontal x/y and independently projects Z onto available ground, not a3D sphere.
+
+Deterministic actual778027 terrain RED atabe8a8f2 fails0.01s for the approved outer-ring point: origin WoW(-8949.950195,-132.492996,82.630287), point(-8952.673828,-128.299637,82.868111), horizontal5.000244 versus spatial5.005896. The assertion now retains the same5.001 horizontal bound (Bevy x/z). Real learned-use separately requires an exact first-destination point; only secondary scattered points must equal their independently queried source-ground height. The initial strengthened height check incorrectly included the unprojected first destination and is recorded as an oracle-boundary failure, not a runtime defect. Production/runtime, randomness, source durations and canonical data are unchanged.
+
+Atb2bc2f2d, bounded Scarab/Flute/Ysera controls pass6/6 zero ignored58.56s. The final first-destination assertion was then tightened from0.001 proximity to exact equality: both affected source39 cases pass2/2 zero ignored60.82s at7b389562; unchanged comparison scopes remain retained rather than rerun. Current package/tests check1m26s, fmt/manual changed-line readability pass without warnings. Lead owns the next merged-tree gate; these results are not a new whole-Toy/native certificate.
+
+Evidence root below: `scarab412-30-repeat-ledger.json`, original-repeat01–30 logs and preserved artifact SHA256ec9463b2daa398e34fe4767da47b3124e6792df0e4004b737a0429f8a72771db; `scarab412-readonly-terrain-diagnostic.json`, `scarab412-fix-proof-ledger.json`, source-slope-red/green-controls2/exact-first-final/check/fmt logs. Read-only terrain diagnostics preceded all code edits; direct Rust RED confirms the real source geometry rather than relying on the diagnostic mirror.
+
 ## Source-order continuation gaps (2026-10-16)
 
 Ashhide104329/148626 remains blocked by the missing mount template73689. Source aura78 names73689; the authentic TDB model row selects display51484 (M2 646374), but the published creature catalog lacks73689. Generic aura241 flag proof does not establish Ashhide learning/use, mount rendering, area acceptance or expiry. Per lead instruction, retain this named gap and continue source order; no substitute mount or importer admission. Unexecuted Ashhide test drafts remain in continuation evidence, not the passing regression suite.
@@ -769,3 +779,22 @@ Development test1/1 (three IDs) passes51.41s. Final bounded serial comparison wi
 At6d1230e7, bounded serial5 tests/seven actual IDs pass105.95s, zero ignored: four holiday hearthstones including78–79 plus three source-disguise recovery controls. Package/tests check23.82s, fmt/manual changed-line readability clean/no warnings. Production unchanged, no invented RED or full-Toy repeat. Native source visuals82342/82355/82382/82387 include procedural357948/357956/357957 type17/Value1=151355 (last Value0=13832112); particles/appearance/wire/pixels/audio, cross-map transfer and natural30min recharge remain separate.
 
 Exact rows `rows114-118-{readonly-source,action-source}.json`, `hearth116-117-visual-source.json`; proof `hearth116-117-proof-ledger.json`, contracts/check/fmt logs. No canonical data write or full-toy parity claim.
+
+## Source118–123: dragon costume simulation lifecycle (2026-10-17)
+
+All six roots already have authentic published content/TDB model rows. Source self transform56/misc1=8, instant cast,900000ms duration and900000ms item recovery; no separate SpellCooldowns recovery. No production/importer patch or manufactured runtime RED.
+
+| Source row / costume | Item / spell | Template / single display |
+|---|---|---|
+|118 Blue Head |165671 /285519 |147018 /89489 |
+|119 Blue Body |165672 /285521 |147020 /89491 |
+|120 Blue Tail |165673 /285523 |147022 /89493 |
+|121 Green Head |165674 /285520 |147019 /89490 |
+|122 Green Body |165675 /285522 |147021 /89492 |
+|123 Green Tail |165676 /285524 |147023 /89494 |
+
+Six distinct actual bag-learning/UseToy cases share one behavioral fixture: exact source display/aura duration and cooldown report; immediate cooldown refusal; same model just before ordinary50ms-frame expiry; replicated aura removal/prior model restoration with unchanged health; natural fifteen-minute recovery permits reuse and reapplies the exact display/aura. No clock, duration or recovery reset.
+
+At958d29a5, six cases pass6/6 zero ignored53.27s. Separate directly related actual transform recovery/cancellation controls pass2/2 zero ignored19.21s: combined bounded acceptance8 tests72.48s, not a rerun of the whole-Toy suite. Package/tests check2m09s and fmt/manual changed-line readability pass without warnings. Initial118 failure after successful expiry/reuse was fixture retention of its earlier expected OnCooldown event; assert/drain that event at its own boundary. The later signed-entry compile mismatch also produced no runtime RED. Exact scopes/results remain in `dragon118-proof-ledger.json`, `dragon118-fixture-diagnosis.json`, `dragon118-123-proof-ledger.json` and final-contracts2/transform-controls/check/fmt logs.
+
+Native costume/body compositing, group-following presentation, wire/pixels/audio and wall-clock duration remain unproved; source text does not establish an automatic follower mechanic. Model state acceptance is not full-toy parity. Read-only source capsules `rows114-118-readonly-source.json`, `dragon118-action-source.json`, `rows119-123-readonly-source.json` and `dragon118-123-template-preflight.json` retain exact70391 fields and model provenance; canonical data untouched.
