@@ -1,3 +1,7 @@
+## 2026-10-17 — Creature-script triggered aura metadata
+
+[Spell casting](systems/spell-casting.md#creature-script-triggered-aura-metadata--2026-10-17): distinct creature bool-true branch bypassed all six implemented fields, native RED2pass/6fail9.38s. Shared caster/target checkers now surround existing recipient admission before success/launch; real producer matrix and generic-stun-exempt Frostbolt controls pass in RED. GREEN pending; no row/clock/budget/NoOp changes, no whole-ability/flag/legal-build claim.
+
 ## 2026-10-17 — Excluded caster aura-type admission
 
 [Spell casting](systems/spell-casting.md#excluded-caster-aura-type-admission--2026-10-17): actual853 zero-amount stun supplies native449285 excluded12. RED1pass/2fail17.32s proves wrong ordinary error priority and incorrect full-trigger admission; cancellation/native expiry control passes. Shared caster field predicate and metadata-before-generic-CC priority pass current157/0/0 in98.03s (four new+153 adjacent), workspace/all-target check18.988s/0warnings, fmt and independent artifact/wiring/source/readability. The separate creature-script triggered shortcut still bypasses metadata and remains open. Required caster types, midcast/26-positive/whole-ability and legal-build acceptance remain separate.
