@@ -62,10 +62,10 @@ fn toyfx85_forlorn_real_learning_cast_flight_source_displays_recovery_and_soul_e
         read_forlorn_souls(&mut h).is_empty(),
         "source cast still pending"
     );
-    h.advance(25); // Total1.6s: root has launched; fixed3s travel is not over.
+    h.advance(35); // Total2.1s allows message delivery; fixed3s travel is not over.
     assert!(h.inbox.go.iter().any(|go| go.spell_id == SPELL));
     assert!(read_forlorn_souls(&mut h).is_empty());
-    h.advance(40); // Total3.6s: still before1.5+3s, not radius3/speed3=1s.
+    h.advance(30); // Total3.6s: still before1.5+3s, not radius3/speed3=1s.
     assert!(
         read_forlorn_souls(&mut h).is_empty(),
         "speed-as-delay must remain3s"
