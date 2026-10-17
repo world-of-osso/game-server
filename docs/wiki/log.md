@@ -1,3 +1,7 @@
+## 2026-10-17 — Flashback source screen effect
+
+[Flashback88 boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17): retain actual ScreenEffect1473 and chapel9587 source fields without inventing world phasing; actual learned use/native presentation remain open. Docs-only; retained150/49 proofs unchanged.
+
 ## 2026-10-16 — Stampwhistle source assistant and mailbox
 
 [Katy156833](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16): genuine importer/template, journal Assistant35 and NPC mailbox REDs; preserve actual default TempSummon flags/faction instead of owned-pet sanitization. Ordinary mail service sends real persisted letters and keeps distance/death guards; full600s summoned lifecycle and service pass2/2 after per-frame transient-message fixture correction. Whole-Toy143/143, affected mail/NPC/summon49/49, importer controls3/3, check/fmt pass. Canonical370 still refuses missing132969; prepared392 is classification, not completed toys. No canonical/native-rendering claim.

@@ -1,6 +1,8 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Flashback screen-effect boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17) — source260/1473 is not world-phase proof; actual chapel use/native presentation open.
+
 - [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16) — source soul import and genuine early-arrival RED→fixed flight/lifecycle;150 Toy+49 affected pass, canonical publication/native appearances separate.
 
 - [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16) — exact302746 profile plus parent destination RED→GREEN, actual cooking/CozyFire/cleanup;149 Toy+29 affected pass, native presentation separate.
