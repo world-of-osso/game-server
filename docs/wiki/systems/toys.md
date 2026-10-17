@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Holiday hearthstone learned use (2026-10-16)
+
+Greatfather Winter162973/278244 and Headless Horseman163045/278559 use persisted HomeBind, source10s cast and shared charge2309; missing bind refuses before spending and either toy blocks its sibling after spending the sole charge. Two independent actual learned-use tests pass; current whole-Toy146/146, check/fmt/manual readability pass. [Exact evidence and exclusions](../../toy-effects14-coverage.md#holiday-hearthstones7879-learned-use-boundary-2026-10-16) separate same-map server acceptance from source type17 procedural appearance, native wire/render/audio, cross-map transfer and natural30min recharge.
+
 ## Corgi and Rezan source boundaries (2026-10-16)
 
 Corgi158149/264091 learned-use/cancel passes with literal viewer233 payload[3569,53], not a global ModelDisplay change; native viewer interpretation/rendering remains absent. Roar160509/272071 genuine learned-use effect3 refusal precedes exact audited cosmetic admission; focused cast/source90s recovery/reuse and unchanged health/model/no aura/summon pass. Native catalog resolves the authored one-shot caster animation74/sound107006; authenticated1777497 bytes are not audible playback. [Exact coverage and proof boundaries](../../toy-effects14-coverage.md#roar71-source-one-shot-cosmetic-2026-10-16) retain revisions, passing144/144 whole-Toy gate and named Chili69/Enthralling70 gaps; no invented fire/critter-following implementation or full-toy claim.

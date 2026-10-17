@@ -1717,3 +1717,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: Residual idle release acceptance: b701f32/11 real UDP peers/full187770-creature population holds20.0–20.1Hz,weightedmean19.93ms; all5RED→GREEN+86controls/check retained, pressure-heavy first run documented in [[server-tick-lag]].
 - 2026-10-16: [Corgi and Rezan source boundaries](systems/toys.md#corgi-and-rezan-source-boundaries-2026-10-16): corrected sparse-fixture learned-use proof; genuine effect3 refusal before exact272071 cosmetic admission; native catalog source resolution, not audible playback. Chili/Enthralling stay named gaps; whole-Toy144/144 and current check/fmt/readability pass. Canonical393 classification includes separate lead template publication, not393 complete toys.
+
+- 2026-10-16: [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16): real persisted bind/source10s cast and shared2309 charge acceptance,146/146 Toy tests; source type17 appearance/cross-map/wall recharge remain separate.
