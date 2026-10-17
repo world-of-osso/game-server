@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source130–134: companion/weapon/healer/corpse/music boundaries (2026-10-17)
+
+| Source row | Exact retained boundary / proof level |
+|---|---|
+|130 Cranky Crab166662/289330 | Source149189/property491 Control0/Title0/flags8 is targeted through150/74, not an ordinary caster-owned scenery destination. The description promises a crab for the battle pet to ride. Missing published149189 and owned-critter/ride action remain gaps; no generic crab spawn substitutes for the pet relationship. |
+|131 Hand Anchor166663/289337 | Self dummy4; authored equipment presentation uses procedural358109/358110 type17 with Value1=150764/153648. Anchor weapon presentation/action remains unresolved; no ordinary back attachment or invented weapon stats. |
+|132 Brynja's Beacon166678/289277 | Self viewer aura233 carries[4076,155] for source604800000ms. That payload is not proof of a spawned spirit healer or resurrection service; the described death-state Brynja interaction remains unproved. No phase/actor/heal substitute. |
+|133 Warbeast Kraal Dinner Bell166701/288515 | Allied target21 has dummy4 plus three effect140 slots pointing to288528; the child summons148794/property3076 for21000ms with five source raptor displays90027/90031/90028/90029/90030. Fallen-ally eligibility/body/forced-child eating action remains unresolved; no generic living-ally summon or guessed fixed raptor count. |
+|134 Proudmoore Music Box166702/289531 | Published149830 is absent. Pinned TDB's sole display32497 has DisplayScale0.3/Probability0 and resolves model3426/FDID196988, `world/generic/activedoodads/chests/chest01b.m2`. No289531 SpellXSpellVisual or149830 addon rows were found in the inspected source. This body metadata alone does not establish music/appearance behavior; retain the gap rather than inventing a different music-box model or audio action. |
+
+Exact source capsules `rows130-134-{readonly-source,action-source}.json` retain roots/descriptions/targets/durations/procedural/model fields; `musicbox134-readonly-preflight.json` records published absence versus TDB/CDI/model provenance, with the path resolved from the existing local community listfile. Read-only continuation; no runtime admission, importer/template publication, new native/server acceptance or changed historical test scope. Source125–126 remains local while lead gates the preceding Scarab fix.
+
 ## Source124–129: garment/anchor/action gaps and Noble Gardener (2026-10-17)
 
 125 Noble Gardener165802/286031 uses source homebind252,10s cast and shared charge2309, with item recovery-1 and spell recovery0/GCD1500. New actual bag-learning/UseToy acceptance reuses the persisted-bind fixture: missing bind refuses before spending, hydrated saved bind receives the displaced caster after the authored cast, charge max1/current0/recharge1800000ms is reported and Lunar Elder165669 refuses afterward. Health/model are unchanged. Native82534 procedural357967/type17/Value1=44803, wire/pixels/audio, cross-map transfer and natural30min recharge remain unproved.
