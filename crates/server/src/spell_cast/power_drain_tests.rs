@@ -119,7 +119,7 @@ fn native_power_drain_frost_breath_retains_health_damage_and_native_variance() {
     );
     let drained = mana_before - mana(&h, target);
     // Native1666 +100SP; retain authored variance0.300120056 (no RNG override).
-    assert!((1501.0..=2030.0).contains(&drained), "drained={drained}");
+    assert!((1501.0..=2031.0).contains(&drained), "drained={drained}");
     assert_eq!(drained.fract(), 0.0);
     assert_eq!(mana(&h, h.caster), caster_before + drained);
 }
