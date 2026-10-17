@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source275–279 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17): Harmony/Clarity/Faith retain distinct missing-runtime actors/scales plus caster dummy slots; Whistle retains fast/tired transport/area script gaps.279 source creates exactly one existing187342 after2s with30s item recovery; bounded actual-use/inventory/reuse test drafted externally, not yet committed/run while240 compiles. No wrapping/gifting assumption, source actor substitution, runtime/data admission or new positive proof.
+
 ## 2026-10-17 — Toy source270–274 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source270274-mirrorfatemixed-guiseshadowdead-party-boundaries-2026-10-17): mirror vehicle7544/periodic-zero-child copying, rune fate, Changeling transform/-45/312, player-target shadow child and fresh-dead party35 judgment remain unproved. Existing176673/101182/101766 is not complete mixed-graph acceptance; shadow child source33559 has weight0 versus39810 weight1. No generic actor/transform/corpse-output substitute, runtime/data admission or new positive proof;240 sole native dependency compile continues.

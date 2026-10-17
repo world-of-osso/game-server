@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source275–279: vesper/transport boundaries and pending offering-kit acceptance (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|275 Vesper of Harmony187176/356451 | Target47 summon180120/properties3911 plus self dummy4 for45000ms; item recovery1800000ms. TDB92678/scale0.5 exists, runtime absent. Exact mixed actor/caster action, placement/lifecycle and native vesper presentation remain unproved; source249's single stationary Vesper is not automatic mixed-root acceptance. |
+|276 Vesper of Clarity187184/356503 | Same mixed root shape with distinct180121/92679/scale0.375,45000ms and1800000ms item recovery; runtime absent. Preserve this source identity/scale and caster slot rather than reusing Harmony's actor or claiming shared native proof. |
+|277 Vesper of Faith187185/356505 | Same mixed root shape with distinct180122/92680/scale0.25,45000ms and1800000ms item recovery; runtime absent. Source placement/actor/caster lifecycle remains unproved. All three ItemEffects author CategoryCoolDownMSec1500 but SpellCategoryID0; do not invent a nonzero shared category. |
+|278 Silver Shardhide Whistle187339/357012 | Self script3/base20 and script3/base2, effect64/misc300→357293 and effect203→122729. Reachable357293 lasts120000ms and triggers357318's20000ms forced-forward241/speed32 payload; RequiredAreasID7354 appears on root/357293. Advertised fast20s versus tired2min transport and Shadowlands eligibility remain unproved together; no guessed fatigue policy, fixed transport substitute or child discard. Item recovery300000ms retained. |
+|279 Offering Kit Maker187344/357020 | Source2000ms self create-item24/count1/product187342,30000ms item recovery. Existing runtime187342 is named Offering Preparation Kit, while source description says Offering Condensing Kit; exact product ID is authoritative for this root. A bounded actual-learning/persisted-inventory/cast/recovery/reuse acceptance draft is prepared outside the checkout, not yet committed/run while240 compiles. Wrapping/gifting/use of the created kit and native UI are separate, not invented here. |
+
+`rows275-279-{readonly-source,action-source}.json` retains exact70391 roots/children/casts/durations and actual source/runtime model/item rows. `offering279-active-goal.json` and the external test draft track the pending279 acceptance;240 remains the sole owned build. No new runtime/data/admission or positive simulation/native certificate; no code mutation beneath compile, duplicate gate or149865 Tea Set publication.
+
 ## Source270–274: mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
