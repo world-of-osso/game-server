@@ -1,6 +1,9 @@
 ## 2026-10-16 — Eligible victim class52
 
 [Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN2/2; structural5530/1841 adds245 only.
+## 2026-10-16 — Miss-only pet self outcomes194
+
+[Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
 
 ## 2026-10-16 — Eligible victim race53
 
@@ -15,6 +18,7 @@
 ## 2026-10-16 — Wild summon lifetime and ordinary encounter gate
 
 [Boss scripts](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16): generic owner-death cull reproduced before minion-only cleanup; wild expiry/Grimoire Imp3/3 and explicit ignored Omor1/1 pass at9be44701. Omor ignore removed, full native/Orbital acceptance remains open. Earlier pushedb8dc0d86 ordinary four-thread filter passed210/0failed/14ignored with endpoint fix147aa87b.
+[Bounded1344](../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16): independent Block759 for user/other friendly Critters, explicit wearer/original caster and shared self26 duration policy. Actual unsupported223 RED→GREEN9;1764/2829 rows (62.35%)/1010 graphs,2232/2. Both-skin private5961 independent caller/Critter blocks keep892/892, non-Critter978 takes28/26; eight fullHD originals/ExtractedOnly/tripwire0/canonical4-asset closure pass. Final lib104/wild-PvP24/UI12/check/fmt pass; no generic selector/full Retail timing claim.
 
 ## 2026-10-16 — Same-species pet damage370
 
