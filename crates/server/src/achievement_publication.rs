@@ -16,7 +16,10 @@ pub(super) fn queue_update(
     toasts: Vec<AchievementToastSnapshot>,
 ) {
     let mut connection = world.entity_mut(connection);
-    let mut publication = connection.entry::<AchievementPublication>().or_default();
+    let mut publication = connection
+        .entry::<AchievementPublication>()
+        .or_default()
+        .into_mut();
     publication.pending = Some(snapshot);
     publication.toasts.extend(toasts);
 }

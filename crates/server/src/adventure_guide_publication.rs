@@ -16,7 +16,10 @@ pub(super) fn queue_update(
     force_full: bool,
 ) {
     let mut connection = world.entity_mut(connection);
-    let mut publication = connection.entry::<GuidePublication>().or_default();
+    let mut publication = connection
+        .entry::<GuidePublication>()
+        .or_default()
+        .into_mut();
     publication.pending = Some(snapshot);
     publication.force_full |= force_full;
 }
