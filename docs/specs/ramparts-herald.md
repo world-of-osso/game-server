@@ -35,7 +35,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 - `crates/server/src/scripted_ai/hellfire_ramparts.rs` — currently registers Gargolmar and Omor, not Herald/Vazruden.
 - `crates/server/src/scripted_ai/instance_script.rs` — existing copy-local boss/data state; Herald source lifecycle is not implemented.
-- `scripts/encounter_cpp_bindings.py` — existing copy-only primary binder; Herald/70448 profile is not implemented.
+- `scripts/encounter_cpp_bindings.py` — `herald` exports primary17307/1892/bit1 SQL only after pinned TC and explicit70448 DungeonEncounter/Journal/actor CSV validation; records the named policy and input hashes.
 - `scripts/encounter_serverside_spells.py` — `herald` copy-only profile selects the seven exact TDB spell/effect pairs.
 - `scripts/encounter_summons.py` — existing summon producer; Herald actor prerequisites are not implemented.
 
