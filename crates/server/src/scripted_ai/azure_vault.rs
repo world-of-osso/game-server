@@ -13,6 +13,35 @@ const FROZEN_GROUND: u32 = 387149;
 const FROST_BOMB_DAMAGE: u32 = 386910;
 const EXPLOSIVE_BRAND: u32 = 374567;
 const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
+const LEYMOR_SCRIPT: &str = "boss_leymor";
+const AZURE_INSTANCE: &str = "instance_azure_vault";
+const STASIS: u32 = 375729;
+// TC a352b1fa UnitDefines.h: UNIT_FLAG_IMMUNE_TO_NPC.
+const IMMUNE_TO_NPC: u32 = 0x0000_0200;
+
+pub(super) fn is_creature_script(name: &str) -> bool {
+    name == LEYMOR_SCRIPT
+}
+
+pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn super::CreatureAi>> {
+    let map = world.get::<crate::maps::InMap>(actor)?;
+    let maps = world.get_resource::<crate::maps::MapStore>()?;
+    if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(AZURE_INSTANCE) {
+        return None;
+    }
+    Some(Box::new(Leymor))
+}
+
+struct Leymor;
+
+impl super::CreatureAi for Leymor {
+    fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        if let Some(mut flags) = ctx.world.get_mut::<shared::components::UnitFlags>(ctx.me) {
+            flags.0 |= shared::components::UnitFlags::IMMUNE_TO_PC | IMMUNE_TO_NPC;
+        }
+        ctx.do_cast_self(STASIS);
+    }
+}
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
