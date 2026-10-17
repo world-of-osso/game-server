@@ -44,6 +44,18 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Toy source boundaries89–93](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) — child scripts, owned-critter150 and procedural headwear remain unresolved; [94–98](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) adds source-action/procedural boundaries; [99–103](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) separates existing contracts from missing actions.
+
+- [Lunar/Peddlefeet hearthstone learned use](systems/toys.md#lunarpeddlefeet-hearthstone-learned-use-2026-10-17) — persisted bind/source cast/shared2309 charge;5 scoped tests pass, native presentation separate.
+
+- [Source disguise recovery precedence](systems/toys.md#source-disguise-recovery-precedence-2026-10-17) — three actual learned-use/lifetime cases; item overrides versus inherited spell recovery, native bodies separate.
+
+- [Oomgut source transform lifecycle](systems/toys.md#oomgut-source-transform-lifecycle-2026-10-17) — actual ten-minute expiry/restoration and two-hour recovery report; scoped14-case acceptance, native appearances separate.
+
+- [Flashback screen-effect boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17) — source260/1473 is not world-phase proof; actual chapel use/native presentation open.
+
+- [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16) — source soul import and genuine early-arrival RED→fixed flight/lifecycle;150 Toy+49 affected pass, canonical publication/native appearances separate.
+
 - [Optional cost spell modifiers](systems/auras.md#optional-cost-spell-modifiers-2026-10-16) — native Practiced Strikes/Protection Execute RED3/2→GREEN38 plus merged5; optional spend excludes flat and retains percentage modifiers; workspace check passes.
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls and current-master workspace check pass; full talent/legal/fresh UDP acceptance open.
 - [Missing-storage Call Pet](systems/combat-pet-lifecycle.md#missing-storage-call-pet--2026-10-16) — actual character47 has no pet record; native cast RED→refusal, sourced Human starter-pet mapping remains a gap.

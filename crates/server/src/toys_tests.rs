@@ -8,10 +8,14 @@ use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, 
 mod akunda;
 #[path = "toys_bashiok_tests.rs"]
 mod bashiok;
+#[path = "toys_disguise_tests.rs"]
+mod disguises;
 #[path = "toys_flute_tests.rs"]
 mod flute;
 #[path = "toys_force_forward_tests.rs"]
 mod force_forward;
+#[path = "toys_forlorn_toll_tests.rs"]
+mod forlorn_toll;
 #[path = "toys_gnoll_barrel_tests.rs"]
 mod gnoll_barrel;
 #[path = "toys_group_inheritance_tests.rs"]
@@ -20,6 +24,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_hearthstone_tests.rs"]
 mod hearthstones;
+#[path = "toys_oomgut_tests.rs"]
+mod oomgut;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
 #[path = "toys_podium_tests.rs"]
