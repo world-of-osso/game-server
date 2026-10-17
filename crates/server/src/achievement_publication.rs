@@ -45,7 +45,6 @@ fn publish_snapshot(world: &mut World, connection: Entity, snapshot: Achievement
         .and_then(|publication| publication.published.as_ref())
         .map(|previous| diff_snapshots(previous, &snapshot));
     match delta {
-        Some(delta) if delta == empty_delta() => return,
         Some(delta) => world
             .get_mut::<MessageSender<AchievementDelta>>(connection)
             .expect("protocol registers the achievement delta sender")
@@ -77,14 +76,6 @@ fn publish_toasts(world: &mut World, connection: Entity, toasts: Vec<Achievement
             message: Some("achievement completed".into()),
             error: None,
         });
-    }
-}
-
-fn empty_delta() -> AchievementDelta {
-    AchievementDelta {
-        earned_ids: None,
-        progress_upserts: Vec::new(),
-        removed_progress_ids: Vec::new(),
     }
 }
 
