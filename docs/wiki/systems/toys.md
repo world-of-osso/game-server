@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Dragon costume simulation lifecycle (2026-10-17)
+
+Six already-authentic dragon costumes now have actual learned-use/source-display acceptance through ordinary fifteen-minute expiry/restoration and natural recovery/reuse. [Exact118–123 identities, eight-test bounded proof and fixture-failure distinction](../../toy-effects14-coverage.md#source118123-dragon-costume-simulation-lifecycle-2026-10-17) separate simulation state from unproved native costume/group presentation. Production and canonical data unchanged.
+
 ## Oomgut source transform lifecycle (2026-10-17)
 
 Actual163795 learned use already works with132902; new test proves source display membership, ten-minute ordinary-frame expiry/model restoration and reported two-hour recovery remaining active afterward. No production patch or invented RED. [Exact scoped14-case proof and exclusions](../../toy-effects14-coverage.md#oomgut104-existing-transform-lifecycle-2026-10-17) distinguish simulation acceptance from all17 native appearances and wall-clock recovery. [105–108 boundaries](../../toy-effects14-coverage.md#source105108-controlheadwearbanner-boundaries-2026-10-17) retain RC possession/headwear gaps and prior Hero Banner proof.

@@ -769,3 +769,22 @@ Development test1/1 (three IDs) passes51.41s. Final bounded serial comparison wi
 At6d1230e7, bounded serial5 tests/seven actual IDs pass105.95s, zero ignored: four holiday hearthstones including78–79 plus three source-disguise recovery controls. Package/tests check23.82s, fmt/manual changed-line readability clean/no warnings. Production unchanged, no invented RED or full-Toy repeat. Native source visuals82342/82355/82382/82387 include procedural357948/357956/357957 type17/Value1=151355 (last Value0=13832112); particles/appearance/wire/pixels/audio, cross-map transfer and natural30min recharge remain separate.
 
 Exact rows `rows114-118-{readonly-source,action-source}.json`, `hearth116-117-visual-source.json`; proof `hearth116-117-proof-ledger.json`, contracts/check/fmt logs. No canonical data write or full-toy parity claim.
+
+## Source118–123: dragon costume simulation lifecycle (2026-10-17)
+
+All six roots already have authentic published content/TDB model rows. Source self transform56/misc1=8, instant cast,900000ms duration and900000ms item recovery; no separate SpellCooldowns recovery. No production/importer patch or manufactured runtime RED.
+
+| Source row / costume | Item / spell | Template / single display |
+|---|---|---|
+|118 Blue Head |165671 /285519 |147018 /89489 |
+|119 Blue Body |165672 /285521 |147020 /89491 |
+|120 Blue Tail |165673 /285523 |147022 /89493 |
+|121 Green Head |165674 /285520 |147019 /89490 |
+|122 Green Body |165675 /285522 |147021 /89492 |
+|123 Green Tail |165676 /285524 |147023 /89494 |
+
+Six distinct actual bag-learning/UseToy cases share one behavioral fixture: exact source display/aura duration and cooldown report; immediate cooldown refusal; same model just before ordinary50ms-frame expiry; replicated aura removal/prior model restoration with unchanged health; natural fifteen-minute recovery permits reuse and reapplies the exact display/aura. No clock, duration or recovery reset.
+
+At958d29a5, six cases pass6/6 zero ignored53.27s. Separate directly related actual transform recovery/cancellation controls pass2/2 zero ignored19.21s: combined bounded acceptance8 tests72.48s, not a rerun of the whole-Toy suite. Package/tests check2m09s and fmt/manual changed-line readability pass without warnings. Initial118 failure after successful expiry/reuse was fixture retention of its earlier expected OnCooldown event; assert/drain that event at its own boundary. The later signed-entry compile mismatch also produced no runtime RED. Exact scopes/results remain in `dragon118-proof-ledger.json`, `dragon118-fixture-diagnosis.json`, `dragon118-123-proof-ledger.json` and final-contracts2/transform-controls/check/fmt logs.
+
+Native costume/body compositing, group-following presentation, wire/pixels/audio and wall-clock duration remain unproved; source text does not establish an automatic follower mechanic. Model state acceptance is not full-toy parity. Read-only source capsules `rows114-118-readonly-source.json`, `dragon118-action-source.json`, `rows119-123-readonly-source.json` and `dragon118-123-template-preflight.json` retain exact70391 fields and model provenance; canonical data untouched.
