@@ -8,6 +8,8 @@ base0 row, models and template addon; no new difficulty row is fabricated.
 Adarogg: server-side Inferno Charge119297 summons TDB61409 (base0 + Normal1).
 Wailing ritual: source groups2/3 select5762/5763; project only their actual Normal1
 rows, retaining existing base templates/models and all population/credit.
+Leymor: native374360 summons TDB190509; base0/models and actual Normal1/Mythic23
+rows only, without inventing a follower205 difficulty or any placements.
 """
 import argparse
 import sqlite3
@@ -203,7 +205,7 @@ def import_fiendish_hound(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -219,6 +221,10 @@ def main():
                 entries = [import_demonic_leap_template(conn)]
             elif args.encounter == 'omor':
                 entries = import_fiendish_hound(conn)
+            elif args.encounter == 'leymor':
+                entries = [import_base_template(conn, 190509, 'npc_ley_line_sprouts')]
+                project_difficulty(conn, 190509, 1)
+                project_difficulty(conn, 190509, 23)
             elif args.encounter == 'theradras':
                 entries = import_zaetar_spirit(conn)
             elif args.encounter == 'celebras':
