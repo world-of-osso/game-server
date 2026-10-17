@@ -123,6 +123,26 @@ impl super::CreatureAi for LeyLineSprout {
         ctx.do_cast_self(LEY_LINE_SPROUT_AURA);
         ctx.do_cast_at(None, ARCANE_POWER, true);
     }
+
+    fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
+        // TC boss_leymor.cpp:286–300: the actual TempSummon owner loses one stack.
+        let Some(owner) = ctx.world.get::<crate::zones::TempSummon>(ctx.me) else {
+            return;
+        };
+        let owner = owner.summoner;
+        let instance = ctx
+            .world
+            .get::<crate::auras::ActiveAuras>(owner)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == ARCANE_POWER)
+                    .map(|aura| aura.instance_id)
+            });
+        if let Some(instance) = instance {
+            crate::auras::spend_stack(ctx.world, owner, instance);
+        }
+    }
 }
 
 struct Leymor {
