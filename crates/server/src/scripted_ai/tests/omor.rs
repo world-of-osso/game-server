@@ -87,7 +87,6 @@ fn summon_speech_count(
 }
 
 #[test]
-#[ignore = "source ordinary30707 OnSpellCast30%Talk0 acceptance pending implementation"]
 fn encounter_coverage_omor_summon_cast_speech_has_both_source_chance_outcomes() {
     let (mut h, boss, map) = summon_speech_fixture();
     let texts: std::collections::HashSet<_> = h.app.world().resource::<CreatureTexts>().groups
