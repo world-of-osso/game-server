@@ -2,6 +2,18 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Procedural/control/script and Tea Set gaps (2026-10-17)
+
+[Source145–149 matrix](../../toy-effects14-coverage.md#source145149-proceduralcontrolscript-and-tea-table-boundaries-2026-10-17) retains the blight-coating procedural payload, Control4 spinning toys, ambiguous Highborne possession action and unpublished149865 Tea Set. No generic visual/actor substitute or new admission; authentic Tea Set model metadata is not successful gameplay/native proof.135 remains a separate established source contract.
+
+## Brewfest hearthstone and corpse/appearance boundaries (2026-10-17)
+
+Brewfest Reveler140 now has actual saved-bind/shared2309 acceptance alongside six prior holiday roots. [Seven-case proof and exact141–144 boundaries](../../toy-effects14-coverage.md#source140144-brewfest-hearthstone-and-corpseappearance-boundaries-2026-10-17) distinguish enemy-corpse fireworks, the mixed Transmorpher child/service chain and dead-target soul trapping from generic handlers. Runtime/data unchanged; native Brewfest presentation and full recharge remain separate.
+
+## Goldtusk table and Fire Eater source contracts (2026-10-17)
+
+Source135's maintained import and actual-use omissions were reproduced before adding exactly149876 with its authentic90570/half-scale model. New source139 follows the existing saved-bind/shared2309 path;136 bowl retains its Group28 contract, while137–138 RC possession stays unimplemented. [Exact nine-test/importer proof, source/native exclusions and copy-only publication receipt](../../toy-effects14-coverage.md#source135139-goldtusk-table-retained-bowl-rc-gaps-and-fire-eater-2026-10-17) distinguish the added data from Rust handler changes, food interaction and native presentation. Lead owns canonical publication after landing.
+
 ## Source companion/healer/corpse/music boundaries (2026-10-17)
 
 [Source130–134 matrix](../../toy-effects14-coverage.md#source130134-companionweaponhealercorpsemusic-boundaries-2026-10-17) preserves the owned-critter riding target, procedural anchor weapon, Brynja viewer payload versus healer service, fallen-ally forced-child semantics and missing music-box publication/behavior. Actual TDB music-box body resolves to the existing chest01b model; that does not authorize invented presentation/audio. No runtime/data changes or new acceptance claims.
