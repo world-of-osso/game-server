@@ -13,14 +13,25 @@ pub(crate) fn send_pending_invites(
     >,
 ) {
     for (world, mut sender) in &mut connections {
-        if let Some(invite) = persistence::load_pending_guild_invite(&db.db, world.character_id) {
-            sender.send::<AuthChannel>(GuildInvitation {
-                guild_id: invite.guild_id,
-                guild_name: invite.guild_name,
-                inviter_name: invite.inviter_name,
-            });
+        if let Some(invite) = load_pending_invitation(&db.db, world.character_id) {
+            sender.send::<AuthChannel>(invite);
         }
     }
+}
+
+/// Guild.cpp1727–1738 sends the inviting guild's current registered emblem.
+/// Pending invite storage remains unchanged; resolve its real design at delivery.
+pub(crate) fn load_pending_invitation(
+    db: &redb::Database,
+    character: u64,
+) -> Option<GuildInvitation> {
+    let invite = persistence::load_pending_guild_invite(db, character)?;
+    Some(GuildInvitation {
+        guild_id: invite.guild_id,
+        guild_name: invite.guild_name,
+        inviter_name: invite.inviter_name,
+        tabard: persistence::guild_tabards::load_design(db, invite.guild_id),
+    })
 }
 
 #[cfg(test)]
