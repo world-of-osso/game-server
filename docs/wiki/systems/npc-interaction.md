@@ -2,6 +2,10 @@
 
 Right-clicking an NPC opens a gossip menu or a role frame (vendor, trainer, auction house, …), validated by the server. Code: `crates/server/src/npc_interaction.rs` (validation, session, systems) and `npc_interaction/gossip.rs` (world.db gossip loader, what an NPC opens). Protocol: shared-protocol `protocol/interaction_messages.rs`, `InteractionChannel`.
 
+## NPC mailbox service (2026-10-16)
+
+Pinned TC a352b1fa `WorldSession::CanOpenMailBox` accepts creature GUIDs only through `GetNPCIfCanInteractWith(..., UNIT_NPC_FLAG_MAILBOX, ...)`. The ordinary server `InteractNpc` path now opens the existing Mailbox role when that flag is present, even with Katy132969's GOSSIP bit; it does not manufacture an unbound gossip option. Existing same-map/live/range/session guards and mail request persistence remain unchanged. [Toy source and acceptance boundary](../../toy-effects14-coverage.md#stampwhistle66-source-assistant-and-mailbox-2026-10-16) distinguish real summon identity from mailbox service, delivery timing and pending native proof.
+
 ## NPC flags
 
 Every NPC replicates `NpcFlags(u64)`: bits 0-31 Retail `UNIT_NPC_FLAG_*` (TrinityCore `NPCFlags`), bits 32-63 `UNIT_NPC_FLAG_2_*`. Set at spawn (`zones.rs`) by `NpcFlags::from_azerothcore(creature_template.npcflag)`.
