@@ -187,6 +187,7 @@ pub(super) fn queue_request(
         .entity_mut(connection)
         .entry::<PendingReplies>()
         .or_default()
+        .into_mut()
         .0
         .push_back(PendingReply {
             account,
