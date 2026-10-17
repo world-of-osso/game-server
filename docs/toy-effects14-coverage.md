@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source155–159: equipment/light/ocean/gift boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|155 Mechagonian Sawblades167931/294703 | Self dummy4/900000ms; visuals85604/87847 reference procedural358463/358464/358739 type17 with Value1=150764/137619/165600. The source equipment/spinning presentation is not established by a copied ordinary weapon attachment or zero-aura admission. |
+|156 Apexis Focusing Shard168012/295017 | Paired target25/self dummy4 effects,60000ms source duration and visual85709. Targeted light/channel behavior remains unproved; a self cosmetic alone is not that paired action. No generic marker admission. |
+|157 Banner of the Burning Blade168014/295037 | Self dummy4/600000ms and visual85713. The specific banner presentation/lifecycle remains unproved; no different Gladiator/War Banner chosen by name, and no new aura4 whitelist. |
+|158 Hyper-Compressed Ocean168016/295044 | Source cursor87 summon152121/property64/900000ms; published152121 is absent. TDB names a fishing icon but faction0/npcflag0/empty AI/script/addon state; its sole91526 display resolves FDID124640, `creature/invisiblestalker/invisiblestalker.m2`. An invisible ordinary actor does not establish the ocean/fishing/loot interaction, and no synthetic pool or source substitution is admitted. |
+|159 Twitching Eyeball168123/295689 | Self dummy4/3600000ms; visual84347 references procedural358470/type17/Value1=168004. The specific appearance/gift payload remains unproved; no generic eye attachment or extra gameplay effects inferred from the description. |
+
+Evidence `rows155-159-{readonly-source,action-source}.json` retains exact root/target/duration/kit/model fields; `ocean158-readonly-model-source.json` links source91526 to its actual local-listfile body. Read-only source continuation only: no additional policy/importer/canonical rows, simulation/native certificate or rerun of unchanged151/prior code gates.
+
 ## Source150–154: Azerite real-ground recovery and interaction gaps (2026-10-17)
 
 151 Azerite Firework Launcher166877/290627 was already admitted by the audited one-shot caster-kit policy and covered by the three-ID source18 flat-ground fixture. New test-only acceptance at79a93ee7 uses actual778027 terrain/Northshire9: real bag learning and journal use, one cast event, source600000ms item recovery, immediate and near599s refusal without another cast, then reuse after ordinary50ms-frame passage of the original deadline. Exactly two cast events, unchanged health/body/position and no root aura/summon are asserted. No clock/cooldown reset, policy change or fabricated RED.
