@@ -149,6 +149,11 @@ fn azure_leymor_fissure_selector_uses_caster_front_entry_and_copy_not_destinatio
         .unwrap()
         .clone();
     spell.cast_destination = Some([back_pose.x, back_pose.y, back_pose.z]);
+    assert_eq!(
+        spell.misc.as_ref().unwrap().speed,
+        0.0,
+        "native394154 hits immediately"
+    );
     let selected = crate::spell_cast::targets::select_targets(
         h.app.world_mut(),
         leymor,
@@ -174,14 +179,15 @@ fn azure_leymor_fissure_selector_uses_caster_front_entry_and_copy_not_destinatio
         Vec3::new(back_pose.x, back_pose.y, back_pose.z),
         0,
     );
-    h.advance(0.1);
+    // Sample the immediate hit, before generic cleanup unsummons the cross-copy probe
+    // whose owner intentionally remains in the original copy (summon.rs:867–881).
     for &child in &selected {
         assert!(!crate::spell_cast::targets::is_alive(h.app.world(), child));
     }
     for survivor in [behind, remote, player] {
         assert!(
             crate::spell_cast::targets::is_alive(h.app.world(), survivor),
-            "post-tick survivor={survivor:?}, behind={behind:?}, remote={remote:?}, player={player:?}, health={:?}, map={:?}",
+            "immediate survivor={survivor:?}, behind={behind:?}, remote={remote:?}, player={player:?}, health={:?}, map={:?}",
             h.app.world().get::<Health>(survivor),
             h.app.world().get::<InMap>(survivor),
         );
