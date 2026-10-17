@@ -258,7 +258,7 @@ Counterexamples to blanket acceptance: Gadgetzan18986/23453 teleports and scouti
 
 [Forlorn/charge master integration](../../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17) retains both delayed-hit behaviors; merged55-case proof and template publication receipt are separate from historical whole-Toy/native claims.
 
-[Source boundaries89–93](../../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) retain Poking's dummy child, owned-critter150 and conditional procedural headwear gaps; no generic cosmetic admission.
+[Source boundaries89–93](../../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) retain Poking's dummy child, owned-critter150 and conditional procedural headwear gaps; [94–98 source actions](../../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retain nearby reactions, spectral/headwear operations, corpse ritual and return/catch gaps. No generic cosmetic admission.
 
 [Flashback88 source screen-effect boundary](../../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17) separates source metadata, source-area acceptance and missing native presentation; no world-phase conclusion.
 

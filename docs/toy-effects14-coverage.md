@@ -701,3 +701,15 @@ At server56eb840825d8ff218062cd23729bfdbfe2e8ff90/protocol6b066803e00f0527d03e7e
 |93 Brazier Cap163713/279934 | Self dummy4 lasts1800000ms. Conditional visuals80447/81214 use source PlayerCondition64471/34467; aura kits103329/104655 include procedural357632/357694, type17/Value1=9859 (latter Value3=-2.14748365e+09). Ordinary attachment55 model FDIDs194254/166131/1367341 and sound117483 do not replace this procedural payload. No generic head attachment/equipment substitution. |
 
 Exact rows: `rows89-93-readonly-source.json`, `witch89-child-source.json`, `rows89-93-action-source.json`; interpretation/proof limits in `rows89-93-source-proof-ledger.json`. These remain named gaps, not completed toys. No runtime/data change or fabricated RED. Merged55-case proof remains code-current after this docs-only audit; no broad repeat.
+
+## Source action/procedural boundaries94–98 (2026-10-17)
+
+| Source row | Literal source / retained gap |
+|---|---|
+|94 Foul Belly163735/279963 | Dummy3/source22, radius index0; description promises a loud sound startling nearby units. Visual80467 supplies source sound117484/animations363155 and363157 (LoopAnim10/186), but no authored nearby-unit selection/reaction consumer is established. No guessed radius or generic dummy admission. |
+|95 Spectral Visage163736/279977 | Self dummy4/visual80472; kit103373 has procedural357578 type1/Value0=9222653 and357579 type14/Value0=0.200000003. Ordinary attached models do not establish those appearance operations; no invented ghost shader or aura4 substitution. |
+|96 Syndicate Mask163738/279983 | Self dummy4/visual80474; kit103377 procedural357580 type17/Value1=120431. Description explicitly replaces headwear; an ordinary mask attachment alone is not this procedural/equipment operation. |
+|97 Ritual Sacrifice163740/279966 | Dummy3/target25 with radius8=5yd, plus effect140 triggers279974; child summons143666 Spirit Visual/property64 Control0/Title0/flags0. Canonical143666 absent; source empty AI/script/MovementType0 does not establish recently-deceased eligibility or ritual action. No generic actor import/admission. |
+|98 Throw Magic Fun Rock163741/279989 | Effect77/friendly target21 promises automatic return when possible. A launch visual80480 does not implement recipient eligibility or the return/catch exchange; retain source script refusal without a one-way cosmetic substitute. |
+
+Root/visual/procedural sources: `rows94-98-readonly-source.json`, `rows94-98-action-source.json`; prior prepared census records exact dummy/aura/script/missing143666 refusals. Pinned local `spell_item.cpp` name search found none of these actions; that absence alone does not prove Retail lacks scripts. Named gaps remain open; no production/canonical write, fabricated RED or full-toy claim. Merged55 proof remains code-current; docs-only changes require no broad rerun.
