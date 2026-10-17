@@ -6,7 +6,7 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5530 ordinary (3507 account/2023 character),1841 statistics; 107 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5533 ordinary (3510 account/2023 character),1841 statistics; 108 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -133,7 +133,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 28 | BeSpellTarget | 858/1841 | 565/1290 | 293 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 29 | CastSpell | 2530/2995 | 1499/1665 | 1031 | Native successful casts; plain SingleFalse87 uses scoped known-unearned authority with all companions. Actual1217637 casts grant41707 at20 then stop; account/sibling/reopen/date controls pass. Other unsupported conditions remain disabled. |
 | 30 | TrackedWorldStateUIModified | 16/87 | 16/78 | 0 | Native: every battleground objective credit (TC BattlegroundScore::UpdatePvpStat:78-80) records +1 for the connected character, completed in the match map; only unconditional rows whose PvpStat is a native column. BG start/fail-event rows stay disabled. Native completion-map gate leaves 199/200 (Instance_ID489) unearned on WSG2106. See spec. |
-| 31 | PVPKillInArea | 0/51 | 0/45 | 0 | World RewardHonor eligibility now exists (type35). Recipient AreaID event31 is not wired; scoreboard/type70 cannot substitute. Remains disabled pending its own native RED and source-qualified implementation. |
+| 31 | PVPKillInArea | 18/51 | 16/45 | 2 | Native eligible world-HK reward samples each recipient current terrain area; positive authored ancestry, full companions and account SUM. Full50 Blood and Sand12411 native acceptance pending GREEN; Hall roots224/1151 structural only, not native BG admission. |
 | 32 | WinArena | 57/82 | 56/62 | 1 | Native committed rated winners: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
 | 33 | ParticipateInArena | 55/87 | 55/61 | 0 | Native committed rated participants, including losers: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
 | 34 | LearnOrKnowSpell | 569/579 | 468/468 | 101 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
