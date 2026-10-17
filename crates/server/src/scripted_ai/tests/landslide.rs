@@ -1,4 +1,5 @@
 //! Pinned Landslide schedules, first incoming damage crossing50%, actual summons.
+use super::super::cast_admission::CastAdmissions;
 use super::*;
 
 #[test]
@@ -44,18 +45,29 @@ fn encounter_coverage_landslide_wipe_rearms_damage_trigger() {
 
 #[test]
 fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
-    let seed = super::landslide_seed_probe::find_counterexample_seed();
-    eprintln!("LANDSLIDE seed={seed}");
-    assert_landslide_clocks(seed);
+    // Seed104 delays a cast behind a channel, then its next due-anchored repeat
+    // is inside the real11s cooldown. A success-only observer used to fail here.
+    assert_landslide_clocks(104, 1);
 }
 
-fn assert_landslide_clocks(seed: u64) {
+#[test]
+fn encounter_coverage_landslide_seeded_no_rejection_control() {
+    assert_landslide_clocks(0, 0);
+}
+
+fn assert_landslide_clocks(seed: u64, expected_rejections: usize) {
     let (mut h, boss, map) = bound_boss(12203, 349, 4);
     h.app
         .world_mut()
         .get_mut::<CreatureAiState>(boss)
         .unwrap()
         .ai = Some(super::super::super::maraudon::seeded_landslide(seed));
+    let origin = h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64();
+    h.app.insert_resource(CastAdmissions {
+        actor: boss,
+        origin,
+        entries: Vec::new(),
+    });
     let player = h.player();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert((
@@ -138,15 +150,19 @@ fn assert_landslide_clocks(seed: u64) {
         "LANDSLIDE source casts={casts:?}, unique summons={}",
         summons.len()
     );
-    for (spell, first, repeat, cast_time, target) in [
-        (18670, (5.0, 10.0), (15.0, 25.0), 1.0, player),
-        (5568, (10.0, 15.0), (10.0, 20.0), 0.0, boss),
-        (21808, (20.0, 20.0), (30.0, 40.0), 0.0, boss),
+    assert_knock_admission(&h, &casts, &blocked, expected_rejections);
+    let admissions = &h.app.world().resource::<CastAdmissions>().entries;
+    for (spell, first, repeat, target) in [
+        (18670, (5.0, 10.0), (15.0, 25.0), player),
+        (5568, (10.0, 15.0), (10.0, 20.0), boss),
+        (21808, (20.0, 20.0), (30.0, 40.0), boss),
     ] {
-        let times: Vec<_> = casts
+        // TaskContext::Repeat runs even when ordinary admission rejects a cast.
+        // The source contract is request timing, not guaranteed SpellGo timing.
+        let times: Vec<_> = admissions
             .iter()
-            .filter(|(id, _, _)| *id == spell)
-            .map(|(_, time, _)| *time - cast_time)
+            .filter(|attempt| attempt.spell == spell)
+            .map(|attempt| attempt.time)
             .collect();
         assert!(
             super::celebras::follows_task_deadlines(&times, first, repeat, &blocked),
@@ -212,5 +228,50 @@ fn assert_landslide_clocks(seed: u64) {
         h.inbox(0).spell_gos.len(),
         before,
         "dead source actor stops all casts"
+    );
+}
+
+fn assert_knock_admission(
+    h: &Harness,
+    casts: &[(u32, f32, Option<u64>)],
+    blocked: &[(f32, bool)],
+    expected_rejections: usize,
+) {
+    let attempts = &h.app.world().resource::<CastAdmissions>().entries;
+    let rejected: Vec<_> = attempts
+        .iter()
+        .filter(|attempt| attempt.result.is_err())
+        .collect();
+    assert_eq!(rejected.len(), expected_rejections);
+    for attempt in rejected {
+        assert_eq!(attempt.spell, 18670);
+        assert_eq!(
+            attempt.result,
+            Err(crate::spell_cast::CastFailure::OnCooldown)
+        );
+        assert!(
+            attempt.on_cooldown,
+            "ordinary sourced cooldown is still active"
+        );
+    }
+    let times: Vec<_> = casts
+        .iter()
+        .filter(|(id, _, _)| *id == 18670)
+        .map(|(_, time, _)| *time - 1.0)
+        .collect();
+    // Retain the exact old observer as a negative regression: a legitimate
+    // rejected repeat cannot be inferred from successful casts alone.
+    assert_eq!(
+        super::celebras::follows_task_deadlines(&times, (5.0, 10.0), (15.0, 25.0), blocked),
+        expected_rejections == 0,
+    );
+    let admitted = attempts
+        .iter()
+        .filter(|attempt| attempt.spell == 18670 && attempt.result.is_ok())
+        .count();
+    assert_eq!(
+        admitted,
+        times.len(),
+        "each admitted Knock Away actually completes"
     );
 }
