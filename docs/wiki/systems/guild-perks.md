@@ -34,15 +34,13 @@ Actual Human native item6948 use exposed458619 (No Place Like Home):411/+1 charg
 
 ## Mobile and resurrection authority audit — 2026-10-17
 
-This is source inspection, not effect acceptance or a behavioral RED/GREEN. Mobile Banking and Quick/Dead remain unimplemented.
+This is source inspection, not effect acceptance or a behavioral RED/GREEN. Mobile Banking remains unimplemented. User clarification2026-10-17 excludes resurrection guild perks from World of Osso; Quick/Dead is not a pending gap.
 
 | Boundary | Established evidence | Remaining gap |
 |---|---|---|
 | Reputation representation | Shared `CharacterReputation` stores faction values; authenticated `reputation_factions.rs` includes Guild1168 atNeutral0. TC a352b1fa `CriteriaHandler.cpp:2069` reads faction1168 directly. | Current cast-versus-chest-use qualification, not a missing reputation table. Do not substitute membership, rank or default Friendly. |
 | Mobile data | Active83958: script77 without trigger,3600000ms recovery. Child88304/88306: actual206602/206603, type34,300000ms duration. | Pinned Mainline dispatch and the mobile object's complete permission/lifecycle path. |
 | Contemporary fork candidate | RoleplayCore8604a936f3eaceb5034eb9e082e78640bf39fad6 `spell_generic.cpp:5920–5957` checks Friendly1168 at cast and dispatches Alliance88304/Horde88306. SQL binding was retrieved, not merely inferred from a search snippet. | Installed tooltip says Friendly users; it does not explicitly require Friendly casters. Fork behavior is not accepted as Mainline authority. |
-| Resurrection candidate | Historical4.3.4 fork sppcppf91cbb76a414d6706effb53051d27ee3cbf6c9b9 `SpellEffects.cpp:297–299,4198–4200,5744–5746` uses the caster's aura, same-guild check, out-of-combat condition and percentage health multiplication. | Not modern recipient/caster qualification authority. TC a352b1fa has HandleNULL for340; installed Mainline tooltip is unqualified. No formula is transplanted. |
-| Dead movement | Installed83950 second effect is dummy3/+10%; pinned source contains no83950 dispatch. | Actual ghost-speed formula and interaction with other ghost modifiers; a tooltip alone does not establish stacking. |
 
 RoleplayCore's March11,2026 commit9fc5c2e586c1fcf9ea3ebc6a5fce4ca85c5bcba2 added this script/binding and replaced an older hard-coded Alliance-only dispatch. That history proves fork authorship, not Blizzard correctness. The fork is not evidence that pinned TC implemented the missing effect.
 
