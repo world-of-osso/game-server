@@ -79,6 +79,7 @@ fn native_full_trigger_allow_dead_target_freeze_remains_admissible() {
         Some(h.npc),
         1,
     ));
-    assert!(has_aura(h.app.world(), h.npc, FREEZE));
+    // AllowDeadTarget permits admission, not aura persistence while dead.
+    assert!(!has_aura(h.app.world(), h.npc, FREEZE));
     assert_eq!(h.health(h.npc), 0.0);
 }
