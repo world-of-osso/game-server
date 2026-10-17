@@ -686,15 +686,11 @@ pub fn process_guild_invites(
                 let target =
                     persistence::find_character_id_by_name(&db.db, &req.target_character_name)
                         .expect("successful invite has target");
-                let pending = persistence::load_pending_guild_invite(&db.db, target)
+                let pending = crate::guild::load_pending_invitation(&db.db, target)
                     .expect("successful invite persisted");
                 for (target_link, mut sender) in &mut invitees {
                     if char_ids.get(target_link.0).is_ok_and(|id| id.0 == target) {
-                        sender.send::<AuthChannel>(shared::protocol::GuildInvitation {
-                            guild_id: pending.guild_id,
-                            guild_name: pending.guild_name.clone(),
-                            inviter_name: pending.inviter_name.clone(),
-                        });
+                        sender.send::<AuthChannel>(pending.clone());
                     }
                 }
             }
