@@ -33,7 +33,7 @@ fn pet_battle_miss_branch_gift_heals_only_its_user_after_a_miss() {
 fn pet_battle_miss_branch_success_does_not_stun_or_heal_the_user() {
     let catalog = catalog();
     for (ability, damage_amount) in [(762, 300), (989, 180)] {
-        let mut initial = battle(&catalog, 0, 0, [ability, 110, 123]);
+        let mut initial = battle(&catalog, 6, 0, [ability, 110, 123]);
         initial.teams[0].pets[0].health = 9000;
         initial.teams[0].pets[0]
             .states
@@ -80,7 +80,7 @@ fn pet_battle_miss_branch_block_is_not_a_miss() {
 fn pet_battle_miss_branch_ignores_an_opponents_earlier_miss_in_the_same_round() {
     let catalog = catalog();
     for ability in [762, 989] {
-        let mut initial = battle(&catalog, 0, 0, [ability, 110, 123]);
+        let mut initial = battle(&catalog, 6, 0, [ability, 110, 123]);
         let caller = &mut initial.teams[0].pets[0];
         caller.health = 9000;
         caller.stats.speed = 50;
