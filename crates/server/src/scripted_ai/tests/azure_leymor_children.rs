@@ -11,14 +11,38 @@ const BRAND: u32 = 374567;
 const BRAND_CHILD: u32 = 374582;
 
 #[test]
-#[ignore = "native Fissure child boundary awaiting behavioral RED"]
-fn azure_leymor_fissure_completion_emits_one_native_sprout_selector() {
+#[ignore = "native Fissure Sprout-hit lifecycle awaiting behavioral RED"]
+fn azure_leymor_fissure_completion_kills_native_sprouts_and_consumes_owner_stacks() {
     const FISSURE: u32 = 386660;
-    const SPROUT_SELECTOR: u32 = 394154;
+    const SPROUT: u32 = 190509;
+    const ARCANE_POWER: u32 = 374736;
     let (mut h, leymor) = prepare_leymor_for_later_clock();
     h.advance(13.8);
-    assert_eq!(h.creatures_of(190509).len(), 14);
-    assert!(h.app.world().get::<Health>(h.player()).unwrap().current > 0.0);
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(children.len(), 14);
+    let origin = *h.app.world().get::<Position>(leymor).unwrap();
+    let distance = |child| {
+        let pos = h.app.world().get::<Position>(child).unwrap();
+        (pos.x - origin.x).hypot(pos.z - origin.z)
+    };
+    let nearest = children
+        .iter()
+        .copied()
+        .min_by(|left, right| distance(*left).total_cmp(&distance(*right)))
+        .unwrap();
+    let position = *h.app.world().get::<Position>(nearest).unwrap();
+    let offset = Vec3::new(position.x - origin.x, 0.0, origin.z - position.z);
+    assert!(offset.length() > 0.0 && offset.length() < 23.0);
+    // Aim the controlled fixture at a real native child without moving any Sprout.
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(position);
+    h.app.world_mut().get_mut::<Rotation>(leymor).unwrap().y =
+        offset.z.atan2(offset.x) + std::f32::consts::FRAC_PI_2;
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        14
+    );
+    assert!(h.app.world().get::<Health>(player).unwrap().current > 0.0);
     assert_eq!(h.casts(0, leymor, FISSURE), 0);
     h.advance(0.3);
     let cast = h.app.world().get::<CastState>(leymor).unwrap();
@@ -26,14 +50,25 @@ fn azure_leymor_fissure_completion_emits_one_native_sprout_selector() {
     let remaining = cast.duration - cast.elapsed;
     h.advance(remaining + 0.2);
     assert_first_fissure_and_living_victim(&mut h, leymor);
+    assert!(
+        !crate::spell_cast::targets::is_alive(h.app.world(), nearest),
+        "ordinary Fissure394154 hit kills the actual qualifying native Sprout"
+    );
+    let dead = children
+        .iter()
+        .filter(|&&child| !crate::spell_cast::targets::is_alive(h.app.world(), child))
+        .count();
+    assert!(dead > 0 && dead < children.len());
+    let remaining = children.len() as u32 - dead as u32;
     assert_eq!(
-        h.inbox(0)
-            .spell_gos
-            .iter()
-            .filter(|go| { go.caster == leymor.to_bits() && go.spell_id == SPROUT_SELECTOR })
-            .count(),
-        1,
-        "actual ordinary Fissure effect0 completion casts exactly one native394154 child"
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        remaining,
+        "exactly one owner-stack decrement per actual hit/death"
+    );
+    h.advance(0.2);
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        remaining
     );
 }
 
