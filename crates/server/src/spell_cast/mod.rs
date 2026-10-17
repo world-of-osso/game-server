@@ -2827,8 +2827,7 @@ fn execute_costed_trigger(
 ) -> Result<(), CastFailure> {
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
-    // The queue captured the unit; self-only selectors may validate as None.
-    validate_target(world, caster, spell, explicit, Sight::Start)?;
+    let explicit = validate_target(world, caster, spell, explicit, Sight::Start)?;
     aura_spell_restrictions::check_target(world, explicit, spell)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
