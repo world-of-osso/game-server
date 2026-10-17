@@ -138,7 +138,9 @@ fn pet_battle_starfall_applies_moonlight_after_healing_and_existing_weather_modi
         state.teams[0].pets[1].cooldowns.clear();
         let (state, events) = use_ability(&state, &catalog, ability);
         assert_eq!(state.teams[0].pets.each_ref().map(|p| p.health), [9045; 3]);
-        assert_eq!(damage(&events), [39; 3]);
+        // Starfall is Dragonkin; Moon Tears alone receives Moonlight's Magic bonus.
+        let expected_damage = if ability == 258 { 36 } else { 39 };
+        assert_eq!(damage(&events), [expected_damage; 3]);
         assert_eq!(state.auras.len(), 1);
     }
 }
