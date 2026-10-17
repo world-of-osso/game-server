@@ -1,8 +1,34 @@
 # Toy effects14 — active whole-goal coverage
 
-## Source185–189: midday acceptance pending and interactive boundaries (2026-10-17)
+## Source195–199: motion/faction/appearance/action boundaries (2026-10-17)
 
-187 Jar of Sunwarmed Sand170380/304369 has existing self screen-effect260/misc1719/7 and7200000ms aura with86400000ms item recovery. Test/spec9ec632d3a extends the existing Shadescale180 actual-learning/aura/replication/cancel fixture to this second source and checks both reported recoveries remain spent after cancellation. Fmt/manual changed-line readability/diffcheck pass; targeted native-helper tests are still compiling/running and package/tests check is pending in `midday187-proof-ledger.json`, not a passing acceptance claim. No production patch, invented RED, native midday certificate or full two-hour/24-hour passage proof.
+| Source row | Exact retained source boundary |
+|---|---|
+|195 Nomi's Vintage173727/312049 | Self knockback98/base300/misc-100/200 plus safe-fall aura144/base999 for6000ms; RequiredAreasID6832 and600000ms item recovery. This is not merely a drink or flame cosmetic. Source-area/self-launch/safe-fall behavior remains unproved as a combined actual-toy contract; no no-op/generic visual substitute. |
+|196 N'lyeth, Sliver of N'Zoth173951/313172 | Self language75/misc178, faction243/misc3214/1 and max-health-percent damage165/base60;3600000ms duration/item recovery and RequiredAreasID6916. Advertised outdoor/War Mode eligibility, self-sacrifice, Shath'Yar hostility/language and death removal remain unestablished together. No generic faction flip, PvP permission bypass or cosmetic admission. Visual92159 also authors procedural357234/type1 and357235/type14; metadata is not native proof. |
+|197 Scroll of Aeons173984/314988 | Actual on-use is TriggerType0/LegacySlot1, a self dummy4/1800000ms with inherited3600000ms spell recovery. Separate TriggerType7/slot0 row314407 carries two remove-aura164 slots naming313353/314393; it is not the journal's on-use root. Soul-appearance behavior remains unproved; no selection of the auxiliary row or arbitrary transform by name. |
+|198 Glimmerfly Cocoon174445/315240 | Source2000ms cast, script3 with targets47/86 and120000ms spell recovery. Cocoon-opening action remains unresolved; the root does not name an executable child here. No guessed pet/critter/release behavior or generic summon. |
+|199 Shadowy Disguise174830/316646 | Self dummy4 has nonzero misc150550/11,15000ms duration and300000ms item recovery; visual92809 authors procedural474/type1. It is not a complete-zero cosmetic signature or source transform56. Specific shadowy-figure appearance remains unproved; no copied transform template or ignored payload. |
+
+Exact roots, trigger/slot distinctions, effect/aura/area/duration/visual fields and procedural mapping live in `rows195-199-{readonly-source,action-source}.json`. Pinned `SharedDefines.h` names98 knockback,164 remove-aura and165 max-health-percent damage; `SpellAuraEffects.cpp` identifies144 safe fall,75 language and243 faction. Current ToyCatalog selects TriggerType0 before slot order. Read-only source/documentation only; no policy/runtime/importer/canonical/data changes, new acceptance or repeated code gate.
+
+## Source190–194: Eternal Traveler and mount/control/portal boundaries (2026-10-17)
+
+190 Eternal Traveler's Hearthstone172179/308742 already uses source10s homebind252 and shared2309 charge. Test-only9e56fbe2a adds its actual bag-learning/UseToy case to the existing saved-bind fixture: missing bind refuses before spending; after displacement the authored cast returns to persisted bind, reports max1/current0/recharge1800000ms, and Holographic165 refuses on that shared charge. Health/model remain unchanged. Nine actual holiday variants pass9/9 zero ignored79.23s; native package/tests check13.81s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `hearth190-proof-ledger.json` records exact commands/revision. No production change or invented RED.
+
+Source190's multiple visual branches contain procedural types1/14/15; the simulation contract is not native branch/race/appearance/audio certification. Cross-map wire behavior and natural30min recharge remain separate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|191 Wild Holly172219/308923 | Self dummy4/3600000ms with60000ms item recovery. Source description requires Feast of Winter Veil and transforms the mount, not the player's ordinary body. Mounted-state eligibility, holiday gating and authentic festive mount appearance remain unresolved; no generic self cosmetic or guessed mount display. |
+|192 Crashin' Thrashin' Juggernaught172222/308921 and193 Battleship172223/308922 | Source18 summons158459/93523 and158455/93522 via4728 Control3/faction1616/flags4, alongside self auras25/321/37 with misc85; source3000ms cast/300000ms duration. Runtime content actors are absent. RC possession, action bar and attacks against other toys remain unresolved; no ordinary noncontrolled actor or generic banner/control substitute. |
+|194 Wormhole Generator: Shadowlands172924/324031 | Source47 summon169501/property3539,5000ms cast/300000ms duration and900000ms item/spell recovery. Runtime content169501 is absent; source29886/scale1/weight0 has npcflag0/empty AI/script. Portal metadata does not implement authored point selection/eligibility/transport; no invented destinations or copied Pandaria random teleport. |
+
+`rows190-194-{readonly-source,action-source}.json` retains exact roots, properties/durations, visual branches and actual runtime-content/source actor/model rows. Only190 acceptance/spec changed;191–194 remain named action/control/service gaps. No runtime-policy/importer/canonical/data changes, extra publication or full-Toy/native/master recertification.
+
+## Source185–189: midday source acceptance and interactive boundaries (2026-10-17)
+
+187 Jar of Sunwarmed Sand170380/304369 has existing self screen-effect260/misc1719/7 and7200000ms aura with86400000ms item recovery. Test/spec9ec632d3a extends the existing Shadescale180 actual-learning/aura/replication/cancel fixture to this second source and checks both reported recoveries remain spent after cancellation. The expanded source fixture plus feather-fall, cosmetic/script and five-ID disguise controls pass4/4 zero ignored57.78s after a single26m32s cold native-slot compile. Native package/tests check3m04s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `midday187-proof-ledger.json` records exact commands/revision and code scope; no duplicate run or reset. No production patch, invented RED, native midday certificate or full two-hour/24-hour passage proof.
 
 | Source row | Exact retained source boundary and proof level |
 |---|---|
@@ -11,7 +37,7 @@
 |188 Memento of the Deeps170469/304550 | Source47 summon156074/property1362/120000ms actor,3600000ms item recovery; published runtime content156074 is absent. Source92601/scale1/weight0 and faction0/npcflag0/empty AI/script are metadata, not the described interact-to-recall-allies action. No generic seashell actor or invented memory interaction. |
 |189 Underlight Sealamp170476/304620 | Existing runtime156086/92605/DisplayScale0.35, source47/property1362/180000ms and3600000ms item recovery. Retain prior actual-learning/source-scale CPU proof and both-skin native meshes/root0.35/no pet frame, state-kit ground attachment and natural180-second removal witnesses below. This revisit adds no new lamp test/native certificate or speculative gameplay. |
 
-Exact roots, durations/properties/visual fields and distinct actual runtime-content/source actor/model rows are retained in `rows185-189-{readonly-source,action-source}.json`. No new data/importer/runtime-policy/canonical publication;189's historical native scope and187's pending targeted scope remain separate.
+Exact roots, durations/properties/visual fields and distinct actual runtime-content/source actor/model rows are retained in `rows185-189-{readonly-source,action-source}.json`. No new data/importer/runtime-policy/canonical publication;189's historical native scope and187's new bounded CPU acceptance remain separate.
 
 ## Source180–184: retained midnight/sign proof and equipment gaps (2026-10-17)
 
