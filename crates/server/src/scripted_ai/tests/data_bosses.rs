@@ -13,6 +13,8 @@ mod gnomeregan;
 mod group_criteria;
 #[path = "landslide.rs"]
 mod landslide;
+#[path = "landslide_seed_probe.rs"]
+mod landslide_seed_probe;
 #[path = "maraudon.rs"]
 mod maraudon;
 #[path = "noxxion.rs"]
