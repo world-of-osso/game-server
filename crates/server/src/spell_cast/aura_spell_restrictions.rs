@@ -1,7 +1,8 @@
-//! Native aura-spell refs; TC Spell.cpp5881–5883/SpellInfo.cpp2510.
+//! Native aura references/types; TC Spell.cpp5881–5883/SpellInfo.cpp2510–2517.
 use bevy::prelude::*;
 
 use super::CastFailure;
+use crate::auras::ActiveAuras;
 use crate::spell_info::SpellInfo;
 
 pub(super) fn check_caster(
@@ -33,6 +34,15 @@ pub(super) fn check_target(
     };
     let excluded = restrictions.exclude_target_aura_spell;
     if excluded != 0 && crate::auras::has_aura(world, target, excluded) {
+        return Err(CastFailure::TargetAuraState);
+    }
+    let auras = world.get::<ActiveAuras>(target);
+    let required_type = restrictions.target_aura_type;
+    if required_type != 0 && !auras.is_some_and(|auras| auras.has_type(required_type)) {
+        return Err(CastFailure::TargetAuraState);
+    }
+    let excluded_type = restrictions.exclude_target_aura_type;
+    if excluded_type != 0 && auras.is_some_and(|auras| auras.has_type(excluded_type)) {
         return Err(CastFailure::TargetAuraState);
     }
     Ok(())
