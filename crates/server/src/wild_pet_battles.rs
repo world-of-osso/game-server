@@ -119,6 +119,8 @@ impl WildCatalog {
             States::new(),
         )?;
         pet.health = health;
+        pet.states
+            .insert(self.turns.state_id("Is_Dead")?, i32::from(health <= 0));
         Ok(pet)
     }
 }

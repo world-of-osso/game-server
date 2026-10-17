@@ -1,10 +1,10 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "4fbe6e59",
+  "validator_revision": "a7dfb33e",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1756,
+  "admitted_effect_rows": 1760,
   "effect_rows": 2829,
-  "admitted_abilities": 1006,
+  "admitted_abilities": 1008,
   "abilities": 1404,
   "properties": [
     {
@@ -1451,16 +1451,11 @@
       "rejected_graph_effect_ids": []
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 4,
+      "handler": true,
       "property": 112,
       "rows": 4,
-      "rejected_graph_effect_ids": [
-        4328,
-        4329,
-        4330,
-        4331
-      ]
+      "rejected_graph_effect_ids": []
     },
     {
       "admitted_rows": 2,
@@ -2336,8 +2331,6 @@
     3878,
     3884,
     3885,
-    3889,
-    3890,
     3892,
     3893,
     3898,
@@ -2749,8 +2742,6 @@
     "2337": "unsupported property 374 at effect 4306",
     "2342": "ability 2343: unsupported aura state 314 Critical_Damage_Bonus",
     "2343": "ability 2343: unsupported aura state 314 Critical_Damage_Bonus",
-    "2347": "unsupported property 112 at effect 4328",
-    "2348": "unsupported property 112 at effect 4330",
     "2349": "ability 2350: unsupported aura state 316 Weather_Toxic_Gas",
     "2350": "ability 2350: unsupported aura state 316 Weather_Toxic_Gas",
     "2351": "ability 2351: undetermined team target routing",

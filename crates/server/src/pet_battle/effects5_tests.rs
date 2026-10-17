@@ -1,6 +1,99 @@
 use super::effects2_tests::use_ability;
 use super::*;
 
+#[test]
+fn pet_battle_bench_resurrection_revives_only_dead_reserves_for_every_active_slot() {
+    let c = catalog();
+    let dead = c.state_id("Is_Dead").unwrap();
+    for ability in [2347, 2348] {
+        for active in 0..3 {
+            let mut b = battle(&c, 7, 7, [ability, 110, 123]);
+            b.teams[0].active = active;
+            for slot in 0..3 {
+                let pet = &mut b.teams[0].pets[slot];
+                if slot != active {
+                    pet.stats.health = 10003;
+                    pet.health = 0;
+                    pet.states.insert(dead, 1);
+                }
+            }
+            let (b, events) = use_ability(&b, &c, ability);
+            let revived: Vec<_> = events
+                .iter()
+                .filter_map(|event| match event {
+                    Event::Revived(pet) => Some(*pet),
+                    _ => None,
+                })
+                .collect();
+            let reserves: Vec<_> = (0..3)
+                .filter(|slot| *slot != active)
+                .map(|slot| PetRef { team: 0, slot })
+                .collect();
+            assert_eq!(revived, reserves, "ability {ability}, active {active}");
+            assert_eq!(b.teams[0].pets[active].health, 10000);
+            for reserve in reserves {
+                assert_eq!(b.pet(reserve).health, 500);
+                assert_eq!(b.pet(reserve).state(dead), 0);
+            }
+            assert!(b.teams[1].pets.iter().all(|pet| pet.health == 10000));
+        }
+    }
+}
+
+#[test]
+fn pet_battle_bench_resurrection_does_not_heal_living_reserve() {
+    let c = catalog();
+    let dead = c.state_id("Is_Dead").unwrap();
+    for ability in [2347, 2348] {
+        let mut b = battle(&c, 7, 7, [ability, 110, 123]);
+        b.teams[0].pets[1].health = 37;
+        b.teams[0].pets[2].health = 0;
+        b.teams[0].pets[2].states.insert(dead, 1);
+        let (b, events) = use_ability(&b, &c, ability);
+        assert_eq!(b.teams[0].pets[1].health, 37);
+        assert_eq!(b.teams[0].pets[2].health, 500);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| matches!(event, Event::Revived(_)))
+                .count(),
+            1
+        );
+    }
+}
+
+#[test]
+fn pet_battle_bench_resurrection_survives_old_undead_clock_without_resetting_passive() {
+    let c = catalog();
+    let dead = c.state_id("Is_Dead").unwrap();
+    let mut b = battle(&c, 6, 7, [2347, 110, 123]);
+    let reserve = PetRef { team: 0, slot: 1 };
+    let pet = b.pet_mut(reserve);
+    pet.health = 0;
+    pet.states.insert(dead, 1);
+    pet.resurrection_used = true;
+    pet.undead_expires = Some(2);
+    let mut b = use_ability(&b, &c, 2347).0;
+    b = b
+        .step(&c, [Action::Pass; 2], &mut Fixed(500_000))
+        .unwrap()
+        .0;
+    assert_eq!(
+        b.pet(reserve).health,
+        500,
+        "old expiry cannot kill an explicit revival"
+    );
+    assert!(
+        b.pet(reserve).resurrection_used,
+        "family passive is once per battle"
+    );
+    let (b, _) = b
+        .step(&c, [Action::Swap(1), Action::Pass], &mut Fixed(500_000))
+        .unwrap();
+    let (_, events) = use_ability(&b, &c, 110);
+    assert_eq!(damage(&events), vec![120], "revived reserve is usable");
+}
+
 const TWO_WAY_WALLS: [(u32, u32); 7] = [
     (325, 326),
     (433, 434),
