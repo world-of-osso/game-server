@@ -76,9 +76,16 @@ fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() 
 fn azure_leymor_sprouts_starts_at_three_seconds_with_native_cast_time() {
     const SPROUTS: u32 = 374364;
     let (mut h, leymor) = wake_leymor();
+    let sprouts_casts = |h: &Harness| {
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .filter(|go| go.caster == leymor.to_bits() && go.spell_id == SPROUTS)
+            .count()
+    };
     h.engage(leymor);
     h.advance(2.8);
-    assert_eq!(h.casts(0, leymor, SPROUTS), 0);
+    assert_eq!(sprouts_casts(&h), 0);
     h.advance(0.3);
     let cast = h
         .app
@@ -88,5 +95,10 @@ fn azure_leymor_sprouts_starts_at_three_seconds_with_native_cast_time() {
     assert_eq!(cast.spell_id, SPROUTS);
     let remaining = cast.duration - cast.elapsed;
     h.advance(remaining + 0.2);
-    assert_eq!(h.casts(0, leymor, SPROUTS), 1);
+    assert_eq!(sprouts_casts(&h), 1, "completed native self-cast receipt");
+    assert!(h.inbox(0).spell_gos.iter().any(|go| {
+        go.caster == leymor.to_bits()
+            && go.spell_id == SPROUTS
+            && go.target == Some(leymor.to_bits())
+    }));
 }
