@@ -12,6 +12,7 @@
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Refuge Critter shields223](systems/pet-battle-engine.md#refuge223--2026-10-16) — bounded1344, original caster/explicit friendly wearer and independent Block759; RED→GREEN9, strict both-skin native blocks/non-Critter damage, final lib104/wild-PvP24/UI12/check pass.
 - [Same-species pet damage370](systems/pet-battle-engine.md#same-species-damage370--2026-10-16) — explicit owned/wild identity and bounded2283; RED→GREEN6, strict both-skin85/77 and bounded final gates.
 - [Bench pet resurrection112](systems/pet-battle-engine.md#bench-resurrection112--2026-10-16) — bounded2347/2348, real persisted-dead-state boundary, RED4→GREEN4 and both-skin2347; native2348 remains unproved.
 - [Azure Leymor intro](investigations/follower-data.md#azure-leymor-intro--2026-10-16) — authored groupAI0 depletion, one-second wake/copy lifetime and NPC immunity predicate; five intro +Brand3/Frost6 controls pass14/14, scopedcheck pending; full phases/native70448 acceptance open.
@@ -37,6 +38,10 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16) — two authentic identities, real5759 area/cursor pair/300s lifecycle and147 Toy tests; canonical publication/native body/target-dummy combat separate.
+
+- [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16) — actual persisted bind/source10s cast/shared2309 charge;146 Toy tests pass, procedural native appearance and cross-map/wall-recharge separate.
+
 - [Corgi and Rezan source boundaries](systems/toys.md#corgi-and-rezan-source-boundaries-2026-10-16) — viewer233 learned-use and audited roar RED→GREEN/source sound-animation; Chili/Enthralling and native playback/rendering remain separate.
 
 - [Stampwhistle assistant/mailbox](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16) — authentic132969/Assistant35 mailbox service/600s simulation expiry;143 Toy+49 affected+3 importer controls pass, canonical template publication/native rendering separate.
@@ -523,3 +528,11 @@ Debug logs and root cause analyses.
 - [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
 
 - [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — controlled source clocks/effects/fixed death spirit/credit GREEN and actual TDB Normal projection; extra attacks remain unsupported.
+
+- [Gargolmar runtime and charge gap](systems/boss-scripts.md#ramparts-gargolmar-runtime--2026-10-16) — source clocks/reset/credit, real Watcher response; distant effect96 impact remains RED.
+
+- [Omor source preparation](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) — actual orbital server-side spells and hound base0, no invented Normal row; runtime pending.
+
+- [Landslide deterministic admission clock](systems/boss-scripts.md#landslide-deterministic-admission-clock--2026-10-16) — real seed104 RED, source cooldown rejection versus request timing; no timer/tolerance change.
+
+- [SAI protected clock samples](systems/boss-scripts.md#sai-protected-clock-samples--2026-10-16) — actual Vyletongue RED isolates dropped50ms endpoint evidence; no production/tolerance change.
