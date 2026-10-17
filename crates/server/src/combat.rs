@@ -313,7 +313,11 @@ type RetargetedCreatures<'w, 's> = Query<
     'w,
     's,
     (Entity, &'static CombatTarget, Option<&'static AutoAttack>),
-    (Changed<CombatTarget>, Without<Player>),
+    (
+        Changed<CombatTarget>,
+        Without<Player>,
+        Without<crate::scripted_ai::caster_chase::CasterChase>,
+    ),
 >;
 
 /// A creature's AI attacks by setting its `CombatTarget` (`Unit::Attack`, which

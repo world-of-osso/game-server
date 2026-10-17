@@ -2,6 +2,22 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source companion/healer/corpse/music boundaries (2026-10-17)
+
+[Source130–134 matrix](../../toy-effects14-coverage.md#source130134-companionweaponhealercorpsemusic-boundaries-2026-10-17) preserves the owned-critter riding target, procedural anchor weapon, Brynja viewer payload versus healer service, fallen-ally forced-child semantics and missing music-box publication/behavior. Actual TDB music-box body resolves to the existing chest01b model; that does not authorize invented presentation/audio. No runtime/data changes or new acceptance claims.
+
+## Noble Gardener and source anchor boundary (2026-10-17)
+
+Noble Gardener125 now has the actual saved-bind/shared2309 contract alongside four prior holiday roots. Citizens126 remains refused at the source child's permanent Personal Anchor dummy; its new actual-learning refusal test proves no partial actor/effect or recovery spending, not a successful summon. [Exact source124–129 matrix and retained proof scopes](../../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17) distinguish these from native garment/surfing/zero-entry/script appearance gaps. No production admission.
+
+## Scarab source scatter metric (2026-10-17)
+
+The first guardian retains the exact selected destination; secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
+
+## Dragon costume simulation lifecycle (2026-10-17)
+
+Six already-authentic dragon costumes now have actual learned-use/source-display acceptance through ordinary fifteen-minute expiry/restoration and natural recovery/reuse. [Exact118–123 identities, eight-test bounded proof and fixture-failure distinction](../../toy-effects14-coverage.md#source118123-dragon-costume-simulation-lifecycle-2026-10-17) separate simulation state from unproved native costume/group presentation. Production and canonical data unchanged.
+
 ## Oomgut source transform lifecycle (2026-10-17)
 
 Actual163795 learned use already works with132902; new test proves source display membership, ten-minute ordinary-frame expiry/model restoration and reported two-hour recovery remaining active afterward. No production patch or invented RED. [Exact scoped14-case proof and exclusions](../../toy-effects14-coverage.md#oomgut104-existing-transform-lifecycle-2026-10-17) distinguish simulation acceptance from all17 native appearances and wall-clock recovery. [105–108 boundaries](../../toy-effects14-coverage.md#source105108-controlheadwearbanner-boundaries-2026-10-17) retain RC possession/headwear gaps and prior Hero Banner proof.

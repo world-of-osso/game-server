@@ -1559,7 +1559,13 @@ fn load_criteria_facts(
             30 => small
                 .filter(|kind| (1..=15).contains(kind))
                 .map(CriteriaFact::KilledCreatureType),
-            67 => node_counts::required_owned_nodes(asset).map(CriteriaFact::EitherTeamNodeCount),
+            67 => match node_counts::constant_expression(asset) {
+                Some(true) => continue, // Proven literal truth needs no live world-state authority.
+                Some(false) => return Ok(None),
+                None => {
+                    node_counts::required_owned_nodes(asset).map(CriteriaFact::EitherTeamNodeCount)
+                }
+            },
             78 => load_battle_pet_type_fact(conn, asset)?,
             46 => small
                 .filter(|percent| (1..=100).contains(percent))

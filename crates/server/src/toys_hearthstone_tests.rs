@@ -95,3 +95,8 @@ fn toyfx116_lunar_elder_hearthstone_learned_use_returns_to_bind_and_blocks_peddl
 fn toyfx117_peddlefeet_hearthstone_learned_use_returns_to_bind_and_blocks_lunar_elder() {
     assert_toy_hearthstone_bind_and_shared_charge(165670, 285424, 165669);
 }
+
+#[test]
+fn toyfx125_noble_gardener_hearthstone_learned_use_returns_to_bind_and_blocks_lunar_elder() {
+    assert_toy_hearthstone_bind_and_shared_charge(165802, 286031, 165669);
+}

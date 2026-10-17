@@ -142,6 +142,9 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+pub(crate) mod mobile_banking;
+#[cfg(test)]
+mod mobile_banking_tests;
 #[cfg(test)]
 mod normal_allow_dead_target_tests;
 pub(crate) mod omor_orbital;
@@ -1604,6 +1607,7 @@ fn validate_start(
     toy_area::check_cast(world, caster, spell.id)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
+    mobile_banking::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
     if !ignore_cast_in_progress && world.get::<CastState>(caster).is_some() {
@@ -2116,6 +2120,7 @@ pub(crate) fn execute_cast(
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
     check_ordinary_caster_life(world, caster, spell)?;
+    mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
@@ -2999,6 +3004,11 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .cooldowns
         .as_ref()
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let base_recovery_ms = if spell.id == mobile_banking::MOBILE_BANKING {
+        shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
+    } else {
+        base_recovery_ms
+    };
     let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
     let cooldown = |base: u32| {
@@ -3320,6 +3330,8 @@ mod new_class_tests;
 mod optional_flat_cost_tests;
 #[cfg(test)]
 mod override_queue_tests;
+#[cfg(test)]
+mod power_drain_tests;
 #[cfg(test)]
 mod queue_tests;
 #[cfg(test)]
