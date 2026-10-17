@@ -69,6 +69,7 @@ pub enum Event {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pet {
+    pub species: u32,
     pub stats: Stats,
     /// Unmodified maximum health; weather changes the published stats.health cap.
     pub base_health: i32,
@@ -87,14 +88,18 @@ pub struct Pet {
     pub acted_round: u32,
 }
 impl Pet {
-    /// Encounter/journal caller supplies validated family and equipped abilities.
+    /// Encounter/journal caller supplies species identity, family and equipped abilities.
     pub fn new(
         catalog: &Catalog,
+        species: u32,
         stats: Stats,
         family: usize,
         abilities: [u32; 3],
         mut states: States,
     ) -> Result<Self, String> {
+        if !catalog.species_states.contains_key(&species) {
+            return Err(format!("unknown battle pet species {species}"));
+        }
         if family >= 10 || stats.health <= 0 || stats.power < 0 || stats.speed < 0 {
             return Err("invalid pet stats/family".into());
         }
@@ -120,6 +125,7 @@ impl Pet {
             .entry(catalog.state_id("Stat_CritChance")?)
             .or_insert(5);
         Ok(Self {
+            species,
             stats,
             base_health: stats.health,
             health: stats.health,

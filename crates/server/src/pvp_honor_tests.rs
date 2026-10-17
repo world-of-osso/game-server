@@ -34,6 +34,15 @@ fn honor_kill_mirrors_xp_into_wallet_under_world_of_osso_policy() {
     // TC ceil(30 * 1.55) =47; HONOR_WALLET_MIRRORS_HONOR_XP binds the same N to1792.
     let progress = serialized_progress(&world, killer);
     assert_eq!(progress["lifetime_honor_xp"], 47);
+    assert_eq!(
+        world
+            .get::<crate::achievement::PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&63413),
+        Some(&1),
+        "eligible kill credits authored type35 independently of wallet/XP"
+    );
     assert!(
         progress["honor_level"].is_null(),
         "HONOR_LEVEL_XP_CURVE gap"

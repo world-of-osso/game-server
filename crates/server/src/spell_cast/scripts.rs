@@ -743,7 +743,7 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
     let (charges, remaining_ms) =
         reduce_running_timers(&mut history, charge_category, spell_id, now, seconds);
     if let Some(charges) = charges {
-        super::send_charges(world, caster, &charges, now);
+        super::send_to_owner(world, caster, charges);
     }
     if let Some(remaining_ms) = remaining_ms {
         send_reduced_cooldown(world, caster, spell_id, remaining_ms);
@@ -756,15 +756,14 @@ fn reduce_running_timers(
     spell_id: u32,
     now: f64,
     seconds: f64,
-) -> (Option<super::ChargeState>, Option<u32>) {
+) -> (Option<shared::protocol::SpellChargesUpdate>, Option<u32>) {
     let charges = history
         .charges
         .get_mut(&charge_category)
-        .filter(|charges| charges.used > 0)
+        .filter(|charges| charges.used() > 0)
         .map(|charges| {
-            charges.next_ready_at -= seconds;
-            charges.refresh(now);
-            *charges
+            charges.reduce_recovery(now, seconds);
+            charges.snapshot(now)
         });
     let remaining_ms = history
         .spell_ready_at

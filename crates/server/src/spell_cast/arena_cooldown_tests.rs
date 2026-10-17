@@ -139,9 +139,12 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
             spell_id: 1,
             category: 10,
             max: 2,
-            used: 1,
-            recharge_secs: 15.0,
-            next_ready_at: 15.0,
+            recovery_ms: 15_000.0,
+            recovery_mult: 1.0,
+            pending: std::collections::VecDeque::from([super::ChargeRecovery {
+                recovery_ms: 15_000.0,
+                ready_at: 15.0,
+            }]),
             fully_ready_at: 15.0,
         },
     );
@@ -157,7 +160,8 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
         );
     }
     assert_eq!(
-        history.charges[&10].used, 1,
+        history.charges[&10].used(),
+        1,
         "TC cooldown reset does not reset charges"
     );
     assert_eq!(history.gcd_ready_at[&133], 5.0);
