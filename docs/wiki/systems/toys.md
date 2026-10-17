@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source vesper/transport boundaries and pending offering-kit acceptance (2026-10-17)
+
+[Source275–279 matrix](../../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17) records three distinct mixed actor/caster Vesper identities/scales and Whistle fast/tired transport/area gaps.279 has an exact existing create-item product187342/count1/source2s/item30s contract; actual learned-use/persisted-inventory acceptance is drafted externally and awaits240 compile completion before code changes. Source naming differs from runtime item name, so retain the exact ID. No shared Vesper/transport shortcut, wrapping/gifting claim, new runtime/data admission or positive proof.
+
 ## Source mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
 
 [Source270–274 matrix](../../toy-effects14-coverage.md#source270274-mirrorfatemixed-guiseshadowdead-party-boundaries-2026-10-17) retains action-copy mirror/movement removal, authentic rune fate output, mixed Changeling transform/-45/312 payload, selected-player shadow child and recently-deceased party judgment gaps. Existing176673/two-model appearance is not ordinary-disguise acceptance for a mixed graph; target35 is party, not a generic enemy corpse. No actor/model/payload substitution, runtime/data admission or new positive proof.
