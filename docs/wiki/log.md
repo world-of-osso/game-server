@@ -1,6 +1,6 @@
 ## 2026-10-17 — Life Exchange health redistribution
 
-[Bounded67](../pet-battle-effect-coverage.md#life-exchange67--implementation2026-10-17): direct active HP averaging/caps/miss conservation, no invented attack-power or callback behavior. Actual unsupported67 RED3→GREEN4;1778/2829 rows/1016 graphs. Native/final gates pending; independent Retail rounding/feedback remains unproved.
+[Bounded67](../pet-battle-effect-coverage.md#life-exchange67--implementation2026-10-17): direct active HP averaging/caps/miss conservation, no invented attack-power or callback behavior. Actual unsupported67 RED3→GREEN4;1778/2829 rows/1016 graphs. Owned/wild-PvP28 and fresh native builds pass. Tormented Spirit strict loader passes but its scale1.0 humanoid fails Modern viewport framing before cast/capture; camera/scale contract preserved, legal native subject switches to Sprite Darter87/15/slot2 with existing canonical6/6 closure. Native/final gates pending; independent Retail rounding/feedback remains unproved.
 
 ## 2026-10-17 — Launch Rocket setup and launch
 
