@@ -1,6 +1,35 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_constant67_false_literal_never_credits_a_real_kill_definition() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            race: 1,
+            class: 1,
+            level: 90,
+            map: 568,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    for _ in 0..2 {
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::KillCreature(23863),
+            None,
+            1,
+            &conditions,
+        );
+    }
+    assert!(
+        !state.criteria_progress.contains_key(&3255),
+        "authored3785 is0==1, not an absent world-state value or an omitted qualifier"
+    );
+}
+
+#[test]
 fn achievements_criteria_honor_area31_authored_ancestry_does_not_enable_timers() {
     let catalog = catalog();
     // Real child12213 of10458. Its timed criterion46725 is outside achievement roots.
@@ -1453,9 +1482,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Active70448: all three area31 roots retain full authored thresholds.
+    // Active70448: literal67 adds21 ordinary roots; false3785 remains impossible.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5544);
+    assert_eq!(union.len(), 5565);
+    for id in [11700, 12847, 12878, 12884, 63240] {
+        assert!(union.contains(&id), "source-true literal67 root{id}");
+    }
     for id in [238, 239, 509, 512, 513, 515, 516, 869, 870, 5363, 39935] {
         assert!(union.contains(&id), "full authored lifetime113 root{id}");
     }
