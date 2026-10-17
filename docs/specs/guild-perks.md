@@ -24,6 +24,8 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 ## Tests asserting this spec
 
+- `spell_cast::charge_snapshot_tests::guild_hasty_hearth_...` — four actual-spell controls cover isolated30/15/30-minute recovery, consumed-clock preservation, and Human458619 mixed25/10/25-minute queued uses. Ten existing rate and three snapshot controls also pass.
+
 - `auras::mount_tests::guild_mount_up_...` — three real-data controls cover ground/flight grants and revocation, stronger Crusader Aura without stacking/swim leakage, and installed battleground/arena map suppression/restoration.
 
 - `class_progression::tests::guild_perks_real_membership_grants_rebuilds_revokes_and_reopens_without_touching_class_spells` — real persisted invite acceptance/quit, knowledge, owner messages, spec rebuild and reopen.
@@ -32,17 +34,25 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 
 - [x] Real persisted join, changed specialization, quit and fresh-process class-knowledge test GREEN1/1 at serveree29a3bd/protoe50b02c.
 - [x] Existing-member login, online forced removal/rejoin and offline removal/reopen controls GREEN2/2 at5dd1cfa9.
-- [ ] Supported Mount Up172/211 requires its separate landing gate;210 remains a named blocked context. Hasty Hearth, Mobile Banking and Quick/Dead remain separately qualified. Guild Mail has a real same-guild zero-delay control.
+- [x] Supported Mount Up172/211 and map suppression landed;210 remains a named blocked context.
+- [ ] Hasty Hearth, Mobile Banking and Quick/Dead remain separately qualified. Guild Mail has a real same-guild zero-delay control.
 - [x] Bounded catalog/membership/UI slice landed; actual UDP invitation/removal/rejoin/quit and native fresh-process owner readback passed.
 
 ## Out of scope
 
 Guild rewards/reputation eligibility and invitation tabards are separate slices. Missing effect support stays explicit rather than being claimed from a known spell ID.
 
-## Active effect slice: Mount Up
+## Active effect slice: Hasty Hearth
+
+- [x] Actual Hearthstone8690 consumes charge category2309:1800000ms without83944,900000ms with its authored453/-900000ms passive; revocation restores future uses.
+- [x] Joining or leaving does not retime an already-consumed Hearthstone charge (TC SpellAuraEffects.cpp525 and SpellHistory.cpp834–853).
+- [x] Preserve actual Human458619: two charges,25-minute nonmember/10-minute guild consumption. Mixed queued uses retain their own durations through join/removal; no racial knowledge is removed to simplify the fixture.
+- [ ] Actual native membership/cast/charge receipts establish both-skin behavior; catalog knowledge alone is insufficient.
+
+## Supported effect slice: Mount Up
 
 - [x] Actual78633 grants10% mounted run/flight speed through authored172/211 effects, with strongest-positive nonstacking semantics (TC Unit.cpp8812–8854). Revocation restores the mounted baseline without removing the mount.
 - [ ] **Blocked by explicit lead decision:**210 applies only to player-controlled NPC flight (TC Unit.cpp8833–8844). The local authored vehicle runtime is ground IoC Demolishers; no flying context is fabricated or applied to the mounted player. This is not part of the supported172/211 completion claim.
 - [x] Source Attr4/8 arena/battleground restrictions suppress the passive effect while preserving knowledge and restore it on leaving.
-- [ ] Real native mounted/unmounted and guild-removal proof; do not claim effect completion from visible rows or known IDs.
+- [x] Real native mounted/unmounted movement and guild-removal proof passes both skins: seven coherent actual samples each. Ten inspected mounted originals selected; four wall/tree-occluded removed-ground/unmounted frames are not claimed as pixel proof.
 
