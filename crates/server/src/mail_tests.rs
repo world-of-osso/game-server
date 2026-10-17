@@ -13,6 +13,98 @@ use crate::persistence::mail_store::{MailData, MailItemData, MailSender, load_ma
 const DAY: u64 = 86_400;
 
 #[test]
+fn toyfx66_katy_source_mailbox_npc_opens_mail_and_sends_without_gossip_substitution() {
+    use shared::components::{Health, Npc, Position, UnitFactionTemplate};
+    use shared::protocol::{
+        InteractNpc, InteractionChannel, InteractionKind, InteractionOpened, NpcFlags, NpcRole,
+    };
+    let mut h = harness().unwrap();
+    let recipient = h.create_alt("Katymailb");
+    h.set_gold(100);
+    let flags: u64 = h
+        .conn
+        .query_row(
+            "SELECT npcflag FROM tdb_creature_template WHERE entry=132969",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(flags, NpcFlags::MAILBOX | NpcFlags::GOSSIP);
+    let katy = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 132969,
+                name: "Katy Stampwhistle".into(),
+            },
+            NpcFlags(flags),
+            Position {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitFactionTemplate(35),
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    h.send::<_, InteractionChannel>(InteractNpc {
+        npc: katy.to_bits(),
+    });
+    assert!(
+        h.take::<InteractionOpened>()
+            .iter()
+            .any(|opened| opened.npc == katy.to_bits()
+                && opened.kind == InteractionKind::Role(NpcRole::Mailbox)),
+        "authentic mailbox flag opens mail, not an invented gossip option"
+    );
+    // As with the existing game-object fixture, contents follow the role by one frame.
+    h.app.update();
+    let contents = h.take::<MailboxContents>();
+    assert!(
+        contents
+            .iter()
+            .any(|mailbox| mailbox.object == katy.to_bits() && mailbox.mails.is_empty()),
+        "contents={contents:?}, active={:?}",
+        h.app
+            .world()
+            .get::<crate::npc_interaction::ActiveInteraction>(h.connection)
+    );
+    send(&mut h, katy, letter("Katymailb"));
+    assert!(failures(&mut h).is_empty());
+    let mails = load_mailbox(h.db(), recipient);
+    assert_eq!(mails.len(), 1);
+    assert_eq!(mails[0].subject, "Linen");
+    assert_eq!(h.gold(), 70);
+    h.move_player(30.0);
+    send(&mut h, katy, letter("Katymailb"));
+    assert!(failures(&mut h).contains(&MailError::NotInteracting));
+    assert_eq!(load_mailbox(h.db(), recipient).len(), 1);
+    assert_eq!(h.gold(), 70);
+    h.move_player(0.0);
+    h.send::<_, InteractionChannel>(InteractNpc {
+        npc: katy.to_bits(),
+    });
+    assert!(
+        h.take::<InteractionOpened>()
+            .iter()
+            .any(|opened| opened.kind == InteractionKind::Role(NpcRole::Mailbox))
+    );
+    h.app.world_mut().get_mut::<Health>(katy).unwrap().current = 0.0;
+    for _ in 0..3 {
+        h.app.update();
+    }
+    send(&mut h, katy, letter("Katymailb"));
+    assert!(failures(&mut h).contains(&MailError::NotInteracting));
+    assert_eq!(load_mailbox(h.db(), recipient).len(), 1);
+    assert_eq!(h.gold(), 70);
+}
+
+#[test]
 fn achievements_criteria_postage_and_most_money_follow_committed_mail_not_requests() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState};
     let file = tempfile::NamedTempFile::new().unwrap();

@@ -1,3 +1,10 @@
+## 2026-10-16 — Bench pet resurrection112
+
+[Sourced Raise Dead/Mass Resurrection](../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16): four actual112 rows, inactive-slot routing and zero-HP owned-load state. RED3+persisted-redb1→GREEN4;1756→1760/2829 rows (62.07→62.21%),1006→1008 graphs. Both-skin private5961 actual2347 shows both78/1563 reserves, pointer swap and real147-damage win; eight fullHD originals inspected. Canonical78-asset closure/strict loader readback and final lib91/wild-PvP22/UI12/check/fmt pass; stale sibling `/hug` compilation drift resolved by lead-authorized fast-forward, no gameplay patch. Generic resurrection semantics remain gated.
+
+## 2026-10-16 — Azure finite Frost Bomb chain
+
+[Source and proof boundary](investigations/follower-data.md#azure-frost-bomb--2026-10-16): source-timed native Telash186737/205 genuine2RED (initial0.1s run invalid), then exact misplaced-ground RED;386781→386881 expiry-only387149+386910 and target-derived destination now pass6 native+3 adjacent controls, including the arena control with its existing fixture env. Scoped check/fmt and independent source/artifact gates pass; native pixels remain separate. No boss phases or unbound ground actions inferred; private225-actor import preserves canonical/Stockade proof snapshots.
 ## 2026-10-16 — Two-way pet-wall150 charges
 
 [Seven source-qualified pairs](../pet-battle-effect-coverage.md#two-way-walls150--bounded-proof2026-10-16): actual unsupported150 RED6→GREEN88, canonical journal3/wild12/PvP9 and check/fmt;1749→1756/2829 rows (61.82→62.07%),993→1006 graphs. Both-skin private5961 Ice Barrier479 physically blocks incoming then outgoing attacks, expires, and exposes subsequent45/65critical damage; six fullHD originals inspected. Conditional123/126 is bounded to six auras; Onyx, multi-wall order and exact Retail/VFX feedback remain gaps. Subject model/texture receipts match the current local root; owned-process cleanup passes.
@@ -15,6 +22,10 @@
 ## 2026-10-15 — Read-only follower group reward receipts
 
 - 2026-10-16: [Arena residual](investigations/slow-native-test-fixtures.md#arena-residual-bounded-independent-fixtures-2026-10-16): LEAD-approved cap4 workers; all sixteen native cases pass52.70s with unchanged assertions/frames/50msstep; sampled CPU113.70s versus52.90s wall, full-suite separate.
+## 2026-10-16 — Stampwhistle source assistant and mailbox
+
+[Katy156833](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16): genuine importer/template, journal Assistant35 and NPC mailbox REDs; preserve actual default TempSummon flags/faction instead of owned-pet sanitization. Ordinary mail service sends real persisted letters and keeps distance/death guards; full600s summoned lifecycle and service pass2/2 after per-frame transient-message fixture correction. Whole-Toy143/143, affected mail/NPC/summon49/49, importer controls3/3, check/fmt pass. Canonical370 still refuses missing132969; prepared392 is classification, not completed toys. No canonical/native-rendering claim.
+
 ## 2026-10-16 — Sightless detection consumer
 
 [Sightless153293](systems/toys.md#sightless-detection-consumer-2026-10-16): journal RED rejects152 despite an existing native target-detected-range consumer. Real hostile12yd/7yd controls pass before minimal registry admission; actual learning/UseToy plus aggro GREEN2/2 retain source group5454/600s aura/300s recovery and ordinary expiry. Whole-Toy142/142, creature-aggro30/30, binary/tests check and fmt pass; canonical classification369→370 adds only153293. Native delivery/rendering remains separate; remote-view/possession roots unimplemented.
@@ -1660,6 +1671,10 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].
 - 2026-10-16: [Native targeted Hug247](systems/dungeon-achievements.md#native-targeted-hug247); complete qualifiers and native RED→GREEN, census247/1042 only.
 
+- 2026-10-16: Content-tuning participation268 bounded to native15; authored min/max, complete companions, generated5809 and census5519/pinned908+909. Native predicate RED genuine, GREEN pending.
 - 2026-10-16: Bounded dormant detection/resize RED→GREEN and 43 behaviour controls; irrelevant GO collision RED and membership-index implementation recorded in [[server-tick-lag]].
 
+- 2026-10-16: Content268 native/catalog GREEN3/3(13.47s), including100 native controlled flag settlements for both908/909 grants, faction/idle guards and database-reopened original dates. Integrated server9aca3c1a, final gate pending.
+
+- 2026-10-16: Content268 integrated gate at a8d4d866 passes217/0/1existingignored +site1/1; serverworkspace/alltargetcheckEXIT0/noRustwarnings. Native100 grants908/909 and strengthened89participation guard pass; readability/independentartifactPASS.
 - 2026-10-16: Final geometry proof: 50 controls pass, warning-free check, unchanged 187770-creature idle debug sustains 19.9–20.0 ticks/s; detection 1.891 ms/step, resize/collision out of top15; private published-schema refresh recorded in [[server-tick-lag]].

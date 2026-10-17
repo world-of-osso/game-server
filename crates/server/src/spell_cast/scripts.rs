@@ -154,6 +154,9 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
+            Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
+        }
         (crate::seething_parachute::PARACHUTE, 1) => {
             Some(crate::seething_parachute::reset_fall_information)
         }
