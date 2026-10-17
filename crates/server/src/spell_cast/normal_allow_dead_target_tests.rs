@@ -8,6 +8,7 @@ use crate::auras::has_aura;
 const DEATH_TOUCH: u32 = 5;
 const FREEZE: u32 = 9454;
 const FLAME_SHOCK: u32 = 188389;
+const ANCESTRAL_SPIRIT: u32 = 2008;
 const NATURAL_FIXTURE_MANA: f32 = 10_000.0;
 
 fn native_fixture() -> Harness {
@@ -68,6 +69,24 @@ fn native_normal_creature_freeze_still_stuns_living_recipient() {
         .unwrap();
     assert!(has_aura(h.app.world(), h.npc, FREEZE));
     assert!(h.health(h.npc) > 0.0);
+}
+
+#[test]
+fn native_normal_resurrection_still_refuses_living_ally() {
+    let mut h = harness(Vec::new(), &[ANCESTRAL_SPIRIT], 7).unwrap();
+    let target = spawn_player(&mut h.app, 5, 3.0);
+    assert!(super::targets::is_friendly(h.app.world(), h.caster, target));
+    assert!(matches!(
+        super::creature::creature_cast(
+            h.app.world_mut(),
+            h.caster,
+            ANCESTRAL_SPIRIT,
+            Some(target),
+            true,
+        ),
+        Err(super::CastFailure::InvalidTarget)
+    ));
+    assert!(h.health(target) > 0.0);
 }
 
 #[test]
