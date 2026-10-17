@@ -14,13 +14,13 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
             .min_by_key(|row| (row.level, row.ability))
             .map_or(0, |row| row.ability)
     });
-    if species == 2959 {
-        let resurrection = catalog
+    if species == 2621 {
+        let call = catalog
             .species_abilities
             .iter()
-            .find(|row| row.species == species && row.ability == 2347 && row.level <= level)
-            .expect("Authored Raise Dead option must be unlocked");
-        abilities[resurrection.slot as usize] = resurrection.ability;
+            .find(|row| row.species == species && row.ability == 2283 && row.level <= level)
+            .expect("Authored Dragon's Call option must be unlocked");
+        abilities[call.slot as usize] = call.ability;
     }
     abilities
 }
@@ -28,8 +28,8 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
 fn seed_fixture_pets(catalog: &Catalog) -> (PetJournal, BTreeMap<u64, serde_json::Value>) {
     let mut journal = PetJournal::default();
     let mut states = BTreeMap::new();
-    for (guid, species) in [(41, 2959), (42, 39), (43, 39)] {
-        let level = 25;
+    for (guid, species) in [(41, 2621), (42, 2621), (43, 2621)] {
+        let level = 2;
         journal
             .add_with_guid(species, level, PetQuality::Rare, 3, guid)
             .unwrap();
@@ -37,7 +37,7 @@ fn seed_fixture_pets(catalog: &Catalog) -> (PetJournal, BTreeMap<u64, serde_json
         let stats = calculate_stats(catalog, species, 3, 3, level).unwrap();
         states.insert(
             guid,
-            serde_json::json!({"health": if guid == 41 { stats.health } else { 0 }, "selected_abilities": abilities}),
+            serde_json::json!({"health": stats.health, "selected_abilities": abilities}),
         );
     }
     (journal, states)
@@ -81,6 +81,6 @@ fn main() {
     let (journal, states) = seed_fixture_pets(&catalog);
     save_fixture_pets(&journal, &states);
     println!(
-        "Seeded private account1: Micromancer2959 Raise Dead2347 plus two dead Mechanical Squirrel39 reserves; not acquisition proof"
+        "Seeded private account1: three level2 Lil' Nefarian2621 with authored Dragon's Call2283; not acquisition proof"
     );
 }
