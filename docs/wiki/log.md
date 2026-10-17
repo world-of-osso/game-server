@@ -1,10 +1,10 @@
 ## 2026-10-17 — Telash startup prerequisites
 
-[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored pending RED. Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; no Telash production change.
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored after genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; no Telash production change.
 
 ## 2026-10-17 — Leymor native Sprouts destination boundary
 
-[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask destination implementation committed for targeted GREEN; no summon/lifecycle/full70448 acceptance claimed.
+[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask implementation yields one ordinary native parent/fourteen owned children GREEN at8db5f60f on active70448/a0ccc53b. First28-child fixture manually stimulated a second parent; ordinary SpellGo witness corrects this without production changes. Lifecycle/full native70448 acceptance remain open.
 
 ## 2026-10-16 — Eligible victim race53
 
