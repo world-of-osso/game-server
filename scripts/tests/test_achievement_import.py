@@ -1,5 +1,9 @@
 """Build selection and supported-layout import proofs; never downloads."""
 import importlib.util
+import csv
+import hashlib
+import json
+from unittest.mock import patch
 import shutil
 import sqlite3
 import struct
@@ -16,6 +20,53 @@ spec.loader.exec_module(importer)
 
 
 class AchievementImportTests(unittest.TestCase):
+    def test_active_csv_import_preserves_named_tree_flags_and_order_without_raw_db2s(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = root / '12.1.5.70448'
+            directory.mkdir()
+            active = root / 'active'
+            active.symlink_to(directory)
+            info = root / '.build.info'
+            info.write_text('Product!STRING:0|Active!DEC:1|Version!STRING:0\n'
+                            'wow|1|12.1.5.70448\n')
+            receipt = {'identity': {'product': 'wow', 'build': directory.name,
+                                     'build_key': '88d5e8ef05ec5a8446cdec93d142d7c6'}, 'tables': {}}
+            for name, (fdid, layout, _, columns) in importer.TABLES.items():
+                path = directory / f'{name}.csv'
+                names = [column for column, _ in columns]
+                row = {column: '' if column.endswith('_lang') else '0' for column in names}
+                row['ID'] = '4479'
+                if name == 'CriteriaTree':
+                    row.update(Flags='8193', OrderIndex='2', Amount='50', Operator='5')
+                with path.open('w', newline='') as output:
+                    writer = csv.DictWriter(output, fieldnames=list(reversed(names)))
+                    writer.writeheader()
+                    writer.writerow(row)
+                receipt['tables'][name] = {'fdid': fdid, 'layout': f'{layout:08X}',
+                    'rows': 1, 'csv_sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+            (directory / 'receipt.json').write_text(json.dumps(receipt))
+            database = root / 'world.db'
+            with sqlite3.connect(database) as db:
+                db.execute('CREATE TABLE db2_build (table_name TEXT PRIMARY KEY, build TEXT)')
+            error = None
+            with patch.object(importer, 'ACTIVE_DB2', active), patch.object(importer, 'BUILD_INFO', info), patch.object(sys, 'argv', ['import_achievements.py', '--db2-dir', str(active), '--db', str(database)]):
+                try:
+                    importer.main()
+                except FileNotFoundError as failure:
+                    error = failure
+            self.assertIsNone(error, 'active CSV import must not require obsolete raw DB2 exports')
+            with sqlite3.connect(database) as db:
+                self.assertEqual(db.execute('SELECT Flags,OrderIndex,Amount FROM criteria_tree WHERE ID=4479').fetchone(), (8193, 2, 50))
+                self.assertEqual(dict(db.execute('SELECT table_name,build FROM db2_build')),
+                                 dict.fromkeys(importer.SQL_NAMES.values(), directory.name))
+            # Modified CSV bytes cannot be imported under the original receipt.
+            with (directory / 'CriteriaTree.csv').open('a') as output:
+                output.write('\n')
+            with patch.object(importer, 'ACTIVE_DB2', active), patch.object(importer, 'BUILD_INFO', info), patch.object(sys, 'argv', ['import_achievements.py', '--db2-dir', str(active), '--db', str(database)]):
+                with self.assertRaisesRegex(ValueError, 'CriteriaTree.*SHA256'):
+                    importer.main()
+
     def test_active_build_reads_retail_install_and_resolved_active_directory(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
