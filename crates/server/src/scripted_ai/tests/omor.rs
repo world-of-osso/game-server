@@ -480,7 +480,6 @@ fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
 }
 
 #[test]
-#[ignore = "source AttackStartCaster100 hold acceptance pending implementation"]
 fn encounter_coverage_omor_caster_holds_inside_authored_range() {
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
@@ -518,7 +517,6 @@ fn encounter_coverage_omor_caster_holds_inside_authored_range() {
 }
 
 #[test]
-#[ignore = "source AttackStartCaster100 retreat acceptance pending implementation"]
 fn encounter_coverage_omor_caster_retreats_from_contact_without_melee() {
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();

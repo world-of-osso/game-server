@@ -51,7 +51,18 @@ fn advance_caster(world: &mut World, unit: Entity) -> Result<(), String> {
     let target = Entity::from_bits(target);
     let from = crate::spell_cast::targets::position(world, unit).ok_or("caster has no position")?;
     let to = crate::spell_cast::targets::position(world, target).ok_or("victim has no position")?;
-    let paused = world
+    if movement_paused(world, unit) {
+        publish_step(world, unit, from, from, to, 0.0);
+        return Ok(());
+    }
+    let (next, speed) = plan_caster_step(world, unit, target, from, to)?;
+    let next = probe_step(world, unit, from, next)?;
+    publish_step(world, unit, from, next, to, speed);
+    Ok(())
+}
+
+fn movement_paused(world: &World, unit: Entity) -> bool {
+    let casting = world
         .get::<shared::casting::CastState>(unit)
         .is_some_and(|cast| !cast.cast_while_moving)
         || world
@@ -60,10 +71,19 @@ fn advance_caster(world: &mut World, unit: Entity) -> Result<(), String> {
     let multiplier = world
         .get::<crate::auras::AuraStatMods>(unit)
         .map_or(1.0, |mods| mods.movement_speed);
-    if paused || multiplier <= 0.0 {
-        publish_step(world, unit, from, from, to, 0.0);
-        return Ok(());
-    }
+    casting || multiplier <= 0.0
+}
+
+fn plan_caster_step(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+    from: Vec3,
+    to: Vec3,
+) -> Result<(Vec3, f32), String> {
+    let multiplier = world
+        .get::<crate::auras::AuraStatMods>(unit)
+        .map_or(1.0, |mods| mods.movement_speed);
     let reach = super::model_reach::combat_reach(world, unit)
         .ok_or("caster has no sourced combat reach")?
         + super::model_reach::combat_reach(world, target)
@@ -83,9 +103,7 @@ fn advance_caster(world: &mut World, unit: Entity) -> Result<(), String> {
         reach,
         step,
     );
-    let next = probe_step(world, unit, from, next)?;
-    publish_step(world, unit, from, next, to, speed);
-    Ok(())
+    Ok((next, speed))
 }
 
 fn plan_step(
@@ -103,13 +121,7 @@ fn plan_step(
     let distance = from.distance(to);
     let tolerance = chase.range + reach;
     if chase.travel.is_none() {
-        chase.travel = if distance < reach {
-            Some(Travel::Retreat)
-        } else if distance >= tolerance + CONTACT_DISTANCE {
-            Some(Travel::Approach)
-        } else {
-            None
-        };
+        chase.travel = select_travel(distance, reach, tolerance);
     }
     let Some(travel) = chase.travel else {
         return from;
@@ -129,6 +141,16 @@ fn plan_step(
         Travel::Retreat => -direction,
     };
     from + direction * step.min(remaining)
+}
+
+fn select_travel(distance: f32, reach: f32, tolerance: f32) -> Option<Travel> {
+    if distance < reach {
+        Some(Travel::Retreat)
+    } else if distance >= tolerance + CONTACT_DISTANCE {
+        Some(Travel::Approach)
+    } else {
+        None
+    }
 }
 
 fn probe_step(world: &mut World, unit: Entity, from: Vec3, to: Vec3) -> Result<Vec3, String> {
@@ -159,24 +181,73 @@ fn publish_step(world: &mut World, unit: Entity, from: Vec3, to: Vec3, target: V
         y: to.y,
         z: to.z,
     };
+    write_bearing(world, unit, to, target, if moving { speed } else { 0.0 });
+    crate::interest::mark_interest_position_changed(
+        world.get_resource::<crate::interest::InterestDirtyQueue>(),
+        unit,
+    );
+    crate::spell_cast::mark_dirty(world, unit);
+}
+
+fn write_bearing(world: &mut World, unit: Entity, to: Vec3, target: Vec3, speed: f32) {
     if let Some(mut motion) = world.get_mut::<CreatureMotion>(unit) {
-        *motion = if moving {
+        *motion = if speed > 0.0 {
             CreatureMotion::Run
         } else {
             CreatureMotion::Still
         };
     }
     if let Some(mut movement) = world.get_mut::<MovementSpeed>(unit) {
-        movement.0 = if moving { speed } else { 0.0 };
+        movement.0 = speed;
     }
     if let Some(mut rotation) = world.get_mut::<shared::components::Rotation>(unit)
         && let Some(facing) = crate::creature_ai::facing_along(target.x - to.x, target.z - to.z)
     {
         rotation.y = facing;
     }
-    crate::interest::mark_interest_position_changed(
-        world.get_resource::<crate::interest::InterestDirtyQueue>(),
-        unit,
-    );
-    crate::spell_cast::mark_dirty(world, unit);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encounter_coverage_caster_range_hysteresis_approaches_source_tolerance() {
+        let victim = Entity::from_bits(1);
+        let mut chase = CasterChase::new(100.0);
+        let from = Vec3::ZERO;
+        let inside = Vec3::X * 104.99;
+        assert_eq!(plan_step(&mut chase, victim, from, inside, 4.5, 0.35), from);
+        let threshold = Vec3::X * 105.0;
+        let first = plan_step(&mut chase, victim, from, threshold, 4.5, 0.35);
+        assert!((first.x - 0.35).abs() < 0.001);
+        let second = plan_step(&mut chase, victim, first, threshold, 4.5, 0.35);
+        assert!(
+            (second.x - 0.5).abs() < 0.001,
+            "finish at104.5yd, not first point inside105"
+        );
+        assert_eq!(
+            plan_step(&mut chase, victim, second, threshold, 4.5, 0.35),
+            second
+        );
+    }
+
+    #[test]
+    fn encounter_coverage_caster_contact_retreat_persists_until_source_tolerance() {
+        let victim = Entity::from_bits(1);
+        let mut chase = CasterChase::new(100.0);
+        let target = Vec3::X * 3.0;
+        let mut position = Vec3::ZERO;
+        for _ in 0..400 {
+            position = plan_step(&mut chase, victim, position, target, 4.5, 0.35);
+        }
+        assert!(
+            (position.x + 101.5).abs() < 0.001,
+            "retreat continues to100+reaches, not just outside contact"
+        );
+        assert_eq!(
+            plan_step(&mut chase, victim, position, target, 4.5, 0.35),
+            position
+        );
+    }
 }

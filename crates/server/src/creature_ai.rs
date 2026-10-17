@@ -752,6 +752,16 @@ fn follow_leader_step(
 
 // -- Chase logic --
 
+type ChasingUnits<'w, 's> = Query<
+    'w,
+    's,
+    Chaser,
+    (
+        ActiveUncontrolled,
+        Without<crate::scripted_ai::caster_chase::CasterChase>,
+    ),
+>;
+
 /// Run pursuing creatures toward their target each tick
 /// (`ChaseMovementGenerator`, run speed × the aura speed multiplier) until within
 /// `CHASE_REACH`, on the floor under it, facing the way it runs and, in reach, the target.
@@ -763,16 +773,7 @@ pub(crate) fn chase_system(
     mut ground: Option<ResMut<GroundMap>>,
     mut nav: Option<ResMut<Navigation>>,
     mut commands: Commands,
-    mut units: ParamSet<(
-        Query<
-            Chaser,
-            (
-                ActiveUncontrolled,
-                Without<crate::scripted_ai::caster_chase::CasterChase>,
-            ),
-        >,
-        Query<&Position>,
-    )>,
+    mut units: ParamSet<(ChasingUnits, Query<&Position>)>,
 ) {
     let dt = time.delta_secs();
     let targets = victim_positions(&mut units);
@@ -926,16 +927,7 @@ fn no_path_evade_system(
 /// Where each chased unit stands at the start of the chase step. A victim may be a
 /// creature that moves in the same step (a soldier and the worg it fights).
 fn victim_positions(
-    units: &mut ParamSet<(
-        Query<
-            Chaser,
-            (
-                ActiveUncontrolled,
-                Without<crate::scripted_ai::caster_chase::CasterChase>,
-            ),
-        >,
-        Query<&Position>,
-    )>,
+    units: &mut ParamSet<(ChasingUnits, Query<&Position>)>,
 ) -> EntityHashMap<Position> {
     let victims: Vec<Entity> = units
         .p0()
