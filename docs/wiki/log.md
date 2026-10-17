@@ -1,6 +1,6 @@
 ## 2026-10-16 — Triggered excluded-caster eligibility and required-ref blocker
 
-[Spell casting](systems/spell-casting.md#triggered-excluded-caster-aura-eligibility--2026-10-16): actual146481→146480/146543 RED retained; shared exclusion predicate wired before triggered launch, GREEN pending. Complete required-caster guard on separate branch fails four positive native chains because parent application registration follows child launch; source registers before activation. Retain failing fixtures/branch, no marker/pregrant/early activation or pending bypass; required field remains open.
+[Spell casting](systems/spell-casting.md#triggered-excluded-caster-aura-eligibility--2026-10-16): actual146481→146480/146543 RED retained byte-identically; shared exclusion predicate wired before triggered launch. Current merged77/0/0 in45.36s includes two new plus75 prior cases; workspace/all-target check198.441s/0warnings, fmt and independent read-only artifact/wiring/readability pass. Complete required-caster guard on separate branch fails four positive native chains because parent application registration follows child launch; source registers before activation. Retain failing fixtures/branch, no marker/pregrant/early activation or pending bypass; required field remains open.
 
 ## 2026-10-16 — Triggered explicit-target aura eligibility
 
