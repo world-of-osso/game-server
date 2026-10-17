@@ -100,3 +100,13 @@ fn toyfx117_peddlefeet_hearthstone_learned_use_returns_to_bind_and_blocks_lunar_
 fn toyfx125_noble_gardener_hearthstone_learned_use_returns_to_bind_and_blocks_lunar_elder() {
     assert_toy_hearthstone_bind_and_shared_charge(165802, 286031, 165669);
 }
+
+#[test]
+fn toyfx139_fire_eater_hearthstone_learned_use_returns_to_bind_and_blocks_noble_gardener() {
+    assert_toy_hearthstone_bind_and_shared_charge(166746, 286331, 165802);
+}
+
+#[test]
+fn toyfx140_brewfest_reveler_hearthstone_learned_use_returns_to_bind_and_blocks_fire_eater() {
+    assert_toy_hearthstone_bind_and_shared_charge(166747, 286353, 166746);
+}
