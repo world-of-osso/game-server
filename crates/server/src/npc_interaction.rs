@@ -232,6 +232,14 @@ struct InteractionWorld<'w, 's> {
     >,
     npcs: Query<'w, 's, NpcView<'static>>,
     maps: Query<'w, 's, &'static crate::maps::InMap>,
+    guild_users: Query<
+        'w,
+        's,
+        (
+            &'static shared::components::GuildMembership,
+            &'static shared::reputation::CharacterReputation,
+        ),
+    >,
     objects: Query<
         'w,
         's,
@@ -242,6 +250,7 @@ struct InteractionWorld<'w, 's> {
             Has<crate::game_objects::GameObjectScript>,
             Has<crate::game_objects::GameObjectInUse>,
             Has<crate::game_objects::seaforium_bombs::SeaforiumFuse>,
+            Has<crate::game_objects::summoned::SummonedObject>,
         ),
     >,
     templates: Res<'w, FactionTemplates>,
@@ -265,7 +274,7 @@ impl InteractionWorld<'_, '_> {
 
     /// What using a game object does if `player` may use it now.
     fn usable_object(&self, player: Entity, object: Entity) -> Result<ObjectUse, InteractionError> {
-        let (info, position, bounds, scripted, in_use, seaforium) = self
+        let (info, position, bounds, scripted, in_use, seaforium, summoned) = self
             .objects
             .get(object)
             .map_err(|_| InteractionError::InvalidTarget)?;
@@ -273,7 +282,19 @@ impl InteractionWorld<'_, '_> {
             // Only buttons with a ported GameObjectAI; generic door/button use is not modelled.
             crate::game_objects::GAMEOBJECT_TYPE_BUTTON if scripted && !in_use => ObjectUse::Script,
             crate::game_objects::GAMEOBJECT_TYPE_TRAP if seaforium => ObjectUse::Seaforium,
-            GAMEOBJECT_TYPE_GUILD_BANK => ObjectUse::Role(NpcRole::GuildBanker),
+            GAMEOBJECT_TYPE_GUILD_BANK => {
+                // Installed Mobile Banking tooltip: guild members at Friendly1168
+                // may USE the mobile chest. Static vaults keep their ordinary rules.
+                if summoned {
+                    let eligible = self.guild_users.get(player).is_ok_and(|(_, rep)| {
+                        rep.has_standing(1168, shared::reputation::Standing::Friendly)
+                    });
+                    if !eligible {
+                        return Err(InteractionError::InvalidTarget);
+                    }
+                }
+                ObjectUse::Role(NpcRole::GuildBanker)
+            }
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             crate::game_objects::spellcaster::GAMEOBJECT_TYPE_SPELLCASTER => ObjectUse::Spellcaster,

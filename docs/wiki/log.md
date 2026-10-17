@@ -44,6 +44,14 @@
 ## 2026-10-17 — Omor Orbital source hooks
 
 [Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
+## 2026-10-17 — Scarab scatter oracle correction
+
+[Gate412 source-ground metric](systems/toys.md#scarab-source-scatter-metric-2026-10-17): unchanged merged artifact fails2/30; actual778027 outer-ring RED confirms the3D-versus-horizontal mismatch. Keep5.001, exact first destination and separate secondary ground-height assertions. Six focused controls pass; final tightened two-case check/check/fmt pass. Runtime and prior native proof scopes unchanged; lead owns the next merge gate.
+
+## 2026-10-17 — Dragon costume lifecycle118–123
+
+[Six source costumes](systems/toys.md#dragon-costume-simulation-lifecycle-2026-10-17) pass actual learned-use/fifteen-minute ordinary expiry and natural recovery/reuse. Six new cases plus two related transform controls pass8/8 across72.48s; check/fmt clean. No production change; expected-refusal fixture failure is not runtime RED, native presentation remains open.
+
 ## 2026-10-17 — Toy source boundaries89–93
 
 [Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. [94–98 continuation](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retains nearby reaction, spectral/headwear procedural, corpse ritual and return/catch gaps. [99–103 matrix](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) retains historical Cooler/Gong proof and exact missing Kovork/procedural gaps. No runtime admission; merged55-case proof unchanged.
@@ -1849,8 +1857,15 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-17: lifetime113 final integration772a3be6 passes required workspace four-filter231/0/1existing ignored(353.60s), site-export1/1, workspace/all-target check and three-repo fmt/diff. Active70448 census5544/1843, all243matrix/pin exact; bounded artifact/readability checks pass. LIFETIME_HK_TRACKING_STARTS_AT_ZERO remains explicit; native higher thresholds/BG/rendered/freshUDP/remoteCI/lead landing are not certified.
 
+## 2026-10-17 — Resurrection guild perk excluded by user
+
+User clarification: World of Osso has no resurrection guild perk. Removed Quick/Dead from pending effect coverage; historical installed-data/native receipts are not project requirements. Mobile Banking remains active with the separately specified2h policy.
 ## 2026-10-17 — Pending-only netdelta producer controls
 
 [Combat publication](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17): dedicated marked-peer/quiet-frame proof, real level-stream/reconnect equivalence and Stockade earned-delta/toast isolation now pass alongside repaired transport-free criteria and explicit HostClient fixtures. Detailed source scopes/counts live on the investigation page. Merged engine checks and genuine UDP byte/latency/performance remeasurement remain pending.
 
 - 2026-10-16: [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16): exact ten-model source identity, retained unitless destination flight after genuine early-arrival RED;150 Toy+49 affected+3 importer controls pass, native appearances/publication separate.
+
+## 2026-10-17 — Mobile Banking user policy implemented
+
+User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed3600000ms. Installed faction children/type34/lifetime and Friendly1168 chest-user gate; no Friendly cast gate. Real server5/5 and tooltip1/1 GREEN; midcast loss checked before consumption. Native actual5min/2h both-skin proof pending. Resurrection perk excluded by user, not a gap.
