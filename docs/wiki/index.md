@@ -1,3 +1,4 @@
+- [Lifetime honorable kills113](systems/dungeon-achievements.md#lifetime-honorable-kills113) — persisted per-character authority/absolute login projection; named zero-start policy, native full100/relog/account/pin/BG controls GREEN6/6.
 - [Active70448 achievements](systems/dungeon-achievements.md#active70448-achievement-inputs) — named CSV import, source build/key receipt, no historical fallback; census migration adds/removes no roots.
 - [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — current terrain per eligible world-HK recipient; controlled full50/account/pin GREEN4/4 on canonical70448; native BG credit unimplemented.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
