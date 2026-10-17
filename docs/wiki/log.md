@@ -1,3 +1,7 @@
+## 2026-10-17 — Eternal Traveler190 source acceptance
+
+[Exact190–194 matrix](../toy-effects14-coverage.md#source190194-eternal-traveler-and-mountcontrolportal-boundaries-2026-10-17): Eternal Traveler actual-learning/saved-bind/shared2309 acceptance brings nine variants9/9/79.23s; native check13.81s/no compiler warnings and fmt/readability pass at9e56fbe2a. No production/data change or manufactured RED. Wild Holly mount/holiday, RC Control3 and Shadowlands portal actions remain gaps; visual/cross-map/full-recharge proof separate.
+
 ## 2026-10-17 — Toy source185–189 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source185189-midday-source-acceptance-and-interactive-boundaries-2026-10-17): Jar187 test/spec9ec632d3a proves exact day/night screen IDs, duration and cancel-preserved item recovery; four affected tests57.78s after one cold26m32s compile, native check3m04s/no compiler warnings and fmt/readability pass. Fish-kicking/Gral/memento actions remain gaps; earlier Sealamp CPU/native/body/scale/state-kit/expiry scope retained without new certification. No production/data change.

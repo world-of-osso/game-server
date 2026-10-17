@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source190–194: Eternal Traveler and mount/control/portal boundaries (2026-10-17)
+
+190 Eternal Traveler's Hearthstone172179/308742 already uses source10s homebind252 and shared2309 charge. Test-only9e56fbe2a adds its actual bag-learning/UseToy case to the existing saved-bind fixture: missing bind refuses before spending; after displacement the authored cast returns to persisted bind, reports max1/current0/recharge1800000ms, and Holographic165 refuses on that shared charge. Health/model remain unchanged. Nine actual holiday variants pass9/9 zero ignored79.23s; native package/tests check13.81s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `hearth190-proof-ledger.json` records exact commands/revision. No production change or invented RED.
+
+Source190's multiple visual branches contain procedural types1/14/15; the simulation contract is not native branch/race/appearance/audio certification. Cross-map wire behavior and natural30min recharge remain separate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|191 Wild Holly172219/308923 | Self dummy4/3600000ms with60000ms item recovery. Source description requires Feast of Winter Veil and transforms the mount, not the player's ordinary body. Mounted-state eligibility, holiday gating and authentic festive mount appearance remain unresolved; no generic self cosmetic or guessed mount display. |
+|192 Crashin' Thrashin' Juggernaught172222/308921 and193 Battleship172223/308922 | Source18 summons158459/93523 and158455/93522 via4728 Control3/faction1616/flags4, alongside self auras25/321/37 with misc85; source3000ms cast/300000ms duration. Runtime content actors are absent. RC possession, action bar and attacks against other toys remain unresolved; no ordinary noncontrolled actor or generic banner/control substitute. |
+|194 Wormhole Generator: Shadowlands172924/324031 | Source47 summon169501/property3539,5000ms cast/300000ms duration and900000ms item/spell recovery. Runtime content169501 is absent; source29886/scale1/weight0 has npcflag0/empty AI/script. Portal metadata does not implement authored point selection/eligibility/transport; no invented destinations or copied Pandaria random teleport. |
+
+`rows190-194-{readonly-source,action-source}.json` retains exact roots, properties/durations, visual branches and actual runtime-content/source actor/model rows. Only190 acceptance/spec changed;191–194 remain named action/control/service gaps. No runtime-policy/importer/canonical/data changes, extra publication or full-Toy/native/master recertification.
+
 ## Source185–189: midday source acceptance and interactive boundaries (2026-10-17)
 
 187 Jar of Sunwarmed Sand170380/304369 has existing self screen-effect260/misc1719/7 and7200000ms aura with86400000ms item recovery. Test/spec9ec632d3a extends the existing Shadescale180 actual-learning/aura/replication/cancel fixture to this second source and checks both reported recoveries remain spent after cancellation. The expanded source fixture plus feather-fall, cosmetic/script and five-ID disguise controls pass4/4 zero ignored57.78s after a single26m32s cold native-slot compile. Native package/tests check3m04s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `midday187-proof-ledger.json` records exact commands/revision and code scope; no duplicate run or reset. No production patch, invented RED, native midday certificate or full two-hour/24-hour passage proof.
