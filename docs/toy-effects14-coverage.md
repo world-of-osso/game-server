@@ -1,8 +1,8 @@
 # Toy effects14 — active whole-goal coverage
 
-## Source185–189: midday acceptance pending and interactive boundaries (2026-10-17)
+## Source185–189: midday source acceptance and interactive boundaries (2026-10-17)
 
-187 Jar of Sunwarmed Sand170380/304369 has existing self screen-effect260/misc1719/7 and7200000ms aura with86400000ms item recovery. Test/spec9ec632d3a extends the existing Shadescale180 actual-learning/aura/replication/cancel fixture to this second source and checks both reported recoveries remain spent after cancellation. Fmt/manual changed-line readability/diffcheck pass; targeted native-helper tests are still compiling/running and package/tests check is pending in `midday187-proof-ledger.json`, not a passing acceptance claim. No production patch, invented RED, native midday certificate or full two-hour/24-hour passage proof.
+187 Jar of Sunwarmed Sand170380/304369 has existing self screen-effect260/misc1719/7 and7200000ms aura with86400000ms item recovery. Test/spec9ec632d3a extends the existing Shadescale180 actual-learning/aura/replication/cancel fixture to this second source and checks both reported recoveries remain spent after cancellation. The expanded source fixture plus feather-fall, cosmetic/script and five-ID disguise controls pass4/4 zero ignored57.78s after a single26m32s cold native-slot compile. Native package/tests check3m04s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `midday187-proof-ledger.json` records exact commands/revision and code scope; no duplicate run or reset. No production patch, invented RED, native midday certificate or full two-hour/24-hour passage proof.
 
 | Source row | Exact retained source boundary and proof level |
 |---|---|
@@ -11,7 +11,7 @@
 |188 Memento of the Deeps170469/304550 | Source47 summon156074/property1362/120000ms actor,3600000ms item recovery; published runtime content156074 is absent. Source92601/scale1/weight0 and faction0/npcflag0/empty AI/script are metadata, not the described interact-to-recall-allies action. No generic seashell actor or invented memory interaction. |
 |189 Underlight Sealamp170476/304620 | Existing runtime156086/92605/DisplayScale0.35, source47/property1362/180000ms and3600000ms item recovery. Retain prior actual-learning/source-scale CPU proof and both-skin native meshes/root0.35/no pet frame, state-kit ground attachment and natural180-second removal witnesses below. This revisit adds no new lamp test/native certificate or speculative gameplay. |
 
-Exact roots, durations/properties/visual fields and distinct actual runtime-content/source actor/model rows are retained in `rows185-189-{readonly-source,action-source}.json`. No new data/importer/runtime-policy/canonical publication;189's historical native scope and187's pending targeted scope remain separate.
+Exact roots, durations/properties/visual fields and distinct actual runtime-content/source actor/model rows are retained in `rows185-189-{readonly-source,action-source}.json`. No new data/importer/runtime-policy/canonical publication;189's historical native scope and187's new bounded CPU acceptance remain separate.
 
 ## Source180–184: retained midnight/sign proof and equipment gaps (2026-10-17)
 
