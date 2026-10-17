@@ -2,7 +2,7 @@
 
 ## Mechanic-specific damage (2026-10-17)
 
-TC a352b1fa `Unit.cpp:6980–6984` adds the sum of aura276 amounts for the damage effect's nonzero mechanic, otherwise the spell mechanic. `spell_cast::effects::mechanic_damage_multiplier` reads actual caster aura amounts × stacks and joins the existing percent-done pipeline; resolved-source and ignored-caster-modifier paths retain their exclusions. Genuine native Leymor RED: fourteen Sprouts produced one ArcanePower374736 aura with14 stacks, but ordinary45s Stomp374731 dealt8631, equal to its unbuffed baseline instead of32797.8 (3.8×). Native GREEN and nonmatching Brand374582 control pending. No global/school bonus, manual stacks, caster rewrite, stat or spell-row override. [Contract](../../specs/follower-dungeons.md).
+TC a352b1fa `Unit.cpp:6980–6984` adds the sum of aura276 amounts for the damage effect's nonzero mechanic, otherwise the spell mechanic. `spell_cast::effects::mechanic_damage_multiplier` reads actual caster aura amounts × stacks and joins the existing percent-done pipeline; resolved-source and ignored-caster-modifier paths retain their exclusions. Genuine native Leymor RED: fourteen Sprouts produced one ArcanePower374736 aura with14 stacks, but ordinary45s Stomp374731 dealt8631, equal to its unbuffed baseline instead of32797.8 (3.8×). Both native matching Stomp and nonmatching Brand374582 cases pass in the consolidated34-test Azure run at99cca08a (507.23s, no failures or ignored cases); fmt passes. Scoped check remains pending after an invalid helper --bin/check combination was rejected before compilation. No global/school bonus, manual stacks, caster rewrite, stat or spell-row override. [Contract](../../specs/follower-dungeons.md).
 
 ## Optional cost spell modifiers (2026-10-16)
 
