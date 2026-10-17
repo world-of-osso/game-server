@@ -7,27 +7,14 @@ use shared::components::Health;
 fn arathi_completion_mirrors_two_separate_source_bonuses_and_reopens_without_replay() {
     for (level, range, one_bonus) in [(30, (30, 39), 61_u32), (90, (90, 90), 124)] {
         let template = arathi_basin();
-        let (mut world, players, file) = native_flag_match(&template);
-        world.init_resource::<Time>();
-        world.init_resource::<Time<Virtual>>();
-        world.insert_resource(
-            crate::spell_cast::test_harness::world_db()
-                .unwrap()
-                .store
-                .clone(),
-        );
-        world.init_resource::<crate::auras::UnhandledAuras>();
-        for (_, player) in &players {
-            world.entity_mut(*player).insert((
-                PlayerPvpState::default(),
-                crate::currency::PlayerCurrencies::default(),
-                shared::components::Level(level),
-            ));
-        }
+        let (mut world, players, file) = honor_match(&template, level);
         {
             let mut state = world.resource_mut::<PvpServerState>();
             let matched = state.battleground_matches.get_mut(&17).unwrap();
-            matched.instance.bracket = LevelBracket::new(range.0, range.1);
+            assert_eq!(
+                matched.instance.bracket,
+                LevelBracket::new(range.0, range.1)
+            );
             matched.nodes = Some(NodeBattle::new(node_rules(2107).unwrap()));
         }
         pvp_objective::update_battleground_objectives(&mut world);
@@ -160,6 +147,100 @@ fn arathi_completion_mirrors_two_separate_source_bonuses_and_reopens_without_rep
         assert_eq!(saved_wallet.week_earned(1792), 0);
         assert_eq!(saved_wallet.get(1602), 0);
     }
+}
+
+#[test]
+fn eye_completion_mirrors_source_bonuses_on_the_real_presence_resource_win() {
+    let template = shared::battleground::eye_of_the_storm();
+    let (mut world, players, file) = honor_match(&template, 30);
+    let rules = shared::battleground::eye_rules(566).unwrap();
+    let position = crate::game_objects::bevy_position(Vec3::from_array(rules.towers[0].position));
+    for (_, player) in players.iter().step_by(2) {
+        world.entity_mut(*player).insert(position);
+    }
+    world
+        .resource_mut::<PvpServerState>()
+        .battleground_matches
+        .get_mut(&17)
+        .unwrap()
+        .eye = Some(shared::battleground::EyeBattle::new(rules));
+    pvp_objective::update_battleground_objectives(&mut world);
+    advance_objective(&mut world, 40_000);
+    {
+        let mut state = world.resource_mut::<PvpServerState>();
+        let matched = state.battleground_matches.get_mut(&17).unwrap();
+        assert_eq!(matched.instance.phase, BgPhase::InProgress);
+        assert!(
+            matched.instance.score_a.score > 0,
+            "real physical presence captured a source tower"
+        );
+        let baseline = template.win_score - 1 - matched.instance.score_a.score;
+        matched.instance.add_score(BgTeam::A, baseline, &template);
+    }
+    assert_eq!(wallet(&world, players[0].1), 0);
+    advance_objective(&mut world, 2000);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&17]
+            .instance
+            .phase,
+        BgPhase::Ended
+    );
+    for (index, (_, player)) in players.iter().enumerate() {
+        let expected = if index % 2 == 0 { 122 } else { 61 };
+        assert_eq!(wallet(&world, *player), expected);
+        assert_eq!(
+            world
+                .get::<PlayerPvpState>(*player)
+                .unwrap()
+                .progress
+                .lifetime_honor_xp,
+            u64::from(expected)
+        );
+    }
+    advance_objective(&mut world, 2000);
+    assert_eq!(wallet(&world, players[0].1), 122, "terminal replay");
+    let character = players[0].0;
+    drop(world);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::persistence::load_currencies(&db, character).get(1792),
+        122
+    );
+    assert_eq!(
+        crate::persistence::load_pvp(&db, character).lifetime_honor_xp,
+        122
+    );
+}
+
+fn honor_match(
+    template: &shared::battleground::BgTemplate,
+    level: u8,
+) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
+    let (mut world, players, file) = native_flag_match(template);
+    world.init_resource::<Time>();
+    world.init_resource::<Time<Virtual>>();
+    world.insert_resource(
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .store
+            .clone(),
+    );
+    world.init_resource::<crate::auras::UnhandledAuras>();
+    for (_, player) in &players {
+        world.entity_mut(*player).insert((
+            PlayerPvpState::default(),
+            crate::currency::PlayerCurrencies::default(),
+            shared::components::Level(level),
+        ));
+    }
+    world
+        .resource_mut::<PvpServerState>()
+        .battleground_matches
+        .get_mut(&17)
+        .unwrap()
+        .instance
+        .bracket = shared::battleground::source_level_bracket(template.map_id, level).unwrap();
+    (world, players, file)
 }
 
 fn wallet(world: &World, player: Entity) -> u32 {
