@@ -79,6 +79,21 @@ fn azure_leymor_sprout_mechanic_power_does_not_amplify_nonmatching_brand() {
 #[test]
 fn azure_leymor_sprout_mechanic_power_amplifies_ordinary_stomp_from_native_stacks() {
     let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
+    let children = h.creatures_of(190509);
+    assert_eq!(children.len(), 14);
+    let stack_boundary = |h: &Harness| {
+        (
+            crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+            children
+                .iter()
+                .filter(|&&child| crate::spell_cast::targets::is_alive(h.app.world(), child))
+                .count(),
+            children
+                .iter()
+                .filter(|&&child| h.app.world().get::<crate::combat::Corpse>(child).is_some())
+                .count(),
+        )
+    };
     assert_eq!(
         crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
         14
@@ -97,7 +112,7 @@ fn azure_leymor_sprout_mechanic_power_amplifies_ordinary_stomp_from_native_stack
         .find(|effect| effect.index == 0)
         .unwrap();
     assert_eq!((effect.aura_type, effect.misc_values[0]), (276, 22));
-    let expected_scale = 1.0 + f64::from(effect.amount) * f64::from(power.stacks) / 100.0;
+    let amount_per_stack = f64::from(effect.amount);
     let damage_spell = h
         .app
         .world()
@@ -127,12 +142,30 @@ fn azure_leymor_sprout_mechanic_power_amplifies_ordinary_stomp_from_native_stack
     );
     // Six fixture seconds plus0.1 then39.1 reaches the ordinary45.2s channel.
     h.advance(39.1);
+    // Native Fissure/Brand deaths change the original fourteen-stack snapshot.
+    // Sample the actual Stomp channel, without forcing any Sprout to survive.
+    let (stacks_at_stomp, living_sprouts, corpses) = stack_boundary(&h);
+    assert!(
+        stacks_at_stomp > 0,
+        "ordinary Stomp has native stacks to amplify it"
+    );
+    assert_eq!(stacks_at_stomp as usize, living_sprouts);
+    assert_eq!(living_sprouts + corpses, children.len());
+    let expected_scale = 1.0 + amount_per_stack * f64::from(stacks_at_stomp) / 100.0;
+    eprintln!(
+        "native276 before_stomp stacks/living/corpses={:?}",
+        (stacks_at_stomp, living_sprouts, corpses)
+    );
     let channel = h.app.world().get::<CastState>(leymor).unwrap();
     assert_eq!(channel.spell_id, STOMP);
     assert_eq!(channel.cast_type, shared::casting::CastType::Channel);
     assert!(native_stomp_damage(&h).is_empty());
     let remaining = channel.duration - channel.elapsed;
     h.advance(remaining + 0.2);
+    eprintln!(
+        "native276 after_stomp stacks/living/corpses={:?}",
+        stack_boundary(&h)
+    );
     let amplified = native_stomp_damage(&h);
     assert_eq!(amplified.len(), 1, "one real ordinary channel-finish child");
     assert_eq!(amplified[0].source, Some(leymor.to_bits()));
