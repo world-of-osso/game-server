@@ -35,7 +35,10 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 | Case | Result |
 |---|---|
 | Same spell, same caster, same source | Refresh: new duration, +1 stack up to the maximum, amounts and absorbs reset, tick phase kept. `SPELL_ATTR1_AURA_UNIQUE` auras are not refreshed. |
-| Same spell, other caster | The auras coexist if the aura is harmful, has a periodic effect or has `SPELL_ATTR3_DOT_STACKING_RULE`. Otherwise the new aura replaces the old one. |
+| Native `CumulativeAura >1`, same source, non-channel/non-DOT/non-multislot, other caster | Reapply the same stack slot and add one native stack up to capacity, retaining the existing aura caster. TC `SpellInfo.cpp:1807–1815` / `Unit.cpp:3403–3465`; no manual stack assignment or caster rewrite. |
+| Otherwise same spell, other caster | The auras coexist if the aura is harmful, has a periodic effect or has `SPELL_ATTR3_DOT_STACKING_RULE`. Otherwise the new aura replaces the old one. |
+
+The shared-slot boundary was exposed by [native Sprout Arcane Power](../investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): fourteen actual source casters reached the correct summoner but beneficial replacement retained only one count. Passive/native multislot exceptions, channels and the native DOT rule stay out of shared-slot merging. This rule does not implement aura276's damage modifier.
 
 ### Classification
 

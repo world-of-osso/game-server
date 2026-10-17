@@ -5,7 +5,9 @@
 //! Stacking rule (TrinityCore `Aura::CanStackWith`, simplified):
 //! - same spell and caster: refresh duration, +1 stack up to `CumulativeAura`
 //!   (`SPELL_ATTR1_AURA_UNIQUE` auras are not refreshed);
-//! - same spell, other caster: coexist when the aura is harmful, has a
+//! - native stackable, non-channel/non-DOT/non-multislot spells share their stack
+//!   slot across casters, preserving the existing aura caster;
+//! - otherwise same spell, other caster: coexist when the aura is harmful, has a
 //!   periodic effect, vehicle-control ownership or `SPELL_ATTR3_DOT_STACKING_RULE`; otherwise the new
 //!   aura replaces the old one.
 //!
@@ -382,11 +384,19 @@ impl ActiveAuras {
     }
 
     /// Apply the stacking rule (module docs) to a new instance.
-    fn stack_or_add(&mut self, new: AuraInstance, coexist: bool, unique: bool) -> Stacking {
-        let same_caster = |aura: &AuraInstance| {
-            aura.spell_id == new.spell_id && aura.caster == new.caster && aura.source == new.source
+    fn stack_or_add(
+        &mut self,
+        new: AuraInstance,
+        coexist: bool,
+        unique: bool,
+        shared_slot: bool,
+    ) -> Stacking {
+        let same_slot = |aura: &AuraInstance| {
+            aura.spell_id == new.spell_id
+                && aura.source == new.source
+                && (shared_slot || aura.caster == new.caster)
         };
-        if let Some(existing) = self.auras.iter_mut().find(|aura| same_caster(aura)) {
+        if let Some(existing) = self.auras.iter_mut().find(|aura| same_slot(aura)) {
             if unique {
                 return Stacking::Ignored;
             }
@@ -429,6 +439,19 @@ pub(crate) fn take_unhandled_auras(world: &mut World) -> Vec<(u32, u32)> {
 
 fn attributes(spell: &SpellInfo, index: usize) -> u32 {
     spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
+}
+
+/// TC SpellInfo.cpp:1807–1815 and Unit.cpp:3403–3465 share these stack slots.
+fn shares_stack_slot_between_casters(spell: &SpellInfo) -> bool {
+    let stackable = spell
+        .aura_options
+        .as_ref()
+        .is_some_and(|options| options.cumulative_aura > 1);
+    let per_caster = crate::spell_cast::is_channeled(spell)
+        || attributes(spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
+    // Native IsMultiSlotAura: passive plus Power Spark/Flak Fire/Incanter's Absorption.
+    let multi_slot = is_passive(spell) || matches!(spell.id, 55849 | 40075 | 44413);
+    stackable && !per_caster && !multi_slot
 }
 
 pub fn is_passive(spell: &SpellInfo) -> bool {
@@ -923,12 +946,13 @@ pub(crate) fn apply_aura_with_spell(
         })
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
+    let shared_slot = shares_stack_slot_between_casters(spell);
     let previous_rate =
         crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
-        .stack_or_add(instance, coexist, unique);
+        .stack_or_add(instance, coexist, unique, shared_slot);
     let (id, kind) = match stacking {
         Stacking::Ignored => return,
         Stacking::Applied(id) => (id, CombatLogKind::AuraApplied),
