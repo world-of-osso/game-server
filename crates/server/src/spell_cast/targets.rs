@@ -391,9 +391,11 @@ pub fn select_targets(
         match selector {
             Selector::None | Selector::ForwardLeap => {}
             Selector::ExistingDest => {
+                // TC Spell::InitExplicitTargets:666–678 initializes an absent
+                // required destination from the supplied object target, else self.
                 center = center
                     .or_else(|| spell.cast_destination.map(Vec3::from_array))
-                    .or(Some(caster_pos));
+                    .or_else(|| position(world, explicit.unwrap_or(caster)));
             }
             Selector::Caster => {
                 selected_any = true;
@@ -1100,10 +1102,11 @@ pub fn effect_dest(
         let point = match selector {
             Selector::CenterCaster => position(world, caster),
             Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
-            // TC CheckDst supplies the caster when no destination was provided.
+            // TC Spell::InitExplicitTargets:666–678; CheckDst must retain the
+            // unit-target destination instead of replacing it with the caster.
             Selector::ExistingDest => dest
                 .map(|dest: Dest| dest.position)
-                .or_else(|| position(world, caster)),
+                .or_else(|| position(world, explicit.unwrap_or(caster))),
             Selector::CasterRandom => {
                 position(world, caster).map(|point| random_destination(point, effect, slot))
             }
