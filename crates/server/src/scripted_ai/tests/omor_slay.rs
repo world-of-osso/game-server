@@ -13,7 +13,7 @@ fn slay_fixture() -> (Harness, Entity) {
     (h, boss)
 }
 
-fn install_player_death_transition(h: &mut Harness) {
+pub(super) fn install_player_death_transition(h: &mut Harness) {
     let player = h.player();
     h.app
         .world_mut()
