@@ -146,7 +146,16 @@ fn pet_battle_armageddon_uses_each_enemy_family_without_sharing_one_hit() {
     let mut initial = battle(&catalog, 9, 0, [1025, 110, 123]);
     let stats = initial.teams[1].pets[0].stats;
     initial.teams[1].pets = [0, 7, 6].map(|family| {
-        Pet::new(&catalog, 39, stats, family, [110, 119, 123], States::new()).unwrap()
+        Pet::new(
+            &catalog,
+            39,
+            1,
+            stats,
+            family,
+            [110, 119, 123],
+            States::new(),
+        )
+        .unwrap()
     });
     let (state, events) = use_ability(&initial, &catalog, 1025);
     assert_eq!(damage(&events), vec![120, 180, 80]);

@@ -88,10 +88,11 @@ pub struct Pet {
     pub acted_round: u32,
 }
 impl Pet {
-    /// Encounter/journal caller supplies species identity, family and equipped abilities.
+    /// Encounter/journal caller supplies species, actual level, family and equipped abilities.
     pub fn new(
         catalog: &Catalog,
         species: u32,
+        level: u8,
         stats: Stats,
         family: usize,
         abilities: [u32; 3],
@@ -99,6 +100,9 @@ impl Pet {
     ) -> Result<Self, String> {
         if !catalog.species_states.contains_key(&species) {
             return Err(format!("unknown battle pet species {species}"));
+        }
+        if !(1..=25).contains(&level) {
+            return Err(format!("invalid battle pet level {level}"));
         }
         if family >= 10 || stats.health <= 0 || stats.power < 0 || stats.speed < 0 {
             return Err("invalid pet stats/family".into());
@@ -120,6 +124,7 @@ impl Pet {
             "Passive_Aquatic",
             "Passive_Mechanical",
         ][family];
+        states.insert(catalog.state_id("Internal_InitialLevel")?, i32::from(level));
         states.insert(catalog.state_id(passive)?, 1);
         states
             .entry(catalog.state_id("Stat_CritChance")?)

@@ -247,6 +247,7 @@ fn pet_battle_169_scorched_earth_ticks_both_fronts_elemental_immune() {
     b.teams[1].pets[0] = Pet::new(
         &c,
         39,
+        1,
         b.teams[1].pets[0].stats,
         6,
         [110, 119, 123],
@@ -461,6 +462,7 @@ fn pet_battle_80_weather_all_slots_replace_expire_elemental() {
     b.teams[1].pets[2] = Pet::new(
         &c,
         39,
+        1,
         b.teams[1].pets[2].stats,
         6,
         [110, 119, 123],
