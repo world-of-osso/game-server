@@ -12,7 +12,7 @@ Brewfest Reveler140 now has actual saved-bind/shared2309 acceptance alongside si
 
 ## Goldtusk table and Fire Eater source contracts (2026-10-17)
 
-Source135's maintained import and actual-use omissions were reproduced before adding exactly149876 with its authentic90570/half-scale model. New source139 follows the existing saved-bind/shared2309 path;136 bowl retains its Group28 contract, while137–138 RC possession stays unimplemented. [Exact nine-test/importer proof, source/native exclusions and copy-only publication receipt](../../toy-effects14-coverage.md#source135139-goldtusk-table-retained-bowl-rc-gaps-and-fire-eater-2026-10-17) distinguish the added data from Rust handler changes, food interaction and native presentation. Lead owns canonical publication after landing.
+Source135's maintained import and actual-use omissions were reproduced before adding exactly149876 with its authentic90570/half-scale model. New source139 follows the existing saved-bind/shared2309 path;136 bowl retains its Group28 contract, while137–138 RC possession stays unimplemented. [Exact nine-test/importer proof, source/native exclusions and copy-only publication receipt](../../toy-effects14-coverage.md#source135139-goldtusk-table-retained-bowl-rc-gaps-and-fire-eater-2026-10-17) distinguish the added data from Rust handler changes, food interaction and native presentation. The lead completed canonical publication after landing; the linked coverage owns the exact receipt and read-only publication acknowledgment.
 
 ## Source companion/healer/corpse/music boundaries (2026-10-17)
 
