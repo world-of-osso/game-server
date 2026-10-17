@@ -77,6 +77,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             76 => self.charged_damage(caster, target, ability, effect),
+            370 => self.damage_with_species_bonus(caster, target, ability, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
                 let caster_speed = self.speed(caster);
@@ -153,6 +154,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             85 => self.reset_aura_state(p[0] as u32),
+            112 => self.resurrect_reserve(caster, effect),
             111 => {
                 let pet = self.battle.pet_mut(caster);
                 pet.health = pet.stats.health * p[0] / 100;
@@ -322,6 +324,26 @@ impl<R: BattleRng> Runtime<'_, R> {
             )),
         }
     }
+    fn damage_with_species_bonus(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let species = self.battle.pet(caster).species;
+        let matching_reserves = self.battle.teams[caster.team]
+            .pets
+            .iter()
+            .enumerate()
+            .filter(|(slot, pet)| *slot != caster.slot && pet.species == species)
+            .count() as i32;
+        let mut damage = effect.clone();
+        damage.property = 24;
+        damage.params[0] += matching_reserves * effect.params[2];
+        damage.params[2] = 0;
+        self.damage_effect(caster, target, ability, &damage)
+    }
     fn charged_damage(
         &mut self,
         caster: PetRef,
@@ -446,6 +468,21 @@ impl<R: BattleRng> Runtime<'_, R> {
         for serial in serials {
             self.remove_aura(serial)?;
         }
+        Ok(true)
+    }
+    fn resurrect_reserve(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let recipient = other_team_slot(caster, effect.order + 1);
+        if self.battle.pet(recipient).health > 0
+            || !self.required_states(caster, recipient, effect.params[2], effect.params[3])
+        {
+            return Ok(false);
+        }
+        let dead = self.catalog.state_id("Is_Dead")?;
+        let pet = self.battle.pet_mut(recipient);
+        pet.health = pet.stats.health * effect.params[0] / 100;
+        pet.states.insert(dead, 0);
+        pet.undead_expires = None;
+        self.events.push(Event::Revived(recipient));
         Ok(true)
     }
     fn fade_swap(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {

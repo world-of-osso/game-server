@@ -55,11 +55,17 @@ fn currency_wallet_round_trips_through_persistence() {
     wallet
         .add(1792, 300, shared::currency::currency_by_id(1792).unwrap())
         .unwrap();
+    wallet
+        .add(1602, 500, shared::currency::currency_by_id(1602).unwrap())
+        .unwrap();
 
     persistence::save_currencies(&db, 42, &wallet);
     let loaded = persistence::load_currencies(&db, 42);
 
     assert_eq!(loaded, wallet);
+    for currency in [1792, 1602] {
+        assert_eq!(loaded.week_earned(currency), 0, "no authored weekly cap");
+    }
 }
 
 #[test]

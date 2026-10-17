@@ -235,7 +235,7 @@ fn raging_blow(chance: f32, rank: bool) {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat]
-        .used;
+        .used();
     let reset = rank && chance == 100.0;
     assert_eq!(used, if reset { 0 } else { 1 });
     // This real one-charge proc marker can be consumed by the root's damage
@@ -280,7 +280,7 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat]
-        .next_ready_at;
+        .next_ready_at();
     h.advance(35);
     root.effects
         .iter_mut()
@@ -309,8 +309,8 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat];
-    assert_eq!(charges.used, 1);
-    assert_eq!(charges.next_ready_at, oldest);
+    assert_eq!(charges.used(), 1);
+    assert_eq!(charges.next_ready_at(), oldest);
 }
 #[test]
 fn dummy7_raging_blow_rank_zero_chance_keeps_recharge() {

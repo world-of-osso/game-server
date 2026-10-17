@@ -113,12 +113,15 @@ impl WildCatalog {
         }
         let mut pet = Pet::new(
             &self.turns,
+            identity.species,
             stats,
             species.family.into(),
             abilities,
             States::new(),
         )?;
         pet.health = health;
+        pet.states
+            .insert(self.turns.state_id("Is_Dead")?, i32::from(health <= 0));
         Ok(pet)
     }
 }

@@ -15,7 +15,7 @@ fn dummy2_hunter_cobra_shot_damages_and_reduces_kill_command_cooldown() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&2067]
-        .next_ready_at;
+        .next_ready_at();
     h.inbox.charges.clear();
     h.cast_and_deliver(193455, Some(h.npc));
     h.advance(5);
@@ -34,7 +34,7 @@ fn dummy2_hunter_cobra_shot_damages_and_reduces_kill_command_cooldown() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&2067]
-        .next_ready_at;
+        .next_ready_at();
     assert_eq!(ready, before - 1.0);
 }
 
@@ -78,7 +78,7 @@ fn dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1518]
-        .next_ready_at;
+        .next_ready_at();
     h.inbox.charges.clear();
     h.set_power(PowerType::Chi, 6.0);
     h.cast_and_deliver(100784, Some(h.npc));
@@ -95,7 +95,7 @@ fn dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1518]
-        .next_ready_at;
+        .next_ready_at();
     assert_eq!(after, before - 1.0);
 }
 
@@ -175,7 +175,7 @@ fn dummy2_monk_blackout_kick_without_rank_two_does_not_reduce_recharge() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1518]
-        .next_ready_at;
+        .next_ready_at();
     h.set_power(PowerType::Chi, 6.0);
     h.cast_and_deliver(100784, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -185,7 +185,7 @@ fn dummy2_monk_blackout_kick_without_rank_two_does_not_reduce_recharge() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1518]
-        .next_ready_at;
+        .next_ready_at();
     assert_eq!(after, before);
 }
 

@@ -82,6 +82,8 @@ pub fn supported_property(property: u32) -> bool {
             | 168
             | 107
             | 150
+            | 112
+            | 370
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -249,6 +251,7 @@ fn validate_ability_graph(
                     | 226
                     | 384
                     | 385
+                    | 370
             ) && catalog.abilities[&ability].family < 0
             {
                 return Err(format!("ability {ability}: damage has no family"));
@@ -307,6 +310,20 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && p[0] == 0
                 && p[1] == 100
                 && p[2..].iter().all(|v| *v == 0)
+        }
+        // Dragon's Call's authored bonus counts additional teammates of the same species.
+        370 => {
+            catalog.turns[&effect.turn].ability == 2283
+                && effect.order == 1
+                && effect.aura == 0
+                && p == [25, 100, 7, 0, 0, 0]
+        }
+        // Raise Dead and Mass Resurrection explicitly revive the two other allies.
+        112 => {
+            matches!(catalog.turns[&effect.turn].ability, 2347 | 2348)
+                && (1..=2).contains(&effect.order)
+                && effect.aura == 0
+                && p == [5, 100, 0, 1, 0, 0]
         }
         131 => effect.aura != 0 && p[0] == 0 && p[2] >= 0 && p[3..].iter().all(|v| *v == 0),
         172 => {

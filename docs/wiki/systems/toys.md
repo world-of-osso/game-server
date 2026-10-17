@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Corgi and Rezan source boundaries (2026-10-16)
+
+Corgi158149/264091 learned-use/cancel passes with literal viewer233 payload[3569,53], not a global ModelDisplay change; native viewer interpretation/rendering remains absent. Roar160509/272071 genuine learned-use effect3 refusal precedes exact audited cosmetic admission; focused cast/source90s recovery/reuse and unchanged health/model/no aura/summon pass. Native catalog resolves the authored one-shot caster animation74/sound107006; authenticated1777497 bytes are not audible playback. [Exact coverage and proof boundaries](../../toy-effects14-coverage.md#roar71-source-one-shot-cosmetic-2026-10-16) retain revisions, passing144/144 whole-Toy gate and named Chili69/Enthralling70 gaps; no invented fire/critter-following implementation or full-toy claim.
+
 ## Stampwhistle source assistant and mailbox (2026-10-16)
 
 156833/261602 summons source132969/display68512 through property4203 Control1/Assistant35. Native default TempSummon routing preserves source flags/faction/non-follow identity,3yd front placement and600s duration; source item/category2066 recovery is3h. Authentic mailbox flag opens ordinary mail service directly, not an invented gossip option. Separate genuine importer/journal/mailbox REDs and source-state diagnostics are retained; focused real service/learned-use/source600s lifecycle now passes2/2 after fixture per-frame reply collection. Whole-Toy143/143, affected mail/NPC/summon49/49, importer controls3/3, binary/tests check and fmt pass at recorded66 revisions. Canonical classification370 still refuses missing132969; prepared392 admits Katy but is not complete-toy coverage. [Exact coverage](../../toy-effects14-coverage.md#stampwhistle66-source-assistant-and-mailbox-2026-10-16) distinguishes full simulated expiry/live service from native assets/rendering and pending lead-owned canonical publication.

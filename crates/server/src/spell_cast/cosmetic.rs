@@ -29,6 +29,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     239560, // Akazamzarak's Spare Hat (hat/rabbit visual models, not a summon)
     254513, // Barrier Generator (channeled shield visual, not an absorb)
     261981, // Spitzy
+    272071, // Roar of Rezan: one-shot caster sound107006/animation74, no gameplay payload.
     286277, // Worn Cloak
     300104, 300144,  // War Banner: source CurrentPvpFaction condition and combat interrupts
     302273,  // Heart of a Champion
