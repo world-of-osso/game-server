@@ -11,6 +11,8 @@ mod azure_frost_bomb;
 mod azure_intro;
 #[path = "azure_leymor_children.rs"]
 mod azure_leymor_children;
+#[path = "azure_mechanic_power.rs"]
+mod azure_mechanic_power;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
