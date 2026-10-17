@@ -183,7 +183,6 @@ fn azure_telash_frost_bomb_starts_at_three_point_five_and_lands_native_aura() {
 }
 
 #[test]
-#[ignore = "RED: native Icy child387152 rejected unsupported channel destination76"]
 fn azure_telash_icy_devastator_follows_first_frost_reschedule_and_native_damage() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     let player = h.player();
