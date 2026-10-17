@@ -1,6 +1,8 @@
 //! Read-only transport payload census before netcode encryption (diagnostic feature only).
 use bevy::prelude::*;
-use lightyear::prelude::{ConnectionSystems, Link, LinkOf, TransportSystems};
+use lightyear::prelude::{
+    ChannelRegistry, ConnectionSystems, Link, LinkOf, Transport, TransportSystems,
+};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -11,6 +13,14 @@ struct PayloadTotals {
     packets: usize,
     bytes: usize,
     peak_packets: usize,
+    channels: HashMap<&'static str, ChannelTotals>,
+}
+
+#[derive(Default, Debug)]
+struct ChannelTotals {
+    sent: usize,
+    acked: usize,
+    nacked: usize,
 }
 
 impl PayloadTotals {
@@ -19,6 +29,16 @@ impl PayloadTotals {
         self.packets += packets;
         self.bytes += link.send.iter().map(|payload| payload.len()).sum::<usize>();
         self.peak_packets = self.peak_packets.max(packets);
+    }
+
+    fn observe_transport(&mut self, transport: &Transport, registry: &ChannelRegistry) {
+        for (kind, sender) in &transport.senders {
+            let name = registry.get_name_from_kind(kind);
+            let channel = self.channels.entry(name).or_default();
+            channel.sent += sender.messages_sent.len();
+            channel.acked += sender.message_acks.len();
+            channel.nacked += sender.message_nacks.len();
+        }
     }
 }
 
@@ -44,18 +64,43 @@ pub(super) fn install(app: &mut App) {
 }
 
 fn count_network_payloads(
-    links: Query<(Entity, &Link), With<LinkOf>>,
+    links: Query<(Entity, &Link, Option<&Transport>), With<LinkOf>>,
+    registry: Res<ChannelRegistry>,
     mut window: ResMut<NetworkWindow>,
 ) {
     window.frames += 1;
-    for (entity, link) in &links {
-        window.peers.entry(entity).or_default().observe(link);
+    for (entity, link, transport) in &links {
+        let totals = window.peers.entry(entity).or_default();
+        totals.observe(link);
+        if let Some(transport) = transport {
+            totals.observe_transport(transport, &registry);
+        }
     }
     let elapsed = window.started.elapsed();
     if elapsed < WINDOW {
         return;
     }
+    report_network_window(&window, elapsed);
+    window.peers.clear();
+    window.frames = 0;
+    window.started = Instant::now();
+}
+
+fn report_network_window(window: &NetworkWindow, elapsed: Duration) {
     for (entity, totals) in &window.peers {
+        for (name, channel) in &totals.channels {
+            if channel.sent + channel.acked + channel.nacked == 0 {
+                continue;
+            }
+            info!(
+                peer = entity.to_bits(),
+                channel = name,
+                sent = channel.sent,
+                acked = channel.acked,
+                nacked = channel.nacked,
+                "Network channel census (transport message/fragment records)"
+            );
+        }
         info!(
             peer = entity.to_bits(),
             frames = window.frames,
@@ -66,9 +111,6 @@ fn count_network_payloads(
             "Network payload census before netcode encryption"
         );
     }
-    window.peers.clear();
-    window.frames = 0;
-    window.started = Instant::now();
 }
 
 #[cfg(test)]
