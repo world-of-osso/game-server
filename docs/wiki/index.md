@@ -1,4 +1,4 @@
-- [Combat publication fanout](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17) — real eleven-owner publication RED11.55MB; lockstep achievement deltas/Guide clocks implemented, producer GREEN and live comparison pending.
+- [Combat publication fanout](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17) — measured full-catalog fanout replaced by pending-only deltas/Guide clocks;94 publisher/native controls pass, merged consumer checks and live comparison pending.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
 - [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
 - [Gargolmar charge impact](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16) — actual19yd no-motion RED→source-speed/reach/delayed-impact GREEN; two-point subset, obstacle/native proof separate.
