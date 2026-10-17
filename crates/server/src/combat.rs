@@ -217,6 +217,25 @@ fn corpse_decay_secs(rank: u8) -> u32 {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct LastDamager(pub Entity);
 
+/// Explicit cause of this pending death, never inferred from prior damage.
+/// Player transitions take the value even when revived before corpse creation.
+#[derive(Component, Debug)]
+pub(crate) struct KillingBlow(pub(crate) Option<Entity>);
+
+/// TC Unit::Kill notifies the actual killing creature, not its reward owner.
+pub(crate) fn notify_killed_unit(world: &mut World, killer: Entity, victim: Entity) {
+    if world.get::<Npc>(killer).is_none() {
+        return;
+    }
+    let Some(map) = world.get::<crate::maps::InMap>(victim) else {
+        return;
+    };
+    if world.get::<crate::maps::InMap>(killer) != Some(map) {
+        return;
+    }
+    crate::scripted_ai::dispatch(world, killer, crate::scripted_ai::Hook::KilledUnit(victim));
+}
+
 /// `WorldObject::IsValidAttackTarget` and `Unit::Attack`'s own checks as far as
 /// they are modelled: living units only (Object.cpp:2367, Unit.cpp:5876), no
 /// uninteractible victim (Object.cpp:2374), hostile factions or duel opponents.
@@ -1532,6 +1551,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     let respawn_timer = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
     let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
     let killer = entity.get::<LastDamager>().map(|damager| damager.0);
+    let killing_blow = entity.take::<KillingBlow>().and_then(|cause| cause.0);
     entity.insert((DeathState { respawn_timer }, Corpse { remaining }));
     crate::vignettes::on_death(&mut entity);
     // A corpse does not run on (the movement systems skip it).
@@ -1547,6 +1567,9 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     let npc = entity.id();
     entity.world_scope(|world| {
         combat_stop(world, npc);
+        if let Some(attacker) = killing_blow {
+            notify_killed_unit(world, attacker, npc);
+        }
         crate::scripted_ai::dispatch(world, npc, crate::scripted_ai::Hook::JustDied(killer));
         crate::achievement::record_creature_death(world, npc, killer);
         crate::pvp::record_creature_death(world, npc, killer);
@@ -1624,6 +1647,7 @@ fn commit_intercepted_melee_loss(
     }
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     if lethal {
+        world.entity_mut(victim).insert(KillingBlow(Some(attacker)));
         mark_npc_dead_world(world, victim);
         crate::spell_cast::log_event(world, death_log_event(attacker, victim));
     }
@@ -1698,6 +1722,7 @@ pub(crate) fn deal_health_damage(
     if !lethal {
         return;
     }
+    world.entity_mut(victim).insert(KillingBlow(Some(attacker)));
     if world.get::<Npc>(victim).is_some() {
         mark_npc_dead_world(world, victim);
     } else {
@@ -1717,7 +1742,9 @@ pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
     }
     health.current = 0.0;
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
-    world.entity_mut(victim).insert(LastDamager(killer));
+    world
+        .entity_mut(victim)
+        .insert((LastDamager(killer), KillingBlow(Some(killer))));
     if world.get::<Npc>(victim).is_some() {
         mark_npc_dead_world(world, victim);
     } else {
@@ -1801,6 +1828,7 @@ fn record_swing_events(
     let swing = swing_log_event(attacker, target, &outcome);
     commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
     if outcome.npc_died || outcome.player_died {
+        commands.entity(target).insert(KillingBlow(Some(attacker)));
         // Unit::Kill removes death-interrupted auras before damage-shield reactions.
         // The ordinary aura-lifetime sweep runs later than this deferred melee batch.
         commands.queue(move |world: &mut World| crate::auras::remove_on_death(world, target));

@@ -1923,3 +1923,8 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 - 2026-10-17: Enabled Omor summon/shield/source-clock controls GREEN3/3/146.31s at2a2c0f28; actual successful/rejected/triggered shield, scheduled hounds/credit retained. Full native encounter and sound10277 remain open.
 
 - 2026-10-17: [Current-victim chase stop](systems/creature-ai.md#current-victim-stop-contract--2026-10-17): real Stockade cached-corner production RED and pinned TC contract; live clear remains open.
+- 2026-10-17: Omor slay source and explicit lethal-cause hook; ordinary30686 playerRED plus actualNPCkillRED→strictignoredGREEN2/2/75.22s at3715cdd4. Document corpse-state/beforeJustDied boundary and approved later-loot difference; environmental/owner/revival/order controls pending. [Source and proof](systems/boss-scripts.md#omor-slay-hook--2026-10-17).
+
+- 2026-10-17: Omor slay environmental/owned-hound/revival/callback-order controls GREEN4/4/99.30s at3715cdd4. Removed both acceptance ignores after strict2/2 receipt; remaining verification uses unchanged death/loot/credit/owner tests. Totem title4 remains unsupported by SummonProperties::is_supported, not a new attribution branch.
+
+- 2026-10-17: Slay unchanged death13/loot32/native-imp owner achievement1 plus enabled30686 player1/source-clock-hound-credit1 GREEN48/48 at487f3072; fmt/diff checks0, owned e9 protocol clean. Existing tests/assertions unchanged; generated loot remains after corpse hook by explicit approval.
