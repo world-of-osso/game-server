@@ -39,6 +39,68 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_miss_branch_uses_authored_owned_loadouts_and_persisted_health() {
+    let catalog = catalog();
+    for (species, ability, slot) in [(1343, 762, 3), (1320, 989, 2)] {
+        let mut journal = PetJournal::default();
+        for (guid, member) in [(41, species), (42, 39), (43, 39)] {
+            journal
+                .add_with_guid(member, 4, PetQuality::Rare, 3, guid)
+                .unwrap();
+        }
+        let mut states = owned_states(&catalog, &journal);
+        let caller = states.get_mut(&41).unwrap();
+        caller
+            .select_ability(&catalog.turns, journal.get(41).unwrap(), slot, ability)
+            .unwrap();
+        caller.health = 100;
+        let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+        let allies = build_team(&catalog, &identities, &states).unwrap();
+        let enemies = build_team(
+            &catalog,
+            &std::array::from_fn::<_, 3, _>(|_| Identity {
+                guid: None,
+                species: 39,
+                level: 4,
+                breed: 3,
+                quality: PetQuality::Rare,
+            }),
+            &OwnedBattleStates::new(),
+        )
+        .unwrap();
+        let enemy_health = enemies.pets.each_ref().map(|pet| pet.health);
+        let initial = Battle::new([allies, enemies]).unwrap();
+        let (state, events) = initial
+            .step(
+                &catalog.turns,
+                [Action::Ability(ability), Action::Pass],
+                &mut Fixed(500_000),
+            )
+            .unwrap();
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, Event::Miss { .. }))
+        );
+        assert_eq!(
+            state.teams[1].pets.each_ref().map(|pet| pet.health),
+            enemy_health
+        );
+        if ability == 762 {
+            assert_eq!(state.teams[0].pets[0].health, 100);
+            assert_eq!(state.auras.len(), 1);
+            assert_eq!(
+                state.auras[0].target,
+                ::server::pet_battle::PetRef { team: 0, slot: 0 }
+            );
+        } else {
+            assert!(state.teams[0].pets[0].health > 100);
+            assert!(state.auras.is_empty());
+        }
+    }
+}
+
+#[test]
 fn wild_pet_battles_refuge_uses_owned_species_families_for_targeted_shields() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
