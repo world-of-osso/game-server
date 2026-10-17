@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source255–259 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source255259-returnmusicdisturbanceminipet-leash-boundaries-2026-10-17):255 cursor missile→ten-second gormling/run-back,256 ten-minute rooted harp music,257 pipe script/sound,258 casing disturbance and259 permanent minipet leash remain gaps. TDB94221/100008 are not runtime-published or action-proved. No static actor/caster attachment/silent-script substitute, new runtime/data admission or positive certificate;240 single owned job stays separate.
+
 ## 2026-10-17 — Toy source250–254 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17): coordinated steward stacking, seven-day viewer233 spirit-healer replacement, slime-minipet party appearance, mixed script/dynamic-ground laser chasing and exact count4/five-model slime lifecycle remain gaps. No caster/global-model/single-actor substitute, runtime/data admission or new positive certificate.240 single owned capacity-gated job remains separate; no repeated gate.

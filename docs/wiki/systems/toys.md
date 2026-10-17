@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source return/music/disturbance/minipet-leash boundaries (2026-10-17)
+
+[Source255–259 matrix](../../toy-effects14-coverage.md#source255259-returnmusicdisturbanceminipet-leash-boundaries-2026-10-17) keeps returning gormling destination/movement, ten-minute rooted harp music, pipe script/sound, disturbable casing and permanent minipet leash contracts unproved. Exact TDB actor presence/root support/zero dummy shape is not those combined actions or native sound. No inert actor/caster attachment/script no-op admission, runtime/data write or new positive proof.
+
 ## Source stacking/death-view/minipet/chase/multi-slime boundaries (2026-10-17)
 
 [Source250–254 matrix](../../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17) retains coordinated steward stacking, death-only viewer spirit-healer replacement, slime-minipet party appearance, ground-laser chasing and exact four-slime source-pool lifecycle gaps. Authentic source models and generic aura/summon support do not establish these combined contracts. No actor/viewer/minipet/script admission, runtime/data write or new positive proof;240 remains the single tracked pending job.

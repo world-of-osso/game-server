@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source255–259: return/music/disturbance/minipet-leash boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|255 Gormling in a Bag184487/346010 | Source500ms cursor87 missile32→346011 creates175665/properties1362 for10000ms. TDB94221/scale1 exists, runtime absent. Actual tossed-destination actor running back to owner remains unproved; no static actor or caster summon substitute. Item recovery10000ms overrides8000ms spell recovery. |
+|256 Fae Harp184489/346012 | Self aura26/root for600000ms,120000ms item recovery. Source melody requires actual learned use/root lifetime/restoration and authentic musical presentation; generic root support or a silent aura is not this complete contract. No new CPU/native result claimed. |
+|257 Fae Pipes184490/346059 | Self script3,12000ms item recovery. Source pipe-playing action/sound remains unproved; no blanket zero-payload script admission, sound-name guess or no-op success. |
+|258 Infested Arachnid Casing184495/346120 | Target47 summon175679/properties3911 (Control0/Title0/flags67241992) for120000ms,300000ms item recovery. TDB100008/scale1 exists, runtime absent. Advertised disturbance/risk action remains unresolved; an inert authentic casing is not interaction/lifecycle acceptance. |
+|259 Mawsworn Pet Leash184508/346226 | Minipet-target90 complete-zero dummy4 with permanent duration-1 and1500ms item recovery. Source owner/pet leash linking, recipient eligibility and cancellation/restoration remain unproved; no caster attachment substitute or inferred global/permanent companion mutation. |
+
+`rows255-259-{readonly-source,action-source}.json` preserves exact70391 roots, child/destination/cast/duration/recovery/property data and source/runtime models. No production/data/canonical write, generic script/summon/minipet admission or positive simulation/native certificate.240 remains the single capacity-gated owned proof; no duplicate/reset or unchanged gate rerun, and149865 Tea Set stays lead-required.
+
 ## Source250–254: stacking/death-view/minipet/chase/multi-slime boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
