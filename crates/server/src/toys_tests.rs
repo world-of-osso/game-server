@@ -8,6 +8,8 @@ use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, 
 mod bashiok;
 #[path = "toys_flute_tests.rs"]
 mod flute;
+#[path = "toys_force_forward_tests.rs"]
+mod force_forward;
 #[path = "toys_group_inheritance_tests.rs"]
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
@@ -20,10 +22,16 @@ mod podium;
 mod scarab;
 #[path = "toys_shrine_tests.rs"]
 mod shrine;
+#[path = "toys_sightless_tests.rs"]
+mod sightless;
+#[path = "toys_stampwhistle_tests.rs"]
+mod stampwhistle;
 #[path = "toys_stone_whistle_tests.rs"]
 mod stone_whistle;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
+#[path = "toys_waywatcher_tests.rs"]
+mod waywatcher;
 #[path = "toys_ysera_tests.rs"]
 mod ysera;
 
