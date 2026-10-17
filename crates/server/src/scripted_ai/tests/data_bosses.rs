@@ -217,9 +217,6 @@ fn encounter_fixture(
 ) -> (Harness, Option<Entity>, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app_with(data, |app| {
-        if entry == 17308 {
-            app.add_plugins(crate::knockback::KnockbackPlugin);
-        }
         app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
         // Install ingress and its source faction resource before the first update.
         app.insert_resource(
