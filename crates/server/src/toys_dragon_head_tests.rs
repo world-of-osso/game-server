@@ -31,7 +31,7 @@ fn toyfx123_dragon_green_tail_real_learning_expiry_and_natural_reuse() {
     assert_costume_learning_expiry_and_reuse(165676, 285524, 147023, 89494);
 }
 
-fn assert_costume_learning_expiry_and_reuse(item: u32, spell: u32, entry: u32, display: u32) {
+fn assert_costume_learning_expiry_and_reuse(item: u32, spell: u32, entry: i32, display: u32) {
     use shared::components::{Health, ModelDisplay, UnitAuras};
     const DURATION_MS: u32 = 900_000;
     const RECOVERY_MS: u32 = 900_000;
