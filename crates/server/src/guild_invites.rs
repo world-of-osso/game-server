@@ -29,13 +29,9 @@ mod tests {
     use shared::{components::GuildMembership, guild_creation::GuildTabardDesign, protocol::*};
 
     fn install_delivery(h: &mut crate::bank_test_harness::Harness) {
-        h.app.add_systems(
-            Update,
-            (
-                crate::messaging::process_guild_invites,
-                send_pending_invites,
-            ),
-        );
+        // GuildPlugin already installs persisted delivery in the real harness.
+        h.app
+            .add_systems(Update, crate::messaging::process_guild_invites);
     }
 
     #[test]
