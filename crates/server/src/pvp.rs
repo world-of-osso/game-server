@@ -645,18 +645,17 @@ fn queue_for_battleground(
     if let Some(queue) = &player_state.queue {
         return Err(format!("already queued for {}", queue_label(queue)));
     }
-    let Some(template) = template_by_id(battleground_id) else {
-        return Err(format!("unknown battleground id {}", battleground_id));
-    };
+    let name = shared::battleground::queue_name(battleground_id)
+        .ok_or_else(|| format!("unknown battleground id {battleground_id}"))?;
     state
         .battleground_queue
         .join_solo(character_id, level, battleground_id, now)
         .map_err(format_bg_queue_error)?;
     player_state.queue = Some(PlayerPvpQueue::Battleground {
         battleground_id,
-        name: template.name.clone(),
+        name: name.clone(),
     });
-    Ok(format!("queued for {}", template.name))
+    Ok(format!("queued for {name}"))
 }
 
 /// TC BattleGroundHandler.cpp189–226: only the leader queues the whole group.
@@ -672,10 +671,12 @@ fn queue_battleground_party(
     if groups.leader_of(leader) != Some(leader) {
         return Err("only the group leader can queue the party".into());
     }
-    let template = template_by_id(battleground_id)
+    let name = shared::battleground::queue_name(battleground_id)
         .ok_or_else(|| format!("unknown battleground id {battleground_id}"))?;
+    let max_group = shared::battleground::queue_group_limit(battleground_id)
+        .expect("validated battleground queue");
     let members = groups.group_members(leader);
-    if members.len() > usize::from(template.team_size) {
+    if members.len() > usize::from(max_group) {
         return Err("group exceeds the battleground team size".into());
     }
     let mut online = Vec::with_capacity(members.len());
@@ -704,10 +705,10 @@ fn queue_battleground_party(
             .expect("validated online party member");
         player_state.queue = Some(PlayerPvpQueue::Battleground {
             battleground_id,
-            name: template.name.clone(),
+            name: name.clone(),
         });
     }
-    Ok((online, format!("queued for {}", template.name)))
+    Ok((online, format!("queued for {name}")))
 }
 
 fn dequeue_player(
