@@ -191,7 +191,7 @@ use shared::casting::{CastState, CastTickResult, CastType};
 use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast, WitnessRay,
+    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 use shared::spell_data::CastFailReason;
 
@@ -1164,7 +1164,7 @@ fn cast_granted_with_item_context(
                     .get_or_insert_with(Default::default)
                     .category_recovery_ms = cooldown.category_ms;
             }
-            start_cast(world, caster, &spell, target, None)
+            start_cast(world, caster, &spell, target)
         });
     debug!(caster = ?caster, spell_id, result = ?result, "Granted cast acceptance result");
     if let Err(failure) = &result {
@@ -1278,7 +1278,7 @@ pub(crate) fn cast_toy_spell(
             .get_or_insert_with(Default::default)
             .category = toy.category;
     }
-    let result = start_cast(world, caster, &spell, target, request.witness);
+    let result = start_cast(world, caster, &spell, target);
     if let Err(failure) = &result {
         let (reason, detail) = failure.to_contract();
         send_to_owner(
@@ -1394,7 +1394,6 @@ fn request_cast(
         world.entity_mut(caster).insert(QueuedSpellCast {
             spell: requested_spell,
             explicit,
-            witness: request.witness,
         });
         return Ok(());
     }
@@ -1402,8 +1401,7 @@ fn request_cast(
         // A newer executable request supersedes the held request too.
         world.entity_mut(caster).remove::<QueuedSpellCast>();
     }
-    start_cast(world, caster, &spell, explicit, request.witness)
-        .map_err(|failure| (spell.id, failure))
+    start_cast(world, caster, &spell, explicit).map_err(|failure| (spell.id, failure))
 }
 
 /// One request in the last 750 ms. TrinityCore a352b1fa Player.cpp:31545-31559 and Retail
@@ -1415,7 +1413,6 @@ const SPELL_QUEUE_WINDOW_SECS: f32 = 0.75;
 struct QueuedSpellCast {
     spell: SpellInfo,
     explicit: Option<Entity>,
-    witness: Option<WitnessRay>,
 }
 
 fn cast_queue_delay(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
@@ -1451,13 +1448,7 @@ fn start_queued_casts(world: &mut World) {
             .clone();
         effective_spell.cast_destination = queued.spell.cast_destination;
         effective_spell.cast_target_item_guid = queued.spell.cast_target_item_guid;
-        if let Err(failure) = start_cast(
-            world,
-            caster,
-            &effective_spell,
-            queued.explicit,
-            queued.witness,
-        ) {
+        if let Err(failure) = start_cast(world, caster, &effective_spell, queued.explicit) {
             let (reason, detail) = failure.to_contract();
             send_to_owner(
                 world,
@@ -1528,7 +1519,6 @@ fn validate_start(
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
-    witness: Option<WitnessRay>,
     ignore_cast_in_progress: bool,
 ) -> Result<Option<Entity>, CastFailure> {
     if !targets::is_alive(world, caster) {
@@ -1563,7 +1553,7 @@ fn validate_start(
             "implicit target {id} not supported"
         )));
     }
-    let target = validate_target(world, caster, spell, explicit, Sight::Start(witness))?;
+    let target = validate_target(world, caster, spell, explicit, Sight::Start)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
@@ -1630,21 +1620,23 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
 /// Line of sight evidence when a cast checks its unit target (docs/specs/line-of-sight.md).
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Sight {
-    /// Cast start: a creature searches; a player's cast carries its witness ray.
-    Start(Option<WitnessRay>),
-    /// Cast finish: a creature searches again; a player's witness was checked at start.
+    /// Cast start: search using the caster and target's authoritative positions.
+    Start,
+    /// Cast finish: a creature searches again; player sight was checked at start.
     Finish,
 }
 
-/// `Spell::CheckCast` → `IsWithinLOS` (Spell.cpp:5996-6013, 9259-9272): a creature's ray
-/// search, a player's witness ray.
+/// `Spell::CheckCast` → `IsWithinLOS` (Spell.cpp:5996-6013, 9259-9272):
+/// authoritative target visibility, never a client endpoint that aged in transit.
 fn in_line_of_sight(world: &World, caster: Entity, target: Entity, sight: Sight) -> bool {
     if world.get::<Npc>(caster).is_some() {
         return crate::line_of_sight::sees_in_world(world, caster, target);
     }
     match sight {
-        Sight::Start(witness) => {
-            crate::line_of_sight::witness_holds(world, caster, target, witness)
+        Sight::Start => {
+            let held = crate::line_of_sight::sees_in_world(world, caster, target);
+            debug!(?caster, ?target, held, "Authoritative cast LOS checked");
+            held
         }
         Sight::Finish => true,
     }
@@ -1879,9 +1871,8 @@ fn start_cast(
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
-    witness: Option<WitnessRay>,
 ) -> Result<(), CastFailure> {
-    let target = validate_start(world, caster, spell, explicit, witness, false)?;
+    let target = validate_start(world, caster, spell, explicit, false)?;
     begin_validated_cast(world, caster, spell, target)
 }
 
