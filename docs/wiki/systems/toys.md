@@ -10,6 +10,10 @@ Actual163795 learned use already works with132902; new test proves source displa
 
 Trogg164373, Hozen164374 and Skeletal Monkey164375 already have authentic transform entries. New actual-use tests prove ten-minute ordinary expiry/restoration and item override versus inherited spell recovery, without production changes. [Exact four-ID final comparison, source pools and exclusions](../../toy-effects14-coverage.md#source109113-bannerscript-boundary-and-disguise-lifecycles-2026-10-17) separate server state from weighted/native appearance certification; Glorious Pennant110 remains an unresolved script.
 
+## Lunar/Peddlefeet hearthstone learned use (2026-10-17)
+
+Two additional holiday roots use the same persisted-bind/shared2309-charge path: missing bind refuses before spending, source10s cast returns to the saved same-map location, spending blocks its sibling. [Exact5-test/seven-ID gate and source visual boundaries](../../toy-effects14-coverage.md#source114117-hidinggift-gaps-and-holiday-hearthstones-2026-10-17) retain procedural/native/cross-map/recharge gaps; no production patch. Rhan'ka hiding114/Akunda gift115 remain unresolved actions.
+
 ## Forlorn Toll destination-only flight (2026-10-16)
 
 163463/279223 triggers279222 after source1.5s cast+3s fixed missile flight, then one143222 source soul. Genuine importer RED precedes exact one-entry/ten-model admission; actual learned-use RED finds early arrival because front47 was unrecognized and unit-only delay storage discarded unitless destination flight. The existing scheduler now retains that delay without a fake target or toy-ID special case. Real cast/flight, source display membership/front,30s recovery/reuse and coexisting independent60s lifetimes pass. Whole-Toy150/150, affected49/49, importer3/3 and check/fmt pass. [Exact revisions, current-copy publication receipt and boundaries](../../toy-effects14-coverage.md#forlorn-toll85-source-summon-2026-10-16) distinguish server timing from all-ten native appearances, ghost/wandering semantics and complete-toy parity; canonical template publication remains lead-owned.

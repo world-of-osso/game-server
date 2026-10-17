@@ -10,6 +10,10 @@
 
 [Three existing transforms](systems/toys.md#source-disguise-recovery-precedence-2026-10-17): actual learned-use proves source models, ten-minute ordinary expiry and item/spell recovery precedence. New three-ID test passes; final comparison with Oomgut passes2/2 at69.43s, check/fmt clean. No production change or native/weighted/full-recovery claim; Pennant110 script gap remains.
 
+## 2026-10-17 — Lunar/Peddlefeet learned use
+
+[Two new holiday cases](systems/toys.md#lunarpeddlefeet-hearthstone-learned-use-2026-10-17) prove existing persisted-bind/shared-charge path without production changes; bounded5 tests/seven IDs pass105.95s, check/fmt clean. Native/procedural/cross-map/recharge claims excluded; hiding114/gift115 remain named gaps.
+
 ## 2026-10-17 — Forlorn/charge merge
 
 [Focused merge proof](../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17): preserve effect96 movement-duration hit ordering and destination-only flight/front47; merged55/55 pass with actual protocol master. Lead published matching Forlorn template receipt; no new full-suite/native-parity claim.
