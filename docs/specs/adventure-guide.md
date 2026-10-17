@@ -5,6 +5,7 @@ Authoritative Suggested Content and Traveler's Log snapshots for the [client con
 ## What it must do
 
 - [x] Authenticated in-world queries return source rows or explicit source errors; never invented suggestions/progress.
+- [ ] Send a full Guide on initial login/reconnect, existing explicit queries, and changed content. Send only `AdventureGuideClock` when the countdown time alone changes; suppress unchanged refreshes. Preserve every monthly activity, tracking flag, suggestion and error.
 - [x] Apply supported PlayerConditions; hide/count unsupported suggestion gates. Eligible authored cards remain display-only; unsupported activations are absent and counted as a subset of visible cards.
 - [x] Apply the [World of Osso monthly access/reset policy](../../../game-engine/docs/specs/adventure-guide.md#world-of-osso-monthly-policy) to every character; preserve tracking and reset only monthly counters.
 - [x] Reuse existing criteria tracking, attribute real events once across overlapping activity trees, persist/account-aggregate contributions, and exclude historical login reconstruction from monthly credit. Unsupported criteria show unavailable, not zero.
