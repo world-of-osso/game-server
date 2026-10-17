@@ -5,6 +5,22 @@ use shared::protocol::GameObjectInfo;
 
 const MOBILE: u32 = 83958;
 
+#[test]
+#[ignore = "explicit offline private5891 Friendly reputation prerequisite, not earned reputation proof"]
+fn guild_mobile_banking_private_friendly_prerequisite() {
+    let path = std::env::var("GUILD_MOBILE_PRIVATE_DB").expect("explicit stopped private DB");
+    assert!(path.starts_with("/home/osso/.worktrees/logs/guild-mobile-banking-"));
+    let db = redb::Database::open(path).unwrap();
+    let id = crate::persistence_character::find_character_id_by_name(&db, "Gcperkspeer").unwrap();
+    let registry = shared::reputation::default_faction_registry();
+    let mut rep = crate::persistence::load_reputation(&db, id, || {
+        shared::reputation::CharacterReputation::new_for_race(&registry, 1)
+    });
+    rep.set_rep(1168, 3000);
+    crate::persistence::save_reputation(&db, id, &rep);
+    println!("PRIVATE_PREREQUISITE character=Gcperkspeer faction=1168 standing=3000 earned=false");
+}
+
 fn fixture(race: u8, member: bool) -> Harness {
     let mut h = harness(Vec::new(), &[MOBILE, 88304, 88306], 8).unwrap();
     let conn = rusqlite::Connection::open_with_flags(
@@ -157,6 +173,27 @@ fn guild_mobile_banking_user_policy_cooldown_refuses_at_one_hour_and_until_two_h
         .unwrap()
         .clone();
     assert!(super::start_cast(h.app.world_mut(), h.caster, &spell, None).is_ok());
+}
+
+#[test]
+fn guild_mobile_banking_membership_loss_during_cast_does_not_summon_or_start_cooldown() {
+    let mut h = fixture(1, true);
+    h.cast(MOBILE, None);
+    h.advance(6);
+    assert!(h.app.world().get::<super::CastState>(h.caster).is_some());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<GuildMembership>();
+    h.advance(75);
+    assert!(!h.inbox.failed.is_empty());
+    assert!(chests(&mut h).is_empty());
+    assert!(
+        h.inbox
+            .cooldowns
+            .iter()
+            .all(|clock| clock.spell_id != MOBILE || clock.is_gcd)
+    );
 }
 
 #[test]
