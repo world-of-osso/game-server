@@ -76,6 +76,10 @@ fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() 
 fn azure_leymor_sprouts_starts_at_three_seconds_with_native_cast_time() {
     const SPROUTS: u32 = 374364;
     let (mut h, leymor) = wake_leymor();
+    // Headless fixture has no interest plugin; use the existing recipient-set contract.
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(leymor).insert(visibility);
     let sprouts_casts = |h: &Harness| {
         h.inbox(0)
             .spell_gos
