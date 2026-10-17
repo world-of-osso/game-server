@@ -833,6 +833,23 @@ fn periodic_save_never_waits_for_a_busy_durable_writer() {
     assert_eq!(load_character(&saved, character).unwrap().health, 100.0);
 }
 
+#[derive(Resource, Default)]
+struct TransferBurstFrames {
+    frame: u8,
+    arrivals: Vec<u8>,
+}
+
+fn record_transfer_burst_frame(
+    event: On<Insert, crate::maps::InMap>,
+    maps: Query<&crate::maps::InMap, With<Player>>,
+    mut frames: ResMut<TransferBurstFrames>,
+) {
+    if maps.get(event.entity).is_ok_and(|map| map.map_id == 2106) {
+        let frame = frames.frame;
+        frames.arrivals.push(frame);
+    }
+}
+
 #[test]
 fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_reopen() {
     use crate::auth::{Authenticated, InWorld};
@@ -854,7 +871,8 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
     )
     .unwrap();
     let maps = crate::maps::store::load_map_store(&source).unwrap();
-    let start = shared::battleground::flag_rules(489).unwrap().starts[0];
+    // Active Retail Warsong, not retired map489.
+    let start = shared::battleground::flag_rules(2106).unwrap().starts[0];
     let destination = maps.safe_locs[&start];
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -874,6 +892,8 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
         fixed_unix: Some(1790812900),
         offset_secs: 0,
     });
+    app.init_resource::<TransferBurstFrames>();
+    app.add_observer(record_transfer_burst_frame);
     app.add_systems(Update, crate::maps::transfer::receive_world_port_acks);
     app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
     app.finish();
@@ -936,7 +956,7 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
         .resource_scope(|world, mut manager: Mut<InstanceManager>| {
             manager.create_battleground_map(
                 world.resource::<MapStore>(),
-                489,
+                destination.map_id,
                 &roster,
                 20,
                 crate::maps::instances::Now {
@@ -955,7 +975,7 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
             .insert((
                 destination.bevy_position(),
                 MapTransfer {
-                    map_id: 489,
+                    map_id: destination.map_id,
                     destination,
                     origin,
                     options: TeleportOptions::default(),
@@ -982,11 +1002,18 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
         held.abort().unwrap();
     });
     let started = std::time::Instant::now();
-    for _ in 0..3 {
+    for frame in 1..=3 {
+        app.world_mut().resource_mut::<TransferBurstFrames>().frame = frame;
         app.update();
     }
     app.world_mut().run_schedule(FixedUpdate);
     let elapsed = started.elapsed();
+    let arrivals = &app.world().resource::<TransferBurstFrames>().arrivals;
+    assert_eq!(arrivals.len(), 20);
+    assert!(
+        arrivals.iter().all(|frame| *frame == arrivals[0]),
+        "ACKs must arrive in one frame: {arrivals:?}"
+    );
     for (_, player) in &players {
         assert_eq!(app.world().get::<InMap>(*player), Some(&copy));
         assert!(app.world().get::<MapTransfer>(*player).is_none());
@@ -1002,7 +1029,10 @@ fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_
     let db = Database::open(file.path()).unwrap();
     let expected = destination.position;
     for id in roster {
-        assert_eq!(crate::maps::persistence::load_character_map(&db, id), 489);
+        assert_eq!(
+            crate::maps::persistence::load_character_map(&db, id),
+            destination.map_id
+        );
         assert_eq!(
             stored_position(&db, id),
             (expected.x, expected.y, expected.z)
