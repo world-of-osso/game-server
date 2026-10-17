@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source stack/bobber/area/vehicle boundaries and vessel proof (2026-10-17)
+
+[Source215–219 matrix](../../toy-effects14-coverage.md#source215219-retained-vessel-proof-and-stackbobberareavehicle-gaps-2026-10-17) keeps215's stack-conditioned shoulders/proc,217's actual bobber override,218's nearby forced-cry area action and219's mixed vehicle/motion/party-devouring graph open. Existing166086/display100400 content is not a missing-template fix.216 retains Batch3's exact learning/use/aura/cancel CPU scope without a fresh per-toy native certificate. No new admission or repeated unchanged gate; Tea Set149865 remains lead-required.
+
 ## Source visual/motion/return/class/covenant boundaries (2026-10-17)
 
 [Source210–214 matrix](../../toy-effects14-coverage.md#source210214-visualmotionreturnclasscovenant-boundaries-2026-10-17) retains multi-visual eyes, water-walk/hover, player throw-return, class-armor payload and advertised Night Fae eligibility gaps. Shared2309/homebind metadata or ItemEffect condition0 is not complete Night Fae proof; no invented covenant rule or borrowed earlier hearthstone certificate. No runtime/data admission or new native result.
