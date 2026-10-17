@@ -53,9 +53,13 @@ This checkpoint's OnEnd callbacks cover Arathi and Eye. Other per-map/resource/o
 
 ## Alterac captain/general Honor
 
-Pinned TC AV enum69–72, HonorKillBonus535–539 and OnUnitKilled653–684 give the opposing team three bonus-kill equivalents for captain11949/11947 and four for general11948/11946. Use `ceil(kills × min(instance PVPDifficulty maximum,80) ×1.55)`, preserving the source float multiplication order and rounding the whole grant once. The admitted20–79 bracket gives captain368 and general490, as separate events totaling858 before any still-unimplemented end/tower bonuses; neither recipient level20 nor `kills × ceil(one-kill bonus)` substitutes for the source rule.
+Pinned TC AV enum69–72, HonorKillBonus535–539 and OnUnitKilled653–684 give the opposing team three bonus-kill equivalents for captain11949/11947 and four for general11948/11946. Use `ceil(kills × min(instance PVPDifficulty maximum,80) ×1.55)`, preserving the source float multiplication order and rounding the whole grant once. The admitted20–79 bracket gives captain368 and general490, as separate events totaling858 before tower and still-unimplemented survivor-end bonuses; neither recipient level20 nor `kills × ceil(one-kill bonus)` substitutes for the source rule.
 
-Only a source battle-accepted death triggers the award, scoped to its accepted, present opposing roster. Other-copy deaths and mine-owner changes do not mint this bonus; captain alive-state and terminal general transition reject replay. Keep the common positive-Honor eligibility, full XP/wallet mirror, cap and durable updates. Tower destruction and survivor OnEnd awards remain separate unfinished callbacks; these NPC credits do not claim full AV reward parity.
+Only a source battle-accepted death triggers the award, scoped to its accepted, present opposing roster. Other-copy deaths and mine-owner changes do not mint this bonus; captain alive-state and terminal general transition reject replay. Keep the common positive-Honor eligibility, full XP/wallet mirror, cap and durable updates. Tower destruction is a separate callback below; survivor OnEnd remains unfinished. These NPC credits do not claim full AV reward parity.
+
+## Alterac tower Honor
+
+Pinned TC AV EventPlayerDestroyedPoint813–817 grants three bonus-kill equivalents to the assaulting team when a tower actually finishes destruction. At retained20–79, each tower grants368; two distinct destructions grant368+368=736, not a single rounded six-kill grant. An assault, canceled Opening, successful defense, graveyard capture or later update of an already destroyed tower grants nothing. Credit the accepted roster still present in that copy through the existing positive-Honor eligibility and durable XP/wallet mirror. The source240s capture timer remains the only destruction clock. Survivor OnEnd remains a separate unfinished callback.
 
 ## Isle commander Honor
 
