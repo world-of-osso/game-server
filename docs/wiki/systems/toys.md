@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source visual/motion/return/class/covenant boundaries (2026-10-17)
+
+[Source210–214 matrix](../../toy-effects14-coverage.md#source210214-visualmotionreturnclasscovenant-boundaries-2026-10-17) retains multi-visual eyes, water-walk/hover, player throw-return, class-armor payload and advertised Night Fae eligibility gaps. Shared2309/homebind metadata or ItemEffect condition0 is not complete Night Fae proof; no invented covenant rule or borrowed earlier hearthstone certificate. No runtime/data admission or new native result.
+
 ## Source area/vision/companion boundaries and Aqir proof (2026-10-17)
 
 [Source205–209 matrix](../../toy-effects14-coverage.md#source205209-areavisioncompanion-boundaries-and-retained-aqir-proof-2026-10-17) distinguishes an area-trigger totem, void-perception payload, Control1/Title2 scale2 apple and minipet-target leash from generic scenery/caster cosmetics. Aqir retains earlier actual missile/selected-target/15s-aura CPU proof without new native certification. No runtime/data admission or repeated gate.
