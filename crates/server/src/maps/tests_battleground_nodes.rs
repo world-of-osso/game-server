@@ -353,7 +353,7 @@ fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() 
 #[test]
 fn alterac_channel_tower_honor_requires_destruction_and_rounds_each_event() {
     for (team, tower_entry, contested_entry, second_tower, graveyard) in [
-        (BgTeam::A, 178946, 178940, 178945, 179481),
+        (BgTeam::A, 178946, 178940, 178945, 179483),
         (BgTeam::B, 178925, 179435, 178929, 179284),
     ] {
         let template = shared::battleground::alterac_valley();
