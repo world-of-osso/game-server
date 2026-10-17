@@ -6,6 +6,8 @@ use shared::components::PowerType;
 const ICE_POWER: u32 = 389453;
 const FROST_BOMB: u32 = 386781;
 const FROST_BOMB_AURA: u32 = 386881;
+const ICY_DEVASTATOR: u32 = 387151;
+const ICY_DEVASTATOR_DAMAGE: u32 = 387152;
 
 #[test]
 fn azure_telash_appears_with_sixty_native_energy() {
@@ -29,6 +31,19 @@ fn azure_telash_appears_with_sixty_native_energy() {
 #[test]
 fn azure_telash_native_flag_stops_regen_without_changing_controlled_pools() {
     let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+    h.advance(0.1);
+    // Isolate baseline permission from the now-authentic scripted combat aura.
+    let removed = crate::auras::remove_auras(
+        h.app.world_mut(),
+        telash,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == ICE_POWER,
+    );
+    assert_eq!(
+        removed.len(),
+        1,
+        "remove only the actual engagement aura control"
+    );
     h.advance(1.0);
     assert_eq!(
         power_value(h.app.world(), telash, PowerType::Energy),
@@ -102,7 +117,6 @@ fn assert_living_victim(h: &mut Harness, telash: Entity) {
 }
 
 #[test]
-#[ignore = "RED: Telash engagement Ice Power activation not implemented"]
 fn azure_telash_engagement_applies_native_ice_power_to_self() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     h.engage(telash);
@@ -124,7 +138,6 @@ fn azure_telash_engagement_applies_native_ice_power_to_self() {
 }
 
 #[test]
-#[ignore = "RED: Telash first ordinary3.5s Frost Bomb not implemented"]
 fn azure_telash_frost_bomb_starts_at_three_point_five_and_lands_native_aura() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     let mut visibility = crate::interest::NetworkVisibility::default();
@@ -166,5 +179,68 @@ fn azure_telash_frost_bomb_starts_at_three_point_five_and_lands_native_aura() {
     assert!(
         h.has_aura(h.player(), FROST_BOMB_AURA),
         "native dummy hit applies386881"
+    );
+}
+
+#[test]
+#[ignore = "RED: native Icy Devastator first rescheduled14.3s cast not implemented"]
+fn azure_telash_icy_devastator_follows_first_frost_reschedule_and_native_damage() {
+    let (mut h, telash) = super::azure_frost_bomb::fixture();
+    let player = h.player();
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(telash).insert(visibility);
+    h.engage(telash);
+    // TC firstFrost3.5s reschedules the initial14.5s Devastator10.8s later:14.3s.
+    h.advance(14.1);
+    assert_living_victim(&mut h, telash);
+    assert!(
+        h.has_aura(telash, ICE_POWER),
+        "ordinary native engagement aura prerequisite"
+    );
+    assert_eq!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .filter(|go| go.caster == telash.to_bits() && go.spell_id == FROST_BOMB)
+            .count(),
+        1,
+        "first ordinary Frost completed before its source rescheduled deadline"
+    );
+    assert!(
+        !h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == telash.to_bits() && go.spell_id == ICY_DEVASTATOR)
+    );
+    h.advance(0.3);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(telash)
+        .expect("source firstFrost reschedule starts Icy Devastator at14.3s");
+    assert_eq!(cast.spell_id, ICY_DEVASTATOR);
+    let remaining = cast.duration - cast.elapsed;
+    // Keep native cast/channel duration and give its1000ms trigger387152 a real tick.
+    h.advance(remaining + 1.2);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == telash.to_bits()
+                && go.spell_id == ICY_DEVASTATOR
+                && go.target == Some(player.to_bits())),
+        "native random-player cast target"
+    );
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(ICY_DEVASTATOR_DAMAGE)
+                && event.kind == CombatLogKind::Damage
+                && event.source == Some(telash.to_bits())
+                && event.target == Some(player.to_bits())
+                && event.amount > 0),
+        "native periodic trigger387152 damages the selected player from Telash"
     );
 }
