@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- [x] Oomgut Ritual Drum163795/280308 uses an authentic132902 display for600000ms. Ordinary expiry restores the previous model and preserves health; report7200000ms item recovery and retain its refusal after appearance expiry. Actual learned-use acceptance: `crates/server/src/toys_oomgut_tests.rs`. Native appearance/all-model sampling and full two-hour passage remain separate.
+
 - Katy's Stampwhistle156833/261602 requires authentic132969/display68512 and property4203 Control1/Assistant35. Use native default TempSummon lifetime, not a pet/minion body or following actor: one stationary source47/3yd-front actor for600000ms. Preserve source GOSSIP|MAILBOX flags, faction35, caster identity,10800000ms item/category2066 recovery and ordinary despawn. Existing mailbox service must open from the real actor, retain distance/death/despawn guards and reject requests after closure; no invented gossip option. Server interaction does not certify native body/rendering or wall lifetime.
 
 - Sightless Eye153293/254568 preserves source aura152's target detected-range modifier-15yd for600000ms, instant cast, area group5454 and300000ms item recovery. Use the existing native creature attack-distance calculation, including its minimum/reach clamps and source level/expansion exceptions; do not treat this as stealth, invisibility or untargetability. Ordinary expiry restores detection, not a timer/cooldown reset. Native visual/wire acceptance remains separate.
