@@ -1,5 +1,16 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source160–164: robot/teleport/whistle boundaries and retained Ocean proof (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|160 Blingtron7000 168667/298926 | Source47 summon153897/property3371,660000ms actor duration and14400000ms item recovery. Property3371 is Control0/Title7/flags2048; published153897 is absent. TDB source92505/scale1.2/weight1 has faction0/npcflag0/empty AI/script. Authentic robot metadata does not establish daily gifts or fighting other Blingtrons; no ordinary actor/service substitute or admission. |
+|161 Wormhole Generator: Kul Tiras168807/299083 and162 Zandalar168808/299084 | Both self script3,3000ms cast and900000ms item/spell recovery. Neither root authors a child/destination in these effect rows. Existing126755 Pandaria code chooses its own nine pinned source teleports; it is not evidence for these two location sets or destination selection. No copied Pandaria handler or invented coordinates. |
+|163 Ocean Simulator168824/298869 | Existing audited self dummy4,2000ms cast and180000ms aura. Prior exact-source simulation, both-skin native apply/remove and authenticated nonzero PCM witnesses remain recorded in the earlier Gaze/Ocean coverage below. This source-order revisit adds no acceptance test, current-master/native certificate or physical-output audibility claim; do not confuse it with unresolved Hyper-Compressed Ocean158. |
+|164 item168836/253937 | Root name is Flight Master's Whistle; root ItemSparse display remains null in this capsule. Self dummy3, shared charge1854 and required-area5550 remain source metadata. Description redirects to227334, whose source effect summons114281/property2061 with target42/138. A description reference is not an executable child edge; flight-master destination/transport/service behavior remains unproved, with no generic summon or invented destination. |
+
+Exact70391 roots, effects, casts, durations, properties and inspected153897 source/published absence are retained in `rows160-164-{readonly-source,action-source}.json`. Current `spell_cast/toy_wormhole.rs` explicitly implements only pinned Pandaria126755/126756–126764. Documentation/source inspection only; no runtime/importer/canonical changes, new data publication or rerun of unchanged historical gates.
+
 ## Source155–159: equipment/light/ocean/gift boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
