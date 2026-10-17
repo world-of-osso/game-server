@@ -1,3 +1,7 @@
+## 2026-10-17 — Life Exchange health redistribution
+
+[Bounded67](../pet-battle-effect-coverage.md#life-exchange67--implementation2026-10-17): direct active HP averaging/caps/miss conservation, no invented attack-power or callback behavior. Actual unsupported67 RED3→GREEN4;1778/2829 rows/1016 graphs. Native/final gates pending; independent Retail rounding/feedback remains unproved.
+
 ## 2026-10-17 — Launch Rocket setup and launch
 
 [Bounded75](../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17): exact293/effect508/aura294, existing charged direct-damage path. Unsupported75 RED3→GREEN4;1777/2829 rows/1015 graphs. Authored owned-team/wild-PvP27 and both strict native skins pass setup/launch win, six inspected fullHD originals/two framed models throughout. Final lib122/check55.43s/no warnings/bothfmt pass; wild-PvP27 and unchanged UI12 scopes retained. Initial duplicate caller `--locked` failed before compilation; corrected check passed, both attempts logged. No generic object-sharing/timing/VFX claim.

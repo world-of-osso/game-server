@@ -39,6 +39,51 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_life_exchange_uses_legal_tormented_spirit_and_persisted_injury() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 2611), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    let caller = states.get_mut(&41).unwrap();
+    caller
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 3, 277)
+        .unwrap();
+    caller.health = 50;
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    assert_eq!(allies.pets[0].species, 2611);
+    assert_eq!(allies.pets[0].health, 50);
+    assert_eq!(allies.pets[0].abilities[2], 277);
+    let enemies = build_team(
+        &catalog,
+        &std::array::from_fn::<_, 3, _>(|_| Identity {
+            guid: None,
+            species: 39,
+            level: 4,
+            breed: 3,
+            quality: PetQuality::Rare,
+        }),
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let initial = Battle::new([allies, enemies]).unwrap();
+    let expected = (50 + initial.teams[1].pets[0].health) / 2;
+    let (state, _) = initial
+        .step(
+            &catalog.turns,
+            [Action::Ability(277), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    assert_eq!(state.teams[0].pets[0].health, expected);
+    assert_eq!(state.teams[1].pets[0].health, expected);
+}
+
+#[test]
 fn wild_pet_battles_launch_rocket_uses_unlocked_lil_bling_setup_and_launch() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
