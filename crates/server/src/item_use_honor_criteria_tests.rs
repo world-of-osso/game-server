@@ -19,6 +19,8 @@ fn achievements_criteria_gnerd_native_item_ten_zero_xp_honor_kills_and_reopen() 
     use_slot(&mut eater, 0);
     assert!(errors(&mut eater).is_empty());
     assert_eq!(count_of(&eater, CANDY), 0);
+    // Authored CastingTimeIndex4 is1000ms; accepting UseItem precedes its aura.
+    eater.h.advance(20);
     assert!(
         eater
             .h
