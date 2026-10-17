@@ -107,7 +107,7 @@ impl Stealth {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct DetectionGeometry {
     level: u8,
     facing: Option<f32>,
