@@ -480,7 +480,6 @@ fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
 }
 
 #[test]
-#[ignore = "source coincident pull angle acceptance pending implementation"]
 fn encounter_coverage_omor_coincident_pull_projects_source_combat_reach() {
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
@@ -525,7 +524,6 @@ fn encounter_coverage_omor_coincident_pull_projects_source_combat_reach() {
 }
 
 #[test]
-#[ignore = "source coincident caster retreat angle acceptance pending implementation"]
 fn encounter_coverage_omor_coincident_caster_retreats_along_source_angle() {
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
