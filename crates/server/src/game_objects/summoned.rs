@@ -16,7 +16,7 @@ use shared::protocol::{
 
 use super::GameObjectBounds;
 use crate::interest::NetworkVisibility;
-use crate::spell_cast::{duration_ms, effects::EffectCtx, now};
+use crate::spell_cast::{duration_ms, effects::EffectCtx, history_now};
 use crate::spell_info::SpellEffect;
 
 pub(crate) const EFFECT_TRANSMITTED: u32 = 50;
@@ -307,7 +307,7 @@ pub(crate) fn spawn_transmitted(world: &mut World, ctx: &EffectCtx, effect: &Spe
         return;
     };
     let duration = duration_ms(world, ctx.caster, ctx.spell);
-    let expires_at = (duration > 0).then(|| now(world) + f64::from(duration / 1000));
+    let expires_at = (duration > 0).then(|| history_now(world) + f64::from(duration / 1000));
     spawn_object(
         world,
         (Some(ctx.caster), ctx.spell.id),
@@ -335,7 +335,7 @@ pub(crate) fn spawn_wild(world: &mut World, ctx: &EffectCtx, effect: &SpellEffec
         return;
     };
     let duration = duration_ms(world, ctx.caster, ctx.spell);
-    let expires_at = (duration > 0).then(|| now(world) + f64::from(duration / 1000));
+    let expires_at = (duration > 0).then(|| history_now(world) + f64::from(duration / 1000));
     spawn_object(world, (None, ctx.spell.id), template, dest, map, expires_at);
 }
 
@@ -401,7 +401,8 @@ fn spawn_object(
 }
 
 pub(crate) fn expire_objects(world: &mut World) {
-    let time = now(world);
+    // TC GameObject.cpp1403/2286 uses GameTime, not capped simulation ticks.
+    let time = history_now(world);
     let mut query = world.query::<(Entity, &SummonedObject)>();
     let expired: Vec<_> = query
         .iter(world)

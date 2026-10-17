@@ -31,8 +31,6 @@ fn fixture(race: u8, member: bool) -> Harness {
     h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     h.app
-        .add_systems(Update, crate::game_objects::summoned::expire_objects);
-    h.app
         .world_mut()
         .get_mut::<shared::components::Player>(h.caster)
         .unwrap()
@@ -122,6 +120,25 @@ fn guild_mobile_banking_neutral_member_casts_both_faction_chests_with_five_minut
         h.advance(1);
         assert!(h.app.world().get_entity(chest).is_err());
     }
+}
+
+#[test]
+fn guild_mobile_banking_lifetime_expires_after_real_elapsed_time_despite_simulation_clamp() {
+    let mut h = fixture(1, true);
+    let chest = cast_chest(&mut h);
+    let before = super::now(h.app.world());
+    // Native process failure: a loaded frame advances real time while Bevy's
+    // default250ms virtual catch-up clamp discards elapsed simulation time.
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_secs(301),
+        ));
+    h.advance(1);
+    assert!(super::now(h.app.world()) - before < 1.0);
+    assert!(
+        h.app.world().get_entity(chest).is_err(),
+        "Five-minute chest must expire by real time, not dropped virtual ticks"
+    );
 }
 
 #[test]
