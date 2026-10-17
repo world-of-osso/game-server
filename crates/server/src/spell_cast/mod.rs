@@ -130,6 +130,8 @@ mod excluded_aura_spell_tests;
 mod excluded_caster_type_tests;
 #[cfg(test)]
 mod fount_strength_tests;
+#[cfg(test)]
+mod full_trigger_dead_target_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
