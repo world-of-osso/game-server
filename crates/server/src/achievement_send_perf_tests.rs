@@ -157,8 +157,10 @@ fn spawn_peer(app: &mut App, index: usize) -> Peer {
             MessageReceiver::<AdventureGuideSnapshot>::default(),
             MessageSender::<AdventureGuideClock>::default(),
             MessageReceiver::<AdventureGuideClock>::default(),
-            MessageSender::<AdventureGuideRequest>::default(),
-            MessageReceiver::<AdventureGuideRequest>::default(),
+            (
+                MessageSender::<AdventureGuideRequest>::default(),
+                MessageReceiver::<AdventureGuideRequest>::default(),
+            ),
         ))
         .id();
     Peer { player, connection }
