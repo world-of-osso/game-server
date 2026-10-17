@@ -18,6 +18,7 @@
 pub(crate) mod azure_vault;
 pub mod boss_ai;
 pub mod bossmod;
+pub(crate) mod caster_chase;
 pub mod creature_text;
 pub mod event_map;
 pub(crate) mod hellfire_ramparts;
@@ -110,6 +111,9 @@ impl Plugin for ScriptedAiPlugin {
                         .after(waypoint_path::path_movement_system)
                         .before(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
+                    caster_chase::advance
+                        .after(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
                     kings_rest::update_gold_follows
                         .after(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
@@ -164,6 +168,9 @@ pub enum Hook {
     ChannelFinished {
         spell_id: u32,
     },
+    SpellCast {
+        spell_id: u32,
+    },
     JustEngagedWith(Entity),
     JustDied(Option<Entity>),
     /// `DamageTaken(attacker, damage)` with the health the damage was taken from.
@@ -214,6 +221,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn reset(&mut self, _ctx: &mut Ctx) {}
     fn just_appeared(&mut self, _ctx: &mut Ctx) {}
     fn channel_finished(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
+    fn on_spell_cast(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
     fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {}
     fn just_died(&mut self, _ctx: &mut Ctx, _killer: Option<Entity>) {}
     fn damage_taken(&mut self, _ctx: &mut Ctx, _attacker: Option<Entity>, _damage: DamageTaken) {}
@@ -517,6 +525,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::Reset => ai.reset(&mut ctx),
         Hook::JustAppeared => ai.just_appeared(&mut ctx),
         Hook::ChannelFinished { spell_id } => ai.channel_finished(&mut ctx, spell_id),
+        Hook::SpellCast { spell_id } => ai.on_spell_cast(&mut ctx, spell_id),
         Hook::JustEngagedWith(who) => ai.just_engaged_with(&mut ctx, who),
         Hook::JustDied(killer) => ai.just_died(&mut ctx, killer),
         Hook::DamageTaken {
@@ -596,6 +605,13 @@ pub(crate) fn damage_taken(
 pub(crate) fn spell_hit(world: &mut World, creature: Entity, caster: Entity, spell_id: u32) {
     if world.get::<CreatureAiState>(creature).is_some() {
         dispatch(world, creature, Hook::SpellHit { caster, spell_id });
+    }
+}
+
+/// TC Spell.cpp:3920–3923: successful cast, before immediate/delayed resolution.
+pub(crate) fn on_spell_cast(world: &mut World, caster: Entity, spell_id: u32) {
+    if world.get::<CreatureAiState>(caster).is_some() {
+        dispatch(world, caster, Hook::SpellCast { spell_id });
     }
 }
 
