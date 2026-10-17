@@ -409,16 +409,18 @@ fn update_creature_ai(world: &mut World) {
 /// The head of `Creature::Update`: `JustAppeared` once after AddToMap or Respawn.
 /// `Map::Update` updates objects before relocation notifies, so this precedes the
 /// tick's sight and aggro.
-fn trigger_just_appeared(world: &mut World) {
-    let creatures: Vec<Entity> = world
-        .query_filtered::<Entity, (
-            With<TriggerJustAppeared>,
-            With<CreatureAiState>,
-            Without<DeathState>,
-            Without<GridDormant>,
-        )>()
-        .iter(world)
-        .collect();
+type AppearingCreatures = QueryState<
+    Entity,
+    (
+        With<TriggerJustAppeared>,
+        With<CreatureAiState>,
+        Without<DeathState>,
+        Without<GridDormant>,
+    ),
+>;
+
+fn trigger_just_appeared(world: &mut World, appearing: &mut AppearingCreatures) {
+    let creatures: Vec<Entity> = appearing.iter(world).collect();
     for creature in creatures {
         // An earlier creature's hook may have despawned this one.
         let Ok(mut entity) = world.get_entity_mut(creature) else {
