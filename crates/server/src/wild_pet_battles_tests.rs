@@ -81,7 +81,7 @@ fn wild_pet_battles_lock_on_uses_authored_tonk_target_mark_and_blast() {
     assert_eq!(ready.auras[0].ability, 300);
     assert_eq!(
         ready.auras[0].target,
-        crate::pet_battle::PetRef { team: 1, slot: 0 }
+        ::server::pet_battle::PetRef { team: 1, slot: 0 }
     );
     assert_eq!(ready.auras[0].remaining, 1);
     let (launched, _) = ready
