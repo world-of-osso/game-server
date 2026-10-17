@@ -10,6 +10,23 @@ const ARCANE_ERUPTION: u32 = 375749;
 // TC a352b1fa UnitDefines.h176; production has no named NPC immunity bit yet.
 const IMMUNE_TO_NPC: u32 = 0x0000_0200;
 
+#[test]
+fn azure_leymor_sourced_npc_immunity_rejects_npc_attack_admission() {
+    let flags = shared::components::UnitFlags(IMMUNE_TO_NPC);
+    assert!(
+        !flags.can_be_attacked_by(false),
+        "TC NPC immunity rejects NPC attackers"
+    );
+    assert!(
+        flags.can_be_attacked_by(true),
+        "NPC-only immunity does not imply PC immunity"
+    );
+    let all =
+        shared::components::UnitFlags(IMMUNE_TO_NPC | shared::components::UnitFlags::IMMUNE_TO_PC);
+    assert!(!all.can_be_attacked_by(false));
+    assert!(!all.can_be_attacked_by(true));
+}
+
 fn eruption_count(h: &mut Harness, leymor: Entity) -> usize {
     h.app
         .world_mut()
