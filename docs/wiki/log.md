@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source260–264 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source260264-paired-trophyoracledanceleashanima-service-boundaries-2026-10-17):260 requires both same-difficulty trophy actors,261 authored future consultation,262 nearby melody/dance,263 permanent minipet linking and264 outside-Torghast service.264 TDBvisible52318 has probability0 versus invisible11686/scale2 probability1; neither runtime publication nor service is proved. No one-slot/visible-body/no-op substitute, new runtime/data admission or positive certificate;240 single owned proof continues separately.
+
 ## 2026-10-17 — Toy source255–259 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source255259-returnmusicdisturbanceminipet-leash-boundaries-2026-10-17):255 cursor missile→ten-second gormling/run-back,256 ten-minute rooted harp music,257 pipe script/sound,258 casing disturbance and259 permanent minipet leash remain gaps. TDB94221/100008 are not runtime-published or action-proved. No static actor/caster attachment/silent-script substitute, new runtime/data admission or positive certificate;240 single owned job stays separate.

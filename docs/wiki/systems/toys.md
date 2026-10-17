@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source paired-trophy/oracle/dance/leash/anima-service boundaries (2026-10-17)
+
+[Source260–264 matrix](../../toy-effects14-coverage.md#source260264-paired-trophyoracledanceleashanima-service-boundaries-2026-10-17) retains paired Doomwalker actor placement/lifecycle, authentic oracle fortunes, nearby haunting-melody dancing, permanent companion leash and outside-Torghast anima service gaps.264's selected source model is invisible11686/scale2, not zero-weight visible52318; no source slot/model/recipient substitution or metadata-only admission. No runtime/data write or new positive proof.
+
 ## Source return/music/disturbance/minipet-leash boundaries (2026-10-17)
 
 [Source255–259 matrix](../../toy-effects14-coverage.md#source255259-returnmusicdisturbanceminipet-leash-boundaries-2026-10-17) keeps returning gormling destination/movement, ten-minute rooted harp music, pipe script/sound, disturbable casing and permanent minipet leash contracts unproved. Exact TDB actor presence/root support/zero dummy shape is not those combined actions or native sound. No inert actor/caster attachment/script no-op admission, runtime/data write or new positive proof.
