@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source165–169: Holographic Hearthstone and banner boundaries (2026-10-17)
+
+165 Holographic Digitalization Hearthstone168907/298068 uses existing source10s homebind252/shared2309 behavior. Test-only9d1214327 adds actual bag learning/UseToy to the saved-bind fixture: absent bind refuses without spending, a displaced caster returns after the ordinary authored cast, charge max1/current0/recharge1800000ms is reported, and Brewfest140 then refuses. Health/model remain unchanged. All eight actual holiday hearthstone variants pass8/8 zero ignored62.43s; fmt/diffcheck/manual changed-line readability pass. Native package/tests check remains pending capacity admission in `hearth165-proof-ledger.json`, not a passed gate. No production change or manufactured RED; cross-map/native presentation and natural30min recharge remain unproved. Source visual86828 includes procedural358629/358630 type22, not a native acceptance claim.
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|166 Rustbolt Banner169108/299846 | Cursor87 effect50 names333298,180000ms source duration and category1246 recovery180000ms. Published/content333298 is absent; TDB type5/display57836/size0.6 resolves source FDID3037230. Authentic holographic-object metadata is not passing placement/lifecycle or native presentation; no generic banner substitution or data admission. |
+|167 Alliance War Banner169275/300104 and168 Horde War Banner169276/300144 | Retain source20's exact real-learning/application/combat-interruption and both-skin back-model/removal witnesses below. Those historical bounded proofs do not become a fresh current-master/native gate merely because source order revisits them. |
+|169 Horde War Standard169277/300141 | Permanent self dummy4 plus speed-decrease aura33/base25, with10000ms item recovery. The mixed standard/slow/combat-removal behavior is not established by167–168's different two War Banners or their cosmetic admission; no copied appearance or extra admission. |
+
+`rows165-169-{readonly-source,action-source}.json` retains exact root effects, cast/category/duration fields, selected visual/procedural data and333298 source/published absence. No importer/canonical change or full-Toy recertification;165's new test scope and prior167–168/native scopes remain distinct.
+
 ## Source160–164: robot/teleport/whistle boundaries and retained Ocean proof (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |

@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Holographic Hearthstone and banner boundaries (2026-10-17)
+
+[Source165–169 matrix](../../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17) records eight actual learned-use/saved-bind/shared-charge cases including Holographic165; package check remains pending capacity. Rustbolt333298 publication/placement and mixed Horde War Standard action remain gaps. Earlier source20 War Banner native/combat-removal witnesses retain their original scope; no new runtime/data admission or native certificate.
+
 ## Source robot/teleport/whistle boundaries (2026-10-17)
 
 [Source160–164 matrix](../../toy-effects14-coverage.md#source160164-robotteleportwhistle-boundaries-and-retained-ocean-proof-2026-10-17) separates missing Blingtron7000/service behavior, unsourced Kul Tiras/Zandalar destinations and Flight Master's Whistle action from existing Pandaria code. Ocean Simulator retains its earlier revision-scoped simulation/native/PCM witnesses; no new acceptance, physical-output claim or confusion with Hyper-Compressed Ocean. No runtime/data admission.
