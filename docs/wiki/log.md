@@ -1,6 +1,9 @@
 ## 2026-10-17 — Native power drain8
 
 [Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): pinned primary-power/integer/actual-removal/Amplitude implementation, unchanged native3405/46453/16094. Four real missing-drain REDs and two exclusion guards; stale-protocol compiler failure is not RED. Native pools/costs retained; merged26f5332a native GREEN6/6 in18.34s/146.040s total, no whole-ability acceptance.
+## 2026-10-17 — Sprout death stack consumption
+
+[Native Sprout deaths](investigations/follower-data.md#sprout-death-stack-consumption--2026-10-17): original-caster-first fourteen-child RED→GREEN1/45.34s; actual owner stack consumption, final replicated removal and duplicate-corpse exclusion. Timer/amount assertions and integration gates pending.
 
 ## 2026-10-17 — Literal world-state source boundary
 
