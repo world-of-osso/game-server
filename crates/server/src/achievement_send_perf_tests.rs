@@ -3,7 +3,10 @@
 use super::*;
 use lightyear::connection::host::HostClient;
 use lightyear_serde::{registry::SerializeFns, writer::Writer};
-use shared::protocol::{AchievementDelta, AdventureGuideClock, AdventureGuideSnapshot};
+use shared::protocol::{
+    AchievementDelta, AdventureGuideClock, AdventureGuideRequest, AdventureGuideSnapshot,
+    InstanceChannel,
+};
 
 const PEERS: usize = 11;
 const INCREMENTAL_BYTES_PER_PEER: usize = 1024;
@@ -154,6 +157,8 @@ fn spawn_peer(app: &mut App, index: usize) -> Peer {
             MessageReceiver::<AdventureGuideSnapshot>::default(),
             MessageSender::<AdventureGuideClock>::default(),
             MessageReceiver::<AdventureGuideClock>::default(),
+            MessageSender::<AdventureGuideRequest>::default(),
+            MessageReceiver::<AdventureGuideRequest>::default(),
         ))
         .id();
     Peer { player, connection }
@@ -404,10 +409,15 @@ fn combat_progress_stream_equals_full_state_and_reconnect_replaces_baseline() {
         .iter()
         .filter_map(|message| message.snapshot.as_ref())
         .collect();
+    let world = fixture.app.world();
+    let state = world
+        .get::<PlayerAchievementState>(fixture.peers[0].player)
+        .unwrap();
+    let after_login = world.resource::<AchievementCatalog>().snapshot(state, 1);
     assert_eq!(
         fulls,
-        vec![&projected[0]],
-        "reconnect sends current full baseline"
+        vec![&after_login],
+        "reconnect sends current full baseline, including genuine Login credit"
     );
     assert!(
         reconnected[0]
@@ -416,4 +426,122 @@ fn combat_progress_stream_equals_full_state_and_reconnect_replaces_baseline() {
             .all(|message| message.completed.is_none())
     );
     assert!(reconnected[0].deltas.is_empty());
+}
+
+#[test]
+fn combat_publication_stream_replaces_earned_ids_and_removes_and_restores_progress() {
+    let mut fixture = fixture();
+    let connection = fixture.peers[0].connection;
+    let mut projected = fixture.baselines[0].clone();
+    let mut reduced = projected.clone();
+    assert!(
+        reduced.progress.len() > 2,
+        "full production catalog is present"
+    );
+    reduced.earned_ids = vec![6, 7];
+    reduced.progress.truncate(2);
+    reduced.progress[0].current = 3;
+    send_updates(
+        fixture.app.world_mut(),
+        connection,
+        reduced.clone(),
+        Vec::new(),
+    );
+    let first = fixture.advance().remove(0);
+    assert_eq!(first.deltas.len(), 1);
+    assert!(first.achievements.is_empty());
+    apply_delta(&mut projected, first.deltas.into_iter().next().unwrap());
+    assert_eq!(projected, reduced);
+
+    let mut restored = fixture.baselines[0].clone();
+    restored.earned_ids.clear();
+    restored.progress.truncate(3);
+    restored.progress[2].current = 17;
+    send_updates(
+        fixture.app.world_mut(),
+        connection,
+        restored.clone(),
+        Vec::new(),
+    );
+    let second = fixture.advance().remove(0);
+    assert_eq!(second.deltas.len(), 1);
+    assert_eq!(
+        second.deltas[0].earned_ids,
+        Some(Vec::new()),
+        "empty replaces earned set"
+    );
+    apply_delta(&mut projected, second.deltas.into_iter().next().unwrap());
+    assert_eq!(projected, restored);
+    send_updates(fixture.app.world_mut(), connection, restored, Vec::new());
+    let unchanged = fixture.advance().remove(0);
+    assert!(unchanged.achievements.is_empty() && unchanged.deltas.is_empty());
+}
+
+#[test]
+fn combat_guide_query_and_content_changes_coalesce_without_losing_clock() {
+    let mut fixture = fixture();
+    let connection = fixture.peers[0].connection;
+    fixture
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = Some(1_792_180_801);
+    crate::adventure_guide::refresh_for_connection(fixture.app.world_mut(), connection);
+    fixture
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<AdventureGuideRequest>>(connection)
+        .unwrap()
+        .send::<InstanceChannel>(AdventureGuideRequest::Query);
+    let queried = fixture.advance().remove(0);
+    assert_eq!(
+        queried.guides.len(),
+        1,
+        "explicit query still returns complete Guide"
+    );
+    assert!(
+        queried.clocks.is_empty(),
+        "queued clock and forced full cannot overtake each other"
+    );
+    assert_eq!(queried.guides[0].month.now_unix, 1_792_180_801);
+    let activity = queried.guides[0].activities[0].id;
+
+    crate::adventure_guide::refresh_for_connection(fixture.app.world_mut(), connection);
+    assert_eq!(
+        fixture.advance().remove(0).bytes(),
+        0,
+        "unchanged refresh suppressed"
+    );
+    fixture
+        .app
+        .world_mut()
+        .get_mut::<MessageSender<AdventureGuideRequest>>(connection)
+        .unwrap()
+        .send::<InstanceChannel>(AdventureGuideRequest::TrackActivity {
+            activity_id: activity,
+            tracked: true,
+        });
+    let changed = fixture.advance().remove(0);
+    assert_eq!(changed.guides.len(), 1);
+    assert!(
+        changed.guides[0]
+            .activities
+            .iter()
+            .any(|row| row.id == activity && row.tracked)
+    );
+    assert!(changed.clocks.is_empty());
+    fixture
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = Some(1_792_180_802);
+    crate::adventure_guide::refresh_for_connection(fixture.app.world_mut(), connection);
+    let clock = fixture.advance().remove(0);
+    assert!(clock.guides.is_empty());
+    assert_eq!(
+        clock.clocks,
+        vec![AdventureGuideClock {
+            now_unix: 1_792_180_802
+        }]
+    );
 }
