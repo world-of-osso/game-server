@@ -23,6 +23,7 @@ fn spawn_leader_cast_harness(
     character: u64,
     race: u8,
     casts: &[(u32, u32)],
+    clock_unix: Option<i64>,
 ) -> Harness {
     let saved = persistence::load_achievements(&db, character);
     let spells: Vec<_> = casts.iter().map(|(spell, _)| *spell).collect();
@@ -52,6 +53,10 @@ fn spawn_leader_cast_harness(
         shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(race)),
         saved,
     ));
+    h.app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = clock_unix;
     h.app.update();
     h
 }
@@ -65,7 +70,7 @@ fn achievements_criteria_constant67_native_full_leaders_keep_companions_and_date
         let (character, _) =
             persistence::create_character(&db, 17, "Leaderproof", race, 1).unwrap();
         let (foreign, _) = persistence::create_character(&db, 18, "Nonleader", race, 1).unwrap();
-        let mut h = spawn_leader_cast_harness(db, character, race, &casts);
+        let mut h = spawn_leader_cast_harness(db, character, race, &casts, None);
         assert!(!crate::spell_cast::try_cast_triggered(
             h.app.world_mut(),
             h.caster,
@@ -149,7 +154,8 @@ fn achievements_criteria_constant67_native_full_leaders_keep_companions_and_date
                 .criteria_progress
                 .is_empty()
         );
-        let h = spawn_leader_cast_harness(db, character, race, &casts);
+        let h = spawn_leader_cast_harness(db, character, race, &casts, Some(date + 3600));
+        assert!(h.app.world().resource::<crate::maps::ServerClock>().unix() > date);
         assert_eq!(
             h.app
                 .world()
