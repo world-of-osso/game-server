@@ -77,7 +77,7 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 ### Armageddon1025 — 2026-10-16
 
-[Bounded source and proof](../../pet-battle-effect-coverage.md#armageddon1025--bounded-proof2026-10-16). Existing ordinary damage routes once to each living enemy; the final self-kill suppresses Mechanical Failsafe even when attacks miss or the final enemy faints. Allied reserves remain unchanged. Exact kill tuple and root stay bounded; no new opcode/generic sacrifice rule. Real route-rejection RED1→GREEN8 covers18 active-slot/team combinations and a real authored level4 Rascal-Bot owned loadout. Admission1776/2829 rows/1013 graphs; native/final proof pending.
+[Bounded source and proof](../../pet-battle-effect-coverage.md#armageddon1025--bounded-proof2026-10-16). Existing ordinary damage routes once to each living enemy; the final self-kill suppresses Mechanical Failsafe even when attacks miss or the final enemy faints. Allied reserves remain unchanged. Exact kill tuple and root stay bounded; no new opcode/generic sacrifice rule. Real route-rejection RED1→GREEN8 covers18 active-slot/team combinations and a real authored level4 Rascal-Bot owned loadout. Admission1776/2829 rows/1013 graphs. Both-skin strict native casts deal61/58, caller321→0 without revival, force a real reserve selection and permit its actual attack; eight fullHD originals inspected. Native one-enemy and three-enemy test scopes remain distinct; final gates pending.
 
 ### Miss-only self outcomes194 — 2026-10-16
 
