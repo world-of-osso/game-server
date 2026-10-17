@@ -12,6 +12,9 @@ use std::sync::{
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+#[path = "tick_perf_peers/combat.rs"]
+mod combat;
+
 const PEER_COUNT: usize = 11;
 const MEASUREMENT: Duration = Duration::from_secs(90);
 
@@ -100,7 +103,11 @@ fn select(
     }
 }
 
-fn entered(mut run: ResMut<Run>, mut replies: Query<&mut MessageReceiver<EnterWorldResponse>>) {
+fn entered(
+    mut run: ResMut<Run>,
+    mut replies: Query<&mut MessageReceiver<EnterWorldResponse>>,
+    mut combat: Option<ResMut<combat::Combat>>,
+) {
     for mut receiver in &mut replies {
         for reply in receiver.receive() {
             assert!(
@@ -110,6 +117,9 @@ fn entered(mut run: ResMut<Run>, mut replies: Query<&mut MessageReceiver<EnterWo
             );
             assert!(!run.entered, "duplicate world entry");
             run.entered = true;
+            if let Some(combat) = combat.as_mut() {
+                combat.owner = reply.player_entity;
+            }
             run.count.fetch_add(1, Ordering::SeqCst);
             run.ready.send(run.index).expect("profiling supervisor");
             println!(
@@ -121,10 +131,27 @@ fn entered(mut run: ResMut<Run>, mut replies: Query<&mut MessageReceiver<EnterWo
     }
     if run.count.load(Ordering::SeqCst) == PEER_COUNT && run.all_entered.is_none() {
         run.all_entered = Some(Instant::now());
+        println!(
+            "MEASUREMENT_STARTED {} unix_ms={}",
+            run.username,
+            read_unix_millis()
+        );
     }
 }
 
-fn finish(run: Res<Run>, connected: Query<(), With<Connected>>, mut exit: MessageWriter<AppExit>) {
+fn read_unix_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("wall clock before Unix epoch")
+        .as_millis()
+}
+
+fn finish(
+    run: Res<Run>,
+    connected: Query<(), With<Connected>>,
+    combat: Option<Res<combat::Combat>>,
+    mut exit: MessageWriter<AppExit>,
+) {
     assert!(
         run.started.elapsed() < Duration::from_secs(600),
         "peer readiness deadline exceeded"
@@ -138,7 +165,11 @@ fn finish(run: Res<Run>, connected: Query<(), With<Connected>>, mut exit: Messag
         .all_entered
         .is_some_and(|start| start.elapsed() >= MEASUREMENT)
     {
-        println!("PEER_COMPLETE {}", run.username);
+        let completed_unix_ms = read_unix_millis();
+        if let Some(combat) = combat {
+            combat.assert_complete(&run.username);
+        }
+        println!("PEER_COMPLETE {} unix_ms={completed_unix_ms}", run.username);
         exit.write(AppExit::Success);
     }
 }
@@ -157,10 +188,17 @@ fn run_peer(run: Run) -> bool {
     });
     app.add_plugins(shared::ProtocolPlugin);
     app.insert_resource(run);
+    if let Some(combat) = combat::Combat::read_args() {
+        app.insert_resource(combat);
+    }
     app.add_observer(connected);
+    app.add_observer(combat::connect);
     app.add_systems(Startup, connect);
     app.add_systems(FixedUpdate, login);
-    app.add_systems(Update, (select, entered, finish).chain());
+    app.add_systems(
+        Update,
+        (select, entered, combat::receive, combat::fight, finish).chain(),
+    );
     app.run().is_success()
 }
 
