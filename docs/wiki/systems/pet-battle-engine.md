@@ -77,7 +77,7 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 ### Refuge223 — 2026-10-16
 
-[Bounded1344](../../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16) keeps self26's six-round policy and routes the two other slots only to friendly Critters. A shared explicit-wearer aura function preserves original caster and existing live/charge/refresh semantics; no caster relabeling or shared team shield. Actual unsupported223 RED observed; other selectors and complete Retail timing remain gated. GREEN9/9 and1764/2829 rows/1010 graphs pass; native/final proof pending.
+[Bounded1344](../../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16) keeps self26's six-round policy and routes the two other slots only to friendly Critters. A shared explicit-wearer aura function preserves original caster and existing live/charge/refresh semantics; no caster relabeling or shared team shield. Actual unsupported223 RED observed; other selectors and complete Retail timing remain gated. GREEN9/9 and1764/2829 rows/1010 graphs pass. Both-skin private5961 physically blocks caller then Critter reserve independently at892/892, while non-Critter978 takes28/26 damage; strict snapshots/canonical readback pass and eight fullHD originals are inspected. Final CPU gates pending.
 
 ### Limits
 
