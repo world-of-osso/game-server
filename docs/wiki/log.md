@@ -1,3 +1,7 @@
+## 2026-10-16 — Eligible victim class52
+
+[Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN pending.
+
 ## 2026-10-16 — Eligible victim race53
 
 [Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Native/account GREEN3/3 proves both full ten-race grants and group/reopened date. Census5529/1841 adds246/1005; post-master filter224/0/1existingignored+site1/1, workspace/all-targetcheck/fmt/diff pass and independent artifact/readability complete.
