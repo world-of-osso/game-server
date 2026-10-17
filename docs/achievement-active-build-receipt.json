@@ -161,18 +161,21 @@
   "generated_predicates": {
     "mythic": 64,
     "single": 149,
-    "conditions": 5811,
+    "conditions": 6082,
     "rank_factions": 241,
-    "node_counts": 2
+    "node_counts": 2,
+    "literal_expressions": 21
   },
   "boundary": "Active readable records only, no historical substitution. CriteriaTree named Flags/OrderIndex corrects previous raw-offset reversal. Auxiliary WorldMapOverlay stays separately pinned69933; not a complete current-content/playability certificate.",
   "census": {
     "build": "12.1.5.70448",
-    "ordinary": 5544,
-    "account": 3519,
-    "character": 2025,
-    "statistics": 1843,
+    "ordinary": 5565,
+    "account": 3534,
+    "character": 2031,
+    "statistics": 1844,
     "enabled_types": 109,
+    "constant67_added": [11700, 12847, 12878, 12884, 14193, 14194, 14195, 14196, 15122, 15123, 15124, 15125, 15126, 15416, 15417, 15418, 15423, 15492, 15493, 40040, 63240],
+    "constant67_statistics_added": [63235],
     "migration_added": [],
     "migration_removed": [],
     "area31_added": [
