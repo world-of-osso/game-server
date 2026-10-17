@@ -143,7 +143,7 @@ fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() 
         .collect();
     assert_eq!(
         children,
-        vec![players[0].to_bits()],
+        vec![Some(players[0].to_bits())],
         "only falling player threat, never self/grounded player"
     );
 }
