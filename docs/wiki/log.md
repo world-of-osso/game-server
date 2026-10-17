@@ -1,3 +1,7 @@
+## 2026-10-16 — Leymor Brand expiry hook
+
+[Source boundary](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16): native Brand374567 applied/expired but omitted374570 in genuine8049cebc RED; two controls passed. Finite source expiry hook added; GREEN and complete Leymor/native acceptance pending.
+
 ## 2026-10-16 — Azure finite Frost Bomb chain
 
 [Source and proof boundary](investigations/follower-data.md#azure-frost-bomb--2026-10-16): source-timed native Telash186737/205 genuine2RED (initial0.1s run invalid), then exact misplaced-ground RED;386781→386881 expiry-only387149+386910 and target-derived destination now pass6 native+3 adjacent controls, including the arena control with its existing fixture env. Scoped check/fmt and independent source/artifact gates pass; native pixels remain separate. No boss phases or unbound ground actions inferred; private225-actor import preserves canonical/Stockade proof snapshots.
