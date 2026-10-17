@@ -1,3 +1,4 @@
+- [Health aura-state qualification](investigations/health-aura-state-admission.md) — exact integer thresholds, map/queued phases and passive transitions; no health implementation, integration/ownership seams remain open.
 - [Native required caster aura-spell admission](systems/spell-casting.md#native-required-caster-aura-spell-admission--2026-10-16) — native Voidform/Sheilun two-second lifetime RED3/6→merged52/check/fmt, exact native GCD retained; target notification producer open.
 - [Native excluded aura-spell admission](systems/spell-casting.md#native-excluded-aura-spell-admission--2026-10-16) — native player/NPC and actual450ms completion RED4/5→GREEN37, merged37/check/fmt pass; retained Stealth children, other fields open.
 - [Native aura restriction metadata loader](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16) — native metadata/schema RED→GREEN4 and merged39 controls; mandatory source publication, state/admission still separate.

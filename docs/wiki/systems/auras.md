@@ -1,5 +1,7 @@
 # Auras
 
+[Health aura-state qualification](../investigations/health-aura-state-admission.md) records the separate stored-state lifecycle contract and unresolved integration seams; raw restriction loading and aura-spell consumers do not implement health states.
+
 ## Optional cost spell modifiers (2026-10-16)
 
 TC a352b1fa SpellInfo.cpp4220–4226 explicitly excludes flat spellmods from optional power costs. `spell_mods::modifier_totals` retains the existing live/charged snapshot matching; ordinary `modify` uses `(base+flat)×mult`, while optional `modify_percent` uses only `base×mult`. Native Practiced Strikes429647 effect6/op34 previously subtracted100 from both Protection Execute163201's required and optional Rage: a400 input left200 instead of100. No spell-specific production exception or resource-cap change. Native Sudden Death52437 effect5/op34=-100% and Arms order0 are independent controls. Native OptionalCostPct remains unconsumed. Five native regression/control tests passed within the38-test resource/modifier run (14.74s); after master merge006efb17, all five pass again (14.76s), workspace/all-target check passes64.411s. Independent verification preserves the charged/live matching boundary; no whole-ability/legal-build/fresh-UDP claim. [Contract](../../specs/class-completeness.md).

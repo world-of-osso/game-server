@@ -1,5 +1,7 @@
 # Spell Casting
 
+[Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
+
 ## Native required caster aura-spell admission — 2026-10-16
 
 `aura_spell_restrictions::check_caster` now checks nonzero native `CasterAuraSpell` before the existing excluded-caster reference. Existing ordinary admission/completion callers therefore require the actual caster's active spell identity; a different unit's aura does not qualify. Missing state uses the existing CasterAuraState/detail failure and full-trigger helper bypass is unchanged. The internal module was renamed from exclusions to restrictions; no compatibility path or protocol change.

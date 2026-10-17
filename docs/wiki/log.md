@@ -1,3 +1,7 @@
+## 2026-10-16 — Health aura-state source qualification
+
+[Investigation](investigations/health-aura-state-admission.md): two waves of five bounded read-only explorers reconciled against primary files/native70391. Exact thresholds, seven IDs, packet-before-unit/queued-after-own-unit phases and passive gain/loss qualified; incorrect numeric, missing-data, write-through and broad fractional-stats claims rejected. Missing pinned map/session/opcode sources cached with SHA receipts. No health code or runtime proof; integration/ownership/passive-source seams remain open while independent ledger work continues.
+
 ## 2026-10-16 — Native required caster aura-spell admission
 
 [Spell casting](systems/spell-casting.md#native-required-caster-aura-spell-admission--2026-10-16): actual Voidform/Sheilun casts and two-second cloud loss RED3pass/6fail9.05s precede the shared caster identity check. Positive heal, recipient/expiry/NPC/full-trigger controls included. Initial23/24 exposed a fixture's incorrect empty-GCD expectation; the actual native205406/category133/1500ms packet is now asserted exactly, without production changes. Current merged52/0/0 passes19.79s, cold rebuild416.895s/0warnings; workspace/all-target check132.981s/0warnings and fmt/manual Rust readability pass; canonical source-table publication remains lead-owned and absent at final read-only inspection. Target322109→1221044 notification producer remains unqualified and is not invented.
