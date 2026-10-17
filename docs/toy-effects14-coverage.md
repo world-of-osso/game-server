@@ -2,11 +2,78 @@
 
 ## Source-order continuation gaps (2026-10-16)
 
+Ashhide104329/148626 remains blocked by the missing mount template73689. Source aura78 names73689; the authentic TDB model row selects display51484 (M2 646374), but the published creature catalog lacks73689. Generic aura241 flag proof does not establish Ashhide learning/use, mount rendering, area acceptance or expiry. Per lead instruction, retain this named gap and continue source order; no substitute mount or importer admission. Unexecuted Ashhide test drafts remain in continuation evidence, not the passing regression suite.
+
+113543/174004 has aura78 with zero creature entry and no matching70391 Mount SourceSpell row; its mount/body action remains unresolved. [Grizzlesnout129965 learned-use proof](#grizzlesnout63-source-lifecycle-2026-10-16) now covers the next source root without closing that gap. Next130249/195806 has current published template99572 with authentic display choices63609/63606; the earlier absent-template snapshot is stale. [Waywatcher learned-use acceptance](#waywatcher64-source-lifecycle-2026-10-16) now covers this existing template without adding an importer admission; native rendering remains separate. Evidence: `waywatcher64-template-source-preflight.json`.
+
 Guardian health remains read-only. Pinned TC `Guardian::InitStatsForLevel` uses ExpectedStat when pet_levelstats has no matching row; the local TDB archive has2715 rows and none for51113. `SetCreateHealth(uint32)` truncates the computed base, unlike the wild-summon ceiling. Final `UpdateAllStats` also inherits30% of owner stamina. The actual owner-stamina/final-health oracle remains incomplete; prior positive HP1 wire evidence is not parity. Continue other toys without inventing a guardian default.
 
 Earlier root refusals remain in the [effects12 identity/reason table](toy-effects12-coverage.md#exact-retained-gaps) and [effects13 refinements](toy-effects13-coverage.md#exact-retained-gaps), except identities explicitly closed by later packets here. Arrival of the Naaru64456/91752 is not admitted: TDB51200/display35543 resolves model124640, `creature/invisiblestalker/invisiblestalker.m2`, not a recording model. The local root has only its summon effect; template addon, AI/script, creature spells and SmartAI bindings are empty. The recording action is not established by publishing this invisible actor. This is a local source gap, not proof that Retail has no action.
 
 [Enchanted Stone Whistle server proof](#enchanted-stone-whistle-server-proof-2026-10-16) closes the next source-backed summon boundary without changing the preceding refusals. Evidence: `whistle59-readonly-source.json` and `guardian57-readonly-source.json` in the continuation evidence root below.
+
+## Stampwhistle66 source assistant and mailbox (2026-10-16)
+
+156833/261602 authors Katy132969/display68512 with property4203 Control1/Assistant35, source47's3yd front radius,600000ms duration and10800000ms item/category2066 recovery. Pinned TC `EffectSummonType` and `Map::SummonCreature` route Assistant35 through default TempSummon, not minion/guardian. `CanOpenMailBox` accepts her actual MAILBOX flag with the ordinary live-NPC guard, not an invented gossip choice.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Genuine REDs | Maintained import omits132969 (0/1,2.394s); authentic GOSSIP|MAILBOX service opens no Mailbox role; corrected actual bag-learning/UseToy refuses Control1/title35 (0/1,38.35s). Initial late-add_plugins fixture failure is preserved separately, not behavioral RED. |
+| Source changes | Importer copies authentic132969/model68512/flags67108865; exact Assistant35 admission plus default-lifecycle routing retain source flags/faction. Existing mailbox role opens directly from MAILBOX flag with ordinary validation; no mail schema or arithmetic redesign. Initial supported-title-only routing diagnostic proved flags0/faction1 from the old owned path; actual source state after correction confirms flags67108865/faction35/health23642 and active Mailbox. |
+| Focused GREEN | At source-equivalentb41800cc (code0e255646; see ledger exact hash), both service and actual bag-learning/summon/mailbox lifecycle pass2/2, zero ignored40.75s. Source flags/faction/body/non-pet/non-follow/3yd-front/600s expiry and3h category2066 recovery are retained. Actual persisted mail sends with30c postage; range loss/death/despawn close service and reject requests without spending. Ordinary50ms simulation remains unchanged. Maintained importer/idempotence passes1/1. Transient replies are collected per frame, matching existing harness lifetime; initial delayed-receiver fixture failures remain separate. |
+| Current gates | At server269cf209/engine48fcd9625/protocol07a8faa, whole `toys:: --test-threads 2` passes143/143, zero ignored484.12s. Affected real mail/NPC interaction/summon controls pass49/49,68.94s; maintained importer rollback/source-preservation controls3/3,3.024s. Binary/tests check19.14s and fmt pass; no compile warnings/manual readability findings. |
+| Catalog/publication boundary | Canonical runtime classification remains370 and still refuses missing132969; no canonical data was changed. Prepared importer basis is392/1166 with Katy admitted, not392 completed toys; prior385 prepared61 checkpoint is a different recorded stage, not this packet's baseline. Lead owns publication. Native assets/pixels/wire/audio/wall-lifetime and complete-toy parity remain open. |
+
+Evidence root below: `stampwhistle66-{active-goal,proof-ledger,source-preflight,mailbox-source}.json`, importer/journal/mail REDs, source-state, focused development and final gate logs plus `stampwhistle66-{final-results,readability,census-delta}.json`. Pinned MailHandler source SHA256 `c88bb3db1e03bb00e0d3af34f61faf0d86c19e26c89f61705e68191cac8f09b8` is retained only under private engine `data/diagnostics/toy-effects66-2026-10-16/reference/`.
+
+## Sightless65 native detection consumer (2026-10-16)
+
+Actual journal153293/254568 RED at077ed8f6 rejects `unsupported toy spell: aura 152` (0/1,56.25s). Before production admission, real source-aura hostile-acquisition controls664a50ed pass1/1,37.57s: ordinary level5 spider acquires player at12yd, protected player stays unacquired12yd but is acquired7yd. Existing `AggroDistance::center_radius` already reads target152 before native minimum/reach clamps. Minimal574d45f5 names that constant in the aura registry and recognizes the existing consumer; no aggro formula, stealth, faction, movement or wire change.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Focused GREEN | Both actual bag-learning/UseToy and real hostile acquisition pass2/2, zero ignored42.78s. Source Val'sharah7558 terrain accepts group5454, instant cast/600000ms aura and300000ms recovery remain authored. Ordinary50ms simulation expiry removes the aura with original body/health retained. Northshire9 refuses without spending, then valid terrain permits use after ordinary recovery expiry. No clock/duration/cooldown reset. |
+| Current gates | At server2e936278/engine48fcd9625/protocol07a8faa, whole `toys:: --test-threads 2` passes142/142, zero ignored792.86s; native creature-aggro controls30/30 pass118.42s. Server binary/tests check passes5m34s and fmt passes; no compile warnings/manual readability findings. Canonical runtime catalog classification369→370 adds only153293, zero removals; not370 completed toys or the separate prepared-import basis. No new assets/native pixels/wire/audio/wall-lifetime or complete-toy claim. |
+| Preceding source gaps |153193 zero-entry mount action remains unresolved.153194 effect72 creates a farsight DynamicObject/viewpoint;153204 uses bind-sight1/stalked68;153253 property65 Control3 requires possessed128391, not a wild actor. These capabilities remain unimplemented and are not admitted by152 recognition. |
+
+Evidence root below: `sightless65-{active-goal,proof-ledger,source-preflight}.json`, genuine journal RED, pre-admission aggro proof, focused GREEN and final fmt/check/aggro/whole-Toy logs plus `sightless65-{final-results,readability,census-delta}.json`; local pinned TC `Creature.cpp::GetAttackDistance` and `SpellAuraEffects.cpp`152 consumer mapping. `after-waywatcher64-root-metadata.json` preserves preceding source identities.
+
+## Waywatcher64 source lifecycle (2026-10-16)
+
+Test-only194e7c82 adds actual bag learning and journal UseToy130249/195806 acceptance. Initial run passes1/1, zero ignored42.09s against the currently published authentic99572 template. No runtime fix, importer change or manufactured RED; earlier absent99572 source evidence is stale.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Server lifecycle | Real Northshire9 terrain refuses group4273 without recovery; real Broken Isles1220/Val'sharah7558 accepts the authored instant cast. Existing transform selects one source63609/63606 display, flag1→65 preserves the unrelated bit, run speed is3.0 and aura duration15000ms. Ordinary50ms simulation expiry restores original display/health/flag1/speed1 while retaining900000ms recovery. Test does not certify both random outcomes or their distribution. |
+| Private body closure | Eighteen70391 assets authenticate against build334a36cf5f3c32a5f7a167405487fa14 resolution/config/root/encoding: M2 1120483, three BLPs, ten animations and four skins. Maintained importer publishes18 private receipts/four byte-equal runtime aliases; reconstructed graph has zero missing/unresolved dependencies. All-build canonical ownership check finds zero keys before private publication. Both source display overrides1120500/1120502 are included. |
+| Current gates | At server15d7e63e/enginecd4c614d/protocol07a8faa, whole `toys:: --test-threads 2` passes141/141, zero ignored569.87s. Server binary/tests check passes27.90s, fmt passes; actual production `ModelAssetIndex::load` resolves the private combined namespace's18 receipts/four aliases. Manual Rust readability and compile-warning audit have no findings. Later contract/docs-only commits do not invalidate this source scope. |
+| Remaining | Lead owns canonical publication; private receipts do not establish native metadata availability, wire, input delivery for this toy, pixels/audio/wall lifetime or complete-toy parity. |
+
+Evidence root below: `waywatcher64-{active-goal,proof-ledger,metadata-preflight,template-source-preflight,terrain-preflight,body-preflight,all-build-owners,readability}.json`, `waywatcher64-initial.log` and `waywatcher64-native-{staged,publication,verified}.json`, `waywatcher64-final-results.json` and final logs/private-loader log. Next153193 has an unresolved zero-entry mount action; no substitute is inferred.
+
+## Grizzlesnout63 source lifecycle (2026-10-16)
+
+Test-only commit6f02eec4 exercises actual bag learning and journal UseToy129965/194807. Initial run passes1/1 in41.95s, zero ignored; this is acceptance of existing handlers after62, not a new RED→GREEN runtime fix. The source-backed test asserts real ADT parser area/height: Northshire9 refuses area group4446 without spending recovery; Northrend571/area3537 accepts after the authored1500ms cast.
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Server lifecycle | Source transform27864 selects9287; flag1 becomes65 without losing the unrelated bit; run speed multiplier3.5 and aura15000ms remain authored. The ordinary50ms simulation expires the aura, restores original display/health/flag1/speed1, and retains the600000ms item recovery. No clock, cooldown or duration reset. |
+| Body ownership | Twelve same70391 body dependencies authenticate by resolution content key/MD5, SHA256 and byte length. Every key already has exactly one canonical owner; both12648700/01.skin aliases are byte-equal to the referenced skins. No new fragment, extraction or canonical mutation. |
+| Current gates | At server5b3a1604/engined6adbe444/protocol07a8faa, whole `toys:: --test-threads 2` passes140/140, zero ignored623.06s. Server binary/tests check passes1m36s; fmt passes. Actual production `ModelAssetIndex::load` accepts the canonical combined namespace and resolves all12 Grizzlesnout receipts/two aliases. No compile warnings; manual changed-Rust readability has no findings. |
+| Remaining | No fresh wire, native input delivery for this particular toy, pixels, audio, wall-clock lifetime or complete-toy parity claim. Generic35/35 native movement proof retains only its62 scope. |
+
+Evidence root below: `grizzlesnout63-{active-goal,proof-ledger,source-metadata,body-source,terrain-source,authenticated-owners,readability}.json` and `grizzlesnout63-initial.log`, `grizzlesnout63-final-results.json`, final gate logs and `grizzlesnout63-canonical-loader.log`. Model43→M2 126487 has seven external animations, two skins and display overrides126492/126493; source display scale1.5 remains separate from server display identity.
+
+## Forced-forward62 generic input proof (2026-10-16)
+
+| Boundary | Exact result / proof level |
+|---|---|
+| Replicated flag | TC aura241 sets `UnitFlags2::FORCE_MOVEMENT`0x40; unrelated bits survive, overlapping auras retain the flag until last removal. Genuine RED0/1 observes1 instead of65; GREEN1/1 passes6.08s at serverb0a24e7d/protocol07a8faa. Existing wire field reused; no new schema. |
+| Native input | Engine8be3b46e8 test genuinely fails forced idle input `[0,0,0]` instead of `[0,0,1]`. Production18625f980 plus numeric-tuple API correctiond6adbe444 consumes replicated0x40 and clamps forward exactly1 while preserving strafe, ordinary mouse/scripted controls and release. Native gameplay controls pass35/35, zero ignored2.84s; compile3m27s. Initial contains-method compile failure is retained separately. |
+| Current regression | Whole `toys:: --test-threads 2` passes139/139, zero ignored418.73s at server2d8fc58e/engined6adbe444/protocol07a8faa; compile24m16s. Native lib check passes2m24s, server binary check4m13s, changed-package engine/server and protocol fmt pass. Manual changed-Rust readability finds no suppressions or new issue. |
+| Classification and gaps | Same shared-data catalog snapshot basis364→369 adds104329/113543/129965/130249/153193, zero removals. This is handler classification, not five complete toys; prior385 prepared-import count is a different DB basis. Missing73689 and zero-entry113543 mount action remain named gaps above; next actual-use candidate129965 has source27864/display9287. No new native wire/pixels, per-toy movement/body/lifetime or guardian-health parity claim. |
+
+Evidence root below: `force-forward62-{proof-ledger,readonly-source,next-source-order,readability,census-delta,final-results}.json`, native/flag RED/GREEN and final logs. Unexecuted Ashhide drafts are archived under `deferred62-*`, not admitted to the active regression suite. [Native input contract](../../game-engine/docs/specs/player-movement-sync.md#forced-forward-aura).
 
 ## Ysera source summon proof (2026-10-16)
 

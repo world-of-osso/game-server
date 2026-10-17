@@ -30,6 +30,8 @@ const TITLE_GUARDIAN: i32 = 2;
 const TITLE_MINION: i32 = 3;
 const TITLE_COMPANION: i32 = 5;
 const TITLE_RUNEBLADE: i32 = 6;
+/// TC EffectSummonType/Map::SummonCreature use the default TempSummon branch.
+const TITLE_ASSISTANT: i32 = 35;
 const IMMUNE_TO_PC_AND_NPC: u32 = 0x100 | 0x200;
 const DANCING_RUNE_WEAPON: u32 = 49028;
 const RUNE_WEAPON_PARRY: u32 = 81256;
@@ -92,7 +94,12 @@ impl SummonProperties {
             CONTROL_PET => true,
             CONTROL_WILD | CONTROL_ALLY => matches!(
                 self.title,
-                0 | TITLE_PET | TITLE_GUARDIAN | TITLE_MINION | TITLE_COMPANION | TITLE_RUNEBLADE
+                0 | TITLE_PET
+                    | TITLE_GUARDIAN
+                    | TITLE_MINION
+                    | TITLE_COMPANION
+                    | TITLE_RUNEBLADE
+                    | TITLE_ASSISTANT
             ),
             _ => false, // Puppet/vehicle controls and specialized titles require their own runtime.
         }
@@ -206,7 +213,11 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         return;
     };
     let entry = effect.misc_values[0] as u32;
-    if properties.control == CONTROL_WILD && properties.title == 0 && !properties.is_guardian() {
+    let uses_default_lifecycle = matches!(
+        (properties.control, properties.title),
+        (CONTROL_WILD, 0) | (CONTROL_WILD | CONTROL_ALLY, TITLE_ASSISTANT)
+    );
+    if uses_default_lifecycle && !properties.is_guardian() {
         let count = roll_summon_count(world, ctx, effect, properties_id);
         for index in 0..count {
             let destination = if index == 0 {
@@ -795,6 +806,13 @@ fn spawn_summon(
         ));
     }
     drop(entity);
+    // TC TemporarySummon.cpp: Guardian::InitSummon calls TempSummon::InitSummon,
+    // including the creature summoner's JustSummoned (BossAI's SummonList).
+    world
+        .entity_mut(actor)
+        .insert(crate::zones::TempSummon { summoner: owner });
+    crate::scripted_ai::dispatch(world, actor, crate::scripted_ai::Hook::IsSummonedBy(owner));
+    crate::scripted_ai::dispatch(world, owner, crate::scripted_ai::Hook::JustSummoned(actor));
     super::log_summon(world, owner, actor, ctx.spell);
 }
 

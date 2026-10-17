@@ -1,4 +1,7 @@
 import sqlite3
+import csv
+import subprocess
+import sys
 import json
 import tempfile
 import unittest
@@ -68,6 +71,66 @@ def areas():
 
 
 class WorldQuestImportTests(unittest.TestCase):
+    def test_cli_imports_one_csv_build_without_separately_pinned_binary_tables(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'source.db'
+            with closing(sqlite3.connect(source)) as conn:
+                fixture(conn)
+            poi = areas()
+            exports = {
+                'QuestPOIBlob.csv': (list(poi['blobs'][0]), poi['blobs']),
+                'QuestPOIPoint.csv': (list(poi['points'][0]), poi['points']),
+                'QuestXP.csv': (list(poi['xp'][0]), poi['xp']),
+                'CreatureLabel.csv': (['ID', 'LabelID', 'CreatureDifficultyID'], []),
+                'QuestFactionReward.csv': (
+                    ['ID'] + [f'Difficulty_{n}' for n in range(10)],
+                    [dict(ID=key, **{f'Difficulty_{n}': value for n, value in enumerate(values)})
+                     for key, values in poi['faction_rewards'].items()]),
+            }
+            for filename, (columns, rows) in exports.items():
+                with (root / filename).open('w', newline='') as stream:
+                    writer = csv.DictWriter(stream, fieldnames=columns)
+                    writer.writeheader()
+                    writer.writerows(rows)
+            receipt_path = root / 'duration.json'
+            receipt_path.write_text(json.dumps(receipt()))
+            output = root / 'world.db'
+            result = subprocess.run([
+                sys.executable, str(Path(__file__).with_name('import_world_quests.py')),
+                '--source-db', str(source), '--output-db', str(output),
+                '--poi-db2-dir', str(root), '--duration-receipt', str(receipt_path),
+            ], capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)['imported'], [52847])
+            with closing(sqlite3.connect(output)) as conn:
+                self.assertEqual(conn.execute('SELECT z FROM content_world_quest_area ORDER BY point_index').fetchall(), [(0.0,)] * 4)
+                self.assertEqual(conn.execute('SELECT amount FROM content_world_quest_reward WHERE kind="reputation"').fetchall(), [(75,)])
+            with closing(sqlite3.connect(source)) as conn:
+                self.assertEqual(conn.execute("SELECT count(*) FROM sqlite_master WHERE name='content_world_quest_area'").fetchone()[0], 0)
+
+    def test_source_polygon_heights_are_preserved_in_area_rows(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            poi = areas()
+            heights = [-1582, -1614, -1599, -1577]
+            for point, height in zip(poi['points'], heights):
+                point['Z'] = height
+            self.assertEqual(import_definitions(conn, receipt(), poi), [52847])
+            cursor = conn.execute('SELECT * FROM content_world_quest_area ORDER BY point_index')
+            names = [column[0] for column in cursor.description]
+            rows = [dict(zip(names, row)) for row in cursor.fetchall()]
+            self.assertEqual([row.get('z') for row in rows], heights,
+                             'QuestPOIPoint source Z must not be discarded or replaced with zero')
+
+    def test_missing_source_height_is_rejected_not_guessed(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            poi = areas()
+            del poi['points'][0]['Z']
+            with self.assertRaises(KeyError):
+                import_definitions(conn, receipt(), poi)
+
     def test_polygon_policy_duration_and_point_only_exclusion(self):
         with closing(sqlite3.connect(":memory:")) as conn:
             fixture(conn)

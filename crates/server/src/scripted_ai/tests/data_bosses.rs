@@ -1,16 +1,22 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "celebras.rs"]
+mod celebras;
 #[path = "gizlock.rs"]
 mod gizlock;
 #[path = "gnomeregan.rs"]
 mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "landslide.rs"]
+mod landslide;
 #[path = "maraudon.rs"]
 mod maraudon;
 #[path = "noxxion.rs"]
 mod noxxion;
+#[path = "theradras.rs"]
+mod theradras;
 #[path = "vyletongue.rs"]
 mod vyletongue;
 
@@ -207,6 +213,8 @@ fn encounter_fixture(
         ADAROGG => Some(prepare_encounter_database("adarogg")),
         SLAGMAW => Some(prepare_encounter_database("slagmaw")),
         13282 => Some(prepare_encounter_database("noxxion")),
+        12225 => Some(prepare_encounter_database("celebras")),
+        12201 => Some(prepare_encounter_database("theradras")),
         _ => None,
     };
     let path = prepared
@@ -248,6 +256,9 @@ fn encounter_fixture(
             || (entry == ADAROGG && *id == DEMONIC_LEAP)
             || (entry == 7800 && *id == 7915)
             || (entry == 13282 && *id == 13456)
+            || (entry == 12225 && [13743, 13716].contains(id))
+            || (entry == 12203 && *id == 11783)
+            || (entry == 12201 && *id == 12238)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
@@ -402,7 +413,10 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if [ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236].contains(&entry)
+        let near = if [
+            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201,
+        ]
+        .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
         {
             // Keep these hostile source actors idle until their fixture explicitly pulls.
