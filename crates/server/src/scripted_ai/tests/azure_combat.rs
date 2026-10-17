@@ -155,14 +155,26 @@ fn assert_first_fissure_and_living_victim(h: &mut Harness, leymor: Entity) {
     );
 }
 
+fn count_self_spell_gos(h: &Harness, caster: Entity, spell: u32) -> usize {
+    h.inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| {
+            go.caster == caster.to_bits()
+                && go.spell_id == spell
+                && go.target == Some(caster.to_bits())
+        })
+        .count()
+}
+
 #[test]
-#[ignore = "RED: native Leymor first31s Explosive Brand clock unported"]
+#[ignore = "Native31s Brand self-target SpellGo GREEN pending after fixture correction"]
 fn azure_leymor_later_clock_brand_starts_at_thirty_one_and_applies_native_aura() {
     const BRAND: u32 = 374567;
     let (mut h, leymor) = prepare_leymor_for_later_clock();
     h.advance(24.8);
     assert_first_fissure_and_living_victim(&mut h, leymor);
-    assert_eq!(h.casts(0, leymor, BRAND), 0);
+    assert_eq!(count_self_spell_gos(&h, leymor, BRAND), 0);
     assert!(!h.has_aura(h.player(), BRAND));
     h.advance(0.3);
     let cast = h
@@ -174,24 +186,21 @@ fn azure_leymor_later_clock_brand_starts_at_thirty_one_and_applies_native_aura()
     assert_eq!(cast.target, leymor.to_bits());
     let remaining = cast.duration - cast.elapsed;
     h.advance(remaining + 0.2);
-    assert_eq!(h.casts(0, leymor, BRAND), 1);
+    assert_eq!(count_self_spell_gos(&h, leymor, BRAND), 1);
     assert!(
         h.has_aura(h.player(), BRAND),
         "ordinary parent applies native Brand"
     );
-    assert!(h.inbox(0).spell_gos.iter().any(|go| {
-        go.caster == leymor.to_bits() && go.spell_id == BRAND && go.target == Some(leymor.to_bits())
-    }));
 }
 
 #[test]
-#[ignore = "RED: native Leymor first45s Consuming Stomp channel unported"]
+#[ignore = "Native45s Stomp self-target SpellGo GREEN pending after fixture correction"]
 fn azure_leymor_later_clock_stomp_channels_at_forty_five_with_native_duration() {
     const STOMP: u32 = 374720;
     let (mut h, leymor) = prepare_leymor_for_later_clock();
     h.advance(38.8);
     assert_first_fissure_and_living_victim(&mut h, leymor);
-    assert_eq!(h.casts(0, leymor, STOMP), 0);
+    assert_eq!(count_self_spell_gos(&h, leymor, STOMP), 0);
     h.advance(0.3);
     let cast = h
         .app
@@ -201,11 +210,11 @@ fn azure_leymor_later_clock_stomp_channels_at_forty_five_with_native_duration() 
     assert_eq!(cast.spell_id, STOMP);
     assert_eq!(cast.cast_type, shared::casting::CastType::Channel);
     assert_eq!(cast.target, leymor.to_bits());
-    assert_eq!(h.casts(0, leymor, STOMP), 1);
+    assert_eq!(count_self_spell_gos(&h, leymor, STOMP), 1);
     let remaining = cast.duration - cast.elapsed;
     h.advance(remaining + 0.2);
     assert!(h.app.world().get::<CastState>(leymor).is_none());
-    assert_eq!(h.casts(0, leymor, STOMP), 1);
+    assert_eq!(count_self_spell_gos(&h, leymor, STOMP), 1);
 }
 
 #[test]
