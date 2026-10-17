@@ -684,10 +684,11 @@ const POLYMORPH_REGEN_SHARE: f32 = 0.05;
 /// engaged (`!IsEngaged()`), a third of its max health every `CREATURE_REGEN_INTERVAL`.
 /// The timer restarts at the interval of the state the tick found. MOD_HEALTH_REGEN_PERCENT
 /// and MOD_REGEN are not modelled.
-pub(super) fn regenerate_creature_health(world: &mut World) {
+type ActiveHealthRegen =
+    QueryState<(Entity, &'static mut CreatureHealthRegenTimer), Without<GridDormant>>;
+
+pub(super) fn regenerate_creature_health(world: &mut World, creatures: &mut ActiveHealthRegen) {
     let dt = world.resource::<Time>().delta_secs();
-    let mut creatures =
-        world.query_filtered::<(Entity, &mut CreatureHealthRegenTimer), Without<GridDormant>>();
     let due: Vec<Entity> = creatures
         .iter_mut(world)
         .filter_map(|(entity, mut timer)| {
