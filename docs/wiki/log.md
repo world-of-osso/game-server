@@ -1,3 +1,7 @@
+## 2026-10-17 — Native power drain8
+
+[Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): pinned primary-power/integer/actual-removal/Amplitude implementation, unchanged native3405/46453/16094. Four real missing-drain REDs and two exclusion guards; stale-protocol compiler failure is not RED. Native pools/costs retained; merged26f5332a native GREEN6/6 in18.34s/146.040s total, no whole-ability acceptance.
+
 ## 2026-10-17 — Literal world-state source boundary
 
 [Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN2bcef1424/4 proves both full-five-spell grants/reopened dates plus false/pin/Gilneas controls. Integrated4bcd410a affected workspace240/0/1ignored+site1, one-hour-later relog dates, workspace/all-target check/no Rust warnings and3repo/native-Godot fmt/diff pass. Independent boundedModeB/readability PASS; missing Mephistroth/Warfront/raid availability unclaimed.
