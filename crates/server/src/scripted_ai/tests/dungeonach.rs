@@ -1,7 +1,8 @@
 use super::*;
 use crate::achievement::{AchievementCatalog, PlayerAchievementState, load_achievement_catalog};
 use shared::protocol::{
-    AchievementCatalogPage, AchievementStateUpdate, DungeonProgress, QueryAchievementCatalog,
+    AchievementCatalogPage, AchievementDelta, AchievementStateUpdate, DungeonProgress,
+    QueryAchievementCatalog,
 };
 
 #[test]
@@ -256,6 +257,8 @@ fn attach_dungeon2_messages(world: &mut World, connection: Entity) {
     world.entity_mut(connection).insert((
         MessageSender::<AchievementStateUpdate>::default(),
         MessageReceiver::<AchievementStateUpdate>::default(),
+        MessageSender::<AchievementDelta>::default(),
+        MessageReceiver::<AchievementDelta>::default(),
         MessageSender::<DungeonProgress>::default(),
         MessageReceiver::<DungeonProgress>::default(),
         MessageSender::<QueryAchievementCatalog>::default(),
