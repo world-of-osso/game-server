@@ -2,6 +2,12 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Dead-caster native channel coverage — 2026-10-17
+
+Native55224 Archivist's Scan supplies cast-time row195=1100ms, duration row31=8000ms, Attr1 channel bit0x4, Attr0 AllowCastWhileDead, and a real zero-amount aura12 target stun. It has no power or target-condition rows in the owned source snapshot. This is a distinct prepare→channel lifetime boundary, not another direct cast. New concrete fixtures use actual5 and DeathPlugin-produced Dead, retain the native cast/channel clocks and require actual channel state plus an ordinary target Frostbolt refused as Stunned. The full-mask5 call used to kill a caster during its channel is the real generic-CC-exempt bool API, not an edited flag.
+
+Coverage being measured: natural completion while still dead, actual death interrupting a living-start channel, and successful Ghost release interrupting an already-dead channel, all removing the target aura. Baseline pending; if these already pass, this slice changes tests/docs only and claims no invented RED or production fix. No raw health/mana/stat/native flags/rows/clocks/RNG/budget changes, fabricated aura or learned Archivist ability claim. Receipts `data/class-completeness6-2026-10-12/dead-caster-channel-{goal,source}.json`.
+
 ## Dead-start cast progression and death interruption — 2026-10-17
 
 The source-qualified distinction below is now wired at cast progress: eligible dead-start casts can advance, but observing a living-to-dead transition still interrupts. Existing server-only `PendingCastSpell` now contains the native `SpellInfo` plus one `caster_was_alive` boolean, captured by the existing cast-state constructor and updated on progress. This is an observation of actor life, not a native spell flag, new wire field or trigger-origin registry. Missing snapshots cannot positively qualify a dead-start exemption; there is no alternate metadata lookup. Movement rules and ordinary completion revalidation remain active.
