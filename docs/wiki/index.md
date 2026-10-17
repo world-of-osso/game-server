@@ -2,6 +2,7 @@
 - [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Authoritative target LOS](systems/spell-casting.md#authoritative-target-los--2026-10-16) — moving-target receipt boundary replaces stale client endpoint validation; native release acceptance remains separate.
 - [Leymor Brand expiry](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16) — native6000ms expiry-only374570; genuine RED→native3PASS; shared controls/check queued, full phases/native acceptance pending.
+- [Leymor Brand expiry](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16) — native6000ms expiry-only374570; genuine RED→native3PASS; six shared controls/check/fmt pass, full phases/native acceptance pending.
 - [Residual idle indexing](investigations/server-tick-lag.md#residual-idle-indexing-2026-10-16) — five full-population RED→GREEN work bounds and 86 targeted behavior controls; release peer acceptance separate.
 - [Remaining geometry scans](investigations/server-tick-lag.md#remaining-geometry-scans-2026-10-16) — dormant wake-aware detection/resize and live collision membership indexing; bounded 50-control proof.
 - [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
@@ -11,6 +12,7 @@
 
 - [Same-species pet damage370](systems/pet-battle-engine.md#same-species-damage370--2026-10-16) — explicit owned/wild identity and bounded2283; RED→GREEN6, strict both-skin85/77 and bounded final gates.
 - [Bench pet resurrection112](systems/pet-battle-engine.md#bench-resurrection112--2026-10-16) — bounded2347/2348, real persisted-dead-state boundary, RED4→GREEN4 and both-skin2347; native2348 remains unproved.
+- [Azure Leymor intro](investigations/follower-data.md#azure-leymor-intro--2026-10-16) — authored groupAI0 depletion, one-second wake/copy lifetime and NPC immunity predicate; five intro +Brand3/Frost6 controls pass14/14, scopedcheck pending; full phases/native70448 acceptance open.
 - [Azure Frost Bomb hooks](investigations/follower-data.md#azure-frost-bomb--2026-10-16) — sourced finite hit/expiry chain and target-derived ground; native6+3 controls/check/fmt pass, full Telash/Leymor phases and full-Azure acceptance open.
 
 - [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
