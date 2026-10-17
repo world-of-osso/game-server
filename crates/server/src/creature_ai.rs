@@ -774,7 +774,7 @@ pub(crate) fn chase_system(
     mut nav: Option<ResMut<Navigation>>,
     mut commands: Commands,
     los: Option<Res<crate::line_of_sight::LineOfSight>>,
-    mut units: ChaseUnits,
+    mut units: ParamSet<(ChasingUnits, Query<ChaseView>)>,
 ) {
     let dt = time.delta_secs();
     let targets = read_chase_targets(&mut units, los.as_deref());
@@ -948,8 +948,6 @@ type ChaseView = (
     Option<&'static crate::networking::CombatTarget>,
     Option<&'static InMap>,
 );
-type ChaseUnits<'w, 's> = ParamSet<'w, 's, (ChasingUnits<'w, 's>, Query<'w, 's, ChaseView>)>;
-
 struct ChaseTarget {
     position: Position,
     in_reach_and_visible: bool,
@@ -957,7 +955,7 @@ struct ChaseTarget {
 
 /// Snapshot before any chaser moves: mutual chases see the same tick's poses.
 fn read_chase_targets(
-    units: &mut ChaseUnits,
+    units: &mut ParamSet<(ChasingUnits, Query<ChaseView>)>,
     los: Option<&crate::line_of_sight::LineOfSight>,
 ) -> EntityHashMap<ChaseTarget> {
     let chasing: Vec<_> = units
