@@ -1,6 +1,7 @@
 use super::*;
 use crate::bank_test_harness::{ACCOUNT, Harness};
 use shared::components::{Health, Level, Npc, Position, UnitFactionTemplate};
+use shared::protocol::AdventureGuideClock;
 
 #[test]
 fn db2_follow_install_trading_post_reads_next_build_and_rejects_mixed_sources() {
@@ -56,6 +57,8 @@ fn prepare(h: &mut Harness, now: i64) {
         MessageReceiver::<AdventureGuideRequest>::default(),
         MessageSender::<AdventureGuideSnapshot>::default(),
         MessageReceiver::<AdventureGuideSnapshot>::default(),
+        MessageSender::<AdventureGuideClock>::default(),
+        MessageReceiver::<AdventureGuideClock>::default(),
     ));
 }
 fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot {
