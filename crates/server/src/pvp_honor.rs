@@ -37,6 +37,35 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
     }
 }
 
+/// BG_END_BONUS_ONCE_PER_MATCH normalizes TC's per-player OnEnd placement.
+/// Arathi OnEnd574–585: one winner bonus, then one completion bonus for everyone.
+pub(super) fn award_battleground_completion(
+    world: &mut World,
+    player: Entity,
+    map_id: u32,
+    bracket: shared::battleground::LevelBracket,
+    won: bool,
+) {
+    if map_id != 2107 {
+        return; // Other per-map callbacks remain unimplemented, not generic rewards.
+    }
+    let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
+        return;
+    };
+    let inactive = world
+        .get::<ActiveAuras>(player)
+        .is_some_and(|auras| auras.has_spell(INACTIVE));
+    if level < MIN_HONOR_PLAYER_LEVEL || inactive {
+        return;
+    }
+    // RewardHonor(nullptr,...) does not apply victim-only group/aura/rest modifiers.
+    let bonus = (f32::from(bracket.max_level.min(80)) * 1.55).ceil() as u32;
+    if won {
+        award_honor(world, player, bonus);
+    }
+    award_honor(world, player, bonus);
+}
+
 fn world_kill_map(world: &World, killer: Entity, victim: Entity) -> Option<InMap> {
     if killer == victim || world.get::<Player>(victim).is_none() {
         return None;
