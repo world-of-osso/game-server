@@ -2924,12 +2924,10 @@ fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level:
                 .get_mut::<MessageSender<GroupInviteIntent>>(leader.connection)
                 .unwrap()
                 .send::<GroupChannel>(GroupInviteIntent { name });
-        }
-        let mut invited = std::collections::BTreeSet::new();
-        let mut notices = Vec::new();
-        for _ in 0..5 {
-            h.advance(1);
-            for member in &party[1..] {
+            let mut invited = false;
+            let mut notices = Vec::new();
+            for _ in 0..5 {
+                h.advance(1);
                 let mut receiver = h
                     .app
                     .world_mut()
@@ -2937,30 +2935,28 @@ fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level:
                     .unwrap();
                 for invite in receiver.receive() {
                     assert_eq!(invite.inviter_name, leader_name);
-                    invited.insert(member.connection);
+                    invited = true;
                 }
+                drop(receiver);
+                notices.extend(
+                    h.app
+                        .world_mut()
+                        .get_mut::<MessageReceiver<GroupCommandResponse>>(leader.connection)
+                        .unwrap()
+                        .receive(),
+                );
             }
-            notices.extend(
-                h.app
-                    .world_mut()
-                    .get_mut::<MessageReceiver<GroupCommandResponse>>(leader.connection)
-                    .unwrap()
-                    .receive(),
+            assert!(
+                invited,
+                "normal invitation delivered before answer: {notices:?}"
             );
-        }
-        assert_eq!(
-            invited.len(),
-            4,
-            "normal invitations delivered before answers: {notices:?}"
-        );
-        for member in &party[1..] {
             h.app
                 .world_mut()
                 .get_mut::<MessageSender<RespondGroupInvite>>(member.connection)
                 .unwrap()
                 .send::<GroupChannel>(RespondGroupInvite { accept: true });
+            h.advance(5);
         }
-        h.advance(5);
         let groups = h.app.world().resource::<crate::group::GroupRegistry>();
         let leader_id = h.app.world().get::<ClientId>(leader.player).unwrap().0;
         for member in party {
