@@ -24,7 +24,8 @@ fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_thre
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let players = [h.players[0].0, h.players[1].0];
-    for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
+    // Outside the source4.5yd contact-retreat boundary, still within20yd Orbital.
+    for (player, gap) in players.into_iter().zip([5.0, 8.0]) {
         h.app.world_mut().entity_mut(player).insert((
             map,
             Position {
@@ -184,6 +185,125 @@ fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() 
 }
 
 #[test]
+fn encounter_coverage_omor_whip_pull_reverses_real_airborne_motion() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+        shared::components::PlayerMotion::default(),
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), boss, player, 1.0);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(player), true)
+        .expect("actual source knock30637");
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 32185, Some(boss), true)
+        .expect("actual source periodic Whip32185");
+    h.advance(1.9);
+    let before = *h.app.world().get::<Position>(player).unwrap();
+    h.advance(0.15);
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(30638)
+                && event.target == Some(player.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "actual authored periodic30638 child reached target"
+    );
+    let pulled = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        pulled.x > before.x,
+        "genuine outgoing knock traveled before pull"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(player)
+            .unwrap()
+            .contains(shared::components::PlayerMotion::FALLING),
+        "actual airborne target"
+    );
+    h.advance(0.1);
+    let after = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        after.x < pulled.x,
+        "effect124 must reverse outbound motion toward caster: {pulled:?} -> {after:?}"
+    );
+    assert!(
+        ((pulled.x - after.x) - 1.31).abs() < 0.02,
+        "authored MiscValue131 gives13.1yd/s, not teleport or outgoing15yd/s: {pulled:?} -> {after:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_whip_pull_uses_source_3d_ballistics_and_reach() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+        shared::components::PlayerMotion::default(),
+    ));
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(player), true)
+        .expect("actual30637 launch");
+    h.advance(1.9);
+    let start = *h.app.world().get::<Position>(player).unwrap();
+    // TDB1210 creature_model_info18237 CombatReach3, source Omor scale1.
+    let contact = Vec3::new(origin.x + 3.0, origin.y, origin.z);
+    let crate::ground::GroundProbe::Supported(height) = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, contact)
+    else {
+        panic!("authentic combat-reach destination must have ground")
+    };
+    let contact = Vec3::new(contact.x, height, contact.z);
+    let from = Vec3::new(start.x, start.y, start.z);
+    let distance = from.distance(contact);
+    let height_delta = contact.y - start.y;
+    let speed = 13.1;
+    let gravity = shared::skyriding::GRAVITY;
+    let vertical_speed = (2.0 * speed * speed * height_delta + gravity * distance * distance)
+        / (2.0 * speed * distance);
+    let expected_y = start.y + vertical_speed * 0.1 - 0.5 * gravity * 0.01;
+    let distance_2d = start.x - contact.x;
+    let incorrect_speed = (2.0 * speed * speed * height_delta
+        + gravity * distance_2d * distance_2d)
+        / (2.0 * speed * distance_2d);
+    assert!(
+        (vertical_speed - incorrect_speed).abs() * 0.1 > 0.1,
+        "raised real knock discriminates Blizzard3D formula from2D"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30638, Some(player), true)
+        .expect("actual child30638");
+    assert_eq!(
+        *h.app.world().get::<Position>(player).unwrap(),
+        start,
+        "launch is an impulse, not teleportation"
+    );
+    h.advance(0.1);
+    let after = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        (after.x - (start.x - 1.31)).abs() < 0.02,
+        "pull overrides outgoing direction at authored13.1: {start:?} -> {after:?}"
+    );
+    assert!(
+        (after.y - expected_y).abs() < 0.02,
+        "source3D distance/combat-reach floor/signed vertical speed: expected{expected_y}, actual{after:?}"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() {
     for gap in [3.0, 25.0] {
         let (mut h, boss, _) = orbital_fixture();
@@ -266,12 +386,247 @@ fn encounter_coverage_omor_orbital_exact_two_dimensional_cutoff() {
 }
 
 #[test]
+fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
+    let (mut h, boss, _) = bound_boss(17308, 543, 0);
+    let player = h.player();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x + 3.0,
+        ..origin
+    });
+    let speech = h.app.world().resource::<CreatureTexts>().groups[&17308][&5][0]
+        .male_text
+        .clone();
+    assert!(!speech.is_empty(), "actual authored shield text must load");
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    h.engage(boss);
+    h.hit_pct(boss, 81.0);
+    h.advance(4.2);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 31901),
+        "actual health-threshold scheduled shield reaches successful cast boundary"
+    );
+    assert!(
+        h.has_aura(boss, 31901),
+        "actual authored Demonic Shield aura"
+    );
+    let emotes: Vec<_> = h
+        .inbox(0)
+        .chat
+        .iter()
+        .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+        .collect();
+    assert_eq!(
+        emotes.len(),
+        1,
+        "OnSpellCast31901 must speak exactly one authored group5 emote"
+    );
+    assert_eq!(emotes[0].content, speech);
+    assert!(
+        h.inbox(1).chat.is_empty(),
+        "other map copy must not hear shield emote"
+    );
+    h.hit_pct(boss, 1.0);
+    h.advance(1.0);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        1,
+        "further damage/aura ticks cannot repeat an OnSpellCast hook"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), true)
+        .expect("actual creature full-mask shield");
+    h.advance(0.05);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), boss, 31901, Some(boss), 1);
+    h.advance(0.05);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        3,
+        "ordinary, creature-triggered and generic-triggered successful casts each fire once"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30686, Some(player), false)
+        .expect("actual source cast occupies caster");
+    assert_eq!(
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), false),
+        Err(crate::spell_cast::CastFailure::InProgress),
+        "no admission bypass"
+    );
+    h.advance(0.05);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        3,
+        "rejected shield cast cannot speak"
+    );
+    assert!(
+        h.inbox(1).chat.is_empty(),
+        "no triggered route leaks across map copies"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_coincident_pull_projects_source_combat_reach() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        origin,
+        shared::components::PlayerMotion::default(),
+    ));
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(player), true)
+        .expect("actual source knock creates falling before any position step");
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(player)
+            .unwrap()
+            .contains(shared::components::PlayerMotion::FALLING)
+    );
+    let before = h.health(player).current;
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30638, Some(player), true)
+        .expect("actual authored child at the coincident position");
+    h.advance(0.1);
+    assert!(
+        h.health(player).current < before,
+        "native child damage precondition"
+    );
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            let authored = event.spell_id == Some(30638) && event.kind == CombatLogKind::Damage;
+            let owned =
+                event.source == Some(boss.to_bits()) && event.target == Some(player.to_bits());
+            authored && owned && event.amount > 0
+        }),
+        "actual target-owned30638 damage"
+    );
+    let position = *h.app.world().get::<Position>(player).unwrap();
+    // TC Position.h136–140 atan2(0,0)=0 projects the caster's reach along WoW+X.
+    assert!(
+        (position.x - origin.x - 1.31).abs() < 0.02 && (position.z - origin.z).abs() < 0.02,
+        "source coincident combat-reach point must pull+X at13.1, not skip/retain outgoing knock: {origin:?} -> {position:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_coincident_caster_retreats_along_source_angle() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((map, origin));
+    h.engage(boss);
+    h.advance(5.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 30686),
+        "actual ordinary source cast completes at coincident target"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        position.x > origin.x + 0.05 && (position.z - origin.z).abs() < 0.02,
+        "source GetAbsoluteAngle(0,0)=0 chooses+X retreat, not zero displacement: {origin:?} -> {position:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_caster_holds_inside_authored_range() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    let target = Position {
+        x: origin.x + 20.0,
+        ..origin
+    };
+    h.app.world_mut().entity_mut(player).insert((map, target));
+    let ground = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, Vec3::new(target.x, target.y, target.z));
+    assert!(
+        matches!(ground, crate::ground::GroundProbe::Supported(_)),
+        "authentic20yd target support: {ground:?}"
+    );
+    h.engage(boss);
+    h.advance(15.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .filter(|go| go.caster == boss.to_bits() && go.spell_id == 30686)
+            .count()
+            >= 2,
+        "real source ranged casting, not paused AI"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        (position.x - origin.x).abs() < 0.01 && (position.z - origin.z).abs() < 0.01,
+        "source100yd caster must hold at20yd, not generic melee chase: {origin:?} -> {position:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_caster_retreats_from_contact_without_melee() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+    ));
+    h.engage(boss);
+    h.advance(5.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 30686),
+        "real source cast completes before movement resumes"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        position.x < origin.x - 0.05,
+        "ChaseRange100 minRange0 plus reach-sum4.5 requires retreat from3yd: {origin:?} -> {position:?}"
+    );
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(boss.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()),
+        "source Attack(victim,false) must not produce melee swings"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
-    let (mut h, boss, map) = bound_boss(17308, 543, 0);
+    let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(Position {
-        x: origin.x + 3.0,
+        // Source melee range, but outside4.5yd caster retreat; dedicated3yd case covers retreat.
+        x: origin.x + 5.0,
         ..origin
     });
     let mut visibility = crate::interest::NetworkVisibility::default();

@@ -11,6 +11,8 @@ mod azure_frost_bomb;
 mod azure_intro;
 #[path = "azure_leymor_children.rs"]
 mod azure_leymor_children;
+#[path = "azure_mechanic_power.rs"]
+mod azure_mechanic_power;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
@@ -1688,18 +1690,29 @@ fn encounter_coverage_koranthal_uses_source_combat_schedule_and_storm_damage() {
             .iter()
             .any(|chat| chat.content.contains("Shadow Storm"))
     );
-    let before = h.health(h.player()).current;
     h.advance(3.2);
+    assert_eq!(
+        koranthal_storm_damage_count(&h, boss, player),
+        0,
+        "first3s periodic tick launches the missile; its authored5s flight has not landed"
+    );
+    let before = h.health(player).current;
+    h.advance(5.0);
     assert!(
-        h.health(h.player()).current < before,
-        "119973 dummy ->119965 missile -> actual storm damage"
+        koranthal_storm_damage_count(&h, boss, player) > 0,
+        "119973 dummy ->119965 five-second missile -> actual119964 damage"
+    );
+    assert!(
+        h.health(player).current < before,
+        "actual storm health loss"
     );
     assert_eq!(
         h.casts(0, boss, 119300),
         2,
         "Storm reschedules, no Twisted at20.6s"
     );
-    h.advance(12.3);
+    // The extra5s impact observation must not shift the36.2/67.7 source-clock guards.
+    h.advance(7.3);
     assert_eq!(casting(&h), None);
     h.advance(0.2);
     assert_eq!(casting(&h), Some(119300), "rescheduled to36.2s");
@@ -1722,20 +1735,41 @@ fn encounter_coverage_koranthal_shadow_storm_dummy_launches_authored_damage() {
         x: position.x + 3.0,
         ..position
     });
-    let before = h.health(target).current;
     crate::spell_cast::creature_cast(h.app.world_mut(), boss, 119973, None, true)
         .expect("real119973 source-area-enemy dummy");
-    h.advance(1.0);
-    assert!(h.health(target).current < before);
-    assert!(
-        h.inbox(0).log.iter().any(|event| {
-            event.kind == CombatLogKind::Damage
-                && event.spell_id == Some(119964)
-                && event.source == Some(boss.to_bits())
-                && event.target == Some(target.to_bits())
-        }),
-        "effect value119965 triggers actual119964 damage on the selected enemy"
+    // Native119965 Speed5/Attr9 speed-as-delay; TC Spell.cpp:880–896 gives5000ms.
+    h.advance(4.95);
+    assert_eq!(
+        koranthal_storm_damage_count(&h, boss, target),
+        0,
+        "no119964 damage before the authored5s destination flight"
     );
+    let before = h.health(target).current;
+    h.advance(0.1);
+    assert_eq!(
+        koranthal_storm_damage_count(&h, boss, target),
+        1,
+        "one actual119964 hit at5s, within one50ms fixture frame"
+    );
+    assert!(
+        h.health(target).current < before,
+        "actual child health loss, not unrelated earlier melee damage"
+    );
+}
+
+/// Recipient-owned positive119964 hits, not generic HP loss from melee or other spells.
+fn koranthal_storm_damage_count(h: &Harness, boss: Entity, target: Entity) -> usize {
+    h.inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            let authored_hit =
+                event.kind == CombatLogKind::Damage && event.spell_id == Some(119964);
+            let owned_hit =
+                event.source == Some(boss.to_bits()) && event.target == Some(target.to_bits());
+            authored_hit && owned_hit && event.amount > 0
+        })
+        .count()
 }
 
 #[test]

@@ -2,6 +2,38 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source companion/healer/corpse/music boundaries (2026-10-17)
+
+[Source130–134 matrix](../../toy-effects14-coverage.md#source130134-companionweaponhealercorpsemusic-boundaries-2026-10-17) preserves the owned-critter riding target, procedural anchor weapon, Brynja viewer payload versus healer service, fallen-ally forced-child semantics and missing music-box publication/behavior. Actual TDB music-box body resolves to the existing chest01b model; that does not authorize invented presentation/audio. No runtime/data changes or new acceptance claims.
+
+## Noble Gardener and source anchor boundary (2026-10-17)
+
+Noble Gardener125 now has the actual saved-bind/shared2309 contract alongside four prior holiday roots. Citizens126 remains refused at the source child's permanent Personal Anchor dummy; its new actual-learning refusal test proves no partial actor/effect or recovery spending, not a successful summon. [Exact source124–129 matrix and retained proof scopes](../../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17) distinguish these from native garment/surfing/zero-entry/script appearance gaps. No production admission.
+
+## Scarab source scatter metric (2026-10-17)
+
+The first guardian retains the exact selected destination; secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
+
+## Dragon costume simulation lifecycle (2026-10-17)
+
+Six already-authentic dragon costumes now have actual learned-use/source-display acceptance through ordinary fifteen-minute expiry/restoration and natural recovery/reuse. [Exact118–123 identities, eight-test bounded proof and fixture-failure distinction](../../toy-effects14-coverage.md#source118123-dragon-costume-simulation-lifecycle-2026-10-17) separate simulation state from unproved native costume/group presentation. Production and canonical data unchanged.
+
+## Oomgut source transform lifecycle (2026-10-17)
+
+Actual163795 learned use already works with132902; new test proves source display membership, ten-minute ordinary-frame expiry/model restoration and reported two-hour recovery remaining active afterward. No production patch or invented RED. [Exact scoped14-case proof and exclusions](../../toy-effects14-coverage.md#oomgut104-existing-transform-lifecycle-2026-10-17) distinguish simulation acceptance from all17 native appearances and wall-clock recovery. [105–108 boundaries](../../toy-effects14-coverage.md#source105108-controlheadwearbanner-boundaries-2026-10-17) retain RC possession/headwear gaps and prior Hero Banner proof.
+
+## Source disguise recovery precedence (2026-10-17)
+
+Trogg164373, Hozen164374 and Skeletal Monkey164375 already have authentic transform entries. New actual-use tests prove ten-minute ordinary expiry/restoration and item override versus inherited spell recovery, without production changes. [Exact four-ID final comparison, source pools and exclusions](../../toy-effects14-coverage.md#source109113-bannerscript-boundary-and-disguise-lifecycles-2026-10-17) separate server state from weighted/native appearance certification; Glorious Pennant110 remains an unresolved script.
+
+## Lunar/Peddlefeet hearthstone learned use (2026-10-17)
+
+Two additional holiday roots use the same persisted-bind/shared2309-charge path: missing bind refuses before spending, source10s cast returns to the saved same-map location, spending blocks its sibling. [Exact5-test/seven-ID gate and source visual boundaries](../../toy-effects14-coverage.md#source114117-hidinggift-gaps-and-holiday-hearthstones-2026-10-17) retain procedural/native/cross-map/recharge gaps; no production patch. Rhan'ka hiding114/Akunda gift115 remain unresolved actions.
+
+## Forlorn Toll destination-only flight (2026-10-16)
+
+163463/279223 triggers279222 after source1.5s cast+3s fixed missile flight, then one143222 source soul. Genuine importer RED precedes exact one-entry/ten-model admission; actual learned-use RED finds early arrival because front47 was unrecognized and unit-only delay storage discarded unitless destination flight. The existing scheduler now retains that delay without a fake target or toy-ID special case. Real cast/flight, source display membership/front,30s recovery/reuse and coexisting independent60s lifetimes pass. Whole-Toy150/150, affected49/49, importer3/3 and check/fmt pass. [Exact revisions, current-copy publication receipt and boundaries](../../toy-effects14-coverage.md#forlorn-toll85-source-summon-2026-10-16) distinguish server timing from all-ten native appearances, ghost/wandering semantics and complete-toy parity; canonical template publication remains lead-owned.
+
 ## Akunda source child and visible trap (2026-10-16)
 
 163211/279076 first refuses linked trap302746; exact source type6/display16675 profile now joins31442/display0 without generic trap admission. A separate genuine child-position RED finds279077 at the caster rather than clicked point; existing effect64/32 unit-trigger routing now retains the parent's explicit destination/item level through its depth-checked loader/launcher. Actual learned-use root/child/visible-source trap, ordinary recipe consumption/output, environmental CozyFire refresh, five source-drift refusals and ordinary300s cleanup pass. Whole-Toy149/149, affected29/29 and check/fmt/manual readability pass. [Exact proofs and source boundaries](../../toy-effects14-coverage.md#akunda84-visible-linked-trap-boundary-2026-10-16) separate server behavior from native pixels/audio, broad trigger completeness and full-retail parity;82 missing ItemSparse/83 specialized title27 remain named gaps.
@@ -251,6 +283,12 @@ Wild control0/title0 summons keep their template faction. Ally/guardian/companio
 Visual-only support uses the audited IDs in [cosmetic.rs](../../../crates/server/src/spell_cast/cosmetic.rs), plus runtime checks: a nonzero DifficultyID-0 SpellXSpellVisual and exclusively zero-valued effect3/effect77/aura4, no misc payload, trigger, item or mechanic. Descriptions promise only attachments/sounds/visuals: Touch of the Naaru119144, Fruit Basket119083, Seafarer's Slidewhistle126931 and Heart of a Champion169768 have concrete loopback use tests. SpellGo already broadcasts caster, spell and hit targets; aura4 uses existing ActiveAuras/UnitAuras apply, duration and cancellation. No new spell-specific gameplay script is installed. Visual presence cannot prove that periodic dummy ticks do nothing; the data-backed226 bridge and retained script gaps are described below.
 
 Counterexamples to blanket acceptance: Gadgetzan18986/23453 teleports and scouting-map150743/360598 unlocks flight points despite single zero-valued dummy effects plus visuals. Both stay unavailable. Metadata-drift tests remove a visual binding or append another effect to audited176594 and assert refusal without cooldown/SpellGo.
+
+[Forlorn/charge master integration](../../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17) retains both delayed-hit behaviors; merged55-case proof and template publication receipt are separate from historical whole-Toy/native claims.
+
+[Source boundaries89–93](../../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) retain Poking's dummy child, owned-critter150 and conditional procedural headwear gaps; [94–98 source actions](../../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retain nearby reactions, spectral/headwear operations, corpse ritual and return/catch gaps. No generic cosmetic admission. [99–103 matrix](../../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) separates retained Cooler/Gong contracts from missing procedural/Kovork identities.
+
+[Flashback88 source screen-effect boundary](../../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17) separates source metadata, source-area acceptance and missing native presentation; no world-phase conclusion.
 
 Retail type meanings (TC a352b1fa SpellAuraDefines/SpellAuraEffects):293 override abilities,321 no actions,428 linked summons,37 effect immunity,105 feather fall,258 override summoned object,260 screen effect,61 model scale,56 transform. They are not interchangeable cosmetic auras; puppet/vehicle controls remain blocked; generic61/105/37/293 and data-qualified linked summons are described below. Aura56 with an existing template was already handled; zero-entry scripted costumes and missing templates stay blocked. Time-Lost Figurine32782 now explicitly proves ModelDisplay changes to a creature23423 display and cancellation removes it to restore the native race/sex model. Aura260 is implemented as ClientVisual: TC's registry labels it `HandleNoImmediateEffect` with no server code required. Nonzero ScreenEffect IDs use standard aura replication/cancellation. Shadescale170187/304370 proves authentic screen1720 state, but the item stays unavailable because content_item is absent; no runtime item is synthesized.
 
