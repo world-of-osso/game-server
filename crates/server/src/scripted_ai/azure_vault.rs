@@ -1,5 +1,5 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Telash power and first Frost clock are ported; remaining clocks, jumps and runes are unported.
+//! Telash power/first-loop Frost and Icy clocks are ported; full phases/jumps/runes are unported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -22,6 +22,8 @@ const TELASH_INITIAL_POWER: f32 = 60.0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
 const EVENT_FROST_BOMB: u32 = 1;
+const ICY_DEVASTATOR: u32 = 387151;
+const EVENT_ICY_DEVASTATOR: u32 = 2;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -183,10 +185,19 @@ impl super::boss_ai::BossScript for Telash {
     }
 
     fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
-        if event_id == EVENT_FROST_BOMB {
-            ctx.do_cast_self(FROST_BOMB_CAST);
+        match event_id {
+            EVENT_FROST_BOMB => {
+                ctx.do_cast_self(FROST_BOMB_CAST);
+                self.boss.events.reschedule(EVENT_ICY_DEVASTATOR, 10_800);
+            }
+            EVENT_ICY_DEVASTATOR => {
+                if let Some(target) = ctx.select_target_random(75.0, true) {
+                    ctx.do_cast_at(Some(target), ICY_DEVASTATOR, false);
+                }
+            }
+            _ => {}
         }
-        // TC starts with one Frost; the post-phase action/counters remain unported.
+        // TC starts with one Frost/Icy each; post-phase action/counters remain unported.
     }
 }
 
@@ -212,6 +223,7 @@ impl super::CreatureAi for Telash {
         self.boss.just_engaged_with(ctx);
         ctx.do_cast(ICE_POWER_PERIODIC);
         self.boss.events.schedule(EVENT_FROST_BOMB, 3_500);
+        self.boss.events.schedule(EVENT_ICY_DEVASTATOR, 14_500);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
