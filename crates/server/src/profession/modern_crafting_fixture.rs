@@ -152,7 +152,7 @@ fn assert_private_order_deliveries_and_commissions_survive_reopen() {
             );
         }
         println!(
-            "PRIVATE ORDERS {name} gold={gold} output22658={outputs}; no escrow reagents remain"
+            "PRIVATE ORDERS {name} gold={gold} output22658={outputs}; order reagent bag counts are zero"
         );
     }
 }
