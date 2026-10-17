@@ -12,6 +12,138 @@ struct EnteredMatch {
 }
 
 #[test]
+fn arathi_four_normal_five_player_parties_enter_one_twenty_player_match() {
+    let template = shared::battleground::arathi_basin();
+    let mut entered = enter_source_match_queued(
+        &template,
+        node_rules(template.map_id).unwrap().starts,
+        |_| {},
+        SourceQueueFixture::FourPartiesOfFive,
+    );
+    assert_eq!(entered.players.len(), 20);
+    assert_eq!(
+        entered
+            .teams
+            .iter()
+            .filter(|team| **team == BgTeam::A)
+            .count(),
+        10
+    );
+    assert_eq!(
+        entered
+            .teams
+            .iter()
+            .filter(|team| **team == BgTeam::B)
+            .count(),
+        10
+    );
+    for (party, teams) in entered.players.chunks(5).zip(entered.teams.chunks(5)) {
+        assert!(
+            teams.iter().all(|team| *team == teams[0]),
+            "ordinary party is not split"
+        );
+        for member in party {
+            let snapshot = battleground(&entered.h, member);
+            assert_eq!(snapshot.match_id, entered.match_id);
+            assert_eq!(snapshot.phase, BgPhase::InProgress);
+            assert_eq!(snapshot.players.len(), 20);
+            assert_eq!(entered.h.map_of(member), Some(entered.copy));
+        }
+    }
+    leave_and_return(&mut entered);
+}
+
+#[test]
+fn arathi_late_party_arrival_gets_one_score_row_without_resetting_existing_scores() {
+    let template = shared::battleground::arathi_basin();
+    let mut previous = Vec::new();
+    let mut entered = enter_source_match_with_arrival(
+        &template,
+        node_rules(template.map_id).unwrap().starts,
+        |_| {},
+        SourceQueueFixture::FourPartiesOfFive,
+        |h, players, index| {
+            if index != players.len() - 1 {
+                return;
+            }
+            let snapshot = battleground(h, &players[0]);
+            assert_eq!(snapshot.phase, BgPhase::InProgress);
+            let point = source_battleground_objects(template.map_id).0.remove(0);
+            let copy = h.map_of(&players[0]).unwrap();
+            let (object, _) = objects_in(h, copy, point.info.entry)[0];
+            h.walk_to(&players[0], point.position);
+            use_object(h, &players[0], object);
+            previous = battleground(h, &players[0]).players.clone();
+            let actor_id = h.app.world().get::<ClientId>(players[0].player).unwrap().0;
+            assert_eq!(
+                previous
+                    .iter()
+                    .find(|row| row.character_id == actor_id)
+                    .unwrap()
+                    .objective_scores
+                    .iter()
+                    .find(|(stat, _)| *stat == node_rules(template.map_id).unwrap().assault_stat)
+                    .unwrap()
+                    .1,
+                1
+            );
+            let late_id = h
+                .app
+                .world()
+                .get::<ClientId>(players[index].player)
+                .unwrap()
+                .0;
+            assert!(previous.iter().all(|row| row.character_id != late_id));
+        },
+    );
+    let late = entered.players.last().unwrap();
+    let late_id = entered
+        .h
+        .app
+        .world()
+        .get::<ClientId>(late.player)
+        .unwrap()
+        .0;
+    for _ in 0..3 {
+        entered.h.receive_pvp_updates(5);
+        let snapshot = battleground(&entered.h, late);
+        assert_eq!(snapshot.players.len(), 20);
+        for row in &previous {
+            assert_eq!(
+                snapshot
+                    .players
+                    .iter()
+                    .find(|score| score.character_id == row.character_id),
+                Some(row)
+            );
+        }
+        let rows: Vec<_> = snapshot
+            .players
+            .iter()
+            .filter(|row| row.character_id == late_id)
+            .collect();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].team, snapshot.team);
+        assert_eq!(
+            (
+                rows[0].damage_done,
+                rows[0].healing_done,
+                rows[0].deaths,
+                rows[0].killing_blows
+            ),
+            (0, 0, 0, 0)
+        );
+        assert!(
+            rows[0]
+                .objective_scores
+                .iter()
+                .all(|(_, value)| *value == 0)
+        );
+    }
+    leave_and_return(&mut entered);
+}
+
+#[test]
 fn warsong_channel_zero_capture_timeout_gets_only_end_honor() {
     let template = shared::battleground::warsong_gulch();
     let rules = shared::battleground::flag_rules(template.map_id).unwrap();
@@ -2602,6 +2734,31 @@ fn enter_source_match_with(
     starts: [u32; 2],
     setup: impl FnOnce(&mut App),
 ) -> EnteredMatch {
+    enter_source_match_queued(template, starts, setup, SourceQueueFixture::SoloMinimum)
+}
+
+#[derive(Clone, Copy)]
+enum SourceQueueFixture {
+    SoloMinimum,
+    FourPartiesOfFive,
+}
+
+fn enter_source_match_queued(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+    queue_fixture: SourceQueueFixture,
+) -> EnteredMatch {
+    enter_source_match_with_arrival(template, starts, setup, queue_fixture, |_, _, _| {})
+}
+
+fn enter_source_match_with_arrival(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+    queue_fixture: SourceQueueFixture,
+    mut before_arrival: impl FnMut(&mut Harness, &[Traveler], usize),
+) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
     } else if matches!(template.map_id, 727 | 1803) {
@@ -2615,6 +2772,9 @@ fn enter_source_match_with(
     let mut h = harness_with(|app| {
         app.insert_resource(crate::persistence::GameDatabase { db });
         app.insert_resource(objects);
+        if matches!(queue_fixture, SourceQueueFixture::FourPartiesOfFive) {
+            app.add_plugins(crate::group::GroupPlugin);
+        }
         if template.map_id == 727 {
             let (world_data, spellclick) = silvershard_source_world();
             app.insert_resource(world_data);
@@ -2681,7 +2841,10 @@ fn enter_source_match_with(
     })
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
-    let count = u64::from(template.min_players_per_team) * 2;
+    let count = match queue_fixture {
+        SourceQueueFixture::SoloMinimum => u64::from(template.min_players_per_team) * 2,
+        SourceQueueFixture::FourPartiesOfFive => 20,
+    };
     // BattlemasterList's broad admission minimum need not have a PVPDifficulty row
     // (Deephaul allows19–90 there, but its first authored match bracket is80).
     let level = (template.bracket.min_level..=template.bracket.max_level)
@@ -2707,6 +2870,15 @@ fn enter_source_match_with(
             pair::<shared::protocol::InteractionFailed>(),
             pair::<PvpStateUpdate>(),
         ));
+    }
+    let queue_members: Vec<_> = match queue_fixture {
+        SourceQueueFixture::SoloMinimum => players.iter().collect(),
+        SourceQueueFixture::FourPartiesOfFive => {
+            form_source_five_player_parties(&mut h, &players, level);
+            players.iter().step_by(5).collect()
+        }
+    };
+    for who in queue_members {
         h.app
             .world_mut()
             .get_mut::<MessageSender<QueueForBattleground>>(who.connection)
@@ -2716,6 +2888,22 @@ fn enter_source_match_with(
             });
     }
     h.receive_pvp_updates(5);
+    let invited = players
+        .iter()
+        .filter(|who| {
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_some()
+        })
+        .count();
+    assert_eq!(
+        invited,
+        players.len(),
+        "all ordinary party members receive one normal queue invitation"
+    );
     let invitations: Vec<_> = players
         .iter()
         .map(|who| battleground(&h, who).clone())
@@ -2741,7 +2929,7 @@ fn enter_source_match_with(
             });
     }
     let updates = h.receive_pvp_updates(5);
-    for (who, invitation) in players.iter().zip(&invitations) {
+    for (index, (who, invitation)) in players.iter().zip(&invitations).enumerate() {
         assert!(
             updates[&who.connection]
                 .iter()
@@ -2777,6 +2965,7 @@ fn enter_source_match_with(
             }),
             source.position
         ));
+        before_arrival(&mut h, &players, index);
         h.ack(who);
     }
     h.receive_pvp_updates(5);
@@ -2792,6 +2981,90 @@ fn enter_source_match_with(
         match_id,
         copy,
         origin,
+    }
+}
+
+fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level: u8) {
+    use shared::protocol::{
+        GroupChannel, GroupCommandResponse, GroupInviteCancelled, GroupInviteIntent,
+        GroupInvitePrompt, GroupRosterSnapshot, RespondGroupInvite,
+    };
+    for who in players {
+        h.app
+            .world_mut()
+            .entity_mut(who.player)
+            .insert(shared::components::UnitLevel(level));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<GroupInviteIntent>(),
+            pair::<RespondGroupInvite>(),
+            pair::<GroupInvitePrompt>(),
+            pair::<GroupRosterSnapshot>(),
+            pair::<GroupCommandResponse>(),
+            pair::<GroupInviteCancelled>(),
+        ));
+    }
+    for party in players.chunks(5) {
+        let leader = &party[0];
+        let leader_name = h
+            .app
+            .world()
+            .get::<Player>(leader.player)
+            .unwrap()
+            .name
+            .clone();
+        for member in &party[1..] {
+            let name = h
+                .app
+                .world()
+                .get::<Player>(member.player)
+                .unwrap()
+                .name
+                .clone();
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<GroupInviteIntent>>(leader.connection)
+                .unwrap()
+                .send::<GroupChannel>(GroupInviteIntent { name });
+            let mut invited = false;
+            let mut notices = Vec::new();
+            for _ in 0..5 {
+                h.advance(1);
+                let mut receiver = h
+                    .app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<GroupInvitePrompt>>(member.connection)
+                    .unwrap();
+                for invite in receiver.receive() {
+                    assert_eq!(invite.inviter_name, leader_name);
+                    invited = true;
+                }
+                drop(receiver);
+                notices.extend(
+                    h.app
+                        .world_mut()
+                        .get_mut::<MessageReceiver<GroupCommandResponse>>(leader.connection)
+                        .unwrap()
+                        .receive(),
+                );
+            }
+            assert!(
+                invited,
+                "normal invitation delivered before answer: {notices:?}"
+            );
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<RespondGroupInvite>>(member.connection)
+                .unwrap()
+                .send::<GroupChannel>(RespondGroupInvite { accept: true });
+            h.advance(5);
+        }
+        let groups = h.app.world().resource::<crate::group::GroupRegistry>();
+        let leader_id = h.app.world().get::<ClientId>(leader.player).unwrap().0;
+        for member in party {
+            let id = h.app.world().get::<ClientId>(member.player).unwrap().0;
+            assert_eq!(groups.group_members(id).len(), 5);
+            assert_eq!(groups.leader_of(id), Some(leader_id));
+        }
     }
 }
 
