@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source motion/faction/appearance/action boundaries (2026-10-17)
+
+[Source195–199 matrix](../../toy-effects14-coverage.md#source195199-motionfactionappearanceaction-boundaries-2026-10-17) retains self-launch/safe-fall, language/faction/self-sacrifice, soul appearance, cocoon action and nonzero shadow-disguise payload gaps. Scroll314988 is the actual TriggerType0 on-use; auxiliary314407/TriggerType7 must not replace it. No cosmetic/actor/transform substitutes, runtime/data admission or new native proof.
+
 ## Eternal Traveler and mount/control/portal boundaries (2026-10-17)
 
 [Source190–194 matrix](../../toy-effects14-coverage.md#source190194-eternal-traveler-and-mountcontrolportal-boundaries-2026-10-17) adds Eternal Traveler actual learned-use/saved-bind/shared-charge acceptance: nine variants/check/fmt pass without runtime/data changes. Wild Holly mount/holiday, Control3 RC toys and Shadowlands portal service remain unresolved; source actor/visual metadata is not those actions or native certification.

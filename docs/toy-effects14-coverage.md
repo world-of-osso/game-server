@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source195–199: motion/faction/appearance/action boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|195 Nomi's Vintage173727/312049 | Self knockback98/base300/misc-100/200 plus safe-fall aura144/base999 for6000ms; RequiredAreasID6832 and600000ms item recovery. This is not merely a drink or flame cosmetic. Source-area/self-launch/safe-fall behavior remains unproved as a combined actual-toy contract; no no-op/generic visual substitute. |
+|196 N'lyeth, Sliver of N'Zoth173951/313172 | Self language75/misc178, faction243/misc3214/1 and max-health-percent damage165/base60;3600000ms duration/item recovery and RequiredAreasID6916. Advertised outdoor/War Mode eligibility, self-sacrifice, Shath'Yar hostility/language and death removal remain unestablished together. No generic faction flip, PvP permission bypass or cosmetic admission. Visual92159 also authors procedural357234/type1 and357235/type14; metadata is not native proof. |
+|197 Scroll of Aeons173984/314988 | Actual on-use is TriggerType0/LegacySlot1, a self dummy4/1800000ms with inherited3600000ms spell recovery. Separate TriggerType7/slot0 row314407 carries two remove-aura164 slots naming313353/314393; it is not the journal's on-use root. Soul-appearance behavior remains unproved; no selection of the auxiliary row or arbitrary transform by name. |
+|198 Glimmerfly Cocoon174445/315240 | Source2000ms cast, script3 with targets47/86 and120000ms spell recovery. Cocoon-opening action remains unresolved; the root does not name an executable child here. No guessed pet/critter/release behavior or generic summon. |
+|199 Shadowy Disguise174830/316646 | Self dummy4 has nonzero misc150550/11,15000ms duration and300000ms item recovery; visual92809 authors procedural474/type1. It is not a complete-zero cosmetic signature or source transform56. Specific shadowy-figure appearance remains unproved; no copied transform template or ignored payload. |
+
+Exact roots, trigger/slot distinctions, effect/aura/area/duration/visual fields and procedural mapping live in `rows195-199-{readonly-source,action-source}.json`. Pinned `SharedDefines.h` names98 knockback,164 remove-aura and165 max-health-percent damage; `SpellAuraEffects.cpp` identifies144 safe fall,75 language and243 faction. Current ToyCatalog selects TriggerType0 before slot order. Read-only source/documentation only; no policy/runtime/importer/canonical/data changes, new acceptance or repeated code gate.
+
 ## Source190–194: Eternal Traveler and mount/control/portal boundaries (2026-10-17)
 
 190 Eternal Traveler's Hearthstone172179/308742 already uses source10s homebind252 and shared2309 charge. Test-only9e56fbe2a adds its actual bag-learning/UseToy case to the existing saved-bind fixture: missing bind refuses before spending; after displacement the authored cast returns to persisted bind, reports max1/current0/recharge1800000ms, and Holographic165 refuses on that shared charge. Health/model remain unchanged. Nine actual holiday variants pass9/9 zero ignored79.23s; native package/tests check13.81s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `hearth190-proof-ledger.json` records exact commands/revision. No production change or invented RED.
