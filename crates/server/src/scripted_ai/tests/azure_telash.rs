@@ -4,7 +4,6 @@ use crate::spell_cast::powers::{PowerTypeTable, power_value};
 use shared::components::PowerType;
 
 #[test]
-#[ignore = "RED: Telash native initial Energy60 not implemented"]
 fn azure_telash_appears_with_sixty_native_energy() {
     let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
     let energy = h
@@ -20,5 +19,67 @@ fn azure_telash_appears_with_sixty_native_energy() {
         power_value(h.app.world(), telash, PowerType::Energy),
         Some((60.0, 100.0)),
         "source JustAppeared initializes native primary Energy to60"
+    );
+}
+
+#[test]
+fn azure_telash_native_flag_stops_regen_without_changing_controlled_pools() {
+    let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+    h.advance(1.0);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((60.0, 100.0)),
+        "authored unit_flags2=0 prevents unauthored baseline regeneration"
+    );
+    // Control the existing companion resource path, not actual Telash gameplay.
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::UnitFlags>(telash)
+        .unwrap()
+        .0 |= crate::faction::UNIT_FLAG_PLAYER_CONTROLLED;
+    h.advance(0.2);
+    let (current, maximum) = power_value(h.app.world(), telash, PowerType::Energy).unwrap();
+    assert!(
+        current > 60.0,
+        "controlled pools retain native player-rate regeneration"
+    );
+    assert_eq!(
+        maximum, 100.0,
+        "control does not manufacture a new capacity"
+    );
+}
+
+#[test]
+#[ignore = "RED: native Ice Power periodic dummy hook not implemented"]
+fn azure_telash_ice_power_ticks_add_two_energy_each_native_second() {
+    let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+    h.advance(0.1);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((60.0, 100.0))
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), telash, 389453, Some(telash), true)
+        .expect("native Ice Power aura cast");
+    assert!(
+        h.has_aura(telash, 389453),
+        "native aura prerequisite before periodic RED"
+    );
+    h.advance(0.8);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((60.0, 100.0)),
+        "no baseline or premature periodic power before the native one-second tick"
+    );
+    h.advance(0.3);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((62.0, 100.0)),
+        "source periodic dummy adds two primary Energy at the first native tick"
+    );
+    h.advance(1.0);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((64.0, 100.0)),
+        "source periodic dummy repeats on the next native tick"
     );
 }
