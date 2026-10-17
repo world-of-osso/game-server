@@ -377,7 +377,7 @@ fn process_attack_messages(
 /// `Unit::Attack(victim, true)`: a new victim keeps the running swing timers and
 /// is announced with `SMSG_ATTACK_START` (`SendMeleeAttackStart`, Unit.cpp:2542);
 /// attacking the current victim again changes nothing (Unit.cpp:5906-5924).
-fn start_attack(
+pub(crate) fn start_attack(
     commands: &mut Commands,
     attacker: Entity,
     victim: Entity,

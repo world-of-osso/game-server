@@ -44,6 +44,7 @@ mod casting_restriction;
 mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
+pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
@@ -273,6 +274,7 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<summon::SummonPropertiesStore>()
             .add_systems(Startup, summon::load_summon_properties_startup)
             .add_systems(Startup, powers::load_power_type_table_startup)
+            .add_systems(FixedPreUpdate, charge::release_finished)
             .add_systems(
                 Update,
                 (receive_cast_requests, receive_stop_requests).chain(),
@@ -286,6 +288,7 @@ impl Plugin for SpellCastPlugin {
                     runes::regenerate_runes,
                     sync_charge_recovery,
                     advance_casts.after(crate::networking::process_player_inputs),
+                    charge::advance,
                     missiles::resolve_due_hits,
                     start_queued_casts,
                     powers::sync_unit_powers,
