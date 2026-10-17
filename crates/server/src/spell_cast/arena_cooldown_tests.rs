@@ -139,10 +139,10 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
             spell_id: 1,
             category: 10,
             max: 2,
-            recharge_secs: 15.0,
+            recovery_ms: 15_000.0,
             recovery_mult: 1.0,
             pending: std::collections::VecDeque::from([super::ChargeRecovery {
-                duration: 15.0,
+                recovery_ms: 15_000.0,
                 ready_at: 15.0,
             }]),
             fully_ready_at: 15.0,

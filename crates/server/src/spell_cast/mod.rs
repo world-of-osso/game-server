@@ -423,10 +423,11 @@ impl CastFailure {
     }
 }
 
-/// One consumed charge, with the duration selected at that actual use.
+/// One consumed charge: the flat-adjusted base selected at use and its deadline.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct ChargeRecovery {
-    duration: f64,
+    /// Flat-adjusted recovery at consumption, before the changeable rate.
+    recovery_ms: f32,
     ready_at: f64,
 }
 
@@ -436,8 +437,8 @@ struct ChargeState {
     spell_id: u32,
     category: u32,
     max: u8,
-    /// Authored recovery for a new use; existing uses keep their own durations.
-    recharge_secs: f64,
+    /// Flat-adjusted base for new uses; existing uses retain their recorded bases.
+    recovery_ms: f32,
     recovery_mult: f32,
     pending: VecDeque<ChargeRecovery>,
     /// Exact time the final missing charge returned, not the observed frame.
@@ -468,33 +469,40 @@ impl ChargeState {
 
     fn consume(&mut self, now: f64, ready_credit: u32) {
         // TC ConsumeCharge834–853: nonpositive recovery/max consumes nothing.
-        if self.max == 0 || self.recharge_secs <= 0.0 {
+        let duration = Self::calculate_recovery_seconds(self.recovery_ms, self.recovery_mult);
+        if self.max == 0 || duration <= 0.0 {
             return;
         }
         let ready_at = self.pending.back().map_or_else(
-            || now + (self.recharge_secs - f64::from(ready_credit) / 1000.0).max(0.0),
-            |previous| previous.ready_at + self.recharge_secs,
+            || now + (duration - f64::from(ready_credit) / 1000.0).max(0.0),
+            |previous| previous.ready_at + duration,
         );
         self.pending.push_back(ChargeRecovery {
-            duration: self.recharge_secs,
+            recovery_ms: self.recovery_ms,
             ready_at,
         });
     }
 
-    fn retime(&mut self, now: f64, ratio: f64) {
-        // TC UpdateChargeRecoveryRate: partial progress only on the oldest use;
-        // subsequent uses retain their individually selected recovery durations.
+    fn retime(&mut self, now: f64, multiplier: f32) {
+        // Recompute from each use's base: multiplying an already floored timer
+        // loses milliseconds when removing or refreshing a rate modifier.
         let mut previous_end = now;
         for (index, charge) in self.pending.iter_mut().enumerate() {
+            let old_duration =
+                Self::calculate_recovery_seconds(charge.recovery_ms, self.recovery_mult);
+            let new_duration = Self::calculate_recovery_seconds(charge.recovery_ms, multiplier);
             let remaining = if index == 0 {
-                charge.ready_at - now
+                (charge.ready_at - now) * new_duration / old_duration
             } else {
-                charge.duration
+                new_duration
             };
-            charge.duration *= ratio;
-            charge.ready_at = previous_end + remaining * ratio;
+            charge.ready_at = previous_end + remaining;
             previous_end = charge.ready_at;
         }
+    }
+
+    fn calculate_recovery_seconds(base_ms: f32, multiplier: f32) -> f64 {
+        f64::from((base_ms * multiplier).max(0.0).floor()) / 1000.0
     }
 
     fn reduce_recovery(&mut self, now: f64, seconds: f64) {
@@ -506,7 +514,8 @@ impl ChargeState {
 
     fn snapshot(&self, now: f64) -> SpellChargesUpdate {
         let next = self.pending.front();
-        let duration = next.map_or(self.recharge_secs, |charge| charge.duration);
+        let base_ms = next.map_or(self.recovery_ms, |charge| charge.recovery_ms);
+        let duration = Self::calculate_recovery_seconds(base_ms, self.recovery_mult);
         SpellChargesUpdate {
             spell_id: self.spell_id,
             category: self.category,
@@ -580,10 +589,7 @@ impl SpellHistory {
         }
         let max =
             (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
-        let recharge_ms = ((categories.charge_recovery_ms as f32 + mods.recovery_flat_ms)
-            * mods.recovery_mult)
-            .max(0.0)
-            .floor();
+        let recovery_ms = categories.charge_recovery_ms as f32 + mods.recovery_flat_ms;
         let state = self
             .charges
             .entry(categories.charge_category)
@@ -591,7 +597,7 @@ impl SpellHistory {
                 spell_id: spell.id,
                 category: categories.charge_category,
                 max,
-                recharge_secs: 0.0,
+                recovery_ms: 0.0,
                 recovery_mult: mods.recovery_mult,
                 pending: VecDeque::new(),
                 fully_ready_at: 0.0,
@@ -599,11 +605,10 @@ impl SpellHistory {
         state.max = max;
         state.refresh(now);
         if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
-            let ratio = f64::from(mods.recovery_mult / state.recovery_mult);
-            state.retime(now, ratio);
+            state.retime(now, mods.recovery_mult);
         }
         // Aura453 has no immediate handler: only future consumption changes.
-        state.recharge_secs = f64::from(recharge_ms) / 1000.0;
+        state.recovery_ms = recovery_ms;
         state.recovery_mult = mods.recovery_mult;
         Some(state)
     }
