@@ -2925,20 +2925,35 @@ fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level:
                 .unwrap()
                 .send::<GroupChannel>(GroupInviteIntent { name });
         }
-        h.advance(5);
-        for member in &party[1..] {
-            let mut receiver = h
-                .app
-                .world_mut()
-                .get_mut::<MessageReceiver<GroupInvitePrompt>>(member.connection)
-                .unwrap();
-            assert!(
-                receiver
-                    .receive()
-                    .any(|invite| invite.inviter_name == leader_name),
-                "normal invitation delivered before answer"
+        let mut invited = std::collections::BTreeSet::new();
+        let mut notices = Vec::new();
+        for _ in 0..5 {
+            h.advance(1);
+            for member in &party[1..] {
+                let mut receiver = h
+                    .app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<GroupInvitePrompt>>(member.connection)
+                    .unwrap();
+                for invite in receiver.receive() {
+                    assert_eq!(invite.inviter_name, leader_name);
+                    invited.insert(member.connection);
+                }
+            }
+            notices.extend(
+                h.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<GroupCommandResponse>>(leader.connection)
+                    .unwrap()
+                    .receive(),
             );
-            drop(receiver);
+        }
+        assert_eq!(
+            invited.len(),
+            4,
+            "normal invitations delivered before answers: {notices:?}"
+        );
+        for member in &party[1..] {
             h.app
                 .world_mut()
                 .get_mut::<MessageSender<RespondGroupInvite>>(member.connection)
