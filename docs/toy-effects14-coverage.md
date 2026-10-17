@@ -1,5 +1,29 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source185–189: midday acceptance pending and interactive boundaries (2026-10-17)
+
+187 Jar of Sunwarmed Sand170380/304369 has existing self screen-effect260/misc1719/7 and7200000ms aura with86400000ms item recovery. Test/spec9ec632d3a extends the existing Shadescale180 actual-learning/aura/replication/cancel fixture to this second source and checks both reported recoveries remain spent after cancellation. Fmt/manual changed-line readability/diffcheck pass; targeted native-helper tests are still compiling/running and package/tests check is pending in `midday187-proof-ledger.json`, not a passing acceptance claim. No production patch, invented RED, native midday certificate or full two-hour/24-hour passage proof.
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|185 Flopping Fish170203/304502 | Source47 summon156051/property64/60000ms actor and3600000ms item recovery. Runtime content156051 is absent; source has npcflag16777216 and fifteen91102–91088 displays at0.1scale. Fish placement/kicking interaction remains unresolved; no ordinary noninteractive actor or substitute fish. |
+|186 Symbol of Gral170204/304372 | Self dummy4/3600000ms and7200000ms item recovery. Advertised Gral blessing/presentation remains unproved; the empty dummy payload does not authorize a fabricated gameplay benefit or generic cosmetic admission. |
+|188 Memento of the Deeps170469/304550 | Source47 summon156074/property1362/120000ms actor,3600000ms item recovery; published runtime content156074 is absent. Source92601/scale1/weight0 and faction0/npcflag0/empty AI/script are metadata, not the described interact-to-recall-allies action. No generic seashell actor or invented memory interaction. |
+|189 Underlight Sealamp170476/304620 | Existing runtime156086/92605/DisplayScale0.35, source47/property1362/180000ms and3600000ms item recovery. Retain prior actual-learning/source-scale CPU proof and both-skin native meshes/root0.35/no pet frame, state-kit ground attachment and natural180-second removal witnesses below. This revisit adds no new lamp test/native certificate or speculative gameplay. |
+
+Exact roots, durations/properties/visual fields and distinct actual runtime-content/source actor/model rows are retained in `rows185-189-{readonly-source,action-source}.json`. No new data/importer/runtime-policy/canonical publication;189's historical native scope and187's pending targeted scope remain separate.
+
+## Source180–184: retained midnight/sign proof and equipment gaps (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|180 Shadescale170187/304370 | Self screen-effect260/misc1720/7,7200000ms source duration and3600000ms item recovery. Existing imported-item acceptance proves actual bag learning/UseToy, SpellGo, aura payload/replication and cancellation. That historical CPU scope is not a fresh native midnight-sky/pixels certificate or natural two-hour expiry proof. No new weather rule inferred. |
+|181 Shirakess Warning Sign170196/304505 and182 Swarthy Warning Sign170197/438546 | Source47/property3077 summons156052/92597 and218978/117639 respectively, model scale0.6/source60000ms lifetime/3600000ms item recovery. Existing actual-source actor/owner/map/scale/expiry proof and separate both-skin native mesh/removal receipts remain below. Those bounded actor proofs do not implement the described message carving,148628 extended lifetime or changed visibility to other players; interaction/persistence remains a named gap, not a complete warning-sign claim. |
+|183 Eternal Palace Dining Set170198/304373 | Self dummy4/3600000ms with7200000ms item recovery. Selected visual89162/89164 kits author procedural358888–358891 type17, Value1=170382/170381. Specific dining-equipment presentation/action remains unproved; a plain self aura or generic table is not this source payload. No additional admission. |
+|184 Zanj'ir Weapon Rack170199/304504 | Self dummy4/3600000ms with7200000ms item recovery. Visuals89237–89242 include procedural358940–358945 type17, Value1=169102/169102/169090/169094/170465/169089. Specific naga-equipment choice/presentation remains unproved; neither a copied ordinary weapon attachment nor arbitrary rack actor establishes it. No additional admission. |
+
+`rows180-184-{readonly-source,action-source}.json` retains exact root effects, durations and per-visual procedural mapping. Earlier imported-item/sign simulation and native receipts remain revision-scoped, without rerunning unchanged tests or claiming message-writing/native midnight/equipment completion. No runtime/importer/canonical/data changes.
+
 ## Source175–179: retained props, collection gap and memory transforms (2026-10-17)
 
 178 Book of the Unshackled170154/303994 and179 Carved Ankoan Charm170155/303995 already have runtime content155896/eight displays and155897/sixteen displays; the separate base creature tables are not their runtime authority. Both source roots are self transform56/misc8/600000ms with item recovery-1 inheriting3600000ms spell recovery. Test-only59d1527ce extends the existing real-learning disguise fixture to these exact pools: actual UseToy/source display membership, before-expiry retention, ordinary50ms-frame expiry/restoration/replicated-aura removal, unchanged health and cooldown refusal both before/after appearance expiry. No production change or manufactured RED.
