@@ -4,7 +4,7 @@ use bevy_replicon::shared::server_entity_map::ServerEntityMap;
 use lightyear::prelude::*;
 use shared::components::{MovementControl, Npc, Position};
 use shared::protocol::*;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const CAST_INTERVAL: Duration = Duration::from_secs(2);
 const MOVE_INTERVAL: Duration = Duration::from_millis(100);
@@ -25,6 +25,35 @@ pub struct Combat {
     observed_position: Option<Vec3>,
     observed_moves: usize,
     evidence: Evidence,
+    delivery: DeliveryEvidence,
+}
+
+#[derive(Default, Clone, Debug)]
+struct DeliveryEvidence {
+    last: Option<Instant>,
+    events: usize,
+    max_gap_ms: u128,
+    max_latency_ms: u128,
+}
+
+impl DeliveryEvidence {
+    fn observe(
+        &mut self,
+        started: Instant,
+        received: Instant,
+        sent_unix_ms: u64,
+        now_unix_ms: u128,
+    ) {
+        let previous = self.last.unwrap_or(started);
+        self.max_gap_ms = self
+            .max_gap_ms
+            .max(received.duration_since(previous).as_millis());
+        self.max_latency_ms = self
+            .max_latency_ms
+            .max(now_unix_ms.saturating_sub(sent_unix_ms as u128));
+        self.last = Some(received);
+        self.events += 1;
+    }
 }
 
 #[derive(Default, Clone, Debug)]
@@ -81,18 +110,25 @@ impl Combat {
             observed_position: None,
             observed_moves: 0,
             evidence: Evidence::default(),
+            delivery: DeliveryEvidence::default(),
         })
     }
 
     pub fn assert_complete(&self, username: &str) {
+        let trailing_gap_ms = self
+            .delivery
+            .last
+            .map_or(0, |last| last.elapsed().as_millis());
+        let max_gap_ms = self.delivery.max_gap_ms.max(trailing_gap_ms);
         println!(
-            "COMBAT_COMPLETE {username} owner={:?} target={:?} submitted={} moves={} observed_moves={} evidence={:?}",
+            "COMBAT_COMPLETE {username} owner={:?} target={:?} submitted={} moves={} observed_moves={} evidence={:?} delivery={:?} max_gap_ms={max_gap_ms}",
             self.owner,
             self.target,
             self.casts_sent,
             self.moves_sent,
             self.observed_moves,
-            self.evidence
+            self.evidence,
+            self.delivery
         );
         assert!(
             self.evidence.damage >= 10,
@@ -126,6 +162,7 @@ pub fn connect(event: On<Add, Connected>, mut commands: Commands) {
 }
 
 pub fn receive(
+    run: Res<super::Run>,
     combat: Option<ResMut<Combat>>,
     mut peers: Query<(
         &mut MessageReceiver<KnownSpellsSnapshot>,
@@ -139,8 +176,20 @@ pub fn receive(
             combat.known = snapshot.spells;
         }
         for event in events.receive() {
-            if let (Some(owner), Some(target)) = (combat.owner, combat.target) {
-                combat.evidence.observe(&event, owner, target);
+            if let Some(started) = run.all_entered {
+                let now_unix_ms = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("clock")
+                    .as_millis();
+                combat.delivery.observe(
+                    started,
+                    Instant::now(),
+                    event.timestamp_unix_ms,
+                    now_unix_ms,
+                );
+                if let (Some(owner), Some(target)) = (combat.owner, combat.target) {
+                    combat.evidence.observe(&event, owner, target);
+                }
             }
         }
         for failure in failures.receive() {
@@ -178,9 +227,10 @@ pub fn fight(
         return;
     };
     let origin = Vec3::new(position.x, position.y, position.z);
-    if combat
-        .observed_position
-        .is_some_and(|previous| previous.distance(origin) > 0.01)
+    if run.all_entered.is_some()
+        && combat
+            .observed_position
+            .is_some_and(|previous| previous.distance(origin) > 0.01)
     {
         combat.observed_moves += 1;
     }
@@ -305,6 +355,17 @@ fn send_movement(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn delivery_evidence_measures_gaps_and_server_to_client_latency() {
+        let started = Instant::now();
+        let mut evidence = DeliveryEvidence::default();
+        evidence.observe(started, started + Duration::from_secs(2), 1000, 1015);
+        evidence.observe(started, started + Duration::from_secs(14), 2000, 2100);
+        assert_eq!(evidence.events, 2);
+        assert_eq!(evidence.max_gap_ms, 12000);
+        assert_eq!(evidence.max_latency_ms, 100);
+    }
 
     #[test]
     fn evidence_excludes_other_actors_and_other_victims() {
