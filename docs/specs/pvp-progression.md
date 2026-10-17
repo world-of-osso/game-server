@@ -57,6 +57,10 @@ Pinned TC AV enum69–72, HonorKillBonus535–539 and OnUnitKilled653–684 give
 
 Only a source battle-accepted death triggers the award, scoped to its accepted, present opposing roster. Other-copy deaths and mine-owner changes do not mint this bonus; captain alive-state and terminal general transition reject replay. Keep the common positive-Honor eligibility, full XP/wallet mirror, cap and durable updates. Tower destruction and survivor OnEnd awards remain separate unfinished callbacks; these NPC credits do not claim full AV reward parity.
 
+## Alterac tower Honor
+
+Pinned TC AV EventPlayerDestroyedPoint813–817 grants three bonus-kill equivalents to the assaulting team when a tower actually finishes destruction. At retained20–79, each tower grants368; two distinct destructions grant368+368=736, not a single rounded six-kill grant. An assault, canceled Opening, successful defense, graveyard capture or later update of an already destroyed tower grants nothing. Credit the accepted roster still present in that copy through the existing positive-Honor eligibility and durable XP/wallet mirror. The source240s capture timer remains the only destruction clock. Survivor OnEnd remains a separate unfinished callback.
+
 ## Isle commander Honor
 
 Pinned TC Isle `HonorRewards`193–197 and `OnUnitKilled`383–394 grant a literal500 Honor to the opposite team when commander34924 or34922 dies, before ending the match. This is not a bonus-kill multiplier, a generic completion award, or the500 Conquest spell definition. Only an actual source battle-accepted commander death triggers it; the battle's terminal transition rejects dead-target replay. Credit only the winning accepted roster still present in that map copy, with the same positive Honor minimum-level/Inactive checks. Dead eligible recipients remain allowed. Preserve the existing1:1 XP/wallet mirror, holding cap, zero-weekly rule and durable updates.
