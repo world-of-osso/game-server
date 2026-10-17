@@ -1,11 +1,11 @@
 {
   "build": "12.1.5.70448",
   "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
-  "validator_revision": "3889b5ca",
+  "validator_revision": "5d23a60de980ed33c5925c8847e4e1e8f32369b8",
   "boundary": "Graph admission only; supported property ID is not full semantic or Retail proof. Fresh validator census over fixture tables reconciled content-identical against all ten active70448 CSVs; historical70391 remains separate.",
-  "admitted_effect_rows": 1797,
+  "admitted_effect_rows": 1811,
   "effect_rows": 2829,
-  "admitted_abilities": 1023,
+  "admitted_abilities": 1025,
   "abilities": 1404,
   "properties": [
     {
@@ -50,7 +50,7 @@
       ]
     },
     {
-      "admitted_rows": 97,
+      "admitted_rows": 103,
       "handler": true,
       "property": 23,
       "rows": 115,
@@ -59,14 +59,8 @@
         367,
         438,
         1115,
-        1378,
-        1379,
-        1380,
         1682,
         2062,
-        2200,
-        2201,
-        2202,
         2786,
         4272,
         4376,
@@ -76,7 +70,7 @@
       ]
     },
     {
-      "admitted_rows": 576,
+      "admitted_rows": 582,
       "handler": true,
       "property": 24,
       "rows": 945,
@@ -92,7 +86,6 @@
         356,
         384,
         454,
-        461,
         489,
         537,
         538,
@@ -189,8 +182,6 @@
         1336,
         1337,
         1348,
-        1376,
-        1377,
         1421,
         1458,
         1469,
@@ -236,9 +227,6 @@
         2030,
         2063,
         2181,
-        2197,
-        2198,
-        2199,
         2223,
         2224,
         2225,
@@ -1038,7 +1026,7 @@
       ]
     },
     {
-      "admitted_rows": 11,
+      "admitted_rows": 13,
       "handler": true,
       "property": 80,
       "rows": 24,
@@ -1047,8 +1035,6 @@
         1345,
         1349,
         1353,
-        1381,
-        2203,
         2301,
         2378,
         4256,
@@ -2420,7 +2406,7 @@
     },
     {
       "ability": 258,
-      "error": "ability 258: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 259,
@@ -4644,7 +4630,7 @@
     },
     {
       "ability": 979,
-      "error": "ability 979: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 980,
