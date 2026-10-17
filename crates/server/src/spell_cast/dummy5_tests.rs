@@ -198,13 +198,19 @@ fn bone_stacks(h: &Harness) -> u8 {
 }
 #[test]
 fn dummy5_deaths_caress_generates_two_bone_shield_stacks() {
-    let mut h = harness(Vec::new(), &[195292, 55078, 195181], 6).expect("real catalog");
+    // Guaranteed-impact fixture: Blood Plague's child uses native melee dodge.
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[195292, 55078, 195181], 6)
+        .expect("real catalog");
     h.cast_and_deliver(195292, Some(h.npc));
     h.advance(10);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(bone_stacks(&h), 2);
     assert!(damage(&h, 195292, h.npc) > 0);
-    assert!(crate::auras::has_aura(h.app.world(), h.npc, 55078));
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.npc, 55078),
+        "Blood Plague missing after Death's Caress: {:?}",
+        h.inbox.log
+    );
 }
 #[test]
 fn dummy5_deaths_caress_adds_to_existing_bone_shield_up_to_catalog_cap() {
