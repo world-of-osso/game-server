@@ -144,6 +144,22 @@ fn native_npc_death_interrupts_flagged_cast_before_death_touch_returns() {
 }
 
 #[test]
+fn native_npc_forced_despawn_interrupts_flagged_cast_immediately() {
+    let mut h = native_fixture();
+    let caster = h.npc;
+    begin_cast(&mut h, caster, NETHER_EXPLOSION, 1.0);
+    crate::combat::despawn_creature(h.app.world_mut(), caster);
+    assert_eq!(h.health(caster), 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(caster)
+            .is_some()
+    );
+    assert!(h.app.world().get::<CastState>(caster).is_none());
+}
+
+#[test]
 fn native_npc_corpse_removal_interrupts_an_eligible_dead_start_cast() {
     let mut h = native_fixture();
     kill_npc(&mut h);
