@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Eternal Traveler and mount/control/portal boundaries (2026-10-17)
+
+[Source190–194 matrix](../../toy-effects14-coverage.md#source190194-eternal-traveler-and-mountcontrolportal-boundaries-2026-10-17) adds Eternal Traveler actual learned-use/saved-bind/shared-charge acceptance: nine variants/check/fmt pass without runtime/data changes. Wild Holly mount/holiday, Control3 RC toys and Shadowlands portal service remain unresolved; source actor/visual metadata is not those actions or native certification.
+
 ## Midday source acceptance and interactive boundaries (2026-10-17)
 
 [Source185–189 matrix](../../toy-effects14-coverage.md#source185189-midday-source-acceptance-and-interactive-boundaries-2026-10-17) records Jar187's actual-source day/night aura/cancellation/recovery acceptance: four affected tests/check/fmt pass after one cold-slot compile. Fish-kicking, Gral blessing and memento interaction remain gaps; Sealamp retains earlier exact body/scale/state-kit/natural-expiry witnesses without a new native run. No runtime/data admission or generic interactive substitutes.
