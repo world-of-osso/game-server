@@ -79,3 +79,41 @@ pub(crate) fn require(path: PathBuf) -> PathBuf {
     );
     path
 }
+
+/// Full idle population across diverse layouts, as in the live world's optional components.
+#[derive(bevy::prelude::Component)]
+struct IdleLayout<const BIT: u8>;
+
+pub(crate) fn populate_idle_world<B: bevy::prelude::Bundle>(
+    world: &mut bevy::prelude::World,
+    mut bundle: impl FnMut() -> B,
+) {
+    for index in 0..250_000_u32 {
+        let mut unit = world.spawn(bundle());
+        macro_rules! layout {
+            ($($bit:literal),*) => { $(
+                if index & (1 << $bit) != 0 { unit.insert(IdleLayout::<$bit>); }
+            )* };
+        }
+        layout!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+    }
+}
+
+pub(crate) fn assert_idle_updates_are_bounded(app: &mut bevy::prelude::App, label: &str) {
+    app.update();
+    let fastest = (0..3)
+        .map(|_| {
+            let start = std::time::Instant::now();
+            for _ in 0..5 {
+                app.update();
+            }
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    eprintln!("{label}: 250000 units/4096 layouts/five updates {fastest:?}");
+    assert!(
+        fastest < std::time::Duration::from_micros(100),
+        "idle {label} still depends on full world population/layouts: {fastest:?}"
+    );
+}
