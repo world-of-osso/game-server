@@ -13,6 +13,7 @@
 //! `CREATE_ITEM` (24) stores the item and rolls `Player::UpdateCraftSkill`.
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
+mod concentration;
 mod data;
 mod gathering;
 #[cfg(test)]
@@ -303,6 +304,7 @@ impl Plugin for ProfessionPlugin {
                 FixedUpdate,
                 continue_craft_queues.after(crate::spell_cast::advance_casts),
             )
+            .add_systems(Update, concentration::receive_queries)
             .add_systems(PostUpdate, save_and_send_professions);
     }
 }
