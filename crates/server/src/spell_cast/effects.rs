@@ -1537,6 +1537,18 @@ fn power_drain_base_points(
     if effect.coefficient != 0.0 {
         return Ok(calc_base_value(world, caster, spell, effect));
     }
+    let expected = read_power_drain_expected_stat(world, spell, level)?;
+    let value = expected * effect.base_points / 100.0;
+    let use_float =
+        super::attributes(spell, 12) & SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS != 0;
+    Ok(if use_float { value } else { value.round() })
+}
+
+fn read_power_drain_expected_stat(
+    world: &World,
+    spell: &SpellInfo,
+    level: u8,
+) -> Result<f32, super::CastFailure> {
     let stats = world
         .get_resource::<crate::level_scaling::CreatureSpellStats>()
         .ok_or_else(|| {
@@ -1547,15 +1559,11 @@ fn power_drain_base_points(
         })?;
     let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
     let auto_attack = super::attributes(spell, 0) & SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL != 0;
-    let expected = if auto_attack {
+    Ok(if auto_attack {
         stats.evaluate(true, level, tuning)
     } else {
         stats.player_mana(level, tuning)
-    };
-    let value = expected * effect.base_points / 100.0;
-    let use_float =
-        super::attributes(spell, 12) & SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS != 0;
-    Ok(if use_float { value } else { value.round() })
+    })
 }
 
 fn power_drain_bonus_done(

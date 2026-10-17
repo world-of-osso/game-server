@@ -149,8 +149,8 @@ impl ExpectedStats {
     }
 }
 
-/// ExpectedStat `CreatureSpellDamage` and `CreatureAutoAttackDps` by `(Lvl,
-/// ExpansionID)`: what a creature spell's base points are a percentage of
+/// ExpectedStat spell damage, auto-attack DPS and PlayerMana by `(Lvl,
+/// ExpansionID)`: spell damage and effect8 base-point percentage budgets
 /// (`SpellEffectInfo::CalcBaseValue` → `EvaluateExpectedStat(stat, level,
 /// expansion, 0, CLASS_NONE)`, which applies no ExpectedStatMod).
 #[derive(Resource, Debug, Clone, Default, PartialEq)]
