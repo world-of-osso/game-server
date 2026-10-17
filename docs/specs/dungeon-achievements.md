@@ -199,7 +199,7 @@ Character achievement247 / criterion2379 uses native DoEmote54 TextEmote56. Pres
 ## Eligible recipient area31
 
 - Credit PVPKillInArea31 at the existing eligible world-player death reward using each recipient's current authenticated terrain area. Match a positive authored AreaTable asset or its descendants (TC RewardHonor6756, CriteriaHandler1637–1640). Victim area, another recipient's area, unknown terrain and stale cached positions cannot substitute. Preserve all companions, sum account contributions and do not add BG/arena eligibility policy.
-- Blood and Sand12411 keeps all twelve authored area leaves9511–9522 and the root's fifty-kill sum threshold. Existing Hall achievements224/1151 retain their authored thresholds and alternative areas; structural support does not certify native battleground content. Preserve earned dates and quantities across normal persistence reconstruction.
+- Blood and Sand12411 keeps all twelve authored area leaves9511–9522 and the root's fifty-kill sum threshold. All three roots12411/224/1151 are battleground-authored; they retain their thresholds and alternatives. Controlled world-reward tests on extracted BG terrain are not production queue/admission proof. The current world-HK producer excludes registered BG matches, so native BG credit remains unimplemented. Preserve earned dates and quantities across normal persistence reconstruction.
 
 ## Eligible victim class52
 
