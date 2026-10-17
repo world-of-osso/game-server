@@ -11,6 +11,7 @@ type DeadTappedCreatures<'w, 's> = Query<
     's,
     (
         &'static Npc,
+        Option<&'static shared::components::UnitLevel>,
         &'static CreatureTap,
         &'static Position,
         &'static InMap,
@@ -35,7 +36,7 @@ pub(super) fn publish_rewarded_creature_kills(
     mut credits: MessageWriter<CriteriaCredit>,
 ) {
     let online: BTreeSet<_> = connections.iter().map(|link| link.0).collect();
-    for (npc, tap, position, map) in &killed {
+    for (npc, level, tap, position, map) in &killed {
         let creature_type = data
             .as_deref()
             .and_then(|data| data.templates.get(&npc.template_id))
@@ -55,7 +56,10 @@ pub(super) fn publish_rewarded_creature_kills(
             if online.contains(&player) && (!grouped || !corpse_blocks_credit) {
                 credits.write(CriteriaCredit {
                     player,
-                    event: CriteriaEvent::KillAnyCreature(creature_type),
+                    event: CriteriaEvent::KillAnyCreature {
+                        creature_type,
+                        level: level.map(|level| level.0),
+                    },
                 });
             }
         }
