@@ -1,3 +1,7 @@
+## 2026-10-17 — Lock-On target charge
+
+[Bounded77](../pet-battle-effect-coverage.md#lock-on77--implementation2026-10-17): target-worn300/one-round duration, ordinary second-use direct blast, GM722 remains gated. Actual unsupported77 RED5→GREEN6 plus Rocket4/Wind-Up1 regressions pass;1779/2829 rows/1017 graphs. Authored wild-PvP29 and both strict skins pass enemy lock/no damage→145/143 blast/expiry, six inspected fullHD originals and canonical3-mesh loader. Final lib132/check1m02/no warnings/bothfmt pass; prior unchanged UI12 retained. Two fixture namespace compile mistakes corrected with actual library import; failed logs preserved. No cross-caster sharing or full timing/VFX claim.
+
 ## 2026-10-17 — Life Exchange health redistribution
 
 [Bounded67](../pet-battle-effect-coverage.md#life-exchange67--implementation2026-10-17): direct active HP averaging/caps/miss conservation, no invented attack-power or callback behavior. Actual unsupported67 RED3→GREEN4;1778/2829 rows/1016 graphs. Owned/wild-PvP28 and fresh native builds pass. Tormented Spirit strict loader passes but its scale1.0 humanoid fails Modern viewport framing before cast/capture; camera/scale contract preserved, legal native subject switches to Sprite Darter87/15/slot2 with existing canonical6/6 closure. Sprite replacement owned1/1 and both actual strict native skins pass shared98/108, Scratch28/30, retained70→78 HP; four inspected fullHD originals/all four saved phases have two framed models. Final lib126/check1m25/no warnings/bothfmt pass; unaffected wild-PvP27 + replacement Sprite1 and unchanged UI12 scopes retained. Independent Retail rounding/feedback remains unproved.
@@ -15,9 +19,36 @@
 ## 2026-10-17 — Guild invitation appearance delivery
 
 [Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
+## 2026-10-17 — Omor sourced pull124
+
+[Omor](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): actual periodic30638 damage precedes physical no-reversal REDbf5659cd. Source handlerb509bd01 passes strict movement1/1/58.80s; enable only after this receipt. Ordinary Omor7/shared knockback9 pass16/16/435.67s at73932f34, including actual-child3D-distance/reach/no-teleport controls; map543 obstacle/Detour/dynamic collision and full native proof remain open.
+
 ## 2026-10-17 — Omor Orbital source hooks
 
 [Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
+## 2026-10-17 — Toy source boundaries89–93
+
+[Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. [94–98 continuation](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retains nearby reaction, spectral/headwear procedural, corpse ritual and return/catch gaps. [99–103 matrix](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) retains historical Cooler/Gong proof and exact missing Kovork/procedural gaps. No runtime admission; merged55-case proof unchanged.
+
+## 2026-10-17 — Oomgut source lifecycle
+
+[Actual learned use](systems/toys.md#oomgut-source-transform-lifecycle-2026-10-17) proves existing transform/ordinary ten-minute expiry and longer recovery without a production change. New plus existing transform2/2 and bounded source-contract14/14 pass; check/fmt clean. Native/all17/wall-clock claims remain excluded; RC105–106 and procedural107 remain gaps.
+
+## 2026-10-17 — Source disguise recovery
+
+[Three existing transforms](systems/toys.md#source-disguise-recovery-precedence-2026-10-17): actual learned-use proves source models, ten-minute ordinary expiry and item/spell recovery precedence. New three-ID test passes; final comparison with Oomgut passes2/2 at69.43s, check/fmt clean. No production change or native/weighted/full-recovery claim; Pennant110 script gap remains.
+
+## 2026-10-17 — Lunar/Peddlefeet learned use
+
+[Two new holiday cases](systems/toys.md#lunarpeddlefeet-hearthstone-learned-use-2026-10-17) prove existing persisted-bind/shared-charge path without production changes; bounded5 tests/seven IDs pass105.95s, check/fmt clean. Native/procedural/cross-map/recharge claims excluded; hiding114/gift115 remain named gaps.
+
+## 2026-10-17 — Forlorn/charge merge
+
+[Focused merge proof](../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17): preserve effect96 movement-duration hit ordering and destination-only flight/front47; merged55/55 pass with actual protocol master. Lead published matching Forlorn template receipt; no new full-suite/native-parity claim.
+
+## 2026-10-17 — Flashback source screen effect
+
+[Flashback88 boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17): retain actual ScreenEffect1473 and chapel9587 source fields without inventing world phasing; actual learned use/native presentation remain open. Docs-only; retained150/49 proofs unchanged.
 
 ## 2026-10-16 — Eligible victim class52
 
@@ -1799,3 +1830,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 ## 2026-10-17 — Pending-only netdelta producer controls
 
 [Combat publication](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17): dedicated marked-peer/quiet-frame proof, real level-stream/reconnect equivalence and Stockade earned-delta/toast isolation now pass alongside repaired transport-free criteria and explicit HostClient fixtures. Detailed source scopes/counts live on the investigation page. Merged engine checks and genuine UDP byte/latency/performance remeasurement remain pending.
+
+- 2026-10-16: [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16): exact ten-model source identity, retained unitless destination flight after genuine early-arrival RED;150 Toy+49 affected+3 importer controls pass, native appearances/publication separate.

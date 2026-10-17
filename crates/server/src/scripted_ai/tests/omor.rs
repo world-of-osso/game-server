@@ -184,6 +184,125 @@ fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() 
 }
 
 #[test]
+fn encounter_coverage_omor_whip_pull_reverses_real_airborne_motion() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+        shared::components::PlayerMotion::default(),
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), boss, player, 1.0);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(player), true)
+        .expect("actual source knock30637");
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 32185, Some(boss), true)
+        .expect("actual source periodic Whip32185");
+    h.advance(1.9);
+    let before = *h.app.world().get::<Position>(player).unwrap();
+    h.advance(0.15);
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(30638)
+                && event.target == Some(player.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "actual authored periodic30638 child reached target"
+    );
+    let pulled = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        pulled.x > before.x,
+        "genuine outgoing knock traveled before pull"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(player)
+            .unwrap()
+            .contains(shared::components::PlayerMotion::FALLING),
+        "actual airborne target"
+    );
+    h.advance(0.1);
+    let after = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        after.x < pulled.x,
+        "effect124 must reverse outbound motion toward caster: {pulled:?} -> {after:?}"
+    );
+    assert!(
+        ((pulled.x - after.x) - 1.31).abs() < 0.02,
+        "authored MiscValue131 gives13.1yd/s, not teleport or outgoing15yd/s: {pulled:?} -> {after:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_whip_pull_uses_source_3d_ballistics_and_reach() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+        shared::components::PlayerMotion::default(),
+    ));
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(player), true)
+        .expect("actual30637 launch");
+    h.advance(1.9);
+    let start = *h.app.world().get::<Position>(player).unwrap();
+    // TDB1210 creature_model_info18237 CombatReach3, source Omor scale1.
+    let contact = Vec3::new(origin.x + 3.0, origin.y, origin.z);
+    let crate::ground::GroundProbe::Supported(height) = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, contact)
+    else {
+        panic!("authentic combat-reach destination must have ground")
+    };
+    let contact = Vec3::new(contact.x, height, contact.z);
+    let from = Vec3::new(start.x, start.y, start.z);
+    let distance = from.distance(contact);
+    let height_delta = contact.y - start.y;
+    let speed = 13.1;
+    let gravity = shared::skyriding::GRAVITY;
+    let vertical_speed = (2.0 * speed * speed * height_delta + gravity * distance * distance)
+        / (2.0 * speed * distance);
+    let expected_y = start.y + vertical_speed * 0.1 - 0.5 * gravity * 0.01;
+    let distance_2d = start.x - contact.x;
+    let incorrect_speed = (2.0 * speed * speed * height_delta
+        + gravity * distance_2d * distance_2d)
+        / (2.0 * speed * distance_2d);
+    assert!(
+        (vertical_speed - incorrect_speed).abs() * 0.1 > 0.1,
+        "raised real knock discriminates Blizzard3D formula from2D"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30638, Some(player), true)
+        .expect("actual child30638");
+    assert_eq!(
+        *h.app.world().get::<Position>(player).unwrap(),
+        start,
+        "launch is an impulse, not teleportation"
+    );
+    h.advance(0.1);
+    let after = *h.app.world().get::<Position>(player).unwrap();
+    assert!(
+        (after.x - (start.x - 1.31)).abs() < 0.02,
+        "pull overrides outgoing direction at authored13.1: {start:?} -> {after:?}"
+    );
+    assert!(
+        (after.y - expected_y).abs() < 0.02,
+        "source3D distance/combat-reach floor/signed vertical speed: expected{expected_y}, actual{after:?}"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() {
     for gap in [3.0, 25.0] {
         let (mut h, boss, _) = orbital_fixture();
