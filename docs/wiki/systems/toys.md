@@ -2,6 +2,18 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Akunda source child and visible trap (2026-10-16)
+
+163211/279076 first refuses linked trap302746; exact source type6/display16675 profile now joins31442/display0 without generic trap admission. A separate genuine child-position RED finds279077 at the caster rather than clicked point; existing effect64/32 unit-trigger routing now retains the parent's explicit destination/item level through its depth-checked loader/launcher. Actual learned-use root/child/visible-source trap, ordinary recipe consumption/output, environmental CozyFire refresh, five source-drift refusals and ordinary300s cleanup pass. Whole-Toy149/149, affected29/29 and check/fmt/manual readability pass. [Exact proofs and source boundaries](../../toy-effects14-coverage.md#akunda84-visible-linked-trap-boundary-2026-10-16) separate server behavior from native pixels/audio, broad trigger completeness and full-retail parity;82 missing ItemSparse/83 specialized title27 remain named gaps.
+
+## Gnoll Barrel source pair (2026-10-16)
+
+163201/279063 source templates143119/143120 were absent after maintained import: genuine importer RED precedes the exact two-entry source admission. Idempotence/rollback controls and actual learned-use pass: real area5759 eligibility, authentic map1643/MCNK9042 cursor pair38854/38857, unchanged faction35/nonpet/nonfollow, ordinary300s simulation expiry and30min recovery. Current whole-Toy147/147 and check/fmt/manual readability pass. [Exact source, revisions, copy-only canonical receipt and claim boundaries](../../toy-effects14-coverage.md#gnoll-barrel81-authentic-template-admission-2026-10-16) distinguish data/lifecycle acceptance from missing native533501 body, indoor/WMO eligibility and unproved target-dummy combat. Canonical publication remains lead-owned; Cursed Vision80 remains a named remote-view gap.
+
+## Holiday hearthstone learned use (2026-10-16)
+
+Greatfather Winter162973/278244 and Headless Horseman163045/278559 use persisted HomeBind, source10s cast and shared charge2309; missing bind refuses before spending and either toy blocks its sibling after spending the sole charge. Two independent actual learned-use tests pass; current whole-Toy146/146, check/fmt/manual readability pass. [Exact evidence and exclusions](../../toy-effects14-coverage.md#holiday-hearthstones7879-learned-use-boundary-2026-10-16) separate same-map server acceptance from source type17 procedural appearance, native wire/render/audio, cross-map transfer and natural30min recharge.
+
 ## Corgi and Rezan source boundaries (2026-10-16)
 
 Corgi158149/264091 learned-use/cancel passes with literal viewer233 payload[3569,53], not a global ModelDisplay change; native viewer interpretation/rendering remains absent. Roar160509/272071 genuine learned-use effect3 refusal precedes exact audited cosmetic admission; focused cast/source90s recovery/reuse and unchanged health/model/no aura/summon pass. Native catalog resolves the authored one-shot caster animation74/sound107006; authenticated1777497 bytes are not audible playback. [Exact coverage and proof boundaries](../../toy-effects14-coverage.md#roar71-source-one-shot-cosmetic-2026-10-16) retain revisions, passing144/144 whole-Toy gate and named Chili69/Enthralling70 gaps; no invented fire/critter-following implementation or full-toy claim.

@@ -882,6 +882,7 @@ fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -
         || cosmetic::is_visual_only(spell)
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
+        || scripts::on_cast_effect(spell.id, effect.index).is_some()
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
@@ -2387,6 +2388,9 @@ fn resolve_effects(
             dest: *dest,
             chain_multiplier: 1.0,
         };
+        if let Some(hook) = scripts::on_cast_effect(spell.id, effect.index) {
+            hook(world, &ctx, effect);
+        }
         if effect.effect == effects::EFFECT_PERSISTENT_AREA_AURA {
             area_aura::create(world, &ctx, effect);
             continue;
@@ -2720,6 +2724,21 @@ pub(crate) fn cast_triggered_with_effect0_amount(
     };
     effect.base_points = amount;
     launch_triggered_spell(world, caster, &spell, explicit, depth);
+}
+
+/// Full-mask triggered cast at an authored destination, retaining native selectors and flight.
+pub(crate) fn cast_triggered_at_destination(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    position: Vec3,
+    depth: u8,
+) {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    spell.cast_destination = Some(position.to_array());
+    launch_triggered_spell(world, caster, &spell, None, depth);
 }
 
 fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {

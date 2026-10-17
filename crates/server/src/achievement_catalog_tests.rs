@@ -1,6 +1,52 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_honor_area31_authored_ancestry_does_not_enable_timers() {
+    let catalog = catalog();
+    // Real child12213 of10458. Its timed criterion46725 is outside achievement roots.
+    let timed = &catalog.criteria[&46725];
+    assert!(CriteriaEvent::HonorableKillInArea(12213).matches(timed));
+    assert!(CriteriaEvent::HonorableKillInArea(10458).matches(timed));
+    assert!(!CriteriaEvent::HonorableKillInArea(0).matches(timed));
+    assert!(!CriteriaEvent::HonorableKillInArea(9511).matches(timed));
+    assert!(!timed.supported, "timer companion still rejects admission");
+    assert!(
+        !catalog.criteria[&39692].supported,
+        "asset0 is not an all-area alias"
+    );
+}
+
+#[test]
+fn achievements_criteria_honor_area31_account_contributions_sum_not_max() {
+    let contributions = [23, 27].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(39747, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&39747), Some(&50));
+}
+
+#[test]
+fn achievements_criteria_honor_class52_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(2359, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&2359), Some(&7));
+}
+
+#[test]
+fn achievements_criteria_honor_race53_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(2370, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&2370), Some(&7));
+}
+
+#[test]
 fn achievements_criteria_honor_account_contributions_sum_not_max() {
     let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
         criteria_progress: [(3826, count)].into(),
@@ -1407,9 +1453,17 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Imported70391: native Hug, Call to Arms and seven complete type35 roots.
+    // Active70448: all three area31 roots retain full authored thresholds.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5527);
+    assert_eq!(union.len(), 5533);
+    for id in [224, 1151, 12411] {
+        assert!(union.contains(&id), "full authored area31 root{id}");
+    }
+    assert!(union.contains(&245), "full thirteen-class That Takes Class");
+    assert!(
+        union.contains(&246) && union.contains(&1005),
+        "both full Know Thy Enemy roots"
+    );
     assert!(union.contains(&1261), "authored ten-kill G.N.E.R.D. Rage");
     assert!(union.contains(&247), "native dead hostile player Hug");
     for achievement in [908, 909, 18202, 18203, 18205, 18206] {
