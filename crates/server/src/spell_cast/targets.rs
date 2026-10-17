@@ -153,8 +153,7 @@ fn selector(id: u32) -> Option<Selector> {
         77 => Selector::ChannelTarget,
         92 => Selector::Summoner,
         24 => Selector::ConeEnemy,
-        // TC SpellInfo.cpp:110, like60, is caster-reference CONE/ENTRY/FRONT.
-        60 | 110 => Selector::ConeEntry,
+        60 => Selector::ConeEntry,
         104 => Selector::ConeToDest,
         129 => Selector::CasterLine,
         134 => Selector::LineToDest,
