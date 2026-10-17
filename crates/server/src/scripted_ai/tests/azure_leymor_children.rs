@@ -10,6 +10,33 @@ const STOMP_DAMAGE: u32 = 374731;
 const BRAND: u32 = 374567;
 const BRAND_CHILD: u32 = 374582;
 
+#[test]
+#[ignore = "native Fissure child boundary awaiting behavioral RED"]
+fn azure_leymor_fissure_completion_emits_one_native_sprout_selector() {
+    const FISSURE: u32 = 386660;
+    const SPROUT_SELECTOR: u32 = 394154;
+    let (mut h, leymor) = prepare_leymor_for_later_clock();
+    h.advance(13.8);
+    assert_eq!(h.creatures_of(190509).len(), 14);
+    assert!(h.app.world().get::<Health>(h.player()).unwrap().current > 0.0);
+    assert_eq!(h.casts(0, leymor, FISSURE), 0);
+    h.advance(0.3);
+    let cast = h.app.world().get::<CastState>(leymor).unwrap();
+    assert_eq!(cast.spell_id, FISSURE);
+    let remaining = cast.duration - cast.elapsed;
+    h.advance(remaining + 0.2);
+    assert_first_fissure_and_living_victim(&mut h, leymor);
+    assert_eq!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .filter(|go| { go.caster == leymor.to_bits() && go.spell_id == SPROUT_SELECTOR })
+            .count(),
+        1,
+        "actual ordinary Fissure effect0 completion casts exactly one native394154 child"
+    );
+}
+
 fn prepare_running_stomp() -> (Harness, Entity) {
     let (mut h, leymor) = prepare_leymor_for_later_clock();
     h.advance(39.2); // Six fixture seconds plus39.2 reaches actual45.2s.
