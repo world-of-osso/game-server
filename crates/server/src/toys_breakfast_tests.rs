@@ -1,16 +1,48 @@
-//! Source135: authentic Goldtusk table, half scale and ordinary five-minute lifetime.
+//! Source135/149: authentic scenery tables and ordinary five-minute lifetimes.
 use super::*;
+
+struct SourceTableCase {
+    item: u32,
+    spell: u32,
+    entry: u32,
+    display: u32,
+    scale: f32,
+    front_distance: f32,
+    recovery_ms: u32,
+}
 
 #[test]
 fn toyfx135_goldtusk_real_learning_source_table_scale_expiry_and_recovery() {
+    assert_source_table_lifecycle(SourceTableCase {
+        item: 166703,
+        spell: 289533,
+        entry: 149876,
+        display: 90570,
+        scale: 0.5,
+        front_distance: 3.0,
+        recovery_ms: 600_000,
+    });
+}
+
+#[test]
+fn toyfx149_tea_set_real_learning_source_table_scale_expiry_and_recovery() {
+    assert_source_table_lifecycle(SourceTableCase {
+        item: 166808,
+        spell: 290483,
+        entry: 149865,
+        display: 90552,
+        scale: 1.0,
+        front_distance: 1.5,
+        recovery_ms: 900_000,
+    });
+}
+
+fn assert_source_table_lifecycle(case: SourceTableCase) {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{
         Health, ModelDisplay, Npc, Rotation, UnitFactionTemplate, UnitIsPet, UnitScale,
         UnitSummonedBy,
     };
-    const ITEM: u32 = 166703;
-    const SPELL: u32 = 289533;
-    const ENTRY: u32 = 149876;
     let directory = tempfile::tempdir().unwrap();
     let path = toyfx8_world();
     let conn =
@@ -35,21 +67,24 @@ fn toyfx135_goldtusk_real_learning_source_table_scale_expiry_and_recovery() {
     let display = h.app.world().get::<ModelDisplay>(caster).copied();
     let origin = *h.app.world().get::<Position>(caster).unwrap();
     let map = *h.app.world().get::<crate::maps::InMap>(caster).unwrap();
-    learn_effect_toy(&mut h, character, ITEM);
-    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    learn_effect_toy(&mut h, character, case.item);
+    assert_eq!(activate(&mut h, case.item)[0].error, None);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(h.inbox.go.iter().any(|go| go.spell_id == SPELL));
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == case.spell));
     let world = h.app.world_mut();
     let actors: Vec<_> = world
         .query::<(Entity, &Npc, &SummonedCreature)>()
         .iter(world)
-        .filter(|(_, npc, summon)| npc.template_id == ENTRY && summon.spell_id == SPELL)
+        .filter(|(_, npc, summon)| npc.template_id == case.entry && summon.spell_id == case.spell)
         .map(|(entity, _, summon)| (entity, summon.expires_at.unwrap()))
         .collect();
     assert_eq!(actors.len(), 1);
     let (actor, expiry) = actors[0];
-    assert_eq!(world.get::<ModelDisplay>(actor).unwrap().display_id, 90570);
-    assert_eq!(world.get::<UnitScale>(actor).unwrap().0, 0.5);
+    assert_eq!(
+        world.get::<ModelDisplay>(actor).unwrap().display_id,
+        case.display
+    );
+    assert_eq!(world.get::<UnitScale>(actor).unwrap().0, case.scale);
     assert_eq!(world.get::<UnitFactionTemplate>(actor).unwrap().0, 35);
     assert_eq!(
         world.get::<UnitSummonedBy>(actor).unwrap().0,
@@ -64,8 +99,9 @@ fn toyfx135_goldtusk_real_learning_source_table_scale_expiry_and_recovery() {
     );
     let placed = *world.get::<Position>(actor).unwrap();
     assert!(
-        (placed.x - origin.x - 3.0).abs() < 0.01 && (placed.z - origin.z).abs() < 0.01,
-        "authored47 three-yard front placement: {placed:?}"
+        (placed.x - origin.x - case.front_distance).abs() < 0.01
+            && (placed.z - origin.z).abs() < 0.01,
+        "authored47 source front placement: {placed:?}"
     );
     let remaining = expiry - world.resource::<Time>().elapsed_secs_f64();
     assert!((299.0..=300.0).contains(&remaining));
@@ -73,10 +109,10 @@ fn toyfx135_goldtusk_real_learning_source_table_scale_expiry_and_recovery() {
         h.inbox
             .cooldowns
             .iter()
-            .find(|cooldown| cooldown.spell_id == SPELL && !cooldown.is_gcd)
+            .find(|cooldown| cooldown.spell_id == case.spell && !cooldown.is_gcd)
             .unwrap()
             .duration_ms,
-        600_000
+        case.recovery_ms
     );
     h.app.world_mut().get_mut::<Position>(caster).unwrap().x -= 5.0;
     h.advance(20);
@@ -89,8 +125,8 @@ fn toyfx135_goldtusk_real_learning_source_table_scale_expiry_and_recovery() {
     assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
     assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), display);
     assert_eq!(
-        activate(&mut h, ITEM)[0].error.as_deref(),
+        activate(&mut h, case.item)[0].error.as_deref(),
         Some("OnCooldown"),
-        "five-minute actor expiry retains the ten-minute item recovery"
+        "five-minute actor expiry retains the source item recovery"
     );
 }
