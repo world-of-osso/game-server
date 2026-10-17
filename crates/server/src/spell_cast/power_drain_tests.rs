@@ -13,7 +13,7 @@ const NATURAL_PLAYER_MANA: f32 = 10_000.0;
 const INTELLECT_COST: f32 = 100.0;
 const NATIVE_DRAIN_WITH_PLAYER_SP: f32 = 278.0;
 
-fn fixture(class: u8) -> (Harness, Entity) {
+pub(super) fn fixture(class: u8) -> (Harness, Entity) {
     let mut h = harness(
         Vec::new(),
         &[SOUL_REND, DRAIN_MANA, FROST_BREATH, ARCANE_INTELLECT],
