@@ -77,7 +77,7 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 ### Miss-only self outcomes194 — 2026-10-16
 
-[Bounded762/989 source and proof](../../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16). The guard inspects only miss events produced during the current turn. Blocked attacks and another pet's earlier miss do not open the branch. The following159 selects the actual caller for existing stun/heal machinery. Stench selectors and generic failure/callback semantics are unchanged. RED2→GREEN8 passes; native proof and final gates remain pending.
+[Bounded762/989 source and proof](../../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16). The guard inspects only miss events produced during the current turn. Blocked attacks and another pet's earlier miss do not open the branch. The following159 selects the actual caller for existing stun/heal machinery. Stench selectors and generic failure/callback semantics are unchanged. RED2→GREEN8 passes; both-skin private5961 actual self-stun and59/68 healing, ten inspected fullHD originals and canonical strict readback pass. Final integrated gates remain pending; exact native heads and source limits live at the linked coverage entry.
 
 ### Refuge223 — 2026-10-16
 
