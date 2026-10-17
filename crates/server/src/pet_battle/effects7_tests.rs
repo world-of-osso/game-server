@@ -2,6 +2,70 @@ use super::effects2_tests::use_ability;
 use super::*;
 
 #[test]
+fn pet_battle_launch_rocket_creates_then_launches_and_requires_another_setup() {
+    let catalog = catalog();
+    let initial = battle(&catalog, 9, 0, [293, 110, 123]);
+    let (ready, setup_events) = use_ability(&initial, &catalog, 293);
+    assert!(damage(&setup_events).is_empty());
+    assert_eq!(ready.teams[1].pets[0].health, 10000);
+    assert_eq!(ready.auras.len(), 1);
+    assert_eq!(ready.auras[0].ability, 294);
+    assert_eq!(ready.auras[0].target, PetRef { team: 0, slot: 0 });
+    assert_eq!(ready.auras[0].remaining, -1);
+    let (waiting, _) = ready
+        .step(&catalog, [Action::Pass; 2], &mut Fixed(500_000))
+        .unwrap();
+    let (launched, events) = use_ability(&waiting, &catalog, 293);
+    assert_eq!(damage(&events), vec![270]);
+    assert_eq!(launched.teams[1].pets[0].health, 9730);
+    assert!(launched.auras.is_empty());
+    let object_state = catalog.state_id("Mechanic_IsObject").unwrap();
+    assert_eq!(launched.teams[0].pets[0].state(object_state), 0);
+    let (ready_again, events) = use_ability(&launched, &catalog, 293);
+    assert!(damage(&events).is_empty());
+    assert_eq!(ready_again.auras.len(), 1);
+    assert_eq!(ready_again.teams[1].pets[0].health, 9730);
+}
+
+#[test]
+fn pet_battle_launch_rocket_setup_is_not_an_enemy_attack_and_missed_launch_spends_rocket() {
+    let catalog = catalog();
+    let mut initial = battle(&catalog, 9, 0, [293, 110, 123]);
+    let dodge_state = catalog.state_id("Stat_Dodge").unwrap();
+    initial.teams[1].pets[0].states.insert(dodge_state, 100);
+    let (ready, events) = use_ability(&initial, &catalog, 293);
+    assert!(damage(&events).is_empty());
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, Event::Miss { .. }))
+    );
+    assert_eq!(ready.auras.len(), 1);
+    let (launched, events) = use_ability(&ready, &catalog, 293);
+    assert!(damage(&events).is_empty());
+    assert!(
+        events
+            .iter()
+            .any(|event| matches!(event, Event::Miss { effect: 508, .. }))
+    );
+    assert!(launched.auras.is_empty());
+    assert_eq!(launched.teams[1].pets[0].health, 10000);
+}
+
+#[test]
+fn pet_battle_launch_rocket_uses_mechanical_damage_against_each_defender_family() {
+    let catalog = catalog();
+    for (family, expected_damage) in [(0, 270), (7, 405), (6, 180)] {
+        let initial = battle(&catalog, 9, family, [293, 110, 123]);
+        let (ready, _) = use_ability(&initial, &catalog, 293);
+        let (launched, events) = use_ability(&ready, &catalog, 293);
+        assert_eq!(damage(&events), vec![expected_damage]);
+        assert_eq!(launched.teams[1].pets[0].health, 10000 - expected_damage);
+        assert!(launched.auras.is_empty());
+    }
+}
+
+#[test]
 fn pet_battle_armageddon_hits_each_enemy_then_kills_its_mechanical_caster_without_failsafe() {
     let catalog = catalog();
     let initial = battle(&catalog, 9, 0, [1025, 110, 123]);
