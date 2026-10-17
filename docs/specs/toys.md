@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Goldtusk Inn Breakfast Buffet166703/289533 requires authentic149876/display90570 with model DisplayScale0.5, source faction35 and unchanged empty interaction/AI/script fields. Maintained additive import preserves the exact TDB model row, including its zero probability. Real learned use places one non-pet/non-follow table at source47's3yd XZ offset for300000ms; preserve600000ms item recovery after ordinary expiry, owner/map and player body/health. Source47 collision/elevation, food/loot interactions and native appearance are not established by this bounded template/lifecycle contract.
+
 - [ ] Establish Citizens Brigade166247/287080 child287079's permanent Personal Anchor action before admitting its linked summon. Authentic148048 model availability alone must not discard the unresolved dummy effect; preserve explicit refusal without cast, actor or recovery spending. [Source126 boundary](../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17).
 
 - [x] Source dragon costumes165671–165676 retain their own authentic template/display pairs, source900000ms self-transform duration and item recovery. Real learned use refuses during recovery; ordinary expiry removes the aura/restores the previous model without health change, and natural recovery permits reuse. Exact identities/proof: [source118–123 matrix](../toy-effects14-coverage.md#source118123-dragon-costume-simulation-lifecycle-2026-10-17), `crates/server/src/toys_dragon_head_tests.rs`. Native costume compositing, group presentation and wall-clock parity remain separate.
