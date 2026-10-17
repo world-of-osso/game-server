@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gnoll Barrel source pair (2026-10-16)
+
+163201/279063 source templates143119/143120 were absent after maintained import: genuine importer RED precedes the exact two-entry source admission. Idempotence/rollback controls and actual learned-use pass: real area5759 eligibility, authentic map1643/MCNK9042 cursor pair38854/38857, unchanged faction35/nonpet/nonfollow, ordinary300s simulation expiry and30min recovery. Current whole-Toy147/147 and check/fmt/manual readability pass. [Exact source, revisions, copy-only canonical receipt and claim boundaries](../../toy-effects14-coverage.md#gnoll-barrel81-authentic-template-admission-2026-10-16) distinguish data/lifecycle acceptance from missing native533501 body, indoor/WMO eligibility and unproved target-dummy combat. Canonical publication remains lead-owned; Cursed Vision80 remains a named remote-view gap.
+
 ## Holiday hearthstone learned use (2026-10-16)
 
 Greatfather Winter162973/278244 and Headless Horseman163045/278559 use persisted HomeBind, source10s cast and shared charge2309; missing bind refuses before spending and either toy blocks its sibling after spending the sole charge. Two independent actual learned-use tests pass; current whole-Toy146/146, check/fmt/manual readability pass. [Exact evidence and exclusions](../../toy-effects14-coverage.md#holiday-hearthstones7879-learned-use-boundary-2026-10-16) separate same-map server acceptance from source type17 procedural appearance, native wire/render/audio, cross-map transfer and natural30min recharge.
