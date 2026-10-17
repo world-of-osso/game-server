@@ -1,5 +1,5 @@
-//! TC a352b1fa Leymor intro, Explosive Brand and Telash Frost Bomb hooks.
-//! Boss schedules, energy/jump phases and rune/ground area actions remain unported.
+//! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
+//! Other boss schedules, energy/jump phases and rune/ground actions remain unported.
 use bevy::prelude::*;
 use shared::components::UnitFlags;
 
@@ -22,6 +22,10 @@ const DATA_LEYMOR_INTRO_DONE: u32 = 4;
 const ACTION_FINISH_LEYMOR_INTRO: i32 = 251501;
 const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
+const INFUSED_STRIKE: u32 = 374789;
+const EVENT_INFUSED_STRIKE: u32 = 5;
+const LEY_LINE_SPROUTS: u32 = 374364;
+const EVENT_LEY_LINE_SPROUTS: u32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
     name == LEYMOR_SCRIPT
@@ -76,6 +80,21 @@ struct Leymor {
     tasks: super::EventMap,
 }
 
+impl super::boss_ai::BossScript for Leymor {
+    fn boss_ai(&mut self) -> &mut super::boss_ai::BossAi {
+        &mut self.boss
+    }
+
+    fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
+        match event_id {
+            EVENT_INFUSED_STRIKE => ctx.do_cast_victim(INFUSED_STRIKE),
+            EVENT_LEY_LINE_SPROUTS => ctx.do_cast_self(LEY_LINE_SPROUTS),
+            _ => return,
+        }
+        self.boss.events.repeat(48_000);
+    }
+}
+
 impl super::CreatureAi for Leymor {
     fn reset(&mut self, ctx: &mut super::Ctx) {
         self.tasks.reset();
@@ -97,6 +116,8 @@ impl super::CreatureAi for Leymor {
 
     fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
+        self.boss.events.schedule(EVENT_LEY_LINE_SPROUTS, 3_000);
+        self.boss.events.schedule(EVENT_INFUSED_STRIKE, 10_000);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
@@ -122,7 +143,7 @@ impl super::CreatureAi for Leymor {
             ctx.do_cast_self(ARCANE_ERUPTION);
             ctx.talk(0);
         }
-        ctx.update_victim();
+        super::boss_ai::boss_update_ai(self, ctx, diff_ms);
     }
 }
 
