@@ -287,7 +287,7 @@ fn send_movement(
     };
     let step = APPROACH_SPEED * MOVE_INTERVAL.as_secs_f32();
     let destination = origin + direction * step;
-    sender.send::<MovementChannel>(PlayerInput {
+    sender.send::<InputChannel>(PlayerInput {
         direction: direction.to_array(),
         facing_yaw,
         jumping: false,
