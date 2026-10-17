@@ -19,6 +19,9 @@ const EXPLOSIVE_BRAND_CHILD: u32 = 374582;
 const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
 const LEYMOR_SCRIPT: &str = "boss_leymor";
 const TELASH_SCRIPT: &str = "boss_telash_greywing";
+const SPROUT_SCRIPT: &str = "npc_ley_line_sprouts";
+const LEY_LINE_SPROUT_AURA: u32 = 374161;
+const ARCANE_POWER: u32 = 374736;
 const TELASH_INITIAL_POWER: f32 = 60.0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
@@ -54,7 +57,7 @@ const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
 const EVENT_LEY_LINE_SPROUTS: u32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, LEYMOR_SCRIPT | TELASH_SCRIPT)
+    matches!(name, LEYMOR_SCRIPT | TELASH_SCRIPT | SPROUT_SCRIPT)
 }
 
 pub(super) fn creature_ai(
@@ -66,6 +69,9 @@ pub(super) fn creature_ai(
     let maps = world.get_resource::<crate::maps::MapStore>()?;
     if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(AZURE_INSTANCE) {
         return None;
+    }
+    if script_name == SPROUT_SCRIPT {
+        return Some(Box::new(LeyLineSprout));
     }
     let boss = super::instance_script::bound_boss(world, actor)?;
     match script_name {
@@ -107,6 +113,35 @@ pub(super) fn finish_leymor_intro(
             leymor,
             super::Hook::DoAction(ACTION_FINISH_LEYMOR_INTRO),
         );
+    }
+}
+
+struct LeyLineSprout;
+
+impl super::CreatureAi for LeyLineSprout {
+    fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        ctx.do_cast_self(LEY_LINE_SPROUT_AURA);
+        ctx.do_cast_at(None, ARCANE_POWER, true);
+    }
+
+    fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
+        // TC boss_leymor.cpp:286–300: the actual TempSummon owner loses one stack.
+        let Some(owner) = ctx.world.get::<crate::zones::TempSummon>(ctx.me) else {
+            return;
+        };
+        let owner = owner.summoner;
+        let instance = ctx
+            .world
+            .get::<crate::auras::ActiveAuras>(owner)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == ARCANE_POWER)
+                    .map(|aura| aura.instance_id)
+            });
+        if let Some(instance) = instance {
+            crate::auras::spend_stack(ctx.world, owner, instance);
+        }
     }
 }
 

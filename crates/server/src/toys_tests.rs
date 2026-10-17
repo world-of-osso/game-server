@@ -6,10 +6,18 @@ use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, 
 
 #[path = "toys_akunda_tests.rs"]
 mod akunda;
+#[path = "toys_azerite_firework_tests.rs"]
+mod azerite_firework;
 #[path = "toys_bashiok_tests.rs"]
 mod bashiok;
+#[path = "toys_breakfast_tests.rs"]
+mod breakfast;
+#[path = "toys_citizens_tests.rs"]
+mod citizens;
 #[path = "toys_disguise_tests.rs"]
 mod disguises;
+#[path = "toys_dragon_head_tests.rs"]
+mod dragon_head;
 #[path = "toys_flute_tests.rs"]
 mod flute;
 #[path = "toys_force_forward_tests.rs"]
@@ -64,14 +72,14 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
         Vec::new(),
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
-            99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
-            376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
-            398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762, 388088, 264091, 289277,
-            384585, 203533, 203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328,
-            406870, 383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085,
-            361090, 381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617,
-            469618, 128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760,
-            71909, 171352, 127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
+            99104, 304370, 304369, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657,
+            225659, 376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162,
+            398329, 398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762, 388088, 264091,
+            289277, 384585, 203533, 203820, 261981, 286277, 455023, 462145, 1269949, 1280563,
+            128328, 406870, 383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123,
+            361085, 361090, 381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616,
+            469617, 469618, 128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067,
+            430760, 71909, 171352, 127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
         ],
         class,
     )
@@ -644,55 +652,80 @@ fn toyfx_cosmetic_dummy_and_script_deliver_spell_go() {
 
 #[test]
 fn toyfx_screen_effect_replicates_and_cancel_removes_it() {
-    // Source item import makes Shadescale170187 usable through actual learning/UseToy.
+    const SCREEN_EFFECT_AURA: u32 = 260;
+    const DURATION_MS: u32 = 7_200_000;
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, character) = setup(&dir.path().join("toys.redb"));
-    assert!(
-        snapshot(h.app.world(), 1)
-            .toys
+    for (item, spell, screen_effect, recovery_ms) in [
+        (170187, 304370, 1720, 3_600_000),
+        (170380, 304369, 1719, 86_400_000),
+    ] {
+        let (mut h, character) = setup(&dir.path().join(format!("screen-{item}.redb")));
+        assert!(
+            snapshot(h.app.world(), 1)
+                .toys
+                .iter()
+                .find(|toy| toy.item_id == item)
+                .unwrap()
+                .unavailable_reason
+                .is_none()
+        );
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item{item}");
+        h.advance(40);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item{item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let auras = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap();
+        let aura = auras.iter().find(|a| a.spell_id == spell).unwrap();
+        assert_eq!(aura.duration_ms, DURATION_MS);
+        assert_eq!(aura.effects[0].aura_type, SCREEN_EFFECT_AURA);
+        assert_eq!(aura.effects[0].misc_values, [screen_effect, 7]);
+        let cooldown = h
+            .inbox
+            .cooldowns
             .iter()
-            .find(|toy| toy.item_id == 170187)
-            .unwrap()
-            .unavailable_reason
-            .is_none()
-    );
-    learn_effect_toy(&mut h, character, 170187);
-    assert_eq!(activate(&mut h, 170187)[0].error, None);
-    h.advance(40);
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(h.inbox.go.iter().any(|go| go.spell_id == 304370));
-    let auras = h
-        .app
-        .world()
-        .get::<crate::auras::ActiveAuras>(h.caster)
-        .unwrap();
-    let aura = auras.iter().find(|a| a.spell_id == 304370).unwrap();
-    assert_eq!(aura.effects[0].aura_type, 260);
-    assert_eq!(aura.effects[0].misc_values, [1720, 7]);
-    assert!(
+            .find(|cooldown| cooldown.spell_id == spell && !cooldown.is_gcd)
+            .unwrap();
+        assert_eq!(cooldown.duration_ms, recovery_ms);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
         h.app
-            .world()
-            .get::<shared::components::UnitAuras>(h.caster)
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
             .unwrap()
-            .auras
-            .iter()
-            .any(|a| a.spell_id == 304370)
-    );
-    h.app
-        .world_mut()
-        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
-        .unwrap()
-        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 304370 });
-    h.advance(5);
-    assert!(
-        !h.app
-            .world()
-            .get::<shared::components::UnitAuras>(h.caster)
-            .unwrap()
-            .auras
-            .iter()
-            .any(|a| a.spell_id == 304370)
-    );
+            .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                spell_id: spell,
+            });
+        h.advance(5);
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert_eq!(
+            activate(&mut h, item)[0].error.as_deref(),
+            Some("OnCooldown"),
+            "item{item}: cancelling the appearance preserves item recovery"
+        );
+    }
 }
 
 #[test]

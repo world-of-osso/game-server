@@ -95,10 +95,13 @@ pub fn supported_property(property: u32) -> bool {
 pub(super) fn damages_enemy_team(ability: u32) -> bool {
     matches!(
         ability,
-        189 | 299
+        189 | 258
+            | 299
             | 404
             | 419
+            | 774
             | 923
+            | 979
             | 1025
             | 1031
             | 1035
@@ -135,13 +138,15 @@ fn validate_ability_graph(
         return Err(format!("missing ability {ability}"));
     }
     if let Some(states) = catalog.ability_states.get(&ability) {
-        for state in states.keys() {
+        for (state, value) in states {
             let name = &catalog.states[state];
             let known_object = matches!(ability, 189 | 294 | 333) || is_two_way_wall(ability);
             if name == "Mechanic_IsObject" && !known_object {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
             let wall_state = is_two_way_wall(ability) && matches!(*state, 123 | 126);
+            let level_health_state =
+                *state == 2 && matches!((ability, *value), (577 | 610, 500) | (1990, 1000));
             if !matches!(
                 *state,
                 21 | 22 | 23 | 24 | 25 | 29 | 30 | 33 | 34 | 35 | 36 | 40 | 41 | 42
@@ -178,6 +183,7 @@ fn validate_ability_graph(
                         | 196
                         | 199
             ) && !wall_state
+                && !level_health_state
             {
                 return Err(format!(
                     "ability {ability}: unsupported aura state {state} {name}"

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -134,12 +134,12 @@ fn update_match(
     if matched.instance.phase == BgPhase::Waiting
         && roster_ready(matched, actors, map, template.min_players_per_team as usize)
     {
-        matched.scoreboard.rows = build_scoreboard(matched, actors);
         changed = matched.instance.start();
     }
     if matched.instance.phase != BgPhase::InProgress {
         return changed;
     }
+    changed |= append_arrived_scores(matched, actors, map);
     let delta_ms = world.resource::<Time<Fixed>>().delta().as_millis() as u64;
     if matched.alterac.is_some() {
         return super::pvp_alterac::update_alterac(world, matched, map, delta_ms) || changed;
@@ -512,37 +512,57 @@ fn roster_ready(
     })
 }
 
-fn build_scoreboard(
-    matched: &InvitedBattleground,
+/// TC Battleground::AddPlayer creates PlayerScores on arrival, not only at start.
+fn append_arrived_scores(
+    matched: &mut InvitedBattleground,
     actors: &BTreeMap<u64, Participant>,
-) -> Vec<BattlegroundPlayerScoreSnapshot> {
-    [
+    map: InMap,
+) -> bool {
+    let existing: BTreeSet<_> = matched
+        .scoreboard
+        .rows
+        .iter()
+        .map(|row| row.character_id)
+        .collect();
+    let existing = &existing;
+    let accepted = &matched.accepted;
+    let battleground_map = map_id(matched);
+    let arrived: Vec<_> = [
         (BgTeam::A, &matched.instance.team_a_players),
         (BgTeam::B, &matched.instance.team_b_players),
     ]
     .into_iter()
     .flat_map(|(team, ids)| {
         ids.iter().filter_map(move |id| {
-            actors.get(id).map(|actor| BattlegroundPlayerScoreSnapshot {
-                character_id: *id,
-                name: actor.name.clone(),
-                class: actor.class,
-                level: actor.level,
-                team,
-                killing_blows: 0,
-                deaths: 0,
-                damage_done: 0,
-                healing_done: 0,
-                objective_scores: shared::battleground::pvp_stat_columns(map_id(matched))
-                    .iter()
-                    .map(|column| (column.stat, 0))
-                    .collect(),
-                honorable_kills: None,
-                honor_level: None,
-            })
+            if existing.contains(id) || !accepted.contains(id) {
+                return None;
+            }
+            actors
+                .get(id)
+                .filter(|actor| actor.map == map)
+                .map(|actor| BattlegroundPlayerScoreSnapshot {
+                    character_id: *id,
+                    name: actor.name.clone(),
+                    class: actor.class,
+                    level: actor.level,
+                    team,
+                    killing_blows: 0,
+                    deaths: 0,
+                    damage_done: 0,
+                    healing_done: 0,
+                    objective_scores: shared::battleground::pvp_stat_columns(battleground_map)
+                        .iter()
+                        .map(|column| (column.stat, 0))
+                        .collect(),
+                    honorable_kills: None,
+                    honor_level: None,
+                })
         })
     })
-    .collect()
+    .collect();
+    let changed = !arrived.is_empty();
+    matched.scoreboard.rows.extend(arrived);
+    changed
 }
 
 fn flag_homes(sources: &GameObjectSpawns, map: InMap) -> Option<[GameObjectSpawn; 2]> {

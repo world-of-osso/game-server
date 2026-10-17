@@ -1,7 +1,70 @@
+## 2026-10-17 — Power-drain CalcValue source correction
+
+[Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): original117 fixture expectation missed ExpectedStat base evaluation, CalcValue rounding and the initial base-variance phase; raw-base118 is not the full native result either. Native70448 zero class/coefficient fields still enter the pin's ExpectedStat else branch. Real UnitLevel10 yields3405=100,46453=278/floor80, and16094's native auto-DPS base284. Freshmaster887760ff genuineRED6FAIL/2PASS73.91s →8fd5f604/b8589ad6 GREEN9/9/60.29s/206.409s total, including metadata refusals and signed native-variance endpoints290/384/491. Hash-verified70448 selected inputs match runtime rows; old six passes remain historical, not source-parity proof.
+## [2026-10-17] systems | Recuperate effect terminology correction
+
+Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-destination-missiles-2026-10-17):1231411 effect179 is `CREATE_AREATRIGGER`, properties38187, not a scene. Timing proof and runtime behavior unchanged; area-trigger behavior/visuals remain outside that proof.
+
+## 2026-10-17 — Native power drain8
+
+[Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): pinned primary-power/integer/actual-removal/Amplitude implementation, unchanged native3405/46453/16094. Four real missing-drain REDs and two exclusion guards; stale-protocol compiler failure is not RED. Native pools/costs retained; merged26f5332a native GREEN6/6 in18.34s/146.040s total, no whole-ability acceptance.
+## 2026-10-17 — Sprout death stack consumption
+
+[Native Sprout deaths](investigations/follower-data.md#sprout-death-stack-consumption--2026-10-17): original-caster-first fourteen-child RED→GREEN1/45.34s; actual owner stack consumption, final replicated removal and duplicate-corpse exclusion. Timer/amount assertions and integration gates pending.
+## 2026-10-17 — Rapid Fire two-wave recipients
+
+[Bounded774](../pet-battle-effect-coverage.md#rapid-fire--implementation2026-10-17): active70448 six rows repeat the same three enemy slots for points4 then3;2064/920 remain rejected. Actual core4/owned1 routing RED precedes minimal productione04f5e10 and six focused pet GREEN cases, including independent wave misses/first-wave faint without retarget and real Peddlefeet122/10. Three Hunter controls are separate. Integrated69653970 lib150/main34/check23.64s/no warnings/fmt pass; fresh reconciled70448 census1817/2829=64.23%/1026 graphs (+6/+1/no removals), with2064/920 still rejected. Subsequent changes docs/census only. Lead gate453 lands150+56 before both-skin legal Peddlefeet122/10 native27+19/Rabbit101 and36critical+20/Rabbit91; capped ordinary Humanoid17/18 recovery preserves653HP. Four inspected fullHD originals under `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all four phases two framed models/strict tripwire0, geometry91/101 only enemy fills/timed floats. Existing8 canonical assets/5-mesh loader pass, no publication. Frozen7e4d7acc/275d6f804/shared3084 hashes unchanged through parallel Primal tests. Both physical forfeits close, owned processes stop/window clears; native miss/first-wave faint/reserves and Retail timing/VFX remain separate.
+
+## 2026-10-17 — Starfall/Moon Tears recipient routing
+
+[Bounded258/979](../pet-battle-effect-coverage.md#starfall-and-moon-tears--implementation2026-10-17): exact active70448 seven-row graphs, source-school distinction and existing Moonlight reuse. Actual routing RED4 plus legal Cosmos owned RED1 precede9b958668 slot/cap/dead/miss/owned GREEN; first weather case exposed only a fixture9-versus-existing8 remaining assumption, corrected test-only9c88c925. Corrected focused weather1/1 passes ataf89ac7c; retain unchanged core4+owned1 GREEN at9b958668. Integrated5d23a60d lib145/main33/check1m36/no warnings/fmt pass; fresh reconciled70448 census1811/2829=64.02%/1025 graphs (+14/+2, no removals). Only subsequent docs/census changes; no redundant broad rerun. Lead gate438 lands145+55 before both-skin native Cosmos1972/1:9 damage/9 healing×3/increased reserve bars/Moonlight8. Four individually inspected fullHD originals under `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all phases two framed models/strict tripwire0, geometry91/110 only HP fills/timed floats. Existing7 canonical assets/3-mesh strict loader pass, no publication. Both physical forfeits close, owned processes stop/window clears.979 native and independent Retail timing/VFX remain unproved. No other ambiguous selectors admitted.
+## 2026-10-17 — Toy source195–199 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source195199-motionfactionappearanceaction-boundaries-2026-10-17): Nomi self-knockback/safe-fall, N'lyeth language/faction/self-sacrifice and Scroll/cocoon/shadow appearance actions remain gaps. Preserve actual on-use314988 versus auxiliary314407/TriggerType7. No ordinary cosmetic/actor/transform substitutions, data/runtime admission or redundant gate.
+
+## 2026-10-17 — Eternal Traveler190 source acceptance
+
+[Exact190–194 matrix](../toy-effects14-coverage.md#source190194-eternal-traveler-and-mountcontrolportal-boundaries-2026-10-17): Eternal Traveler actual-learning/saved-bind/shared2309 acceptance brings nine variants9/9/79.23s; native check13.81s/no compiler warnings and fmt/readability pass at9e56fbe2a. No production/data change or manufactured RED. Wild Holly mount/holiday, RC Control3 and Shadowlands portal actions remain gaps; visual/cross-map/full-recharge proof separate.
+
+## 2026-10-17 — Toy source185–189 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source185189-midday-source-acceptance-and-interactive-boundaries-2026-10-17): Jar187 test/spec9ec632d3a proves exact day/night screen IDs, duration and cancel-preserved item recovery; four affected tests57.78s after one cold26m32s compile, native check3m04s/no compiler warnings and fmt/readability pass. Fish-kicking/Gral/memento actions remain gaps; earlier Sealamp CPU/native/body/scale/state-kit/expiry scope retained without new certification. No production/data change.
+
+## 2026-10-17 — Toy source180–184 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source180184-retained-midnightsign-proof-and-equipment-gaps-2026-10-17): retain earlier Shadescale learned-use/aura/cancel and both warning-sign actor/native expiry scopes without claiming native midnight or sign message carving/extended visibility. Dining/naga-equipment procedural payloads remain gaps. No runtime/data admission, native recertification or duplicate gate.
+
+## 2026-10-17 — Memory178–179 lifecycle acceptance
+
+[Exact175–179 matrix](../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17): existing runtime Unshackled/Ankoan transforms gain actual-learning/source-pool/ordinary600000ms restoration and inherited3600000ms recovery acceptance. Eight tests/12IDs120.25s, native check33.49s/no compiler warnings and fmt/readability pass at59d1527ce. No production/data change or fabricated RED. Heart/Trophy earlier scopes retained; Mechagon collection action/native/all-model proof remain separate.
+
+## 2026-10-17 — Toy source170–174 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17): mixed Alliance Standard, sanctuary script routing, arm-equipment procedural and linked-hologram child remain gaps. Judgment154818/92155 exists in actual runtime content tables; absent base-table rows do not establish missing publication. Corrected earlier base/content misclassification; child behavior remains unproved. No data/runtime admission, borrowed prior native proof or redundant code gate.
+
+## 2026-10-17 — Holographic165 and banner boundaries
+
+[Exact165–169 matrix](../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17): Holographic165 actual learned-use/saved-bind/shared-charge acceptance brings eight variants8/8/62.43s; fmt/readability and native package/tests check1m09s/no compiler warnings pass after capacity admission. Rustbolt333298 and mixed Horde War Standard remain gaps; source20 War Banner native/combat-removal proof retains its revision scope. No runtime/data admission or whole-Toy/native certificate.
+
+## 2026-10-17 — Toy source160–164 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source160164-robotteleportwhistle-boundaries-and-retained-ocean-proof-2026-10-17): Blingtron7000 missing actor/service, Kul Tiras/Zandalar script destinations and whistle transport remain unresolved. Ocean Simulator retains earlier revision-scoped simulation/native/PCM proof, not new current-master certification. Source/doc inspection only; no runtime/data admission or redundant gate.
+
+## 2026-10-17 — Actual killed-creature level21
+
+[Native78/statistic60938](systems/dungeon-achievements.md#actual-killed-creature-level21): TC inclusive actor GetLevel versus actual killed NPC GetLevel, positive21/0 plus complete Demon30/3. Production content view corrects legacy Imp4165 to actual tuned90; approved native41820/actor19,20,21 fixture gives genuine equal-level RED133f48a7. Native/group-own-level/copy/nonDemon/refused/dead/idle/rawpage/reopen/foreign GREEN; missing-level/type/actor/nonzero-offset catalog controls pass. Required integration partitions169/0 at4eadb217e plus73/0/1existing ignored/site1 at e3cb255c (242 unique server tests); no duplicate broad run. Current-master integrationaff7afe17 native/catalog2/2/43.14s, workspace/all-target check/no Rust warnings and fmt/diff pass. Compiler50+census3, all243 inventory rows exact, same7input hashes and only+60938stat1845; ordinary5565 unchanged. Bounded independent artifact/readability PASS, explicit expectation rows remove the accepted arithmetic-naming issue. No template edits, metadata fallback, acquisition/new eligibility policy, UI/fresh-UDP or remote-CI claim.
+
+## 2026-10-17 — Literal world-state source boundary
+
+[Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN2bcef1424/4 proves both full-five-spell grants/reopened dates plus false/pin/Gilneas controls. Integrated4bcd410a affected workspace240/0/1ignored+site1, one-hour-later relog dates, workspace/all-target check/no Rust warnings and3repo/native-Godot fmt/diff pass. Independent boundedModeB/readability PASS; missing Mephistroth/Warfront/raid availability unclaimed.
+## 2026-10-17 — Level-based pet maximum health
+
+[Bounded state2](../pet-battle-effect-coverage.md#level-based-maximum-health--implementation2026-10-17): explicit actual level1..25,5/5/10HP per level, existing percentage/floor/cap and owned-health persistence boundary. Core/owned unsupported-state RED and missing-metadata no-RNG RED precede GREEN; obsolete576 negative removed with remaining negatives retained. All ten fixture tables match active70448; fresh1797/2829/1023 census preserves historical70391. Library139 unchanged passes plus corrected negative1/1, wild/PvP29 plus real-ground configured achievement1/1, check51.00s/no warnings and fmt pass. Initial failures remain documented rather than claiming one all-green broad run. Native proof remains ordered after lead landing.
 ## 2026-10-17 — Omor coincident source angles
 
 [Coincident geometry](systems/boss-scripts.md#coincident-omor-geometry): actual30637 FALLING/30638 damage and ordinary30686 casting precede zero-horizontal-motion RED0/2/126.60s at8a24ba48. Pinned Position.h atan2(0,0)=0 requires+X reach projection/retreat; replace zero-vector normalization in those paths. Strict GREEN2/2/85.93s atf44f6a66 precedes ignore removal; ordinary affected9/9/160.75s atb2f0572f retains nonzero/range/shield controls; no authored data/timing changes.
 
+[Bounded state2](../pet-battle-effect-coverage.md#level-based-maximum-health--implementation2026-10-17): explicit actual level1..25,5/5/10HP per level, existing percentage/floor/cap and owned-health persistence boundary. Core/owned unsupported-state RED and missing-metadata no-RNG RED precede GREEN; obsolete576 negative removed with remaining negatives retained. All ten fixture tables match active70448; fresh1797/2829/1023 census preserves historical70391. Library139 unchanged passes plus corrected negative1/1, wild/PvP29 plus real-ground configured achievement1/1, check51.00s/no warnings and fmt pass. Initial failures remain documented rather than claiming one all-green broad run. Lead gate426 lands140+54 before native. Legal Perky Pug250/7 then proves both skins464→499/Healthy9→464 on nine ordinary passes; Modern HP464→473→230 and retained Forever230→365→117. Six inspected fullHD PNGs at `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all phases two framed models/strict tripwire0, geometry93/104/101 only HP fills/timed floats. Existing7 canonical assets/1mesh loader pass, no publication. Both physical forfeits close; owned processes stopped/window cleared. Ancient Blessing/Knowledge native casts and Retail percentage ordering remain separate gaps.
 ## 2026-10-17 — Koranthal destination-delay assertions
 
 [Koranthal timing](systems/boss-scripts.md#koranthal-destination-delay--2026-10-17): gate413 root is stale immediate timing after masterc99830b5, not OnSpellCast. Valid protocol e9b80b8 A/B each retains2 old failures while actual5s boundary passes. Restore diagnostic bypass; strengthen original tests with early exclusion/exact owned119964 impact/HP and unchanged absolute event clocks. Native data/runtime untouched; corrected original2 GREEN2/2/25.05s at4076e04a/protocol e9b80b8, pushed immediately; lead gate428 subsequently verifies4076 base334/0/12ignored1150.80s, test EXIT0/FMT0; later angle changes have separate proof.
@@ -42,6 +105,42 @@
 ## 2026-10-17 — Omor Orbital source hooks
 
 [Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
+## 2026-10-17 — Toy source155–159 boundaries
+
+[Exact source matrix](systems/toys.md#source-equipmentlightoceangift-boundaries-2026-10-17) retains equipment/light/banner/gift gaps and distinguishes the unpublished Ocean's invisible source body from actual fishing interaction. No new runtime/data admission, native proof or redundant code gate.
+
+## 2026-10-17 — Azerite151 actual-ground/recovery acceptance
+
+[Source150–154 packet](systems/toys.md#azerite-real-ground-recovery-and-interaction-gaps-2026-10-17): existing151 behavior gains real Northshire and natural600s item reuse proof; four source/control tests and check/fmt pass. Matching-game/rally/jukebox/secret-fish actions remain explicit gaps; no policy, data or native presentation claim.
+
+## 2026-10-17 — Toy source145–149 gaps retained
+
+[Exact source matrix](systems/toys.md#proceduralcontrolscript-and-tea-set-gaps-2026-10-17) records blight procedural coating, Control4 spinners, Highborne script ambiguity and missing149865 Tea Set as gaps. No producer/runtime/canonical change or positive Tea Set acceptance;135's existing proof remains separate.
+
+## 2026-10-17 — Brewfest140 and corpse/appearance boundaries
+
+[Source140–144 packet](systems/toys.md#brewfest-hearthstone-and-corpseappearance-boundaries-2026-10-17): seventh actual holiday saved-bind/shared-charge case passes; exact enemy-corpse selector93, mixed Transmorpher action chain and dead-target soul action remain gaps. No new admission, canonical mutation or native presentation inference; exact proof/build scopes remain in the packet ledger.
+
+## 2026-10-17 — Goldtusk135 and Fire Eater139
+
+[Source135–139 packet](systems/toys.md#goldtusk-table-and-fire-eater-source-contracts-2026-10-17): genuine importer/actual-use omission→one authentic table admission, new Fire Eater saved-bind case and retained bowl/refusal controls. Final9/9, importer3/3, check/fmt clean. Copy receipt, later lead publication and read-only acknowledgment are recorded in coverage; the agent did not publish canonical data. No RC/native/food/ground-collision parity inference.
+
+## 2026-10-17 — Toy source130–134 retained boundaries
+
+[Exact source matrix](systems/toys.md#source-companionhealercorpsemusic-boundaries-2026-10-17) distinguishes pet-riding, procedural weapon, healer service and fallen-ally actions from generic handlers. Music Box149830 remains unpublished; its actual TDB chest model is not an invented replacement or music proof. Read-only evidence/docs only, no new admission or test recertification.
+
+## 2026-10-17 — Noble Gardener125 and Citizens126 boundary
+
+[Source124–129 packet](systems/toys.md#noble-gardener-and-source-anchor-boundary-2026-10-17): real Noble Gardener saved-bind/shared charge passes; Citizens Personal Anchor remains an explicit no-partial-effects refusal. Six bounded contracts/check/fmt passed at the retained pre-Scarab f9 scope and replayed byte-identically; no invented summon lifecycle, native presentation or new admission.
+
+## 2026-10-17 — Scarab scatter oracle correction
+
+[Gate412 source-ground metric](systems/toys.md#scarab-source-scatter-metric-2026-10-17): unchanged merged artifact fails2/30; actual778027 outer-ring RED confirms the3D-versus-horizontal mismatch. Keep5.001, exact first destination and separate secondary ground-height assertions. Six focused controls pass; final tightened two-case check/check/fmt pass. Runtime and prior native proof scopes unchanged; lead owns the next merge gate.
+
+## 2026-10-17 — Dragon costume lifecycle118–123
+
+[Six source costumes](systems/toys.md#dragon-costume-simulation-lifecycle-2026-10-17) pass actual learned-use/fifteen-minute ordinary expiry and natural recovery/reuse. Six new cases plus two related transform controls pass8/8 across72.48s; check/fmt clean. No production change; expected-refusal fixture failure is not runtime RED, native presentation remains open.
+
 ## 2026-10-17 — Toy source boundaries89–93
 
 [Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. [94–98 continuation](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retains nearby reaction, spectral/headwear procedural, corpse ritual and return/catch gaps. [99–103 matrix](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) retains historical Cooler/Gong proof and exact missing Kovork/procedural gaps. No runtime admission; merged55-case proof unchanged.
@@ -72,6 +171,10 @@
 ## 2026-10-16 — Miss-only pet self outcomes194
 
 [Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
+## 2026-10-17 — Sprout native spawn aura
+
+[Source boundary](investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): genuine eaad1801 native374161 RED38.63s follows all fourteen ordinary child/owner/map prerequisites. Prepared import preserves actual `npc_ley_line_sprouts`; missing runtime factory/non-boss branch, not data identity, is the cause. Minimal script binding/JustAppeared self-aura at39107add passes native1/32.80s with exact48e6/eight-source/frozenHEAD before-after; enabled only after GREEN. Next two native ArcanePower14/unowned92 cases reach genuine2RED55.66s atf15b03a3 after actual self-aura/summoner/capacity99 prerequisites (e87E0596 was test compile-only, not RED). Minimal source374736/native92 path at6b0ab342 passes unowned92 control but exposes real1vs14 native aura count (1PASS/1FAIL55.81s);9e helper-name compile failure was not behavior proof. Core beneficial-other-caster replacement lacked TC's native shared stack-slot rule. That source rule now retains actual caster/capacity without manual stacks or data/stat/geometry changes; c7aa2385 native owned14 GREEN1/53.95s plus native stackcap1/10.93s and periodiccoexist1/9.09s, strict48/ten-source/frozenHEAD guards. Unowned92 priorPASS retained; power tests enabled only after proof, replicated real-child caster/stacks14 check added. OrdinaryStomp276 relative-budget genuineRED835e53d0 is8631vs32797.8 at14stacks; minimal native mechanic consumer99cca08a passes matching Stomp and nonmatching Brand within34AzurePASS/0ignored507.23s/fmt0, exact48/twelve-source/HEAD stable. No damage/stat/HP override. Invalid --bin/check helper combination failed before compiling; corrected96da2b88 check0/zero compilation warnings1m39s, same12source/exact48DB/HEAD stable; independent source and full artifactPASS. No repeated Azure/fmt gate. Diagnostic registry276 classification is a separate source-observed follow-up. ArcanePower death cleanup/aura395/full lifecycle, rune197204/jumps713714 remain open;803defbf clock/child LANDED409/225 targeted.
+
 ## 2026-10-17 — Leymor first Fissure clock
 
 [Source boundary](investigations/follower-data.md#leymor-first-fissure-clock--2026-10-17): e2a87993 reaches genuine missing20s386660 CastState RED27.99s after native floor/templates/fourteen ordinary Sprouts/living-victim/no-early-cast prerequisites. Minimal source event/victim cast/48s after-execution repeat passes native1/32.44s at31b0bbb8, with strict48e6 before/after and four source-native-root SHA matches; first-clock test enabled only after GREEN. Next ignored31sBrand/45sStomp cases pass real prerequisites/firstFissure/living victim then reach genuine missing CastState/Channel RED2/63.46s at828aafd4. Minimal source self-cast clocks/existing48s repeat reach native cast/channel at f733258d;2FAIL61.73s is the fixture's owner-only CastSuccess count for an unowned self-cast boss, not missing clocks. Fixture-only correction observes native visibility-broadcast self SpellGo; no production routing/HP/geometry change. Corrected8823a417 native2PASS48.35s/strict48/four SHA matches; both tests enabled only after GREEN. Next ignored cases reach genuine missing Brand374582 field and natural Stomp374731 damage RED2, with cancellation controlPASS (1PASS/2FAIL66.11s at e2febba9). Minimal nonexclusive Brand once-effect and existing natural-channel-finished callbacks at4a73c1cb pass native3/55.33s: two preserved parent auras, one native field/damage per recipient/750ms expiry, natural finish damage once and cancellation none. Strict48e6 before/after/six same-source native-root SHA matches captured before edits; no native data/timing/amount override. Three tests enabled only after GREEN; next Sprout374161 spawn-aura case ignored pending native RED. Final eaad1801 Azure29PASS/1nextignored116.19s,scopedcheck0/zero warnings2m43s,fmt0 and exact48e6/eight-source hashes/frozen HEAD before-after pass; independent source/readability PASS, final artifact follow-up pending. Separate next Sprout374161 native0/14 self-aura RED38.63s follows all owner/map prerequisites; no Sprout AI production yet. Native374582 is AT25390/750ms plus area damage, not an invented knockback vector; sprout lifecycle remains separate. Source394154 target110 and sprout lifecycle remain unported; no timing, damage, geometry or data override. Frozen Icy candidate eec25f11 remains separate; its final independent artifact follow-up now passes.
@@ -1843,18 +1946,25 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-17: lifetime113 final integration772a3be6 passes required workspace four-filter231/0/1existing ignored(353.60s), site-export1/1, workspace/all-target check and three-repo fmt/diff. Active70448 census5544/1843, all243matrix/pin exact; bounded artifact/readability checks pass. LIFETIME_HK_TRACKING_STARTS_AT_ZERO remains explicit; native higher thresholds/BG/rendered/freshUDP/remoteCI/lead landing are not certified.
 
+## 2026-10-17 — Resurrection guild perk excluded by user
+
+User clarification: World of Osso has no resurrection guild perk. Removed Quick/Dead from pending effect coverage; historical installed-data/native receipts are not project requirements. Mobile Banking remains active with the separately specified2h policy.
 ## 2026-10-17 — Pending-only netdelta producer controls
 
 [Combat publication](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17): dedicated marked-peer/quiet-frame proof, real level-stream/reconnect equivalence and Stockade earned-delta/toast isolation now pass alongside repaired transport-free criteria and explicit HostClient fixtures. Detailed source scopes/counts live on the investigation page. Merged engine checks and genuine UDP byte/latency/performance remeasurement remain pending.
 
 - 2026-10-16: [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16): exact ten-model source identity, retained unitless destination flight after genuine early-arrival RED;150 Toy+49 affected+3 importer controls pass, native appearances/publication separate.
 
+## 2026-10-17 — Mobile Banking user policy implemented
+
+User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed3600000ms. Installed faction children/type34/lifetime and Friendly1168 chest-user gate; no Friendly cast gate. Real server5/5 and tooltip1/1 GREEN; midcast loss checked before consumption. Native actual5min/2h both-skin proof pending. Resurrection perk excluded by user, not a gap.
 - 2026-10-17: Omor30707 summon speech: distinguish invalid full-mana fixture failure from genuine128-cast missingTalk0 RED123cf9ad; source30% branch15c8e222, strict ignoredGREEN pending. See [boss scripts](systems/boss-scripts.md#omor-summon-cast-speech--2026-10-17).
 
 - 2026-10-17: Omor30707 strict ignoredGREEN1/1/68.03s at15c8e222; enabled ordinary acceptance only after receipt.
 
 - 2026-10-17: Enabled Omor summon/shield/source-clock controls GREEN3/3/146.31s at2a2c0f28; actual successful/rejected/triggered shield, scheduled hounds/credit retained. Full native encounter and sound10277 remain open.
 
+- 2026-10-17: [Current-victim chase stop](systems/creature-ai.md#current-victim-stop-contract--2026-10-17): real Stockade cached-corner production RED and pinned TC contract; live clear remains open.
 - 2026-10-17: Omor slay source and explicit lethal-cause hook; ordinary30686 playerRED plus actualNPCkillRED→strictignoredGREEN2/2/75.22s at3715cdd4. Document corpse-state/beforeJustDied boundary and approved later-loot difference; environmental/owner/revival/order controls pending. [Source and proof](systems/boss-scripts.md#omor-slay-hook--2026-10-17).
 
 - 2026-10-17: Omor slay environmental/owned-hound/revival/callback-order controls GREEN4/4/99.30s at3715cdd4. Removed both acceptance ignores after strict2/2 receipt; remaining verification uses unchanged death/loot/credit/owner tests. Totem title4 remains unsupported by SummonProperties::is_supported, not a new attribution branch.
