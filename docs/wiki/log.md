@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source220–224 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source220224-conditional-fall-and-reagentrandom-action-boundaries-2026-10-17): black-parasol negative generic-tick/refusal proof is not a successful falling contract. Purple/green next-fall consumption, combined Plume slow-fall/turn/area and book vellum/random-action remain unproved. Exact38682/count1 reagent retained; no invented outcome pool, new runtime/data admission or repeated gate.
+
 ## 2026-10-17 — Toy source215–219 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source215219-retained-vessel-proof-and-stackbobberareavehicle-gaps-2026-10-17):216 retains earlier actual learning/use/aura/cancel CPU proof;215 stack-conditioned shoulders/proc,217 bobber override,218 forced-cry area action and219 mixed vehicle/motion/party-devouring lifecycle remain gaps. Slime166086/display100400 already exists in runtime content. No new runtime/data admission, native certificate or repeated gate; Tea Set149865 remains lead-required.

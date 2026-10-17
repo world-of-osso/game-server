@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source220–224: conditional-fall and reagent/random-action boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|220 Stylish Black Parasol182694/341678 | Source1500ms cast,900000ms periodic-dummy226/1000ms period→341677. Child has15000ms feather-fall105 and turn-while-falling409, then remove-aura164 naming341678. Retain existing negative fixture: generic periodic ticks must not cast the child or consume the ready aura; conditional periodic dummy remains refused. This is not successful fall detection or native safe landing. |
+|221 Weathered Purple Parasol182695/341682 | Same source readiness/period/duration; child341680 names341682 for removal and its own follow-on341679. Actual next-fall predicate, one-shot consumption, slow-fall/turn and purple presentation remain unproved; no unconditional periodic substitution or borrowed220 acceptance. |
+|222 The Countess's Parasol182696/341624 | Same source readiness/period/duration; child341630 names341624 for removal and follow-on341669. Source text explicitly says green parasol. Source next-fall/consumption/motion/presentation contract remains open, not a generic held-object cosmetic. All three roots inherit300000ms spell recovery and author180000ms category recovery. |
+|223 Hearty Dragon Plume182729/340077 | Combined feather-fall105/base100 and turn-while-falling409/base100 for10000ms, RequiredAreasID7354; inherits900000ms spell recovery. Actual Shadowlands eligibility, fall motion/turn/landing/restoration remain unproved together; aura metadata alone is not native safe-fall acceptance. |
+|224 The Necronom-i-nom182732/340110 | Self script3 with1800000ms item recovery. Exact SpellReagents row consumes one38682/Enchanting Vellum; source advertises a random effect from the pages without naming an executable outcome here. Reagent spending/random selection/effect lifecycle remain unestablished, not a no-op book cosmetic or invented outcome pool. |
+
+`rows220-224-{readonly-source,action-source}.json` preserves roots, reachable child/removal records, exact durations/recovery and reagent count. Pinned `SpellAuraEffects.cpp` names226 periodic-dummy,105 feather-fall and409 turn-while-falling; existing `toyfx3_conditional_parasol_is_not_an_unconditional_periodic_cast` is refusal proof only. No new runtime/data admission, positive simulation/native certificate or repeat of unchanged gates.
+
 ## Source215–219: retained vessel proof and stack/bobber/area/vehicle gaps (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |
