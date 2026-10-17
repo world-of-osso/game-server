@@ -604,7 +604,7 @@ Read-only next-root audit retains explicit refusals: Gadgetzan18986 has bound na
 
 ## Corgi68 source viewer aura (2026-10-16)
 
-Next Full1166 item158149/264091 is existing accepted viewer aura233, not global transformation. Same70391 source effect707262 preserves literal base550 and misc[3569,53]; SpellMisc duration6 is600000ms. Extended real bag-learning/UseToy/cancel regression pending; no new production handler. Existing native code has no viewer233 consumer; payload interpretation, body selection, target eligibility and pixels remain open. Neither a direct display3569 nor creature-template3569 is inferred. `corgi68-readonly-source.json` retains source rows; acceptance does not certify full toy parity.
+Next Full1166 item158149/264091 is existing accepted viewer aura233, not global transformation. Same70391 source effect707262 preserves literal base550 and misc[3569,53]; SpellMisc duration6 is600000ms. Extended real bag-learning/UseToy/cancel regression passes1/1 in20.01s (`corgi68-focused-green.log`); no new production handler. Initial missing-spell failure came from the sparse fixture omitting264091, not production; corrected fixture supplies that authentic spell. Existing native code has no viewer233 consumer; payload interpretation, body selection, target eligibility and pixels remain open. Neither a direct display3569 nor creature-template3569 is inferred. `corgi68-readonly-source.json` retains source rows; acceptance does not certify full toy parity.
 
 ### Following source-order gaps: Chili69 and Enthralling70
 
