@@ -314,6 +314,9 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity, killer:
             .collect::<Vec<_>>()
     });
     for id in changed {
+        if map.map_id == 628 {
+            super::honor::award_isle_commander_honor(world, id);
+        }
         super::pvp_objective::send_match_snapshot(world, id);
     }
 }

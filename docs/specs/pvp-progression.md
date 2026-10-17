@@ -41,7 +41,21 @@ Pinned raw sources (prefix `https://raw.githubusercontent.com/TrinityCore/Trinit
 
 Explicit Lead authorization binds an implemented TC-sourced Honor award of N to two separate credits: the unchanged lifetime honor-XP path receives N, and the existing wallet receives N of Honor1792 subject to its authored15000 holding cap. The wallet cap must not reduce XP. Persist the wallet and PvP projection, publish the authoritative CurrencyStateUpdate and normal gain feedback, and keep static weekly0 bookkeeping unchanged. This is our event binding, not a claim that TC itself credits1792 in RewardHonor. The mirror is pinned by actual lethal-damage and persistence tests; native acceptance requires a real world-kill wallet increase in both skins.
 
-The rule applies at the shared Honor award boundary so per-map BG Honor awards use the same mirror when their callbacks are implemented. Current world-kill eligibility/calculation stays unchanged. BG callbacks not yet wired remain an implementation gap, not a missing wallet-binding authorization. Arena/Conquest1602 quantities remain ARENA_COMPLETION_WALLET_BINDING; no mapping is authorized. Korrak1166 stays out of scope. HONOR_LEVEL_XP_CURVE remains a gap; no level advancement is added.
+The rule applies at the shared Honor award boundary so per-map BG Honor awards use the same mirror when their callbacks are implemented. Current world-kill eligibility/calculation stays unchanged. BG callbacks not yet wired remain an implementation gap, not a missing wallet-binding authorization. BG admission must retain the exact [PVPDifficulty source range](../../../shared-protocol/docs/specs/battleground-brackets.md): event bonus amounts use the instance bracket maximum, not a participant's current level or the broad template admission maximum. Arena/Conquest1602 quantities remain ARENA_COMPLETION_WALLET_BINDING; no mapping is authorized. Korrak1166 stays out of scope. HONOR_LEVEL_XP_CURVE remains a gap; no level advancement is added.
+
+## World of Osso policy: BG_END_BONUS_ONCE_PER_MATCH
+
+Explicit Lead authorization normalizes each per-map completion hook to one invocation per completed match. Pinned TC `Battleground.cpp`675/781 places OnEnd inside the online-player loop; team-wide script awards would otherwise multiply by roster size. We do not reproduce that placement. This is a named project normalization, not a Retail claim. Each eligible present participant receives the authored per-map win/end bonuses once, and HONOR_WALLET_MIRRORS_HONOR_XP mirrors the authorized XP1:1 subject to the holding cap.
+
+Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each grant a winning participant one bonus-kill equivalent, then grant every eligible participant one equivalent. Each call rounds separately using `ceil(min(instance PVPDifficulty maximum,80) ×1.55)`:30–39 winners receive61+61=122; other present participants receive61. Inactive/minimum-XP-level checks remain; dead accepted participants receive the team award, departed/unaccepted players do not. Null-victim team awards do not apply kill-only group/aura/rest modifiers and do not emit type35 honorable-kill criteria. Terminal resource-tick replay must not duplicate rewards; both wallet and separate lifetime XP persist.
+
+This checkpoint implements Arathi and Eye completion only. Resource-threshold/objective awards, other per-map callbacks, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+
+## Isle commander Honor
+
+Pinned TC Isle `HonorRewards`193–197 and `OnUnitKilled`383–394 grant a literal500 Honor to the opposite team when commander34924 or34922 dies, before ending the match. This is not a bonus-kill multiplier, a generic completion award, or the500 Conquest spell definition. Only an actual source battle-accepted commander death triggers it; the battle's terminal transition rejects dead-target replay. Credit only the winning accepted roster still present in that map copy, with the same positive Honor minimum-level/Inactive checks. Dead eligible recipients remain allowed. Preserve the existing1:1 XP/wallet mirror, holding cap, zero-weekly rule and durable updates.
+
+Resource-node12-per45s awards remain separate unfinished work; winning by reinforcement depletion must not be relabeled as a commander kill. This event does not resolve Arena/Conquest or the lifetime-level curve.
 
 ## Sourced weekly counters — 70391
 

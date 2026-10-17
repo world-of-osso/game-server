@@ -4,6 +4,13 @@
 ## 2026-10-16 — Miss-only pet self outcomes194
 
 [Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
+## 2026-10-17 — Telash startup prerequisites
+
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored after genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; no Telash production change.
+
+## 2026-10-17 — Leymor native Sprouts destination boundary
+
+[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask implementation yields one ordinary native parent/fourteen owned children GREEN at8db5f60f on active70448/a0ccc53b. First28-child fixture manually stimulated a second parent; ordinary SpellGo witness corrects this without production changes. Affected17/0failed/1ignored TelashRED, scoped servercheck/fmt and bounded independent source/artifact/readability inspection pass at8ca93220. Lifecycle/full native70448 acceptance remain open.
 
 ## 2026-10-16 — Eligible victim race53
 
@@ -1746,6 +1753,7 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16): authentic paired template import RED→GREEN, real area/cursor/source300s simulation lifecycle,147/147 Toy gate; target-dummy combat and missing native533501 body remain separate.
 
+- 2026-10-16: [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16): separate catalog/child-position REDs, exact302746/display16675, actual cooking/CozyFire/source300s cleanup and source-drift refusals;149 Toy+29 affected gates pass, native appearance/full trigger parity separate.
 - 2026-10-17: [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) reads real current terrain at the existing HK boundary, retains ancestry/companions and account SUM; native/account behavioral RED2/2, full50 GREEN pending. Imported70391 structural census5533/1841 adds only224/1151/12411; area metadata is70448, no reconciled70448 achievement-profile claim.
 
 - 2026-10-17: [Active70448 achievement inputs](systems/dungeon-achievements.md#active70448-achievement-inputs) regenerated from active CSVs; named tree Flags/OrderIndex fixes prior raw offsets. Build/key receipt, active predicates and5533/1841 census reconciled (no root delta from migration). Importer behavioralRED→GREEN4/4; canonical publication lead-owned.
