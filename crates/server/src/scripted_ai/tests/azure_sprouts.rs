@@ -119,7 +119,7 @@ fn azure_leymor_sprouts_native_children_apply_their_authored_spawn_aura() {
     );
 }
 
-fn prepare_arcane_power_prerequisites() -> (Harness, Entity) {
+pub(super) fn prepare_arcane_power_prerequisites() -> (Harness, Entity) {
     let (mut h, leymor) = super::azure_combat::prepare_leymor_for_later_clock();
     h.advance(0.1);
     let children = h.creatures_of(SPROUT);
@@ -157,7 +157,6 @@ fn prepare_arcane_power_prerequisites() -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "RED: native Sprouts do not yet apply374736 through summoner92"]
 fn azure_leymor_sprout_power_adds_one_native_aura_count_per_real_child() {
     let (mut h, leymor) = prepare_arcane_power_prerequisites();
     assert_eq!(
@@ -165,7 +164,26 @@ fn azure_leymor_sprout_power_adds_one_native_aura_count_per_real_child() {
         14,
         "one native Arcane Power application per actual ordinary summon"
     );
-    for child in h.creatures_of(SPROUT) {
+    let children = h.creatures_of(SPROUT);
+    let view = h
+        .app
+        .world()
+        .get::<shared::components::UnitAuras>(leymor)
+        .unwrap();
+    let powers: Vec<_> = view
+        .auras
+        .iter()
+        .filter(|aura| aura.spell_id == ARCANE_POWER)
+        .collect();
+    assert_eq!(powers.len(), 1, "native shared slot is one replicated aura");
+    assert_eq!(powers[0].stacks, 14);
+    assert!(
+        children
+            .iter()
+            .any(|child| Some(child.to_bits()) == powers[0].caster),
+        "preserve a real sprout caster, never recast from Leymor"
+    );
+    for child in children {
         assert!(!h.has_aura(child, ARCANE_POWER), "not the casting sprout");
     }
     for &(player, _, _) in &h.players {
@@ -174,7 +192,6 @@ fn azure_leymor_sprout_power_adds_one_native_aura_count_per_real_child() {
 }
 
 #[test]
-#[ignore = "RED: native summoner92 selector is not implemented"]
 fn azure_leymor_sprout_power_unowned_caster_does_not_use_explicit_or_self() {
     let (mut h, leymor) = prepare_arcane_power_prerequisites();
     assert!(
