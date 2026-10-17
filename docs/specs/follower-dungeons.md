@@ -35,6 +35,8 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 ## Azure sourced partial
 
+Leymor starts in375729 stasis with PC/NPC attack immunity until its authored `leymor_arcane_tender` formation depletes. Non-following groupAI0 still has group membership, including its leader. Only the last living member in that map copy completes intro key4; it survives boss reset/death for the instance lifetime without DB persistence. After one second Leymor removes stasis/immunities, casts375749 and announces group0 once. Other copies remain locked. NPC immunity0x200 rejects non-player-controlled attackers independently of PC immunity0x100. Final native Azure acceptance uses user-selected build70448; historical70391 evidence is not relabeled.
+
 Leymor374567 effect0 dummy aura must cast374570 on natural expiry from the original extant caster. Cancellation, dispel, death, evade and missing-caster cleanup must not explode it. The parent374582 once-per-effect knockback and remaining Leymor phases are separate requirements, not established by this finite hook.
 
 A destination-requiring spell cast at a supplied unit must initialize its absent destination from that unit, not the caster. An explicitly supplied destination retains priority; a cast without any unit uses the caster. Ground-target selectors still project onto native map geometry and fail if it is unavailable; no geometry/tolerance bypass.

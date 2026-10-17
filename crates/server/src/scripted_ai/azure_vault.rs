@@ -21,8 +21,7 @@ const DATA_LEYMOR_INTRO_DONE: u32 = 4;
 const ACTION_FINISH_LEYMOR_INTRO: i32 = 251501;
 const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
-// TC a352b1fa UnitDefines.h: UNIT_FLAG_IMMUNE_TO_NPC.
-const IMMUNE_TO_NPC: u32 = 0x0000_0200;
+use shared::components::UnitFlags;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
     name == LEYMOR_SCRIPT
@@ -88,8 +87,8 @@ impl super::CreatureAi for Leymor {
         if super::instance_script::get_data(ctx.world, map, DATA_LEYMOR_INTRO_DONE) != 0 {
             return;
         }
-        if let Some(mut flags) = ctx.world.get_mut::<shared::components::UnitFlags>(ctx.me) {
-            flags.0 |= shared::components::UnitFlags::IMMUNE_TO_PC | IMMUNE_TO_NPC;
+        if let Some(mut flags) = ctx.world.get_mut::<UnitFlags>(ctx.me) {
+            flags.0 |= UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
         }
         ctx.do_cast_self(STASIS);
     }
@@ -115,8 +114,8 @@ impl super::CreatureAi for Leymor {
             crate::auras::remove_auras(ctx.world, ctx.me, RemoveReason::Cancelled, |aura| {
                 aura.spell_id == STASIS
             });
-            if let Some(mut flags) = ctx.world.get_mut::<shared::components::UnitFlags>(ctx.me) {
-                flags.0 &= !(shared::components::UnitFlags::IMMUNE_TO_PC | IMMUNE_TO_NPC);
+            if let Some(mut flags) = ctx.world.get_mut::<UnitFlags>(ctx.me) {
+                flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
             }
             ctx.do_cast_self(ARCANE_ERUPTION);
             ctx.talk(0);
