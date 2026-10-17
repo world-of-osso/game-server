@@ -12,7 +12,6 @@ struct EnteredMatch {
 }
 
 #[test]
-#[ignore = "RED: ordinary party queue must invite all20 members instead of only four solo leaders"]
 fn arathi_four_normal_five_player_parties_enter_one_twenty_player_match() {
     let template = shared::battleground::arathi_basin();
     let mut entered = enter_source_match_queued(
@@ -55,7 +54,6 @@ fn arathi_four_normal_five_player_parties_enter_one_twenty_player_match() {
 }
 
 #[test]
-#[ignore = "RED: late WorldPortAck arrivals are missing from the scoreboard"]
 fn arathi_late_party_arrival_gets_one_score_row_without_resetting_existing_scores() {
     let template = shared::battleground::arathi_basin();
     let mut previous = Vec::new();
