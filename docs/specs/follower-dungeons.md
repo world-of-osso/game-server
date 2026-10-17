@@ -39,6 +39,8 @@ Leymor starts in375729 stasis with PC/NPC attack immunity until its authored `le
 
 Leymor engagement schedules sprouts374364 at3s, Infused Strike374789 at10s, Erupting Fissure386660 at20s, Explosive Brand374567 at31s and Consuming Stomp374720 at45s; each repeats48s after execution and waits while casting. Sprouts must cast on Leymor using its native cast time; a successful parent cast does not establish its destination children or summoned actors. Infused Strike must use its native cast time, damage and DOT against the victim; an event queue entry alone is not combat proof.
 
+Leymor374364 effect0 must emit two native374362 destination missiles at each of the seven source-authored origins, once per effect rather than per selected unit. Native374362 random7yd destination selection, flight and374360 ground-projected190509 summons retain the original caster/map copy. Missing source templates/level inputs or ground are prerequisite gaps, not missing-fourteen behavioral proof; no manufactured205 row or placement.
+
 Leymor374567 effect0 dummy aura must cast374570 on natural expiry from the original extant caster. Cancellation, dispel, death, evade and missing-caster cleanup must not explode it. The parent374582 once-per-effect knockback and remaining Leymor phases are separate requirements, not established by this finite hook.
 
 A destination-requiring spell cast at a supplied unit must initialize its absent destination from that unit, not the caster. An explicitly supplied destination retains priority; a cast without any unit uses the caster. Ground-target selectors still project onto native map geometry and fail if it is unavailable; no geometry/tolerance bypass.
