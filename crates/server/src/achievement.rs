@@ -1659,3 +1659,7 @@ mod tests;
 #[cfg(test)]
 #[path = "achievement_unknown_spell_tests.rs"]
 mod unknown_spell_tests;
+
+#[cfg(test)]
+#[path = "achievement_send_perf_tests.rs"]
+mod send_perf_tests;
