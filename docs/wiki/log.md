@@ -1,3 +1,7 @@
+## 2026-10-16 — Hasty Human queue and native authority
+
+[Guild perks](systems/guild-perks.md): per-consumption flat-adjusted bases/deadlines preserve the actual Human's mixed25/10/25-minute charge queue.17 charge controls pass, including unchanged rate-restoration expectations. Identical-binary actual item6948/8690 proof passes in both skins: four casts, four invitation/removal cycles, current1→0/max2 and exact114 non-guild IDs retained. Twelve inspected full-HD originals show bag/item/cast context; numerical recovery is native owner state. Extra haste/script controls and final checks remain pending; no whole-perks or pending-clock restart-persistence claim.
+
 ## 2026-10-16 — Guild mounted rates and Hasty charge boundary
 
 [Guild perks](systems/guild-perks.md): supported Mount Up172/211/map suppression landed; living flat-ground native input and real guild removal confirm seven coherent samples in each skin, with ten selected mounted full-HD originals. Controlled-NPC210 remains blocked. Hasty8690/83944 already gives30/15/30-minute new-charge recovery; actual RED exposed joining halving a consumed clock. Preserving that453 consumption boundary passes3/3, including removal→recovery→next30-minute use; native actual-item proof is pending.
