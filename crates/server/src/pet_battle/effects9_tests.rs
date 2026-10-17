@@ -12,13 +12,18 @@ fn level_health_battle(catalog: &Catalog, ability: u32, level: i32) -> Battle {
 #[test]
 fn pet_battle_level_health_bonus_uses_authored_points_per_level_before_healing() {
     let catalog = catalog();
-    for (ability, aura, points) in [(576, 577, 5), (611, 610, 5), (1991, 1990, 10)] {
+    for (ability, aura, points, healing) in
+        [(576, 577, 5, 28), (611, 610, 5, 28), (1991, 1990, 10, 35)]
+    {
         for level in [1, 7, 25] {
             let initial = level_health_battle(&catalog, ability, level);
             let (state, _) = use_ability(&initial, &catalog, ability);
             let bonus = points * level;
             assert_eq!(state.teams[0].pets[0].stats.health, 10000 + bonus);
-            assert_eq!(state.teams[0].pets[0].health, 10000 + bonus.min(168));
+            assert_eq!(
+                state.teams[0].pets[0].health,
+                10000 + bonus.min(healing * 6)
+            );
             assert_eq!(state.auras[0].ability, aura);
             assert_eq!(state.teams[0].pets[1].stats.health, 10000);
             assert_eq!(state.teams[1].pets[0].stats.health, 10000);
