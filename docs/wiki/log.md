@@ -1,3 +1,7 @@
+## [2026-10-17] systems | Recuperate effect terminology correction
+
+Corrected [immediate self hits](systems/spell-casting.md#immediate-self-hits-alongside-destination-missiles--2026-10-17):1231411 effect179 is `CREATE_AREATRIGGER`, properties38187, not a scene. Timing proof and runtime behavior unchanged; area-trigger behavior/visuals remain outside that proof.
+
 ## 2026-10-17 — Native power drain8
 
 [Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): pinned primary-power/integer/actual-removal/Amplitude implementation, unchanged native3405/46453/16094. Four real missing-drain REDs and two exclusion guards; stale-protocol compiler failure is not RED. Native pools/costs retained; merged26f5332a native GREEN6/6 in18.34s/146.040s total, no whole-ability acceptance.
