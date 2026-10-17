@@ -1,6 +1,8 @@
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
 
+- [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16) — actual persisted bind/source10s cast/shared2309 charge;146 Toy tests pass, procedural native appearance and cross-map/wall-recharge separate.
+
 - [Corgi and Rezan source boundaries](systems/toys.md#corgi-and-rezan-source-boundaries-2026-10-16) — viewer233 learned-use and audited roar RED→GREEN/source sound-animation; Chili/Enthralling and native playback/rendering remain separate.
 
 - [Stampwhistle assistant/mailbox](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16) — authentic132969/Assistant35 mailbox service/600s simulation expiry;143 Toy+49 affected+3 importer controls pass, canonical template publication/native rendering separate.
