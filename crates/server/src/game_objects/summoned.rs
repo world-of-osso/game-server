@@ -38,7 +38,7 @@ struct ObjectTemplate {
 #[derive(Resource, Debug, Default)]
 pub(crate) struct SummonedObjectTemplates(
     HashMap<u32, ObjectTemplate>,
-    Option<super::cooking_traps::TrapTemplate>,
+    HashMap<u32, super::cooking_traps::TrapTemplate>,
 );
 
 /// Owner and spell remain distinct from a ritual's channel-held ownership.
@@ -132,7 +132,7 @@ pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObje
         .collect::<rusqlite::Result<_>>()?;
     Ok(SummonedObjectTemplates(
         templates,
-        super::cooking_traps::load_template(conn)?,
+        super::cooking_traps::load_templates(conn)?,
     ))
 }
 
@@ -204,8 +204,10 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
         GAMEOBJECT_TYPE_GENERIC | GAMEOBJECT_TYPE_CHAIR | GAMEOBJECT_TYPE_MAILBOX
     );
     if cooking_only && template.linked_trap != 0 {
-        let trap_supported = template.linked_trap == super::cooking_traps::BASIC_CAMPFIRE_TRAP
-            && world.resource::<SummonedObjectTemplates>().1.is_some()
+        let trap_supported = world
+            .resource::<SummonedObjectTemplates>()
+            .1
+            .contains_key(&template.linked_trap)
             && super::cooking_traps::spell_supported(world);
         if !trap_supported {
             return Some(format!(
@@ -349,9 +351,13 @@ fn spawn_object(
             .expect("supported template has display bounds")
     };
     let seaforium_spell = template.seaforium_spell;
-    let linked_trap = (template.linked_trap != 0 && template.cooking_focus.is_some())
-        .then(|| world.resource::<SummonedObjectTemplates>().1.clone())
-        .flatten();
+    let linked_trap = template.cooking_focus.and_then(|_| {
+        world
+            .resource::<SummonedObjectTemplates>()
+            .1
+            .get(&template.linked_trap)
+            .cloned()
+    });
     let mut object = world.spawn((
         Position {
             x: dest.position.x,
