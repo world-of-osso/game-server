@@ -32,6 +32,9 @@ pub(crate) use batch20::proc_charges;
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
+        (crate::scripted_ai::azure_vault::ERUPTING_FISSURE, 0) => {
+            Some(crate::scripted_ai::azure_vault::cast_fissure_sprout_selector)
+        }
         (crate::scripted_ai::azure_vault::EXPLOSIVE_BRAND, 0) => {
             Some(crate::scripted_ai::azure_vault::cast_brand_child)
         }
