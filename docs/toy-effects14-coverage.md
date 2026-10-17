@@ -1,5 +1,15 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate412: Scarab source-ground metric (2026-10-17)
+
+Exact unchanged gate artifact from merged9979ffe2 (68946414 onto6c0cadc94) reproduces the original full3D `distance <=5.001` failure2/30 times;28 pass. Neither118–123 nor recent destination/missile changes altered this sampler/test: the metric dates to13bc6b124 and horizontal scatter/ground projection to8db0a46a (2026-10-14). Pinned TC `SpellEffects.cpp::SummonGuardian` retains the first destination, then calls `WorldObject::GetRandomPoint`; `Object.cpp`678–705 samples horizontal x/y and independently projects Z onto available ground, not a3D sphere.
+
+Deterministic actual778027 terrain RED atabe8a8f2 fails0.01s for the approved outer-ring point: origin WoW(-8949.950195,-132.492996,82.630287), point(-8952.673828,-128.299637,82.868111), horizontal5.000244 versus spatial5.005896. The assertion now retains the same5.001 horizontal bound (Bevy x/z). Real learned-use separately requires an exact first-destination point; only secondary scattered points must equal their independently queried source-ground height. The initial strengthened height check incorrectly included the unprojected first destination and is recorded as an oracle-boundary failure, not a runtime defect. Production/runtime, randomness, source durations and canonical data are unchanged.
+
+Atb2bc2f2d, bounded Scarab/Flute/Ysera controls pass6/6 zero ignored58.56s. The final first-destination assertion was then tightened from0.001 proximity to exact equality: both affected source39 cases pass2/2 zero ignored60.82s at7b389562; unchanged comparison scopes remain retained rather than rerun. Current package/tests check1m26s, fmt/manual changed-line readability pass without warnings. Lead owns the next merged-tree gate; these results are not a new whole-Toy/native certificate.
+
+Evidence root below: `scarab412-30-repeat-ledger.json`, original-repeat01–30 logs and preserved artifact SHA256ec9463b2daa398e34fe4767da47b3124e6792df0e4004b737a0429f8a72771db; `scarab412-readonly-terrain-diagnostic.json`, `scarab412-fix-proof-ledger.json`, source-slope-red/green-controls2/exact-first-final/check/fmt logs. Read-only terrain diagnostics preceded all code edits; direct Rust RED confirms the real source geometry rather than relying on the diagnostic mirror.
+
 ## Source-order continuation gaps (2026-10-16)
 
 Ashhide104329/148626 remains blocked by the missing mount template73689. Source aura78 names73689; the authentic TDB model row selects display51484 (M2 646374), but the published creature catalog lacks73689. Generic aura241 flag proof does not establish Ashhide learning/use, mount rendering, area acceptance or expiry. Per lead instruction, retain this named gap and continue source order; no substitute mount or importer admission. Unexecuted Ashhide test drafts remain in continuation evidence, not the passing regression suite.

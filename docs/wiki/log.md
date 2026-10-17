@@ -1,3 +1,7 @@
+## 2026-10-17 — Scarab scatter oracle correction
+
+[Gate412 source-ground metric](systems/toys.md#scarab-source-scatter-metric-2026-10-17): unchanged merged artifact fails2/30; actual778027 outer-ring RED confirms the3D-versus-horizontal mismatch. Keep5.001, exact first destination and separate secondary ground-height assertions. Six focused controls pass; final tightened two-case check/check/fmt pass. Runtime and prior native proof scopes unchanged; lead owns the next merge gate.
+
 ## 2026-10-17 — Dragon costume lifecycle118–123
 
 [Six source costumes](systems/toys.md#dragon-costume-simulation-lifecycle-2026-10-17) pass actual learned-use/fifteen-minute ordinary expiry and natural recovery/reuse. Six new cases plus two related transform controls pass8/8 across72.48s; check/fmt clean. No production change; expected-refusal fixture failure is not runtime RED, native presentation remains open.
