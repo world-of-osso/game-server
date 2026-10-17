@@ -135,9 +135,8 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
         })
         .collect();
     assert!(
-        points
-            .iter()
-            .any(|point| point.distance(destination) < 0.001)
+        points.contains(&destination),
+        "the first guardian retains the exact selected destination"
     );
     {
         let map = *world.get::<crate::maps::InMap>(caster).unwrap();
