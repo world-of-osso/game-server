@@ -1765,3 +1765,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-17: [Lifetime HK113](systems/dungeon-achievements.md#lifetime-honorable-kills113) implements explicit LIFETIME_HK_TRACKING_STARTS_AT_ZERO and separate persisted count before absolute113. Full100/native40+60/policy RED0/3; GREEN pending. Active70448 structural5544/1843 adds11ordinary/2stats only, same seven source hashes; all thresholds retained.
 
 - 2026-10-17: lifetime113 at785c8f1b passes6/6(35.54s): native100 roots238/513/39935, actual40+60 account sum, zero-start JSON policy, reopen/relog and5544 pin plus2 BG merge controls. Original dates survive a one-hour clock advance. Required integration/check pending.
+
+- 2026-10-17: lifetime113 final integration772a3be6 passes required workspace four-filter231/0/1existing ignored(353.60s), site-export1/1, workspace/all-target check and three-repo fmt/diff. Active70448 census5544/1843, all243matrix/pin exact; bounded artifact/readability checks pass. LIFETIME_HK_TRACKING_STARTS_AT_ZERO remains explicit; native higher thresholds/BG/rendered/freshUDP/remoteCI/lead landing are not certified.
