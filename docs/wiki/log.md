@@ -22,6 +22,18 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 ## 2026-10-17 — Starfall/Moon Tears recipient routing
 
 [Bounded258/979](../pet-battle-effect-coverage.md#starfall-and-moon-tears--implementation2026-10-17): exact active70448 seven-row graphs, source-school distinction and existing Moonlight reuse. Actual routing RED4 plus legal Cosmos owned RED1 precede9b958668 slot/cap/dead/miss/owned GREEN; first weather case exposed only a fixture9-versus-existing8 remaining assumption, corrected test-only9c88c925. Corrected focused weather1/1 passes ataf89ac7c; retain unchanged core4+owned1 GREEN at9b958668. Integrated5d23a60d lib145/main33/check1m36/no warnings/fmt pass; fresh reconciled70448 census1811/2829=64.02%/1025 graphs (+14/+2, no removals). Only subsequent docs/census changes; no redundant broad rerun. Lead gate438 lands145+55 before both-skin native Cosmos1972/1:9 damage/9 healing×3/increased reserve bars/Moonlight8. Four individually inspected fullHD originals under `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all phases two framed models/strict tripwire0, geometry91/110 only HP fills/timed floats. Existing7 canonical assets/3-mesh strict loader pass, no publication. Both physical forfeits close, owned processes stop/window clears.979 native and independent Retail timing/VFX remain unproved. No other ambiguous selectors admitted.
+## 2026-10-17 — Toy source210–214 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source210214-visualmotionreturnclasscovenant-boundaries-2026-10-17): multi-visual eyes, combined water-walk/hover, player throw-return, class-armor payload and advertised Night Fae pledge acceptance remain gaps. Condition0/shared2309 does not establish or negate all eligibility; no invented gate or borrowed nine-hearthstone certificate. Also name204's source35 precisely as party-target. No runtime/data change, new admission or duplicate gate.
+
+## 2026-10-17 — Toy source205–209 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source205209-areavisioncompanion-boundaries-and-retained-aqir-proof-2026-10-17):205 creates area trigger19143, not a generic totem NPC; vision233, Control1/Title2 scale2 apple and minipet-target leash remain gaps.209 retains the earlier actual missile/selected-target/15s-aura CPU scope; no fresh native proof, runtime/data admission or duplicate gate.
+
+## 2026-10-17 — Toy source200–204 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source200204-pending-mogu-acceptance-and-companionequipmentgame-boundaries-2026-10-17):201 exact Mogu pool/lifecycle test/spec924bcde11 remains pending execution/check, fmt/readability pass. Companion-control description reference is not an executable child edge; headgear/shaving/skull-game actions remain gaps. Existing163441/95179 half-scale content is not missing publication or successful interaction. No production/data change or fabricated RED/native proof.
+
 ## 2026-10-17 — Toy source195–199 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source195199-motionfactionappearanceaction-boundaries-2026-10-17): Nomi self-knockback/safe-fall, N'lyeth language/faction/self-sacrifice and Scroll/cocoon/shadow appearance actions remain gaps. Preserve actual on-use314988 versus auxiliary314407/TriggerType7. No ordinary cosmetic/actor/transform substitutions, data/runtime admission or redundant gate.
@@ -1982,3 +1994,9 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 - 2026-10-17: Enabled Gargolmar8 GREEN8/8/294.43s atce47484e, including charge/reset/Watcher heal/credit and allspeechcases. Readability audit splits two new damage predicates into named ownership/kind terms; only those two cases need scoped final proof.
 
 - 2026-10-17: Gargolmar predicate-only final2/2/63.96s atf7126b3b; other six cases retaince47484e8/8 proof, no broad rerun. Also independently read LEAD kill-hook gate449:766/0/28ignored1785.58s/all sixSlay/EXIT0/FMT0, head5032 reportedLANDED.
+
+- 2026-10-17: Verified active70448 Herald DungeonEncounter/Journal/actor join and named ENCOUNTER_CREDIT_FROM_RETAIL_DUNGEONENCOUNTER policy. Audited TC ignoredout-of-rangebossrow, sameactorNazan morph,30717/property64Vazruden,ordinarygroup357/3spawns and sourceCT0→maptuning. Added unverified [Herald contract](../../docs/specs/ramparts-herald.md); no runtime or canonical data changes.
+
+- 2026-10-17: Herald copy-only server-spell profile: realCLI invalid-choiceREDfd9ad1db→GREEN6/6/0.201s2e0a3835. All7+7actualTDBrecords/everyfield/idempotence/unrelateddata/atomicmissing30698effect refusal; existing3profiles/canonical/symlinkguards retained. No actor/binder/runtime/credit claim.
+
+- 2026-10-17: Herald70448 binding CLI REDac42b003→25/25aefee7b0; strictretailCSV/build/namedgap/sourcehash/primaryonly/populationpreservation. Fixed actual SQLite fixture lifetime warning using closing+transaction contexts, not suppression; affected binding3/spellproducer6 GREEN9/9/0.896s with ResourceWarning elevated at9874a576. Unchanged22bindingproofretained. Structuraldata only, runtimepairedcreditstillOPEN.

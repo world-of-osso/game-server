@@ -1,8 +1,8 @@
-//! Source111–113 and178–179: real transforms and item versus spell-owned recovery.
+//! Source111–113,178–179 and201: real transforms and source recovery.
 use super::*;
 
 #[test]
-fn toyfx111_113_and178_179_disguises_real_learning_models_expiry_and_source_recovery_precedence() {
+fn toyfx111_113_178_179_201_disguise_learning_expiry_and_recovery_precedence() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
     const DURATION_MS: u32 = 600_000;
     const FRAME_SECONDS: f64 = 0.05;
@@ -50,6 +50,13 @@ fn toyfx111_113_and178_179_disguises_real_learning_models_expiry_and_source_reco
                 92526, 92527, 92528, 92529,
             ]
             .as_slice(),
+            3_600_000,
+        ),
+        (
+            174873,
+            305123,
+            156286,
+            [92868, 92880, 92874, 92871].as_slice(),
             3_600_000,
         ),
     ] {
