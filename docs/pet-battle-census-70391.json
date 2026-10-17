@@ -1,10 +1,10 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "86dad170",
+  "validator_revision": "d4bfaf1c",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1776,
+  "admitted_effect_rows": 1777,
   "effect_rows": 2829,
-  "admitted_abilities": 1013,
+  "admitted_abilities": 1015,
   "abilities": 1404,
   "properties": [
     {
@@ -1730,13 +1730,11 @@
       ]
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 1,
+      "handler": true,
       "property": 75,
       "rows": 1,
-      "rejected_graph_effect_ids": [
-        508
-      ]
+      "rejected_graph_effect_ids": []
     },
     {
       "admitted_rows": 0,
@@ -1928,7 +1926,6 @@
     484,
     485,
     486,
-    488,
     490,
     496,
     498,
@@ -2428,8 +2425,6 @@
     "289": "ability 289: unsupported aura state 2 maxHealthBonus",
     "290": "unsupported property 72 at effect 504",
     "291": "unsupported property 74 at effect 505",
-    "293": "unsupported property 75 at effect 508",
-    "294": "ability 294: unsupported object/team aura",
     "295": "ability 295: undetermined team target routing",
     "301": "unsupported property 77 at effect 517",
     "303": "unsupported property 78 at effect 519",

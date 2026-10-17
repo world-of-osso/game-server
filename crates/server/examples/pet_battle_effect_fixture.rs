@@ -14,13 +14,13 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
             .min_by_key(|row| (row.level, row.ability))
             .map_or(0, |row| row.ability)
     });
-    let chosen = (species == 1256).then_some(1025);
+    let chosen = (species == 1320).then_some(293);
     if let Some(ability) = chosen {
         let authored = catalog
             .species_abilities
             .iter()
             .find(|row| row.species == species && row.ability == ability && row.level <= level)
-            .expect("Authored Armageddon option must be unlocked");
+            .expect("Authored Launch Rocket option must be unlocked");
         abilities[authored.slot as usize] = authored.ability;
     }
     abilities
@@ -29,8 +29,8 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
 fn seed_fixture_pets(catalog: &Catalog) -> (PetJournal, BTreeMap<u64, serde_json::Value>) {
     let mut journal = PetJournal::default();
     let mut states = BTreeMap::new();
-    for (guid, species) in [(41, 1256), (42, 39), (43, 39)] {
-        let level = 4;
+    for (guid, species) in [(41, 1320), (42, 39), (43, 39)] {
+        let level = 20;
         journal
             .add_with_guid(species, level, PetQuality::Rare, 3, guid)
             .unwrap();
@@ -82,6 +82,6 @@ fn main() {
     let (journal, states) = seed_fixture_pets(&catalog);
     save_fixture_pets(&journal, &states);
     println!(
-        "Seeded private account1: RascalBot1256/4 Armageddon1025 and two Squirrel39/4 reserves; not acquisition proof"
+        "Seeded private account1: LilBling1320/20 LaunchRocket293 and two Squirrel39/20 reserves; not acquisition proof"
     );
 }
