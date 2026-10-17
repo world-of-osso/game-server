@@ -27,6 +27,8 @@ const ISLE_RESOURCE_HONOR: u32 = 12;
 // TC AV HonorKillBonus535–539 / OnUnitKilled653–684.
 const AV_CAPTAIN_KILL_EQUIVALENTS: u32 = 3;
 const AV_GENERAL_KILL_EQUIVALENTS: u32 = 4;
+// TC AV EventPlayerDestroyedPoint813–817 / HonorKillBonus539.
+const AV_TOWER_KILL_EQUIVALENTS: u32 = 3;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -111,6 +113,49 @@ pub(super) fn award_alterac_npc_honor(world: &mut World, match_id: u64, entry: u
         .bracket;
     let amount = calculate_bonus_honor(bracket, kills);
     award_match_team_honor(world, match_id, team, amount);
+}
+
+pub(super) fn read_alterac_tower_counters(world: &World) -> Vec<(u64, [u32; 2])> {
+    world
+        .resource::<PvpServerState>()
+        .battleground_matches
+        .iter()
+        .filter_map(|(id, matched)| {
+            let runtime = matched.alterac.as_ref()?;
+            let super::pvp_alterac::BannerBattle::Alterac(battle) = &runtime.battle else {
+                return None;
+            };
+            Some((*id, battle.destroyed_towers()))
+        })
+        .collect()
+}
+
+pub(super) fn award_alterac_tower_changes(world: &mut World, before: Vec<(u64, [u32; 2])>) {
+    for (match_id, counts) in before {
+        let (after, amount) = {
+            let state = world.resource::<PvpServerState>();
+            let matched = &state.battleground_matches[&match_id];
+            let runtime = matched
+                .alterac
+                .as_ref()
+                .expect("Alterac tower snapshot has runtime");
+            let super::pvp_alterac::BannerBattle::Alterac(battle) = &runtime.battle else {
+                panic!("Alterac tower snapshot cannot change battle type");
+            };
+            (
+                battle.destroyed_towers(),
+                calculate_bonus_honor(matched.instance.bracket, AV_TOWER_KILL_EQUIVALENTS),
+            )
+        };
+        for (index, team) in [BgTeam::A, BgTeam::B].into_iter().enumerate() {
+            let grants = after[index]
+                .checked_sub(counts[index])
+                .expect("destroyed Alterac towers cannot return");
+            for _ in 0..grants {
+                award_match_team_honor(world, match_id, team, amount);
+            }
+        }
+    }
 }
 
 fn award_match_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount: u32) {

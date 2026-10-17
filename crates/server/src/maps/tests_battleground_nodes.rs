@@ -351,6 +351,107 @@ fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() 
 }
 
 #[test]
+fn alterac_channel_tower_honor_requires_destruction_and_rounds_each_event() {
+    for (team, tower_entry, contested_entry, second_tower, graveyard) in [
+        (BgTeam::A, 178946, 178940, 178945, 179481),
+        (BgTeam::B, 178925, 179435, 178929, 179284),
+    ] {
+        let template = shared::battleground::alterac_valley();
+        let mut entered = enter_source_match(&template, [611, 610]);
+        use_second_frames(&mut entered.h);
+        let actor_index = entered
+            .teams
+            .iter()
+            .position(|value| *value == team)
+            .unwrap();
+        let defender_index = entered
+            .teams
+            .iter()
+            .position(|value| *value != team)
+            .unwrap();
+        let actor = &entered.players[actor_index];
+        let defender = &entered.players[defender_index];
+        let (banner, at) = objects_in(&mut entered.h, entered.copy, tower_entry)[0];
+        entered.h.walk_to(actor, at);
+        use_object(&mut entered.h, actor, banner);
+        entered
+            .h
+            .app
+            .world_mut()
+            .entity_mut(actor.player)
+            .insert(crate::networking::Moving(true));
+        entered.h.advance(1);
+        entered
+            .h
+            .app
+            .world_mut()
+            .entity_mut(actor.player)
+            .insert(crate::networking::Moving(false));
+        entered.h.advance(8);
+        assert_eq!(
+            objects_in(&mut entered.h, entered.copy, tower_entry).len(),
+            1
+        );
+        assert_team_honor(&entered, 0, 0);
+
+        use_object(&mut entered.h, actor, banner);
+        entered.h.advance(8);
+        entered.h.advance(200);
+        assert_team_honor(&entered, 0, 0);
+        let (contested, at) = objects_in(&mut entered.h, entered.copy, contested_entry)[0];
+        entered.h.walk_to(defender, at);
+        use_object(&mut entered.h, defender, contested);
+        entered.h.advance(8);
+        entered.h.advance(240);
+        assert_eq!(
+            objects_in(&mut entered.h, entered.copy, tower_entry).len(),
+            1
+        );
+        assert_team_honor(&entered, 0, 0);
+
+        for (entry, amount) in [(tower_entry, 368), (second_tower, 736)] {
+            let (banner, at) = objects_in(&mut entered.h, entered.copy, entry)[0];
+            entered.h.walk_to(actor, at);
+            use_object(&mut entered.h, actor, banner);
+            entered.h.advance(8);
+            entered.h.advance(240);
+            assert!(objects_in(&mut entered.h, entered.copy, entry).is_empty());
+            let expected = if team == BgTeam::A {
+                [amount, 0]
+            } else {
+                [0, amount]
+            };
+            assert_team_honor(&entered, expected[0], expected[1]);
+            entered.h.advance(240);
+            assert_team_honor(&entered, expected[0], expected[1]);
+        }
+        let (banner, at) = objects_in(&mut entered.h, entered.copy, graveyard)[0];
+        entered.h.walk_to(actor, at);
+        use_object(&mut entered.h, actor, banner);
+        entered.h.advance(8);
+        entered.h.advance(240);
+        let expected = if team == BgTeam::A {
+            [736, 0]
+        } else {
+            [0, 736]
+        };
+        assert_team_honor(&entered, expected[0], expected[1]);
+        let world = entered.h.app.world();
+        let character = world.get::<ClientId>(actor.player).unwrap().0;
+        let database = world.resource::<crate::persistence::GameDatabase>();
+        assert_eq!(
+            crate::persistence::load_currencies(&database.db, character).get(1792),
+            736
+        );
+        assert_eq!(
+            crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+            736
+        );
+        leave_and_return(&mut entered);
+    }
+}
+
+#[test]
 fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return() {
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match(&template, [611, 610]);
