@@ -3150,6 +3150,8 @@ mod optional_flat_cost_tests;
 #[cfg(test)]
 mod override_queue_tests;
 #[cfg(test)]
+mod power_drain_tests;
+#[cfg(test)]
 mod queue_tests;
 #[cfg(test)]
 mod regen_tests;

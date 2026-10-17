@@ -305,6 +305,8 @@ Omor Orbital Strike Target35642 and Whip32185 must retain every actual TDB1210 s
 
 Coincident Omor caster/target coordinates must follow pinned TC Position.h136–140: atan2(0,0)=0 projects the pull's caster combat-reach point and the caster's retreat along WoW+X, not a zero direction. Actual map543 movement RED8a24ba48 (0/2/126.60s) reaches genuine falling/30638 damage and ordinary30686 casting before missing horizontal pull/retreat. Angle-based geometry passes strict GREEN2/2/85.93s atf44f6a66 before ignore removal; ordinary affected9/9/160.75s atb2f0572f retains coincident/nonzero3D pulls,20yd hold/3yd retreat, source endpoints and shield-cast controls. No native fields, vertical ballistic formula, scheduling parameters or admission change.
 
+Omor's successful30707 `OnSpellCast` independently rolls30% to emit authored group0 summon speech; unsuccessful admissions and later summon/regen ticks must not replay it. Ordinary native casts retain their100mana cost,1s cast and3s category cooldown. Acceptance requires actual owned17540 hounds and both spoken/quiet outcomes, not triggered-cast admission bypasses. Exact30% is source-backed code, not a statistical claim from the sample.
+
 Wild spell summons, including Omor's property64 hounds, retain their own lifetime after summoner death. Minion owner-death cleanup and authored expiry remain unchanged.
 
 Omor30707 summons Fiendish Hound17540 via authored property64. Copy-only `encounter_summons.py --encounter omor` must replace legacy base/models/addon from actual TDB base0 (CT220, level10–30, Health0.55, Mana2.8568, Damage1), preserving SmartAI and absence of Normal1; existing difficulty rows, population and credit remain unchanged. Authored Heroic2 is not Normal authority.

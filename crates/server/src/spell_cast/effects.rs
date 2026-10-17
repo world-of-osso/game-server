@@ -48,6 +48,7 @@ pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 pub const EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT: u32 = 165;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
+pub const EFFECT_POWER_DRAIN: u32 = 8;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;
@@ -99,6 +100,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT => damage_from_max_health_pct,
         33 | 95 => crate::gathering::effect_gather,
         87 => crate::pvp::isle_siege::effect_damage,
+        EFFECT_POWER_DRAIN => power_drain,
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
@@ -1429,6 +1431,92 @@ fn apply_resolved_heal(
             },
         );
     }
+}
+
+/// TC a352b1fa EffectPowerDrain: primary power only, no health/crit/absorb path.
+fn power_drain(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let Some(power) = PowerType::from_db(effect.misc_values[0]) else {
+        return;
+    };
+    let primary = world
+        .get::<super::powers::PowerPools>(target)
+        .and_then(|pools| pools.order.first());
+    if primary != Some(&power) || !super::targets::is_alive(world, target) {
+        return;
+    }
+    let Some(amount) = power_drain_amount(world, ctx, effect, target) else {
+        return;
+    };
+    let Some(change) = super::powers::change_power(world, target, power, -amount) else {
+        debug!("Spell {}: drain target has no {power:?} pool", ctx.spell.id);
+        return;
+    };
+    mark_dirty(world, target);
+    if ctx.caster != target {
+        let multiplier = spell_mods::modify(
+            world,
+            ctx.caster,
+            ctx.spell,
+            SpellModOp::Amplitude,
+            effect.amplitude,
+        );
+        let credit = (-change * multiplier).trunc();
+        energize_unit(world, ctx, ctx.caster, power, credit, false);
+    }
+}
+
+fn power_drain_amount(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+) -> Option<f32> {
+    // GetEffectValueAsInt truncates before SpellDamageBonusDone adds coefficients.
+    let base = modded_base_points(world, ctx.caster, ctx.spell, effect).trunc();
+    if base < 0.0 {
+        return None;
+    }
+    let done = power_drain_bonus_done(world, ctx, effect, target, base);
+    let varied = roll_power_drain(done, effect.variance);
+    let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
+    Some((varied * taken).max(0.0).trunc())
+}
+
+fn power_drain_bonus_done(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    base: f32,
+) -> f32 {
+    const ATTR3_IGNORE_CASTER_MODIFIERS: u32 = 0x2000_0000;
+    if super::attributes(ctx.spell, 3) & ATTR3_IGNORE_CASTER_MODIFIERS != 0 {
+        return base;
+    }
+    let multiplier = if ignores_caster_damage_modifiers(ctx.spell) {
+        1.0
+    } else {
+        stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(ctx.spell.school_mask()))
+            * versatility_multiplier(world, ctx.caster)
+            * crate::auras::summon_damage::multiplier(world, ctx.caster)
+            * creature_type_damage_multiplier(world, ctx.caster, target, ctx.spell)
+            * mechanic_damage_multiplier(world, ctx.caster, ctx.spell, Some(effect))
+    };
+    let bonus = effect_power_bonus(world, ctx.caster, ctx.spell, effect).trunc();
+    modded_amount(world, ctx, (base + bonus) * multiplier, false)
+        .max(0.0)
+        .trunc()
+}
+
+/// Source adds a truncated signed variance contribution to the integer done bonus.
+fn roll_power_drain(done: f32, variance: f32) -> f32 {
+    let half_variance = (variance * 0.5).abs();
+    let variance = if half_variance == 0.0 {
+        0.0
+    } else {
+        rand::Rng::gen_range(&mut rand::thread_rng(), -half_variance..=half_variance)
+    };
+    done + (done * variance).trunc()
 }
 
 /// 30 ENERGIZE: spell-modified base points in raw units of `EffectMiscValue_0`.
