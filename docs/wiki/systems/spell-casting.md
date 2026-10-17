@@ -2,6 +2,12 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Normal explicit AllowDeadTarget admission — 2026-10-17
+
+The maintained `validate_target` used `target_alive == resurrects`, treating every non-resurrection spell as living-only. Native9454 Freeze has AllowDeadTarget, independent of the aura's missing AllowAuraWhileDead. Actual Death Touch5 leaves a present corpse; player request, ordinary creature and triggered creature entry all incorrectly rejected9454 with InvalidTarget. Genuine RED24687a16 is2pass/3fail12.93s (164.091s wrapper), with actual living Freeze stun and corpse Flame Shock/no-payment controls passing. No raw health/mana/stat/row/flag/clock/RNG/budget mutations.
+
+For a living unit, the validator retains resurrection rejection. For a dead unit, it now uses the already-qualified `SpellInfo::allows_dead_target` predicate (`SpellInfo.cpp:1842–1857,2455`), then keeps map/type/range/LOS and all later aura/resource checks. Aura persistence still follows `Unit.cpp:3525` and existing `auras/mod.rs:865`; successful dead-target Freeze must neither apply an aura nor revive the unit. Queued callers share this validator, but native64 parents of9454 are absent, so no fabricated queue chain is claimed. Native resurrection2006/2008/7328/20484/61999/95750/361227 has raw corpse-ally Targets32768; maintained resurrection controls must remain passing. GREEN/final gates pending; receipts `data/class-completeness6-2026-10-12/normal-allow-dead-target-{goal,proof-ledger}.json` and prior full-trigger source rows.
+
 ## Shared full-trigger dead-recipient admission — 2026-10-17
 
 `plan_triggered_spell` bypassed all explicit unit-life checks. Native Death Touch5 leaves a present corpse; a subsequent shared full-trigger188389 admitted and applied Flame Shock. Source `SpellInfo.cpp:1842–1857,2455` checks `IsAllowingDeadTarget`: Attr2 bit1, raw Targets corpse-enemy0x200/unit-dead0x400/corpse-ally0x8000, or active-effect corpse-object selectors93/119/121. The shared route now applies this unit-life predicate before target aura checks/planning. It does not classify non-unit objects without Health as dead units.

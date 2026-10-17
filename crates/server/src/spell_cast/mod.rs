@@ -1769,7 +1769,12 @@ fn validate_target(
     // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
     // caster's map).
     let target_alive = targets::is_alive(world, target);
-    if target_alive == resurrects
+    let invalid_life = if target_alive {
+        resurrects
+    } else {
+        !spell.allows_dead_target()
+    };
+    if invalid_life
         || !targets::same_map(world, caster, target)
         || !targets::creature_type_allowed(world, spell, target)
     {
