@@ -136,6 +136,8 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+#[cfg(test)]
+mod normal_allow_dead_target_tests;
 pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
