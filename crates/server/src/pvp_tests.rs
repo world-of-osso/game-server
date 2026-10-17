@@ -1,6 +1,8 @@
 use super::*;
 use crate::persistence::GameDatabase;
 
+#[path = "pvp_content_tuning_tests.rs"]
+mod content_tuning;
 #[path = "pvp_honor_tests.rs"]
 mod honor_progress;
 #[path = "pvp_kill_criteria_tests.rs"]
