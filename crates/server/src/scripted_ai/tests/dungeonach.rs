@@ -1,7 +1,8 @@
 use super::*;
 use crate::achievement::{AchievementCatalog, PlayerAchievementState, load_achievement_catalog};
 use shared::protocol::{
-    AchievementCatalogPage, AchievementStateUpdate, DungeonProgress, QueryAchievementCatalog,
+    AchievementCatalogPage, AchievementDelta, AchievementStateUpdate, DungeonProgress,
+    QueryAchievementCatalog,
 };
 
 #[test]
@@ -76,6 +77,7 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
         // encounter/chat inbox does, rather than losing the toast next frame.
         h.advance(0.05);
         let mut updates = drain::<AchievementStateUpdate>(h.app.world_mut(), connection);
+        let mut deltas = drain::<AchievementDelta>(h.app.world_mut(), connection);
         let mut dungeon_updates = drain::<DungeonProgress>(h.app.world_mut(), connection);
         let mut peer_updates = drain::<DungeonProgress>(h.app.world_mut(), peer_connection);
         h.advance(0.05);
@@ -83,6 +85,7 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
             h.app.world_mut(),
             connection,
         ));
+        deltas.extend(drain::<AchievementDelta>(h.app.world_mut(), connection));
         dungeon_updates.extend(drain::<DungeonProgress>(h.app.world_mut(), connection));
         peer_updates.extend(drain::<DungeonProgress>(h.app.world_mut(), peer_connection));
         assert_eq!(peer_updates, dungeon_updates);
@@ -139,16 +142,21 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
                 (toasts[0].name.as_str(), toasts[0].points),
                 ("Stormwind Stockade", 10)
             );
-            assert!(updates.iter().any(|update| {
-                update
-                    .snapshot
+            assert!(deltas.iter().any(|delta| {
+                delta
+                    .earned_ids
                     .as_ref()
-                    .is_some_and(|snapshot| snapshot.earned_ids.contains(&633))
+                    .is_some_and(|earned| earned.contains(&633))
             }));
+            assert!(
+                updates.iter().all(|update| update.snapshot.is_none()),
+                "live completion keeps the initial full baseline"
+            );
         } else {
             assert!(toasts.is_empty());
         }
         assert!(drain::<AchievementStateUpdate>(h.app.world_mut(), other_connection).is_empty());
+        assert!(drain::<AchievementDelta>(h.app.world_mut(), other_connection).is_empty());
         // Repeating DONE cannot credit the encounter or creature again.
         assert!(!super::super::instance_script::set_boss_state(
             h.app.world_mut(),
@@ -256,6 +264,8 @@ fn attach_dungeon2_messages(world: &mut World, connection: Entity) {
     world.entity_mut(connection).insert((
         MessageSender::<AchievementStateUpdate>::default(),
         MessageReceiver::<AchievementStateUpdate>::default(),
+        MessageSender::<AchievementDelta>::default(),
+        MessageReceiver::<AchievementDelta>::default(),
         MessageSender::<DungeonProgress>::default(),
         MessageReceiver::<DungeonProgress>::default(),
         MessageSender::<QueryAchievementCatalog>::default(),

@@ -1,5 +1,5 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Telash power and first Frost clock are ported; remaining clocks, jumps and runes are unported.
+//! Telash power/first-loop Frost and Icy clocks are ported; full phases/jumps/runes are unported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -14,7 +14,8 @@ pub(crate) const FROST_BOMB_CAST: u32 = 386781;
 const FROST_BOMB_AURA: u32 = 386881;
 const FROZEN_GROUND: u32 = 387149;
 const FROST_BOMB_DAMAGE: u32 = 386910;
-const EXPLOSIVE_BRAND: u32 = 374567;
+pub(crate) const EXPLOSIVE_BRAND: u32 = 374567;
+const EXPLOSIVE_BRAND_CHILD: u32 = 374582;
 const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
 const LEYMOR_SCRIPT: &str = "boss_leymor";
 const TELASH_SCRIPT: &str = "boss_telash_greywing";
@@ -22,6 +23,8 @@ const TELASH_INITIAL_POWER: f32 = 60.0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
 const EVENT_FROST_BOMB: u32 = 1;
+const ICY_DEVASTATOR: u32 = 387151;
+const EVENT_ICY_DEVASTATOR: u32 = 2;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -31,6 +34,12 @@ const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
 const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
+const ERUPTING_FISSURE: u32 = 386660;
+const EVENT_ERUPTING_FISSURE: u32 = 4;
+const EVENT_EXPLOSIVE_BRAND: u32 = 6;
+const CONSUMING_STOMP: u32 = 374720;
+const CONSUMING_STOMP_DAMAGE: u32 = 374731;
+const EVENT_CONSUMING_STOMP: u32 = 3;
 pub(crate) const LEY_LINE_SPROUTS: u32 = 374364;
 const LEY_LINE_SPROUTS_MISSILE: u32 = 374362;
 const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
@@ -114,6 +123,9 @@ impl super::boss_ai::BossScript for Leymor {
     fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
         match event_id {
             EVENT_INFUSED_STRIKE => ctx.do_cast_victim(INFUSED_STRIKE),
+            EVENT_ERUPTING_FISSURE => ctx.do_cast_victim(ERUPTING_FISSURE),
+            EVENT_EXPLOSIVE_BRAND => ctx.do_cast_self(EXPLOSIVE_BRAND),
+            EVENT_CONSUMING_STOMP => ctx.do_cast_self(CONSUMING_STOMP),
             EVENT_LEY_LINE_SPROUTS => ctx.do_cast_self(LEY_LINE_SPROUTS),
             _ => return,
         }
@@ -140,10 +152,19 @@ impl super::CreatureAi for Leymor {
         ctx.do_cast_self(STASIS);
     }
 
+    fn channel_finished(&mut self, ctx: &mut super::Ctx, spell_id: u32) {
+        if spell_id == CONSUMING_STOMP {
+            ctx.do_cast_at(None, CONSUMING_STOMP_DAMAGE, true);
+        }
+    }
+
     fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         self.boss.events.schedule(EVENT_LEY_LINE_SPROUTS, 3_000);
         self.boss.events.schedule(EVENT_INFUSED_STRIKE, 10_000);
+        self.boss.events.schedule(EVENT_ERUPTING_FISSURE, 20_000);
+        self.boss.events.schedule(EVENT_EXPLOSIVE_BRAND, 31_000);
+        self.boss.events.schedule(EVENT_CONSUMING_STOMP, 45_000);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
@@ -183,10 +204,19 @@ impl super::boss_ai::BossScript for Telash {
     }
 
     fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
-        if event_id == EVENT_FROST_BOMB {
-            ctx.do_cast_self(FROST_BOMB_CAST);
+        match event_id {
+            EVENT_FROST_BOMB => {
+                ctx.do_cast_self(FROST_BOMB_CAST);
+                self.boss.events.reschedule(EVENT_ICY_DEVASTATOR, 10_800);
+            }
+            EVENT_ICY_DEVASTATOR => {
+                if let Some(target) = ctx.select_target_random(75.0, true) {
+                    ctx.do_cast_at(Some(target), ICY_DEVASTATOR, false);
+                }
+            }
+            _ => {}
         }
-        // TC starts with one Frost; the post-phase action/counters remain unported.
+        // TC starts with one Frost/Icy each; post-phase action/counters remain unported.
     }
 }
 
@@ -212,6 +242,7 @@ impl super::CreatureAi for Telash {
         self.boss.just_engaged_with(ctx);
         ctx.do_cast(ICE_POWER_PERIODIC);
         self.boss.events.schedule(EVENT_FROST_BOMB, 3_500);
+        self.boss.events.schedule(EVENT_ICY_DEVASTATOR, 14_500);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
@@ -283,6 +314,21 @@ fn read_ice_power_delta(world: &World, target: Entity) -> Option<(PowerType, f32
     let primary = world.get::<PowerPools>(target)?.order.first().copied()?;
     let current = crate::spell_cast::powers::power_value(world, target, primary)?.0;
     Some((primary, energy + ICE_POWER_PER_TICK - current))
+}
+
+/// TC374567 effect0/APPLY_AURA OnEffectHit: one child, retaining native parent auras.
+pub(crate) fn cast_brand_child(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    crate::spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        EXPLOSIVE_BRAND_CHILD,
+        None,
+        ctx.depth + 1,
+    );
 }
 
 /// TC a352b1fa374364 effect0 OnEffectHit: two native missiles per authored origin.

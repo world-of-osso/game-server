@@ -49,7 +49,19 @@ Explicit Lead authorization normalizes each per-map completion hook to one invoc
 
 Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each grant a winning participant one bonus-kill equivalent, then grant every eligible participant one equivalent. Each call rounds separately using `ceil(min(instance PVPDifficulty maximum,80) ×1.55)`:30–39 winners receive61+61=122; other present participants receive61. Inactive/minimum-XP-level checks remain; dead accepted participants receive the team award, departed/unaccepted players do not. Null-victim team awards do not apply kill-only group/aura/rest modifiers and do not emit type35 honorable-kill criteria. Terminal resource-tick replay must not duplicate rewards; both wallet and separate lifetime XP persist.
 
-This checkpoint's OnEnd callbacks cover Arathi, Eye and the Alterac survivor contract below. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+This checkpoint's OnEnd callbacks cover Arathi, Eye, current Warsong and the Alterac survivor contract below. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+
+## Warsong / Twin Peaks capture Honor
+
+Pinned WSG557 and TwinPeaks526 unconditionally grant current Warsong2106/TwinPeaks726 teams two bonus-kill equivalents on each actual flag capture, including the winning capture. Round the whole two-kill grant once using the retained source bracket: WSG first10–19 gives59; Twin Peaks first30–39 gives121. Credit the assigned accepted team still in the copy through the existing positive-Honor eligibility and durable XP/wallet mirror. Pickup, return, possession and repeated objective updates grant nothing. Consume the source capture PvpStat receipt once; do not infer captures from scores or introduce another timer/queue.
+
+Twin Peaks has no additional authored Honor OnEnd producer in the pinned script; no generic win/end award is substituted. Current Warsong's separate final-capture and end amounts follow the exact type-ID source chain below, not a guessed calendar.
+
+## Modern Warsong final-capture / end Honor
+
+Current Warsong template1014/map2106 uses the pinned TC normal branch: winning third capture grants a separate flat20; OnEnd once grants the winner one bonus-kill equivalent, then every eligible participant two equivalents, each whole grant rounded separately. This is in addition to each actual two-equivalent capture. At source10–19, three winning captures and one opposing capture produce winner177+20+30+59=286 and opponent59+59=118. A capture-free timeout draw grants only59 to each team, without a winner bonus or flat20. Replay cannot duplicate any component; persist separate lifetime XP and the capped wallet mirror.
+
+Authority is literal pinned TC behavior, not a Retail-calendar claim: `Battleground::GetTypeID`1495–1497 returns the template ID; `SharedDefines.h`6778–6779/6856–6858 distinguishes legacy WS2/AB3 from modern1014/1018. `BattlegroundMgr::BGTypeToWeekendHolidayId`674–689 lists only the legacy IDs and returns HOLIDAY_NONE for1014/1018; `IsBGWeekend`707–709 calls `IsHolidayActive`, whose `GameEventMgr.cpp`1620–1631 explicitly returns false for HOLIDAY_NONE. No modern→legacy alias or unknown-calendar fallback is added. Current Arathi1018 normal threshold160 is likewise source-resolved but its callback remains a separate slice. Eye7 still maps a real holiday and retains BG_WEEKEND_AUTHORITY; no season/calendar service is invented here.
 
 ## Alterac captain/general Honor
 

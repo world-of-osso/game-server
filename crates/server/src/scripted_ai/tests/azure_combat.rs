@@ -72,6 +72,150 @@ fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() 
 }
 
 #[test]
+fn azure_leymor_erupting_fissure_starts_at_twenty_seconds_with_native_cast_time() {
+    const FISSURE: u32 = 386660;
+    let (mut h, leymor) = wake_leymor();
+    let player = h.player();
+    let map = *h.app.world().get::<InMap>(leymor).unwrap();
+    super::azure_sprouts::prepare_sprout_templates(&mut h);
+    super::azure_sprouts::install_azure_ground(&mut h, map);
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(leymor).insert(visibility);
+    h.engage(leymor);
+    h.advance(19.8);
+    assert_eq!(
+        h.creatures_of(190509).len(),
+        14,
+        "ordinary native Sprouts prerequisite"
+    );
+    assert!(h.app.world().get::<Health>(player).unwrap().current > 0.0);
+    assert_eq!(
+        (Ctx {
+            world: h.app.world_mut(),
+            me: leymor,
+        })
+        .victim(),
+        Some(player),
+        "ordinary source clock retains its actual living victim"
+    );
+    assert_eq!(h.casts(0, leymor, FISSURE), 0);
+    h.advance(0.3);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(leymor)
+        .expect("source20s Erupting Fissure starts its real native cast");
+    assert_eq!(cast.spell_id, FISSURE);
+    assert_eq!(cast.target, player.to_bits());
+    let remaining = cast.duration - cast.elapsed;
+    h.advance(remaining + 0.2);
+    assert_eq!(h.casts(0, leymor, FISSURE), 1);
+    assert!(h.inbox(0).spell_gos.iter().any(|go| {
+        go.caster == leymor.to_bits()
+            && go.spell_id == FISSURE
+            && go.target == Some(player.to_bits())
+    }));
+}
+
+pub(super) fn prepare_leymor_for_later_clock() -> (Harness, Entity) {
+    let (mut h, leymor) = wake_leymor();
+    let map = *h.app.world().get::<InMap>(leymor).unwrap();
+    super::azure_sprouts::prepare_sprout_templates(&mut h);
+    super::azure_sprouts::install_azure_ground(&mut h, map);
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(leymor).insert(visibility);
+    h.engage(leymor);
+    h.advance(6.0);
+    assert_eq!(
+        h.creatures_of(190509).len(),
+        14,
+        "ordinary native Sprouts prerequisite"
+    );
+    (h, leymor)
+}
+
+pub(super) fn assert_first_fissure_and_living_victim(h: &mut Harness, leymor: Entity) {
+    assert_eq!(
+        h.casts(0, leymor, 386660),
+        1,
+        "earlier ordinary Fissure completed"
+    );
+    let player = h.player();
+    assert!(h.app.world().get::<Health>(player).unwrap().current > 0.0);
+    assert_eq!(
+        (Ctx {
+            world: h.app.world_mut(),
+            me: leymor,
+        })
+        .victim(),
+        Some(player),
+        "ordinary later clock retains its actual living victim"
+    );
+}
+
+pub(super) fn count_self_spell_gos(h: &Harness, caster: Entity, spell: u32) -> usize {
+    h.inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| {
+            go.caster == caster.to_bits()
+                && go.spell_id == spell
+                && go.target == Some(caster.to_bits())
+        })
+        .count()
+}
+
+#[test]
+fn azure_leymor_later_clock_brand_starts_at_thirty_one_and_applies_native_aura() {
+    const BRAND: u32 = 374567;
+    let (mut h, leymor) = prepare_leymor_for_later_clock();
+    h.advance(24.8);
+    assert_first_fissure_and_living_victim(&mut h, leymor);
+    assert_eq!(count_self_spell_gos(&h, leymor, BRAND), 0);
+    assert!(!h.has_aura(h.player(), BRAND));
+    h.advance(0.3);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(leymor)
+        .expect("source31s Explosive Brand starts its native cast");
+    assert_eq!(cast.spell_id, BRAND);
+    assert_eq!(cast.target, leymor.to_bits());
+    let remaining = cast.duration - cast.elapsed;
+    h.advance(remaining + 0.2);
+    assert_eq!(count_self_spell_gos(&h, leymor, BRAND), 1);
+    assert!(
+        h.has_aura(h.player(), BRAND),
+        "ordinary parent applies native Brand"
+    );
+}
+
+#[test]
+fn azure_leymor_later_clock_stomp_channels_at_forty_five_with_native_duration() {
+    const STOMP: u32 = 374720;
+    let (mut h, leymor) = prepare_leymor_for_later_clock();
+    h.advance(38.8);
+    assert_first_fissure_and_living_victim(&mut h, leymor);
+    assert_eq!(count_self_spell_gos(&h, leymor, STOMP), 0);
+    h.advance(0.3);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(leymor)
+        .expect("source45s Consuming Stomp starts its native channel");
+    assert_eq!(cast.spell_id, STOMP);
+    assert_eq!(cast.cast_type, shared::casting::CastType::Channel);
+    assert_eq!(cast.target, leymor.to_bits());
+    assert_eq!(count_self_spell_gos(&h, leymor, STOMP), 1);
+    let remaining = cast.duration - cast.elapsed;
+    h.advance(remaining + 0.2);
+    assert!(h.app.world().get::<CastState>(leymor).is_none());
+    assert_eq!(count_self_spell_gos(&h, leymor, STOMP), 1);
+}
+
+#[test]
 fn azure_leymor_sprouts_starts_at_three_seconds_with_native_cast_time() {
     const SPROUTS: u32 = 374364;
     let (mut h, leymor) = wake_leymor();

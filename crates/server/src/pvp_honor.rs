@@ -31,6 +31,10 @@ const AV_GENERAL_KILL_EQUIVALENTS: u32 = 4;
 const AV_TOWER_KILL_EQUIVALENTS: u32 = 3;
 // TC AV OnEnd755–790: accumulate two equivalents per controlled tower/living captain.
 const AV_SURVIVOR_KILL_EQUIVALENTS: u32 = 2;
+// TC WSG557 / TwinPeaks526: unconditional reward on actual flag capture.
+const FLAG_CAPTURE_KILL_EQUIVALENTS: u32 = 2;
+// TC WSG571: type1014 resolves HOLIDAY_NONE, so final-capture victory grants20.
+const WARSONG_CAPTURE_VICTORY_HONOR: u32 = 20;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -69,7 +73,8 @@ fn increment_and_save_lifetime_kills(world: &mut World, player: Entity) {
 }
 
 /// BG_END_BONUS_ONCE_PER_MATCH normalizes TC's per-player OnEnd placement.
-/// Arathi OnEnd574–585 / Eye OnEnd437–448: winner1, then everyone1.
+/// Arathi/Eye: winner1/everyone1; current WSG type1014: winner1/everyone2.
+/// TC BGTypeToWeekendHolidayId maps1014 to NONE; this is not a guessed calendar.
 pub(super) fn award_battleground_completion(
     world: &mut World,
     player: Entity,
@@ -77,14 +82,15 @@ pub(super) fn award_battleground_completion(
     bracket: shared::battleground::LevelBracket,
     won: bool,
 ) {
-    if !matches!(map_id, 2107 | 566) {
-        return; // Other per-map callbacks remain unimplemented, not generic rewards.
-    }
-    let bonus = calculate_bonus_honor(bracket, 1);
+    let (winner_kills, end_kills) = match map_id {
+        2106 => (1, 2), // Only current Warsong1014 is configured for this map.
+        2107 | 566 => (1, 1),
+        _ => return, // Other source hooks do not inherit a generic completion reward.
+    };
     if won {
-        award_battleground_honor(world, player, bonus);
+        award_battleground_honor(world, player, calculate_bonus_honor(bracket, winner_kills));
     }
-    award_battleground_honor(world, player, bonus);
+    award_battleground_honor(world, player, calculate_bonus_honor(bracket, end_kills));
 }
 
 fn calculate_bonus_honor(bracket: shared::battleground::LevelBracket, kills: u32) -> u32 {
@@ -132,6 +138,55 @@ pub(super) fn award_alterac_npc_honor(world: &mut World, match_id: u64, entry: u
         .bracket;
     let amount = calculate_bonus_honor(bracket, kills);
     award_match_team_honor(world, match_id, team, amount);
+}
+
+/// Consume an actual source capture receipt, not pickup/return or a generic score delta.
+pub(super) fn award_flag_capture_honor(
+    world: &mut World,
+    match_id: u64,
+    character: u64,
+    stat: u32,
+) {
+    let (team, amount) = {
+        let state = world.resource::<PvpServerState>();
+        let matched = &state.battleground_matches[&match_id];
+        let map = matched.map.expect("objective receipt has an active map");
+        if !matches!(map.map_id, 2106 | 726) {
+            return;
+        }
+        let flags = matched
+            .flags
+            .as_ref()
+            .expect("source flag map has flag battle");
+        if stat != flags.rules.capture_stat {
+            return;
+        }
+        let team = match (
+            matched.instance.team_a_players.contains(&character),
+            matched.instance.team_b_players.contains(&character),
+        ) {
+            (true, false) => BgTeam::A,
+            (false, true) => BgTeam::B,
+            _ => panic!("flag capturer must belong to exactly one assigned team"),
+        };
+        (
+            team,
+            calculate_bonus_honor(matched.instance.bracket, FLAG_CAPTURE_KILL_EQUIVALENTS),
+        )
+    };
+    award_match_team_honor(world, match_id, team, amount);
+    award_warsong_capture_victory(world, match_id, team);
+}
+
+fn award_warsong_capture_victory(world: &mut World, match_id: u64, team: BgTeam) {
+    let winning_capture = {
+        let state = world.resource::<PvpServerState>();
+        let instance = &state.battleground_matches[&match_id].instance;
+        instance.bg_id == 1014 && instance.phase == shared::battleground::BgPhase::Ended
+    };
+    if winning_capture {
+        award_match_team_honor(world, match_id, team, WARSONG_CAPTURE_VICTORY_HONOR);
+    }
 }
 
 /// Called only at an accepted NPC/player-death or objective terminal transition.
