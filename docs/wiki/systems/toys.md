@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source equipment/light/ocean/gift boundaries (2026-10-17)
+
+[Source155–159 matrix](../../toy-effects14-coverage.md#source155159-equipmentlightoceangift-boundaries-2026-10-17) preserves exact equipment/gift procedural fields, paired light behavior and the Burning Blade banner presentation gap. Hyper-Compressed Ocean152121 remains unpublished; its actual source body is an invisible stalker, not proof of a fishable pool. No generic substitutes, new admissions or native acceptance.
+
 ## Azerite real-ground recovery and interaction gaps (2026-10-17)
 
 Already-admitted Azerite151 now has actual Northshire ground/learning and ordinary600s item recovery/reuse acceptance, without new policy. [Exact four-test/check proof and150–154 matrix](../../toy-effects14-coverage.md#source150154-azerite-real-ground-recovery-and-interaction-gaps-2026-10-17) separate server events from native skyward presentation and retain matching-game, rally, jukebox and secret-fish interaction gaps. No database publication.
