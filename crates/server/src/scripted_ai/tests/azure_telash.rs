@@ -31,6 +31,19 @@ fn azure_telash_appears_with_sixty_native_energy() {
 #[test]
 fn azure_telash_native_flag_stops_regen_without_changing_controlled_pools() {
     let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+    h.advance(0.1);
+    // Isolate baseline permission from the now-authentic scripted combat aura.
+    let removed = crate::auras::remove_auras(
+        h.app.world_mut(),
+        telash,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == ICE_POWER,
+    );
+    assert_eq!(
+        removed.len(),
+        1,
+        "remove only the actual engagement aura control"
+    );
     h.advance(1.0);
     assert_eq!(
         power_value(h.app.world(), telash, PowerType::Energy),
