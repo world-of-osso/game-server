@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Export active installed CASC achievement DB2s, then import them into world.db.
+"""Import active installed achievement CSVs into world.db by named columns.
 
-Extract the four FDIDs with casc-local first. Never downloads anything. Uses the
-same WDC5 decoder as db2.py extract; .csv.import files are Godot translation
-metadata, not DB2 export recipes. Unknown-key zero-filled sections are reported
-by the decoder and excluded. The four tables are replaced in one transaction.
+Validate the active build and export receipt before replacing four tables in one
+transaction. Readable records follow the active exporter; encrypted gaps are not
+filled from historical builds. Raw decoding below serves frozen historical tests.
 """
 import argparse
 import csv
+import hashlib
+import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import casc_locale
@@ -79,8 +81,33 @@ def export_tables(directory):
     return tables
 
 
+def read_active_tables(directory, build):
+    receipt = json.loads((directory / 'receipt.json').read_text())
+    identity = receipt['identity']
+    if identity['build'] != build or identity['product'] != 'wow':
+        raise ValueError(f'{directory}: receipt identity does not match active wow {build}')
+    tables = {}
+    for name, (fdid, layout, _, columns) in TABLES.items():
+        source = directory / f'{name}.csv'
+        entry = receipt['tables'][name]
+        if entry['fdid'] != fdid or entry['layout'] != f'{layout:08X}':
+            raise ValueError(f'{name}: unsupported receipt FDID/layout')
+        if hashlib.sha256(source.read_bytes()).hexdigest() != entry['csv_sha256']:
+            raise ValueError(f'{name}: CSV SHA256 differs from active receipt')
+        with source.open(newline='', encoding='utf-8') as stream:
+            reader = csv.DictReader(stream)
+            rows = [[row[column] if column.endswith('_lang') else int(row[column])
+                     for column, _ in columns] for row in reader]
+        if len(rows) != entry['rows']:
+            raise ValueError(f'{name}: row count differs from active receipt')
+        tables[name] = (columns, rows)
+    print(json.dumps({'identity': identity, 'inputs': {
+        name: receipt['tables'][name] for name in TABLES}}))
+    return tables
+
+
 def import_tables(database, tables, build):
-    with sqlite3.connect(database) as db:
+    with closing(sqlite3.connect(database)) as db, db:
         db.execute("BEGIN IMMEDIATE")
         for name, (columns, rows) in tables.items():
             table = SQL_NAMES[name]
@@ -100,7 +127,7 @@ def main():
     build = read_active_build(ACTIVE_DB2, BUILD_INFO)
     if args.db2_dir.resolve().name != build:
         parser.error(f"requires active installed build {build}, got {args.db2_dir.resolve().name}")
-    import_tables(args.db, export_tables(args.db2_dir), build)
+    import_tables(args.db, read_active_tables(args.db2_dir, build), build)
 
 
 if __name__ == "__main__":

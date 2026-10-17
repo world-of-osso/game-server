@@ -44,6 +44,7 @@ mod casting_restriction;
 mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
+pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
@@ -128,6 +129,8 @@ mod guardian_tests;
 mod hit;
 #[cfg(test)]
 mod readiness_lifetime_tests;
+#[cfg(test)]
+mod summon_lifetime_tests;
 #[cfg(test)]
 mod touch_of_death_tests;
 #[cfg(test)]
@@ -271,6 +274,7 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<summon::SummonPropertiesStore>()
             .add_systems(Startup, summon::load_summon_properties_startup)
             .add_systems(Startup, powers::load_power_type_table_startup)
+            .add_systems(FixedPreUpdate, charge::release_finished)
             .add_systems(
                 Update,
                 (receive_cast_requests, receive_stop_requests).chain(),
@@ -284,6 +288,7 @@ impl Plugin for SpellCastPlugin {
                     runes::regenerate_runes,
                     sync_charge_recovery,
                     advance_casts.after(crate::networking::process_player_inputs),
+                    charge::advance,
                     missiles::resolve_due_hits,
                     start_queued_casts,
                     powers::sync_unit_powers,
@@ -876,6 +881,7 @@ fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -
         || cosmetic::is_visual_only(spell)
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
+        || scripts::on_cast_effect(spell.id, effect.index).is_some()
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
@@ -2370,6 +2376,9 @@ fn resolve_effects(
             dest: *dest,
             chain_multiplier: 1.0,
         };
+        if let Some(hook) = scripts::on_cast_effect(spell.id, effect.index) {
+            hook(world, &ctx, effect);
+        }
         if effect.effect == effects::EFFECT_PERSISTENT_AREA_AURA {
             area_aura::create(world, &ctx, effect);
             continue;
@@ -2702,6 +2711,21 @@ pub(crate) fn cast_triggered_with_effect0_amount(
     };
     effect.base_points = amount;
     launch_triggered_spell(world, caster, &spell, explicit, depth);
+}
+
+/// Full-mask triggered cast at an authored destination, retaining native selectors and flight.
+pub(crate) fn cast_triggered_at_destination(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    position: Vec3,
+    depth: u8,
+) {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    spell.cast_destination = Some(position.to_array());
+    launch_triggered_spell(world, caster, &spell, None, depth);
 }
 
 fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {

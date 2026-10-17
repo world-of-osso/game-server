@@ -410,7 +410,7 @@ fn load_player_terrain_area(world: &mut World, player: Entity) -> Option<(u32, u
     let position = *world.get::<shared::components::Position>(player)?;
     let map = *world.get::<InMap>(player)?;
     let area = world
-        .resource_mut::<crate::ground::GroundMap>()
+        .get_resource_mut::<crate::ground::GroundMap>()?
         .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))?;
     Some((area, map.map_id))
 }
@@ -901,20 +901,23 @@ fn personal_arena_rating_event(
     Some(CriteriaEvent::PersonalArenaRating { bracket, rating })
 }
 
-/// TC RewardHonor6755-6757: the validated world victim supplies race to every eligible recipient.
+/// TC RewardHonor6754-6757: actual victim identity for every eligible world-HK recipient.
 pub(crate) fn record_world_honorable_kill(world: &mut World, player: Entity, victim: Entity) {
-    let race = world
+    let victim = world
         .get::<Player>(victim)
-        .expect("validated world honor victim")
-        .race;
-    record_criteria_events(
-        world,
-        player,
-        &[
-            CriteriaEvent::EarnHonorableKill,
-            CriteriaEvent::HonorableKillRace(race),
-        ],
-    );
+        .expect("validated world honor victim");
+    let race = victim.race;
+    let class = victim.class;
+    let mut events = vec![
+        CriteriaEvent::EarnHonorableKill,
+        CriteriaEvent::HonorableKillRace(race),
+        CriteriaEvent::HonorableKillClass(class),
+    ];
+    // TC RewardHonor6756 reads this recipient's area, independently of the victim.
+    if let Some((area, _)) = load_player_terrain_area(world, player) {
+        events.push(CriteriaEvent::HonorableKillInArea(area));
+    }
+    record_criteria_events(world, player, &events);
 }
 
 pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {

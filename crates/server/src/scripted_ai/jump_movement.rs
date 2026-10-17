@@ -114,7 +114,10 @@ pub(crate) fn advance_jumps(world: &mut World) {
 
 fn update_jump_positions(world: &mut World, dt_ms: u32) -> Vec<(Entity, Option<u32>)> {
     let mut updates = Vec::new();
-    let mut jumps = world.query_filtered::<Jumpers, Without<DeathState>>();
+    let mut jumps = world.query_filtered::<Jumpers, (
+        Without<DeathState>,
+        Without<crate::spell_cast::charge::ChargeMovement>,
+    )>();
     for (entity, mut jump, mut position, rotation) in jumps.iter_mut(world) {
         if jump.elapsed_ms == jump.duration_ms {
             continue;
