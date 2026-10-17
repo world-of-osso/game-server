@@ -203,9 +203,15 @@ fn native_required_caster_aura_applies_to_ordinary_npc_casts() {
 }
 
 #[test]
-fn native_required_caster_aura_keeps_existing_full_triggered_bypass() {
+fn native_required_caster_aura_refuses_full_trigger_without_voidform() {
     let mut h = priest();
     assert!(!has_aura(h.app.world(), h.caster, VOIDFORM));
-    super::cast_triggered(h.app.world_mut(), h.caster, VOID_TORRENT, Some(h.npc), 0);
-    assert!(has_aura(h.app.world(), h.npc, VOID_TORRENT));
+    assert!(!super::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        VOID_TORRENT,
+        Some(h.npc),
+        0,
+    ));
+    assert!(!has_aura(h.app.world(), h.npc, VOID_TORRENT));
 }

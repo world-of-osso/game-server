@@ -1,4 +1,6 @@
 //! Native effect64 queues its child instead of resolving it inside the parent.
+use shared::protocol::CombatLogKind;
+
 use super::test_harness::*;
 use crate::auras::has_aura;
 
@@ -45,4 +47,24 @@ fn native_trigger64_zero_ms_child_is_not_reentrant_and_follows_parent_applicatio
     assert!(!has_aura(h.app.world(), caster, LUNAR_CHILD));
     h.advance(1);
     assert!(has_aura(h.app.world(), caster, LUNAR_CHILD));
+}
+
+#[test]
+fn native_trigger64_callbacks_dispatch_by_due_time_not_parent_call_order() {
+    let mut h = native_fixture();
+    let caster = h.npc;
+    for parent in [STACK_PARENT, LUNAR_PARENT] {
+        super::creature::creature_cast(h.app.world_mut(), caster, parent, Some(caster), false)
+            .unwrap();
+    }
+    h.advance(2);
+    let children: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::AuraApplied)
+        .filter_map(|event| event.spell_id)
+        .filter(|spell| [STACK_CHILD, LUNAR_CHILD].contains(spell))
+        .collect();
+    assert_eq!(children, [LUNAR_CHILD, STACK_CHILD]);
 }

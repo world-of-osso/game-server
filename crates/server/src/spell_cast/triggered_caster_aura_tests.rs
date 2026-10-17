@@ -1,5 +1,4 @@
-//! Excluded-caster portion of the native parent-chain REDfddf075c fixture.
-//! Required-caster integration remains blocked on aura application registration.
+//! Native parent/child caster aura identity; queued64 preserves producer visibility.
 use bevy::prelude::Entity;
 
 use super::test_harness::*;
@@ -41,6 +40,40 @@ fn cancel_aura(h: &mut Harness, target: Entity, spell: u32) {
         aura.spell_id == spell
     });
     assert!(!has_aura(h.app.world(), target, spell));
+}
+
+#[test]
+fn native_triggered_caster_required_ref_refuses_lunar_child_without_producer() {
+    let mut h = native_fixture();
+    let caster = h.npc;
+    ordinary_cast(&mut h, caster, LUNAR_PARENT, caster);
+    assert!(has_aura(h.app.world(), caster, LUNAR_PARENT));
+    assert!(!has_aura(h.app.world(), caster, LUNAR_PRODUCER));
+    assert!(!has_aura(h.app.world(), caster, LUNAR_CHILD));
+}
+
+#[test]
+fn native_triggered_caster_required_ref_accepts_actual_lunar_producer() {
+    let mut h = native_fixture();
+    let caster = h.npc;
+    ordinary_cast(&mut h, caster, LUNAR_PRODUCER, caster);
+    assert!(has_aura(h.app.world(), caster, LUNAR_PRODUCER));
+    assert!(has_aura(h.app.world(), caster, LUNAR_CHILD));
+}
+
+#[test]
+fn native_triggered_caster_required_ref_removal_and_foreign_recipient_do_not_qualify() {
+    let mut h = native_fixture();
+    let caster = h.npc;
+    ordinary_cast(&mut h, caster, LUNAR_PRODUCER, caster);
+    super::cancel_cast(h.app.world_mut(), caster);
+    cancel_aura(&mut h, caster, LUNAR_PRODUCER);
+    cancel_aura(&mut h, caster, LUNAR_CHILD);
+    let other = spawn_player(&mut h.app, 5, 2.0);
+    ordinary_cast(&mut h, other, LUNAR_PRODUCER, other);
+    assert!(has_aura(h.app.world(), other, LUNAR_PRODUCER));
+    ordinary_cast(&mut h, caster, LUNAR_PARENT, caster);
+    assert!(!has_aura(h.app.world(), caster, LUNAR_CHILD));
 }
 
 #[test]

@@ -1,3 +1,7 @@
+## 2026-10-16 — Native queued effect64 integration
+
+[Spell casting](systems/spell-casting.md#queued-effect64-and-required-caster-trigger-integration--2026-10-16): actual native0/1ms parent calls expose inline-child RED0pass/2fail11.81s. Native-delay FIFO callbacks now defer64 without clock edits or early aura activation; required-caster guard and exact retained positive/negative fixtures restored. GREEN/final gates pending;32/140, native64 costs/reagents and general launch-phase parity remain separate.
+
 ## 2026-10-16 — Triggered excluded-caster eligibility and required-ref blocker
 
 [Spell casting](systems/spell-casting.md#triggered-excluded-caster-aura-eligibility--2026-10-16): actual146481→146480/146543 RED retained byte-identically; shared exclusion predicate wired before triggered launch. Current merged77/0/0 in45.36s includes two new plus75 prior cases; workspace/all-target check198.441s/0warnings, fmt and independent read-only artifact/wiring/readability pass. Complete required-caster guard on separate branch fails four positive native chains. Subsequent five-way source qualification corrects the initial registration hypothesis: native64 queues children with0/1ms delay at launch, whereas Rust casts inline before parent publication. Pinned EventProcessor callbacks are non-reentrant; application/activation separation alone does not justify a new identity store. Retain failing fixtures/branch, no marker/pregrant/early activation or pending bypass; required field remains open.

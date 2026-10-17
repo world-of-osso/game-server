@@ -114,7 +114,8 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
         // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
         // missile's spell hits the unit target, like TRIGGER_SPELL.
-        EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
+        EFFECT_TRIGGER_SPELL => super::queued_triggers::schedule,
+        EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_SEND_EVENT => send_game_event,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,

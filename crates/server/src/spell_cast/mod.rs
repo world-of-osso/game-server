@@ -264,6 +264,8 @@ pub(crate) mod toy_scripts;
 mod toy_weather;
 mod toy_wormhole;
 
+pub(crate) mod queued_triggers;
+
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
@@ -279,6 +281,7 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<teleport_positions::SpellTargetPositions>()
             .add_systems(Startup, teleport_positions::load_positions_startup)
             .init_resource::<missiles::PendingSpellHits>()
+            .init_resource::<queued_triggers::PendingTriggers>()
             .init_resource::<guardian::GuardianSpells>()
             .add_systems(Startup, guardian::load_startup)
             .init_resource::<summon::SummonPropertiesStore>()
@@ -299,6 +302,7 @@ impl Plugin for SpellCastPlugin {
                     advance_casts.after(crate::networking::process_player_inputs),
                     missiles::resolve_due_hits,
                     start_queued_casts,
+                    queued_triggers::resolve_due,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
                     assisted_costs::publish,
@@ -2762,10 +2766,9 @@ fn launch_triggered_spell(
         warn!("Triggered spell {} skipped: {failure:?}", spell.id);
         return false;
     }
-    // Full-trigger flags do not bypass aura metadata. Required caster identity
-    // awaits source-compatible parent aura application registration; exclusions
-    // and explicit target checks consume the existing active identities here.
-    let aura_eligibility = aura_spell_restrictions::check_caster_exclusion(world, caster, spell)
+    // Full-trigger flags do not bypass aura metadata. Effect64 is queued so
+    // a native producer finishes before its dependent child's admission.
+    let aura_eligibility = aura_spell_restrictions::check_caster(world, caster, spell)
         .and_then(|()| aura_spell_restrictions::check_target(world, explicit, spell));
     if let Err(failure) = aura_eligibility {
         warn!("Triggered spell {} skipped: {failure:?}", spell.id);
