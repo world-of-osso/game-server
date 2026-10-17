@@ -5,14 +5,13 @@ const ARCANE_POWER: u32 = 374736;
 const SPROUT: u32 = 190509;
 
 #[test]
-#[ignore = "requires authentic native Azure Sprouts and imported world.db"]
 fn azure_leymor_sprout_death_removes_one_owner_stack_once_until_final_aura_removal() {
     let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     assert_eq!(
         crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
         14
     );
-    let original_caster = h
+    let original_aura = h
         .app
         .world()
         .get::<crate::auras::ActiveAuras>(leymor)
@@ -20,7 +19,8 @@ fn azure_leymor_sprout_death_removes_one_owner_stack_once_until_final_aura_remov
         .iter()
         .find(|aura| aura.spell_id == ARCANE_POWER)
         .unwrap()
-        .caster;
+        .clone();
+    let original_caster = original_aura.caster;
     let mut children = h.creatures_of(SPROUT);
     assert_eq!(children.len(), 14);
     assert!(children.contains(&original_caster));
@@ -53,6 +53,28 @@ fn azure_leymor_sprout_death_removes_one_owner_stack_once_until_final_aura_remov
             assert_eq!(powers.len(), 1);
             assert_eq!(u32::from(powers[0].stacks), remaining);
             assert_eq!(powers[0].caster, Some(original_caster.to_bits()));
+            let aura = h
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(leymor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == ARCANE_POWER)
+                .unwrap();
+            assert_eq!(aura.duration_ms, original_aura.duration_ms);
+            assert_eq!(aura.expires_at, original_aura.expires_at);
+            assert_eq!(aura.charges, original_aura.charges);
+            assert_eq!(
+                aura.effects
+                    .iter()
+                    .map(|effect| effect.amount)
+                    .collect::<Vec<_>>(),
+                original_aura
+                    .effects
+                    .iter()
+                    .map(|effect| effect.amount)
+                    .collect::<Vec<_>>()
+            );
         }
         crate::combat::kill_unit(h.app.world_mut(), player, child);
         h.advance(0.1);
