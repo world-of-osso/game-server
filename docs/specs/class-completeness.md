@@ -4,7 +4,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
-- [x] Triggered casts refuse an existing active native `ExcludeCasterAuraSpell` on the actual caster, sharing the ordinary exclusion predicate. Native146481→146480 excludes146543 supplied by an ordinary self cast; removal and foreign-recipient controls preserve the child. Triggered required-caster refs remain open until parent aura application registration is source-compatible; no pre-granted markers, early effect activation or requirement bypass may substitute for that lifecycle.
+- [x] Triggered casts refuse an existing active native `ExcludeCasterAuraSpell` on the actual caster, sharing the ordinary exclusion predicate. Native146481→146480 excludes146543 supplied by an ordinary self cast; removal and foreign-recipient controls preserve the child. Triggered required-caster refs remain open until source-compatible queued effect64 dispatch lets the parent finish before its dependent child; no pre-granted markers, early effect activation or requirement bypass may substitute for that ordering.
 
 - [x] Triggered casts with an explicit unit still enforce the implemented target aura-spell/type restrictions before child launch. Native full-trigger flags do not suppress TARGET_AURASTATE; relation bypass is separate. Native412677→412680 must create the180-second child once, not refresh it while its excluded target aura remains, and resume after removal without borrowing another unit's aura. Caster-trigger requirements, missing explicit/auto-self resolution, other implicit targets and full flag compatibility remain separate.
 
