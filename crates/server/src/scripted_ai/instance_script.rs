@@ -58,6 +58,8 @@ pub struct InstanceScript {
     pub boss_creatures: Vec<(u32, u32)>,
     /// `OnlyOnceAreaTriggerScript` success state; discarded when this copy unloads.
     pub(crate) handled_area_triggers: HashSet<u32>,
+    /// Instance script GetData/SetData state; neither boss saves nor actor resets own it.
+    pub(crate) data: HashMap<u32, u32>,
 }
 
 impl InstanceScript {
@@ -105,6 +107,7 @@ fn compatibility_catalog(map_id: u32) -> InstanceScript {
         bosses: Vec::new(),
         boss_creatures: Vec::new(),
         handled_area_triggers: HashSet::new(),
+        data: HashMap::new(),
     };
     for row in include_str!("encounter_compat.csv")
         .lines()
@@ -256,6 +259,29 @@ fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript>
         .get_resource_mut::<InstanceScripts>()
         .map(Mut::into_inner)
         .and_then(|scripts| scripts.0.get_mut(&map))
+}
+
+/// `InstanceScript::GetData`: unassigned source keys read zero.
+pub(super) fn get_data(world: &mut World, map: InMap, key: u32) -> u32 {
+    instance_script(world, map)
+        .and_then(|script| script.data.get(&key).copied())
+        .unwrap_or(0)
+}
+
+/// `InstanceScript::SetData`: copy-lifetime custom state, deliberately not saved to DB.
+pub(super) fn set_data(world: &mut World, map: InMap, key: u32, value: u32) {
+    if let Some(script) = instance_script(world, map) {
+        script.data.insert(key, value);
+    }
+}
+
+/// `InstanceScript::OnCreatureGroupDepleted`.
+pub(crate) fn creature_group_depleted(
+    world: &mut World,
+    map: InMap,
+    leader_ids: &crate::zones::CreatureStringIds,
+) {
+    super::azure_vault::finish_leymor_intro(world, map, leader_ids);
 }
 
 /// Runtime slot of an encounter identity, independent of source ordinals/DB2 bits.

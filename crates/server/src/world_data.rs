@@ -202,7 +202,7 @@ pub struct WorldData {
     pub addons: HashMap<u32, CreatureAddon>,
     /// `creature_template_addon` keyed by template entry.
     pub template_addons: HashMap<u32, CreatureAddon>,
-    /// `creature_formations` keyed by member guid (leaders' own rows omitted).
+    /// `creature_formations` keyed by member guid, including authored leader rows.
     pub formations: HashMap<u32, FormationInfo>,
     /// `content_creature_equip_template` keyed by entry, then ID (ascending, as
     /// ObjectMgr's `_equipmentInfoStore`).
@@ -988,7 +988,7 @@ fn load_formations(conn: &Connection) -> HashMap<u32, FormationInfo> {
             // (CreatureGroup::AddMember), so groups without one never move.
             "SELECT leaderGUID, memberGUID, dist, angle, groupAI
              FROM content_creature_formations member
-             WHERE leaderGUID <> memberGUID AND EXISTS (
+             WHERE EXISTS (
                  SELECT 1 FROM content_creature_formations leader
                  WHERE leader.memberGUID = member.leaderGUID
                    AND leader.leaderGUID = member.leaderGUID
