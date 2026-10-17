@@ -1,6 +1,6 @@
 ## 2026-10-16 — Eligible victim race53
 
-[Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Full ten-race GREEN and gates pending.
+[Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Native/account GREEN3/3 proves both full ten-race grants and group/reopened date. Census5529/1841 adds246/1005; integration gates pending.
 
 ## 2026-10-16 — Same-species pet damage370
 
