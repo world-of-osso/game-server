@@ -1397,6 +1397,37 @@ fn isle_channel_source_demolition_breaches_gate_and_releases_keep_banner() {
             .world_states
             .contains(&(4347, 1))
     );
+    assert_player_completion_honor(&entered, 0, 0);
+    let (commander, health) = find_alterac_source_npc(&mut entered.h, entered.copy, 34922);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        commander,
+        health + 1.0,
+    );
+    entered.h.receive_pvp_updates(5);
+    assert_eq!(battleground(&entered.h, actor).phase, BgPhase::Ended);
+    // TC OnUnitKilled pays a literal500, not a bracket-scaled kill equivalent.
+    assert_player_completion_honor(&entered, 500, 0);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        commander,
+        health + 1.0,
+    );
+    entered.h.receive_pvp_updates(5);
+    assert_player_completion_honor(&entered, 500, 0);
+    let world = entered.h.app.world();
+    let character = world.get::<ClientId>(actor.player).unwrap().0;
+    let database = world.resource::<crate::persistence::GameDatabase>();
+    assert_eq!(
+        crate::persistence::load_currencies(&database.db, character).get(1792),
+        500
+    );
+    assert_eq!(
+        crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+        500
+    );
 }
 
 #[test]
@@ -2283,28 +2314,32 @@ fn node_match(template: BgTemplate) {
     h.advance(120);
     if template.map_id == 2107 {
         // Source fixture enters at10: its PVPDifficulty maximum19 gives30 per bonus.
-        for (who, team) in entered.players.iter().zip(&entered.teams) {
-            let expected = if *team == BgTeam::A { 60 } else { 30 };
-            let world = h.app.world();
-            assert_eq!(
-                world
-                    .get::<crate::currency::PlayerCurrencies>(who.player)
-                    .unwrap()
-                    .0
-                    .get(1792),
-                expected
-            );
-            let progress = &world
-                .get::<crate::pvp::PlayerPvpState>(who.player)
-                .unwrap()
-                .progress;
-            assert_eq!(
-                (progress.honor, progress.lifetime_honor_xp),
-                (expected, u64::from(expected))
-            );
-        }
+        assert_player_completion_honor(&entered, 60, 30);
     }
     win_leave_and_return(&mut entered, 1500);
+}
+
+fn assert_player_completion_honor(entered: &EnteredMatch, winner: u32, other: u32) {
+    let world = entered.h.app.world();
+    for (who, team) in entered.players.iter().zip(&entered.teams) {
+        let expected = if *team == BgTeam::A { winner } else { other };
+        assert_eq!(
+            world
+                .get::<crate::currency::PlayerCurrencies>(who.player)
+                .unwrap()
+                .0
+                .get(1792),
+            expected
+        );
+        let progress = &world
+            .get::<crate::pvp::PlayerPvpState>(who.player)
+            .unwrap()
+            .progress;
+        assert_eq!(
+            (progress.honor, progress.lifetime_honor_xp),
+            (expected, u64::from(expected))
+        );
+    }
 }
 
 #[test]
@@ -3064,5 +3099,7 @@ fn eye_of_the_storm_channel_towers_flag_drop_victory_and_origin_return() {
     assert!(battleground(h, carrier).world_states.contains(&(8863, 1)));
 
     h.advance(300);
+    // Source fixture enters at20: maximum29 gives45 per bonus, including the dead carrier.
+    assert_player_completion_honor(&entered, 90, 45);
     win_leave_and_return(&mut entered, 1500);
 }

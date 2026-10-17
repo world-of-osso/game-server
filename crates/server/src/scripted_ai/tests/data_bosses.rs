@@ -11,6 +11,8 @@ mod azure_frost_bomb;
 mod azure_intro;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
+#[path = "azure_telash.rs"]
+mod azure_telash;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "gargolmar.rs"]
