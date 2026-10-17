@@ -61,6 +61,9 @@
 ## 2026-10-16 — Native aura restrictions metadata loader
 
 [SpellInfo](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16): dropped metadata/schema RED0/4→GREEN4/0/0, retaining twelve native state/spell/type IDs through the production store. Difficulty0, sparse absence, orphan and missing-source boundaries covered; source publication precedes deployment. Merged39 native controls pass11.45s after owned-slot maintained import and exact10675-row equality; fmt/readability and workspace/all-target check159.051s/0warnings pass. State production/admission and canonical publication remain open.
+## 2026-10-17 — Launch Rocket setup and launch
+
+[Bounded75](../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17): exact293/effect508/aura294, existing charged direct-damage path. Unsupported75 RED3→GREEN4;1777/2829 rows/1015 graphs. Authored owned-team/wild-PvP27 and both strict native skins pass setup/launch win, six inspected fullHD originals/two framed models throughout. Final lib122/check55.43s/no warnings/bothfmt pass; wild-PvP27 and unchanged UI12 scopes retained. Initial duplicate caller `--locked` failed before compilation; corrected check passed, both attempts logged. No generic object-sharing/timing/VFX claim.
 ## 2026-10-17 — Guild effect source authority
 
 [Mobile/resurrection audit](systems/guild-perks.md#mobile-and-resurrection-authority-audit--2026-10-17): existing authenticated faction1168 disproves the missing-reputation-provider assumption. Retrieved and pinned contemporary Mobile and historical resurrection fork candidates; neither establishes Mainline cast/use, resurrection qualification or ghost-stacking policy. No production behavior or effect completion claimed.
