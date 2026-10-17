@@ -32,7 +32,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(false);
         }
         match effect.property {
-            22 | 116 | 157 | 158 | 159 | 177 => Ok(true),
+            22 | 116 | 157 | 158 | 159 | 177 | 194 => Ok(true),
             117 => {
                 let lock = &mut self.battle.pet_mut(caster).lockouts[(p[0] - 1) as usize];
                 *lock = (*lock).max(p[1] as u32);
