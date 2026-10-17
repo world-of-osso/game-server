@@ -10,6 +10,8 @@ mod bashiok;
 mod flute;
 #[path = "toys_force_forward_tests.rs"]
 mod force_forward;
+#[path = "toys_gnoll_barrel_tests.rs"]
+mod gnoll_barrel;
 #[path = "toys_group_inheritance_tests.rs"]
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
