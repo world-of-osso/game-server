@@ -17,7 +17,18 @@ pub(super) fn check_caster(
     if required != 0 && !crate::auras::has_aura(world, caster, required) {
         return Err(CastFailure::CasterAuraState);
     }
-    let excluded = restrictions.exclude_caster_aura_spell;
+    check_caster_exclusion(world, caster, spell)
+}
+
+pub(super) fn check_caster_exclusion(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    let excluded = spell
+        .aura_restrictions
+        .as_deref()
+        .map_or(0, |restrictions| restrictions.exclude_caster_aura_spell);
     if excluded != 0 && crate::auras::has_aura(world, caster, excluded) {
         return Err(CastFailure::CasterAuraState);
     }

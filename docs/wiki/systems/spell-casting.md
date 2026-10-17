@@ -2,6 +2,16 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Triggered excluded-caster aura eligibility — 2026-10-16
+
+Triggered launch consumes active `ExcludeCasterAuraSpell` through a predicate shared with ordinary `check_caster`, before the existing explicit-target checker. Full-mask source flags do not bypass caster references (`Spell.cpp:5873–5889`, `SpellDefines.h:293–302`). Native146481 Fissure Shock triggers146480 Dark Ascendancy, which excludes146543 on its caster. Real ordinary self casts supply that identity; target-only identity and actual removal permit the child. Exact negative/positive fixtures are retained from fddf075c's genuine excluded-caster RED and matching pass; no unchanged RED rerun. GREEN/final gates pending. Receipts `data/class-completeness6-2026-10-12/triggered-excluded-caster-aura-{goal,proof-ledger}.json` and `triggered-caster-aura-source.json`.
+
+### Required-caster trigger integration remains blocked
+
+Applying the complete caster checker on branch `class-triggered-caster-aura` (69ab93ab/7c54719d) passes negative identity checks but fails four positive native chains:298992→181448 and three412677→412680 controls (76pass/4fail). This branch is **not landable**. The runtime batches parent aura masks, launches children, then publishes parent auras. Source creates/registers the parent's application before later trigger effects (`Spell.cpp:3250`, `SpellEffects.cpp:1114–1128`) while activation is separate (`Spell.cpp:3025–3036`). Required identity therefore exposes an application-registration ordering gap, not a fixture permission problem. Do not weaken those positive fixtures, pre-grant markers, globally activate parent effects early or bypass pending requirements. The blocked branch retains those tests/proofs; this independent exclusion slice does not certify required-trigger parity or current-resolution parent identity.
+
+No native rows, clock/RNG/resource budgets, caster-type/state/health logic or whole-spell/transform gameplay changed. None auto-self, implicit/area targets and full flag compatibility remain separate.
+
 ## Triggered explicit-target aura eligibility — 2026-10-16
 
 The source `TRIGGERED_FULL_MASK=0x0007FFFF` excludes both IGNORE_TARGET_CHECK0x00100000 and IGNORE_CASTER_AURASTATE0x00200000 (`SpellDefines.h:293–302`). Even IGNORE_TARGET_CHECK only overrides BAD_TARGETS, not TARGET_AURASTATE (`Spell.cpp:3488–3492`). Earlier bypass controls document previous server behavior, not source compatibility.
