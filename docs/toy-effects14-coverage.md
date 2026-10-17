@@ -1,5 +1,18 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source240–244: pending Dominated helm and coin/launch/linked/covenant gaps (2026-10-17)
+
+240 Helm of the Dominated184223/344795 uses existing175221 with authentic92410–92418 choices. Source self transform56/misc8 lasts600000ms and item-1 inherits3600000ms spell recovery. Test/spec c8feec2e adds this exact nine-display pool to the actual learning/ordinary-expiry/restoration/health/recovery fixture, now eight disguise IDs. Disguise/Oomgut tests and package check remain pending under the single capacity-gated native job; no passing result or new runtime/data/native admission is implied.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|241 Ancient Elethium Coin184292/345053 | Selected-target25 script3 with60000ms item recovery overriding1000ms spell recovery. Source target coin-toss action is unproved; no invented damage/death effect from “as good as dead,” no copied self-toss script or silent no-op. |
+|242 Borr-Geth's Fiery Brimstone184312/345154 | Self max-health-percent damage165/base10 plus knockback98/base400/misc1/0,1200000ms item recovery and RequiredAreasID7354. Advertised Maw-only self-launch/flame pillar and health sacrifice remain unproved together; source group ID is retained without inventing a stricter/looser geographic gate or replacing launch with art. |
+|243 Battlecry of Krexus184318/345256 | Linked-summon aura428/300000ms triggers345257; child has permanent target47 summon175442/properties64 plus self dummy4. Existing runtime175442/display99668 is authentic but does not prove the child's dummy action or root-linked summon/cleanup/presentation. Inherited3600000ms recovery retained; no generic ghost prop or child payload discard. |
+|244 Kyrian Hearthstone184353/345393 | Source10s homebind252 also explicitly advertises Kyrian pledge eligibility. Actual eligibility/learned-use/shared-charge/native acceptance remains source-specific and unproved; no automatic certificate from the earlier ten hearthstones or invented pledge gate. |
+
+`rows240-244-{readonly-source,action-source}.json` preserves exact70391 roots, reachable child, casts/durations/recovery and runtime model pools. `helm240-proof-ledger.json` records the pending acceptance, not metadata closure. Pinned `SpellAuraEffects.cpp` names428 linked-summon. No source data/canonical mutation, new native result, generic script admission or repeated unchanged gate;149865 Tea Set stays lead-required.
+
 ## Source235–239: advice/riding/sentry/atonement boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |

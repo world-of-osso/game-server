@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Dominated helm and coin/launch/linked/covenant boundaries (2026-10-17)
+
+[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17) adds240 test/spec c8feec2e for existing175221/nine-display actual learning/ten-minute restoration/inherited recovery; tests/check remain pending under the capacity-gated job. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
+
 ## Source advice/riding/sentry/atonement boundaries (2026-10-17)
 
 [Source235–239 matrix](../../toy-effects14-coverage.md#source235239-adviceridingsentryatonement-boundaries-2026-10-17) retains minute-period dummy advice with no named child, wheelbarrow riding/eligibility, unwanted-entity warning and allied atonement gaps. Three authentic TDB actors exist but are absent from runtime content; Racer's VehicleId0 must not be replaced with an invented vehicle. No generic cosmetic/actor admission, new runtime/data write or positive simulation/native proof.
