@@ -68,6 +68,7 @@ pub fn supported_property(property: u32) -> bool {
             | 67
             | 75
             | 76
+            | 77
             | 96
             | 100
             | 131
@@ -249,6 +250,7 @@ fn validate_ability_graph(
                     | 68
                     | 75
                     | 76
+                    | 77
                     | 96
                     | 141
                     | 169
@@ -318,6 +320,13 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && effect.order == 1
                 && effect.aura == 0
                 && p == [100, 0, 0, 0, 0, 0]
+        }
+        // Lock-On marks the enemy for one round before its second-use blast.
+        77 => {
+            catalog.turns[&effect.turn].ability == 301
+                && effect.order == 1
+                && effect.aura == 300
+                && p == [45, 100, 1, 0, 0, 0]
         }
         // Launch Rocket's first use sets up294; its second use launches the rocket.
         75 => {
