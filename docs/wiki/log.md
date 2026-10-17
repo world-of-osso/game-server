@@ -4,7 +4,7 @@
 
 ## 2026-10-17 — Leymor native Sprouts destination boundary
 
-[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask implementation yields one ordinary native parent/fourteen owned children GREEN at8db5f60f on active70448/a0ccc53b. First28-child fixture manually stimulated a second parent; ordinary SpellGo witness corrects this without production changes. Lifecycle/full native70448 acceptance remain open.
+[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask implementation yields one ordinary native parent/fourteen owned children GREEN at8db5f60f on active70448/a0ccc53b. First28-child fixture manually stimulated a second parent; ordinary SpellGo witness corrects this without production changes. Affected17/0failed/1ignored TelashRED, scoped servercheck/fmt and bounded independent source/artifact/readability inspection pass at8ca93220. Lifecycle/full native70448 acceptance remain open.
 
 ## 2026-10-16 — Eligible victim race53
 
