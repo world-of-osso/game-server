@@ -125,6 +125,8 @@ pub mod effects;
 #[cfg(test)]
 mod excluded_aura_spell_tests;
 #[cfg(test)]
+mod excluded_caster_type_tests;
+#[cfg(test)]
 mod fount_strength_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
