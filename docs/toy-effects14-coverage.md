@@ -1,5 +1,20 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source150–154: Azerite real-ground recovery and interaction gaps (2026-10-17)
+
+151 Azerite Firework Launcher166877/290627 was already admitted by the audited one-shot caster-kit policy and covered by the three-ID source18 flat-ground fixture. New test-only acceptance at79a93ee7 uses actual778027 terrain/Northshire9: real bag learning and journal use, one cast event, source600000ms item recovery, immediate and near599s refusal without another cast, then reuse after ordinary50ms-frame passage of the original deadline. Exactly two cast events, unchanged health/body/position and no root aura/summon are asserted. No clock/cooldown reset, policy change or fabricated RED.
+
+The new case plus existing caster-kit source/drift and90s Roar controls pass4/4 zero ignored39.16s. Package/tests check32.03s and fmt/manual changed-line readability pass without warnings. `azerite151-proof-ledger.json` records exact commands/revision; contracts/check/fmt logs retain output. Source speed25 and skyward visual authoring are not native projectile/particle/audio, wire or wall-clock certification. No whole-Toy repeat or new database rows.
+
+| Source row | Exact retained interaction/action gap |
+|---|---|
+|150 Kojo's Master Matching Set166851/290618 | Dummy4 plus140→281580, whose two force-cast slots name279557/271379. Shell-game UI/state/action remains unestablished; a concentration aura or generic force-cast is not a completed matching game. |
+|152 Rallying War Banner166879/290636 | Script77 with source47/31. The planted-banner/nearby-troop rally action is not established by a different ordinary banner or no-op caster visual; no substitute or new admission. |
+|153 Meerah's Jukebox166880/288851 | Mixed140→288865 (dummy4),140→290701 (effect50/misc321012) and77. Object/music/nearby-entry behavior remains unresolved; neither a generic crate nor an ignored script establishes the advertised jukebox hit. |
+|154 Secret Fish Goggles167698/293671 | Periodic23/26000ms triggers293698→151583/property4602 Control0/flags65536. Published151583 is absent; source Secret Fish has faction0/npcflag0/empty AI/script. Secret-fish spawning/visibility/collection action remains unproved; no generic detect-invisibility aura or plain actor substitute. |
+
+Exact roots, child effects and inspected source fish metadata: `rows150-154-{readonly-source,action-source}.json`.151 adds only actual-source acceptance for existing behavior; the other named gaps remain open, without importer/runtime/canonical/native changes.
+
 ## Source145–149: procedural/control/script and tea-table boundaries (2026-10-17)
 
 | Source row | Exact retained source gap |
