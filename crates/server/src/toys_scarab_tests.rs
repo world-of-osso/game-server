@@ -143,6 +143,11 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
         let map = *world.get::<crate::maps::InMap>(caster).unwrap();
         let mut ground = world.resource_mut::<crate::ground::GroundMap>();
         for point in &points {
+            // SummonGuardian retains the first selected destination; only secondary
+            // GetRandomPoint placements project elevation onto the map.
+            if *point == destination {
+                continue;
+            }
             assert_source_guardian_scatter_point(*point, destination, map, &mut ground);
         }
     }
