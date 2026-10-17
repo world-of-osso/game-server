@@ -1,14 +1,14 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "4fbe6e59",
+  "validator_revision": "44dd5ba2",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1756,
+  "admitted_effect_rows": 1772,
   "effect_rows": 2829,
-  "admitted_abilities": 1006,
+  "admitted_abilities": 1012,
   "abilities": 1404,
   "properties": [
     {
-      "admitted_rows": 571,
+      "admitted_rows": 573,
       "handler": true,
       "property": 24,
       "rows": 945,
@@ -126,7 +126,6 @@
         1421,
         1458,
         1469,
-        1505,
         1513,
         1514,
         1515,
@@ -206,7 +205,6 @@
         2461,
         2462,
         2463,
-        2472,
         2478,
         2512,
         2549,
@@ -390,7 +388,7 @@
       ]
     },
     {
-      "admitted_rows": 155,
+      "admitted_rows": 156,
       "handler": true,
       "property": 26,
       "rows": 241,
@@ -443,7 +441,6 @@
         2441,
         2502,
         2518,
-        2722,
         2735,
         2736,
         2832,
@@ -660,7 +657,7 @@
       ]
     },
     {
-      "admitted_rows": 93,
+      "admitted_rows": 94,
       "handler": true,
       "property": 23,
       "rows": 115,
@@ -679,7 +676,6 @@
         2200,
         2201,
         2202,
-        2475,
         2786,
         3612,
         4272,
@@ -825,7 +821,7 @@
       ]
     },
     {
-      "admitted_rows": 36,
+      "admitted_rows": 37,
       "handler": true,
       "property": 52,
       "rows": 44,
@@ -835,7 +831,6 @@
         2090,
         2095,
         2096,
-        2238,
         2726,
         3059
       ]
@@ -1245,7 +1240,7 @@
       ]
     },
     {
-      "admitted_rows": 4,
+      "admitted_rows": 6,
       "handler": true,
       "property": 159,
       "rows": 10,
@@ -1253,9 +1248,7 @@
         543,
         545,
         1178,
-        2217,
-        2236,
-        2474
+        2217
       ]
     },
     {
@@ -1451,16 +1444,11 @@
       "rejected_graph_effect_ids": []
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 4,
+      "handler": true,
       "property": 112,
       "rows": 4,
-      "rejected_graph_effect_ids": [
-        4328,
-        4329,
-        4330,
-        4331
-      ]
+      "rejected_graph_effect_ids": []
     },
     {
       "admitted_rows": 2,
@@ -1548,14 +1536,13 @@
       ]
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 1,
+      "handler": true,
       "property": 370,
       "rows": 3,
       "rejected_graph_effect_ids": [
         4060,
-        4140,
-        4161
+        4140
       ]
     },
     {
@@ -1624,14 +1611,11 @@
       "rejected_graph_effect_ids": []
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 2,
+      "handler": true,
       "property": 194,
       "rows": 2,
-      "rejected_graph_effect_ids": [
-        1506,
-        2473
-      ]
+      "rejected_graph_effect_ids": []
     },
     {
       "admitted_rows": 0,
@@ -1644,14 +1628,11 @@
       ]
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 2,
+      "handler": true,
       "property": 223,
       "rows": 2,
-      "rejected_graph_effect_ids": [
-        2723,
-        2724
-      ]
+      "rejected_graph_effect_ids": []
     },
     {
       "admitted_rows": 0,
@@ -2078,7 +2059,6 @@
     1169,
     1170,
     1182,
-    1186,
     1193,
     1202,
     1215,
@@ -2145,7 +2125,6 @@
     1618,
     1625,
     1626,
-    1631,
     1645,
     1646,
     1651,
@@ -2187,7 +2166,6 @@
     1813,
     2026,
     2235,
-    2246,
     2247,
     2250,
     2260,
@@ -2308,7 +2286,6 @@
     3811,
     3812,
     3813,
-    3815,
     3818,
     3825,
     3829,
@@ -2336,8 +2313,6 @@
     3878,
     3884,
     3885,
-    3889,
-    3890,
     3892,
     3893,
     3898,
@@ -2555,7 +2530,6 @@
     "746": "ability 747: unsupported object/team aura",
     "747": "ability 747: unsupported object/team aura",
     "758": "unsupported property 121 at effect 1498",
-    "762": "unsupported property 194 at effect 1506",
     "768": "ability 768: undetermined team target routing",
     "774": "ability 774: undetermined team target routing",
     "785": "unsupported property 140 at effect 1573",
@@ -2588,7 +2562,6 @@
     "968": "ability 968: unsupported aura state 124 Special_TypeOverride",
     "979": "ability 979: undetermined team target routing",
     "985": "unsupported parameters for property 24 effect 2224: [9, 80, 0, 1, 0, 0]",
-    "989": "unsupported property 194 at effect 2473",
     "996": "ability 926: unsupported turn 1546 kind1 event1",
     "997": "unsupported property 197 at effect 2253",
     "1000": "ability 827: unsupported object/team aura",
@@ -2621,7 +2594,6 @@
     "1120": "ability 1120: unsupported turn 1809 kind1 event2",
     "1121": "ability 1121: unsupported turn 4063 kind1 event2",
     "1337": "unsupported parameters for property 107 effect 2711: [0, 0, 0, 0, 0, 0]",
-    "1344": "unsupported property 223 at effect 2723",
     "1345": "ability 1348: unsupported turn 2250 kind1 event1",
     "1348": "ability 1348: unsupported turn 2250 kind1 event1",
     "1354": "ability 1355: unsupported object/team aura",
@@ -2715,17 +2687,16 @@
     "2252": "unsupported property 360 at effect 4042",
     "2253": "ability 543: unsupported turn 773 kind1 event2",
     "2254": "ability 2254: unsupported turn 3782 kind1 event2",
-    "2259": "unsupported property 370 at effect 4060",
+    "2259": "unsupported parameters for property 370 effect 4060: [16, 0, 3, 0, 0, 0]",
     "2260": "unsupported property 362 at effect 4061",
     "2261": "unsupported parameters for property 111 effect 4063: [100, 100, 0, 1, 0, 0]",
     "2262": "ability 2262: unsupported aura state 124 Special_TypeOverride",
     "2263": "unsupported property 363 at effect 4077",
     "2264": "ability 2264: unsupported aura state 306 Special_Redirect_Healing",
     "2265": "ability 2264: unsupported aura state 306 Special_Redirect_Healing",
-    "2280": "unsupported property 370 at effect 4140",
+    "2280": "unsupported parameters for property 370 effect 4140: [20, 100, 3, 0, 0, 0]",
     "2281": "ability 2281: unsupported aura state 313 Special_Intercept_Damage",
     "2282": "ability 2281: unsupported aura state 313 Special_Intercept_Damage",
-    "2283": "unsupported property 370 at effect 4161",
     "2285": "unsupported property 249 at effect 4164",
     "2292": "unsupported property 363 at effect 4175",
     "2295": "ability 2295: unsupported aura state 306 Special_Redirect_Healing",
@@ -2749,8 +2720,6 @@
     "2337": "unsupported property 374 at effect 4306",
     "2342": "ability 2343: unsupported aura state 314 Critical_Damage_Bonus",
     "2343": "ability 2343: unsupported aura state 314 Critical_Damage_Bonus",
-    "2347": "unsupported property 112 at effect 4328",
-    "2348": "unsupported property 112 at effect 4330",
     "2349": "ability 2350: unsupported aura state 316 Weather_Toxic_Gas",
     "2350": "ability 2350: unsupported aura state 316 Weather_Toxic_Gas",
     "2351": "ability 2351: undetermined team target routing",

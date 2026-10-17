@@ -14,13 +14,18 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
             .min_by_key(|row| (row.level, row.ability))
             .map_or(0, |row| row.ability)
     });
-    if species == 1145 {
-        let wall = catalog
+    let chosen = match species {
+        1142 => Some(762),
+        1320 => Some(989),
+        _ => None,
+    };
+    if let Some(ability) = chosen {
+        let authored = catalog
             .species_abilities
             .iter()
-            .find(|row| row.species == species && row.ability == 479 && row.level <= level)
-            .expect("Authored Ice Barrier option must be unlocked");
-        abilities[wall.slot as usize] = wall.ability;
+            .find(|row| row.species == species && row.ability == ability && row.level <= level)
+            .expect("Authored miss-branch option must be unlocked");
+        abilities[authored.slot as usize] = authored.ability;
     }
     abilities
 }
@@ -28,16 +33,20 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
 fn seed_fixture_pets(catalog: &Catalog) -> (PetJournal, BTreeMap<u64, serde_json::Value>) {
     let mut journal = PetJournal::default();
     let mut states = BTreeMap::new();
-    for (guid, species) in [(41, 1145), (42, 39), (43, 39)] {
-        let level = 25;
+    for (guid, species, level) in [(41, 1142, 10), (42, 1320, 2), (43, 39, 4)] {
         journal
             .add_with_guid(species, level, PetQuality::Rare, 3, guid)
             .unwrap();
         let abilities = fixture_abilities(catalog, species, level);
         let stats = calculate_stats(catalog, species, 3, 3, level).unwrap();
+        let health = if species == 1320 {
+            stats.health / 2
+        } else {
+            stats.health
+        };
         states.insert(
             guid,
-            serde_json::json!({"health": stats.health, "selected_abilities": abilities}),
+            serde_json::json!({"health": health, "selected_abilities": abilities}),
         );
     }
     (journal, states)
@@ -69,6 +78,7 @@ fn save_fixture_pets(journal: &PetJournal, states: &BTreeMap<u64, serde_json::Va
 }
 
 #[test]
+#[ignore = "Writes the stopped, owned private5961 journal; run deliberately with --ignored"]
 fn seed_owned_private_effect_journal() {
     main();
 }
@@ -80,6 +90,6 @@ fn main() {
     let (journal, states) = seed_fixture_pets(&catalog);
     save_fixture_pets(&journal, &states);
     println!(
-        "Seeded private account1: Mr. Bigglesworth1145 Ice Barrier479 plus two Mechanical Squirrel39 reserves; not acquisition proof"
+        "Seeded private account1: Clockem1142/10 Haymaker762, injured LilBling1320/2 Gift989 and Squirrel39/4; not acquisition proof"
     );
 }

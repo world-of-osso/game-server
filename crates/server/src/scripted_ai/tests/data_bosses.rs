@@ -1,8 +1,20 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "azure_combat.rs"]
+mod azure_combat;
+#[path = "azure_explosive_brand.rs"]
+mod azure_explosive_brand;
+#[path = "azure_frost_bomb.rs"]
+mod azure_frost_bomb;
+#[path = "azure_intro.rs"]
+mod azure_intro;
+#[path = "azure_sprouts.rs"]
+mod azure_sprouts;
 #[path = "celebras.rs"]
 mod celebras;
+#[path = "gargolmar.rs"]
+mod gargolmar;
 #[path = "gizlock.rs"]
 mod gizlock;
 #[path = "gnomeregan.rs"]
@@ -15,6 +27,8 @@ mod landslide;
 mod maraudon;
 #[path = "noxxion.rs"]
 mod noxxion;
+#[path = "omor.rs"]
+mod omor;
 #[path = "theradras.rs"]
 mod theradras;
 #[path = "vyletongue.rs"]
@@ -69,6 +83,24 @@ fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path:
     source
         .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
         .expect("snapshot canonical encounter data without writing source");
+    if ["gargolmar", "omor"].contains(&encounter) {
+        let dump = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql");
+        run_preparation_script(
+            "encounter_serverside_spells.py",
+            &[
+                "--encounter".as_ref(),
+                encounter.as_ref(),
+                "--db".as_ref(),
+                path.as_os_str(),
+                "--source-dump".as_ref(),
+                dump.as_os_str(),
+            ],
+        );
+        if encounter == "gargolmar" {
+            return (directory, path);
+        }
+    }
     if ["adarogg", "slagmaw"].contains(&encounter) {
         // encounter_serverside_spells.py's actual TDB rows precede the summon import.
         let copy = Connection::open(&path).unwrap();
@@ -215,6 +247,8 @@ fn encounter_fixture(
         13282 => Some(prepare_encounter_database("noxxion")),
         12225 => Some(prepare_encounter_database("celebras")),
         12201 => Some(prepare_encounter_database("theradras")),
+        17306 => Some(prepare_encounter_database("gargolmar")),
+        17308 => Some(prepare_encounter_database("omor")),
         _ => None,
     };
     let path = prepared
@@ -259,6 +293,8 @@ fn encounter_fixture(
             || (entry == 12225 && [13743, 13716].contains(id))
             || (entry == 12203 && *id == 11783)
             || (entry == 12201 && *id == 12238)
+            || (entry == 17306 && *id == 17309)
+            || (entry == 17308 && *id == 17540)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
@@ -302,6 +338,12 @@ fn encounter_fixture(
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
+        // The Azure intro depends on the real non-following tender formation.
+        formations: if populate && map_id == 2515 {
+            crate::test_data::world_data().formations.clone()
+        } else {
+            Default::default()
+        },
         addons: crate::world_data::load_spawn_addons(&conn),
         template_addons: crate::world_data::load_template_addons(&conn),
         class_level_base_hp: hp,
@@ -324,7 +366,7 @@ fn encounter_fixture(
     // A script's unknown spell must fail normal admission, not panic the fixture.
     let all = crate::spell_cast::test_harness::world_db().unwrap();
     let mut store = all.store.clone();
-    if store.get(119297).is_none() {
+    if [17306, 17308].contains(&entry) || store.get(119297).is_none() {
         // Production's loader over the prepared copy's server-side tables.
         store.append_serverside(&conn).unwrap();
     }
@@ -414,7 +456,7 @@ fn encounter_fixture(
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
         let near = if [
-            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201,
+            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 17306, 17308,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)

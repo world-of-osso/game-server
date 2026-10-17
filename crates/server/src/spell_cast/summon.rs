@@ -870,7 +870,10 @@ pub(super) fn expire_summons(world: &mut World) {
         .filter(|(_, summon, map)| {
             summon.expires_at.is_some_and(|expiry| now >= expiry)
                 || world.get::<InMap>(summon.owner) != Some(*map)
-                || !super::targets::is_alive(world, summon.owner)
+                // TC TempSummon::Update retains wild summons' own lifetimes.
+                // Only minion ownership ties this cleanup to owner death.
+                || (summon.properties.is_minion()
+                    && !super::targets::is_alive(world, summon.owner))
         })
         .map(|(entity, _, _)| entity)
         .collect();

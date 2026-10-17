@@ -108,6 +108,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         }
         EFFECT_ENERGIZE => energize,
         41 => super::teleport::jump_to_unit,
+        96 => super::charge::hit,
         98 | 144 => super::knockback::knock_back,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
@@ -1511,15 +1512,15 @@ fn cast_destination_missile_child(
     Ok(())
 }
 
+/// Native EffectTriggerSpell carries the parent's explicit destination into the child.
 fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    super::cast_triggered_with_item_level(
-        world,
-        ctx.caster,
-        effect.trigger_spell,
-        Some(target),
-        ctx.depth + 1,
-        ctx.spell.cast_item_level,
-    );
+    let depth = ctx.depth + 1;
+    let Some(mut spell) = super::load_triggered_spell(world, effect.trigger_spell, depth) else {
+        return;
+    };
+    spell.cast_destination = ctx.spell.cast_destination;
+    spell.cast_item_level = ctx.spell.cast_item_level;
+    super::launch_triggered_spell(world, ctx.caster, &spell, Some(target), depth);
 }
 
 /// 140 FORCE_CAST (`Spell::EffectForceCast`, SpellEffects.cpp:791-849): the target casts

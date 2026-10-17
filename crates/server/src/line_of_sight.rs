@@ -1,6 +1,6 @@
 //! Line of sight (docs/specs/line-of-sight.md) over the baked LOS tiles (`shared::los`):
-//! creatures search from their eye point to the target's eyes, chest and feet (LOS holds
-//! when any ray is clear); player casts carry a witness ray the server checks.
+//! creatures and player casts search from authoritative eye points to the target's
+//! eyes, chest and feet (LOS holds when any ray is clear).
 //!
 //! The bake output (`los-bake --out <ground dir>/los`) loads from the ground directory:
 //! the eye table at startup, each map's tiles on first use. A map without baked tiles
@@ -21,20 +21,11 @@ use los::{Body, LosMap};
 use shared::components::{
     ModelDisplay, Npc, Player, PlayerStandState, Position, Rotation, StandState, UnitPose,
 };
-use shared::protocol::WitnessRay;
 
 use crate::maps::InMap;
 
 /// The ground directory's subdirectory the bake writes to.
 const LOS_DIR: &str = "los";
-/// How far a witness ray may start from the caster's eye point as the server places it:
-/// the client sends the cast from its own, newer position (one movement report at run
-/// speed, 7 yd/s, is well under this).
-pub(crate) const WITNESS_START_TOLERANCE: f32 = 1.0;
-/// How far outside the target's body volume a witness ray may end: the client saw the
-/// target where the server had it a round trip and an interpolation delay ago (about
-/// 0.3 s at run speed).
-pub(crate) const WITNESS_END_TOLERANCE: f32 = 2.0;
 
 #[derive(Resource)]
 pub struct LineOfSight {
@@ -249,48 +240,6 @@ pub(crate) fn sees_area_center(world: &World, target: Entity, center: Vec3) -> b
     };
     let eye_height = body.eyes.y - body.feet.y;
     los.clear(map, body.eyes, center + Vec3::Y * eye_height)
-}
-
-/// A player cast's witness ray (spec, Player casts): it starts within
-/// [`WITNESS_START_TOLERANCE`] of the caster's eye point, ends inside the target's body
-/// volume grown by [`WITNESS_END_TOLERANCE`], both at the server's current positions, and
-/// crosses no baked triangle. No witness fails; true when no LOS is loaded.
-pub(crate) fn witness_holds(
-    world: &World,
-    caster: Entity,
-    target: Entity,
-    witness: Option<WitnessRay>,
-) -> bool {
-    let (Some(los), Some(map)) = (
-        world.get_resource::<LineOfSight>(),
-        world.get::<InMap>(caster).copied(),
-    ) else {
-        return true;
-    };
-    let Some(witness) = witness else {
-        return false;
-    };
-    let body = |unit| parts_in_world(world, unit).and_then(|parts| los.body(parts));
-    let (Some(caster), Some(target)) = (body(caster), body(target)) else {
-        return false;
-    };
-    let (start, end) = (Vec3::from(witness.start), Vec3::from(witness.end));
-    let held = start.distance(caster.eyes) <= WITNESS_START_TOLERANCE
-        && target.contains(end, WITNESS_END_TOLERANCE)
-        && los.clear(map, start, end);
-    debug!(
-        ?map,
-        caster_eye = ?caster.eyes,
-        target_eye = ?target.eyes,
-        start_distance = start.distance(caster.eyes),
-        end_in_body = target.contains(end, WITNESS_END_TOLERANCE),
-        witness_segment_clear = los.clear(map, start, end),
-        authoritative_witness = ?los.witness(map, &caster, &target),
-        ?witness,
-        held,
-        "Cast witness checked"
-    );
-    held
 }
 
 pub struct LineOfSightPlugin;

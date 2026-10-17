@@ -4,16 +4,22 @@ use crate::spell_cast::test_harness::*;
 use shared::components::{CombatStatus, Level, Position};
 use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, UseItem};
 
+#[path = "toys_akunda_tests.rs"]
+mod akunda;
 #[path = "toys_bashiok_tests.rs"]
 mod bashiok;
 #[path = "toys_flute_tests.rs"]
 mod flute;
 #[path = "toys_force_forward_tests.rs"]
 mod force_forward;
+#[path = "toys_gnoll_barrel_tests.rs"]
+mod gnoll_barrel;
 #[path = "toys_group_inheritance_tests.rs"]
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
 mod group_private;
+#[path = "toys_hearthstone_tests.rs"]
+mod hearthstones;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
 #[path = "toys_podium_tests.rs"]
@@ -54,12 +60,12 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
-            398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762, 388088, 289277, 384585,
-            203533, 203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870,
-            383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090,
-            381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
-            128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
-            171352, 127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
+            398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762, 388088, 264091, 289277,
+            384585, 203533, 203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328,
+            406870, 383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085,
+            361090, 381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617,
+            469618, 128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760,
+            71909, 171352, 127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
         ],
         class,
     )
@@ -1372,8 +1378,87 @@ fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
 }
 
 #[test]
+fn toyfx71_rezan_roar_real_learning_cast_event_and_source_recovery() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    const ITEM: u32 = 160509;
+    const SPELL: u32 = 272071;
+    const RECOVERY_MS: u32 = 90_000;
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("roar.redb"));
+    let path = crate::test_data::world_db_path();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let health_before = *h.app.world().get::<Health>(h.caster).unwrap();
+    let target_health = *h.app.world().get::<Health>(h.npc).unwrap();
+    let model_before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+    learn_effect_toy(&mut h, character, ITEM);
+    assert_eq!(
+        activate(&mut h, ITEM)[0].error,
+        None,
+        "real Roar learned-use"
+    );
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.spell_id == SPELL && go.caster == h.caster.to_bits())
+    );
+    assert!(h.inbox.cooldowns.iter().any(|cooldown| {
+        cooldown.spell_id == SPELL && cooldown.duration_ms == RECOVERY_MS && !cooldown.is_gcd
+    }));
+    assert_eq!(
+        *h.app.world().get::<Health>(h.caster).unwrap(),
+        health_before
+    );
+    assert_eq!(*h.app.world().get::<Health>(h.npc).unwrap(), target_health);
+    assert_eq!(
+        h.app.world().get::<ModelDisplay>(h.caster),
+        model_before.as_ref()
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .is_none_or(|auras| auras.auras.iter().all(|aura| aura.spell_id != SPELL))
+    );
+    assert_eq!(
+        h.app
+            .world_mut()
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(h.app.world())
+            .count(),
+        0
+    );
+    let first_cast_count = h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count();
+    assert!(
+        activate(&mut h, ITEM)[0]
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("Cooldown"))
+    );
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
+        first_cast_count
+    );
+    h.advance(1_801); // Harness advances50ms/frame: source90s recovery elapses normally.
+    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
+        first_cast_count + 1
+    );
+}
+
+#[test]
 fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
-    for (item, spell, payload) in [(166678, 289277, [4076, 155]), (198227, 384585, [6409, 170])] {
+    for (item, spell, payload) in [
+        (158149, 264091, [3569, 53]), // Overtuned Corgi Goggles
+        (166678, 289277, [4076, 155]),
+        (198227, 384585, [6409, 170]),
+    ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
         learn_effect_toy(&mut h, character, item);
@@ -3604,7 +3689,7 @@ fn toyfx14_target_and_sound_cosmetics_census() {
 }
 
 #[test]
-fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
+fn toyfx14_gaze_uses_authoritative_baked_sight() {
     use shared::components::{ModelDisplay, Position, Rotation, UnitAuras};
     use shared::protocol::WitnessRay;
     let directory = tempfile::tempdir().unwrap();
@@ -3695,23 +3780,13 @@ fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
         start: caster.eyes.to_array(),
         end: end.to_array(),
     };
-    assert_eq!(
-        activate(&mut h, 122120)[0].error.as_deref(),
-        Some("LineOfSight")
-    );
-    let forged = WitnessRay {
-        start: [witness.start[0] + 5.0, witness.start[1], witness.start[2]],
+    // The sampled endpoint may age; authoritative clear sight decides the toy cast.
+    let stale = WitnessRay {
+        end: [witness.end[0] + 5.0, witness.end[1], witness.end[2]],
         ..witness
     };
     assert_eq!(
-        activate_witnessed(&mut h, 122120, None, Some(forged))[0]
-            .error
-            .as_deref(),
-        Some("LineOfSight")
-    );
-    assert!(h.inbox.go.is_empty());
-    assert_eq!(
-        activate_witnessed(&mut h, 122120, None, Some(witness))[0].error,
+        activate_witnessed(&mut h, 122120, None, Some(stale))[0].error,
         None
     );
     h.advance(3);
