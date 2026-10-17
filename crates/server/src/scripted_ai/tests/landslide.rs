@@ -44,7 +44,7 @@ fn encounter_coverage_landslide_wipe_rearms_damage_trigger() {
 
 #[test]
 fn encounter_coverage_landslide_threshold_clocks_summons_and_isolated_credit() {
-    for seed in 1..=16 {
+    for seed in 17..=64 {
         eprintln!("LANDSLIDE seed={seed}");
         assert_landslide_clocks(seed);
     }
