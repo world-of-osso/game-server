@@ -30,6 +30,21 @@ pub(super) fn assert_source_clock(
 }
 
 #[test]
+fn encounter_coverage_gizlock_clock_observer_accepts_frame_boundary_blocked_delay() {
+    // Real Vyletongue gate trace: Flash ends11.2s; the7.05s Shoot's latest
+    // deadline is10.95s. The old strict (11.05,11.1) window drops both samples.
+    let blocked = [(11.05, true), (11.1, true)];
+    assert_source_clock(&[0.05, 3.65, 7.05, 11.2], (0.0, 0.0), (2.3, 3.9), &blocked);
+}
+
+#[test]
+#[should_panic(expected = "late unblocked dispatch")]
+fn encounter_coverage_gizlock_clock_observer_rejects_frame_boundary_unblocked_delay() {
+    let blocked = [(11.05, true), (11.1, false)];
+    assert_source_clock(&[0.05, 3.65, 7.05, 11.2], (0.0, 0.0), (2.3, 3.9), &blocked);
+}
+
+#[test]
 fn encounter_coverage_gizlock_clock_observer_accepts_only_blocked_delay() {
     let blocked: Vec<_> = (0..=180).map(|tick| (tick as f32 * 0.05, true)).collect();
     assert_source_clock(&[0.05, 9.0], (0.0, 0.0), (2.3, 3.9), &blocked);
