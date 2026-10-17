@@ -1,8 +1,7 @@
 //! Read-only transport payload census before netcode encryption (diagnostic feature only).
 use bevy::prelude::*;
-use lightyear::prelude::{
-    ChannelRegistry, ConnectionSystems, Link, LinkOf, Transport, TransportSystems,
-};
+use lightyear::prelude::{ChannelRegistry, ConnectionSystems, Link, LinkOf, Transport};
+use lightyear_transport::plugin::TransportSystems;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
