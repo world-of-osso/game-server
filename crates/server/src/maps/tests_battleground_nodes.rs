@@ -13,7 +13,11 @@ struct EnteredMatch {
 
 #[test]
 fn random_queue_normal_party_projects_original32_to_every_member() {
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(database_file.path()).unwrap();
+    crate::persistence::create_tables(&db);
     let mut h = harness_with(|app| {
+        app.insert_resource(crate::persistence::GameDatabase { db });
         app.add_plugins((crate::group::GroupPlugin, crate::pvp::PvpPlugin));
     })
     .unwrap();
