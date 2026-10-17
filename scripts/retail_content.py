@@ -272,6 +272,9 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     98300,
     # Ysera's Tear: source private vision; procedural display rendering is separate.
     99518,
+    # Katy's Stampwhistle: preserve source Assistant35 and mailbox NPC flags.
+    # Service and summon-category acceptance remain separate runtime gates.
+    132969,
     # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
     51113,
     # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.

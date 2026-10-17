@@ -1038,6 +1038,10 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load profession data; run scripts/import-azerothcore.sh");
     commands.insert_resource(professions);
     commands.insert_resource(
+        shared::crafting_reagents::CraftingReagentCatalog::load(Path::new("data/db2/active"))
+            .expect("Failed to load local Retail crafting reagent slot CSVs"),
+    );
+    commands.insert_resource(
         crate::profession::specializations::load_specialization_data(&conn)
             .expect("Failed to load profession specialization references; run scripts/profession_data.py with explicit --db and --source-dir"),
     );
