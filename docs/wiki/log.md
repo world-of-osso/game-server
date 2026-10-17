@@ -1,6 +1,6 @@
-## 2026-10-16 — Excluded caster aura-type admission
+## 2026-10-17 — Excluded caster aura-type admission
 
-[Spell casting](systems/spell-casting.md#excluded-caster-aura-type-admission--2026-10-16): actual853 zero-amount stun supplies native449285 excluded12. RED1pass/2fail17.32s proves wrong ordinary error priority and incorrect full-trigger admission; cancellation/native expiry control passes. Shared caster field predicate and metadata-before-generic-CC priority implemented; GREEN pending. Required caster types, midcast/26-positive/whole-ability and legal-build acceptance remain separate.
+[Spell casting](systems/spell-casting.md#excluded-caster-aura-type-admission--2026-10-17): actual853 zero-amount stun supplies native449285 excluded12. RED1pass/2fail17.32s proves wrong ordinary error priority and incorrect full-trigger admission; cancellation/native expiry control passes. Shared caster field predicate and metadata-before-generic-CC priority pass current157/0/0 in98.03s (four new+153 adjacent), workspace/all-target check18.988s/0warnings, fmt and independent artifact/wiring/source/readability. The separate creature-script triggered shortcut still bypasses metadata and remains open. Required caster types, midcast/26-positive/whole-ability and legal-build acceptance remain separate.
 
 ## 2026-10-16 — Queued effect64 recipient admission
 
