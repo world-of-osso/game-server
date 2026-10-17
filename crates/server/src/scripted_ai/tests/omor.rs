@@ -385,7 +385,6 @@ fn encounter_coverage_omor_orbital_exact_two_dimensional_cutoff() {
 }
 
 #[test]
-#[ignore = "source OnSpellCast shield emote acceptance pending implementation"]
 fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
     let (mut h, boss, _) = bound_boss(17308, 543, 0);
     let player = h.player();
