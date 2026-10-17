@@ -131,6 +131,8 @@ def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, autho
         return asset in achievement_ids
     if kind == 67:
         return asset in node_counts
+    if kind == 21:
+        return asset == 0
     if kind == 30:
         return 1 <= asset <= 15
     if kind == 78:
