@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "azure_combat.rs"]
+mod azure_combat;
 #[path = "azure_explosive_brand.rs"]
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
