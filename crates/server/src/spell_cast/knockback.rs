@@ -1,4 +1,4 @@
-//! TC a352b1fa SpellEffects.cpp:4037-4075, effects98/144.
+//! TC a352b1fa SpellEffects.cpp:4037–4075/4151, effects98/144/124.
 use super::{effects::EffectCtx, *};
 use crate::spell_info::SpellEffect;
 use shared::components::{Npc, Player, UnitSummonedBy};
@@ -74,7 +74,8 @@ fn launch_pull(
         return Err("non-finite vertical pull speed".into());
     }
     let offset = destination - start;
-    let direction = Vec3::new(offset.x, 0.0, offset.z).normalize_or_zero();
+    let angle = offset.z.atan2(offset.x);
+    let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
     crate::knockback::launch_directed(world, target, direction * speed_xy + Vec3::Y * speed_z)
 }
 
@@ -88,7 +89,9 @@ fn probe_pull_destination(world: &mut World, caster: Entity, target: Vec3) -> Re
     let reach = crate::scripted_ai::model_reach::combat_reach(world, caster)
         .ok_or("pull caster has no sourced combat reach")?;
     let offset = target - start;
-    let direction = Vec3::new(offset.x, 0.0, offset.z).normalize_or_zero();
+    // Position.h:136–140 defines angle0 even when both coordinates coincide.
+    let angle = offset.z.atan2(offset.x);
+    let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
     let destination = start + direction * reach;
     let los = world
         .get_resource::<crate::line_of_sight::LineOfSight>()
