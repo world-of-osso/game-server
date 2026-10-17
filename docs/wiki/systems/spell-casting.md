@@ -10,6 +10,26 @@ Actual Death Touch5 kills the present NPC without direct health writes. Native15
 
 Both positive spells are instant. Their eligibility/application does not certify progression of non-instant casts from a dead actor: `advance_casts` still cancels on death, and source death-transition versus already-dead cast scheduling needs separate qualification. These fixtures are not legal Divine Vision knowledge, whole PvP talent/Sickness effects, self-resurrection94 or passive learn/gain/loss proof. No raw Health/Mana/stat/native rows/flags/clocks/RNG/budgets are changed.
 
+### Non-instant progression qualification — 2026-10-17
+
+Five independent read-only probes were reconciled against the pinned files. **No non-instant runtime acceptance follows from this qualification.** Ordinary instant205 plus the unexempt queue control remain unchanged proof, not cast-bar coverage.
+
+| Case | Pinned source boundary | Current proof |
+|---|---|---|
+| Already-dead player or creature CORPSE starts an eligible cast | Player945/Creature822 run Unit/events; Spell4240–4276 has no caster-alive progress gate and completion3759 rechecks5748 | Source-qualified divergence: `advance_casts` currently cancels on every dead tick |
+| Living caster dies while PREPARING or channeling | Unit9178/9187–9197 interrupts current non-melee spells at death before aura/control cleanup; flags/passive do not exempt that interruption | Existing health-poll cancellation is not a model of this distinct transition |
+| Launched projectile's caster dies | InterruptNonMeleeSpells(false) skips generic LAUNCHED state | Separate lifetime boundary, no new behavioral proof |
+| Creature is DEAD rather than CORPSE | Creature776–817 does not call Unit::Update | Do not extend CORPSE event progression to despawn/respawn/DEAD |
+| Ordinary instant active/passive exceptions | Native15007/199324 and direct execution | Existing205+1 proofs retained; no rerun after docs-only work |
+
+`Spell.h:683` defines `IsInterruptable()` as `!m_executedCurrently`: the death-interrupt exception prevents reentrant cancellation during execution, not an exemption based on the client's interruptible cast-bar attribute. The newly cached pinned header has URL/SHA receipts. `Unit.cpp:11447–11458` runs kill/death procs before the death transition; simply letting every flagged dead cast progress would lose source interruption of a cast that began alive. Conversely, moving every cancellation to a delayed player transition risks canceling a new already-dead cast. Integration must preserve the actual ordering, not replace the health poll with another assumption.
+
+Literal runtime state is `CastState` plus server-only `PendingCastSpell(SpellInfo)`; neither records a life transition. The maintained runner patches shared-protocol-s2 explicitly, not the canonical sibling claimed by one explorer. No new wire/state type or remediation was adopted during this read-only step.
+
+Native candidate35058 Nether Explosion has1000ms, AllowCastWhileDead, E2 and selectors22/15. RadiusA is0 but RadiusB is13; inspecting only A would incorrectly reject its source area. Its actual radius, costs, target conditions and observable hit outcome must be authenticated before behavioral RED. Native53008 supplies a passive3000ms modifier but lacks death-persistent aura eligibility;55224 has the channel bit, so neither is interchangeable with a direct active cast. No flag/cast-time/clock/RNG/resource edits or NoOp markers are authorized to make a fixture work.
+
+Sources: TCa352b1fa `Unit.cpp:3158–3184,3255–3263,9178–9218,11447–11458`, `Spell.h:683`, `Spell.cpp:3759,4240–4276,5748`, `Player.cpp:920–950`, `Creature.cpp:749–835`, `Object.cpp:245`, `SpellInfo.cpp:783–825,4003–4018`; current `spell_cast/mod.rs` and death producers. Receipts: `data/class-completeness6-2026-10-12/cast-while-dead-progress-{goal,candidates,native-inputs,qualification}.json`, plus `tc-a352b1fa/Spell.h.receipt.json`.
+
 ## Creature bool-trigger dead-caster admission — 2026-10-17
 
 `creature_cast(..., triggered=true)` unconditionally rejected a dead caster. Pinned `Spell.cpp:5748–5749` instead exempts `IsTriggered() && !m_triggeredByAuraSpell`; `SpellDefines.h:498,523` gives the bool constructor FULL_MASK with default null TriggeringAura, and `Spell.cpp:3455–3459` only records an aura origin when one is supplied. This bool API has no aura-origin argument, so its living-caster gate was not native compatibility.
