@@ -35,7 +35,7 @@ pub(super) fn fixture() -> (Harness, Entity) {
         ),
         "native Azure floor fixture must be available"
     );
-    // No engagement/AI schedule: exercise the real authored actor's cast boundary.
+    // No explicit fixture pull; ordinary proximity engagement can run alongside manual casts.
     h.players[0].2.log.clear();
     (h, telash)
 }
