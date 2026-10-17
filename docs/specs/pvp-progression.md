@@ -33,6 +33,22 @@ Pinned raw sources (prefix `https://raw.githubusercontent.com/TrinityCore/Trinit
 - `src/server/game/Entities/Player/Player.h`, SHA256 `9908cb848beaa931b878dcc2d47a016e3fff0288ddb686874163b603d5b08199`:1207–1208.
 - `src/server/game/Spells/Auras/SpellAuraDefines.h`, SHA256 `1784b495ea9704bbe12223c2ad42d9d5fea7d320f0dc6c0055cd090cb7e5498b`:159/212/491 identities; active70391 SpellName identifies43681 as Inactive.
 
+## Private Currency presentation fixture
+
+`cargo run -p server --example pvp_currency_zero_fixture -- <private-redb> <character-id>` is an approved diagnostic only. It accepts only the owned2026-10-16/private5941 database while stopped, requires an existing saved wallet, refuses earned/unrelated balances and adds only a discovered1792 entry with quantity/week-earned0. It does not award Honor, alter lifetime XP or mutate canonical realm data. The native client must separately prove a real empty wallet hides Currency before using this fixture.
+
+## Sourced weekly counters — 70391
+
+Honor1792 and Conquest1602 both author MaxEarnablePerWeek0 and do not set ComputedWeeklyMaximum0x4. Following TC Player::GetCurrencyWeeklyCap/ModifyCurrency, zero means no static weekly ceiling and new gains must not increment week_earned. Positive weekly caps still clamp accepted gains and count only the actual accepted amount. Existing historical counters are preserved; no unsourced weekly reset clock or Conquest season limit is introduced. The shared wallet implements this rule; persistence must retain zero counters for new uncapped PvP entries.
+
+Authority: TC a352b1fa Player.cpp7131–7166/7357–7360, DBCEnums.h currency flags, current authenticated70391 CurrencyTypes. Exact source hashes/commands and the expected300-versus0 RED are in game-engine `data/diagnostics/pvp-progression-2026-10-16/earned-awards/`.
+
+## Earned-wallet award binding audit — 70391
+
+`HONOR_WALLET_KILL_BINDING`, `MATCH_COMPLETION_WALLET_BINDING` and `ARENA_COMPLETION_WALLET_BINDING` remain open. RewardHonor/RewardHonorToTeam/EffectGiveHonor credit XP, not1792. Forty-two pinned BG/arena scripts and default BattlegroundScript::OnEnd do not provide a wallet producer. Loaded random-BG Conquest config values alone do not identify an award call. Current local PvpReward1307154 is absent; fresh RewardPackXCurrencyType1307153 decoding yields6 rows/0 unreadable/no1792 or1602. Sixteen current GIVE_CURRENCY spell definitions exist, but no kill/completion caller has been established. Spell definitions/quest reward quantities must not be assigned to arbitrary events.
+
+Conquest sets the100-scaler flag; raw spell/config values cannot be treated as whole display units. WorldState31270/AwardCondition146857 remain separate active-season/eligibility authority gaps. `HONOR_LEVEL_XP_CURVE` remains unchanged. These missing event bindings block new earned-wallet/native-earned-balance claims, not the independently sourced weekly-counter correction. No new PvP payout is implemented by that correction.
+
 ## Gaps
 
 Honor cap15000 is authored. Conquest uses dynamic WorldState31270/AwardCondition146857, not guessed1800/weekly550. Honor/conquest per result and rating policy are not locally derived. PrestigeLevelInfo maps e.g. honor-level5 to achievement12893; no certified Mainline lifetime-XP curve was recovered. The available HonorLevel game table has old Prestige0..32 columns and is not assumed equivalent. Lifetime leveling/reward grants remain blocked by that uncertified curve. Enlisted XP/quest-XP consumers and individual selected spell effects beyond temporary learning remain unproved; aura application and native both-skin selection have bounded proof below.
