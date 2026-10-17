@@ -1027,6 +1027,41 @@ fn creature_type_damage_multiplier(
     mods.damage_done_versus(crate::unit_creature_type::mask(kind))
 }
 
+/// TC Unit.cpp6980–6984: sum matching aura276, effect mechanic before spell mechanic.
+fn mechanic_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: Option<&SpellEffect>,
+) -> f32 {
+    const MOD_DAMAGE_DONE_FOR_MECHANIC: u32 = 276;
+    let mechanic = effect.filter(|effect| effect.mechanic != 0).map_or_else(
+        || spell.categories.as_ref().map_or(0, |row| row.mechanic),
+        |effect| effect.mechanic,
+    );
+    if mechanic == 0 {
+        return 1.0;
+    }
+    let percent = world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .map_or(0.0, |auras| {
+            auras
+                .iter()
+                .map(|aura| {
+                    aura.effects
+                        .iter()
+                        .filter(|effect| {
+                            effect.aura_type == MOD_DAMAGE_DONE_FOR_MECHANIC
+                                && effect.misc_values[0] == mechanic as i32
+                        })
+                        .map(|effect| effect.amount * aura.stack_multiplier())
+                        .sum::<f32>()
+                })
+                .sum::<f32>()
+        });
+    1.0 + percent / 100.0
+}
+
 /// Unit.cpp1243–1257: spell blocks double integer percentage before truncating
 /// the resulting amount, with a full-block cap. Critical block is not a crit hit.
 fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f32) -> (f32, f32) {
@@ -1102,6 +1137,7 @@ fn deal_damage_and_report(
             * versatility_multiplier(world, bonus_caster)
             * crate::auras::summon_damage::multiplier(world, bonus_caster)
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
+            * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
     };
     let taken = if effect.is_some_and(|effect| effect.effect == EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT) {
         crate::auras::damage_resilience_multiplier(world, target, ctx.spell)
