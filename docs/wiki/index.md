@@ -1,3 +1,4 @@
+- [Native power drain8](systems/spell-casting.md#native-power-drain8--2026-10-17) — primary-power and integer drain, actual-removal caster credit, unchanged native spell effects; behavioral RED retained, GREEN pending.
 - [Level-based pet maximum health](systems/pet-battle-engine.md#level-based-maximum-health--2026-10-17) — explicit actual level, bounded577/610/1990; eight CPU cases, owned cap, fresh reconciled70448 census1797/2829; post-landing native proof pending.
 - [Koranthal5s destination delay](systems/boss-scripts.md#koranthal-destination-delay--2026-10-17) — valid-pair hook A/B falsifies hook regression; stale early-impact expectations corrected to sourced5000ms/typed119964, unchanged data/runtime.
 - [Omor caster hold/retreat](systems/boss-scripts.md#omor-caster-hold-and-retreat--2026-10-17) — real20yd hold/3yd retreat/no-melee RED→strict GREEN2/2; direct grounded subset, ordinary affected25/25 GREEN; native/path/timer gaps remain.

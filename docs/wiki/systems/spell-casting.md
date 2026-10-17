@@ -24,6 +24,14 @@ Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulf
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Native power drain8 — 2026-10-17
+
+`effects.rs::power_drain` implements pinned TC a352b1fa `SpellEffects.cpp1146–1180`: target must be alive and its `PowerPools.order` primary must match MiscValue. A stored secondary/legacy Mana component alone is insufficient. The handler truncates the native base before existing supported SP/AP and damage-done modifiers, adds truncated signed native variance, then applies supported damage-taken modifiers with integer truncation. No health, armor, crit or absorb resolution runs for the drain.
+
+`change_power` supplies the actual removal after the zero floor. Only a different caster receives that amount times native Amplitude (caster spell-mod operation27), truncated and passed through ordinary energize clamping/logging. Native3405 amplitude0 grants nothing;46453 uses integer17 plus the fixture's100SP, not rounded18. Imported16094 retains its independent damage and slow effects. Tests use naturally spawned Skul10393 mana10922 and actual1459 costs, without changing imported effects, variance, actor pools or clocks. Initial native RED: four missing-drain failures, two exclusion guards pass; GREEN pending in the [proof ledger](../../../data/class-completeness6-2026-10-12/power-drain-proof-ledger.json).
+
+[Contract](../../specs/class-completeness.md). Sources: TC `Spell.h803`, `Unit.cpp6828/7011`, `SpellInfo.cpp754–759`, `SpellDefines.h181`; hashed receipt `data/class-completeness6-2026-10-12/power-drain-source.json`. Existing unimplemented damage modifiers and the distinct power-drain execute-log packet remain gaps; no full13/40, whole-ability, timing, legal-loadout or rendered acceptance claim.
+
 ## Level80 class completeness
 
 [Victim melee critical chance](../../class-completeness6.md#victim-melee-critical-chance--batch30) applies native187 after caster/script crit values to melee auto-attacks and non-ranged attack-type spells. Native ranged-weapon metadata, not school alone, excludes actual ranged attacks; positive/negative/additive and natural-expiry controls use real native rows. Other incoming critical modifiers remain separate gaps.
