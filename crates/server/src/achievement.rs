@@ -1678,6 +1678,9 @@ mod absent_aura_tests;
 #[path = "achievement_completed_quest_tests.rs"]
 mod completed_quest_tests;
 #[cfg(test)]
+#[path = "achievement_constant_worldstate_tests.rs"]
+mod constant_worldstate_tests;
+#[cfg(test)]
 #[path = "achievement_creature_type_tests.rs"]
 mod creature_type_tests;
 #[cfg(test)]
