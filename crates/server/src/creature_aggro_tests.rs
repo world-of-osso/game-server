@@ -978,7 +978,7 @@ fn threat_membership_wakes_with_current_entries_and_tracks_active_edits() {
         app.world().get::<UnitThreatList>(npc).unwrap().0,
         vec![victim.to_bits()]
     );
-    app.world_mut().get_mut::<ThreatTable>(npc).unwrap().clear();
+    app.world_mut().get_mut::<ThreatTable>(npc).unwrap().reset();
     app.update();
     assert!(app.world().get::<UnitThreatList>(npc).unwrap().0.is_empty());
     app.world_mut()
