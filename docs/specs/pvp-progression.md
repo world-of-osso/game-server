@@ -8,6 +8,14 @@ Retail Mainline behavior applies to both client art skins. Extend existing PvP/r
 - War Mode changes require authoritative rest-area, combat and instance checks; its source-backed buff and talent activation must follow actual world state.
 - PvP talent selection requires source specialization, slot-mask/unlock, level and PlayerCondition eligibility. Unknown conditions cannot be guessed true.
 
+## Ordinary battleground party queue
+
+A grouped character's QueueForBattleground request is leader-only. Resolve its GroupRegistry roster, validate all members are online, available for PvP and in the same source bracket, then enqueue the whole roster through existing join_group atomically. Reject groups larger than one battleground team. Every queued member receives the normal queue projection; existing matchmaking keeps the party together without changing minimums or capacity.
+
+Accepted roster members completing transfer after match start receive exactly one zeroed scoreboard entry on their assigned team, following pinned TC Battleground::AddPlayer/PlayerScores. Preserve every existing score entry and keep start thresholds unchanged; sequential WorldPortAck arrivals must not truncate the final roster.
+
+Pinned TC BattleGroundHandler.cpp189–226 supplies the leader/group admission and per-member queued notification contract. Four ordinary five-player parties must enter one Arathi match with20 players,10 per assigned team, through normal invite/accept, queue and battleground invitation/accept messages. WSG's lower minimum can form earlier; this contract does not delay its queue to force20.
+
 ## Source catalogs and import
 
 `scripts/reference/pvp-12.1.0.69933/` contains locally extracted CASC records. CurrencyTypes contains only1792/1602; PvpTalent407 rows, category3, unlock4, PrestigeLevelInfo24. Values come from Retail build keydcfc90fffd79ba00406ae46f5f657592, exported by game-engine `scripts/export_db2_csv.py` at exact layoutsFA3226AB/BE69BB5A/ECB2C5C2/9685CBCC/6582638F. The local TrinityCore `DB2Structure.h` preserved in game-engine `data/diagnostics/scrap-2026-10-10/` defines field semantics. Numeric source receipts remain in `data/diagnostics/pvp-progression-2026-10-11/db2/`.
@@ -50,6 +58,23 @@ Explicit Lead authorization normalizes each per-map completion hook to one invoc
 Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each grant a winning participant one bonus-kill equivalent, then grant every eligible participant one equivalent. Each call rounds separately using `ceil(min(instance PVPDifficulty maximum,80) ×1.55)`:30–39 winners receive61+61=122; other present participants receive61. Inactive/minimum-XP-level checks remain; dead accepted participants receive the team award, departed/unaccepted players do not. Null-victim team awards do not apply kill-only group/aura/rest modifiers and do not emit type35 honorable-kill criteria. Terminal resource-tick replay must not duplicate rewards; both wallet and separate lifetime XP persist.
 
 This checkpoint's OnEnd callbacks cover Arathi, Eye, current Warsong and the Alterac survivor contract below. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+
+## Random Battleground admission and reward profile — 70448
+
+**`RANDOM_BG_LEVEL_ELIGIBLE_MAPS` — project policy based on current Retail level-banded Random BG behavior, not a TC port.** Random32 admission uses parent map566's source bracket (first20–29), parent minimum5/team, capacity10/team and maximum party5. Every player's original32 identity must survive concrete map selection, acceptance, transfer and reconnect.
+
+Select only configured concrete templates linked from70448 BML32, using their existing configured weights (Retail weights are undocumented). Each eligible map must have its own PVPDifficulty bracket containing every queued player's level, within its admission bounds. Reject a requested level range explicitly when no configured eligible map exists. Deepwind2245 stays excluded because its template is missing. A level25 party cannot select Deephaul2656; level80 can. The instance retains the selected map's level-matching bracket, never a copied parent RangeIndex. Existing per-map payouts and minimum-to-start remain unchanged; the parent's5/team matchmaking minimum does not lower a concrete map's start minimum. No new UI map-exclusion behavior.
+
+## Fill existing battleground copies
+
+Queue and capacity-release events fill compatible existing Waiting/InProgress battleground copies before creating a new one. The concrete map and every incoming member's selected-map level range must match; rated/arena and Ended copies are excluded. Random32 eligibility remains unchanged, with no redraw. Each character retains their own original queue, including direct/random queues sharing a concrete copy.
+
+- **`BG_BACKFILL_WHOLE_PARTY_SMALLER_TEAM` — project policy:** assign a whole party to the smaller team only when it fits that team's remaining concrete-map capacity; never split it. This replaces TC's per-faction one-player-at-parity limiter. Count outstanding invitations and offline-reserved members, not just entered players. A non-fitting party stays queued; a later smaller fitting party may join.
+- **`BG_BACKFILL_MATCH_ORDER` — project policy:** try existing match IDs in deterministic ascending order before creating a new copy. This is not TC's free-slot push-front ordering.
+
+Preserve match/copy ID, objective state, score, clock and phase. Existing accepted players are not re-invited; late arrivals use existing zero-row scoreboard insertion. Reserve new ownership on an existing InstanceManager copy before inviting/removing queued entries; running-copy acceptance must work through the normal port/WorldPortAck path. Refill on queue requests and existing decline/leave/offline-release events only. No new timers, rewards, source minima or parent queue limits. Arathi's unchanged8/team minimum is reached naturally when later parties fill a Random5v5 Waiting copy.
+
+`RANDOM_BG_WIN_REWARD_PROFILE` remains unresolved: pinned TC a352b1fa defaults and shipped assignments use win first27000/repeat13500 and loss first4500/repeat3500 as kill equivalents, not flat Honor. Reset defaults to06:00 server-local. No amounts, reset authority, first-win/daily state or Random completion grant is adopted.
 
 ## Warsong / Twin Peaks capture Honor
 

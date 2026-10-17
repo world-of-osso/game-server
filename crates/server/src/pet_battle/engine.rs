@@ -7,6 +7,8 @@ const RULE_STATES: &[&str] = &[
     "Stat_Dodge",
     "Mod_SpeedPercent",
     "Mod_MaxHealthPercent",
+    "maxHealthBonus",
+    "Internal_InitialLevel",
     "Weather_ArcaneStorm",
     "Mod_PetType_ID",
     "Mod_PetTypeDamageDealtPercent",
@@ -552,7 +554,9 @@ impl<R: BattleRng> Runtime<'_, R> {
     }
     fn refresh_max_health(&mut self, pet: PetRef) {
         let multiplier = self.percent(pet, "Mod_MaxHealthPercent");
-        let max = (f64::from(self.battle.pet(pet).base_health) * multiplier)
+        let level_bonus =
+            self.state(pet, "maxHealthBonus") * self.state(pet, "Internal_InitialLevel") / 100;
+        let max = (f64::from(self.battle.pet(pet).base_health + level_bonus) * multiplier)
             .floor()
             .max(1.0) as i32;
         let data = self.battle.pet_mut(pet);

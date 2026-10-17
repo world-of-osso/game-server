@@ -208,6 +208,7 @@ pub(super) fn create_match(
             accepted: Default::default(),
             map: None,
             origins: Default::default(),
+            original_queues: Default::default(),
             flags: Default::default(),
             nodes: None,
             eye: None,

@@ -149,19 +149,35 @@ impl ExpectedStats {
     }
 }
 
-/// ExpectedStat `CreatureSpellDamage` and `CreatureAutoAttackDps` by `(Lvl,
-/// ExpansionID)`: what a creature spell's base points are a percentage of
+/// ExpectedStat spell damage, auto-attack DPS and PlayerMana by `(Lvl,
+/// ExpansionID)`: spell damage and effect8 base-point percentage budgets
 /// (`SpellEffectInfo::CalcBaseValue` → `EvaluateExpectedStat(stat, level,
 /// expansion, 0, CLASS_NONE)`, which applies no ExpectedStatMod).
 #[derive(Resource, Debug, Clone, Default, PartialEq)]
 pub struct CreatureSpellStats {
     pub by_level: HashMap<(u8, i32), (f32, f32)>,
+    /// ExpectedStat PlayerMana, used by effect8's native base-value branch.
+    pub player_mana_by_level: HashMap<(u8, i32), f32>,
     /// `ContentTuning.ExpansionID` by ID: a spell's `ContentTuningID` picks the
     /// expansion (-2 without one).
     pub tuning_expansion: HashMap<u32, i32>,
 }
 
 impl CreatureSpellStats {
+    /// Effect8's PlayerMana budget; source expansion lookup and missing-row value1.
+    pub fn player_mana(&self, level: u8, content_tuning_id: u32) -> f32 {
+        let expansion = self
+            .tuning_expansion
+            .get(&content_tuning_id)
+            .copied()
+            .unwrap_or(DEFAULT_EXPANSION);
+        self.player_mana_by_level
+            .get(&(level, expansion))
+            .or_else(|| self.player_mana_by_level.get(&(level, DEFAULT_EXPANSION)))
+            .copied()
+            .unwrap_or(1.0)
+    }
+
     /// `CreatureSpellDamage` (or `CreatureAutoAttackDps`) at `level` for a spell of
     /// ContentTuning `content_tuning_id`; 1 when the level has no row
     /// (DB2Manager::EvaluateExpectedStat).

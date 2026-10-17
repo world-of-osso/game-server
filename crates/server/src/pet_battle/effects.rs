@@ -227,7 +227,13 @@ impl<R: BattleRng> Runtime<'_, R> {
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
                 let target = if super::rules::damages_enemy_team(ability) {
-                    other_team_slot(target, effect.order)
+                    // Rapid Fire's two authored three-row waves address the same pets.
+                    let order = if ability == 774 {
+                        (effect.order - 1) % 3 + 1
+                    } else {
+                        effect.order
+                    };
+                    other_team_slot(target, order)
                 } else {
                     target
                 };
@@ -296,6 +302,10 @@ impl<R: BattleRng> Runtime<'_, R> {
                     .states
                     .insert(p[0] as u32, value);
                 Ok(true)
+            }
+            23 if matches!(ability, 258 | 979) => {
+                let recipient = other_team_slot(caster, effect.order - 3);
+                self.heal_recipient(caster, recipient, effect)
             }
             23 | 53 => self.heal_effect(caster, effect),
             31 => {
@@ -397,12 +407,19 @@ impl<R: BattleRng> Runtime<'_, R> {
         {
             return Ok(false);
         }
-        let previous = self.healing_target;
-        self.healing_target = Some(recipient);
         let mut heal = effect.clone();
         heal.property = 23;
         heal.params[2] = p[4];
-        let result = self.heal_effect(caster, &heal);
+        self.heal_recipient(caster, recipient, &heal)
+    }
+    fn heal_recipient(
+        &mut self,
+        caster: PetRef,
+        recipient: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let previous = self.healing_target.replace(recipient);
+        let result = self.heal_effect(caster, effect);
         self.healing_target = previous;
         result
     }
