@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source170–174 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17): mixed Alliance Standard, sanctuary script routing, arm-equipment procedural and linked-hologram child remain gaps. Distinguish absent runtime154818 from existing content/source metadata. No data/runtime admission, borrowed prior native proof or redundant code gate.
+
 ## 2026-10-17 — Holographic165 and banner boundaries
 
 [Exact165–169 matrix](../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17): Holographic165 actual learned-use/saved-bind/shared-charge acceptance brings eight variants8/8/62.43s; fmt/readability pass, package check pending capacity. Rustbolt333298 and mixed Horde War Standard remain gaps; source20 War Banner native/combat-removal proof retains its revision scope. No runtime/data admission or whole-Toy/native certificate.
