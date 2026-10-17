@@ -741,8 +741,8 @@ fn smartai_coverage_despawning_a_native_corpse_interrupts_its_dead_start_cast() 
     let spawn = data
         .spawns
         .iter()
-        .find(|spawn| spawn.template_entry == 1978 && spawn.map == 0)
-        .expect("native Erland world spawn");
+        .find(|spawn| spawn.guid == 20_004_147)
+        .expect("native Brown Ram world spawn");
     let template = data.templates.get(&spawn.template_entry).unwrap();
     let mut h = harness(Vec::new(), &[DEATH_TOUCH, NETHER_EXPLOSION], 2).unwrap();
     let mut queue = bevy::ecs::world::CommandQueue::default();
