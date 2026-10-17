@@ -79,7 +79,10 @@ fn wild_pet_battles_lock_on_uses_authored_tonk_target_mark_and_blast() {
         initial.teams[1].pets[0].health
     );
     assert_eq!(ready.auras[0].ability, 300);
-    assert_eq!(ready.auras[0].target, PetRef { team: 1, slot: 0 });
+    assert_eq!(
+        ready.auras[0].target,
+        crate::pet_battle::PetRef { team: 1, slot: 0 }
+    );
     assert_eq!(ready.auras[0].remaining, 1);
     let (launched, _) = ready
         .step(&catalog.turns, actions, &mut Fixed(500_000))
