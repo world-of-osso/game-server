@@ -5,6 +5,8 @@ use crate::persistence::GameDatabase;
 mod content_tuning;
 #[path = "pvp_honor_tests.rs"]
 mod honor_progress;
+#[path = "pvp_honor_race_tests.rs"]
+mod honor_race;
 #[path = "pvp_kill_criteria_tests.rs"]
 mod kill_criteria;
 use crate::pvp::pvp_support::build_pvp_snapshot;
