@@ -222,44 +222,91 @@ fn encounter_coverage_gargolmar_real_evade_rearms_damage_thresholds() {
 }
 
 #[test]
-#[ignore = "RED: generic effect 96 charge absent (Gargolmar Surge)"]
 fn encounter_coverage_gargolmar_surge_selects_farthest_living_threat() {
     let (mut h, boss, map) = pull_gargolmar();
-    let victim = h.player();
     let far = h.players[1].0;
+    assert_ne!(
+        far,
+        h.player(),
+        "farthest threat is not the high-threat melee victim"
+    );
     let origin = *h.app.world().get::<Position>(boss).unwrap();
-    h.app.world_mut().entity_mut(far).insert((
-        map,
-        Position {
-            x: origin.x + 20.0,
-            ..origin
-        },
-    ));
+    let destination = Position {
+        x: origin.x + 20.0,
+        ..origin
+    };
+    h.app.world_mut().entity_mut(far).insert((map, destination));
     crate::creature_aggro::add_threat(h.app.world_mut(), boss, far, 0.1);
-    let mut cast = None;
     for _ in 0..120 {
         h.advance(0.05);
-        cast = spell_gos(&h, boss, 34645).last().map(|go| go.target);
-        if cast.is_some() {
+        if !spell_gos(&h, boss, 34645).is_empty() {
             break;
         }
     }
     assert_eq!(
-        cast,
-        Some(Some(far.to_bits())),
-        "source MaxDistance is not the high-threat melee victim"
+        spell_gos(&h, boss, 34645).last().unwrap().target,
+        Some(far.to_bits())
     );
-    assert_ne!(far, victim);
+    let at_launch = *h.app.world().get::<Position>(boss).unwrap();
+    let distance = |p: Position| {
+        Vec3::new(p.x, p.y, p.z).distance(Vec3::new(destination.x, destination.y, destination.z))
+    };
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), far).unwrap();
     assert!(
-        h.inbox(0)
-            .log
-            .iter()
-            .any(|event| event.source == Some(boss.to_bits())
+        distance(at_launch) > reach + 1.0,
+        "charge must travel, not teleport at launch"
+    );
+    let speed = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(34645)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .speed;
+    let expected_frames =
+        ((1.0 + (distance(at_launch) - reach) * 1000.0 / speed) / 50.0).ceil() as usize;
+    let mut previous = at_launch;
+    let mut impact = None;
+    for frame in 1..=20 {
+        h.advance(0.05);
+        let position = *h.app.world().get::<Position>(boss).unwrap();
+        let traveled = Vec3::new(
+            position.x - previous.x,
+            position.y - previous.y,
+            position.z - previous.z,
+        )
+        .length();
+        assert!(
+            traveled <= speed * 0.05 + 0.001,
+            "charge exceeds authored velocity: {traveled}"
+        );
+        previous = position;
+        if h.inbox(1).log.iter().any(|event| {
+            event.source == Some(boss.to_bits())
                 && event.target == Some(far.to_bits())
                 && event.spell_id == Some(34645)
                 && event.kind == CombatLogKind::Damage
-                && event.amount > 0),
-        "Surge damages selected distant threat"
+                && event.amount > 0
+        }) {
+            assert_eq!(
+                frame, expected_frames,
+                "source spline duration owns impact time"
+            );
+            impact = Some(position);
+            break;
+        }
+    }
+    let at_impact = impact.expect("source Surge must damage selected distant threat after travel");
+    eprintln!(
+        "SURGE launch={at_launch:?}, impact={at_impact:?}, target={destination:?}, reach={reach}"
+    );
+    assert!(
+        distance(at_impact) <= reach + 0.1,
+        "source charge arrives before distant impact: remaining={}",
+        distance(at_impact)
     );
 }
 
