@@ -279,6 +279,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     143119, 143120,
     # Forlorn Toll: source wild Wandering Soul, preserving all ten model choices.
     143222,
+    # Goldtusk Inn Breakfast Buffet: authentic stationary table, source half scale.
+    149876,
     # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
     51113,
     # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.

@@ -314,11 +314,18 @@ fn motion_ownership_world() -> (World, Entity, Entity) {
         ))
         .id();
     let target = world
-        .spawn(Position {
-            x: 0.0,
-            y: 0.0,
-            z: 10.0,
-        })
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 10.0,
+            },
+            crate::maps::InMap::continent(0),
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
         .id();
     assert!(move_path(&mut world, actor, 1));
     (world, actor, target)
