@@ -11,8 +11,8 @@
 // Native kill78 CreatureType30 preserves the actual eligible victim type.
 // Native participation15 PlayerLevelWithinContentTuning268 uses authored inclusive min/max.
 // Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.
-// Criteria SHA256 84f035906822bcb34048b1cfbbfc714fd1688b4742676c1ee7139c1280ace5b7.
-// ModifierTree SHA256 82e79d0f3f51759d5c220192e962bdc72bf0fe3f8a85fb75d7a5f7f7d8749062.
+// Criteria SHA256 5c63e0bcb9b6f77a9bf4d2f562109acf373fa7d1ce97f749a20612a6152e67eb.
+// ModifierTree SHA256 9afe5f7734828630b7088be5c5f1f5c36f954a86ea85305927b298a502bb5b90.
 // Difficulty SHA256 e5ca0536f7488bd637bff55329ed94eb191ddbe19015929633d9594c1fb8468d.
 use super::{CompiledConditions, DifficultyRule};
 
