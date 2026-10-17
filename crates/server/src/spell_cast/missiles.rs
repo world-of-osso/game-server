@@ -259,7 +259,7 @@ fn split_reflected(
 }
 
 /// Every landing with its delay in ms, earliest first: the plan split by hit delay
-/// (effects without unit targets, such as areas and summons, go with the earliest hit),
+/// (effects without units use the destination's delay, otherwise the earliest hit),
 /// and per reflector its aura proc at its delay and the reflected spell at 1.5 × it
 /// ("Increase time interval for reflected spells by 1.5", Spell.cpp:2543-2544).
 fn landings(
@@ -278,20 +278,20 @@ fn landings(
     let units = super::hit_units(&plan);
     let mut moments: Vec<u64> = units.iter().map(|&unit| delay_of(unit)).collect();
     moments.sort_unstable();
-    moments.dedup();
     let unitless_moment = destination_delay.unwrap_or_else(|| {
         moments
             .first()
             .copied()
             .unwrap_or_else(|| delays.iter().map(|(_, delay)| *delay).min().unwrap_or(0))
     });
-    if moments.is_empty() && plan.iter().any(|planned| planned.units.is_empty()) {
+    if plan.iter().any(|planned| planned.units.is_empty()) {
         moments.push(unitless_moment);
     }
+    moments.sort_unstable();
+    moments.dedup();
     let mut landings: Vec<(u64, Landing)> = moments
         .iter()
-        .enumerate()
-        .map(|(slot, &moment)| {
+        .map(|&moment| {
             let plan: TargetPlan = plan
                 .iter()
                 .filter_map(|planned| {
@@ -301,7 +301,7 @@ fn landings(
                         .copied()
                         .filter(|&unit| delay_of(unit) == moment)
                         .collect();
-                    let unitless = planned.units.is_empty() && slot == 0;
+                    let unitless = planned.units.is_empty() && moment == unitless_moment;
                     (!units.is_empty() || unitless).then(|| PlannedEffect {
                         units,
                         ..planned.clone()
@@ -341,7 +341,7 @@ fn landings(
 /// Each unit target's hit delay in ms (`Spell::AddUnitTarget`, Spell.cpp:2486-2518),
 /// in plan order. Without travel time every delay is 0. A destination spell is one
 /// missile over the caster's exact distance (`CalculateDelayMomentForDst`) for every
-/// unit. Otherwise a unit is `LaunchDelay` plus the flight from the caster, except with
+/// non-caster unit. Otherwise a unit is `LaunchDelay` plus the flight from the caster, except with
 /// `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES`: a unit after the first that shares an effect
 /// with an earlier one is hit the flight from the latest such unit after it, without
 /// another `LaunchDelay`. The caster's own entry is 0.
@@ -384,7 +384,11 @@ fn hit_delays(
         let distance = origin.map_or(0.0, |origin| origin.distance(dest.position));
         let delay = to_ms(launch_delay + travel(distance));
         return (
-            units.into_iter().map(|unit| (unit, delay)).collect(),
+            // TC Spell.cpp:2486–2521,4096–4138: self hits precede the destination.
+            units
+                .into_iter()
+                .map(|unit| (unit, if unit == caster { 0 } else { delay }))
+                .collect(),
             Some(delay),
         );
     }
