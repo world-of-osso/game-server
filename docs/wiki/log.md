@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source boundaries89–93
+
+[Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. No runtime admission; merged55-case proof unchanged.
+
 ## 2026-10-17 — Forlorn/charge merge
 
 [Focused merge proof](../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17): preserve effect96 movement-duration hit ordering and destination-only flight/front47; merged55/55 pass with actual protocol master. Lead published matching Forlorn template receipt; no new full-suite/native-parity claim.
