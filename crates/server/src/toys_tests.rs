@@ -22,6 +22,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_hearthstone_tests.rs"]
 mod hearthstones;
+#[path = "toys_oomgut_tests.rs"]
+mod oomgut;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
 #[path = "toys_podium_tests.rs"]
