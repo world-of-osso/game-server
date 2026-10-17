@@ -4,7 +4,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
-- [ ] Creature `triggered=true` bool-full-mask casts permit a present-dead caster because that entry has no triggering aura. Actual Death Touch5 kills the NPC; triggered116 Frostbolt remains admissible, while ordinary116 still refuses CasterDead. The dead triggered caster still needs native205406's own214502 aura, and recipient/aura predicates remain active. This is the no-aura-origin bool route, not a new policy for aura-origin triggers, ordinary passive/AllowCastWhileDead or a whole Frostbolt/death-trigger ability claim.
+- [x] Creature `triggered=true` bool-full-mask casts permit a present-dead caster because that entry has no triggering aura. Actual Death Touch5 kills the NPC; triggered116 Frostbolt remains admissible, while ordinary116 still refuses CasterDead. The dead triggered caster still needs native205406's own214502 aura, and recipient/aura predicates remain active. This is the no-aura-origin bool route, not a new policy for aura-origin triggers, ordinary passive/AllowCastWhileDead or a whole Frostbolt/death-trigger ability claim.
 
 - [x] Normal explicit-unit admission permits a present-dead target when native `IsAllowingDeadTarget` allows it, including non-resurrection spells. Actual Death Touch5→Freeze9454 succeeds through player requests and ordinary/triggered creature entry without aura persistence or resurrection. Living Freeze still stuns; Flame Shock188389 still refuses corpses before payment. Resurrection still refuses living recipients. Shared queued callers use the same predicate; this does not certify an unauthenticated9454 parent chain, implicit corpse selection, actor-death or full target-flag parity.
 

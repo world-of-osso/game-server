@@ -1,6 +1,6 @@
 ## 2026-10-17 — Creature bool-trigger dead caster
 
-[Spell casting](systems/spell-casting.md#creature-bool-trigger-dead-caster-admission--2026-10-17): TC permits a dead caster for a triggered cast without aura origin; bool FULL_MASK entry supplies no aura. Actual5→dead NPC→116/205406 gives RED2pass/2fail10.64s, while living bool116/dead ordinary116 controls pass. Removed only the unconditional bool-route living gate; metadata/recipient predicates and all other exemptions remain. GREEN pending; no raw health/stat/Mana/native flags/rows/clock/RNG/budget edits or whole-spell/death-trigger claim.
+[Spell casting](systems/spell-casting.md#creature-bool-trigger-dead-caster-admission--2026-10-17): TC permits a dead caster for a triggered cast without aura origin; bool FULL_MASK entry supplies no aura. Actual5→dead NPC→116/205406 gives RED2pass/2fail10.64s, while living bool116/dead ordinary116 controls pass. Removed only the unconditional bool-route living gate; metadata/recipient predicates and all other exemptions remain. Merged1a33d5c9/master1e782e6e/protocol523d4f9 passes200/0/0 in72.31s (148.091s wrapper): four new plus196 prior, including actual reflection and repaired resurrection controls. Workspace/all-target check15.734s/0warnings, fmt and independent read-only artifact/source/wiring/readability pass. Reviewer formatting hypothesis falsified by actual fmt check; RED fixture byte-identical. No raw health/stat/Mana/native flags/rows/clock/RNG/budget edits or whole-spell/death-trigger claim.
 
 ## 2026-10-17 — Normal explicit AllowDeadTarget
 
