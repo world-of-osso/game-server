@@ -165,5 +165,20 @@
     "rank_factions": 241,
     "node_counts": 2
   },
-  "boundary": "Active readable records only, no historical substitution. CriteriaTree named Flags/OrderIndex corrects previous raw-offset reversal. Auxiliary WorldMapOverlay stays separately pinned69933; not a complete current-content/playability certificate."
+  "boundary": "Active readable records only, no historical substitution. CriteriaTree named Flags/OrderIndex corrects previous raw-offset reversal. Auxiliary WorldMapOverlay stays separately pinned69933; not a complete current-content/playability certificate.",
+  "census": {
+    "build": "12.1.5.70448",
+    "ordinary": 5533,
+    "account": 3510,
+    "character": 2023,
+    "statistics": 1841,
+    "enabled_types": 108,
+    "migration_added": [],
+    "migration_removed": [],
+    "area31_added": [
+      224,
+      1151,
+      12411
+    ]
+  }
 }

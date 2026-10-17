@@ -1,3 +1,4 @@
+- [Active70448 achievements](systems/dungeon-achievements.md#active70448-achievement-inputs) — named CSV import, source build/key receipt, no historical fallback; census migration adds/removes no roots.
 - [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — current terrain per eligible world-HK recipient; controlled full50 RED, GREEN pending; native BG credit unimplemented.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
 - [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
