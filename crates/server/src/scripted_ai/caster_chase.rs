@@ -140,12 +140,13 @@ fn plan_step(
         chase.travel = None;
         return from;
     }
-    let offset = to - from;
-    let direction = Vec3::new(offset.x, 0.0, offset.z).normalize_or_zero();
-    let direction = match travel {
-        Travel::Approach => direction,
-        Travel::Retreat => -direction,
+    let offset = match travel {
+        Travel::Approach => to - from,
+        Travel::Retreat => from - to,
     };
+    // TC GetAbsoluteAngle uses atan2(0,0)=0, including coincident retreat.
+    let angle = offset.z.atan2(offset.x);
+    let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
     from + direction * step.min(remaining)
 }
 
