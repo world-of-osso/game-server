@@ -66,6 +66,24 @@ fn pet_battle_launch_rocket_uses_mechanical_damage_against_each_defender_family(
 }
 
 #[test]
+fn pet_battle_launch_rocket_rejects_unqualified_parameters_before_rng() {
+    struct NoDraw;
+    impl BattleRng for NoDraw {
+        fn draw(&mut self) -> u32 {
+            panic!("unqualified rocket must reject before RNG");
+        }
+    }
+    let mut catalog = catalog();
+    catalog.effects.get_mut(&508).unwrap().params[2] = 1;
+    let initial = battle(&catalog, 9, 0, [293, 110, 123]);
+    assert!(
+        initial
+            .step(&catalog, [Action::Ability(293), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
+}
+
+#[test]
 fn pet_battle_armageddon_hits_each_enemy_then_kills_its_mechanical_caster_without_failsafe() {
     let catalog = catalog();
     let initial = battle(&catalog, 9, 0, [1025, 110, 123]);
