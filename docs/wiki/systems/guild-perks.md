@@ -28,7 +28,9 @@ Sources: pinned TC Unit.cpp8812–8854, SpellInfo.cpp2218, Spell.cpp7158 and Pla
 
 Installed8690 uses category2309 (one charge,1800000ms). Guild passive83944 has453/-900000ms for that category. TC SpellHistory.cpp982–995 adds the flat modifier when consuming a charge; SpellAuraEffects.cpp525 gives453 no immediate handler. Existing new-cast behavior already produced30/15/30-minute receipts for nonmember/member/removed controls. RED at7770d9c5 exposed a different defect: joining changed an already-consumed charge to898750ms remaining instead of preserving its roughly30-minute clock.
 
-The charge state now retains the consumed duration while charges are missing. Multiplier changes retain the existing progress-preserving rate path; a flat modifier affects the duration selected when the category is full again. This fixes the observed one-charge Hearthstone boundary, not arbitrary mixed-duration multi-charge queues. Native proof and final targeted verification remain pending.
+Actual Human native item6948 use exposed458619 (No Place Like Home):411/+1 charge and453/-300000ms, yielding two charges with25-minute nonmember recovery. Guild83944 makes new uses10 minutes; removing the racial to fit a30-minute fixture would be invalid. The real Human mixed-use test reproduced a second defect: after a25-minute ordinary use and a queued guild use, the second recovery was still25 minutes instead of10.
+
+`ChargeState.pending` is now a VecDeque of `ChargeRecovery { duration, ready_at }`, selected at each actual consumption as in TC SpellHistory.cpp834–853. Flat453 changes future uses without changing consumed entries. Rate changes rescale pending progress/durations; scripted reductions shift their deadlines, and restoration removes the newest missing entries. Owner snapshots report the oldest pending entry, switching duration when that entry recovers; no wire extension is added. Mixed-queue GREEN, rate/script controls and native25/10-minute Human proof remain pending. Earlier isolated3/3 proof at0411a44d is not claimed for the new queue until rerun.
 
 ## Sources
 

@@ -72,7 +72,7 @@ fn dummy3_serenity_flash_heal_reduces_running_recharge_by_six_seconds() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1673]
-        .next_ready_at;
+        .next_ready_at();
     h.inbox.charges.clear();
     h.cast_and_deliver(2061, Some(h.caster));
     h.advance(40);
@@ -83,7 +83,7 @@ fn dummy3_serenity_flash_heal_reduces_running_recharge_by_six_seconds() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1673]
-        .next_ready_at;
+        .next_ready_at();
     assert_eq!(after, before - 6.0);
     assert!(h.inbox.charges.iter().any(|e| e.spell_id == 2050));
 }

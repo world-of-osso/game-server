@@ -274,7 +274,7 @@ fn dummy4_prayer_reduces_running_sanctify_recharge_by_six_seconds() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&category]
-        .next_ready_at;
+        .next_ready_at();
     h.cast_and_deliver(596, Some(h.caster));
     h.advance(60);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -284,7 +284,7 @@ fn dummy4_prayer_reduces_running_sanctify_recharge_by_six_seconds() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&category]
-        .next_ready_at;
+        .next_ready_at();
     assert_eq!(after, before - 6.0);
     assert!(h.inbox.charges.iter().any(|e| e.spell_id == 34861));
 }

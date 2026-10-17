@@ -34,7 +34,7 @@ fn apply_charge_rate(h: &mut Harness) {
 
 fn remaining_ms(h: &Harness) -> u32 {
     let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
-    let remaining = history.charges[&1715].next_ready_at - super::history_now(h.app.world());
+    let remaining = history.charges[&1715].next_ready_at() - super::history_now(h.app.world());
     (remaining.max(0.0) * 1000.0) as u32
 }
 
