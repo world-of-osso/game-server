@@ -13,12 +13,7 @@ fn achievement_monthly_snapshot_never_waits_for_a_busy_durable_writer() {
         held.abort().unwrap();
     });
     let started = std::time::Instant::now();
-    save_monthly_contribution(
-        &db,
-        41,
-        character.character_id,
-        &PlayerAchievementState::default(),
-    );
+    save_monthly_contribution(&db, 41, character, &PlayerAchievementState::default());
     let elapsed = started.elapsed();
     blocker.join().unwrap();
     assert!(
