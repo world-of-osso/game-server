@@ -1,3 +1,7 @@
+## 2026-10-17 — Literal world-state source boundary
+
+[Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN/integration pending, missing Mephistroth/Warfront/raid availability unclaimed.
+
 ## 2026-10-17 — Launch Rocket setup and launch
 
 [Bounded75](../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17): exact293/effect508/aura294, existing charged direct-damage path. Unsupported75 RED3→GREEN4;1777/2829 rows/1015 graphs. Authored owned-team/wild-PvP27 and both strict native skins pass setup/launch win, six inspected fullHD originals/two framed models throughout. Final lib122/check55.43s/no warnings/bothfmt pass; wild-PvP27 and unchanged UI12 scopes retained. Initial duplicate caller `--locked` failed before compilation; corrected check passed, both attempts logged. No generic object-sharing/timing/VFX claim.
