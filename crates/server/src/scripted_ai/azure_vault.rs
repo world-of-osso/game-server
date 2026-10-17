@@ -14,7 +14,8 @@ pub(crate) const FROST_BOMB_CAST: u32 = 386781;
 const FROST_BOMB_AURA: u32 = 386881;
 const FROZEN_GROUND: u32 = 387149;
 const FROST_BOMB_DAMAGE: u32 = 386910;
-const EXPLOSIVE_BRAND: u32 = 374567;
+pub(crate) const EXPLOSIVE_BRAND: u32 = 374567;
+const EXPLOSIVE_BRAND_CHILD: u32 = 374582;
 const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
 const LEYMOR_SCRIPT: &str = "boss_leymor";
 const TELASH_SCRIPT: &str = "boss_telash_greywing";
@@ -37,6 +38,7 @@ const ERUPTING_FISSURE: u32 = 386660;
 const EVENT_ERUPTING_FISSURE: u32 = 4;
 const EVENT_EXPLOSIVE_BRAND: u32 = 6;
 const CONSUMING_STOMP: u32 = 374720;
+const CONSUMING_STOMP_DAMAGE: u32 = 374731;
 const EVENT_CONSUMING_STOMP: u32 = 3;
 pub(crate) const LEY_LINE_SPROUTS: u32 = 374364;
 const LEY_LINE_SPROUTS_MISSILE: u32 = 374362;
@@ -148,6 +150,12 @@ impl super::CreatureAi for Leymor {
             flags.0 |= UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
         }
         ctx.do_cast_self(STASIS);
+    }
+
+    fn channel_finished(&mut self, ctx: &mut super::Ctx, spell_id: u32) {
+        if spell_id == CONSUMING_STOMP {
+            ctx.do_cast_at(None, CONSUMING_STOMP_DAMAGE, true);
+        }
     }
 
     fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
@@ -306,6 +314,21 @@ fn read_ice_power_delta(world: &World, target: Entity) -> Option<(PowerType, f32
     let primary = world.get::<PowerPools>(target)?.order.first().copied()?;
     let current = crate::spell_cast::powers::power_value(world, target, primary)?.0;
     Some((primary, energy + ICE_POWER_PER_TICK - current))
+}
+
+/// TC374567 effect0/APPLY_AURA OnEffectHit: one child, retaining native parent auras.
+pub(crate) fn cast_brand_child(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    crate::spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        EXPLOSIVE_BRAND_CHILD,
+        None,
+        ctx.depth + 1,
+    );
 }
 
 /// TC a352b1fa374364 effect0 OnEffectHit: two native missiles per authored origin.
