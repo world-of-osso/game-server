@@ -108,6 +108,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         }
         EFFECT_ENERGIZE => energize,
         41 => super::teleport::jump_to_unit,
+        96 => super::charge::hit,
         98 | 144 => super::knockback::knock_back,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,

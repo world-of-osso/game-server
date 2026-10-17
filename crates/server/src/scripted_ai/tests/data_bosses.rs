@@ -9,6 +9,8 @@ mod azure_explosive_brand;
 mod azure_frost_bomb;
 #[path = "azure_intro.rs"]
 mod azure_intro;
+#[path = "azure_sprouts.rs"]
+mod azure_sprouts;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "gargolmar.rs"]
