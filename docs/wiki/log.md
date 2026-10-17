@@ -1,6 +1,6 @@
 ## 2026-10-17 — Toy source185–189 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source185189-midday-acceptance-pending-and-interactive-boundaries-2026-10-17): new Jar187 test/spec9ec632d3a retains exact day/night screen IDs, duration and cancel-preserved item recovery; execution/check still pending, fmt/readability pass. Fish-kicking/Gral/memento actions remain gaps; earlier Sealamp CPU/native/body/scale/state-kit/expiry scope retained without new certification. No production/data change.
+[Exact source matrix](../toy-effects14-coverage.md#source185189-midday-source-acceptance-and-interactive-boundaries-2026-10-17): Jar187 test/spec9ec632d3a proves exact day/night screen IDs, duration and cancel-preserved item recovery; four affected tests57.78s after one cold26m32s compile, native check3m04s/no compiler warnings and fmt/readability pass. Fish-kicking/Gral/memento actions remain gaps; earlier Sealamp CPU/native/body/scale/state-kit/expiry scope retained without new certification. No production/data change.
 
 ## 2026-10-17 — Toy source180–184 boundaries
 
