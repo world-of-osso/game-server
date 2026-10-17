@@ -66,6 +66,14 @@ fn toyfx84_akunda_real_learning_child_destination_visible_trap_cooking_and_expir
         persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character),
         before
     );
+    h.advance(2);
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert_eq!(h.inbox.failed[0].spell_id, 2538);
+    assert_eq!(
+        h.inbox.failed[0].detail.as_deref(),
+        Some("Requires Cooking Fire")
+    );
+    h.inbox.failed.clear();
     let origin = *h.app.world().get::<Position>(caster).unwrap();
     let point = [origin.x + 2.0, origin.y, origin.z];
     assert_eq!(
@@ -101,7 +109,10 @@ fn toyfx84_akunda_real_learning_child_destination_visible_trap_cooking_and_expir
     let fire = objects[0].1;
     let trap = objects[2].1;
     let fire_position = *world.get::<Position>(fire).unwrap();
-    assert!((fire_position.x - point[0]).abs() < 0.01);
+    assert!(
+        (fire_position.x - point[0]).abs() < 0.01,
+        "child fire {fire_position:?} must use parent cursor {point:?}"
+    );
     assert!((fire_position.z - point[2]).abs() < 0.01);
     assert_eq!(world.get::<Position>(trap), Some(&fire_position));
     for (entry, object, _, _) in &objects[..2] {
@@ -197,4 +208,69 @@ fn toyfx84_akunda_real_learning_child_destination_visible_trap_cooking_and_expir
         persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character),
         cooked
     );
+}
+
+#[test]
+fn toyfx84_akunda_source_trap_drift_refuses_before_spawn_or_cooldown() {
+    let directory = tempfile::tempdir().unwrap();
+    for (label, mutation) in [
+        (
+            "invisible",
+            "UPDATE tdb_gameobject_template SET displayId=0 WHERE entry=302746",
+        ),
+        (
+            "radius",
+            "UPDATE tdb_gameobject_template SET Data2=12 WHERE entry=302746",
+        ),
+        (
+            "spell",
+            "UPDATE tdb_gameobject_template SET Data3=133 WHERE entry=302746",
+        ),
+        (
+            "faction",
+            "UPDATE tdb_gameobject_template_addon SET faction=1 WHERE entry=302746",
+        ),
+        (
+            "missing-addon",
+            "DELETE FROM tdb_gameobject_template_addon WHERE entry=302746",
+        ),
+    ] {
+        let path = directory.path().join(format!("{label}.sqlite"));
+        std::fs::copy(crate::test_data::world_db_path(), &path).unwrap();
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        conn.execute_batch(mutation).unwrap();
+        let (mut h, character) = setup(&directory.path().join(format!("{label}.redb")));
+        h.app
+            .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+        h.app
+            .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+        learn_effect_toy(&mut h, character, 163211);
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        let error = activate_at(&mut h, 163211, Some([origin.x + 2.0, origin.y, origin.z]))[0]
+            .error
+            .clone()
+            .expect("source profile drift must refuse");
+        assert!(
+            error.contains("unsupported linked cooking trap 302746"),
+            "{label}: {error}"
+        );
+        h.advance(60);
+        assert!(!h.inbox.go.iter().any(|go| go.spell_id == 279076));
+        assert!(
+            !h.inbox
+                .cooldowns
+                .iter()
+                .any(|cooldown| cooldown.spell_id == 279076)
+        );
+        let world = h.app.world_mut();
+        assert_eq!(
+            world
+                .query::<&shared::protocol::GameObjectInfo>()
+                .iter(world)
+                .count(),
+            0,
+            "{label}"
+        );
+    }
 }
