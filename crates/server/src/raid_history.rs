@@ -156,6 +156,7 @@ mod tests {
                     }],
                     boss_creatures: vec![],
                     handled_area_triggers: Default::default(),
+                    data: Default::default(),
                 },
             )])));
         assert!(set_boss_state(
