@@ -2,6 +2,26 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Memory transforms and collection boundary (2026-10-17)
+
+[Source175–179 matrix](../../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17) adds actual Unshackled/Ankoan learning, authentic pool membership, ordinary ten-minute restoration and inherited one-hour recovery acceptance. Eight tests/12IDs and check/fmt pass; no runtime/data change. Heart/Trophy retain earlier bounded proof, while the Mechagon figure collection/action remains unresolved despite an existing runtime base. Native bodies/weighted sampling/full recovery passage remain separate.
+
+## Source standard/insignia/equipment/linked-hologram boundaries (2026-10-17)
+
+[Source170–174 matrix](../../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17) retains mixed Standard action, sanctuary script destinations, arm-equipment procedural and linked-hologram child gaps. Judgment154818/92155 already exists in the content tables WorldData actually loads; absent base-table rows are not missing runtime publication. Its linked child/lifecycle behavior remains unproved. No new admission, invented coordinates or borrowed War Banner/hearthstone proof.
+
+## Holographic Hearthstone and banner boundaries (2026-10-17)
+
+[Source165–169 matrix](../../toy-effects14-coverage.md#source165169-holographic-hearthstone-and-banner-boundaries-2026-10-17) records eight actual learned-use/saved-bind/shared-charge cases including Holographic165; native package/tests check and fmt/readability pass. Rustbolt333298 publication/placement and mixed Horde War Standard action remain gaps. Earlier source20 War Banner native/combat-removal witnesses retain their original scope; no new runtime/data admission or native certificate.
+
+## Source robot/teleport/whistle boundaries (2026-10-17)
+
+[Source160–164 matrix](../../toy-effects14-coverage.md#source160164-robotteleportwhistle-boundaries-and-retained-ocean-proof-2026-10-17) separates missing Blingtron7000/service behavior, unsourced Kul Tiras/Zandalar destinations and Flight Master's Whistle action from existing Pandaria code. Ocean Simulator retains its earlier revision-scoped simulation/native/PCM witnesses; no new acceptance, physical-output claim or confusion with Hyper-Compressed Ocean. No runtime/data admission.
+
+## Source equipment/light/ocean/gift boundaries (2026-10-17)
+
+[Source155–159 matrix](../../toy-effects14-coverage.md#source155159-equipmentlightoceangift-boundaries-2026-10-17) preserves exact equipment/gift procedural fields, paired light behavior and the Burning Blade banner presentation gap. Hyper-Compressed Ocean152121 remains unpublished; its actual source body is an invisible stalker, not proof of a fishable pool. No generic substitutes, new admissions or native acceptance.
+
 ## Azerite real-ground recovery and interaction gaps (2026-10-17)
 
 Already-admitted Azerite151 now has actual Northshire ground/learning and ordinary600s item recovery/reuse acceptance, without new policy. [Exact four-test/check proof and150–154 matrix](../../toy-effects14-coverage.md#source150154-azerite-real-ground-recovery-and-interaction-gaps-2026-10-17) separate server events from native skyward presentation and retain matching-game, rally, jukebox and secret-fish interaction gaps. No database publication.
