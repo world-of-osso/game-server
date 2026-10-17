@@ -1,7 +1,9 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Other boss schedules, energy/jump phases and rune/ground actions remain unported.
+//! Telash initial native power is ported; combat/energy/jump/rune phases remain unported.
 use bevy::prelude::*;
-use shared::components::UnitFlags;
+use shared::components::{PowerType, UnitFlags};
+
+use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 
 use crate::auras::{
     AuraInstance, RemoveReason, handlers,
@@ -15,6 +17,8 @@ const FROST_BOMB_DAMAGE: u32 = 386910;
 const EXPLOSIVE_BRAND: u32 = 374567;
 const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
 const LEYMOR_SCRIPT: &str = "boss_leymor";
+const TELASH_SCRIPT: &str = "boss_telash_greywing";
+const TELASH_INITIAL_POWER: f32 = 60.0;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -38,19 +42,28 @@ const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
 const EVENT_LEY_LINE_SPROUTS: u32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    name == LEYMOR_SCRIPT
+    matches!(name, LEYMOR_SCRIPT | TELASH_SCRIPT)
 }
 
-pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn super::CreatureAi>> {
+pub(super) fn creature_ai(
+    world: &World,
+    actor: Entity,
+    script_name: &str,
+) -> Option<Box<dyn super::CreatureAi>> {
     let map = world.get::<crate::maps::InMap>(actor)?;
     let maps = world.get_resource::<crate::maps::MapStore>()?;
     if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(AZURE_INSTANCE) {
         return None;
     }
-    Some(Box::new(Leymor {
-        boss: super::instance_script::bound_boss(world, actor)?,
-        tasks: super::EventMap::default(),
-    }))
+    let boss = super::instance_script::bound_boss(world, actor)?;
+    match script_name {
+        LEYMOR_SCRIPT => Some(Box::new(Leymor {
+            boss,
+            tasks: super::EventMap::default(),
+        })),
+        TELASH_SCRIPT => Some(Box::new(Telash { boss })),
+        _ => None,
+    }
 }
 
 /// TC instance_azure_vault::OnCreatureGroupDepleted: match this group's leader only.
@@ -155,6 +168,48 @@ impl super::CreatureAi for Leymor {
         }
         super::boss_ai::boss_update_ai(self, ctx, diff_ms);
     }
+}
+
+struct Telash {
+    boss: super::boss_ai::BossAi,
+}
+
+impl super::CreatureAi for Telash {
+    fn reset(&mut self, ctx: &mut super::Ctx) {
+        self.boss.reset(ctx);
+    }
+
+    fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        let Some((primary, mut powers)) = read_telash_primary_powers(ctx.world, ctx.me) else {
+            warn!(actor = ?ctx.me, "Telash initial power requires native template/class/power data");
+            return;
+        };
+        let Some(pool) = powers.get_mut(primary) else {
+            warn!(actor = ?ctx.me, ?primary, "Telash native primary power has no non-mana pool");
+            return;
+        };
+        pool.current = TELASH_INITIAL_POWER.min(pool.max);
+        ctx.world.entity_mut(ctx.me).insert(powers);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
+        self.boss.just_engaged_with(ctx);
+    }
+
+    fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
+        self.boss.just_died(ctx);
+    }
+}
+
+fn read_telash_primary_powers(world: &World, actor: Entity) -> Option<(PowerType, PowerPools)> {
+    let npc = world.get::<shared::components::Npc>(actor)?;
+    let data = world.get_resource::<crate::world_data::WorldData>()?;
+    let template = data.templates.get(&npc.template_id)?;
+    let table = world.get_resource::<PowerTypeTable>()?;
+    let primary = table.display_power(template.unit_class)?;
+    table.get(primary)?;
+    let powers = PowerPools::from_table(table, vec![primary]);
+    Some((primary, powers))
 }
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
