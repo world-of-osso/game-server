@@ -24,7 +24,17 @@ const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
 const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
-const LEY_LINE_SPROUTS: u32 = 374364;
+pub(crate) const LEY_LINE_SPROUTS: u32 = 374364;
+const LEY_LINE_SPROUTS_MISSILE: u32 = 374362;
+const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
+    (-5129.39, 1253.30, 555.58),
+    (-5101.68, 1253.71, 555.90),
+    (-5114.70, 1230.28, 555.89),
+    (-5141.62, 1230.33, 555.83),
+    (-5155.62, 1253.60, 555.87),
+    (-5141.42, 1276.70, 555.89),
+    (-5114.78, 1277.42, 555.87),
+];
 const EVENT_LEY_LINE_SPROUTS: u32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
@@ -162,6 +172,27 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// TC a352b1fa374364 effect0 OnEffectHit: two native missiles per authored origin.
+pub(crate) fn cast_sprout_missiles(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    for (x, y, z) in SPROUT_GROUP_ORIGINS {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+        let position = Vec3::new(x, y, z);
+        for _ in 0..2 {
+            crate::spell_cast::cast_triggered_at_destination(
+                world,
+                ctx.caster,
+                LEY_LINE_SPROUTS_MISSILE,
+                position,
+                ctx.depth + 1,
+            );
+        }
+    }
 }
 
 /// OnEffectHitTarget, effect0/SPELL_EFFECT_DUMMY.

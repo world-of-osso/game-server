@@ -1,3 +1,7 @@
+## 2026-10-17 — Leymor native Sprouts destination boundary
+
+[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask destination implementation committed for targeted GREEN; no summon/lifecycle/full70448 acceptance claimed.
+
 ## 2026-10-16 — Eligible victim race53
 
 [Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Native/account GREEN3/3 proves both full ten-race grants and group/reopened date. Census5529/1841 adds246/1005; post-master filter224/0/1existingignored+site1/1, workspace/all-targetcheck/fmt/diff pass and independent artifact/readability complete.
