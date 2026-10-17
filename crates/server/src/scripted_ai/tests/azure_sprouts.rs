@@ -159,7 +159,7 @@ fn prepare_arcane_power_prerequisites() -> (Harness, Entity) {
 #[test]
 #[ignore = "RED: native Sprouts do not yet apply374736 through summoner92"]
 fn azure_leymor_sprout_power_adds_one_native_aura_count_per_real_child() {
-    let (h, leymor) = prepare_arcane_power_prerequisites();
+    let (mut h, leymor) = prepare_arcane_power_prerequisites();
     assert_eq!(
         crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
         14,
