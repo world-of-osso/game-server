@@ -10,9 +10,9 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 [Source205–209 matrix](../../toy-effects14-coverage.md#source205209-areavisioncompanion-boundaries-and-retained-aqir-proof-2026-10-17) distinguishes an area-trigger totem, void-perception payload, Control1/Title2 scale2 apple and minipet-target leash from generic scenery/caster cosmetics. Aqir retains earlier actual missile/selected-target/15s-aura CPU proof without new native certification. No runtime/data admission or repeated gate.
 
-## Pending Mogu and companion/equipment/game boundaries (2026-10-17)
+## Mogu and companion/equipment/game boundaries (2026-10-17)
 
-[Source200–204 matrix](../../toy-effects14-coverage.md#source200204-pending-mogu-acceptance-and-companionequipmentgame-boundaries-2026-10-17) records201's new exact-source four-model transform case as pending native-helper proof, not passing acceptance. Companion possession, headgear procedural, shaving action and skull-game state remain gaps; existing half-scale shaving-kit runtime content is not that interaction. No runtime/data admission, generic substitute or new native certificate.
+[Source200–204 matrix](../../toy-effects14-coverage.md#source200204-mogu-source-acceptance-and-companionequipmentgame-boundaries-2026-10-17) records201's actual exact-source four-model transform/lifecycle/recovery acceptance: two affected tests/seven IDs, native check and fmt/readability pass. Companion possession, headgear procedural, shaving action and skull-game state remain gaps; existing half-scale shaving-kit runtime content is not that interaction. No runtime/data admission, generic substitute or new native certificate.
 
 ## Source motion/faction/appearance/action boundaries (2026-10-17)
 
