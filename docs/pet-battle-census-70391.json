@@ -1,10 +1,10 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "dec61f97",
+  "validator_revision": "70a7be1c",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1778,
+  "admitted_effect_rows": 1779,
   "effect_rows": 2829,
-  "admitted_abilities": 1016,
+  "admitted_abilities": 1017,
   "abilities": 1404,
   "properties": [
     {
@@ -1553,12 +1553,11 @@
       ]
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 1,
+      "handler": true,
       "property": 77,
       "rows": 2,
       "rejected_graph_effect_ids": [
-        517,
         1385
       ]
     },
@@ -1924,7 +1923,6 @@
     485,
     486,
     490,
-    496,
     498,
     502,
     513,
@@ -2081,7 +2079,6 @@
     1309,
     1311,
     1313,
-    1314,
     1316,
     1317,
     1319,
@@ -2422,7 +2419,6 @@
     "290": "unsupported property 72 at effect 504",
     "291": "unsupported property 74 at effect 505",
     "295": "ability 295: undetermined team target routing",
-    "301": "unsupported property 77 at effect 517",
     "303": "unsupported property 78 at effect 519",
     "315": "ability 316: unsupported turn 514 kind1 event1",
     "316": "ability 316: unsupported turn 514 kind1 event1",
@@ -2510,7 +2506,7 @@
     "714": "ability 714: undetermined team target routing",
     "718": "ability 718: unsupported aura state 314 Critical_Damage_Bonus",
     "720": "ability 720: unsupported object/team aura",
-    "722": "unsupported property 77 at effect 1385",
+    "722": "unsupported parameters for property 77 effect 1385: [0, 100, 0, 0, 0, 0]",
     "724": "ability 242: undetermined kill target/passive semantics",
     "733": "unsupported property 128 at effect 1407",
     "746": "ability 747: unsupported object/team aura",

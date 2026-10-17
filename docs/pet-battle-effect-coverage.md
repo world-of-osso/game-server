@@ -1,5 +1,11 @@
 # Pet battle effect-property coverage
 
+## Lock-On77 — implementation2026-10-17
+
+Local70391 root301 says “First use: Locks onto the target.” and “Second use: Blasts the target”. Its Locked On300 aura warns that the enemy is preparing an attack against its wearer. Exact effect517/turn496 supplies `[45,100,1,0,0,0]`, aura300; aura300 has no state modifiers and an empty ordinary turn. Bounded77 reuses charged direct damage, selecting the enemy wearer and authored one-round ready duration rather than75/76's self-owned persistent charge. GM722/effect1385 remains rejected. Generic aura provenance/refresh is unchanged; no new cross-caster sharing policy or full Retail timing/VFX claim.
+
+Real unsupported77 RED5→GREEN6 at70a7be1c covers target setup/second-use270 direct damage/new setup, unused-round expiry, enemy swap/re-lock, missed launch consuming the mark, setup dodge and malformed-duration rejection before RNG. Existing Launch Rocket4/Wind-Up1 regression tests also pass after the shared helper change. Census1779/2829=62.88%,1017graphs (+1row/+1graph),77 admits1/2rows. Source hashes/rows/full logs: `/home/osso/.worktrees/logs/petbattle-effects-2026-10-16/lock-on-*`. Authored Darkmoon Tonk338 level4/301 slot3 owned fixture/seeder is prepared; native/final gates pending. Adopted70448 display15381 closure authenticates5/5,0 failures;3 new product receipts+1 skin alias are privately staged, lead canonical publication requested. No canonical or UI code changes.
+
 ## Life Exchange67 — implementation2026-10-17
 
 Local70391 root277/effect493/turn471/property67 says: “Equalizes the health between the user and his enemy.” and “Health gained cannot exceed the caster's maximum health.” The property's sole named field is Accuracy; the authored tuple is `[100,0,0,0,0,0]`, aura0. Bounded implementation treats this as direct absolute-HP redistribution rather than attack-power-scaled damage or healing: compute the shared average from both pre-effect values, cap health to maximum, preserve reserves and skip both changes on a miss. Reuse ordinary accuracy/dodge admission, mapping property67's first field to Accuracy. Integer division follows the engine's HP convention; independent Retail rounding, damage/heal proc classification and feedback are not certified.
