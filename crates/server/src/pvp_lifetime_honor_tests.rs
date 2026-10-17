@@ -73,6 +73,11 @@ fn achievements_criteria_lifetime_honor113_full_native_hundred_and_relog() {
     let before = app.world().get::<PlayerAchievementState>(killer).unwrap();
     let character_dates = before.earned_at.clone();
     let account_date = before.account.as_ref().unwrap().earned_at[&513];
+    // Relog at a distinct clock time so rewriting an earned date cannot pass by accident.
+    app.world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .offset_secs += 3600;
+    assert!(app.world().resource::<crate::maps::ServerClock>().unix() > account_date);
     reopen_and_relog(&mut app, players[0], file.path());
     assert_eq!(lifetime_total(app.world(), killer), serde_json::json!(100));
     assert_eq!(
