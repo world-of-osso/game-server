@@ -41,6 +41,10 @@ Quest, vendor, trainer, loot, gossip and item tables are imported from the same 
 
 `scripts/mysql_dump.py` loads every dump table (MySQL string escapes decoded; `--schema world_schema.sql` reloads the dump tables into a populated `world.db` in one transaction without touching DB2 tables).
 
+### Native Curve type inputs
+
+The maintained publisher includes `curve(ID, Type, Flags)` rather than guessing interpolation from `curve_point`. [Curve publication](../../db2-active-inputs.md#native-curve-type-publication) owns installed-build provenance, readable-row coverage and explicit encrypted exclusions. This data-input change does not implement area-trigger scale or certify canonical publication.
+
 ### Spell/Class Data (Retail WoW DB2 CSVs)
 
 Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's `.build.info` version), stored in `../game-engine/data/db2/<build>/<Table>.csv`. `db2.py extract` decodes the `LOCAL_TABLES` (ContentTuning 1962930, QuestMoneyReward 1139047, ExpectedStat 1937326, ExpectedStatMod 1969773, ContentTuningXExpected 2976765) from the local CASC install with `scripts/db2_casc.py`. The decoder handles pallet arrays, non-inline ID lists, copy tables and relationship maps. Floats are written as exact float32 values; the earlier 7-digit rendering lost precision, e.g. ExpectedStat CreatureHealth 29552.18 instead of 29552.177734375. All five tables were checked against wago.tools' 12.1.0.69933 exports (`data/reference/wago-verify/`, fetched 2026-09-26 for verification only) and match on every row at float32 precision (`LocalDb2ExtractTests`). ExpectedStat, ExpectedStatMod and ContentTuningXExpected have layouts newer than the vendored WoWDBDefs, so their column order follows the wago export.
