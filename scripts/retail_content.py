@@ -277,6 +277,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     132969,
     # Gnoll Barrel: authentic paired identities; target-dummy combat is separate.
     143119, 143120,
+    # Forlorn Toll: source wild Wandering Soul, preserving all ten model choices.
+    143222,
     # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
     51113,
     # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.
