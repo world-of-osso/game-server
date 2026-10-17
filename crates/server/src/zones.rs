@@ -875,6 +875,10 @@ mod spawn_pools_world_db_tests;
 mod npc_combat_tests;
 
 #[cfg(test)]
+#[path = "zones_context_tuning_tests.rs"]
+mod context_tuning_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate};
