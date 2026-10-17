@@ -2760,9 +2760,11 @@ fn launch_triggered_spell(
         warn!("Triggered spell {} skipped: {failure:?}", spell.id);
         return false;
     }
-    // Native full-trigger flags do not bypass TARGET_AURASTATE. The existing
-    // relation bypass below remains separate from explicit aura eligibility.
-    if let Err(failure) = aura_spell_restrictions::check_target(world, explicit, spell) {
+    // Native full-trigger flags do not bypass caster/target aura requirements.
+    // The existing relation bypass below remains separate from aura eligibility.
+    let aura_eligibility = aura_spell_restrictions::check_caster(world, caster, spell)
+        .and_then(|()| aura_spell_restrictions::check_target(world, explicit, spell));
+    if let Err(failure) = aura_eligibility {
         warn!("Triggered spell {} skipped: {failure:?}", spell.id);
         return false;
     }

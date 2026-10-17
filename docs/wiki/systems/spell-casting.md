@@ -2,6 +2,14 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Triggered caster aura-spell eligibility — 2026-10-16
+
+The same source full-mask contract below requires caster aura-spell checks (`Spell.cpp:5873–5889`): IGNORE_CASTER_AURASTATE0x00200000 is outside0x0007FFFF. Triggered launch now runs the existing caster checker before the explicit-target checker, sharing one refusal/log path. No new state/type interpretation, native flags or ordinary crowd-control reordering.
+
+Actual native181445→181448 requires caster298992; the actual298992 producer applies its aura before launching the child. Native146481→146480 excludes caster146543, supplied by an ordinary native self cast. Initial testfddf075c has two genuine child-admission failures, two positive controls and one invalid fixture failure because298992 channels. Normal cancellation before removal fixes that fixture; correcteddced8676 independently reproduces missing-caster identity (one failure10.24s). Production guards follow these REDs; GREEN/final gates pending. Full child closure is loaded; no raw rows/clock/RNG/budgets changed. Receipts `data/class-completeness6-2026-10-12/triggered-caster-aura-{goal,source,proof-ledger}.json`.
+
+These are controlled native identity consumers, not complete Lunar Tempest/Fissure Shock/transform gameplay or a legal build. The previous direct caster-bypass controls now assert source refusal. Target-required references, caster aura types/states, None auto-self/implicit filtering and whole flag compatibility remain open.
+
 ## Triggered explicit-target aura eligibility — 2026-10-16
 
 The source `TRIGGERED_FULL_MASK=0x0007FFFF` excludes both IGNORE_TARGET_CHECK0x00100000 and IGNORE_CASTER_AURASTATE0x00200000 (`SpellDefines.h:293–302`). Even IGNORE_TARGET_CHECK only overrides BAD_TARGETS, not TARGET_AURASTATE (`Spell.cpp:3488–3492`). Earlier bypass controls document previous server behavior, not source compatibility.

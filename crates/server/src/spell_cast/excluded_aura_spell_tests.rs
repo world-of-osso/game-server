@@ -142,11 +142,17 @@ fn native_excluded_aura_spell_removal_and_expiry_restore_ordinary_cast() {
 }
 
 #[test]
-fn native_triggered_target_aura_exclusion_is_not_the_existing_caster_bypass() {
+fn native_triggered_caster_and_target_aura_exclusions_both_refuse() {
     let mut h = rogue();
     cast_self_aura(&mut h, STEALTH);
-    super::cast_triggered(h.app.world_mut(), h.caster, SHADOW_DANCE, None, 0);
-    assert!(crate::auras::has_aura(
+    assert!(!super::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        SHADOW_DANCE,
+        None,
+        0,
+    ));
+    assert!(!crate::auras::has_aura(
         h.app.world(),
         h.caster,
         SHADOW_DANCE
