@@ -2022,13 +2022,18 @@ fn enter_source_match_with(
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
     let count = u64::from(template.min_players_per_team) * 2;
+    // BattlemasterList's broad admission minimum need not have a PVPDifficulty row
+    // (Deephaul allows19–90 there, but its first authored match bracket is80).
+    let level = (template.bracket.min_level..=template.bracket.max_level)
+        .find(|&level| shared::battleground::source_level_bracket(template.map_id, level).is_some())
+        .expect("source fixture needs an authored PVPDifficulty level");
     let players: Vec<_> = (1..=count)
         .map(|id| h.spawn(id, STORMWIND, origin))
         .collect();
     for who in &players {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
-            shared::components::Level(template.bracket.min_level),
+            shared::components::Level(level),
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
             shared::components::CurrentPvpFaction(2),
         ));
