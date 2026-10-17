@@ -1098,7 +1098,7 @@ fn channel_destination(world: &World, caster: Entity) -> Option<Dest> {
     }
     let requested = world
         .get::<super::PendingCastSpell>(caster)
-        .and_then(|pending| pending.0.cast_destination);
+        .and_then(|pending| pending.spell.cast_destination);
     if let Some(point) = requested {
         return Some(Dest {
             position: Vec3::from_array(point),
