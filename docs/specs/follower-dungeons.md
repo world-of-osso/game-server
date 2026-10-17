@@ -45,6 +45,8 @@ Leymor374567 effect0 dummy aura must cast374570 on natural expiry from the origi
 
 A destination-requiring spell cast at a supplied unit must initialize its absent destination from that unit, not the caster. An explicitly supplied destination retains priority; a cast without any unit uses the caster. Ground-target selectors still project onto native map geometry and fail if it is unavailable; no geometry/tolerance bypass.
 
+Telash186737 starts with primary Energy60 using native Energy capacity, not a fabricated budget or player spell grant. Its sourced group0 references three Vault Rune197204 actors; a missing runtime197204 template remains a named data gap and cannot be replaced by invented rune actors or205 rows. Startup-energy proof is independent of rune/phase acceptance.
+
 Azure2498/map2515 retains its existing encounter ordinals and ordinary follower queue. Telash combat actor186737 (not the header's upper/noncombat199614) must execute Frost Bomb386781 effect0 dummy hits as triggered386881 on each selected unit. Only natural expiry of386881 effect0 dummy casts387149 then386910 from the original caster at the current target; cancellation, dispel, death, evade and missing-caster cleanup must not explode it. This finite hook chain does not establish Telash's energy/jump/rune phases or frozen-ground area actions. Leymor combat phases, Azureblade, Umbrelskul and full-Azure completion remain open; intro has separate scoped proof. [Source/proof boundary](../wiki/investigations/follower-data.md#azure-frost-bomb--2026-10-16).
 
 ## How it works
