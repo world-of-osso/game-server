@@ -8,6 +8,8 @@
 - [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.
 - [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Authoritative target LOS](systems/spell-casting.md#authoritative-target-los--2026-10-16) — moving-target receipt boundary replaces stale client endpoint validation; native release acceptance remains separate.
+- [Telash startup prerequisites](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17) — genuine native missingEnergy60 RED; runtime rune197204 and JumpCharge parameter table absent, no phase proof.
+- [Leymor native Sprouts children](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16) — parent0/14 RED→one ordinary parent/fourteen owned native children GREEN on active70448;17affected/check/fmt/sourceinspection pass; lifecycle/fullAzure open.
 - [Leymor Sprouts clock](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16) — native first3s cast/completed self-target SpellGo GREEN; child summons/lifecycle and fullAzure70448 remain open.
 - [Leymor Infused Strike](investigations/follower-data.md#azure-leymor-infused-strike--2026-10-16) — real10s cast/DOT/damage RED→GREEN, ordinary15/check/fmt/independent proof; other schedules and native Azure remain open.
 - [Leymor Brand expiry](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16) — native6000ms expiry-only374570; genuine RED→native3PASS; six shared controls/check/fmt pass, full phases/native acceptance pending.
@@ -45,6 +47,8 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16) — exact302746 profile plus parent destination RED→GREEN, actual cooking/CozyFire/cleanup;149 Toy+29 affected pass, native presentation separate.
+
 - [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16) — two authentic identities, real5759 area/cursor pair/300s lifecycle and147 Toy tests; canonical publication/native body/target-dummy combat separate.
 
 - [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16) — actual persisted bind/source10s cast/shared2309 charge;146 Toy tests pass, procedural native appearance and cross-map/wall-recharge separate.
