@@ -25,6 +25,7 @@ pub(crate) struct GoldUpdateQueue {
     pending: HashMap<u64, u64>,
     changed_inventories: HashSet<u64>,
     acquired_items: Vec<(u64, u32, u32)>,
+    news_characters: HashSet<u64>,
     looted_items: Vec<(u64, u32, u32, u8)>,
     looted_money: Vec<(u64, u64)>,
     criteria: Vec<(u64, crate::achievement::CriteriaEvent)>,
@@ -44,6 +45,14 @@ impl GoldUpdateQueue {
     /// Items changed without a gold change.
     pub(crate) fn record_items(&mut self, character_id: u64) {
         self.changed_inventories.insert(character_id);
+    }
+
+    pub(crate) fn record_news(&mut self, character: u64) {
+        self.news_characters.insert(character);
+    }
+
+    pub(crate) fn take_news_characters(&mut self) -> HashSet<u64> {
+        std::mem::take(&mut self.news_characters)
     }
 
     /// A committed Retail acquisition, not an inventory move or a requested grant.

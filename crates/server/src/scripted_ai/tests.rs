@@ -33,6 +33,7 @@ use crate::world_data::{CreatureSpawn, WorldData};
 /// `SSCreatureIds` of the bosses.
 const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 
+pub(super) mod cast_admission;
 mod data_bosses;
 mod dungeonach;
 mod smart_combat;
@@ -65,10 +66,7 @@ struct Data {
 
 /// The five Stockade script creatures' templates.
 fn stockade_templates() -> std::collections::HashMap<u32, crate::world_data::CreatureTemplate> {
-    let conn =
-        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    let expected = crate::world_data::load_expected_stats(&conn);
-    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    let mut templates = crate::test_data::world_data().templates.clone();
     templates.retain(|entry, _| {
         [
             NPC_HOGGER,
@@ -79,7 +77,6 @@ fn stockade_templates() -> std::collections::HashMap<u32, crate::world_data::Cre
         ]
         .contains(entry)
     });
-    crate::world_data::load_template_models(&conn, &mut templates);
     templates
 }
 
@@ -154,6 +151,8 @@ struct Inbox {
     timeline: Vec<shared::protocol::EncounterTimelineEvent>,
     log: Vec<CombatLogEvent>,
     spell_gos: Vec<shared::protocol::SpellGo>,
+    opened: Vec<shared::protocol::InteractionOpened>,
+    closed: Vec<shared::protocol::InteractionClosed>,
 }
 
 struct Harness {
@@ -326,6 +325,8 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
                 MessageReceiver::<EncounterDisengageUnit>::default(),
             ),
             (
+                MessageSender::<shared::protocol::InteractNpc>::default(),
+                MessageReceiver::<shared::protocol::InteractNpc>::default(),
                 MessageSender::<shared::protocol::UseGameObject>::default(),
                 MessageReceiver::<shared::protocol::UseGameObject>::default(),
                 MessageSender::<shared::protocol::InteractionOpened>::default(),
@@ -436,6 +437,18 @@ impl Harness {
                 inbox
                     .spell_gos
                     .extend(drain::<shared::protocol::SpellGo>(world, *connection));
+                inbox
+                    .opened
+                    .extend(drain::<shared::protocol::InteractionOpened>(
+                        world,
+                        *connection,
+                    ));
+                inbox
+                    .closed
+                    .extend(drain::<shared::protocol::InteractionClosed>(
+                        world,
+                        *connection,
+                    ));
             }
         }
     }

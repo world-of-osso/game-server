@@ -291,6 +291,45 @@ fn dismissed_pet_stays_stored_and_call_pet_brings_it_back() {
 }
 
 #[test]
+fn call_pet_without_character_pet_storage_fails_before_success_or_spawn() {
+    let path = db_path();
+    let mut h = hunter(&path, HOGGER).expect("real hunter pet data");
+    assert!(
+        stable(&h).is_none(),
+        "fresh hunter has no loaded pet stable"
+    );
+    assert!(
+        load_pet_stable(&h.app.world().resource::<GameDatabase>().db, CHARACTER_ID).is_none(),
+        "fresh character has no tamed or stabled pet record"
+    );
+
+    // Same native bot request: Call Pet 1 with the hostile selected target.
+    h.cast_and_deliver(CALL_PET_1, Some(h.npc));
+    let failed = h
+        .inbox
+        .failed
+        .first()
+        .expect("Call Pet 1 must refuse absent storage");
+    assert_eq!(
+        failed.detail.as_deref(),
+        Some("You do not have a pet to summon")
+    );
+    assert!(h.inbox.log.iter().all(|event| {
+        event.spell_id != Some(CALL_PET_1)
+            || event.kind != shared::protocol::CombatLogKind::CastSuccess
+    }));
+    assert!(stable(&h).is_none());
+    assert_eq!(
+        h.app
+            .world_mut()
+            .query::<&HunterPet>()
+            .iter(h.app.world())
+            .count(),
+        0
+    );
+}
+
+#[test]
 fn call_pet_of_an_empty_slot_has_no_pet_to_summon() {
     let path = db_path();
     seed_stable(&path, None);

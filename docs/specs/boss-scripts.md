@@ -23,6 +23,56 @@
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 
+## Maraudon Celebras source boundary
+
+- [x] Prepare12225→425/Normal349bit3 (TCordinal4), pinned Celebras/header/instance, TDB script identity and Journal70391 CSV428/998/display12350. Preserve other credit;13743/13716 must not acquire primary credit. SQL only.
+- [x] Port source21807 victim first0–6/repeat4–8s,12747 victim first0–5/repeat20s,21968 self first30/repeat20s; preserve actual class2 mana/costs, TaskScheduler casting validator and due-anchored repeats.
+- [x] Gate real21968 summon13743, death summon13716 at boss position/orientation0/manual despawn and isolated controlled425bit3 credit.13743 uses its actual Normal1 row;13716 has only TDB base0 (Health35/Mana5.3615/Damage7.5, ContentTuning0), replacing legacy Health8/Mana4 through copy-only projection; never fabricate Normal1. Regional level-scaling parity of the manual death summon is not certified.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
+## Maraudon Lord Vyletongue source boundary
+
+- [x] Prepare12236→424/Normal349bit2 using pinned TC Maraudon ordinal3/header/instance, actual TDB SmartAI and Journal70391 CSV427/997/display12334. Preserve Gizlock credit and refuse AI/ordinal-as-bit drift; SQL output only.
+- [x] Gate unchanged Shoot16100/CAST_COMBAT_MOVE64 and21390 ranged damage, self21655 caster-front20yd Blink and7964 Flash (actual1.5s cast), plus isolated424/bit2 controlled death credit. Check pre-Blink victim clocks, self-spell repeat clocks with casting-only deferral, source500ms outside-range rechecks at reach-adjusted lower/strict3D upper boundary, actual nearby stun and ranged pre-Blink exclusion. No invented targets/resources/timers.
+- [x] Interpret EVENT_RANGE9 using an engaged current victim and actual3D distance minus both source combat reaches: inclusive minimum, strict maximum. In-range actions reset their authored repeat; excluded victims recheck after500ms, carrying the victim as invoker. Preserve ordinary cast/channel deferral and source flags.
+- [ ] Native/ordinary fight, Blink wall/floor collision, loot, persistence and canonical publication remain separate. Positive20yd Blink displacement and nearby Flash stun are controlled headless proofs, not native geometry acceptance.
+
+## Maraudon Gizlock source boundary
+
+- [x] Prepare13601→427/Normal349bit5 from pinned TC Maraudon header/instance, TDB SmartAI and Journal70391 CSV425/995/display7125. TC ordinal2 is not DB2 bit5. Preserve Noxxion credit and refuse ordinal/bit drift; output remains copy-only SQL.
+- [x] Gate unchanged SAI Shoot16100 first0/repeat2.3–3.9s, Bomb9143 first4/repeat12s (actual2s cast), Dragon Gun21833 first6–9/repeat16–19s (actual8s channel), Flash Bomb29419 self first25/repeat25s and aggro Talk0. Require source-clock repeats with observed casting-only deferrals, genuine16100/9143/21910 damage,21833 self periodic-trigger aura,29419 beast-only exclusion of the human player, isolated427/bit5 controlled credit and post-death silence. Only initial player survival HP/8yd pull position are staged; source flags/resources/targets remain intact.
+- [ ] Native/ordinary fight, loot, persistence and canonical publication remain separate.
+
+## Maraudon Noxxion source port
+
+- [x] Prepare13282→422/Normal349bit0 using pinned TC boss/header/instance and actual Journal70391 CSV423/993/display11172; preserve other credit, write SQL only.
+- [x] Gate source combat: Toxic Volley21687 self first5–10s/repeat15–20s; Uppercut22916 victim first15–20s/repeat20–30s; Summon Dummy21708 self first30–40s/repeat50–60s. Advance only with UpdateVictim; defer dispatch while casting; TaskContext repeats anchor to their prior due time, not dispatch time.
+- [x] Gate21708 effect0/DUMMY apply: creature passive/uninteractible and triggered21707; remove: aggressive/selectable. Actual21707 summons five13456 actors using authored Normal stats; BossAI tracks/despawns them. No fabricated timer, target, chance, resource or difficulty rows.
+- [ ] Ordinary/native clear, knockback movement, loot, persistence and canonical publication remain separate from controlled survival/death-credit proof.
+
+## Maraudon Rotgrip source boundary
+
+- [x] Prepare only13596→428/Normal349bit6 from pinned TC Maraudon header/instance, TDB1210 SmartAI and actual Journal70391 CSV430/actor1000/display13589. SQL stays copy-only, idempotent, preserves Razorlash and refuses AI/bit drift.
+- [x] Exercise unchanged100% SAI clocks: Fatal Bite16495 first6s/repeat12s; Puncture15976 first6–8s/repeat13–18s, both victim arguments. Installed DB2 makes16495 effect165/50% maximum health with implicit SELF1. Two casts actually reduce Rotgrip's own health; Puncture applies its victim aura and real periodic damage. No spell/target/timer/resource override or per-tick healing. High initial player HP is controlled survival only.
+- [x] Separate controlled player kill after29 simulated seconds grants exactly428/bit6 once, with no other-copy start/casts/credit or post-death Fatal Bite.
+- [ ] Intended victim-damaging Fatal Bite/ordinary fight is not certified: installed spell16495 damages SELF despite the TDB victim argument. Do not replace its ID/implicit target to hide this source mismatch. Native clear, loot, persistence and canonical publication remain separate.
+
+## Gnomeregan Electrocutioner source boundary
+
+- [x] Prepare only Electrocutioner6235/encounter380 Normal map90 bit3 from pinned TC header/instance, installed Journal421/actor991/display36558 and actual TDB SmartAI identity. TC ordinal2 must not replace DB2 bit3. Generated SQL remains copy-only and preserves unrelated bindings; other Gnomeregan actors receive no credit from this profile.
+- [x] Verify source-authenticated Electrocutioner engagement, controlled death, one encounter380/bit3 completion and no other-copy credit without mana/class/triggered overrides. This does not certify an ordinary fight, loot or persistence.
+- [ ] Verify actual installed SAI Megavolt11082 (25s/5s), Shock15605 (15s/8s, random hostile) and Chain Bolt11085 (31s/11s, victim). Source-data gap: TDB class1 actor has no mana; ordinary15605 admission returns NotEnoughPower(Mana). Pinned TC SpellInfo.cpp:4043–4089 computes authored cost and Spell.cpp:7392–7430 rejects insufficient power. Retain named ignored failing mechanics acceptance; no resource/class/cast-flag fabrication. Later assertions remain unverified behind the first Shock failure. No canonical publication or native-clear claim.
+
+## Gnomeregan Crowd Pummeler source boundary
+
+- [x] Prepare only Crowd Pummeler6229/encounter381 Normal map90 bit4 from pinned TC header/instance, installed Journal418/actor989/display36560 and actual TDB SmartAI identity. TC ordinal3 must not replace DB2 bit4. Generated copy-only SQL preserves Electrocutioner and unrelated bindings; no other Gnomeregan actors receive credit from this profile.
+- [x] Verify real installed SAI Arcing Smash8374 first15s/repeat15–20s, Trample5568 first25s/repeat25–35s, Crowd Pummel10887 first40s/repeat35–60s, actual positive damage to the victim and copy-isolated381/bit4 death credit without timer/chance/resource/flag overrides. Observe at least two successes of each over110 simulation seconds using actual50ms updates, then no further casts after death. Controlled high-health survival is not an ordinary fight; Crowd Pummel interrupt/knockback movement, native clear, loot and persistence remain separate.
+
+## Gnomeregan Thermaplugg source boundary
+
+- [x] Prepare only Thermaplugg7800/encounter382 Normal map90 bit5 from pinned TC header/instance, TDB SmartAI and Journal70391 encounter422/actor992/display36563. Copy-only SQL must preserve existing bosses and never credit Walking Bomb7915. `encounter_cpp_bindings.py` accepts explicitly selected paired CSV or WDC5 inputs and requires `--journal-build` so reports do not mislabel70391 as69933.
+- [x] Verify ordinary SAI10101 first15s/repeat15–35s and11130 first40s/repeat40–60s, real damage, Talk2 and linked pairs of7915 at30s and60.05s on Normal at authored coordinates; controlled death credit/copy isolation. TC SmartScript.cpp:3794 uses strict timer<diff, so a repeat needs the additional50ms update. Preserve source templates/flags/resources. Other-difficulty exclusion, ordinary fight, bomb movement/explosion, killed-player speech, knockback movement, loot/persistence and native clear remain separate.
+
 ## Ragefire Chasm source hooks
 
 - [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. No DB2 substitutes or derived effect IDs.
@@ -93,6 +143,7 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [x] Later ritual waves: after group2, source+15s Naralex group0 emote, +25s group3 seven5763, +20s Naralex group1, +30s Naralex group2 then actual Mutanus group4. All clocks pause in combat; Naralex lookup/text stay in the Disciple's copy and missing Naralex does not stop later waves. Controlled prior arrival/wave deaths do not certify fights, balance or native clears. Wake-up/exit follows below.
 - [x] Wake-up/exit source21–27: +25s from Mutanus spawn wakes same-copy Naralex (Stand/Talk3), +3s removes Disciple6271/Talk9, +3s NaralexTalk4, +6s Talk5, +3s ordinary8153 on both and Disciple faction35, +8s disables gravity and starts Naralex367900/Disciple367804. Only actual367804 completion schedules immediate source despawn of both. Preserve combat-paused timing, ordinary cast checks, strict spline validation and existing flight/collision policy. Controlled Mutanus death/prior arrival do not certify authentic fights or native clears; controlled fixture proves actual distinct flight endpoints and source retirement; ordinary8153 retains its local5000ms cast, not instant aura application.
 - [x] `encounter_summons.py --encounter wailing-ritual --db <independent-copy>` projects only actual Normal1 rows5762/5763 from source group2/3 (three Moccasins/seven Ectoplasms), with authored tuning/deltas/modifiers/loot. Existing base templates/models, unrelated difficulties, population and encounter credit must remain byte-equivalent at row level; rerunning is idempotent. Reject changed membership/missing source difficulty/tuning/base rather than inventing rows. Canonical application, ordinary balance and native clears remain lead-owned/separate; two process-boundary tests pass on real independent source copies.
+- [x] Controlled Disciple source callbacks: OnGossipHello attempts ordinary5232 before checking all four druid DONE identities in its copy, then prepares existing menu202 only when ready. OnGossipSelect closes only that player's menu and schedules event1 immediately; source return remains false. Event1 sets faction250/removes only GOSSIP, +10 out-of-combat seconds talks group1, +3500ms launches authored367800. Reset clears combat events only. Normal ingress still validates actual flags/options; controlled callbacks do not certify natural activation. Controlled native-server tests2/2 pass, including actual InteractNpc→InvalidTarget with unchanged npcflag0 and direct callback→physical first-path movement; natural positive activation remains blocked by the separate data gaps.
 - [ ] Disciple activation data: Mark of the Wild5232 is absent from both local DB2 and TDB serverside tables. Template3678 npcflag0 has no spawn override; source spawn251412 is phase169. TDB menu202 retains its start option, but normalized menu202 options are empty and template gossip_menu_id is0. No fabricated gossip flag/replacement buff; notification fixture uses existing server phase policy, not native phase-visibility proof. No correction of authored SmartScript parameters or replacement with Classic schedules.
 
 ## Ruby Life Pools source hooks
@@ -214,3 +265,50 @@ Own server :5085 (world.db = `world-stockadebosses-20260927.db`, copied game.red
 Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/death/save fixtures; private both-skin Skum3674/encounter589 lifecycle captures at UDP5830. Controlled admin damage exercises production damage/death boundaries, not ordinary solo balance. Skum display4203 remains outside imported appearance coverage; no replacement model or mechanics are introduced.
 
 - Existing BossAi summon ownership hooks are preserved: JustSummoned tracks owned summons; evade/death cleanup despawns them, and SummonedCreatureDespawn removes ownership. This adds no summon ability.
+
+## Razorlash source binding — 2026-10-16
+
+- Admit only pinned TC a352b1fa Razorlash12258→423/Normal349/bit1, authenticated by installed Journal70391 encounter424/actor994/display12389. Produce copy-only SQL; preserve unrelated bindings. Reject AI/DB2 identity drift.
+- Keep authored SmartAI probabilities (Thrash70%, Cleave/Puncture85%), resources, targeting and timers. Controlled proof may stage player survival health; ordinary balance, extra-attack parity, native clear, loot/persistence and canonical publication remain separate.
+- Bounded proof: repeated source-window SpellGo with explicit self/victim targets, actual Thrash/Puncture auras, real Cleave/Puncture damage and isolated423/bit1 controlled death credit. Production interest routing and Thrash extra-attack effect parity are not certified by this fixture.
+
+
+## Maraudon Landslide source boundary
+
+- [x] Authenticate12203→426/Normal349bit4 (TCordinal5), Journal70391 CSV429/999/display12293; copy-only binding preserves Celebras and excludes summons11783.
+- [x] Port18670 victim5–10s/repeat15–25s,5568 self10–15s/repeat10–20s and21808 self immediately upon first incoming hit crossing below50%, then30–40s repeats; reset re-arms once. Preserve source casting validator and due clocks.
+- [x] Gate actual effects/summons and isolated controlled426bit4 credit; ordinary/native, loot and persistence remain separate.
+
+
+## Maraudon Theradras source boundary
+
+- [x] Authenticate12201→429/Normal349bit7 (TCordinal7), Journal70391 CSV431/1001/display12292; copy-only binding preserves Landslide and excludes Zaetar12238.
+- [x] Port21909 self20–25s/repeat20–25s,21832 random threat target20–30s/repeat15–25s,3391 self10–20s/repeat10–20s,21869 self25–35s/repeat30–40s; preserve actual mana, casting validator and due clocks.
+- [x] Project Zaetar12238 from actual TDB base0 and Normal1/CT281 rows; preserve other templates, placements and credit. Copy-only producer must be idempotent and reject source identity drift.
+- [x] Gate Dust Field damage/aura, Boulder damage, Repulsive Gaze fear and isolated controlled429bit7 credit and manual death summon12238 at authored WoW(28.1887,62.3964,-123.161,4.31096), actual base/Normal source projection. Controlled fixture uses initial survival HP and maintains an8yd target gap (melee pursuit otherwise correctly rejects Boulder below its5yd minimum). Thrash3391 dispatch is not proof of its unsupported extra-attacks effect19. Ordinary/native, loot, persistence and spirit quest/gossip remain separate.
+
+
+## Ramparts Gargolmar source boundary
+
+- [x] Authenticate17306→1893/map543bit2 (TCordinal0), Journal70391 CSV527/1104/display18236; copy-only binding preserves Theradras and excludes healer/companion credit.
+- [x] Prepare actual TDB serverside30642 Request Heal, absent from current DB2; retain every source field and source target conditions. Copy-only, idempotent and missing-source refusal.
+- [ ] Port pinned EventMap mortal30641 victim5–10s/repeat5–15s, surge34645 maximum-distance threat target3–5s/repeat15–40s, incoming-damage below40% request30642 once, below20% retaliation22857 then30s repeats; reset re-arms both. Preserve actual casting admission and source speech/death sound.
+- [ ] Prove source damage/healer chain/retaliation, reset, isolated1893bit2 credit and silence. Source taunt10–15min is timed, not LoS. Ordinary/native, loot/persistence and remaining Ramparts encounters stay separate.
+
+Gargolmar runtime port uses dispatch-anchored EventMap repeats, incoming-only 40%/20% arm-once thresholds and installed encounter bit2. Idle taunt is timed 10–15min, not LoS. OnSpellCast/slay speech and death sound10336 remain unimplemented hook gaps; no complete encounter claim. Runtime GREEN/effect/healer-chain acceptance remains pending.
+
+Gargolmar's bounded20yd acceptance is re-enabled after explicit `--ignored` GREEN: source charge effect96 must move to the selected distant threat before Surge impact. Effect96 supports the two-point trajectory at authored velocity (source default42 and delay-as-seconds mode), target combat-reach offset, motion ownership through landing and matching integer-ms hit delay. Source attack-on-charge preserves swing timers; optional TriggerSpell resolves at impact. Obstacle-generated paths, transports and native charge animation remain unproven. Damage observation belongs to the selected target owner's inbox after travel, not the melee victim's inbox at SpellGo. Keep the concrete20yd impact acceptance, not a cast-only substitute. NPC-to-NPC Watcher Heal30643 effect proof uses actual HP delta (base30±5%); player inbox receives only events owned by source/target and cannot prove absence of that heal.
+
+Omor primary binding: TC a352b1fa17308/source ordinal1 maps to installed DB2 encounter1891/map543bit0, Journal70391 CSV528/1105/display18237. Copy-only binding must preserve Gargolmar17306 and exclude Fiendish Hound17540 from completion credit. Bounded runtime schedules, shield, damage, hound engagement/lifetime and isolated credit are proven; Orbital scripts and full native mechanics remain open.
+
+Omor Orbital Strike Target35642 and Whip32185 must retain every actual TDB1210 server-side spell/effect field via `encounter_serverside_spells.py --encounter omor` on independent copies. Whip source effect0 is aura23/2000ms/trigger30638; target effect0 is dummy3/source-enemy area15/radius33. Import is data preparation, not proof of script behavior.
+
+Wild spell summons, including Omor's property64 hounds, retain their own lifetime after summoner death. Minion owner-death cleanup and authored expiry remain unchanged.
+
+Omor30707 summons Fiendish Hound17540 via authored property64. Copy-only `encounter_summons.py --encounter omor` must replace legacy base/models/addon from actual TDB base0 (CT220, level10–30, Health0.55, Mana2.8568, Damage1), preserving SmartAI and absence of Normal1; existing difficulty rows, population and credit remain unchanged. Authored Heroic2 is not Normal authority.
+
+Omor runtime EventMap port: ShadowBolt30686 immediately then6–10s in actual source melee range or3–4s outside; Treacherous30695 random threat16–23/repeat30–40; Hound30707 self20–23/repeat20–26; OrbitalTarget35642 self25/repeat23–30; incoming-below20 Shield31901 once/reset. Melee predicate uses actual model CombatReach, nominal5yd minimum and aura153 per TC Unit.cpp691–709. Hounds enter zone combat but are deliberately not in BossAi cleanup. CasterAttackStart100yd, OnSpellCast/slay speech and Orbital SpellScript/falling-player AuraScript remain open, not replaced with guessed behavior. Runtime RED confirmed no casts before this port.
+
+Landslide timing acceptance observes actual ordinary cast requests and their admission results, not successful SpellGo messages alone. Authored18670 cooldown11000ms remains active: TaskScheduler repeats from its original due time even when channel deferral makes a repeat fail OnCooldown. Deterministic seeds104(rejected repeat) and0(no rejection) retain unchanged source timing intervals and channel/summon/damage/credit checks; every fixture frame must advance exactly50ms.
+
+SAI clock fixtures retain150ms dispatch grace and100ms protected sampling guards. Sampling must include exact50ms frame endpoints using integer milliseconds, so a cast-blocked interval is not rejected merely because strict floating-point bounds discard both real samples. Unblocked endpoint and early-repeat controls must still fail.

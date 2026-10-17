@@ -1068,3 +1068,95 @@ fn a_decayed_corpse_is_hidden_from_players_who_arrive_later() {
         "a player arriving later does not see it"
     );
 }
+
+#[test]
+fn dormant_detection_geometry_population_fits_one_catch_up_frame() {
+    let mut app = App::new();
+    app.init_resource::<InterestIndex>();
+    app.add_systems(Update, sync_detection_geometry);
+    app.world_mut().spawn_batch((0..250_000).map(|_| {
+        (
+            Npc {
+                template_id: 30,
+                name: "Forest Spider".into(),
+            },
+            crate::grid_activity::GridDormant,
+            Level(30),
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            UnitScale(1.0),
+        )
+    }));
+    app.update();
+    let fastest = (0..3)
+        .map(|_| {
+            let start = std::time::Instant::now();
+            for _ in 0..5 {
+                app.update();
+            }
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    eprintln!("250000 dormant detection units/five steps: {fastest:?}");
+    assert!(
+        fastest < std::time::Duration::from_millis(50),
+        "detection scans exhaust frame: {fastest:?}"
+    );
+}
+
+#[test]
+fn waking_npc_refreshes_reciprocal_invisibility_before_visibility_update() {
+    let harness = crate::spell_cast::test_harness::harness_with_plugins(
+        Vec::new(),
+        &[89302],
+        1,
+        false,
+        |app| {
+            app.add_plugins(InterestPlugin);
+        },
+    )
+    .expect("native invisibility source");
+    let mut app = harness.app;
+    let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    let player = app.world().get::<PlayerLink>(connection).unwrap().0;
+    let target = spawn_interest_target(&mut app, pos(10.0, 0.0, 0.0));
+    app.world_mut()
+        .entity_mut(target)
+        .insert(crate::grid_activity::GridDormant);
+    run_fixed_ticks(&mut app, 1);
+    // A unit added while dormant must not keep the old non-unit geometry on wake.
+    app.world_mut().entity_mut(target).insert(Npc {
+        template_id: 30,
+        name: "Forest Spider".into(),
+    });
+    let spell = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(89302)
+        .unwrap();
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    crate::auras::apply_aura(
+        app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: player,
+            target: player,
+            spell_id: 89302,
+            effect_mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    run_fixed_ticks(&mut app, 2);
+    app.world_mut()
+        .entity_mut(target)
+        .remove::<crate::grid_activity::GridDormant>();
+    run_fixed_ticks(&mut app, 1);
+    assert_not_visible(
+        app.world().get::<NetworkVisibility>(target).unwrap(),
+        connection,
+        "an invisible viewer cannot see a unit that lacks reciprocal detection after wake",
+    );
+}

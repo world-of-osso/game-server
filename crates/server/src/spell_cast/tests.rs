@@ -197,7 +197,8 @@ fn warrior_gets_rage_pool_replicated_as_unit_powers() {
 
 #[test]
 fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown() {
-    let Some(mut h) = harness(Vec::new(), &[MORTAL_STRIKE], 1) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(Vec::new(), &[MORTAL_STRIKE], 1)
+    else {
         return;
     };
     h.set_power(PowerType::Rage, 500.0);

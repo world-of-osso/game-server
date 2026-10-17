@@ -32,7 +32,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(false);
         }
         match effect.property {
-            22 | 116 | 157 | 158 | 159 | 177 => Ok(true),
+            22 | 116 | 157 | 158 | 159 | 177 | 194 => Ok(true),
             117 => {
                 let lock = &mut self.battle.pet_mut(caster).lockouts[(p[0] - 1) as usize];
                 *lock = (*lock).max(p[1] as u32);
@@ -48,7 +48,8 @@ impl<R: BattleRng> Runtime<'_, R> {
                 }
                 Ok(true)
             }
-            168 => self.add_aura_effect(caster, target, effect),
+            150 | 168 => self.add_aura_effect(caster, target, effect),
+            107 => self.fade_swap(caster, effect),
             68 => self.percent_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
@@ -76,6 +77,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             76 => self.charged_damage(caster, target, ability, effect),
+            370 => self.damage_with_species_bonus(caster, target, ability, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
                 let caster_speed = self.speed(caster);
@@ -106,6 +108,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.heal_effect(caster, &heal)
             }
             100 => self.heal_other_ally(caster, effect),
+            223 => self.apply_refuge_shield(caster, effect),
             131 => {
                 let first = self
                     .events
@@ -152,6 +155,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             85 => self.reset_aura_state(p[0] as u32),
+            112 => self.resurrect_reserve(caster, effect),
             111 => {
                 let pet = self.battle.pet_mut(caster);
                 pet.health = pet.stats.health * p[0] / 100;
@@ -321,6 +325,26 @@ impl<R: BattleRng> Runtime<'_, R> {
             )),
         }
     }
+    fn damage_with_species_bonus(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let species = self.battle.pet(caster).species;
+        let matching_reserves = self.battle.teams[caster.team]
+            .pets
+            .iter()
+            .enumerate()
+            .filter(|(slot, pet)| *slot != caster.slot && pet.species == species)
+            .count() as i32;
+        let mut damage = effect.clone();
+        damage.property = 24;
+        damage.params[0] += matching_reserves * effect.params[2];
+        damage.params[2] = 0;
+        self.damage_effect(caster, target, ability, &damage)
+    }
     fn charged_damage(
         &mut self,
         caster: PetRef,
@@ -447,6 +471,46 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         Ok(true)
     }
+    fn resurrect_reserve(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let recipient = other_team_slot(caster, effect.order + 1);
+        if self.battle.pet(recipient).health > 0
+            || !self.required_states(caster, recipient, effect.params[2], effect.params[3])
+        {
+            return Ok(false);
+        }
+        let dead = self.catalog.state_id("Is_Dead")?;
+        let pet = self.battle.pet_mut(recipient);
+        pet.health = pet.stats.health * effect.params[0] / 100;
+        pet.states.insert(dead, 0);
+        pet.undead_expires = None;
+        self.events.push(Event::Revived(recipient));
+        Ok(true)
+    }
+    fn fade_swap(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let candidates: Vec<_> = (0..3)
+            .filter(|slot| {
+                *slot != caster.slot && self.battle.teams[caster.team].pets[*slot].health > 0
+            })
+            .collect();
+        if candidates.is_empty() {
+            return Ok(false);
+        }
+        let choice = if candidates.len() == 1 {
+            0
+        } else {
+            self.draw() as usize * candidates.len() / super::rules::RANDOM_SCALE as usize
+        };
+        let slot = candidates[choice];
+        if self.validate_swap(caster, slot).is_err() {
+            self.events.push(Event::Immune {
+                effect: effect.id,
+                target: caster,
+            });
+            return Ok(false);
+        }
+        self.swap_pet(caster.team, slot)?;
+        Ok(true)
+    }
     fn force_swap(&mut self, target: PetRef, effect: &Effect) -> Result<bool, String> {
         if !self.roll(effect.params[0]) {
             return Ok(false);
@@ -490,8 +554,11 @@ impl<R: BattleRng> Runtime<'_, R> {
         Ok(true)
     }
     fn block_attack(&mut self, target: PetRef) -> Result<bool, String> {
-        let Some(index) = self.battle.auras.iter().position(|a| {
-            a.charges > 0 && (a.target == target || a.team_bound && a.target.team == target.team)
+        let Some(index) = self.battle.auras.iter().position(|aura| {
+            let blocks_both_sides = super::rules::is_two_way_wall(aura.ability);
+            let protects_target =
+                aura.target == target || aura.team_bound && aura.target.team == target.team;
+            aura.charges > 0 && (blocks_both_sides || protects_target)
         }) else {
             return Ok(false);
         };
@@ -868,14 +935,33 @@ impl<R: BattleRng> Runtime<'_, R> {
         self.apply_or_refresh_aura(caster, caster, effect, 1, true)?;
         Ok(true)
     }
+    fn apply_refuge_shield(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let wearer = other_team_slot(caster, effect.order);
+        if self.battle.pet(wearer).family + 1 != effect.params[3] as usize {
+            return Ok(false);
+        }
+        let mut shield = effect.clone();
+        shield.property = 26;
+        // 223's family field is not 26's first-round countdown flag.
+        shield.params[3] = 0;
+        self.add_aura_to_wearer(caster, wearer, &shield)
+    }
     fn add_aura_effect(
         &mut self,
         caster: PetRef,
         target: PetRef,
         effect: &Effect,
     ) -> Result<bool, String> {
-        let positive = matches!(effect.property, 26 | 28 | 63);
+        let positive = matches!(effect.property, 26 | 28 | 63 | 150);
         let wearer = if positive { caster } else { target };
+        self.add_aura_to_wearer(caster, wearer, effect)
+    }
+    fn add_aura_to_wearer(
+        &mut self,
+        caster: PetRef,
+        wearer: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
         // Bend Time1905 uses Accuracy0 for its unconditional next-swap team trigger.
         let unconditional = effect.aura == 1904 && effect.params[1] == 0;
         if self.battle.pet(wearer).health <= 0
@@ -954,7 +1040,9 @@ impl<R: BattleRng> Runtime<'_, R> {
             .map(|t| t.order)
             .max()
             .unwrap_or(1) as i32;
-        let remaining = if effect.params[2] == -1 || effect.aura == 333 && effect.params[2] == 0 {
+        let persistent_object =
+            effect.params[2] == 0 && (effect.aura == 333 || effect.property == 150);
+        let remaining = if effect.params[2] == -1 || persistent_object {
             -1
         } else {
             effect.params[2].max(max_turn)
@@ -984,6 +1072,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             });
             return Ok(());
         }
+        let follows_active_ally = effect.property == 63 && effect.aura != 267;
+        let shared_across_team = effect.property == 150 || matches!(effect.aura, 189 | 333 | 1904);
         let mut aura = Aura {
             serial: self.battle.next_aura,
             ability: effect.aura,
@@ -993,8 +1083,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             turn: 1,
             applied_round: self.battle.round,
             tick_first,
-            team_bound: effect.property == 63 && effect.aura != 267
-                || matches!(effect.aura, 189 | 333 | 1904),
+            team_bound: follows_active_ally || shared_across_team,
             weather: effect.property == 80,
             charges: self
                 .catalog

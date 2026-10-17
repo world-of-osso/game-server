@@ -326,7 +326,7 @@ fn check_summon_pet(
         return Ok(());
     }
     let Some(stable) = world.get::<PetStable>(caster) else {
-        return Ok(());
+        return Err(CastFailure::Pet(PetCastFailure::NoPetAvailable));
     };
     let stored = stable
         .stored

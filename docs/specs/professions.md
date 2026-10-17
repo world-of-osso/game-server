@@ -14,6 +14,18 @@ Retail professions on the server: learning at profession trainers and crafting k
 
 - New characters start with empty bags and no money (the old 20 Linen / 10 Peacebloom / 10 Copper Ore / 10 gold seed is gone). Admin `grant-item <character> <item_id> <count>` stores items in the bags (content_item name, quality and sell price, stacked to the template's max) and sends an online owner the `InventoryDelta`; unknown items, unknown characters and full bags are refused unchanged.
 
+## Quality reagent validation
+
+- `CraftingOperationRequest` validates learned recipes, authored basic slot membership/quantities, aggregate owned Retail bag counts and fixed reagent requirements. It never consumes inventory, advances skill or creates an item.
+- Runtime requires local Retail exports under `data/db2/active`: ModifiedCraftingSpellSlot, ModifiedCraftingReagentSlot, MCRSlotXMCRCategory, CraftingReagentQuality, Item and CraftingQuality. No network lookup or invented substitution is permitted.
+- Quality remains `Err(CraftingOperationComposition)` (`CRAFTING_OPERATION_COMPOSITION`), never a default tier. Modifying/finishing eligibility and unevaluated slot conditions refuse explicitly. Pinned TC a352b1fa `SpellEffects.cpp` maps effects288/297 to EffectNULL; Retail SchematicForm delegates composition to native APIs.
+
+Private acceptance fixture: ignored `profession::modern_crafting_fixture` tests create only the fixed 2026-10-16 diagnostics redb, grant concrete test bags/skills/knowledge and verify post-run reagent/skill conservation. Fixture grants are not acquisition evidence.
+
 ## Out of scope
 
 Gathering nodes, Dragonflight+ quality/concentration/crafting orders/specializations, recrafting, unlearning, First Aid, reputation price discounts, gossip-menu-specific trainers.
+
+### Concentration metadata boundary
+
+Learned skill-line owner queries expose the authored ProfessionExpansion→CurrencyTypes concentration ID, icon, cap, recharge amount and millisecond cycle. Existing wallet amounts are read-only; absent entries are unknown. `CRAFTING_CONCENTRATION_ORIGIN` blocks initialization and live recharge: no full/zero grant or login/epoch origin is fabricated. Unsupported crafting costs/outcomes remain unavailable.

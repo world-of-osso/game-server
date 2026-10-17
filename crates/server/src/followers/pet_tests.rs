@@ -13,7 +13,7 @@ struct PetFixture {
 
 fn fixture() -> PetFixture {
     let prepared = crate::spell_cast::test_harness::prepare_class_world();
-    let mut data = crate::world_data::load_world_data(&prepared.path());
+    let mut data = prepared.world_data();
     // Keep native defense metadata for the harness's live Kobold target too.
     data.templates.retain(|entry, _| [6, 17252].contains(entry));
     let source = rusqlite::Connection::open_with_flags(
@@ -110,6 +110,15 @@ fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
         .get_mut::<crate::pet_control::PetCharm>(pet)
         .unwrap()
         .react = shared::protocol::REACT_PASSIVE;
+    // These kick/readiness fixtures model an already engaged owner, not selection.
+    f.h.attack(f.h.npc);
+    f.h.advance(3);
+    assert!(
+        f.h.inbox.attack_starts.iter().any(|event| {
+            event.attacker == f.h.caster.to_bits() && event.victim == f.h.npc.to_bits()
+        }),
+        "Felguard combat fixture requires a real owner AttackStart"
+    );
     (f, pet)
 }
 
@@ -635,8 +644,10 @@ fn follower_felguard_melee_kill_taps_the_authenticated_player() {
 }
 
 #[test]
-fn follower_felguard_fights_the_companions_selected_enemy() {
+fn follower_felguard_fights_the_companions_engaged_enemy() {
     let mut f = fixture();
+    f.h.attack(f.h.npc);
+    f.h.advance(3);
     for _ in 0..240 {
         super::update_ai(f.h.app.world_mut());
         f.h.advance(1);

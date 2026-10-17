@@ -5,7 +5,10 @@ use crate::spell_cast::test_harness::{Harness, harness_with_plugins, spawn_npc, 
 use shared::components::{Health, Npc, UnitPowers};
 
 pub(super) fn spawn_profile_fixture(entry: u32) -> (Harness, Entity, Profile) {
-    spawn_profile_fixture_with_plugins(entry, |_| {})
+    let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, |_| {});
+    h.attack(h.npc);
+    h.advance(3);
+    (h, unit, profile)
 }
 
 pub(super) fn spawn_profile_fixture_with_plugins(
@@ -54,6 +57,115 @@ pub(super) fn spawn_profile_fixture_with_plugins(
         .unwrap()
         .0 = Some(h.npc);
     (h, unit, profile)
+}
+
+#[test]
+fn follower_selection_is_not_engagement_but_native_attack_is() {
+    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
+    let enemy = h.npc;
+    let before = h.health(enemy);
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(unit)
+        .unwrap();
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert_eq!(h.health(enemy), before, "selection alone must not pull");
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Position>(unit)
+            .unwrap(),
+        position
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .is_some()
+    );
+    h.attack(enemy);
+    h.advance(3);
+    assert!(
+        h.inbox
+            .attack_starts
+            .iter()
+            .any(|event| event.attacker == h.caster.to_bits())
+    );
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(unit.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "real owner attack must engage follower"
+    );
+}
+
+#[test]
+fn follower_party_threat_engages_without_selection_or_owner_auto_attack() {
+    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let mut threat = shared::components::ThreatTable::default();
+    threat.add_threat(h.caster.to_bits(), 100.0);
+    h.app.world_mut().entity_mut(enemy).insert(threat);
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(unit.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "party threat from landed combat must engage follower"
+    );
+}
+
+#[test]
+fn follower_lethal_melee_delivers_one_native_death_to_party_owner() {
+    let (mut h, tank, _) = spawn_profile_fixture(209057);
+    h.app.world_mut().get_mut::<Health>(tank).unwrap().current = 1.0;
+    let enemy = h.npc;
+    h.app.world_mut().entity_mut(enemy).insert((
+        crate::networking::CombatTarget(Some(tank)),
+        crate::combat::AutoAttack::new(tank),
+        crate::auras::AuraStatMods {
+            melee_hit_chance_pct: 100.0,
+            ..Default::default()
+        },
+    ));
+    h.advance(200);
+    assert_eq!(h.health(tank), 0.0);
+    let deaths: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(tank.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        deaths.len(),
+        1,
+        "owner must receive exactly one follower death"
+    );
+    assert_eq!(deaths[0].source, Some(enemy.to_bits()));
+    assert!(deaths[0].timestamp_unix_ms > 0);
 }
 
 /// The real summon starts at the authored template's level, then the bridge

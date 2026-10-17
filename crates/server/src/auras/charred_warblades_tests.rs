@@ -2,7 +2,8 @@
 //! native effect0 percentage for the next PERIODIC_DUMMY heal, then resets.
 use super::*;
 use crate::spell_cast::test_harness::{
-    Harness, drain, harness, spawn_peer_connection, spawn_player,
+    Harness, apply_native_enemy_dodge_reduction_to, drain,
+    harness_with_native_enemy_dodge_reduction, spawn_peer_connection, spawn_player,
 };
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
@@ -16,7 +17,8 @@ const PHYSICAL_HIT: u32 = 12_294;
 const SHIELD: u32 = 17;
 
 fn fixture() -> Harness {
-    let mut h = harness(
+    // Damage/heal lifecycle, not avoidance: use the existing source-aura fixture.
+    let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
         &[CHARRED, HEAL, CHAOS_HIT, FIRE_HIT, PHYSICAL_HIT, SHIELD],
         12,
@@ -59,6 +61,21 @@ fn expected_heal(h: &Harness, damage: u32) -> u32 {
         .effects[0]
         .amount;
     (damage as f32 * percent / 100.0) as u32
+}
+
+#[test]
+fn class_completeness_native_charred_warblades_fixture_establishes_damage_before_heal_assertions() {
+    let mut h = fixture();
+    for attempt in 0..128 {
+        h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = 5000.0;
+        h.inbox.log.clear();
+        let damage = hit(&mut h, CHAOS_HIT);
+        assert!(
+            expected_heal(&h, damage) > 0,
+            "native damage prerequisite failed at hit {attempt}: {:?}",
+            h.inbox.log
+        );
+    }
 }
 
 #[test]
@@ -110,6 +127,7 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
     let expected_owner = expected_heal(&h, owner_damage);
     assert!(expected_owner > 0);
     let other = spawn_player(&mut h.app, 12, 2.0);
+    apply_native_enemy_dodge_reduction_to(&mut h, other);
     let other_connection = spawn_peer_connection(&mut h.app, other, 2);
     h.app.world_mut().get_mut::<Health>(other).unwrap().current = 400.0;
     apply_aura(

@@ -226,7 +226,7 @@ fn dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury() {
         if rank {
             ids.push(321068);
         }
-        let mut h = harness(Vec::new(), &ids, 12).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 12).unwrap();
         let caster = h.caster;
         if rank {
             apply(&mut h, caster, caster, 321068, u32::MAX);

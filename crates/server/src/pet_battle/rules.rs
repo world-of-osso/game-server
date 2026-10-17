@@ -6,6 +6,20 @@ pub const BASE_VARIANCE: i32 = 20; // Blizzard5.3 accuracy article: +/-10%.
 pub const POWER_COEFFICIENT: f64 = 0.05; // Retail SharedPetBattleTemplates AttackBonus.
 pub const CRITICAL_MULTIPLIER: f64 = 1.5; // Blizzard5.3 accuracy article.
 
+const TWO_WAY_WALLS: [(u32, u32); 7] = [
+    (325, 326),
+    (433, 434),
+    (444, 443),
+    (465, 464),
+    (479, 480),
+    (2318, 464),
+    (2398, 2397),
+];
+
+pub(super) fn is_two_way_wall(ability: u32) -> bool {
+    TWO_WAY_WALLS.iter().any(|(_, aura)| *aura == ability)
+}
+
 pub fn supported_property(property: u32) -> bool {
     matches!(
         property,
@@ -66,6 +80,12 @@ pub fn supported_property(property: u32) -> bool {
             | 117
             | 129
             | 168
+            | 107
+            | 150
+            | 112
+            | 370
+            | 223
+            | 194
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -113,9 +133,11 @@ fn validate_ability_graph(
     if let Some(states) = catalog.ability_states.get(&ability) {
         for state in states.keys() {
             let name = &catalog.states[state];
-            if name == "Mechanic_IsObject" && !matches!(ability, 189 | 333) {
+            let known_object = matches!(ability, 189 | 333) || is_two_way_wall(ability);
+            if name == "Mechanic_IsObject" && !known_object {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
+            let wall_state = is_two_way_wall(ability) && matches!(*state, 123 | 126);
             if !matches!(
                 *state,
                 21 | 22 | 23 | 24 | 25 | 29 | 30 | 33 | 34 | 35 | 36 | 40 | 41 | 42
@@ -151,7 +173,8 @@ fn validate_ability_graph(
                         | 176
                         | 196
                         | 199
-            ) {
+            ) && !wall_state
+            {
                 return Err(format!(
                     "ability {ability}: unsupported aura state {state} {name}"
                 ));
@@ -230,6 +253,7 @@ fn validate_ability_graph(
                     | 226
                     | 384
                     | 385
+                    | 370
             ) && catalog.abilities[&ability].family < 0
             {
                 return Err(format!("ability {ability}: damage has no family"));
@@ -271,9 +295,53 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && p[2] > 0
                 && p[3..].iter().all(|v| *v == 0)
         }
-        // Only the two described three-enemy Stench graphs establish these selectors.
+        // Stench retains its team routing; these two miss branches explicitly select self.
         159 => {
-            p.iter().all(|v| *v == 0) && matches!(catalog.turns[&effect.turn].ability, 527 | 1010)
+            let ability = catalog.turns[&effect.turn].ability;
+            let self_after_miss =
+                matches!(ability, 762 | 989) && effect.order == 3 && effect.aura == 0;
+            p.iter().all(|v| *v == 0) && (matches!(ability, 527 | 1010) || self_after_miss)
+        }
+        194 => {
+            matches!(catalog.turns[&effect.turn].ability, 762 | 989)
+                && effect.order == 2
+                && effect.aura == 0
+                && p.iter().all(|v| *v == 0)
+        }
+        // Fade explicitly swaps its user randomly after removing the dodge aura.
+        // Other107 descriptions do not establish random versus selected routing.
+        107 => {
+            catalog.turns[&effect.turn].ability == 1084
+                && p[0] == 100
+                && p[1..].iter().all(|v| *v == 0)
+        }
+        150 => {
+            let ability = catalog.turns[&effect.turn].ability;
+            TWO_WAY_WALLS.contains(&(ability, effect.aura))
+                && p[0] == 0
+                && p[1] == 100
+                && p[2..].iter().all(|v| *v == 0)
+        }
+        // Refuge's other two friendly slots require the authored Critter family.
+        223 => {
+            catalog.turns[&effect.turn].ability == 1344
+                && (2..=3).contains(&effect.order)
+                && effect.aura == 759
+                && p == [0, 100, 6, 5, 0, 0]
+        }
+        // Dragon's Call's authored bonus counts additional teammates of the same species.
+        370 => {
+            catalog.turns[&effect.turn].ability == 2283
+                && effect.order == 1
+                && effect.aura == 0
+                && p == [25, 100, 7, 0, 0, 0]
+        }
+        // Raise Dead and Mass Resurrection explicitly revive the two other allies.
+        112 => {
+            matches!(catalog.turns[&effect.turn].ability, 2347 | 2348)
+                && (1..=2).contains(&effect.order)
+                && effect.aura == 0
+                && p == [5, 100, 0, 1, 0, 0]
         }
         131 => effect.aura != 0 && p[0] == 0 && p[2] >= 0 && p[3..].iter().all(|v| *v == 0),
         172 => {

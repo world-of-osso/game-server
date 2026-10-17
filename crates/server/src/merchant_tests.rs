@@ -52,6 +52,97 @@ const CHIPPED_CLAW: u32 = 7074;
 const BLUE_LINEN_VEST_PATTERN: u32 = 6270;
 
 #[test]
+fn guild_news_records_only_successful_source_qualified_vendor_purchases() {
+    let mut h = harness().expect("authentic vendor database");
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    h.app.world_mut().entity_mut(h.player).insert(Level(50));
+    let mut reputation = shared::reputation::CharacterReputation::default();
+    reputation.set_rep(
+        1119,
+        shared::reputation::threshold_for_standing(shared::reputation::Standing::Exalted),
+    );
+    h.app.world_mut().entity_mut(h.player).insert(reputation);
+    crate::persistence_character::set_character_guild_by_id(
+        &h.app.world().resource::<GameDatabase>().db,
+        h.character_id,
+        7,
+        "Real News",
+    )
+    .unwrap();
+    // Lillehoff's installed slot: Greater Inscription of the Axe, quality7, ilvl30.
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(pair::<shared::protocol::SelectGossipOption>());
+    let vendor = h.open(32540);
+    let opened = h.take::<InteractionOpened>();
+    assert_eq!(opened.len(), 1, "Actual Lillehoff interaction: {opened:?}");
+    let InteractionKind::Gossip(menu) = &opened[0].kind else {
+        panic!("Lillehoff's real gossip menu expected: {opened:?}")
+    };
+    let vendor_option = menu
+        .options
+        .iter()
+        .find(|option| option.icon == 1)
+        .expect("authored vendor gossip option")
+        .option_id;
+    h.send::<_, InteractionChannel>(shared::protocol::SelectGossipOption {
+        npc: vendor.to_bits(),
+        option_id: vendor_option,
+    });
+    let inventories = h.take::<VendorInventory>();
+    assert_eq!(inventories.len(), 1);
+    let item = inventories[0]
+        .items
+        .iter()
+        .find(|item| item.item_id == 50335)
+        .unwrap();
+    let slot = item.slot;
+    h.set_gold(0);
+    h.buy(vendor, slot, 50335, 1);
+    assert_eq!(h.take::<MerchantFailed>().len(), 1);
+    assert!(
+        crate::guild_news::query(&h.app.world().resource::<GameDatabase>().db, h.character_id)
+            .entries
+            .is_empty()
+    );
+    h.set_gold(1_000_000);
+    h.buy(vendor, slot, 50335, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    let inventory =
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id);
+    assert!(inventory.items.iter().any(|item| item.item_id == 50335));
+    let news =
+        crate::guild_news::query(&h.app.world().resource::<GameDatabase>().db, h.character_id);
+    assert_eq!(
+        news.entries.len(),
+        1,
+        "Real committed source-qualified purchase must publish news"
+    );
+    assert_eq!(
+        news.entries[0].kind,
+        shared::protocol::GuildNewsKind::ItemPurchased {
+            member: "Shopper".into(),
+            item_id: 50335
+        }
+    );
+    // Godric's real ordinary-quality shield is a purchase, not guild-news loot.
+    let ordinary = h.open(GODRIC_ROTHGAR);
+    h.take::<VendorInventory>();
+    h.set_gold(100_000);
+    h.buy(ordinary, SHIELD_SLOT, LARGE_ROUND_SHIELD, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    assert_eq!(
+        crate::guild_news::query(&h.app.world().resource::<GameDatabase>().db, h.character_id)
+            .entries,
+        news.entries
+    );
+}
+
+#[test]
 fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
     let mut h = harness_with(|app| {

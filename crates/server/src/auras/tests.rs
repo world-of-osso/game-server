@@ -7,7 +7,9 @@ use shared::components::{
 use shared::protocol::{CancelAura, CombatChannel, CombatLogEvent, CombatLogKind};
 
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness, varied, world_db};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_native_enemy_dodge_reduction, varied, world_db,
+};
 
 const SHADOW_WORD_PAIN: u32 = 589;
 const RENEW: u32 = 139;
@@ -668,7 +670,9 @@ fn purify_dispels_a_magic_debuff_combat_log_metadata() {
 
 #[test]
 fn passive_proc_trigger_fires_on_melee_swing() {
-    let Some(mut h) = harness(Vec::new(), &[DEVASTATOR, DEVASTATOR_DAMAGE], 1) else {
+    let Some(mut h) =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[DEVASTATOR, DEVASTATOR_DAMAGE], 1)
+    else {
         return;
     };
     h.advance(1);
@@ -816,6 +820,62 @@ fn water_breathing_aura_marks_the_target_water_breathing() {
     let mods = mods(&h).unwrap();
     assert!(mods.water_breathing);
     assert_eq!(mods.water_breathing_mult, 1.0);
+}
+
+#[test]
+fn health_percent_watch_credits_crossings_and_new_auras_but_not_idle_ticks() {
+    // Authored 171393: below20% casts171397; above21% casts171404.
+    let mut h = harness(Vec::new(), &[171393, 171397, 171404], 5)
+        .expect("local health-percent spell fixtures");
+    h.advance(1);
+    apply(&mut h.app, h.caster, h.caster, 171393);
+    h.advance(1);
+    assert!(auras_of(&h, h.caster, 171397).is_empty());
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h.advance(1);
+    assert_eq!(auras_of(&h, h.caster, 171397).len(), 1);
+    remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 171397,
+    );
+    h.advance(2);
+    assert!(
+        auras_of(&h, h.caster, 171397).is_empty(),
+        "remaining below the threshold is not another crossing"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 1000.0;
+    h.advance(1);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h.advance(1);
+    assert_eq!(auras_of(&h, h.caster, 171397).len(), 1);
+    remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        RemoveReason::Cancelled,
+        |aura| [171393, 171397].contains(&aura.spell_id),
+    );
+    h.advance(1);
+    apply(&mut h.app, h.caster, h.caster, 171393);
+    h.advance(1);
+    assert_eq!(
+        auras_of(&h, h.caster, 171397).len(),
+        1,
+        "new aura already below threshold fires on application"
+    );
 }
 
 #[test]

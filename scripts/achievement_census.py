@@ -14,7 +14,7 @@ from import_achievement_conditions import load_identity_condition_ids, legacy_di
 import db2_casc
 from import_achievement_node_counts import qualified_node_counts
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 24, 26, 27, 28, 29, 30, 32, 33, 34, 36, 37, 39, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 70, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 90, 91, 96, 97, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 24, 26, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 46, 47, 48, 52, 53, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 70, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 90, 91, 96, 97, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 # shared battleground_columns.rs PvpStat columns credited by native objectives.
 MAX_LEVEL = 90  # crate::experience::MAX_LEVEL
@@ -73,7 +73,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind in (32, 33, 97) and asset <= 0:
             continue  # TC requires exact map ID, not a zero/all-arena alias.
-        if kind == 54 and asset not in (34, 101, 86, 87, 59, 225):
+        if kind == 54 and asset not in (34, 101, 86, 87, 59, 225, 56):
             continue  # TC TextEmotes for the six native emotes, not animation IDs.
         if kind == 26 and asset not in (0, 1, 2, 6):
             continue  # Native fatigue/drowning/falling/void only, no lava/slime/fire producer.
@@ -85,8 +85,12 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue  # TDB1210 orphan aura66303 and holiday404 requirements.
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
-        if kind in (90, 91, 24, 37, 9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56, 78) and asset != 0:
+        if kind in (90, 91, 24, 35, 37, 9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56, 78) and asset != 0:
             continue
+        if kind == 52 and asset not in range(1, 14):
+            continue  # Eligible native victim's exact positive authored class.
+        if kind == 53 and asset not in PLAYABLE_RACES:
+            continue  # Eligible native victim's positive authored playable race, not scoreboard identity.
         if kind == 39 and asset not in (0, 1):
             continue  # Current authored2v2/3v3; retired5v5/RBG/Shuffle/Blitz are not native rating sources.
         if kind == 43 and asset not in overlay_assets:
@@ -117,10 +121,10 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
     return supported
 
 
-def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievement_ids, node_counts, pet_types):
+def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, authored_facts, achievement_ids, node_counts, pet_types):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
-    if kind in item_facts:
-        return asset in item_facts[kind]
+    if kind in authored_facts:
+        return asset in authored_facts[kind]
     if kind in (87, -87):
         return asset in achievement_ids
     if kind == 67:
@@ -129,7 +133,7 @@ def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_
         return 1 <= asset <= 15
     if kind == 78:
         return asset in pet_types
-    return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, -104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, -8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+    return {10: asset in spells, 46: 1 <= asset <= 100, 5: asset == 0, 6: asset == 0, 7: asset == 0, 28: 1 <= asset <= 13, 34: 1 <= asset <= 25, 104: asset in spells, -104: asset in spells, 16: asset == 0, 2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, -8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 27: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 35: asset == 0, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
@@ -189,8 +193,13 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         identities = load_identity_condition_ids(db)
         item_rows = dict(db.execute('SELECT ID, Quality FROM content_item'))
         qualities = set(item_rows.values())
-        item_facts = {19: set(item_rows), 15: qualities,
-                      14: set(range(max(qualities, default=-1) + 1))}
+        tuning_ranges = {row[0] for row in db.execute(
+            'SELECT ID FROM content_tuning_level WHERE minlevel BETWEEN 1 AND 255 '
+            'AND maxlevel BETWEEN minlevel AND 255')}
+        authored_facts = {268: tuning_ranges, 19: set(item_rows), 15: qualities,
+                          14: set(range(max(qualities, default=-1) + 1)),
+                          110: {row[0] for row in db.execute('SELECT ID FROM content_quest_template')},
+                          82: {row[0] + 1 for row in db.execute('SELECT DISTINCT OrderIndex FROM scenario_step WHERE OrderIndex >= 0')}}
     header, overlays = db2_casc.decode(overlays_path.read_bytes())
     if header['layout_hash'] != 0x9A196494:
         raise ValueError('requires pinned WorldMapOverlay layout9A196494')
@@ -200,7 +209,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     condition_trees = {
         row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv')).items()
         if row_id not in single_modifiers
-        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, item_facts, achievements, node_counts, pet_types) for kind, asset in facts)
+        and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, authored_facts, achievements, node_counts, pet_types) for kind, asset in facts)
     }
     supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, condition_trees)
     by_type = collections.defaultdict(set)

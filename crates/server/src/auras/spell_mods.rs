@@ -189,6 +189,23 @@ pub(crate) fn snapshot_charged_modifiers(
 
 /// `base` modified by `caster`'s spell modifiers for `op` on `spell`.
 pub fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
+    let (flat, mult) = modifier_totals(world, caster, spell, op);
+    (base + flat) * mult
+}
+
+/// TC SpellInfo.cpp4220–4226: optional power costs ignore flat spell modifiers.
+pub(crate) fn modify_percent(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    op: SpellModOp,
+    base: f32,
+) -> f32 {
+    let (_, mult) = modifier_totals(world, caster, spell, op);
+    base * mult
+}
+
+fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp) -> (f32, f32) {
     let frozen = spell
         .cast_charge_mods
         .iter()
@@ -197,14 +214,13 @@ pub fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, 
         .fold((0.0, 1.0), |sum, modifier| {
             add_modifier(sum, modifier.amount, modifier.percent)
         });
-    let (flat, mult) = world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
+    world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
         matching(auras, spell, op)
             .filter(|(aura, _)| spell.cast_charge_mods.is_none() || aura.charges == 0)
             .fold(frozen, |sum, (aura, effect)| {
                 add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
             })
-    });
-    (base + flat) * mult
+    })
 }
 
 /// Spell modifiers with charges are spent by the spell they modify: each

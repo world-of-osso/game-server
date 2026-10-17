@@ -15,13 +15,16 @@
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
 
+pub(crate) mod azure_vault;
 pub mod boss_ai;
 pub mod bossmod;
 pub mod creature_text;
 pub mod event_map;
+pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 pub(crate) mod jump_movement;
 pub mod kings_rest;
+pub(crate) mod maraudon;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
@@ -77,8 +80,10 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
+            .add_systems(Startup, maraudon::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
+            .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
             .add_systems(
@@ -224,6 +229,12 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn waypoint_path_ended(&mut self, _ctx: &mut Ctx, _node_id: u32, _path_id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
     fn do_action(&mut self, _ctx: &mut Ctx, _action: i32) {}
+    fn gossip_hello(&mut self, _ctx: &mut Ctx, _player: Entity) -> bool {
+        false
+    }
+    fn gossip_select(&mut self, _ctx: &mut Ctx, _player: Entity) -> bool {
+        false
+    }
     fn store_counter(&mut self, _ctx: &mut Ctx, _id: u32, _value: u32, _reset: bool) {}
     fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
@@ -266,6 +277,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
     }
+    if azure_vault::is_creature_script(script_name) {
+        return azure_vault::creature_ai(world, creature);
+    }
     if murder_row::is_creature_script(script_name) {
         return murder_row::creature_ai(world, creature, script_name);
     }
@@ -277,6 +291,12 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     }
     if wailing_caverns::is_creature_script(script_name) {
         return wailing_caverns::creature_ai(world, creature);
+    }
+    if maraudon::is_creature_script(script_name) {
+        return maraudon::creature_ai(world, creature);
+    }
+    if hellfire_ramparts::is_creature_script(script_name) {
+        return hellfire_ramparts::creature_ai(world, creature);
     }
     the_stockade::creature_ai(world, creature, script_name)
 }
@@ -294,6 +314,9 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || kings_rest::is_creature_script(script_name)
         || ragefire_chasm::is_creature_script(script_name)
         || wailing_caverns::is_creature_script(script_name)
+        || maraudon::is_creature_script(script_name)
+        || azure_vault::is_creature_script(script_name)
+        || hellfire_ramparts::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
@@ -397,16 +420,18 @@ fn update_creature_ai(world: &mut World) {
 /// The head of `Creature::Update`: `JustAppeared` once after AddToMap or Respawn.
 /// `Map::Update` updates objects before relocation notifies, so this precedes the
 /// tick's sight and aggro.
-fn trigger_just_appeared(world: &mut World) {
-    let creatures: Vec<Entity> = world
-        .query_filtered::<Entity, (
-            With<TriggerJustAppeared>,
-            With<CreatureAiState>,
-            Without<DeathState>,
-            Without<GridDormant>,
-        )>()
-        .iter(world)
-        .collect();
+type AppearingCreatures = QueryState<
+    Entity,
+    (
+        With<TriggerJustAppeared>,
+        With<CreatureAiState>,
+        Without<DeathState>,
+        Without<GridDormant>,
+    ),
+>;
+
+fn trigger_just_appeared(world: &mut World, appearing: &mut AppearingCreatures) {
+    let creatures: Vec<Entity> = appearing.iter(world).collect();
     for creature in creatures {
         // An earlier creature's hook may have despawned this one.
         let Ok(mut entity) = world.get_entity_mut(creature) else {
@@ -436,6 +461,50 @@ pub(crate) fn dispatch(world: &mut World, creature: Entity, hook: Hook) {
     if let Some(mut state) = world.get_mut::<CreatureAiState>(creature) {
         state.ai = Some(ai);
     }
+}
+
+/// Source callbacks, separate from NPC eligibility and option validation. These
+/// do not bypass the interaction system's authored flags or menu options.
+pub(crate) fn creature_gossip_hello(world: &mut World, player: Entity, creature: Entity) -> bool {
+    call_gossip(world, creature, |ai, ctx| ai.gossip_hello(ctx, player))
+}
+
+pub(crate) fn creature_gossip_select(world: &mut World, player: Entity, creature: Entity) -> bool {
+    call_gossip(world, creature, |ai, ctx| ai.gossip_select(ctx, player))
+}
+
+fn call_gossip(
+    world: &mut World,
+    creature: Entity,
+    callback: impl FnOnce(&mut dyn CreatureAi, &mut Ctx) -> bool,
+) -> bool {
+    let Some(mut state) = world.get_mut::<CreatureAiState>(creature) else {
+        return false;
+    };
+    let Some(mut ai) = state.ai.take() else {
+        warn!(
+            ?creature,
+            "Cannot synchronously invoke gossip while creature AI is running"
+        );
+        return false;
+    };
+    let handled = callback(
+        ai.as_mut(),
+        &mut Ctx {
+            world,
+            me: creature,
+        },
+    );
+    while let Some(hook) = world
+        .get_mut::<CreatureAiState>(creature)
+        .and_then(|mut state| state.pending.pop_front())
+    {
+        run_hook(world, creature, ai.as_mut(), hook);
+    }
+    if let Some(mut state) = world.get_mut::<CreatureAiState>(creature) {
+        state.ai = Some(ai);
+    }
+    handled
 }
 
 fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) {
@@ -606,7 +675,11 @@ impl Ctx<'_> {
             .world
             .get::<shared::components::Npc>(self.me)
             .map_or_else(String::new, |npc| npc.name.clone());
-        match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
+        let result =
+            crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered);
+        #[cfg(test)]
+        tests::cast_admission::record(self.world, self.me, spell_id, &result);
+        match result {
             Ok(()) => {
                 info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
                 true
@@ -818,3 +891,15 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn idle_just_appeared_full_population_is_bounded() {
+    let mut app = App::new();
+    app.add_systems(Update, trigger_just_appeared);
+    crate::test_data::populate_idle_world(app.world_mut(), || crate::grid_activity::GridDormant);
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_just_appeared_full_population_is_bounded",
+    );
+}

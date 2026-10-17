@@ -121,6 +121,12 @@ pub(super) fn buy(
         inventory,
         expected_inventory,
     )?;
+    crate::guild_news::record_purchase(
+        shop.db(),
+        customer.character_id,
+        purchase.item_id,
+        &purchase.template,
+    );
     shop.gold
         .record_acquisition(customer.character_id, purchase.item_id, purchase.count);
     Ok(())

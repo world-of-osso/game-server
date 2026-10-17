@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use bevy::prelude::*;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use shared::protocol::{
     AchievementProgressSnapshot, AchievementSnapshot, AchievementToastSnapshot,
 };
@@ -15,10 +15,10 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62,
-    63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
-    157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220, 221, 245, 246,
-    253,
+    0, 1, 32, 33, 35, 52, 53, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41,
+    42, 59, 62, 63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130,
+    151, 152, 157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220, 221,
+    245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -76,8 +76,14 @@ pub(crate) enum CriteriaEvent {
     TotalHealReceived(u64),
     HighestHealReceived(u64),
     /// TextEmote ID and the same-map NPC entry resolved from this request's unit GUID.
-    DoEmote(u32, Option<u32>),
+    DoEmote(u32, Option<Entity>),
     DeliveredKillingBlow,
+    /// One eligible native world-player kill, independent of its Honor XP amount.
+    EarnHonorableKill,
+    /// Actual victim race for an eligible HK recipient, not only the final attacker.
+    HonorableKillRace(u8),
+    /// Actual victim class for each eligible HK recipient (TC RewardHonor6754).
+    HonorableKillClass(u8),
     /// One native battleground/arena kill reward; world honor eligibility is separate.
     KillPlayer,
     UseItem(u32),
@@ -214,6 +220,9 @@ impl CriteriaEvent {
             Self::DoEmote(_, _) => 54,
             Self::DeliveredKillingBlow => 56,
             Self::KillPlayer => 70,
+            Self::EarnHonorableKill => 35,
+            Self::HonorableKillRace(_) => 53,
+            Self::HonorableKillClass(_) => 52,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -277,6 +286,8 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::HonorableKillRace(race) => race != 0 && u32::from(race) == criteria.asset,
+            Self::HonorableKillClass(class) => class != 0 && u32::from(class) == criteria.asset,
             Self::FallWithoutDying(distance) => distance > 0 && criteria.asset == 0,
             Self::ObtainAnyItem(item) | Self::LootAnyItem(item) => item > 0 && criteria.asset == 0,
             Self::WinArena(map) | Self::ParticipateInArena(map) => criteria.asset == map,
@@ -309,6 +320,7 @@ impl CriteriaEvent {
             }
             Self::KillAnyCreature(_)
             | Self::DeliveredKillingBlow
+            | Self::EarnHonorableKill
             | Self::TotalExaltedFactions(_)
             | Self::TotalReveredFactions(_)
             | Self::TotalHonoredFactions(_)
@@ -476,15 +488,18 @@ pub(crate) struct PlayerConditions {
     pub difficulty: u32,
     /// None for map-wide credit, which has no reference player.
     pub player: Option<ReferencePlayer>,
-    /// Live type110 hit entities and their pre-effect unit facts.
-    pub hit_units: BTreeMap<Entity, SpellHitUnit>,
+    /// Actual native spell-hit or requested emote units; never persisted.
+    pub hit_units: BTreeMap<Entity, CriteriaTargetUnit>,
 }
 
 /// Separate actual unit authority: neither NPC entry nor auras imply Player identity.
 #[derive(Debug, Default)]
-pub(crate) struct SpellHitUnit {
+pub(crate) struct CriteriaTargetUnit {
     pub creature_entry: Option<u32>,
     pub auras: Option<BTreeSet<u32>>,
+    pub is_player: bool,
+    pub dead: Option<bool>,
+    pub hostile: Option<bool>,
 }
 
 /// Identity of the actual Player hit by this spell; NPC/missing targets have no snapshot.
@@ -505,12 +520,16 @@ pub(crate) struct ReferencePlayer {
     pub known_spells: BTreeSet<u32>,
     /// Absence is meaningful only after class, profession and account mount sources are complete.
     pub spell_knowledge_complete: bool,
+    /// CompleteQuest facts; Login74 reconstructs these from this character's persisted rewards.
+    pub rewarded_quests: BTreeSet<u32>,
     /// This character's earned IDs plus account-wide awards; None when state/catalog is unknown.
     pub earned_achievements: Option<BTreeSet<u32>>,
     /// Negative87 requires the account aggregate too; character-only state is incomplete.
     pub account_achievements_known: bool,
     /// Minimum owned pet level across all three equipped journal slots; None unknown/incomplete.
     pub battle_pet_team_min_level: Option<u8>,
+    /// Actual current authored ScenarioStep ID; None outside/after a scenario or without authority.
+    pub scenario_step: Option<u32>,
     /// Current terrain area (TC Player::GetAreaId).
     pub area: Option<u32>,
     pub map: u32,
@@ -536,6 +555,9 @@ enum CriteriaFact {
     NotAura(u32),
     KnownSpell(u32),
     NotKnownSpell(u32),
+    CompletedQuest(u32),
+    /// Authored step IDs whose OrderIndex equals the one-based modifier asset minus one.
+    ScenarioSteps(BTreeSet<u32>),
     EarnedAchievement(u32),
     NotEarnedAchievement(u32),
     BattlePetTeamLevel(u8),
@@ -552,6 +574,8 @@ enum CriteriaFact {
     /// TargetRace27 from the actual hit unit, never the reference player.
     TargetRace(u8),
     TargetIsPlayer,
+    TargetIsDead,
+    TargetIsHostile,
     /// TC TargetHasAura10 on the actual hit unit, independently of Player identity.
     TargetAura(u32),
     /// Accepted only with positive player/race authority; NPC class predicates stay disabled.
@@ -578,15 +602,17 @@ enum CriteriaFact {
     MapInstanceType(BTreeSet<u32>),
     MinLevel(u8),
     MaxLevel(u8),
+    /// TC268 uses ContentTuning min/max, never MinLevelWithDelta.
+    ContentTuningLevels(std::ops::RangeInclusive<u8>),
 }
 
 fn event_creature_entry(
     event: CriteriaEvent,
-    hit_units: &BTreeMap<Entity, SpellHitUnit>,
+    hit_units: &BTreeMap<Entity, CriteriaTargetUnit>,
 ) -> Option<u32> {
     match event {
-        CriteriaEvent::DoEmote(_, entry) => entry,
-        CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) => {
+        CriteriaEvent::DoEmote(_, Some(target))
+        | CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) => {
             hit_units.get(&target).and_then(|unit| unit.creature_entry)
         }
         _ => None,
@@ -598,13 +624,17 @@ impl CriteriaFact {
         &self,
         player: &ReferencePlayer,
         event: CriteriaEvent,
-        hit_units: &BTreeMap<Entity, SpellHitUnit>,
+        hit_units: &BTreeMap<Entity, CriteriaTargetUnit>,
     ) -> bool {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
             Self::NotAura(spell) => player.auras_known && !player.auras.contains(spell),
             Self::KnownSpell(spell) => player.known_spells.contains(spell),
+            Self::CompletedQuest(quest) => player.rewarded_quests.contains(quest),
+            Self::ScenarioSteps(steps) => player
+                .scenario_step
+                .is_some_and(|step| steps.contains(&step)),
             Self::NotKnownSpell(spell) => {
                 player.spell_knowledge_complete && !player.known_spells.contains(spell)
             }
@@ -633,9 +663,17 @@ impl CriteriaFact {
             Self::TargetRace(race) => {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(target), _, _) if target.race == *race)
             }
-            Self::TargetIsPlayer => {
-                matches!(event, CriteriaEvent::LandTargetedSpell(_, Some(_), _, _))
-            }
+            Self::TargetIsPlayer => match event {
+                CriteriaEvent::DoEmote(_, Some(target)) => {
+                    hit_units.get(&target).is_some_and(|unit| unit.is_player)
+                }
+                CriteriaEvent::LandTargetedSpell(_, Some(_), _, _) => true,
+                _ => false,
+            },
+            Self::TargetIsDead => matches!(event, CriteriaEvent::DoEmote(_, Some(target))
+                if hit_units.get(&target).and_then(|unit| unit.dead) == Some(true)),
+            Self::TargetIsHostile => matches!(event, CriteriaEvent::DoEmote(_, Some(target))
+                if hit_units.get(&target).and_then(|unit| unit.hostile) == Some(true)),
             Self::TargetAura(spell) => {
                 matches!(event, CriteriaEvent::LandTargetedSpell(_, _, _, Some(target))
                     if hit_units.get(&target).and_then(|unit| unit.auras.as_ref())
@@ -674,6 +712,7 @@ impl CriteriaFact {
             Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
+            Self::ContentTuningLevels(range) => range.contains(&player.level),
         }
     }
 }
@@ -750,7 +789,17 @@ struct AchievementDef {
     faction: i32,
 }
 
+#[path = "achievement_evaluation.rs"]
+mod evaluation;
+pub(crate) use evaluation::EvaluationCache;
+
+#[cfg(test)]
+thread_local! {
+    static EVALUATION_WORK: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
+}
+
 #[derive(Resource, Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct AchievementCatalog {
     window: window::WindowData,
     definitions: BTreeMap<u32, AchievementDef>,
@@ -758,6 +807,7 @@ pub(crate) struct AchievementCatalog {
     pub trees: HashMap<u32, CriteriaTree>,
     pub children: HashMap<u32, Vec<u32>>,
     event_criteria: HashMap<u32, Vec<u32>>,
+    evaluation_index: evaluation::EvaluationIndex,
     faction_groups: HashMap<u32, u32>,
     area_bits: HashMap<u32, u32>,
     pet_creatures: BTreeSet<u32>,
@@ -765,7 +815,7 @@ pub(crate) struct AchievementCatalog {
     spell_skill_lines: HashMap<u32, BTreeSet<u32>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct TreeProgress {
     pub current: u64,
     pub required: u64,
@@ -859,61 +909,6 @@ impl AchievementCatalog {
         self.grant_completed(state, completed_map, race, false)
     }
 
-    pub(super) fn grant_completed(
-        &self,
-        state: &mut PlayerAchievementState,
-        completed_map: Option<u32>,
-        race: u8,
-        account_scope: bool,
-    ) -> Vec<AchievementToastSnapshot> {
-        let mut toasts = Vec::new();
-        loop {
-            self.set_pet_battle_points(state);
-            let completed =
-                self.find_completed_definitions(state, completed_map, race, account_scope);
-            if completed.is_empty() {
-                return toasts;
-            }
-            for definition in completed {
-                state.earned_ids.insert(definition.id);
-                toasts.push(AchievementToastSnapshot {
-                    achievement_id: definition.id,
-                    name: definition.name.clone(),
-                    points: definition.points,
-                    icon_fdid: self.window.icon_fdid(definition.id),
-                });
-            }
-        }
-    }
-
-    fn find_completed_definitions(
-        &self,
-        state: &PlayerAchievementState,
-        completed_map: Option<u32>,
-        race: u8,
-        account_scope: bool,
-    ) -> Vec<&AchievementDef> {
-        self.definitions
-            .values()
-            .filter(|definition| {
-                if self.window.has_account_flag(definition.id) != account_scope
-                    || state.earned_ids.contains(&definition.id)
-                {
-                    return false;
-                }
-                if !self.faction_matches(definition.faction, race) {
-                    return false;
-                }
-                if let Some(map) = definition.map_id
-                    && completed_map != Some(map)
-                {
-                    return false;
-                }
-                self.tree_progress(definition.root, state).completed
-            })
-            .collect()
-    }
-
     pub(crate) fn iter_earned_achievement_ids<'a>(
         &'a self,
         state: &'a PlayerAchievementState,
@@ -943,6 +938,11 @@ impl AchievementCatalog {
         state: &PlayerAchievementState,
         race: u8,
     ) -> Vec<AchievementProgressSnapshot> {
+        let character_progress = self.cached_progress(state);
+        let account_progress = state
+            .account
+            .as_deref()
+            .and_then(|account| self.cached_progress(account));
         self.definitions
             .values()
             .filter(|definition| self.faction_matches(definition.faction, race))
@@ -950,8 +950,15 @@ impl AchievementCatalog {
                 !self.window.has_account_flag(definition.id) || state.account.is_some()
             })
             .map(|definition| {
+                let cached = if self.window.has_account_flag(definition.id) {
+                    account_progress
+                } else {
+                    character_progress
+                };
                 let state = self.definition_state(state, definition.id);
-                let progress = self.tree_progress(definition.root, state);
+                let progress = cached
+                    .map(|progress| progress[&definition.id].clone())
+                    .unwrap_or_else(|| self.tree_progress(definition.root, state));
                 AchievementProgressSnapshot {
                     achievement_id: definition.id,
                     current: progress.current.min(u64::from(u32::MAX)) as u32,
@@ -1197,6 +1204,11 @@ impl AchievementCatalog {
     }
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
+        #[cfg(test)]
+        EVALUATION_WORK.with(|work| {
+            let (definitions, trees) = work.get();
+            work.set((definitions, trees + 1));
+        });
         let tree = &self.trees[&id];
         let counter = self.criterion_counter(tree.criteria_id, state);
         let children = self.children.get(&id).into_iter().flatten();
@@ -1383,6 +1395,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
                 .push(id);
         }
     }
+    catalog.index_evaluation_dependencies();
     Ok(catalog)
 }
 
@@ -1439,7 +1452,38 @@ fn load_battle_pet_type_fact(
     Ok((!species.is_empty()).then_some(CriteriaFact::BattlePetSpeciesOfType(species)))
 }
 
+/// TC PlayerScenarioStep compares the actual authored OrderIndex, not vector position.
+fn load_scenario_step_fact(
+    conn: &Connection,
+    stage: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let Some(order) = stage.checked_sub(1) else {
+        return Ok(None);
+    };
+    let mut query = conn.prepare_cached("SELECT ID FROM scenario_step WHERE OrderIndex=?1")?;
+    let steps = query
+        .query_map([order], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!steps.is_empty()).then_some(CriteriaFact::ScenarioSteps(steps)))
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
+fn load_content_tuning_fact(
+    conn: &Connection,
+    asset: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let range = conn
+        .prepare_cached("SELECT minlevel, maxlevel FROM content_tuning_level WHERE ID = ?1")?
+        .query_row([asset], |row| {
+            Ok((row.get::<_, Option<u8>>(0)?, row.get::<_, Option<u8>>(1)?))
+        })
+        .optional()?;
+    let Some((Some(min), Some(max))) = range else {
+        return Ok(None);
+    };
+    Ok((min > 0 && min <= max).then_some(CriteriaFact::ContentTuningLevels(min..=max)))
+}
+
 fn load_criteria_facts(
     conn: &Connection,
     leaves: &[(i32, u32)],
@@ -1460,13 +1504,18 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Identity),
             4 => Some(CriteriaFact::TargetCreature(asset)),
             5 => Some(CriteriaFact::TargetIsPlayer),
+            6 if asset == 0 => Some(CriteriaFact::TargetIsDead),
+            7 if asset == 0 => Some(CriteriaFact::TargetIsHostile),
             8 => exists("spell")?.then_some(CriteriaFact::Aura(asset)),
             -8 => exists("spell")?.then_some(CriteriaFact::NotAura(asset)),
             10 => exists("spell")?.then_some(CriteriaFact::TargetAura(asset)),
+            82 => load_scenario_step_fact(conn, asset)?,
+            268 => load_content_tuning_fact(conn, asset)?,
             87 => exists("achievement")?.then_some(CriteriaFact::EarnedAchievement(asset)),
             -87 => exists("achievement")?.then_some(CriteriaFact::NotEarnedAchievement(asset)),
             104 => exists("spell")?.then_some(CriteriaFact::KnownSpell(asset)),
             -104 => exists("spell")?.then_some(CriteriaFact::NotKnownSpell(asset)),
+            110 => exists("content_quest_template")?.then_some(CriteriaFact::CompletedQuest(asset)),
             14 | 15 => load_item_quality_fact(conn, kind, asset)?,
             16 => Some(CriteriaFact::Alive),
             19 => exists("content_item")?
@@ -1517,7 +1566,7 @@ fn load_criteria_facts(
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
             _ => {
                 unreachable!(
-                    "generated facts use only -104/-87/-8/2/4/5/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/87/104/122"
+                    "generated facts use only -104/-87/-8/2/4/5/6/7/8/14/15/16/17/19/24/25/26/27/28/29/30/32/34/35/41/46/60/67/69/71/78/82/87/104/110/122/268"
                 )
             }
         };
@@ -1711,10 +1760,13 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 26 && matches!(row.get::<_, i32>(2)?, 0 | 1 | 2 | 6))
                         // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel/Love.
                         // TDB1210 has no criteria_data overlay for these unconditional rows.
-                        || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225))
+                        || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59 | 225 | 56))
                         // Current criteria451/447 and authored370/595 map2v2/3v3 to0/1,
                         // unlike old TC ArenaTeam numeric2/3/5; no retired/other bracket inference.
                         || (kind == 39 && matches!(row.get::<_, i32>(2)?, 0 | 1))
+                        || (kind == 52 && (1..=13).contains(&row.get::<_, i32>(2)?))
+                        || (kind == 53 && u8::try_from(row.get::<_, u32>(2)?).ok()
+                            .is_some_and(|race| crate::race_class::race_bit(race).is_some()))
                         // Native rated arena result has a real positive map ID, never an all-map alias0.
                         || (matches!(kind, 32 | 33 | 97) && row.get::<_, i32>(2)? > 0)
                         || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))
@@ -1732,7 +1784,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 24 | 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 24 | 35 | 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

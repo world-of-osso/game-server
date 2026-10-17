@@ -629,7 +629,7 @@ fn a_mailbox_takes_mail_until_it_holds_more_than_a_hundred() {
 #[test]
 fn item_mail_between_guild_members_arrives_at_once() {
     // TrinityCore `HandleSendMail`: "Mail sent between guild members arrives instantly".
-    let Some(mut h) = harness() else { return };
+    let mut h = harness().expect("Actual same-guild mail fixture assets are required");
     let recipient = h.create_on_account(2, "Tradeb", 1);
     for member in [h.character_id, recipient] {
         persistence::set_character_guild_by_id(h.db(), member, 7, "Postmasters").unwrap();

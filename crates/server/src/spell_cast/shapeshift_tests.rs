@@ -15,7 +15,8 @@ const WRATH: u32 = 5176;
 const SKELETON: u32 = 52509;
 
 fn druid() -> Harness {
-    harness(
+    // Form-admission damage must hit; avoidance has separate native tests.
+    harness_with_native_enemy_dodge_reduction(
         Vec::new(),
         &[
             CAT,

@@ -1,6 +1,156 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_honor_class52_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(2359, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&2359), Some(&7));
+}
+
+#[test]
+fn achievements_criteria_honor_race53_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(2370, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&2370), Some(&7));
+}
+
+#[test]
+fn achievements_criteria_honor_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(3826, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&3826), Some(&7));
+}
+
+#[test]
+fn achievements_criteria_content268_requires_complete_inclusive_authored_range() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER, MinLevelWithDelta INTEGER);
+        INSERT INTO content_tuning_level VALUES (483,90,90,1),(484,85,90,1),(485,NULL,90,1),(486,85,NULL,1),(487,90,85,1),(488,0,90,1);").unwrap();
+    for asset in [0, 485, 486, 487, 488, 999] {
+        assert!(
+            load_criteria_facts(&conn, &[(268, asset)], &HashMap::new())
+                .unwrap()
+                .is_none()
+        );
+    }
+    assert!(
+        load_criteria_facts(&conn, &[(268, 483), (268, 999)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "missing companion disables entire predicate"
+    );
+    for asset in [483, 484] {
+        let facts = load_criteria_facts(&conn, &[(268, asset)], &HashMap::new())
+            .unwrap()
+            .unwrap();
+        for level in [0, 1, 84, 85, 89, 90, 91] {
+            let expected = if asset == 483 {
+                level == 90
+            } else {
+                (85..=90).contains(&level)
+            };
+            let player = ReferencePlayer {
+                level,
+                ..Default::default()
+            };
+            assert_eq!(
+                facts[0].holds(
+                    &player,
+                    CriteriaEvent::ParticipateInBattleground(2106),
+                    &BTreeMap::new()
+                ),
+                expected,
+                "asset={asset}, level={level}; never delta range"
+            );
+        }
+    }
+}
+
+#[test]
+fn achievements_criteria_scenario_step82_requires_authored_ordinals_and_complete_metadata() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE scenario_step (ID INTEGER PRIMARY KEY, OrderIndex INTEGER); INSERT INTO scenario_step VALUES (140,7),(987,2),(1001,2);").unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(82, 0)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(82, 3), (82, 6)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "missing companion ordinal disables the entire predicate"
+    );
+    let facts = load_criteria_facts(&conn, &[(82, 3)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (step, expected) in [
+        (None, false),
+        (Some(3), false),
+        (Some(140), false),
+        (Some(987), true),
+        (Some(1001), true),
+    ] {
+        let player = ReferencePlayer {
+            scenario_step: step,
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(
+                &player,
+                CriteriaEvent::KillCreature(204799),
+                &BTreeMap::new()
+            ),
+            expected,
+            "authored ordinal, not ID or vector position"
+        );
+    }
+}
+
+#[test]
+fn achievements_criteria_completed_quest_requires_authored_metadata_and_rewarded_membership() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_quest_template (ID INTEGER PRIMARY KEY); INSERT INTO content_quest_template VALUES (72360);").unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(110, 72361)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        load_criteria_facts(&conn, &[(110, 72360), (110, 72361)], &HashMap::new())
+            .unwrap()
+            .is_none(),
+        "missing companion metadata rejects the whole predicate"
+    );
+    let facts = load_criteria_facts(&conn, &[(110, 72360)], &HashMap::new())
+        .unwrap()
+        .unwrap();
+    for (rewarded_quests, expected) in [
+        (BTreeSet::new(), false),
+        (BTreeSet::from([28766]), false),
+        (BTreeSet::from([72360]), true),
+    ] {
+        let player = ReferencePlayer {
+            rewarded_quests,
+            ..Default::default()
+        };
+        assert_eq!(
+            facts[0].holds(&player, CriteriaEvent::Login, &BTreeMap::new()),
+            expected
+        );
+    }
+}
+
+#[test]
 fn achievements_criteria_absent_aura_requires_authored_metadata() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(
@@ -1277,9 +1427,23 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5511 + nested-All encounter definition11660.
-    // Structural union, not full boss content, recipe repair, travel or acquisition proof.
-    assert_eq!(union.len(), 5512);
+    // Imported70391: full class245, both race roots, Hug and seven type35 roots.
+    // Structural union, not queue/admission, travel or acquisition proof.
+    assert_eq!(union.len(), 5530);
+    assert!(union.contains(&245), "full thirteen-class That Takes Class");
+    assert!(
+        union.contains(&246) && union.contains(&1005),
+        "both full Know Thy Enemy roots"
+    );
+    assert!(union.contains(&1261), "authored ten-kill G.N.E.R.D. Rage");
+    assert!(union.contains(&247), "native dead hostile player Hug");
+    for achievement in [908, 909, 18202, 18203, 18205, 18206] {
+        assert!(
+            union.contains(&achievement),
+            "authored scenario ordinal {achievement}"
+        );
+    }
+    assert!(union.contains(&17495), "completed-quest login");
     assert!(
         union.contains(&11660),
         "complete nested encounter conjunction"
@@ -1542,4 +1706,223 @@ fn achievements_criteria_pet_battle_points_sum_earned_category_achievements_to_a
     fresh.earned_ids.insert(6);
     catalog.grant_completed(&mut fresh, None, 1, true);
     assert_eq!(fresh.criteria_progress.get(&21256), None);
+}
+
+#[test]
+fn achievements_incremental_event_work_is_bounded_and_snapshot_stays_complete() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    let baseline = catalog.snapshot(&state, 1);
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None, 1);
+    let snapshot = catalog.snapshot(&state, 1);
+    let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
+    println!(
+        "warmed character event: {definitions} definitions / {trees} tree nodes / {} snapshot rows",
+        snapshot.progress.len()
+    );
+    assert!(toasts.iter().any(|toast| toast.achievement_id == 6));
+    assert_eq!(snapshot.progress.len(), baseline.progress.len());
+    assert!(
+        snapshot
+            .progress
+            .iter()
+            .any(|row| row.achievement_id == 6 && row.completed)
+    );
+    assert!(
+        definitions < 128,
+        "event visited {definitions} definitions, {trees} tree nodes"
+    );
+    assert!(trees < 1024, "event evaluated {trees} tree nodes");
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(10), None, 1)
+            .is_empty()
+    );
+    assert_eq!(catalog.snapshot(&state, 1), snapshot);
+    let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
+    assert_eq!(
+        (definitions, trees),
+        (0, 0),
+        "unchanged counters must not reevaluate trees"
+    );
+}
+
+// Independent pre-index completion algorithm: keep the old full-scan fixed point as an oracle.
+fn reference_full_scan_grants(
+    catalog: &AchievementCatalog,
+    state: &mut PlayerAchievementState,
+    map: Option<u32>,
+    race: u8,
+    account: bool,
+) -> Vec<u32> {
+    let mut earned = Vec::new();
+    loop {
+        catalog.set_pet_battle_points(state);
+        let completed: Vec<_> = catalog
+            .definitions
+            .values()
+            .filter(|definition| {
+                catalog.window.has_account_flag(definition.id) == account
+                    && !state.earned_ids.contains(&definition.id)
+                    && catalog.faction_matches(definition.faction, race)
+                    && definition
+                        .map_id
+                        .is_none_or(|required| map == Some(required))
+                    && catalog.tree_progress(definition.root, state).completed
+            })
+            .map(|definition| definition.id)
+            .collect();
+        if completed.is_empty() {
+            return earned;
+        }
+        state.earned_ids.extend(&completed);
+        earned.extend(completed);
+    }
+}
+
+#[test]
+fn achievements_incremental_matches_full_scan_after_historical_and_boundary_changes() {
+    let catalog = catalog();
+    let mut indexed = PlayerAchievementState::default();
+    let mut reference = indexed.clone();
+    // Seed every supported criterion, exercising all authored tree operators, not just level leaves.
+    for round in 0..4 {
+        for (&id, criterion) in &catalog.criteria {
+            if criterion.supported && criterion.kind != 8 {
+                let value = if round == 0 {
+                    0
+                } else {
+                    u64::from(id % 7 + round) * 10000
+                };
+                if round == 3 && id % 2 == 0 {
+                    indexed.criteria_progress.remove(&id);
+                    reference.criteria_progress.remove(&id);
+                } else {
+                    indexed.criteria_progress.insert(id, value);
+                    reference.criteria_progress.insert(id, value);
+                }
+            }
+        }
+        indexed.earned_ids.extend([4788, 4789]);
+        reference.earned_ids.extend([4788, 4789]);
+        for (map, race, account) in [
+            (None, 1, false),
+            (Some(36), 1, false),
+            (Some(33), 2, false),
+            (None, 2, true),
+        ] {
+            let actual: Vec<_> = catalog
+                .grant_completed(&mut indexed, map, race, account)
+                .into_iter()
+                .map(|toast| toast.achievement_id)
+                .collect();
+            let expected = reference_full_scan_grants(&catalog, &mut reference, map, race, account);
+            assert_eq!(
+                actual, expected,
+                "round {round}, map {map:?}, race {race}, account {account}"
+            );
+            assert_eq!(indexed, reference);
+            assert_eq!(
+                catalog.snapshot(&indexed, race),
+                catalog.snapshot(&reference, race)
+            );
+        }
+    }
+    // The presentation-only account view invalidates character meta dependencies too.
+    let mut account = PlayerAchievementState::default();
+    account.earned_ids = catalog
+        .definitions
+        .keys()
+        .filter(|id| catalog.window.has_account_flag(**id))
+        .copied()
+        .collect();
+    indexed.account = Some(Box::new(account.clone()));
+    reference.account = Some(Box::new(account));
+    let actual: Vec<_> = catalog
+        .grant_completed(&mut indexed, None, 1, false)
+        .into_iter()
+        .map(|toast| toast.achievement_id)
+        .collect();
+    assert_eq!(
+        actual,
+        reference_full_scan_grants(&catalog, &mut reference, None, 1, false)
+    );
+    assert_eq!(
+        catalog.snapshot(&indexed, 1),
+        catalog.snapshot(&reference, 1)
+    );
+    // A reloaded catalog and a deserialized player must never trust old derived results.
+    let reloaded = self::catalog();
+    let mut reopened: PlayerAchievementState =
+        serde_json::from_slice(&serde_json::to_vec(&indexed).unwrap()).unwrap();
+    reopened.account = indexed.account.clone();
+    assert_eq!(
+        reloaded.snapshot(&indexed, 1),
+        reloaded.snapshot(&reopened, 1)
+    );
+    assert_eq!(
+        reloaded.grant_completed(&mut indexed, None, 1, false),
+        reloaded.grant_completed(&mut reopened, None, 1, false)
+    );
+}
+
+#[test]
+fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_persistence() {
+    use crate::achievement::account_store::{AccountUpdate, sync_account_progress};
+    let catalog = catalog();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let (character, _) = crate::persistence::create_character(&db, 17, "Indexed", 1, 1).unwrap();
+    let boundary = AccountUpdate {
+        account: 17,
+        character,
+        completed_map: None,
+        race: 1,
+        now: 12345,
+    };
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    sync_account_progress(&db, &mut state, &catalog, boundary);
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    let mut toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None, 1);
+    for toast in &toasts {
+        state.earned_at.insert(toast.achievement_id, boundary.now);
+    }
+    toasts.extend(sync_account_progress(&db, &mut state, &catalog, boundary));
+    let snapshot = catalog.snapshot(&state, 1);
+    let (definitions, trees) = EVALUATION_WORK.with(|work| work.get());
+    println!(
+        "warmed account event: {definitions} definitions / {trees} tree nodes / {} snapshot rows",
+        snapshot.progress.len()
+    );
+    assert!(toasts.iter().any(|toast| toast.achievement_id == 6));
+    assert!(
+        definitions < 256,
+        "account sync visited {definitions} definitions"
+    );
+    assert!(trees < 2048, "account sync evaluated {trees} tree nodes");
+    assert!(
+        snapshot.progress.len() > 5000,
+        "full account+character snapshot required"
+    );
+    assert_eq!(
+        crate::persistence::load_achievements(&db, character).earned_at[&6],
+        boundary.now
+    );
+    EVALUATION_WORK.with(|work| work.set((0, 0)));
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(10), None, 1)
+            .is_empty()
+    );
+    assert!(sync_account_progress(&db, &mut state, &catalog, boundary).is_empty());
+    assert_eq!(catalog.snapshot(&state, 1), snapshot);
+    assert_eq!(EVALUATION_WORK.with(|work| work.get()), (0, 0));
+    let mut reopened = crate::persistence::load_achievements(&db, character);
+    assert!(sync_account_progress(&db, &mut reopened, &catalog, boundary).is_empty());
+    assert_eq!(catalog.snapshot(&reopened, 1), snapshot);
 }

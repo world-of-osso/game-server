@@ -87,7 +87,21 @@ pub(super) fn launch(
     for &(unit, reflection) in &reflections {
         reflect::log_miss(world, caster, spell, unit, reflection);
     }
-    let (delays, destination_delay) = hit_delays(world, caster, spell, &plan);
+    let charge = match super::charge::launch(world, caster, spell, &plan) {
+        Ok(charge) => charge,
+        Err(error) => {
+            error!("Spell{} charge launch: {error}", spell.id);
+            return;
+        }
+    };
+    let (mut delays, destination_delay) = hit_delays(world, caster, spell, &plan);
+    if let Some((target, duration_ms)) = charge {
+        for (unit, delay) in &mut delays {
+            if *unit == target {
+                *delay = duration_ms;
+            }
+        }
+    }
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, misc = ?spell.misc, delays = ?delays, "Azerite launch delays");
     }

@@ -72,7 +72,7 @@ fn dummy3_serenity_flash_heal_reduces_running_recharge_by_six_seconds() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1673]
-        .next_ready_at;
+        .next_ready_at();
     h.inbox.charges.clear();
     h.cast_and_deliver(2061, Some(h.caster));
     h.advance(40);
@@ -83,7 +83,7 @@ fn dummy3_serenity_flash_heal_reduces_running_recharge_by_six_seconds() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&1673]
-        .next_ready_at;
+        .next_ready_at();
     assert_eq!(after, before - 6.0);
     assert!(h.inbox.charges.iter().any(|e| e.spell_id == 2050));
 }
@@ -289,7 +289,8 @@ fn devastate_reset(chance: f32, rank: bool) -> (f64, f64, bool) {
         passive.effects[0].base_points = chance;
         extra.push(passive);
     }
-    let mut h = harness(extra, &[20243, 23922], 1).expect("real world.db");
+    let mut h = harness_with_native_enemy_dodge_reduction(extra, &[20243, 23922], 1)
+        .expect("real world.db");
     h.cast_and_deliver(23922, Some(h.npc));
     h.advance(35);
     let before = h

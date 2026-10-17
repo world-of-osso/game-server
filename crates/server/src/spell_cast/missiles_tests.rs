@@ -3,7 +3,9 @@
 use shared::components::{Health, Position};
 use shared::protocol::CombatLogKind;
 
-use crate::spell_cast::test_harness::{Harness, harness};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_native_enemy_dodge_reduction,
+};
 
 /// Frostbolt: 1.75 s cast, missile `Speed` 35 yd/s; its damage is the triggered 228597.
 const FROSTBOLT: u32 = 116;
@@ -107,7 +109,8 @@ fn a_target_that_dies_or_leaves_in_flight_is_not_hit() {
 
 #[test]
 fn a_spell_without_missile_speed_lands_in_its_launch_tick() {
-    let Some(mut h) = harness(Vec::new(), &[MORTAL_STRIKE], 1) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(Vec::new(), &[MORTAL_STRIKE], 1)
+    else {
         return;
     };
     h.set_power(shared::components::PowerType::Rage, 1000.0);
@@ -293,7 +296,11 @@ fn a_reflected_frostbolt_turns_on_its_caster_after_one_and_a_half_flights() {
 /// charge.
 #[test]
 fn an_ability_that_cannot_be_reflected_leaves_spell_reflection_up() {
-    let Some(mut h) = harness(Vec::new(), &[MORTAL_STRIKE, SPELL_REFLECTION], 1) else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[MORTAL_STRIKE, SPELL_REFLECTION],
+        1,
+    ) else {
         return;
     };
     let kobold = h.npc;

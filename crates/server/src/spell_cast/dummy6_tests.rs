@@ -153,7 +153,7 @@ fn bomb_ready(h: &Harness) -> f64 {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat]
-        .next_ready_at
+        .next_ready_at()
 }
 fn butchery(rank: bool, targets: usize) {
     let mut ids = vec![212436, 259495, 265163, 265157, 269747];
@@ -314,7 +314,8 @@ fn dummy6_starfall_without_rank_does_not_extend_dots() {
 
 #[test]
 fn dummy6_butchery_does_not_start_ready_bomb_recharge() {
-    let mut h = harness(Vec::new(), &[212436, 294029, 259495], 3).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[212436, 294029, 259495], 3)
+        .unwrap();
     let c = h.caster;
     apply(&mut h, c, c, 294029, u32::MAX);
     h.cast_and_deliver(212436, None);
@@ -325,7 +326,7 @@ fn dummy6_butchery_does_not_start_ready_bomb_recharge() {
 }
 #[test]
 fn dummy6_butchery_counts_fully_absorbed_hits_for_recharge() {
-    let mut h = harness(
+    let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
         &[212436, 294029, 259495, 265163, 265157, 269747, 17],
         3,

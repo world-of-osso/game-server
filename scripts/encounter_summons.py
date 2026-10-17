@@ -8,6 +8,8 @@ base0 row, models and template addon; no new difficulty row is fabricated.
 Adarogg: server-side Inferno Charge119297 summons TDB61409 (base0 + Normal1).
 Wailing ritual: source groups2/3 select5762/5763; project only their actual Normal1
 rows, retaining existing base templates/models and all population/credit.
+Leymor: native374360 summons TDB190509; base0/models and actual Normal1/Mythic23
+rows only, without inventing a follower205 difficulty or any placements.
 """
 import argparse
 import sqlite3
@@ -125,12 +127,88 @@ def import_wailing_ritual_difficulties(connection):
     return entries
 
 
+def import_noxxion_spawn_difficulty(connection):
+    """Pinned21708 aura triggers21707: five13456 summons, actual Normal1 stats."""
+    effect = connection.execute('''SELECT Effect,EffectMiscValue_0,EffectBasePointsF
+        FROM spell_effect WHERE SpellID=21707 AND EffectIndex=0 AND DifficultyID=0''').fetchone()
+    if effect != (28,13456,5.0):
+        raise ValueError('Noxxion21707 summon identity changed')
+    template = connection.execute('SELECT AIName,ScriptName FROM content_creature_template WHERE entry=13456').fetchone()
+    if template != ('SmartAI',''):
+        raise ValueError('Noxxion spawn13456 runtime AI identity changed')
+    project_difficulty(connection, 13456, 1)
+    return [13456]
+
+
+def import_celebras_redeemed(connection):
+    """Pinned Celebras JustDied summons13716; replace its legacy base, not difficulty1.
+
+    TDB1210 has only base0/ContentTuning0. Preserve that absence rather than
+    invent a Normal row or assign the boss's tuning to the redeemed actor.
+    """
+    identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=13716').fetchone()
+    difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=13716 ORDER BY DifficultyID').fetchall()
+    if identity != ('SmartAI','') or difficulties != [(0,)]:
+        raise ValueError('Celebras redeemed13716 source identity changed')
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=13716 AND DifficultyID=0')
+    connection.execute('DELETE FROM content_creature_template WHERE entry=13716')
+    retail_content.insert_tdb_templates(connection,'13716',replace_legacy=True)
+    connection.execute('DELETE FROM content_creature_template_model WHERE CreatureID=13716')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=13716')
+    connection.execute('DELETE FROM content_creature_template_addon WHERE entry=13716')
+    connection.execute(f'''INSERT INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=13716''')
+    return [13716]
+
+
+def import_zaetar_spirit(connection):
+    """Pinned Theradras JustDied summons12238; actual base0 and Normal1 only."""
+    identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=12238').fetchone()
+    difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=12238 ORDER BY DifficultyID').fetchall()
+    if identity != ('SmartAI','') or difficulties != [(0,), (1,)]:
+        raise ValueError('Zaetar spirit12238 source identity changed')
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=12238 AND DifficultyID=0')
+    connection.execute('DELETE FROM content_creature_template WHERE entry=12238')
+    retail_content.insert_tdb_templates(connection,'12238',replace_legacy=True)
+    connection.execute('DELETE FROM content_creature_template_model WHERE CreatureID=12238')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=12238')
+    connection.execute('DELETE FROM content_creature_template_addon WHERE entry=12238')
+    connection.execute(f'''INSERT INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=12238''')
+    project_difficulty(connection, 12238, 1)
+    return [12238]
+
+
+def import_fiendish_hound(connection):
+    """Omor30707 summons17540; retain authored base0, not an invented Normal1."""
+    identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=17540').fetchone()
+    difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=17540 ORDER BY DifficultyID').fetchall()
+    effect = connection.execute('SELECT Effect,EffectMiscValue_0,EffectMiscValue_1 FROM spell_effect WHERE SpellID=30707 AND EffectIndex=0 AND DifficultyID=0').fetchone()
+    if identity != ('SmartAI','') or difficulties != [(0,), (2,)] or effect != (28,17540,64):
+        raise ValueError('Fiendish Hound17540 source identity changed')
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=17540 AND DifficultyID=0')
+    connection.execute('DELETE FROM content_creature_template WHERE entry=17540')
+    retail_content.insert_tdb_templates(connection,'17540',replace_legacy=True)
+    connection.execute('DELETE FROM content_creature_template_model WHERE CreatureID=17540')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=17540')
+    connection.execute('DELETE FROM content_creature_template_addon WHERE entry=17540')
+    connection.execute(f'''INSERT INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=17540''')
+    return [17540]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
-    canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
+    canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
     if args.db.name == 'world.db' or args.db.resolve() == canonical.resolve():
         parser.error('use an independent database copy, not canonical world.db')
     if args.db.is_symlink() or not args.db.is_file() or args.db.stat().st_nlink != 1:
@@ -141,6 +219,18 @@ def main():
                 entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
             elif args.encounter == 'adarogg':
                 entries = [import_demonic_leap_template(conn)]
+            elif args.encounter == 'omor':
+                entries = import_fiendish_hound(conn)
+            elif args.encounter == 'leymor':
+                entries = [import_base_template(conn, 190509, 'npc_ley_line_sprouts')]
+                project_difficulty(conn, 190509, 1)
+                project_difficulty(conn, 190509, 23)
+            elif args.encounter == 'theradras':
+                entries = import_zaetar_spirit(conn)
+            elif args.encounter == 'celebras':
+                entries = import_celebras_redeemed(conn)
+            elif args.encounter == 'noxxion':
+                entries = import_noxxion_spawn_difficulty(conn)
             elif args.encounter == 'wailing-ritual':
                 entries = import_wailing_ritual_difficulties(conn)
             else:

@@ -60,6 +60,7 @@ pub(super) fn save_account_progress(
         .expect("read account achievements")
         .map(|row| serde_json::from_slice(row.value()).expect("decode account achievements"))
         .unwrap_or_default();
+    let previous_earned = read_character_earned_ids_in(&txn, update.character);
     write_character_contributions(
         &txn,
         &mut saved,
@@ -67,9 +68,25 @@ pub(super) fn save_account_progress(
         update.character,
         character_state,
     );
-    let aggregate = load_account_aggregate(&txn, update.account, &saved, catalog);
+    let mut aggregate = load_account_aggregate(&txn, update.account, &saved, catalog);
+    if let Some(previous) = character_state.account.as_deref() {
+        aggregate.evaluation = previous.evaluation.clone();
+    }
     let (aggregate, toasts) = evaluate_account_progress(catalog, &saved, &update, aggregate);
     saved.state = aggregate.clone();
+    let news_ids: BTreeSet<_> = character_state
+        .earned_ids
+        .difference(&previous_earned)
+        .copied()
+        .chain(toasts.iter().map(|toast| toast.achievement_id))
+        .collect();
+    crate::guild_news::record_achievements_in(
+        &txn,
+        update.character,
+        update.now,
+        news_ids.into_iter(),
+        catalog,
+    );
     let bytes = serde_json::to_vec(&saved).expect("encode account achievements");
     accounts
         .insert(update.account, bytes.as_slice())
@@ -78,6 +95,17 @@ pub(super) fn save_account_progress(
     txn.commit()
         .expect("commit account achievement migration/update");
     (aggregate, toasts)
+}
+
+fn read_character_earned_ids_in(txn: &redb::WriteTransaction, character: u64) -> BTreeSet<u32> {
+    let table = txn
+        .open_table(persistence::ACHIEVEMENTS)
+        .expect("open prior achievement contribution");
+    table
+        .get(character)
+        .expect("read prior achievement contribution")
+        .map(|record| decode_saved_achievement_state(record.value()).0.earned_ids)
+        .unwrap_or_default()
 }
 
 pub(super) fn save_monthly_contribution(

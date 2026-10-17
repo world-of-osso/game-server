@@ -394,6 +394,8 @@ impl Plugin for InterestPlugin {
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
             .add_observer(on_player_link_removed)
+            .add_observer(refresh_woken_detection_geometry)
+            .add_observer(refresh_added_detection_geometry)
             .add_systems(
                 FixedUpdate,
                 (
@@ -545,38 +547,84 @@ fn forward_position_changes_to_replication(
     }
 }
 
-type ChangedDetectionGeometry<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        Option<&'static Level>,
-        Option<&'static Rotation>,
-        Option<&'static UnitScale>,
-        Has<Player>,
-        Has<Npc>,
-        Option<&'static shared::protocol::GameObjectInfo>,
-    ),
-    Or<(
-        Changed<Level>,
-        Changed<Rotation>,
-        Changed<UnitScale>,
-        Added<Player>,
-        Added<Npc>,
-        Added<shared::protocol::GameObjectInfo>,
-    )>,
->;
+type DetectionGeometryData = (
+    Entity,
+    Option<&'static Level>,
+    Option<&'static Rotation>,
+    Option<&'static UnitScale>,
+    Has<Player>,
+    Has<Npc>,
+    Option<&'static shared::protocol::GameObjectInfo>,
+);
 
-fn sync_detection_geometry(units: ChangedDetectionGeometry, mut index: ResMut<InterestIndex>) {
-    for (entity, level, rotation, scale, player, npc, object) in &units {
-        index.detection_geometry.insert(
+type ActiveDetectionGeometry<'w, 's> =
+    Query<'w, 's, DetectionGeometryData, Without<crate::grid_activity::GridDormant>>;
+
+fn sync_detection_geometry(units: ActiveDetectionGeometry, mut index: ResMut<InterestIndex>) {
+    // Only observer geometry controls stealth range/facing; targets need their unit role.
+    // Read current observer components to preserve in-place rotation/level/scale edits.
+    let changed: Vec<_> = index
+        .observers
+        .values()
+        .filter_map(|observer| units.get(observer.player).ok())
+        .map(|(entity, level, rotation, scale, player, npc, object)| {
+            (
+                entity,
+                DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
+            )
+        })
+        .filter(|(entity, geometry)| index.detection_geometry.get(entity) != Some(geometry))
+        .collect();
+    for (entity, geometry) in changed {
+        publish_detection_geometry(&mut index, entity, geometry);
+    }
+}
+
+fn refresh_added_detection_geometry(
+    event: On<
+        Add,
+        (
+            Player,
+            Npc,
+            shared::protocol::GameObjectInfo,
+            NetworkVisibility,
+        ),
+    >,
+    units: ActiveDetectionGeometry,
+    mut index: ResMut<InterestIndex>,
+) {
+    if let Ok((entity, level, rotation, scale, player, npc, object)) = units.get(event.entity) {
+        publish_detection_geometry(
+            &mut index,
             entity,
             DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
         );
-        index.dirty_targets.insert(entity);
-        if let Some(&connection) = index.connection_by_player.get(&entity) {
-            index.dirty_observers.insert(connection);
-        }
+    }
+}
+
+fn refresh_woken_detection_geometry(
+    trigger: On<Remove, crate::grid_activity::GridDormant>,
+    units: Query<DetectionGeometryData>,
+    mut index: ResMut<InterestIndex>,
+) {
+    if let Ok((entity, level, rotation, scale, player, npc, object)) = units.get(trigger.entity) {
+        publish_detection_geometry(
+            &mut index,
+            entity,
+            DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
+        );
+    }
+}
+
+fn publish_detection_geometry(
+    index: &mut InterestIndex,
+    entity: Entity,
+    geometry: DetectionGeometry,
+) {
+    index.detection_geometry.insert(entity, geometry);
+    index.dirty_targets.insert(entity);
+    if let Some(&connection) = index.connection_by_player.get(&entity) {
+        index.dirty_observers.insert(connection);
     }
 }
 
@@ -839,3 +887,30 @@ fn distance_squared(a: &Position, b: &Position) -> f32 {
 #[cfg(test)]
 #[path = "interest_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn idle_detection_full_population_is_bounded() {
+    let mut app = App::new();
+    app.init_resource::<InterestIndex>();
+    app.add_systems(Update, sync_detection_geometry);
+    crate::test_data::populate_idle_world(app.world_mut(), || {
+        (
+            Level(30),
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            UnitScale(1.0),
+            Npc {
+                template_id: 30,
+                name: String::new(),
+            },
+        )
+    });
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_detection_full_population_is_bounded",
+    );
+}

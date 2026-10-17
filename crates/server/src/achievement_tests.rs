@@ -2,6 +2,92 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart() {
+    use shared::protocol::GuildNewsKind;
+    let connection = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("achievement-news.redb");
+    let db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 17, "Newsreader", 1, 1).unwrap();
+    crate::persistence_character::set_character_guild_by_id(&db, character, 7, "Real News")
+        .unwrap();
+    assert!(crate::guild_news::query(&db, character).entries.is_empty());
+    let mut world = World::new();
+    world.insert_resource(load_achievement_catalog(&connection).unwrap());
+    world.insert_resource(GameDatabase { db });
+    world.insert_resource(crate::maps::ServerClock {
+        offset_secs: 0,
+        fixed_unix: Some(1_792_118_000),
+    });
+    let player = world
+        .spawn((
+            Player {
+                name: "Newsreader".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            Level(50),
+            InMap::continent(0),
+            PlayerAchievementState::default(),
+        ))
+        .id();
+    world.spawn((
+        Authenticated { account_id: 17 },
+        InWorld {
+            character_id: character,
+        },
+        PlayerLink(player),
+    ));
+    let (_, toasts) =
+        update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(50)], None).unwrap();
+    assert!(
+        toasts.iter().any(|toast| toast.achievement_id == 14782),
+        "Earn actual installed Level50"
+    );
+    let reply = crate::guild_news::query(&world.resource::<GameDatabase>().db, character);
+    assert_eq!(
+        reply.entries.len(),
+        1,
+        "Only actual SHOW_IN_GUILD_NEWS achievements enter guild news"
+    );
+    assert_eq!(reply.entries[0].timestamp, 1_792_118_000);
+    let GuildNewsKind::PlayerAchievement {
+        member,
+        achievement_id,
+        name,
+        description,
+    } = &reply.entries[0].kind
+    else {
+        panic!("Real achievement news expected")
+    };
+    assert_eq!(
+        (member.as_str(), *achievement_id, name.as_str()),
+        ("Newsreader", 14782, "Level 50")
+    );
+    assert!(!description.is_empty(), "Actual installed tooltip metadata");
+    update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(50)], None).unwrap();
+    assert_eq!(
+        crate::guild_news::query(&world.resource::<GameDatabase>().db, character).entries,
+        reply.entries,
+        "Repeated credit cannot duplicate news"
+    );
+    let saved = persistence::load_achievements(&world.resource::<GameDatabase>().db, character);
+    assert!(
+        saved.earned_ids.contains(&14782),
+        "Achievement and news commit together"
+    );
+    drop(world);
+    let db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
+    assert_eq!(
+        crate::guild_news::query(&db, character).entries,
+        reply.entries
+    );
+}
+
+#[test]
 fn achievements_criteria_encounter_loot_eligibility_reads_active_native_locks_and_authority() {
     use crate::maps::instances::{InstanceEntrant, Now};
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();

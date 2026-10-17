@@ -53,6 +53,9 @@ mod group;
 mod guild;
 mod guild_bank;
 mod guild_event_log;
+mod guild_news;
+mod guild_news_network;
+mod guild_perks;
 mod guild_tabards;
 mod housing;
 mod housing_acquisition;
@@ -220,6 +223,10 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(friends::FriendsPlugin)
         .add_plugins(group::GroupPlugin)
         .add_plugins(guild::GuildPlugin)
+        .add_plugins(
+            guild_perks::GuildPerksPlugin::load(std::path::Path::new("data/db2/active"))
+                .expect("installed Mainline guild perk catalog"),
+        )
         .add_plugins(
             guild_tabards::GuildTabardPlugin::load(std::path::Path::new("data/db2/active"))
                 .expect("load installed guild tabard catalog"),

@@ -54,6 +54,7 @@ pub struct CreatureAggroPlugin;
 impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::creature_sight::CreatureSightPlugin);
+        app.add_observer(replicate_woken_threat_list);
         app.add_systems(
             FixedUpdate,
             (
@@ -255,7 +256,16 @@ fn aggro_on_sight_system(
                 _ => false,
             }
         });
-        if let Some((player, _)) = seen {
+        if let Some((player, center_distance)) = seen {
+            debug!(
+                creature = creature.to_bits(),
+                target = player.to_bits(),
+                map = ?map,
+                creature_position = ?position,
+                target_position = ?players.iter().find(|(unit, ..)| *unit == player).map(|(_, position, _)| position),
+                center_distance,
+                "player proximity acquisition"
+            );
             commands.queue(move |world: &mut World| attack_start(world, creature, player));
         }
     }
@@ -448,21 +458,57 @@ pub(crate) fn update_victim_system(
 /// (threat amounts are not sent). Clients show a creature with them on it as fighting
 /// them (nameplate visibility, hostile colour).
 fn replicate_threat_list_system(
-    creatures: Query<(Entity, &ThreatTable, Option<&UnitThreatList>), Changed<ThreatTable>>,
+    creatures: Query<
+        (Entity, &ThreatTable, Option<&UnitThreatList>),
+        (Changed<ThreatTable>, Without<GridDormant>),
+    >,
     dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
 ) {
     for (creature, threat, replicated) in &creatures {
-        let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
-        if replicated.is_some_and(|replicated| replicated.0 == units)
-            || (replicated.is_none() && units.is_empty())
-        {
-            continue;
-        }
-        commands.entity(creature).insert(UnitThreatList(units));
-        if let Some(dirty) = &dirty {
-            dirty.mark(creature);
-        }
+        publish_threat_membership(
+            creature,
+            threat,
+            replicated,
+            dirty.as_deref(),
+            &mut commands,
+        );
+    }
+}
+
+fn replicate_woken_threat_list(
+    event: On<Remove, GridDormant>,
+    creatures: Query<(&ThreatTable, Option<&UnitThreatList>)>,
+    dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut commands: Commands,
+) {
+    if let Ok((threat, replicated)) = creatures.get(event.entity) {
+        publish_threat_membership(
+            event.entity,
+            threat,
+            replicated,
+            dirty.as_deref(),
+            &mut commands,
+        );
+    }
+}
+
+fn publish_threat_membership(
+    creature: Entity,
+    threat: &ThreatTable,
+    replicated: Option<&UnitThreatList>,
+    dirty: Option<&ReplicationDirtyQueue>,
+    commands: &mut Commands,
+) {
+    let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
+    if replicated.is_some_and(|replicated| replicated.0 == units)
+        || (replicated.is_none() && units.is_empty())
+    {
+        return;
+    }
+    commands.entity(creature).insert(UnitThreatList(units));
+    if let Some(dirty) = dirty {
+        dirty.mark(creature);
     }
 }
 
@@ -742,3 +788,17 @@ pub(crate) fn forget_combat(entity: &mut EntityWorldMut) {
 #[cfg(test)]
 #[path = "creature_aggro_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn idle_threat_full_population_is_bounded() {
+    let mut app = App::new();
+    app.add_systems(Update, replicate_threat_list_system);
+    crate::test_data::populate_idle_world(app.world_mut(), || {
+        (ThreatTable::default(), GridDormant)
+    });
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_threat_full_population_is_bounded",
+    );
+}

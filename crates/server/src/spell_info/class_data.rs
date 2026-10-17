@@ -38,12 +38,14 @@ const AURA_MOUNTED: u32 = 78;
 const ATTR13_CONTENT_ABILITY: u32 = 0x10000;
 
 #[derive(Resource, Debug, Default, Serialize)]
+#[cfg_attr(test, derive(Clone))]
 pub struct ClassSpells {
     /// Sorted by class ID.
     pub classes: Vec<ClassInfo>,
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Clone))]
 pub struct ClassInfo {
     pub class_id: u8,
     pub skill_line: u32,
@@ -73,6 +75,7 @@ pub struct ClassInfo {
 /// `Player::LearnDefaultSkills` and their abilities by `LearnSkillRewardedSpells`
 /// (Player.cpp:25275-25291, 25407-25457).
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Clone))]
 pub struct DefaultSkillLine {
     pub skill_line: u32,
     /// `RaceMasks_0/_1`: the races that get the line (all-zero: every race).
@@ -124,6 +127,7 @@ impl SkillRange {
 
 /// A `skill_line_ability` row on the class skill line.
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Clone))]
 pub struct LearnableSpell {
     pub spell_id: u32,
     pub class_mask: u32,
@@ -141,6 +145,7 @@ pub struct LearnableSpell {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Clone))]
 pub struct SpecInfo {
     pub spec_id: u32,
     pub name: String,
@@ -156,6 +161,7 @@ pub struct SpecInfo {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Clone))]
 pub struct SpecSpell {
     pub spell_id: u32,
     pub overrides_spell_id: u32,

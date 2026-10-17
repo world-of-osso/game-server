@@ -75,6 +75,8 @@ pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
 pub const AURA_EFFECTS: [u32; 4] = [6, 27, 35, 65];
 
 const ATTR0_PASSIVE: u32 = 0x40;
+const ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND: u32 = 0x0001_0000;
+const ATTR8_NOT_IN_BATTLEGROUND: u32 = 0x1000_0000;
 const ATTR0_DO_NOT_DISPLAY: u32 = 0x80;
 const ATTR0_NO_AURA_CANCEL: u32 = 0x8000_0000;
 const ATTR1_AURA_UNIQUE: u32 = 0x800;
@@ -431,6 +433,33 @@ fn attributes(spell: &SpellInfo, index: usize) -> u32 {
 
 pub fn is_passive(spell: &SpellInfo) -> bool {
     attributes(spell, 0) & ATTR0_PASSIVE != 0
+}
+
+/// TC SpellInfo.cpp2218 and Spell.cpp7158; map changes must not erase knowledge.
+fn passive_map_allowed(world: &World, unit: Entity, spell: &SpellInfo) -> bool {
+    use crate::maps::store::InstanceType;
+    let no_battleground = attributes(spell, 8) & ATTR8_NOT_IN_BATTLEGROUND != 0;
+    let no_arena = attributes(spell, 4) & ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND != 0;
+    if !no_battleground && !no_arena {
+        return true;
+    }
+    let map = world
+        .get::<crate::maps::InMap>(unit)
+        .expect("Map-restricted passive requires the unit's actual map");
+    let maps = world
+        .get_resource::<crate::maps::MapStore>()
+        .expect("Map-restricted passive requires installed MapStore metadata");
+    let entry = maps.map(map.map_id).unwrap_or_else(|| {
+        panic!(
+            "Map-restricted passive{} has no installed map{}",
+            spell.id, map.map_id
+        )
+    });
+    match entry.instance_type {
+        InstanceType::Battleground => !no_battleground,
+        InstanceType::Arena => !no_arena,
+        _ => true,
+    }
 }
 
 pub fn is_aura_effect(effect: &SpellEffect) -> bool {
@@ -1257,6 +1286,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         world.entity_mut(unit).insert(stats);
     }
     unit_state::reconcile(world, unit);
+    health_pct_trigger::reconcile(world, unit);
     crate::spell_cast::refresh_cast_movement_permission(world, unit);
 }
 
@@ -1700,11 +1730,10 @@ pub fn interrupt_auras(
 // --- Systems ---
 
 /// Every unit (player or NPC) carries `ActiveAuras`, `UnitAuras` and `AuraStatMods`.
-fn init_unit_auras(world: &mut World) {
-    let units: Vec<Entity> = world
-        .query_filtered::<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>()
-        .iter(world)
-        .collect();
+type UnitsMissingAuras = QueryState<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>;
+
+fn init_unit_auras(world: &mut World, missing: &mut UnitsMissingAuras) {
+    let units: Vec<Entity> = missing.iter(world).collect();
     // Casts and summon cleanup mutate units immediately. Deferred defaults can
     // overwrite a freshly applied aura or insert into a unit already despawned.
     for unit in units {
@@ -1712,14 +1741,21 @@ fn init_unit_auras(world: &mut World) {
     }
 }
 
-/// Players whose `KnownSpells` changed since the last passive sync.
+/// Owners whose knowledge or actual map changed since the last passive sync.
 #[derive(Resource, Debug, Default)]
 struct PendingPassiveSync(Vec<Entity>);
 
-fn queue_passive_sync(
-    changed: Query<Entity, Changed<KnownSpells>>,
-    mut pending: ResMut<PendingPassiveSync>,
-) {
+type ChangedPassiveOwners<'w, 's> = Query<
+    'w,
+    's,
+    Entity,
+    (
+        With<KnownSpells>,
+        Or<(Changed<KnownSpells>, Changed<crate::maps::InMap>)>,
+    ),
+>;
+
+fn queue_passive_sync(changed: ChangedPassiveOwners, mut pending: ResMut<PendingPassiveSync>) {
     pending.0.extend(changed.iter());
 }
 
@@ -1742,6 +1778,7 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
         .iter()
         .filter_map(|&id| lookup_spell(world, id))
         .filter(|spell| is_passive(spell) && aura_effect_mask(spell) != 0)
+        .filter(|spell| passive_map_allowed(world, unit, spell))
         .collect();
     let ids: Vec<u32> = passives.iter().map(|spell| spell.id).collect();
     remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
@@ -2002,6 +2039,8 @@ mod tests;
 mod toy_effects_tests;
 
 #[cfg(test)]
+mod autoattack_crit_tests;
+#[cfg(test)]
 mod bloodsurge_tests;
 #[cfg(test)]
 mod charred_warblades_tests;
@@ -2039,3 +2078,23 @@ mod mage_tests;
 
 #[cfg(test)]
 pub(crate) mod mount_tests;
+
+#[cfg(test)]
+#[test]
+fn idle_aura_init_full_population_is_bounded() {
+    let mut app = App::new();
+    app.add_systems(Update, init_unit_auras);
+    crate::test_data::populate_idle_world(app.world_mut(), || {
+        (
+            Npc {
+                template_id: 30,
+                name: String::new(),
+            },
+            ActiveAuras::default(),
+        )
+    });
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_aura_init_full_population_is_bounded",
+    );
+}
