@@ -65,6 +65,18 @@ fn achievements_criteria_gnerd_native_item_ten_zero_xp_honor_kills_and_reopen() 
         "AddHonorXP rejects level1, not the HK"
     );
     assert_eq!(progress.honor, 0);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::currency::PlayerCurrencies>(player)
+            .unwrap()
+            .0
+            .get(1792),
+        0,
+        "zero XP eligible kills credit type35 but mirror zero wallet Honor"
+    );
     assert!(progress.honor_level.is_none());
     let date = eater
         .h
@@ -132,6 +144,7 @@ fn new_gnerd_eater(path: &std::path::Path) -> Eater {
         ClientId(character),
         PlayerAchievementState::default(),
         crate::pvp::PlayerPvpState::default(),
+        crate::currency::PlayerCurrencies::default(),
         CurrentPvpFaction(2),
         Level(1),
     ));
