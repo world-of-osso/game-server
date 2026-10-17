@@ -1,5 +1,42 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source225–229: pending Necrolord acceptance and retained cooking/quill scope (2026-10-17)
+
+225 Necrolord Hearthstone182773/340200 authors source10s homebind252 and shared2309/one charge/1800000ms recharge. Test/spec e2d1b991 adds its actual learned-use/saved-bind/missing-bind-refusal/shared-sibling-refusal case; ten affected hearthstone variants are queued/running under the single maintained native job. Acceptance is pending until that output and package/tests check are recorded; no runtime/data change, fabricated RED, covenant eligibility or native certificate is claimed.
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|226 Muckpool Cookpot182780/340241 | Source2000ms cursor87 effect50→357706/display67291/scale0.5,300000ms object duration and item recovery. Retain earlier seven-focus actual-use/linked31442 trap/CozyFire7353 versatility refresh/range/expiry/cleanup CPU proof, including this exact ID. No generic scenery substitute; prior Little Wickerman native witness is not a new per-Cookpot certificate. |
+|227 Rapid Recitation Quill182890/340276 | Self complete-zero dummy4/180000ms, inherited60000ms spell recovery. Retain Batch3's exact actual learning/use/SpellGo/lifetime/cancel, unchanged model/health/no-actor CPU scope from the existing attachment fixture. Quill/parchment/dictation presentation remains separately native-unproved for this ID; no new run implied. |
+|228 Venthyr Sinstone183716/342122 | Source10s homebind252/shared2309 also explicitly advertises Venthyr pledge eligibility. ItemEffect condition0 does not establish or negate the complete rule. Actual source eligibility/use/native acceptance stays open; neither225's bounded case nor earlier hearthstones closes it. |
+|229 Acolyte's Guise183847/341175 | Source1500ms self transform56→173467/misc8,900000ms duration; item-1 inherits3600000ms spell recovery. Runtime173467/display94055 exists. Advertised Necrolord pledge and Maldraxxus-specific reduced recovery remain unproved with actual learned use/lifecycle; no ordinary-disguise shortcut or inferred cooldown amount. |
+
+`rows225-229-{readonly-source,action-source}.json` preserves actual roots/cast/charge/duration/recovery and runtime-content rows. Retained historical cooking/quill proof is revision-scoped; the new225 proof ledger remains pending. Tea Set149865 stays the separate lead-required named gap, with no producer/publication changes.
+
+## Source220–224: conditional-fall and reagent/random-action boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|220 Stylish Black Parasol182694/341678 | Source1500ms cast,900000ms periodic-dummy226/1000ms period→341677. Child has15000ms feather-fall105 and turn-while-falling409, then remove-aura164 naming341678. Retain existing negative fixture: generic periodic ticks must not cast the child or consume the ready aura; conditional periodic dummy remains refused. This is not successful fall detection or native safe landing. |
+|221 Weathered Purple Parasol182695/341682 | Same source readiness/period/duration; child341680 names341682 for removal and its own follow-on341679. Actual next-fall predicate, one-shot consumption, slow-fall/turn and purple presentation remain unproved; no unconditional periodic substitution or borrowed220 acceptance. |
+|222 The Countess's Parasol182696/341624 | Same source readiness/period/duration; child341630 names341624 for removal and follow-on341669. Source text explicitly says green parasol. Source next-fall/consumption/motion/presentation contract remains open, not a generic held-object cosmetic. All three roots inherit300000ms spell recovery and author180000ms category recovery. |
+|223 Hearty Dragon Plume182729/340077 | Combined feather-fall105/base100 and turn-while-falling409/base100 for10000ms, RequiredAreasID7354; inherits900000ms spell recovery. Actual Shadowlands eligibility, fall motion/turn/landing/restoration remain unproved together; aura metadata alone is not native safe-fall acceptance. |
+|224 The Necronom-i-nom182732/340110 | Self script3 with1800000ms item recovery. Exact SpellReagents row consumes one38682/Enchanting Vellum; source advertises a random effect from the pages without naming an executable outcome here. Reagent spending/random selection/effect lifecycle remain unestablished, not a no-op book cosmetic or invented outcome pool. |
+
+`rows220-224-{readonly-source,action-source}.json` preserves roots, reachable child/removal records, exact durations/recovery and reagent count. Pinned `SpellAuraEffects.cpp` names226 periodic-dummy,105 feather-fall and409 turn-while-falling; existing `toyfx3_conditional_parasol_is_not_an_unconditional_periodic_cast` is refusal proof only. No new runtime/data admission, positive simulation/native certificate or repeat of unchanged gates.
+
+## Source215–219: retained vessel proof and stack/bobber/area/vehicle gaps (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|215 Smolderheart180873/335099 | Self complete-zero dummy4,1200000ms duration and300000ms spell recovery, but four visual branches require PlayerConditions86766–86769 reading343642 stacks4/8/10. Source proc mask2/chance100 and aura text also reference being on fire343646. Shoulder-smolder progression/proc/conditional presentation remains unproved; root shape alone is not ordinary unconditional caster-art admission. |
+|216 Tithe Collector's Vessel180947/335276 | Self complete-zero dummy4,900000ms duration; ItemEffect cooldown-1 inherits3600000ms spell recovery. Retain Batch3's exact actual learning/UseToy/SpellGo/lifetime/cancel, unchanged model/health and no-actor CPU scope. Existing attachment fixture includes this ID; this revisit is not a fresh test or per-toy native back-vessel/pixel/audio certificate. |
+|217 Bat Visage Bobber180993/335484 | Source1000ms cast,3600000ms override-summoned-object aura258; both slots name35591 and355518/385553, with trigger131474's self dummy3. Fishing bobber replacement/selection remains unproved, not a caster costume or generic child cast. Item recovery900000ms/category11 retained. |
+|218 Orophea's Lyre181794/337486 | Self area-trigger aura395/misc21312/base10 lasts20000ms; item recovery1800000ms. Advertised nearby-player crying requires recipient/action proof; a lyre visual or root aura alone is not the ten-yard forced-cry behavior. No generic cosmetic substitute. |
+|219 Phial of Ravenous Slime181825/323826 | Source1500ms cast,30000ms mixed11-aura graph includes transform56→166086/misc10, forced-forward241, no-actions321, vehicle296/misc7130 and area-trigger395/misc19783; RequiredAreasID7126 and3600000ms item recovery. Runtime166086/display100400 already exists. Outdoor/Shadowlands eligibility, uncontrollable movement and party-devouring/damage lifecycle remain unproved; authentic model presence is not missing publication or full behavior. |
+
+`rows215-219-{readonly-source,action-source}.json` retains70391 roots, executable trigger child, durations/recovery, visual conditions/events and actual runtime-content rows. Pinned `SpellAuraEffects.cpp` names258 override-summoned-object,395 area-trigger,241 forced-forward,321 no-actions and296 vehicle-ID. No new runtime/data/canonical admission, simulation/native result or repeated unchanged gate. Tea Set149865 remains the separate lead-required named gap.
+
 ## Source210–214: visual/motion/return/class/covenant boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
@@ -24,9 +61,9 @@
 
 Exact roots, reachable children, properties/durations, visual/procedural data and actual runtime-content/source model rows: `rows205-209-{readonly-source,action-source}.json`. Pinned `SharedDefines.h` identifies179 as create-area-trigger and90 as target-minipet; current source10 fixture preserves209's earlier bounded CPU contract. Read-only source/documentation only, with no new runtime/data/importer/canonical admission or repeated unchanged gate.
 
-## Source200–204: pending Mogu acceptance and companion/equipment/game boundaries (2026-10-17)
+## Source200–204: Mogu source acceptance and companion/equipment/game boundaries (2026-10-17)
 
-201 Trans-mogu-rifier174873/305123 already has runtime156286 with authentic92868/92880/92874/92871 choices. Source self transform56/misc8 lasts600000ms with3600000ms item/spell recovery. Test/spec924bcde11 adds this exact pool to the existing actual-learning/ordinary-expiry/restoration/health/recovery fixture, now six disguise IDs. Fmt/manual changed-line readability/diffcheck pass; owned native-helper disguise/Oomgut tests are still running and package/tests check is pending in `mogu201-proof-ledger.json`. This is not passing201 acceptance, native all-four presentation or full one-hour recovery proof; no production patch or manufactured RED.
+201 Trans-mogu-rifier174873/305123 already has runtime156286 with authentic92868/92880/92874/92871 choices. Source self transform56/misc8 lasts600000ms with3600000ms item/spell recovery. Test/spec924bcde11 adds this exact pool to the existing actual-learning/ordinary-expiry/restoration/health/recovery fixture, now six disguise IDs. Two affected tests/seven IDs pass2/2 zero ignored107.53s after one14m03s native compile. Native package/tests check2m58s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass; `mogu201-proof-ledger.json` records exact commands/revision and unchanged code scope through the documentation descendants. This bounded CPU contract is not native all-four presentation or full one-hour recovery proof; no production patch or manufactured RED.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -35,7 +72,7 @@ Exact roots, reachable children, properties/durations, visual/procedural data an
 |203 Coifcurl's Close Shave Kit174920/317204 | Source47 summon163441/property4493,1000ms cast/120000ms actor and inherited3600000ms spell recovery. Runtime163441/95179/scale0.5 already exists; property4493 is Control1/Title2/flags67592, source npcflag0/empty AI/script. Existing kit metadata does not establish advertised per-user shaving/appearance consequences; no generic stationary actor or invented barber interaction. |
 |204 Void-Touched Skull174921/317210 | Party target35 dummy3 (source description says friendly target) with1800000ms spell recovery. Throw/pass/timer/void-energy game state remains unresolved; no generic missile, friendly aura or ignored script completes that game. |
 
-`rows200-204-{readonly-source,action-source}.json` retains exact roots, reference records, properties/durations, visual/procedural mapping and actual runtime-content models.201 is test/spec only and still pending execution/check; the other named action gaps remain intact. No runtime-policy/importer/canonical/data changes or new native/full-Toy/master certificate.
+`rows200-204-{readonly-source,action-source}.json` retains exact roots, reference records, properties/durations, visual/procedural mapping and actual runtime-content models.Only201 test/spec acceptance changed; the other named action gaps remain intact. No runtime-policy/importer/canonical/data changes or new native/full-Toy/master certificate.
 
 ## Source195–199: motion/faction/appearance/action boundaries (2026-10-17)
 
