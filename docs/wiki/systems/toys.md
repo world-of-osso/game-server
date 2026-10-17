@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
+
+[Source270–274 matrix](../../toy-effects14-coverage.md#source270274-mirrorfatemixed-guiseshadowdead-party-boundaries-2026-10-17) retains action-copy mirror/movement removal, authentic rune fate output, mixed Changeling transform/-45/312 payload, selected-player shadow child and recently-deceased party judgment gaps. Existing176673/two-model appearance is not ordinary-disguise acceptance for a mixed graph; target35 is party, not a generic enemy corpse. No actor/model/payload substitution, runtime/data admission or new positive proof.
+
 ## Source pet-chase/flight/destruction/drag/mixed-shade boundaries (2026-10-17)
 
 [Source265–269 matrix](../../toy-effects14-coverage.md#source265269-pet-chaseflightdestructiondragmixed-shade-boundaries-2026-10-17) keeps companion/golem chasing, permanent minipet flight payload, Minigrue toy destruction, controlled linked dragging and mixed shade/screen/periodic child contracts unproved. Existing Ball179941/39353 and Shade180048/97411 are not missing publication or complete gameplay proof. Shade-child180054's repeated101526 display has distinct scales/weights that must not be collapsed. No runtime/data admission, source-payload discard or new positive certificate.

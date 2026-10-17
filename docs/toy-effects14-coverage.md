@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source270–274: mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|270 Ring of Duplicity187140/356199 | Actual on-use slot1 has self vehicle-ID296/misc7544 plus periodic-dummy226/500ms with trigger0 for240000ms,3600000ms item recovery. Advertised mirror image action-copy and movement-removal behavior remain unproved; zero child does not establish mirroring or permit inventing a mirror actor/vehicle implementation. |
+|271 Ancient Korthian Runes187154/356229 | Actual slot1, source1500ms target47 script3 and20000ms item recovery. Authored fate-revelation action/output remains unresolved; no arbitrary fortune pool, borrowed Oracle Bones behavior or silent visual substitute. |
+|272 Guise of the Changeling187155/356284 | Actual slot1, self transform56→176673/misc8 plus aura33/base-45 and aura312/misc175 for600000ms,1800000ms item recovery. Runtime101182/101766 choices exist, but the complete mixed appearance/movement/nonzero312 payload remains unproved; ordinary disguise acceptance must not discard the extra slots. |
+|273 Shadow Slicing Shortsword187159/356360 | Actual slot1, selected-target25 effect160→356357; child self summon180086/properties64 plus dummy4 for300000ms,300000ms item recovery. Source player-target shadow severing/child ownership/appearance/lifecycle remain unproved. TDB33559/weight0 versus39810/weight1 exists, runtime absent; no chosen-caster or zero-weight model substitute. |
+|274 Shaded Judgment Stone187174/356419 | Source1500ms script3 plus dummy4 both target35/party for300000ms,900000ms item recovery. Advertised recently-deceased party-member soul judgment requires actual corpse-age/party/action proof, not enemy-corpse logic, generic target art or invented judgment text. |
+
+`rows270-274-{readonly-source,action-source}.json` preserves exact70391 on-use selection, periods/casts/durations/targets/payloads and runtime/source models. No producer/data/canonical change, actor/transform/script admission or new positive simulation/native proof.240's admitted native dependency compile continues as the sole owned job; no source mutation/reset/duplicate gate, and149865 Tea Set stays lead-required.
+
 ## Source265–269: pet-chase/flight/destruction/drag/mixed-shade boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
