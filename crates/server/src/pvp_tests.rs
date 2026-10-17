@@ -483,6 +483,37 @@ fn battleground_admission_retains_source_bracket_without_mixing_queued_players()
 }
 
 #[test]
+fn random_queue_level25_parties_form_configured_level_matching_map() {
+    let mut state = PvpServerState::default();
+    for leader in [1, 6] {
+        state
+            .battleground_queue
+            .join_group(leader, (leader..leader + 5).collect(), vec![25; 5], 32, 0)
+            .unwrap();
+    }
+    let id = form_battleground_invitation(&mut state, 32)
+        .expect("ordinary Random32 parties receive a configured-map invitation");
+    let invitation = &state.battleground_matches[&id];
+    let template = template_by_id(invitation.instance.bg_id).unwrap();
+    assert!([566, 726, 727, 761, 998, 1803, 2106, 2107, 2656].contains(&template.map_id));
+    assert_ne!(
+        template.map_id, 2656,
+        "level25 cannot select Deephaul's80-only bracket"
+    );
+    assert_eq!(
+        invitation.instance.bracket,
+        shared::battleground::LevelBracket::new(20, 29)
+    );
+    assert_eq!(
+        (
+            invitation.instance.team_a_players.len(),
+            invitation.instance.team_b_players.len()
+        ),
+        (5, 5)
+    );
+}
+
+#[test]
 fn objective_tick_without_matches_needs_no_world_object_catalog() {
     let mut world = World::new();
     world.init_resource::<PvpServerState>();
