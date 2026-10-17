@@ -442,6 +442,41 @@ fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
         1,
         "further damage/aura ticks cannot repeat an OnSpellCast hook"
     );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), true)
+        .expect("actual creature full-mask shield");
+    h.advance(0.05);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), boss, 31901, Some(boss), 1);
+    h.advance(0.05);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        3,
+        "ordinary, creature-triggered and generic-triggered successful casts each fire once"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30686, Some(player), false)
+        .expect("actual source cast occupies caster");
+    assert_eq!(
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), false),
+        Err(crate::spell_cast::CastFailure::InProgress),
+        "no admission bypass"
+    );
+    h.advance(0.05);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        3,
+        "rejected shield cast cannot speak"
+    );
+    assert!(
+        h.inbox(1).chat.is_empty(),
+        "no triggered route leaks across map copies"
+    );
 }
 
 #[test]
