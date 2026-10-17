@@ -2944,6 +2944,8 @@ fn node_match(template: BgTemplate) {
     if template.map_id == 2107 {
         // Source max19 gives30: nine resource thresholds270 + winner/end60, other end30.
         assert_team_honor(&entered, 330, 30);
+    } else if template.map_id == 761 {
+        assert_team_honor(&entered, 0, 0); // Gilneas does not inherit Arathi's source producer.
     }
     win_leave_and_return(&mut entered, 1500);
 }
