@@ -6,7 +6,7 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in active70448 Criteria.csv. Active build/key and encrypted-record boundaries: [receipt](achievement-active-build-receipt.json). Earlier numbered checkpoints below retain their historical source build. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5533 ordinary (3510 account/2023 character),1841 statistics; 108 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in active70448 Criteria.csv. Active build/key and encrypted-record boundaries: [receipt](achievement-active-build-receipt.json). Earlier numbered checkpoints below retain their historical source build. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5544 ordinary (3519 account/2025 character),1843 statistics; 109 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -211,7 +211,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 109 | GetLootByType | 1/78 | 1/7 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 110 | LandTargetedSpellOnTarget | 81/159 | 74/121 | 7 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 112 | LearnTradeskillSkillLine | 19/20 | 18/19 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 113 | HonorableKills | 0/4 | 0/1 | 0 | World RewardHonor eligibility now exists (type35), but native lifetime-HK state/type113 remains absent. Wallet, scoreboard and type70 are not lifetime state; remains disabled. |
+| 113 | HonorableKills | 3/4 | 1/1 | 2 | Real persisted per-character lifetime HK increments before absolute113 at the unchanged world-HK boundary, reloads on login and sums character contributions. LIFETIME_HK_TRACKING_STARTS_AT_ZERO: existing0/no backfill/no35/XP alias. Full100 native/account/policy/pin and BG merge controls GREEN6/6(35.54s), with genuine prior0/3 RED; full authored238/513/39935 dates persist across one-hour-later relog. |
 | 114 | AcceptSummon | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 115 | EarnAchievementPoints | 0/8 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 118 | CompletedLFGDungeon | 0/7 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |

@@ -163,6 +163,11 @@ fn send_initial_achievement_snapshot(world: &mut World) {
 fn load_login_events(world: &World, character: u64, account: u64, level: u8) -> Vec<CriteriaEvent> {
     let mut events = vec![CriteriaEvent::Login, CriteriaEvent::ReachLevel(level)];
     if let Some(db) = world.get_resource::<GameDatabase>() {
+        // TC CriteriaHandler748/4989: login projects persisted character lifetime HK.
+        let pvp = persistence::load_pvp(&db.db, character);
+        events.push(CriteriaEvent::LifetimeHonorableKills(
+            pvp.lifetime_honorable_kills,
+        ));
         // TC BankTabPurchased login case: current tab counts of both banks.
         let tabs = [
             (
@@ -908,11 +913,17 @@ pub(crate) fn record_world_honorable_kill(world: &mut World, player: Entity, vic
         .expect("validated world honor victim");
     let race = victim.race;
     let class = victim.class;
-    let mut events = vec![
+    let mut events = Vec::new();
+    if let Some(state) = world.get::<crate::pvp::PlayerPvpState>(player) {
+        events.push(CriteriaEvent::LifetimeHonorableKills(
+            state.progress.lifetime_honorable_kills,
+        ));
+    }
+    events.extend([
         CriteriaEvent::EarnHonorableKill,
         CriteriaEvent::HonorableKillRace(race),
         CriteriaEvent::HonorableKillClass(class),
-    ];
+    ]);
     // TC RewardHonor6756 reads this recipient's area, independently of the victim.
     if let Some((area, _)) = load_player_terrain_area(world, player) {
         events.push(CriteriaEvent::HonorableKillInArea(area));
