@@ -40,6 +40,9 @@ pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::Ca
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if spell == super::mobile_banking::MOBILE_BANKING && index == 0 {
+        return Some(super::mobile_banking::summon_chest);
+    }
     if spell == 96538 && index == 0 {
         return Some(crate::pvp::arena_dalaran::cast_pipe_search);
     }

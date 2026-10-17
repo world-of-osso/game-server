@@ -10,8 +10,8 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, Row};
 use shared::components::{Position, Rotation};
 use shared::protocol::{
-    GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_MAILBOX,
-    GAMEOBJECT_TYPE_RITUAL, GAMEOBJECT_TYPE_SPELL_FOCUS, GameObjectInfo,
+    GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_GUILD_BANK,
+    GAMEOBJECT_TYPE_MAILBOX, GAMEOBJECT_TYPE_RITUAL, GAMEOBJECT_TYPE_SPELL_FOCUS, GameObjectInfo,
 };
 
 use super::GameObjectBounds;
@@ -201,7 +201,10 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
         && !template.extra_focus_payload;
     let ordinary_object = matches!(
         template.info.go_type,
-        GAMEOBJECT_TYPE_GENERIC | GAMEOBJECT_TYPE_CHAIR | GAMEOBJECT_TYPE_MAILBOX
+        GAMEOBJECT_TYPE_GENERIC
+            | GAMEOBJECT_TYPE_CHAIR
+            | GAMEOBJECT_TYPE_MAILBOX
+            | GAMEOBJECT_TYPE_GUILD_BANK
     );
     if cooking_only && template.linked_trap != 0 {
         let trap_supported = world
