@@ -29,6 +29,8 @@ fn prepare_sprout_templates(h: &mut Harness) {
     let mut data = h.app.world_mut().resource_mut::<WorldData>();
     data.templates.extend(templates);
     data.difficulty_templates.extend(difficulties);
+    data.summon_levels = crate::world_data::summon_levels::SummonLevels::load(&connection)
+        .expect("prepared native summon level inputs");
 }
 
 fn install_azure_ground(h: &mut Harness, map: InMap) {
