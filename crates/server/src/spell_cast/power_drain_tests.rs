@@ -25,7 +25,7 @@ pub(super) fn fixture(class: u8) -> (Harness, Entity) {
     h.app
         .world_mut()
         .entity_mut(h.caster)
-        .insert(UnitLevel(u8::try_from(level).unwrap()));
+        .insert(UnitLevel(level));
     let source = rusqlite::Connection::open_with_flags(
         &world_db().unwrap().powers_db,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
