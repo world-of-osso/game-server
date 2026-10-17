@@ -684,10 +684,11 @@ const POLYMORPH_REGEN_SHARE: f32 = 0.05;
 /// engaged (`!IsEngaged()`), a third of its max health every `CREATURE_REGEN_INTERVAL`.
 /// The timer restarts at the interval of the state the tick found. MOD_HEALTH_REGEN_PERCENT
 /// and MOD_REGEN are not modelled.
-pub(super) fn regenerate_creature_health(world: &mut World) {
+type ActiveHealthRegen =
+    QueryState<(Entity, &'static mut CreatureHealthRegenTimer), Without<GridDormant>>;
+
+pub(super) fn regenerate_creature_health(world: &mut World, creatures: &mut ActiveHealthRegen) {
     let dt = world.resource::<Time>().delta_secs();
-    let mut creatures =
-        world.query_filtered::<(Entity, &mut CreatureHealthRegenTimer), Without<GridDormant>>();
     let due: Vec<Entity> = creatures
         .iter_mut(world)
         .filter_map(|(entity, mut timer)| {
@@ -773,4 +774,26 @@ pub(super) fn regenerate_creature_mana(
             * mods.map_or(1.0, |mods| mods.power_regen(PowerType::Mana as i32));
         mana.current = (mana.current + gain).min(mana.max);
     }
+}
+
+#[cfg(test)]
+#[test]
+fn idle_health_regen_full_population_is_bounded() {
+    let mut app = App::new();
+    app.insert_resource(Time::<()>::default());
+    app.add_systems(Update, regenerate_creature_health);
+    crate::test_data::populate_idle_world(app.world_mut(), || {
+        (
+            CreatureHealthRegenTimer::default(),
+            GridDormant,
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        )
+    });
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_health_regen_full_population_is_bounded",
+    );
 }
