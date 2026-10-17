@@ -67,6 +67,8 @@ mod creature_trigger_dead_caster_tests;
 mod creature_type_damage_tests;
 #[cfg(test)]
 mod critical_block_tests;
+#[cfg(test)]
+mod dead_cast_progress_tests;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
