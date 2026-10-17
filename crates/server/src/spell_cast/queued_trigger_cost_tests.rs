@@ -71,12 +71,26 @@ fn native_trigger64_missing_target_does_not_spend_child_mana() {
 fn native_trigger64_child_refuses_unaffordable_dispatch_after_native_enemy_mana_drain() {
     const SOUL_REND: u32 = 3405;
     const SOUL_REND_CASTS: usize = 1000;
+    const SKUL: u32 = 10393;
     let mut h = harness(
         Vec::new(),
         &[FLAME_SHOCK_PARENT, FLAME_SHOCK_CHILD, SOUL_REND],
         7,
     )
     .unwrap();
+    let db_path = &world_db().unwrap().powers_db;
+    let source =
+        rusqlite::Connection::open_with_flags(db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_creature_spell_stats(&source));
+    h.app
+        .insert_resource(crate::world_data::load_world_data(db_path));
+    // Normal spawning supplies Skul's native UnitLevel, not an invented fixture level.
+    let caster = h.caster;
+    let drainer =
+        crate::zones::summon_creature(h.app.world_mut(), caster, SKUL, [3.0, 0.0, 0.0, 0.0])
+            .unwrap();
     let control = spawn_player(&mut h.app, 7, 0.0);
     h.advance(1); // Ordinary initialization of the same-class regen control.
     assert_eq!(mana(&h), NATURAL_FIXTURE_MANA);
@@ -89,12 +103,18 @@ fn native_trigger64_child_refuses_unaffordable_dispatch_after_native_enemy_mana_
     cast_parent(&mut h);
     assert_eq!(mana(&h), NATURAL_FIXTURE_MANA);
     assert!(!has_aura(h.app.world(), h.npc, FLAME_SHOCK_CHILD));
-    // Actual instant native10-mana enemy casts between enqueue and dispatch;
+    // Actual instant, level-scaled native enemy casts between enqueue and dispatch;
     // no frame/regen suppression, raw pool edit or changed imported effect.
     for target in [h.caster, control] {
         for _ in 0..SOUL_REND_CASTS {
-            super::creature::creature_cast(h.app.world_mut(), h.npc, SOUL_REND, Some(target), true)
-                .unwrap();
+            super::creature::creature_cast(
+                h.app.world_mut(),
+                drainer,
+                SOUL_REND,
+                Some(target),
+                true,
+            )
+            .unwrap();
         }
     }
     assert_eq!(mana(&h), 0.0);
