@@ -1419,7 +1419,11 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
         .collect();
     // Imported70391: native Hug, Call to Arms and seven complete type35 roots.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5527);
+    assert_eq!(union.len(), 5529);
+    assert!(
+        union.contains(&246) && union.contains(&1005),
+        "both full Know Thy Enemy roots"
+    );
     assert!(union.contains(&1261), "authored ten-kill G.N.E.R.D. Rage");
     assert!(union.contains(&247), "native dead hostile player Hug");
     for achievement in [908, 909, 18202, 18203, 18205, 18206] {
