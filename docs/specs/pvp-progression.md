@@ -43,6 +43,14 @@ Explicit Lead authorization binds an implemented TC-sourced Honor award of N to 
 
 The rule applies at the shared Honor award boundary so per-map BG Honor awards use the same mirror when their callbacks are implemented. Current world-kill eligibility/calculation stays unchanged. BG callbacks not yet wired remain an implementation gap, not a missing wallet-binding authorization. BG admission must retain the exact [PVPDifficulty source range](../../../shared-protocol/docs/specs/battleground-brackets.md): event bonus amounts use the instance bracket maximum, not a participant's current level or the broad template admission maximum. Arena/Conquest1602 quantities remain ARENA_COMPLETION_WALLET_BINDING; no mapping is authorized. Korrak1166 stays out of scope. HONOR_LEVEL_XP_CURVE remains a gap; no level advancement is added.
 
+## World of Osso policy: BG_END_BONUS_ONCE_PER_MATCH
+
+Explicit Lead authorization normalizes each per-map completion hook to one invocation per completed match. Pinned TC `Battleground.cpp`675/781 places OnEnd inside the online-player loop; team-wide script awards would otherwise multiply by roster size. We do not reproduce that placement. This is a named project normalization, not a Retail claim. Each eligible present participant receives the authored per-map win/end bonuses once, and HONOR_WALLET_MIRRORS_HONOR_XP mirrors the authorized XP1:1 subject to the holding cap.
+
+Current callback: Arathi2107 OnEnd574–585 grants a winning participant one bonus-kill equivalent, then grants every eligible participant one equivalent. Each call rounds separately using `ceil(min(instance PVPDifficulty maximum,80) ×1.55)`:30–39 winners receive61+61=122; other present participants receive61. Inactive/minimum-XP-level checks remain; dead accepted participants receive the team award, departed/unaccepted players do not. Null-victim team awards do not apply kill-only group/aura/rest modifiers and do not emit type35 honorable-kill criteria. Terminal resource-tick replay must not duplicate rewards; both wallet and separate lifetime XP persist.
+
+This checkpoint implements Arathi completion only. Resource-threshold/objective awards, other per-map callbacks, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+
 ## Sourced weekly counters — 70391
 
 Honor1792 and Conquest1602 both author MaxEarnablePerWeek0 and do not set ComputedWeeklyMaximum0x4. Following TC Player::GetCurrencyWeeklyCap/ModifyCurrency, zero means no static weekly ceiling and new gains must not increment week_earned. Positive weekly caps still clamp accepted gains and count only the actual accepted amount. Existing historical counters are preserved; no unsourced weekly reset clock or Conquest season limit is introduced. The shared wallet implements this rule; persistence must retain zero counters for new uncapped PvP entries.

@@ -1,6 +1,8 @@
 use super::*;
 use crate::persistence::GameDatabase;
 
+#[path = "pvp_bg_honor_tests.rs"]
+mod bg_honor;
 #[path = "pvp_content_tuning_tests.rs"]
 mod content_tuning;
 #[path = "pvp_honor_tests.rs"]
@@ -758,7 +760,7 @@ fn native_flag_match_in_world(
         instance_id: 17,
     };
     let mut players = Vec::new();
-    for index in 1..=10 {
+    for index in 1..=u64::from(template.min_players_per_team) * 2 {
         let name = format!("Bgproof{}", char::from(b'a' + index as u8 - 1));
         let account = account_for_index(index);
         let (character, _) = persistence::create_character(&db, account, &name, 1, 1).unwrap();
