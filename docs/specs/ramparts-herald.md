@@ -39,7 +39,10 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ## Tests asserting this spec
 
-No Herald behavioral acceptance exists yet. Read-only source/70448 identity audits are not runtime GREEN.
+- `scripts/tests/test_encounter_serverside_spells.py` — real CLI fixture for all seven authored spell/effect rows, idempotence, unrelated-data preservation and atomic refusal; not yet GREEN.
+- `scripts/tests/fixtures/herald-serverside-spells.json` — exact TDB1210 records selected by the pinned script.
+
+No Herald encounter behavioral acceptance exists yet. Source/70448 identity audits and data preparation are not runtime GREEN.
 
 ## Known gaps (current cycle)
 

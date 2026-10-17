@@ -1,5 +1,7 @@
 import json
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -95,6 +97,42 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         write_dump(self.dump, missing=('serverside_spell_effect', 32185), fixture=fixture)
         with self.assertRaisesRegex(ValueError, '32185'):
             encounter_serverside_spells.import_spells(self.db, self.dump, encounter='omor')
+
+    def run_herald_producer(self):
+        return subprocess.run(
+            [sys.executable, str(Path(encounter_serverside_spells.__file__)),
+             '--encounter', 'herald', '--db', str(self.db), '--source-dump', str(self.dump)],
+            capture_output=True, text=True, check=False,
+        )
+
+    def read_herald_tables(self):
+        with sqlite3.connect(self.db) as connection:
+            connection.row_factory = sqlite3.Row
+            return {
+                'serverside_spell': [dict(row) for row in connection.execute(
+                    'SELECT * FROM tdb_serverside_spell ORDER BY Id,DifficultyID')],
+                'serverside_spell_effect': [dict(row) for row in connection.execute(
+                    'SELECT * FROM tdb_serverside_spell_effect ORDER BY SpellID,EffectIndex,DifficultyID')],
+            }
+
+    def test_herald_cli_preserves_seven_source_spells_and_refuses_incomplete_input_atomically(self):
+        fixture = FIXTURE.with_name('herald-serverside-spells.json')
+        write_dump(self.dump, fixture=fixture)
+        expected = json.loads(fixture.read_text())['rows']
+        for _ in range(2):
+            result = self.run_herald_producer()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(self.read_herald_tables(), expected,
+                             'All seven actual spell/effect records and every field survive the real CLI')
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(connection.execute('SELECT value FROM unrelated').fetchone(), ('retained',))
+        before_failure = self.db.read_bytes()
+        write_dump(self.dump, missing=('serverside_spell_effect', 30698), fixture=fixture)
+        result = self.run_herald_producer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('missing authored serverside_spell_effect spells [30698]', result.stderr)
+        self.assertEqual(self.db.read_bytes(), before_failure,
+                         'Rejected incomplete source cannot partially mutate a prepared copy')
 
     def test_missing_authored_spell_refuses_without_partial_tables(self):
         write_dump(self.dump, missing=('serverside_spell_effect', 119426))
