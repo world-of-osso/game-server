@@ -22,7 +22,7 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - `crates/server/src/persistence_writer.rs` — FIFO jobs, durability receipts, failures and shutdown drain.
 - `crates/server/src/persistence.rs` — database ownership and writer lifetime.
 - `crates/server/src/achievement_account.rs` — pending account contributions and owned atomic character/account/news persistence.
-- `crates/server/src/persistence_runtime.rs` — periodic, exit and departing-character saves; FIFO adaptation remains under verification.
+- `crates/server/src/persistence_runtime.rs` — owned periodic/exit saves on the FIFO. Existing direct single-character/logout callers are not converted by this bounded import.
 - `crates/server/src/adventure_guide.rs` — owned monthly contribution followed by a receipt-dependent Tender settlement.
 - `crates/server/src/trading_post_persistence.rs` — owned validated actions, ordered snapshot settlement and commit-gated per-connection replies.
 - `crates/server/src/trading_post_store.rs` — atomic store operations; account loading is read-only, including missing-table state.
@@ -38,9 +38,10 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 
 ## Known gaps (current cycle)
 
-- [ ] Complete and verify the minimal `b80131863` / `c391e8bbb` / `98cfbc490b` import against current master and landed netdelta.
-- [ ] Verify periodic, achievement account, Guide month and tick Tender paths all use this writer.
-- [ ] Verify FIFO crash/reopen and existing migration fixtures, then run the independently gated 11-peer release workload.
+- [x] Minimal `b80131863` / `c391e8bbb` / `98cfbc490b` import integrated with master b8b6c2f9d and landed netdelta;13 core controls pass within28 affected controls.
+- [x] Periodic/account/Guide/Tender and Trading Post request ordering, crash/reopen and migration controls pass; corrected20-ACK same-frame/due-save/reopen control passes separately.
+- [ ] Independent lead broad gate and post-landing11-peer plain-release acceptance.
+- [ ] Exact PvP release20 stall attribution; ACK handler has no direct character save. Other synchronous callers are not inferred to be its cause.
 
 ## Out of scope
 
