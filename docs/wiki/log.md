@@ -1,6 +1,6 @@
 ## 2026-10-17 — Launch Rocket setup and launch
 
-[Bounded75](../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17): exact293/effect508/aura294, existing charged direct-damage path. Unsupported75 RED3→GREEN4;1777/2829 rows/1015 graphs. Native and final gates pending; no generic object-sharing/timing/VFX claim.
+[Bounded75](../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17): exact293/effect508/aura294, existing charged direct-damage path. Unsupported75 RED3→GREEN4;1777/2829 rows/1015 graphs. Authored owned-team/wild-PvP27 and both strict native skins pass setup/launch win, six inspected fullHD originals/two framed models throughout. Final lib/check pending; no generic object-sharing/timing/VFX claim.
 
 ## 2026-10-16 — Armageddon team damage and sacrifice
 

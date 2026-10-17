@@ -89,7 +89,7 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 ### Launch Rocket75 — 2026-10-17
 
-[Bounded293/294](../../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17) admits exact effect508 and its ready-object aura. Existing charged-damage machinery creates the caster's rocket on first use, launches typed damage on second use and consumes the ready aura even on a miss. Real unsupported75 RED3→GREEN4; setup/delayed launch/re-setup, target dodge, three defender families and malformed-tuple rejection covered. Census1777/2829 rows/1015 graphs. Owned-team/native/final gates remain pending; object-sharing and full Retail timing/VFX are not certified.
+[Bounded293/294](../../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17) admits exact effect508 and its ready-object aura. Existing charged-damage machinery creates the caster's rocket on first use, launches typed damage on second use and consumes the ready aura even on a miss. Real unsupported75 RED3→GREEN4; setup/delayed launch/re-setup, target dodge, three defender families and malformed-tuple rejection covered. Census1777/2829 rows/1015 graphs. Authored level20 Lil' Bling owned-team proof passes in wild/PvP27; both actual strict skins physically set up294 without enemy damage, then launch/expire294 and win at enemy0. Six fullHD originals inspected, two framed models throughout; native capped147 damage is distinct from pure formula proof. Final lib/check gates remain pending; object-sharing and full Retail timing/VFX are not certified.
 
 ### Limits
 
