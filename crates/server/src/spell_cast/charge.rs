@@ -55,16 +55,8 @@ fn calculate_movement(
     let to = target + toward_caster * reach;
     let distance = from.distance(to);
     let authored_speed = spell.misc.as_ref().map_or(0.0, |misc| misc.speed);
-    let (seconds, speed) = if authored_speed > 0.0 && attributes(spell, 9) & SPEED_IS_DELAY != 0 {
-        (authored_speed, distance / authored_speed)
-    } else {
-        let speed = if authored_speed > 0.0 {
-            authored_speed
-        } else {
-            DEFAULT_CHARGE_SPEED
-        };
-        (distance / speed, speed)
-    };
+    let speed_is_delay = attributes(spell, 9) & SPEED_IS_DELAY != 0;
+    let (seconds, speed) = calculate_timing(distance, authored_speed, speed_is_delay);
     // MoveSpline CommonInitializer: integer segment time starts at1ms.
     let duration_ms = 1 + (seconds * 1000.0) as u64;
     (
@@ -77,6 +69,18 @@ fn calculate_movement(
         },
         speed,
     )
+}
+
+fn calculate_timing(distance: f32, authored_speed: f32, speed_is_delay: bool) -> (f32, f32) {
+    if authored_speed > 0.0 && speed_is_delay {
+        return (authored_speed, distance / authored_speed);
+    }
+    let speed = if authored_speed > 0.0 {
+        authored_speed
+    } else {
+        DEFAULT_CHARGE_SPEED
+    };
+    (distance / speed, speed)
 }
 
 /// Keep motion ownership through the landing tick, as with scripted jumps.
@@ -93,8 +97,7 @@ pub(super) fn release_finished(
 
 pub(super) fn advance(world: &mut World) {
     let clock = now(world);
-    let mut moved = Vec::new();
-    for (unit, mut movement, mut position, rotation) in world
+    let moved: Vec<_> = world
         .query_filtered::<(
             Entity,
             &mut ChargeMovement,
@@ -102,33 +105,59 @@ pub(super) fn advance(world: &mut World) {
             Option<&mut Rotation>,
         ), Without<crate::combat::DeathState>>()
         .iter_mut(world)
-    {
-        if movement.finished {
-            continue;
-        }
-        let elapsed_ms = (clock - movement.started) * 1000.0;
-        let progress = (elapsed_ms / movement.duration_ms as f64).clamp(0.0, 1.0) as f32;
-        let next = movement.from.lerp(movement.to, progress);
-        *position = Position {
-            x: next.x,
-            y: next.y,
-            z: next.z,
-        };
-        if let Some(mut rotation) = rotation
-            && let Some(facing) =
-                crate::creature_ai::facing_along(movement.to.x - next.x, movement.to.z - next.z)
-        {
-            rotation.y = facing;
-        }
-        movement.finished = progress >= 1.0;
-        moved.push(unit);
-    }
+        .filter_map(|(unit, mut movement, mut position, rotation)| {
+            step_charge(&mut movement, &mut position, rotation, clock).then_some(unit)
+        })
+        .collect();
     for unit in moved {
-        let queue = world.get_resource::<crate::interest::InterestDirtyQueue>();
-        crate::interest::mark_interest_position_changed(queue, unit);
-        if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
-            queue.mark(unit);
-        }
+        publish_position(world, unit);
+    }
+}
+
+fn step_charge(
+    movement: &mut ChargeMovement,
+    position: &mut Position,
+    rotation: Option<Mut<Rotation>>,
+    clock: f64,
+) -> bool {
+    if movement.finished {
+        return false;
+    }
+    let elapsed_ms = (clock - movement.started) * 1000.0;
+    let progress = (elapsed_ms / movement.duration_ms as f64).clamp(0.0, 1.0) as f32;
+    let next = movement.from.lerp(movement.to, progress);
+    *position = Position {
+        x: next.x,
+        y: next.y,
+        z: next.z,
+    };
+    if let Some(mut rotation) = rotation
+        && let Some(facing) =
+            crate::creature_ai::facing_along(movement.to.x - next.x, movement.to.z - next.z)
+    {
+        rotation.y = facing;
+    }
+    movement.finished = progress >= 1.0;
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encounter_coverage_charge_timing_preserves_velocity_default_and_delay_modes() {
+        assert_eq!(calculate_timing(84.0, 42.0, false), (2.0, 42.0));
+        assert_eq!(calculate_timing(63.0, 0.0, false), (1.5, 42.0));
+        assert_eq!(calculate_timing(63.0, 2.0, true), (2.0, 31.5));
+    }
+}
+
+fn publish_position(world: &World, unit: Entity) {
+    let queue = world.get_resource::<crate::interest::InterestDirtyQueue>();
+    crate::interest::mark_interest_position_changed(queue, unit);
+    if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
+        queue.mark(unit);
     }
 }
 

@@ -1,3 +1,7 @@
+## 2026-10-16 — Gargolmar source charge impact
+
+[Boss scripts](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16): corrected target-owner/delayed-impact observer exposes actual19yd no-motion RED. Generic two-point effect96 now arrives at source1.5yd reach with real damage, actual42yd/s bound and exact travel time; explicit ignored acceptance1/1 passes64.13s at91df4428, ignore removed. Obstacle paths/transports/native animation remain open; final integration checks pending.
+
 ## 2026-10-16 — Wild summon lifetime and ordinary encounter gate
 
 [Boss scripts](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16): generic owner-death cull reproduced before minion-only cleanup; wild expiry/Grimoire Imp3/3 and explicit ignored Omor1/1 pass at9be44701. Omor ignore removed, full native/Orbital acceptance remains open. Earlier pushedb8dc0d86 ordinary four-thread filter passed210/0failed/14ignored with endpoint fix147aa87b.

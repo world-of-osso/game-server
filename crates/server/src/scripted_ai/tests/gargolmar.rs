@@ -222,7 +222,6 @@ fn encounter_coverage_gargolmar_real_evade_rearms_damage_thresholds() {
 }
 
 #[test]
-#[ignore = "RED: generic effect 96 charge absent (Gargolmar Surge)"]
 fn encounter_coverage_gargolmar_surge_selects_farthest_living_threat() {
     let (mut h, boss, map) = pull_gargolmar();
     let far = h.players[1].0;
