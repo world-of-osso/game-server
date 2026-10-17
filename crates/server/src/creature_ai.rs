@@ -989,8 +989,9 @@ fn read_chase_targets(
             let to = Vec3::new(target.2.x, target.2.y, target.2.z);
             let in_reach = from.distance(to) <= stop_reach;
             let visible = in_reach
-                && map
-                    .is_some_and(|map| crate::line_of_sight::unit_sees(los, *map, watcher, target));
+                && los.zip(map).is_some_and(|(los, map)| {
+                    crate::line_of_sight::unit_sees(Some(los), *map, watcher, target)
+                });
             Some((
                 entity,
                 ChaseTarget {
