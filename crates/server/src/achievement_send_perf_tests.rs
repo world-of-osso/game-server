@@ -183,7 +183,7 @@ fn combat_progress_send_budget_for_eleven_players_does_not_resend_full_catalogs(
             record_criteria_event(
                 fixture.app.world_mut(),
                 peer.player,
-                CriteriaEvent::HighestDamageDone(hit),
+                CriteriaEvent::DamageDealt(hit),
             );
         }
     }
@@ -217,8 +217,8 @@ fn combat_progress_send_budget_for_eleven_players_does_not_resend_full_catalogs(
             peer.deltas[0]
                 .progress_upserts
                 .iter()
-                .any(|row| row.current == 505),
-            "final highest hit retained"
+                .any(|row| row.current == 1515),
+            "all five effective damage credits retained"
         );
     }
 }
@@ -250,8 +250,8 @@ fn combat_progress_send_budget_preserves_every_toast_without_full_snapshot_clone
             .collect();
         assert_eq!(
             toasts,
-            vec![6, 7],
-            "source Level10/20 toasts keep their order"
+            vec![6, 40172, 7, 40173, 40174],
+            "source level and allied-race level toasts keep their order"
         );
         let full = peer
             .achievements
