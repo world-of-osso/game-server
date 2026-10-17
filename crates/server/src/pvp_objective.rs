@@ -34,6 +34,7 @@ struct Participant {
 
 pub(super) fn update_battleground_objectives(world: &mut World) {
     let actors = read_participants(world);
+    let isle_resources = super::honor::read_isle_resource_counters(world);
     let changed = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
         state
             .battleground_matches
@@ -43,6 +44,7 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
             })
             .collect::<Vec<_>>()
     });
+    super::honor::award_isle_resource_gains(world, isle_resources);
     credit_pvp_stats(world);
     for match_id in changed {
         credit_completed_match(world, match_id);
