@@ -129,35 +129,44 @@ fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() 
         .expect("authentic source Whip");
     h.advance(1.9);
     assert!(
-        !h.inbox(0).spell_gos.iter().any(|go| go.spell_id == 30638),
-        "no early periodic child"
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(30638)),
+        "no early periodic child damage"
     );
+    let falling_health = h.health(players[0]).current;
+    let grounded_health = h.health(players[1]).current;
+    let caster_health = h.health(boss).current;
     h.advance(0.15);
-    eprintln!(
-        "WHIP observed aura={:?} threat={:?} motion={:?} pos={:?} health={:?}",
-        h.app.world().get::<crate::auras::ActiveAuras>(boss),
-        h.app.world().get::<shared::components::ThreatTable>(boss),
-        h.app
-            .world()
-            .get::<shared::components::PlayerMotion>(players[0]),
-        h.app.world().get::<Position>(players[0]),
-        h.app.world().get::<Health>(players[0])
-    );
-    eprintln!(
-        "WHIP native30638 admission={:?}",
-        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30638, Some(players[0]), true)
-    );
+    // cast_triggered deliberately has no SpellGo/CastSuccess publication.
     let children: Vec<_> = h
         .inbox(0)
-        .spell_gos
+        .log
         .iter()
-        .filter(|go| go.spell_id == 30638)
-        .map(|go| go.target)
+        .filter(|event| {
+            event.spell_id == Some(30638) && event.kind == CombatLogKind::Damage && event.amount > 0
+        })
+        .map(|event| event.target)
         .collect();
     assert_eq!(
         children,
         vec![Some(players[0].to_bits())],
         "only falling player threat, never self/grounded player"
+    );
+    assert!(
+        h.health(players[0]).current < falling_health,
+        "actual authored child damage"
+    );
+    assert_eq!(
+        h.health(players[1]).current,
+        grounded_health,
+        "grounded player unaffected"
+    );
+    assert_eq!(
+        h.health(boss).current,
+        caster_health,
+        "prevent default self-trigger damage"
     );
 }
 
