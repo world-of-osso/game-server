@@ -14,6 +14,8 @@ mod force_forward;
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
 mod group_private;
+#[path = "toys_hearthstone_tests.rs"]
+mod hearthstones;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
 #[path = "toys_podium_tests.rs"]
