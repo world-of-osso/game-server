@@ -1669,3 +1669,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Final geometry proof: 50 controls pass, warning-free check, unchanged 187770-creature idle debug sustains 19.9–20.0 ticks/s; detection 1.891 ms/step, resize/collision out of top15; private published-schema refresh recorded in [[server-tick-lag]].
 
 - 2026-10-16: Landslide deterministic seed104 runtime RED isolates authored cooldown rejection from TaskScheduler request timing; unchanged timing bounds and source mechanics retained. GREEN3/3 passed18.40s under four test workers at e8ee92a3.
+
+- 2026-10-16: Ordinary encounter gate exposes Vyletongue sampling-window RED; deterministic blocked/unblocked controls and integer-ms inclusive samples retain all source timing bounds.

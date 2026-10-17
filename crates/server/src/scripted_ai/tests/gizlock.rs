@@ -8,6 +8,9 @@ pub(super) fn assert_source_clock(
     blocked: &[(f32, bool)],
 ) {
     assert!(times.len() >= 2, "source repeats: {times:?}");
+    const DISPATCH_GRACE_MS: i64 = 150;
+    const SAMPLE_GUARD_MS: i64 = 100;
+    let millis = |seconds: f32| (seconds * 1000.0).round() as i64;
     let mut previous = 0.0;
     for (index, time) in times.iter().copied().enumerate() {
         let (min, max) = if index == 0 { first } else { repeat };
@@ -15,10 +18,18 @@ pub(super) fn assert_source_clock(
             time >= previous + min - 0.01,
             "early source dispatch: {times:?}"
         );
-        if time > previous + max + 0.15 {
+        let dispatch_ms = millis(time);
+        let latest_due_ms = millis(previous + max);
+        if dispatch_ms > latest_due_ms + DISPATCH_GRACE_MS {
+            // Include exact protected endpoints: an open50ms window can discard
+            // every actual50ms sample. Integer ms also eliminate f32 endpoint drift.
             let overdue: Vec<_> = blocked
                 .iter()
-                .filter(|(tick, _)| *tick > previous + max + 0.1 && *tick < time - 0.1)
+                .filter(|(tick, _)| {
+                    let tick_ms = millis(*tick);
+                    tick_ms >= latest_due_ms + SAMPLE_GUARD_MS
+                        && tick_ms <= dispatch_ms - SAMPLE_GUARD_MS
+                })
                 .collect();
             assert!(
                 !overdue.is_empty() && overdue.iter().all(|(_, casting)| *casting),
