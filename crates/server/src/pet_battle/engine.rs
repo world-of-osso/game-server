@@ -7,6 +7,8 @@ const RULE_STATES: &[&str] = &[
     "Stat_Dodge",
     "Mod_SpeedPercent",
     "Mod_MaxHealthPercent",
+    "maxHealthBonus",
+    "Internal_InitialLevel",
     "Weather_ArcaneStorm",
     "Mod_PetType_ID",
     "Mod_PetTypeDamageDealtPercent",
