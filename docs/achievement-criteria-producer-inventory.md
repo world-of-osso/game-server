@@ -6,7 +6,7 @@ Positive TargetHasAura10 is bounded to native110 actual hit-unit active auras be
 
 Canonical content_item70391 refresh additionally resolves orphan type91 item assets112326/136653/186685/192466 (five criteria including duplicate186685), with no new ordinary/statistic roots; source-only drift, not TargetHasAura10 gain. Before/after receipt: `targetaura10-contentitem-drift.json`.
 
-Scope: all243 distinct Types in installed70391 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5529 ordinary (3506 account/2023 character),1841 statistics; 106 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in active70448 Criteria.csv. Active build/key and encrypted-record boundaries: [receipt](achievement-active-build-receipt.json). Earlier numbered checkpoints below retain their historical source build. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5533 ordinary (3510 account/2023 character),1841 statistics; 108 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -104,7 +104,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 
 | Type | Pinned source name | Raw | Current roots | Orphans | State / producer evidence |
 |---:|---|---:|---:|---:|---|
-| 0 | KillCreature | 7420/10169 | 3497/4429 | 3923 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 0 | KillCreature | 7426/10175 | 3497/4429 | 3929 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 1 | WinBattleground | 29/212 | 27/160 | 2 | Native completed-map wins; positive67 loads only exact occupied-node equality OR5717/8656, read from current accepted NodeBattle copy. Native twelve-match5253 ten-win grant passes; other world states/conditions remain disabled. |
 | 3 | CompleteAnyResearchProject | 0/12 | 0/12 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 4 | FindResearchObject | 0/12 | 0/0 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
@@ -133,7 +133,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 28 | BeSpellTarget | 858/1841 | 565/1290 | 293 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 29 | CastSpell | 2530/2995 | 1499/1665 | 1031 | Native successful casts; plain SingleFalse87 uses scoped known-unearned authority with all companions. Actual1217637 casts grant41707 at20 then stop; account/sibling/reopen/date controls pass. Other unsupported conditions remain disabled. |
 | 30 | TrackedWorldStateUIModified | 16/87 | 16/78 | 0 | Native: every battleground objective credit (TC BattlegroundScore::UpdatePvpStat:78-80) records +1 for the connected character, completed in the match map; only unconditional rows whose PvpStat is a native column. BG start/fail-event rows stay disabled. Native completion-map gate leaves 199/200 (Instance_ID489) unearned on WSG2106. See spec. |
-| 31 | PVPKillInArea | 0/51 | 0/45 | 0 | World RewardHonor eligibility now exists (type35). Recipient AreaID event31 is not wired; scoreboard/type70 cannot substitute. Remains disabled pending its own native RED and source-qualified implementation. |
+| 31 | PVPKillInArea | 18/51 | 16/45 | 2 | Native eligible world-HK reward samples each recipient current terrain area; positive authored ancestry, full companions and account SUM. Controlled real-terrain full50 Blood and Sand12411, accountSUM, ancestry/timer and pinned census pass4/4 on canonical70448 (18856aaf,13.70s). All roots12411/224/1151 structural-only for playable BG content: registered BG credit remains outside this world-HK boundary. |
 | 32 | WinArena | 57/82 | 56/62 | 1 | Native committed rated winners: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
 | 33 | ParticipateInArena | 55/87 | 55/61 | 0 | Native committed rated participants, including losers: exact match map; team-size24(2/3) and ranked60 qualified.5v5/unknown qualifiers remain disabled. |
 | 34 | LearnOrKnowSpell | 569/579 | 468/468 | 101 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -154,7 +154,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 49 | EquipItemInSlot | 0/433 | 0/113 | 0 | Source/data mismatch: TC Player.cpp11638/11766 sends slot as miscValue1 and itemID as miscValue2, but ModifierTree3/14/15 read miscValue1 as itemID. Local rows use those qualifiers. No invented argument remap or dropped conditions. |
 | 50 | RollNeed | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 51 | RollGreed | 0/2 | 0/1 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
-| 52 | DeliverKillingBlowToClass | 0/13 | 0/13 | 0 | World RewardHonor eligibility now exists (type35). Eligible-recipient victim-class event52 is not wired; final blow56 cannot substitute. Remains disabled pending its own native RED. |
+| 52 | DeliverKillingBlowToClass | 13/13 | 13/13 | 0 | Native world eligible-recipient victim Player.class; positive exact1..13 assets and all companions/accountSUM. Full thirteen-class245 grant, nonfinal nearby group recipient, zeroXP and reopened original date proven. No new BG/arena policy or character-creation certification. |
 | 53 | DeliverKillingBlowToRace | 20/149 | 20/148 | 0 | Native world eligible-recipient victim Player.race, not final-blow-only or scoreboard identity; exact positive authored playable race, every companion retained, accountSUM. Both full ten-race246/1005 grants and living-near group receipt/reopened original dates proven; no new BG/arena policy. |
 | 54 | DoEmote | 235/400 | 220/254 | 15 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 55 | HealingDone | 1/16 | 0/15 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -260,7 +260,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 162 | ActivelyEarnPetLevel | 24/24 | 0/0 | 24 | Native battle-XP transitions retain actual species; sole positive91 validates authored species and level1–25. All supported rows are outside achievement roots. Qualified positive has catalog/source proof only;1974–1977 lack native combat states, so no native-positive certificate. |
 | 163 | EnterArea | 150/175 | 3/4 | 147 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 164 | LeaveArea | 5/5 | 0/0 | 5 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 165 | DefeatDungeonEncounter | 2502/4376 | 1547/2766 | 955 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 165 | DefeatDungeonEncounter | 2503/4377 | 1547/2766 | 956 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 167 | PlaceGarrisonBuilding | 0/35 | 0/0 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 168 | ActivateAnyGarrisonBuilding | 0/3 | 0/2 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 169 | ActivateGarrisonBuilding | 0/77 | 0/44 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |

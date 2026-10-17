@@ -1,9 +1,31 @@
+## 2026-10-16 — Eligible victim class52
+
+[Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN2/2; structural5530/1841 adds245 only.
+## 2026-10-16 — Miss-only pet self outcomes194
+
+[Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
+## 2026-10-17 — Telash startup prerequisites
+
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored after genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; no Telash production change.
+
+## 2026-10-17 — Leymor native Sprouts destination boundary
+
+[Sprouts](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): fixture-only prepared SummonLevels reload restores actual374360 one-child prerequisite; genuine374364 parent0/14 RED49.34s. Nonexclusive once-effect/full-mask implementation yields one ordinary native parent/fourteen owned children GREEN at8db5f60f on active70448/a0ccc53b. First28-child fixture manually stimulated a second parent; ordinary SpellGo witness corrects this without production changes. Affected17/0failed/1ignored TelashRED, scoped servercheck/fmt and bounded independent source/artifact/readability inspection pass at8ca93220. Lifecycle/full native70448 acceptance remain open.
+
 ## 2026-10-16 — Eligible victim race53
 
 [Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Native/account GREEN3/3 proves both full ten-race grants and group/reopened date. Census5529/1841 adds246/1005; post-master filter224/0/1existingignored+site1/1, workspace/all-targetcheck/fmt/diff pass and independent artifact/readability complete.
 ## 2026-10-16 — Refuge Critter shields223
 
 [Bounded1344](../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16): independent Block759 for user/other friendly Critters, explicit wearer/original caster and shared self26 duration policy. Actual unsupported223 RED→GREEN9;1764/2829 rows (62.35%)/1010 graphs,2232/2. Both-skin private5961 independent caller/Critter blocks keep892/892, non-Critter978 takes28/26; eight fullHD originals/ExtractedOnly/tripwire0/canonical4-asset closure pass. Final CPU gates pending; no generic selector/full Retail timing claim.
+## 2026-10-16 — Gargolmar source charge impact
+
+[Boss scripts](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16): corrected target-owner/delayed-impact observer exposes actual19yd no-motion RED. Generic two-point effect96 now arrives at source1.5yd reach with real damage, actual42yd/s bound and exact travel time; explicit ignored acceptance1/1 passes64.13s at91df4428, ignore removed. Obstacle paths/transports/native animation remain open. Final72fd14b3 ordinary4-thread filter214/0failed/12ignored571.47s and production check147.45s pass without warnings; fmt/diff/manual readability pass.
+
+## 2026-10-16 — Wild summon lifetime and ordinary encounter gate
+
+[Boss scripts](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16): generic owner-death cull reproduced before minion-only cleanup; wild expiry/Grimoire Imp3/3 and explicit ignored Omor1/1 pass at9be44701. Omor ignore removed, full native/Orbital acceptance remains open. Earlier pushedb8dc0d86 ordinary four-thread filter passed210/0failed/14ignored with endpoint fix147aa87b.
+[Bounded1344](../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16): independent Block759 for user/other friendly Critters, explicit wearer/original caster and shared self26 duration policy. Actual unsupported223 RED→GREEN9;1764/2829 rows (62.35%)/1010 graphs,2232/2. Both-skin private5961 independent caller/Critter blocks keep892/892, non-Critter978 takes28/26; eight fullHD originals/ExtractedOnly/tripwire0/canonical4-asset closure pass. Final lib104/wild-PvP24/UI12/check/fmt pass; no generic selector/full Retail timing claim.
 
 ## 2026-10-16 — Same-species pet damage370
 
@@ -19,6 +41,8 @@
 ## 2026-10-16 — Bench pet resurrection112
 
 [Sourced Raise Dead/Mass Resurrection](../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16): four actual112 rows, inactive-slot routing and zero-HP owned-load state. RED3+persisted-redb1→GREEN4;1756→1760/2829 rows (62.07→62.21%),1006→1008 graphs. Both-skin private5961 actual2347 shows both78/1563 reserves, pointer swap and real147-damage win; eight fullHD originals inspected. Canonical78-asset closure/strict loader readback and final lib91/wild-PvP22/UI12/check/fmt pass; stale sibling `/hug` compilation drift resolved by lead-authorized fast-forward, no gameplay patch. Generic resurrection semantics remain gated.
+- 2026-10-16: [Leymor Sprouts clock](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16): genuine3s cast RED→native self-cast/SpellGo GREEN1 at3b856731; unchanged-production Infused control PASS. Repeat/lifecycle runtime, fourteen child summons and fullAzure70448 remain separate; controls/check pending.
+- 2026-10-16: [Leymor Infused Strike](investigations/follower-data.md#azure-leymor-infused-strike--2026-10-16): actual10s missing-cast RED after intro/living-victim checks; sourced finite schedule implemented, native GREEN pending. Intro scoped check passes.
 ## 2026-10-16 — Leymor intro and non-following formation depletion
 
 [Source boundary](investigations/follower-data.md#azure-leymor-intro--2026-10-16): genuine startup/NPC RED4, then startup1PASS/actual-depletion3RED, then source groupAI0 membership/per-copy key4/one-second wake375749 and NPC mask pass. At6ae44dc0, five intro cases include removed leader and copy/reinitialize isolation; three Brand and six Frost controls pass14/14,0ignored. Independent source/artifact/readability and both format gates pass; scopedcheck/protocol unit control pending. Historical70391 proof, not70448 native acceptance or full boss phases.
@@ -1728,3 +1752,12 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16): real persisted bind/source10s cast and shared2309 charge acceptance,146/146 Toy tests; source type17 appearance/cross-map/wall recharge remain separate.
 
 - 2026-10-16: [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16): authentic paired template import RED→GREEN, real area/cursor/source300s simulation lifecycle,147/147 Toy gate; target-dummy combat and missing native533501 body remain separate.
+
+- 2026-10-16: [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16): separate catalog/child-position REDs, exact302746/display16675, actual cooking/CozyFire/source300s cleanup and source-drift refusals;149 Toy+29 affected gates pass, native appearance/full trigger parity separate.
+- 2026-10-17: [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) reads real current terrain at the existing HK boundary, retains ancestry/companions and account SUM; native/account behavioral RED2/2, full50 GREEN pending. Imported70391 structural census5533/1841 adds only224/1151/12411; area metadata is70448, no reconciled70448 achievement-profile claim.
+
+- 2026-10-17: [Active70448 achievement inputs](systems/dungeon-achievements.md#active70448-achievement-inputs) regenerated from active CSVs; named tree Flags/OrderIndex fixes prior raw offsets. Build/key receipt, active predicates and5533/1841 census reconciled (no root delta from migration). Importer behavioralRED→GREEN4/4; canonical publication lead-owned.
+
+- 2026-10-17: area31 on canonical70448 at18856aaf passes controlled native full50, accountSUM, ancestry/timer and pinned census4/4(13.70s); no registered BG policy/credit added. Required integration/check gates pending.
+
+- 2026-10-17: area31/current70448 final integration1c67a39c passes required workspace four-filter228/0/1existing ignored(345.74s), site-export1/1, workspace/all-target check, three-repo fmt/diff. Importer/predicate70448 source reconciliation precedes native GREEN. No new BG policy/playability certificate; lead landing/rendered/fresh UDP remain separate.
