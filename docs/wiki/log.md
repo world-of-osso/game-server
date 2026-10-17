@@ -1,3 +1,7 @@
+## 2026-10-17 — Forlorn/charge merge
+
+[Focused merge proof](../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17): preserve effect96 movement-duration hit ordering and destination-only flight/front47; merged55/55 pass with actual protocol master. Lead published matching Forlorn template receipt; no new full-suite/native-parity claim.
+
 ## 2026-10-17 — Flashback source screen effect
 
 [Flashback88 boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17): retain actual ScreenEffect1473 and chapel9587 source fields without inventing world phasing; actual learned use/native presentation remain open. Docs-only; retained150/49 proofs unchanged.
