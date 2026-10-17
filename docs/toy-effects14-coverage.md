@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source260–264: paired trophy/oracle/dance/leash/anima-service boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|260 Doomwalker Trophy Stand186501/353904 | Two distinct same-difficulty effect28 slots create cursor87 actors180947 and179325/properties3911 for60000ms,300000ms item recovery. TDB models102004/101290 each scale0.5 exist; runtime content absent. Authentic paired placement/ownership/expiry is unproved; prior single trophy/stand witnesses do not authorize dropping a source slot. |
+|261 Pallid Oracle Bones186686/354603 | Self script77;900000ms item recovery overrides1000ms spell recovery. Source future-consultation requires authored fortune selection/message/action proof; no invented oracle text/random pool or silent cosmetic success. |
+|262 Pallid Bone Flute186702/354692 | Self raid-area effect65/dummy4 for30000ms,600000ms item recovery. Source haunting melody and nearby dancing require real recipient/animation/music/lifecycle proof; source self anchor does not reduce the action to caster-only art or a no-op aura. |
+|263 Anima-ted Leash186973/354888 | Minipet-target90 complete-zero dummy4 with permanent duration-1 and1500ms item recovery. Companion-owner linking/recipient eligibility/cancellation remain unproved; no caster attachment or inherited certificate from another leash. |
+|264 Experimental Anima Cell186974/354965 | Source1500ms target47 summon179626/properties64 for600000ms, inherited3600000ms spell recovery. TDB52318/scale1 has probability0, while11686/scale2 has probability1; runtime content absent. Authentic invisible source body must not be replaced by the visible zero-weight row. Advertised outside-Torghast anima-hoard service/eligibility/action remains unproved, not generic scenery. |
+
+`rows260-264-{readonly-source,action-source}.json` preserves exact70391 effect indices/difficulty, cast/duration/recovery, target/property and source/runtime model probabilities. No new actor/fortune/recipient/service admission, production/data/canonical write or positive simulation/native result.240 remains the single progressing owned native proof; unchanged gates are not repeated, and149865 Tea Set stays lead-required.
+
 ## Source255–259: return/music/disturbance/minipet-leash boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
