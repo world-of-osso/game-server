@@ -5,6 +5,9 @@
 ## 2026-10-16 — Azure finite Frost Bomb chain
 
 [Source and proof boundary](investigations/follower-data.md#azure-frost-bomb--2026-10-16): source-timed native Telash186737/205 genuine2RED (initial0.1s run invalid), then exact misplaced-ground RED;386781→386881 expiry-only387149+386910 and target-derived destination now pass6 native+3 adjacent controls, including the arena control with its existing fixture env. Scoped check/fmt and independent source/artifact gates pass; native pixels remain separate. No boss phases or unbound ground actions inferred; private225-actor import preserves canonical/Stockade proof snapshots.
+## 2026-10-16 — Authoritative target LOS
+
+[Cast receipt boundary](systems/spell-casting.md#authoritative-target-los--2026-10-16): moving-target ordinary loopback RED reproduces stale-client-endpoint refusal with clear authoritative sight. Validation now searches from authoritative caster/target positions; client geometry and chosen endpoint tolerances are removed from cast admission/queue. Wall controls and fresh release-server acceptance remain verification gates.
 ## 2026-10-16 — Two-way pet-wall150 charges
 
 [Seven source-qualified pairs](../pet-battle-effect-coverage.md#two-way-walls150--bounded-proof2026-10-16): actual unsupported150 RED6→GREEN88, canonical journal3/wild12/PvP9 and check/fmt;1749→1756/2829 rows (61.82→62.07%),993→1006 graphs. Both-skin private5961 Ice Barrier479 physically blocks incoming then outgoing attacks, expires, and exposes subsequent45/65critical damage; six fullHD originals inspected. Conditional123/126 is bounded to six auras; Onyx, multi-wall order and exact Retail/VFX feedback remain gaps. Subject model/texture receipts match the current local root; owned-process cleanup passes.
