@@ -86,6 +86,11 @@ fn prove_native_summon_prerequisite(h: &mut Harness, leymor: Entity) {
 #[test]
 #[ignore = "RED: once-effect Ley-Line Sprouts destination children not implemented"]
 fn azure_leymor_sprouts_parent_summons_two_native_children_per_authored_origin() {
+    bevy::log::tracing_subscriber::fmt()
+        .with_env_filter("game_server::spell_cast=warn,game_server::zones=warn")
+        .with_test_writer()
+        .try_init()
+        .expect("isolated native sprout prerequisite logger");
     let (mut h, leymor) = super::azure_combat::wake_leymor();
     let map = *h.app.world().get::<InMap>(leymor).unwrap();
     prepare_sprout_templates(&mut h);
