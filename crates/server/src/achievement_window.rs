@@ -31,7 +31,7 @@ struct WindowDefinition {
 pub(super) struct WindowData {
     categories: BTreeMap<u32, AchievementCategoryEntry>,
     definitions: BTreeMap<u32, WindowDefinition>,
-    tree_labels: HashMap<u32, (String, i32)>,
+    tree_labels: HashMap<u32, (String, i32, u32)>,
     /// (achievement, points) in the Pet Battles category tree.
     pet_battle: Vec<(u32, u32)>,
 }
@@ -137,14 +137,16 @@ fn load_window_definitions(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, 
     rows.collect()
 }
 
-fn load_tree_labels(conn: &Connection) -> rusqlite::Result<HashMap<u32, (String, i32)>> {
-    let mut query = conn.prepare("SELECT ID, Description_lang, OrderIndex FROM criteria_tree")?;
+fn load_tree_labels(conn: &Connection) -> rusqlite::Result<HashMap<u32, (String, i32, u32)>> {
+    let mut query =
+        conn.prepare("SELECT ID, Description_lang, OrderIndex, Flags FROM criteria_tree")?;
     let rows = query.query_map([], |row| {
         Ok((
             row.get(0)?,
             (
                 bound_text(&row.get::<_, String>(1)?, ACHIEVEMENT_NAME_MAX_BYTES),
                 row.get(2)?,
+                row.get(3)?,
             ),
         ))
     })?;
@@ -599,12 +601,13 @@ impl AchievementCatalog {
                 .get(&tree.criteria_id)
                 .is_some_and(|criteria| criteria.supported)
             && matches!(tree.operator, TreeOperator::Single);
-        let (description, order_index) = &self.window.tree_labels[&id];
+        let (description, order_index, flags) = &self.window.tree_labels[&id];
         AchievementCriterionLine {
             tree_id: id,
             order_index: *order_index,
             criteria_id: tree.criteria_id,
             description: description.clone(),
+            flags: *flags,
             current: if character_scope { progress.current } else { 0 },
             required: progress.required,
             completed: supported && progress.completed,

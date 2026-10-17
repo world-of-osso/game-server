@@ -457,6 +457,7 @@ fn creature_sight_system(
             target_position = ?params.view(target).map(|view| *view.position),
             map = ?params.view(watcher).map(|view| view.map),
             center_distance,
+            simulation_secs = params.time.elapsed_secs_f64(),
             "creature proximity acquisition"
         );
         commands.queue(move |world: &mut World| {
