@@ -1,26 +1,30 @@
 use super::effects2_tests::use_ability;
 use super::*;
 
+fn create_species_battle(c: &Catalog, caster: PetRef, matching: usize) -> Battle {
+    let mut b = battle(c, 6, 7, [2283, 110, 123]);
+    b.teams[caster.team].active = caster.slot;
+    for pet in &mut b.teams[caster.team].pets {
+        pet.species = 3256;
+        pet.abilities[0] = 2283;
+    }
+    for pet in &mut b.teams[1 - caster.team].pets {
+        pet.species = 2621;
+    }
+    b.pet_mut(caster).species = 2621;
+    for slot in (0..3).filter(|slot| *slot != caster.slot).take(matching) {
+        b.teams[caster.team].pets[slot].species = 2621;
+    }
+    b
+}
+
 #[test]
 fn pet_battle_dragons_call_routes_same_species_bonus_for_both_teams_and_all_active_slots() {
     let c = catalog();
     for team in 0..2 {
         for active in 0..3 {
             for (matching, expected) in [(0, 150), (1, 192), (2, 234)] {
-                let mut b = battle(&c, 6, 7, [2283, 110, 123]);
-                b.teams[team].active = active;
-                for pet in &mut b.teams[team].pets {
-                    pet.species = 3256;
-                    pet.abilities[0] = 2283;
-                }
-                for pet in &mut b.teams[1 - team].pets {
-                    pet.species = 2621;
-                }
-                b.teams[team].pets[active].species = 2621;
-                let reserves: Vec<_> = (0..3).filter(|slot| *slot != active).collect();
-                for slot in reserves.iter().take(matching) {
-                    b.teams[team].pets[*slot].species = 2621;
-                }
+                let b = create_species_battle(&c, PetRef { team, slot: active }, matching);
                 let target = b.active(1 - team);
                 let mut actions = [Action::Pass; 2];
                 actions[team] = Action::Ability(2283);
