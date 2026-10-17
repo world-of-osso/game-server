@@ -47,7 +47,7 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
     });
     super::honor::award_isle_resource_gains(world, isle_resources);
     super::honor::award_alterac_tower_changes(world, alterac_towers);
-    credit_pvp_stats(world);
+    credit_objective_events(world);
     for match_id in changed {
         super::honor::award_alterac_survivor_honor(world, match_id);
         credit_completed_match(world, match_id);
@@ -454,13 +454,23 @@ pub(super) fn credit(scoreboard: &mut Scoreboard, character_id: u64, stat: u32, 
 
 /// TC BattlegroundScore.cpp:78-80: each PvpStat update credits the connected player once,
 /// whatever the stat amount.
-fn credit_pvp_stats(world: &mut World) {
+fn credit_objective_events(world: &mut World) {
     let credits: Vec<_> = world
         .resource_mut::<PvpServerState>()
         .battleground_matches
-        .values_mut()
-        .filter_map(|matched| Some((matched.map?.map_id, &mut matched.scoreboard.stat_credits)))
-        .flat_map(|(map, credits)| std::mem::take(credits).into_iter().map(move |c| (map, c)))
+        .iter_mut()
+        .filter_map(|(id, matched)| {
+            Some((
+                *id,
+                matched.map?.map_id,
+                &mut matched.scoreboard.stat_credits,
+            ))
+        })
+        .flat_map(|(id, map, credits)| {
+            std::mem::take(credits)
+                .into_iter()
+                .map(move |c| (id, map, c))
+        })
         .collect();
     if credits.is_empty() {
         return;
@@ -470,7 +480,8 @@ fn credit_pvp_stats(world: &mut World) {
         .iter(world)
         .map(|(link, owner)| (owner.character_id, link.0))
         .collect();
-    for (map, (character, stat)) in credits {
+    for (match_id, map, (character, stat)) in credits {
+        super::honor::award_flag_capture_honor(world, match_id, character, stat);
         if let Some(&player) = players.get(&character) {
             crate::achievement::record_pvp_stat(world, player, map, stat);
         }
