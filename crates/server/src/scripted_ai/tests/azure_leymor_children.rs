@@ -107,6 +107,14 @@ fn azure_leymor_child_brand_emits_one_native_field_for_two_real_aura_recipients(
         assert_eq!(damage[0].target, Some(h.players[index].0.to_bits()));
         assert!(damage[0].amount > 0);
     }
-    // Native effect0/type179 creates AT25390 for750ms; effect1/type2 deals damage.
+    // Sample after the native750ms lifetime without overriding its spell data.
+    h.advance(0.6);
+    let child_remains = h
+        .app
+        .world_mut()
+        .query::<&SpellAreaTrigger>()
+        .iter(h.app.world())
+        .any(|field| field.spell_id == BRAND_CHILD);
+    assert!(!child_remains, "native child field expires after750ms");
     // No AT action, movement force, knockback or client-pixel claim.
 }
