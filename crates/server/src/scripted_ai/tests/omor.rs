@@ -2,6 +2,69 @@
 use super::*;
 
 #[test]
+#[ignore = "RED: Omor Orbital target SpellScript not ported"]
+fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_threat() {
+    let (mut h, boss, map) = bound_boss(17308, 543, 0);
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let players = [h.players[0].0, h.players[1].0];
+    for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
+        h.app.world_mut().entity_mut(player).insert((
+            map,
+            Position {
+                x: origin.x + gap,
+                ..origin
+            },
+            shared::components::PlayerMotion::default(),
+        ));
+    }
+    h.engage(boss);
+    crate::creature_aggro::add_threat(h.app.world_mut(), boss, players[1], 0.1);
+    for _ in 0..600 {
+        h.advance(0.05);
+        if h.has_aura(boss, 32185) {
+            break;
+        }
+    }
+    assert!(
+        h.has_aura(boss, 32185),
+        "source Orbital target script must cast actual Whip32185"
+    );
+    let falling: Vec<_> = players
+        .into_iter()
+        .filter(|player| {
+            h.app
+                .world()
+                .get::<shared::components::PlayerMotion>(*player)
+                .is_some_and(|motion| motion.contains(shared::components::PlayerMotion::FALLING))
+        })
+        .collect();
+    assert_eq!(
+        falling.len(),
+        1,
+        "source30637 knocks exactly one eligible candidate into falling"
+    );
+    let selected = falling[0];
+    let threat = h
+        .app
+        .world()
+        .get::<shared::components::ThreatTable>(boss)
+        .unwrap();
+    assert_eq!(
+        threat.threat_for(selected.to_bits()),
+        0.0,
+        "source -100% selected threat"
+    );
+    let other = players
+        .into_iter()
+        .find(|player| *player != selected)
+        .unwrap();
+    assert!(
+        threat.threat_for(other.to_bits()) > 0.0,
+        "unselected threat retained"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let (mut h, boss, map) = bound_boss(17308, 543, 0);
     let origin = *h.app.world().get::<Position>(boss).unwrap();
