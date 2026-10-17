@@ -2,7 +2,7 @@
 use bevy::prelude::Entity;
 use shared::casting::CastState;
 use shared::death::DeathState;
-use shared::protocol::{CombatLogKind, DeathStateUpdate};
+use shared::protocol::{CombatLogKind, DeathChannel, DeathStateUpdate, ReleaseSpirit};
 
 use super::test_harness::*;
 use crate::death::{DeathPlugin, PlayerDeathState};
@@ -12,13 +12,20 @@ const NETHER_EXPLOSION: u32 = 35058;
 const GLYPH_OF_THORNS: u32 = 53008;
 
 fn native_fixture() -> Harness {
+    native_fixture_with_world_data(None)
+}
+
+fn native_fixture_with_world_data(world_data: Option<crate::world_data::WorldData>) -> Harness {
     let mut h = harness_with_plugins(
         Vec::new(),
         &[DEATH_TOUCH, NETHER_EXPLOSION, GLYPH_OF_THORNS],
         2,
         false,
-        |app| {
+        move |app| {
             app.add_plugins(DeathPlugin);
+            if let Some(world_data) = world_data {
+                app.insert_resource(world_data);
+            }
         },
     )
     .unwrap();
@@ -46,6 +53,19 @@ fn kill_player(h: &mut Harness) {
             .state,
         DeathState::Dead,
     );
+}
+
+fn request_release_spirit(h: &mut Harness) {
+    h.app.world_mut().entity_mut(h.connection).insert((
+        lightyear::prelude::MessageSender::<ReleaseSpirit>::default(),
+        lightyear::prelude::MessageReceiver::<ReleaseSpirit>::default(),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<lightyear::prelude::MessageSender<ReleaseSpirit>>(h.connection)
+        .unwrap()
+        .send::<DeathChannel>(ReleaseSpirit);
+    h.advance(2);
 }
 
 fn kill_npc(h: &mut Harness) {
@@ -171,6 +191,57 @@ fn native_npc_corpse_removal_interrupts_an_eligible_dead_start_cast() {
     assert!(h.app.world().get::<CastState>(caster).is_none());
     h.advance(25);
     assert_eq!(h.health(h.caster), before);
+}
+
+#[test]
+fn native_successful_spirit_release_interrupts_a_dead_start_cast() {
+    let data = prepare_class_world().world_data();
+    let mut h = native_fixture_with_world_data(Some(data));
+    kill_player(&mut h);
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerDeathState>(h.caster)
+            .unwrap()
+            .graveyard
+            .is_some()
+    );
+    let caster = h.caster;
+    begin_cast(&mut h, caster, NETHER_EXPLOSION, 1.0);
+    request_release_spirit(&mut h);
+    assert_eq!(
+        h.app.world().get::<PlayerDeathState>(caster).unwrap().state,
+        DeathState::Ghost
+    );
+    assert!(h.app.world().get::<CastState>(caster).is_none());
+    h.advance(25);
+    assert!(!h.inbox.log.iter().any(|event| {
+        event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(NETHER_EXPLOSION)
+    }));
+}
+
+#[test]
+fn native_failed_spirit_release_preserves_an_eligible_dead_start_cast() {
+    let mut h = native_fixture();
+    kill_player(&mut h);
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerDeathState>(h.caster)
+            .unwrap()
+            .graveyard
+            .is_none()
+    );
+    let caster = h.caster;
+    begin_cast(&mut h, caster, NETHER_EXPLOSION, 1.0);
+    request_release_spirit(&mut h);
+    assert_eq!(
+        h.app.world().get::<PlayerDeathState>(caster).unwrap().state,
+        DeathState::Dead
+    );
+    assert!(h.app.world().get::<CastState>(caster).is_some());
+    h.advance(25);
+    assert_success(&h, NETHER_EXPLOSION);
 }
 
 #[test]
