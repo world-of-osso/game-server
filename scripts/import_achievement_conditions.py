@@ -209,6 +209,9 @@ def tree_conditions(root, modifiers, children, legacy, criteria_type=0, literal_
         elif criteria_type == 160 and kind == 78 and operator == SINGLE_TRUE and 0 <= int(node['Asset']) <= 9:
             # TC BattlePetType2157–2164 reads the actual earned-level event species' type.
             facts.append((kind, int(node['Asset'])))
+        elif criteria_type == 78 and kind == 21 and operator == SINGLE_TRUE and int(node['Asset']) == 0:
+            # TC1867–1870: inclusive actor GetLevel >= actual killed unit GetLevel.
+            facts.append((kind, 0))
         elif criteria_type == 78 and kind == 30 and operator == SINGLE_TRUE and 1 <= int(node['Asset']) <= 15:
             # TC CreatureType1906–1912 / SharedDefines5016–5032: exact killed NPC type.
             facts.append((kind, int(node['Asset'])))
@@ -298,7 +301,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, expressions_
         '// alive16, known-solo35, native-arena player (24/60), map instance type122, and always-passed HasTimeEventPassed289 leaves.',
         '// Native KillCreature0 SingleFalse8, CastSpell29 SingleFalse87 and Login74 SingleFalse104 use signed compiled kinds; raw DB2 kinds stay unchanged.',
         '// Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.',
-        '// Native kill78 CreatureType30 preserves the actual eligible victim type.',
+        '// Native kill78 CreatureType30 and positive level-delta21/0 preserve the actual eligible victim type/level.',
         '// Native participation15 PlayerLevelWithinContentTuning268 uses authored inclusive min/max.',
         '// Positive WorldStateExpression67 is load-bounded to exact literal comparisons; native battleground-win1/130 also admits occupied-node equality OR.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
