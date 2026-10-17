@@ -123,7 +123,8 @@ fn pet_battle_starfall_applies_moonlight_after_healing_and_existing_weather_modi
             .unwrap();
         assert!(last_heal < weather);
         assert_eq!(state.auras.len(), 1);
-        assert_eq!((state.auras[0].ability, state.auras[0].remaining), (596, 9));
+        // Existing weather ticks include the application round.
+        assert_eq!((state.auras[0].ability, state.auras[0].remaining), (596, 8));
         for team in &state.teams {
             for pet in &team.pets {
                 assert_eq!(
