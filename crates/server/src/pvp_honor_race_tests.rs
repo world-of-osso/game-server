@@ -151,8 +151,20 @@ fn prove_race_achievement(owner_race: u8, achievement: u32, opposite: u32, races
     );
 }
 
-fn race_world(owner_race: u8) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
-    let (mut world, players, file) = native_flag_match(&shared::battleground::warsong_gulch());
+pub(super) fn race_world(owner_race: u8) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
+    race_world_in_world(owner_race, World::new(), |index| index)
+}
+
+pub(super) fn race_world_in_world(
+    owner_race: u8,
+    world: World,
+    account_for_index: impl Fn(u64) -> u64,
+) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
+    let (mut world, players, file) = native_flag_match_in_world(
+        &shared::battleground::warsong_gulch(),
+        world,
+        account_for_index,
+    );
     world.init_resource::<Time>();
     world.insert_resource(
         crate::spell_cast::test_harness::world_db()
@@ -201,7 +213,7 @@ fn race_world(owner_race: u8) -> (World, Vec<(u64, Entity)>, tempfile::NamedTemp
     (world, players, file)
 }
 
-fn spawn_race_victim(world: &mut World, race: u8, faction: u8) -> Entity {
+pub(super) fn spawn_race_victim(world: &mut World, race: u8, faction: u8) -> Entity {
     world
         .spawn((
             Player {
@@ -226,7 +238,7 @@ fn spawn_race_victim(world: &mut World, race: u8, faction: u8) -> Entity {
         .id()
 }
 
-fn hit(world: &mut World, killer: Entity, victim: Entity, amount: f32) {
+pub(super) fn hit(world: &mut World, killer: Entity, victim: Entity, amount: f32) {
     let data = crate::spell_cast::test_harness::world_db().unwrap();
     let ctx = EffectCtx {
         caster: killer,
@@ -238,7 +250,7 @@ fn hit(world: &mut World, killer: Entity, victim: Entity, amount: f32) {
     deal_damage(world, &ctx, victim, amount, false, false);
 }
 
-fn counter(world: &World, player: Entity, criterion: u32) -> Option<u64> {
+pub(super) fn counter(world: &World, player: Entity, criterion: u32) -> Option<u64> {
     world
         .get::<PlayerAchievementState>(player)
         .unwrap()

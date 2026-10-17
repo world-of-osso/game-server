@@ -22,9 +22,24 @@ class Conditions(unittest.TestCase):
         self.criteria = {1: {'Type': '0', 'ModifierTreeId': '10', 'StartEvent': '0',
                              'StartTimer': '0', 'FailEvent': '0', 'EligibilityWorldStateID': '0'}}
 
-    def compile(self, modifiers, criteria=None):
-        compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
+    def compile(self, modifiers, criteria=None, literal_expressions=()):
+        compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY, literal_expressions)
         return {row: rest for row, (_, *rest) in compiled.items()}
+
+    def test_positive_world_state_keeps_literal_identity_and_every_native_cast_companion(self):
+        criteria = {43403: dict(self.criteria[1], Type='29', Asset='314318', ModifierTreeId='12710')}
+        mods = {12710: node(0, 4), 12711: node(12710, 2, 67, 5497)}
+        literals = {5497: True, 3785: False}
+        self.assertEqual(self.compile(mods, criteria), {}, 'missing literal source is not known truth')
+        self.assertEqual(self.compile(mods, criteria, literals), {43403: [None, ((67, 5497),)]})
+        self.assertEqual(self.compile({**mods, 12712: node(12710, 2, 25, 2)}, criteria, literals),
+                         {43403: [None, ((25, 2), (67, 5497))]})
+        self.assertEqual(self.compile({**mods, 12712: node(12710, 2, 999, 1)}, criteria, literals), {})
+        for field, value in [('Operator', '3'), ('Asset', '0'),
+                             ('SecondaryAsset', '1'), ('TertiaryAsset', '1')]:
+            invalid = copy.deepcopy(mods)
+            invalid[12711][field] = value
+            self.assertEqual(self.compile(invalid, criteria, literals), {})
 
     def test_native_battleground_participation_retains_complete_content_tuning_range(self):
         criteria = {45044: dict(self.criteria[1], Type='15', Asset='2106', ModifierTreeId='97933')}

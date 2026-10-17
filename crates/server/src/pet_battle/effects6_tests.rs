@@ -1,6 +1,167 @@
 use super::effects2_tests::use_ability;
 use super::*;
 
+#[test]
+fn pet_battle_miss_branch_haymaker_stuns_only_its_user_after_a_miss() {
+    let catalog = catalog();
+    let initial = battle(&catalog, 0, 0, [762, 110, 123]);
+    let (state, events) = use_ability(&initial, &catalog, 762);
+    assert!(damage(&events).is_empty());
+    assert_eq!(state.teams[0].pets[0].health, 10000);
+    assert_eq!(state.teams[1].pets[0].health, 10000);
+    let stun = catalog.state_id("Mechanic_IsStunned").unwrap();
+    assert_eq!(state.teams[0].pets[0].state(stun), 1);
+    assert_eq!(state.teams[1].pets[0].state(stun), 0);
+    assert_eq!(state.auras.len(), 1);
+    assert_eq!(state.auras[0].target, PetRef { team: 0, slot: 0 });
+    assert_eq!(state.auras[0].remaining, 1);
+}
+
+#[test]
+fn pet_battle_miss_branch_gift_heals_only_its_user_after_a_miss() {
+    let catalog = catalog();
+    let mut initial = battle(&catalog, 9, 0, [989, 110, 123]);
+    initial.teams[0].pets[0].health = 9000;
+    let (state, events) = use_ability(&initial, &catalog, 989);
+    assert!(damage(&events).is_empty());
+    assert_eq!(state.teams[0].pets[0].health, 9180);
+    assert_eq!(state.teams[1].pets[0].health, 10000);
+    assert!(state.auras.is_empty());
+}
+
+#[test]
+fn pet_battle_miss_branch_success_does_not_stun_or_heal_the_user() {
+    let catalog = catalog();
+    for (ability, damage_amount) in [(762, 300), (989, 180)] {
+        let mut initial = battle(&catalog, 6, 0, [ability, 110, 123]);
+        initial.teams[0].pets[0].health = 9000;
+        initial.teams[0].pets[0]
+            .states
+            .insert(catalog.state_id("Stat_Accuracy").unwrap(), 50);
+        let (state, events) = use_ability(&initial, &catalog, ability);
+        assert_eq!(damage(&events), vec![damage_amount]);
+        assert_eq!(state.teams[0].pets[0].health, 9000);
+        assert_eq!(state.teams[1].pets[0].health, 10000 - damage_amount);
+        assert!(state.auras.is_empty());
+    }
+}
+
+#[test]
+fn pet_battle_miss_branch_block_is_not_a_miss() {
+    let catalog = catalog();
+    for ability in [762, 989] {
+        let mut initial = battle(&catalog, 0, 0, [ability, 110, 123]);
+        initial.teams[0].pets[0].health = 9000;
+        initial.teams[0].pets[0]
+            .states
+            .insert(catalog.state_id("Stat_Accuracy").unwrap(), 50);
+        initial.teams[1].pets[0].abilities = [1344, 110, 123];
+        let (shielded, _) = initial
+            .step(
+                &catalog,
+                [Action::Pass, Action::Ability(1344)],
+                &mut Fixed(500_000),
+            )
+            .unwrap();
+        let (state, events) = use_ability(&shielded, &catalog, ability);
+        assert!(damage(&events).is_empty());
+        assert_eq!(state.teams[0].pets[0].health, 9000);
+        assert_eq!(state.teams[1].pets[0].health, 10000);
+        assert!(state.auras.is_empty());
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, Event::Miss { .. }))
+        );
+    }
+}
+
+#[test]
+fn pet_battle_miss_branch_ignores_an_opponents_earlier_miss_in_the_same_round() {
+    let catalog = catalog();
+    for ability in [762, 989] {
+        let mut initial = battle(&catalog, 6, 0, [ability, 110, 123]);
+        let caller = &mut initial.teams[0].pets[0];
+        caller.health = 9000;
+        caller.stats.speed = 50;
+        caller
+            .states
+            .insert(catalog.state_id("Stat_Accuracy").unwrap(), 50);
+        caller
+            .states
+            .insert(catalog.state_id("Stat_Dodge").unwrap(), 100);
+        let (state, events) = initial
+            .step(
+                &catalog,
+                [Action::Ability(ability), Action::Ability(110)],
+                &mut Fixed(500_000),
+            )
+            .unwrap();
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, Event::Miss { .. }))
+        );
+        assert_eq!(state.teams[0].pets[0].health, 9000);
+        assert!(state.auras.is_empty());
+    }
+}
+
+#[test]
+fn pet_battle_miss_branch_self_outcomes_follow_both_teams_and_active_slots() {
+    let catalog = catalog();
+    for ability in [762, 989] {
+        for team in 0..2 {
+            for slot in 0..3 {
+                let mut initial = battle(&catalog, 0, 0, [ability, 110, 123]);
+                initial.teams[0].active = slot;
+                initial.teams[0].pets[slot].health = 9990;
+                if team == 1 {
+                    initial.teams.swap(0, 1);
+                }
+                let mut actions = [Action::Pass; 2];
+                actions[team] = Action::Ability(ability);
+                let (state, _) = initial
+                    .step(&catalog, actions, &mut Fixed(500_000))
+                    .unwrap();
+                let caller = PetRef { team, slot };
+                if ability == 762 {
+                    assert_eq!(state.auras.len(), 1);
+                    assert_eq!(state.auras[0].target, caller);
+                    assert_eq!(state.pet(caller).health, 9990);
+                } else {
+                    assert_eq!(state.pet(caller).health, 10000);
+                    assert!(state.auras.is_empty());
+                }
+                assert!(
+                    state.teams[1 - team]
+                        .pets
+                        .iter()
+                        .all(|pet| pet.health == 10000)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn pet_battle_miss_branch_unknown_gate_rejects_before_rng() {
+    struct NoDraw;
+    impl BattleRng for NoDraw {
+        fn draw(&mut self) -> u32 {
+            panic!("unqualified194 parameters must reject before RNG");
+        }
+    }
+    let mut catalog = catalog();
+    catalog.effects.get_mut(&1506).unwrap().params[0] = 1;
+    let initial = battle(&catalog, 0, 0, [762, 110, 123]);
+    assert!(
+        initial
+            .step(&catalog, [Action::Ability(762), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
+}
+
 fn create_refuge_battle(catalog: &Catalog) -> Battle {
     let mut state = battle(catalog, 6, 7, [1344, 110, 123]);
     let stats = state.teams[0].pets[0].stats;
@@ -8,6 +169,7 @@ fn create_refuge_battle(catalog: &Catalog) -> Battle {
         Pet::new(
             catalog,
             species,
+            1,
             stats,
             family,
             [1344, 110, 123],
@@ -77,7 +239,8 @@ fn pet_battle_refuge_routes_other_friendly_slots_for_both_teams_and_every_active
             initial.teams[0].pets.rotate_right(active);
             initial.teams[0].active = active;
             let stats = initial.teams[1].pets[0].stats;
-            let enemy = Pet::new(&catalog, 1427, stats, 4, [110, 119, 123], States::new()).unwrap();
+            let enemy =
+                Pet::new(&catalog, 1427, 1, stats, 4, [110, 119, 123], States::new()).unwrap();
             initial.teams[1].pets = [enemy.clone(), enemy.clone(), enemy];
             if team == 1 {
                 initial.teams.swap(0, 1);
@@ -149,6 +312,7 @@ fn pet_battle_refuge_other_caster_refreshes_without_stacking_and_preserves_sourc
     initial.teams[0].pets[0] = Pet::new(
         &catalog,
         1427,
+        1,
         initial.teams[0].pets[0].stats,
         4,
         [1344, 110, 123],

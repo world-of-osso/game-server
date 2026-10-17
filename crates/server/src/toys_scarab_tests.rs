@@ -2,6 +2,56 @@
 //! Count/placement/designation proof only; no invented guardian spell or native visual claim.
 use super::*;
 
+fn assert_source_guardian_scatter_point(
+    point: Vec3,
+    destination: Vec3,
+    map: crate::maps::InMap,
+    ground: &mut crate::ground::GroundMap,
+) {
+    // WoW horizontal x/y is Bevy x/z; terrain elevation is independent of disk radius.
+    let horizontal_distance = (point.x - destination.x).hypot(point.z - destination.z);
+    assert!(
+        horizontal_distance <= 5.001,
+        "source five-yard scatter: destination={destination:?}, point={point:?}"
+    );
+    let crate::ground::GroundProbe::Supported(height) = ground.ground_in(map, point) else {
+        panic!("source scatter point has no supporting ground: {point:?}");
+    };
+    assert_eq!(
+        point.y, height,
+        "scatter height must match projected source ground: destination={destination:?}, point={point:?}"
+    );
+}
+
+#[test]
+fn toyfx39_scarab_scatter_accepts_actual_source_slope_outer_ring() {
+    let data = std::fs::read(crate::ground::ground_data_dir().join("terrain/778027.adt")).unwrap();
+    let terrain = crate::terrain_height::parse_adt_heights(&data).unwrap();
+    let destination = Vec3::new(
+        -8949.95,
+        terrain.height_at(-8949.95, -132.493).unwrap(),
+        132.493,
+    );
+    // Exact f32 representation of WoW (-8952.673828, -128.299637) on this ADT.
+    let point = Vec3::new(
+        -8952.674,
+        terrain.height_at(-8952.674, -128.29964).unwrap(),
+        128.29964,
+    );
+    assert!(
+        point.distance(destination) > 5.001,
+        "the actual source slope must expose the incorrect three-dimensional metric"
+    );
+    let tile = crate::ground::bevy_to_tile(destination.x, destination.z);
+    let mut ground = crate::ground::GroundMap::with_terrain(tile, terrain);
+    assert_source_guardian_scatter_point(
+        point,
+        destination,
+        crate::maps::InMap::continent(0),
+        &mut ground,
+    );
+}
+
 #[test]
 fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
     use crate::spell_cast::summon::SummonedCreature;
@@ -85,15 +135,21 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
         })
         .collect();
     assert!(
-        points
-            .iter()
-            .any(|point| point.distance(destination) < 0.001)
+        points.contains(&destination),
+        "the first guardian retains the exact selected destination"
     );
-    assert!(
-        points
-            .iter()
-            .all(|point| point.distance(destination) <= 5.001)
-    );
+    {
+        let map = *world.get::<crate::maps::InMap>(caster).unwrap();
+        let mut ground = world.resource_mut::<crate::ground::GroundMap>();
+        for point in &points {
+            // SummonGuardian retains the first selected destination; only secondary
+            // GetRandomPoint placements project elevation onto the map.
+            if *point == destination {
+                continue;
+            }
+            assert_source_guardian_scatter_point(*point, destination, map, &mut ground);
+        }
+    }
     assert!(points.iter().any(|point| point.distance(destination) > 0.1));
 
     // Exercise the existing authoritative follow system, not only its marker.

@@ -8,6 +8,14 @@ Retail Mainline behavior applies to both client art skins. Extend existing PvP/r
 - War Mode changes require authoritative rest-area, combat and instance checks; its source-backed buff and talent activation must follow actual world state.
 - PvP talent selection requires source specialization, slot-mask/unlock, level and PlayerCondition eligibility. Unknown conditions cannot be guessed true.
 
+## Ordinary battleground party queue
+
+A grouped character's QueueForBattleground request is leader-only. Resolve its GroupRegistry roster, validate all members are online, available for PvP and in the same source bracket, then enqueue the whole roster through existing join_group atomically. Reject groups larger than one battleground team. Every queued member receives the normal queue projection; existing matchmaking keeps the party together without changing minimums or capacity.
+
+Accepted roster members completing transfer after match start receive exactly one zeroed scoreboard entry on their assigned team, following pinned TC Battleground::AddPlayer/PlayerScores. Preserve every existing score entry and keep start thresholds unchanged; sequential WorldPortAck arrivals must not truncate the final roster.
+
+Pinned TC BattleGroundHandler.cpp189–226 supplies the leader/group admission and per-member queued notification contract. Four ordinary five-player parties must enter one Arathi match with20 players,10 per assigned team, through normal invite/accept, queue and battleground invitation/accept messages. WSG's lower minimum can form earlier; this contract does not delay its queue to force20.
+
 ## Source catalogs and import
 
 `scripts/reference/pvp-12.1.0.69933/` contains locally extracted CASC records. CurrencyTypes contains only1792/1602; PvpTalent407 rows, category3, unlock4, PrestigeLevelInfo24. Values come from Retail build keydcfc90fffd79ba00406ae46f5f657592, exported by game-engine `scripts/export_db2_csv.py` at exact layoutsFA3226AB/BE69BB5A/ECB2C5C2/9685CBCC/6582638F. The local TrinityCore `DB2Structure.h` preserved in game-engine `data/diagnostics/scrap-2026-10-10/` defines field semantics. Numeric source receipts remain in `data/diagnostics/pvp-progression-2026-10-11/db2/`.
@@ -41,7 +49,61 @@ Pinned raw sources (prefix `https://raw.githubusercontent.com/TrinityCore/Trinit
 
 Explicit Lead authorization binds an implemented TC-sourced Honor award of N to two separate credits: the unchanged lifetime honor-XP path receives N, and the existing wallet receives N of Honor1792 subject to its authored15000 holding cap. The wallet cap must not reduce XP. Persist the wallet and PvP projection, publish the authoritative CurrencyStateUpdate and normal gain feedback, and keep static weekly0 bookkeeping unchanged. This is our event binding, not a claim that TC itself credits1792 in RewardHonor. The mirror is pinned by actual lethal-damage and persistence tests; native acceptance requires a real world-kill wallet increase in both skins.
 
-The rule applies at the shared Honor award boundary so per-map BG Honor awards use the same mirror when their callbacks are implemented. Current world-kill eligibility/calculation stays unchanged. BG callbacks not yet wired remain an implementation gap, not a missing wallet-binding authorization. Arena/Conquest1602 quantities remain ARENA_COMPLETION_WALLET_BINDING; no mapping is authorized. Korrak1166 stays out of scope. HONOR_LEVEL_XP_CURVE remains a gap; no level advancement is added.
+The rule applies at the shared Honor award boundary so per-map BG Honor awards use the same mirror when their callbacks are implemented. Current world-kill eligibility/calculation stays unchanged. BG callbacks not yet wired remain an implementation gap, not a missing wallet-binding authorization. BG admission must retain the exact [PVPDifficulty source range](../../../shared-protocol/docs/specs/battleground-brackets.md): event bonus amounts use the instance bracket maximum, not a participant's current level or the broad template admission maximum. Arena/Conquest1602 quantities remain ARENA_COMPLETION_WALLET_BINDING; no mapping is authorized. Korrak1166 stays out of scope. HONOR_LEVEL_XP_CURVE remains a gap; no level advancement is added.
+
+## World of Osso policy: BG_END_BONUS_ONCE_PER_MATCH
+
+Explicit Lead authorization normalizes each per-map completion hook to one invocation per completed match. Pinned TC `Battleground.cpp`675/781 places OnEnd inside the online-player loop; team-wide script awards would otherwise multiply by roster size. We do not reproduce that placement. This is a named project normalization, not a Retail claim. Each eligible present participant receives the authored per-map win/end bonuses once, and HONOR_WALLET_MIRRORS_HONOR_XP mirrors the authorized XP1:1 subject to the holding cap.
+
+Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each grant a winning participant one bonus-kill equivalent, then grant every eligible participant one equivalent. Each call rounds separately using `ceil(min(instance PVPDifficulty maximum,80) ×1.55)`:30–39 winners receive61+61=122; other present participants receive61. Inactive/minimum-XP-level checks remain; dead accepted participants receive the team award, departed/unaccepted players do not. Null-victim team awards do not apply kill-only group/aura/rest modifiers and do not emit type35 honorable-kill criteria. Terminal resource-tick replay must not duplicate rewards; both wallet and separate lifetime XP persist.
+
+This checkpoint's OnEnd callbacks cover Arathi, Eye, current Warsong and the Alterac survivor contract below. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+
+## Warsong / Twin Peaks capture Honor
+
+Pinned WSG557 and TwinPeaks526 unconditionally grant current Warsong2106/TwinPeaks726 teams two bonus-kill equivalents on each actual flag capture, including the winning capture. Round the whole two-kill grant once using the retained source bracket: WSG first10–19 gives59; Twin Peaks first30–39 gives121. Credit the assigned accepted team still in the copy through the existing positive-Honor eligibility and durable XP/wallet mirror. Pickup, return, possession and repeated objective updates grant nothing. Consume the source capture PvpStat receipt once; do not infer captures from scores or introduce another timer/queue.
+
+Twin Peaks has no additional authored Honor OnEnd producer in the pinned script; no generic win/end award is substituted. Current Warsong's separate final-capture and end amounts follow the exact type-ID source chain below, not a guessed calendar.
+
+## Modern Warsong final-capture / end Honor
+
+Current Warsong template1014/map2106 uses the pinned TC normal branch: winning third capture grants a separate flat20; OnEnd once grants the winner one bonus-kill equivalent, then every eligible participant two equivalents, each whole grant rounded separately. This is in addition to each actual two-equivalent capture. At source10–19, three winning captures and one opposing capture produce winner177+20+30+59=286 and opponent59+59=118. A capture-free timeout draw grants only59 to each team, without a winner bonus or flat20. Replay cannot duplicate any component; persist separate lifetime XP and the capped wallet mirror.
+
+Authority is literal pinned TC behavior, not a Retail-calendar claim: `Battleground::GetTypeID`1495–1497 returns the template ID; `SharedDefines.h`6778–6779/6856–6858 distinguishes legacy WS2/AB3 from modern1014/1018. `BattlegroundMgr::BGTypeToWeekendHolidayId`674–689 lists only the legacy IDs and returns HOLIDAY_NONE for1014/1018; `IsBGWeekend`707–709 calls `IsHolidayActive`, whose `GameEventMgr.cpp`1620–1631 explicitly returns false for HOLIDAY_NONE. No modern→legacy alias or unknown-calendar fallback is added. Current Arathi1018 normal threshold160 is likewise source-resolved and has the resource callback below. Eye7 still maps a real holiday and retains BG_WEEKEND_AUTHORITY; no season/calendar service is invented here.
+
+## Current Arathi resource Honor
+
+Pinned Arathi34/185–187/221–235 awards one bonus-kill equivalent per160 authored resource points for current type1018, whose exact holiday mapping is NONE/false. Each team retains its remainder across captures/contests/defenses; neutral/contested nodes produce no points. Use only the existing source node-clock additions, including the entire final tick before displayed score capping. External score mutations and controlled test baselines are not resource income; no timer or generic score-delta award is introduced. Gilneas and other node maps do not inherit this award.
+
+At source10–19 each threshold grants30; a full Arathi resource victory crosses nine thresholds270 and adds existing win/end60 for winner330, while a non-scoring opponent receives30. A controlled source30–39 fixture with120 actual points plus1370 external baseline, then a final authored60-point tick (score1490→1500) crosses exactly one160 threshold: winner61 resource +122 completion=183, other61. Keep full positive-Honor team eligibility, separate durable XP/capped-wallet mirroring and replay refusal. Source node score/winner ordering and reputation are not redesigned by this callback.
+
+## Alterac captain/general Honor
+
+Pinned TC AV enum69–72, HonorKillBonus535–539 and OnUnitKilled653–684 give the opposing team three bonus-kill equivalents for captain11949/11947 and four for general11948/11946. Use `ceil(kills × min(instance PVPDifficulty maximum,80) ×1.55)`, preserving the source float multiplication order and rounding the whole grant once. The admitted20–79 bracket gives captain368 and general490, as separate events totaling858 before tower and survivor-end bonuses; neither recipient level20 nor `kills × ceil(one-kill bonus)` substitutes for the source rule.
+
+Only a source battle-accepted death triggers the award, scoped to its accepted, present opposing roster. Other-copy deaths and mine-owner changes do not mint this bonus; captain alive-state and terminal general transition reject replay. Keep the common positive-Honor eligibility, full XP/wallet mirror, cap and durable updates. Tower destruction and survivor OnEnd are separate callbacks below. These NPC credits do not claim full AV reward parity.
+
+## Alterac tower Honor
+
+Pinned TC AV EventPlayerDestroyedPoint813–817 grants three bonus-kill equivalents to the assaulting team when a tower actually finishes destruction. At retained20–79, each tower grants368; two distinct destructions grant368+368=736, not a single rounded six-kill grant. An assault, canceled Opening, successful defense, graveyard capture or later update of an already destroyed tower grants nothing. Credit the accepted roster still present in that copy through the existing positive-Honor eligibility and durable XP/wallet mirror. The source240s capture timer remains the only destruction clock. Survivor OnEnd is a separate callback below.
+
+## Alterac survivor Honor
+
+Pinned TC AV OnEnd755–790 counts only controlled towers (not contested or destroyed) and living captains for each team. Each contributes two bonus-kill equivalents; accumulate the team's equivalents before one whole-grant rounding. At retained20–79, five qualifying survivors give1225, four give980 and three give735, not independently rounded survivor grants. These are team-state bonuses, not a generic winner award. General death, reinforcement depletion by an accepted player death, and tower-destruction depletion all invoke this source hook once under BG_END_BONUS_ONCE_PER_MATCH. A terminal captain death also uses the accepted NPC transition. Repeated source events or subsequent ended updates must not re-award.
+
+Keep NPC/tower bonuses separate and apply the shared accepted/present/Inactive/minimum-level eligibility and durable XP/wallet mirror; dead eligible recipients remain included. Reputation and other unfinished callbacks are not inferred from this Honor hook. Tests using controlled pre-terminal reinforcement baselines must still produce the final death or completed tower destruction through the actual authoritative channel/damage path; those baselines are not full-match proof.
+
+## Isle commander Honor
+
+Pinned TC Isle `HonorRewards`193–197 and `OnUnitKilled`383–394 grant a literal500 Honor to the opposite team when commander34924 or34922 dies, before ending the match. This is not a bonus-kill multiplier, a generic completion award, or the500 Conquest spell definition. Only an actual source battle-accepted commander death triggers it; the battle's terminal transition rejects dead-target replay. Credit only the winning accepted roster still present in that map copy, with the same positive Honor minimum-level/Inactive checks. Dead eligible recipients remain allowed. Preserve the existing1:1 XP/wallet mirror, holding cap, zero-weekly rule and durable updates.
+
+Winning by reinforcement depletion must not be relabeled as a commander kill. This event does not resolve Arena/Conquest or the lifetime-level curve.
+
+## Isle resource Honor
+
+Pinned TC Isle OnUpdate324–334 grants12 Honor to a resource node's team whenever the existing45s resource clock increments its reinforcement. Only owned, uncontested Refinery and Quarry qualify; neutral/contested nodes and non-resource bases grant nothing. Both teams use their actual assigned BG roster, not character race. Each qualifying resource/tick remains a separate12-point award, with the same positive-Honor eligibility, durable lifetime XP and wallet mirror. No new clock starts on capture and no player-death reinforcement loss counts as income.
+
+Two owned resource nodes produce24 per45s; contesting one pauses its contribution, and transferring ownership moves its12-point contribution to the other team. Honor is not granted merely for opening/capturing the banner. Holding caps do not truncate XP, and weekly0 accounting remains unchanged.
 
 ## Sourced weekly counters — 70391
 
@@ -72,3 +134,9 @@ Operator prerequisite: `pvp_*` catalogs are required at normal world startup. Ap
 Before restarting the landed realm, run the importer from the merged server checkout against the explicit canonical DB path. No import or restart was performed on UDP5000 by this task. Confirm `SELECT count(*)` for `pvp_currency`/`pvp_talent`/`pvp_talent_category`/`pvp_talent_slot_unlock`/`pvp_honor_reward` yields2/407/3/4/24. The importer must finish transactionally before startup; do not seed numeric reward/rating policies. Honor1792/Conquest1602 balances are preserved by the existing one-way ID migration.
 
 Private native proof uses diagnostics-owned world.db and fresh redb, fb_pvp2/Pvpproof on UDP5790. Both skins select Holy talents86/640 through actual pointer controls and display wallet0; cross-process relog retains War Mode and talent86. Screenshots and exact proof boundaries are owned by the [client contract](../../../game-engine/docs/specs/pvp-progression.md). No lifetime XP, match payout or rating progression claim follows from this proof.
+
+## LIFETIME_HK_TRACKING_STARTS_AT_ZERO
+
+Persist a separate per-character `lifetime_honorable_kills` count in PvP progress. New and pre-existing characters start at0 when no count has been recorded; never backfill from achievement35, Honor XP, wallet balances or scoreboard statistics. This is the named project tracking-start policy, not a claim to recover untracked historical kills.
+
+At the existing eligible world-HK recipient boundary, increment and persist this count before evaluating achievement113 (TC Player6752–6753). Zero Honor XP does not suppress the count. Rejected/nonlethal/dead replay and unrelated recipients cannot increment it. Normal character load restores it; login projects the absolute current value without replaying a kill. No BG/arena eligibility policy is added. See [achievement projection](dungeon-achievements.md#lifetime-honorable-kills113).

@@ -7,6 +7,8 @@ const RULE_STATES: &[&str] = &[
     "Stat_Dodge",
     "Mod_SpeedPercent",
     "Mod_MaxHealthPercent",
+    "maxHealthBonus",
+    "Internal_InitialLevel",
     "Weather_ArcaneStorm",
     "Mod_PetType_ID",
     "Mod_PetTypeDamageDealtPercent",
@@ -397,7 +399,20 @@ impl<R: BattleRng> Runtime<'_, R> {
             if !matches {
                 continue;
             }
+            let events_before_turn = self.events.len();
+            let mut effect_target = target;
             for effect in self.catalog.turn_effects(turn.id) {
+                if effect.property == 194 {
+                    let missed = self.events[events_before_turn..]
+                        .iter()
+                        .any(|event| matches!(event, Event::Miss { .. }));
+                    if !missed {
+                        break;
+                    }
+                }
+                if effect.property == 159 && matches!(ability, 762 | 989) {
+                    effect_target = caster;
+                }
                 if effect.property == 158 && failed {
                     break;
                 }
@@ -412,7 +427,8 @@ impl<R: BattleRng> Runtime<'_, R> {
                 {
                     break;
                 }
-                let success = self.execute_effect(caster, target, ability, effect, failed)?;
+                let success =
+                    self.execute_effect(caster, effect_target, ability, effect, failed)?;
                 // Leech Life383 explicitly restores health on damage dealt. Its
                 // event2 contains only healing/state guards, not recursive attacks.
                 if ability == 383 && event == 255 && effect.property == 24 && success {
@@ -538,7 +554,9 @@ impl<R: BattleRng> Runtime<'_, R> {
     }
     fn refresh_max_health(&mut self, pet: PetRef) {
         let multiplier = self.percent(pet, "Mod_MaxHealthPercent");
-        let max = (f64::from(self.battle.pet(pet).base_health) * multiplier)
+        let level_bonus =
+            self.state(pet, "maxHealthBonus") * self.state(pet, "Internal_InitialLevel") / 100;
+        let max = (f64::from(self.battle.pet(pet).base_health + level_bonus) * multiplier)
             .floor()
             .max(1.0) as i32;
         let data = self.battle.pet_mut(pet);

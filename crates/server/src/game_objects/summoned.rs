@@ -10,13 +10,13 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, Row};
 use shared::components::{Position, Rotation};
 use shared::protocol::{
-    GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_MAILBOX,
-    GAMEOBJECT_TYPE_RITUAL, GAMEOBJECT_TYPE_SPELL_FOCUS, GameObjectInfo,
+    GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_GUILD_BANK,
+    GAMEOBJECT_TYPE_MAILBOX, GAMEOBJECT_TYPE_RITUAL, GAMEOBJECT_TYPE_SPELL_FOCUS, GameObjectInfo,
 };
 
 use super::GameObjectBounds;
 use crate::interest::NetworkVisibility;
-use crate::spell_cast::{duration_ms, effects::EffectCtx, now};
+use crate::spell_cast::{duration_ms, effects::EffectCtx, history_now};
 use crate::spell_info::SpellEffect;
 
 pub(crate) const EFFECT_TRANSMITTED: u32 = 50;
@@ -38,7 +38,7 @@ struct ObjectTemplate {
 #[derive(Resource, Debug, Default)]
 pub(crate) struct SummonedObjectTemplates(
     HashMap<u32, ObjectTemplate>,
-    Option<super::cooking_traps::TrapTemplate>,
+    HashMap<u32, super::cooking_traps::TrapTemplate>,
 );
 
 /// Owner and spell remain distinct from a ritual's channel-held ownership.
@@ -132,7 +132,7 @@ pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObje
         .collect::<rusqlite::Result<_>>()?;
     Ok(SummonedObjectTemplates(
         templates,
-        super::cooking_traps::load_template(conn)?,
+        super::cooking_traps::load_templates(conn)?,
     ))
 }
 
@@ -201,11 +201,16 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
         && !template.extra_focus_payload;
     let ordinary_object = matches!(
         template.info.go_type,
-        GAMEOBJECT_TYPE_GENERIC | GAMEOBJECT_TYPE_CHAIR | GAMEOBJECT_TYPE_MAILBOX
+        GAMEOBJECT_TYPE_GENERIC
+            | GAMEOBJECT_TYPE_CHAIR
+            | GAMEOBJECT_TYPE_MAILBOX
+            | GAMEOBJECT_TYPE_GUILD_BANK
     );
     if cooking_only && template.linked_trap != 0 {
-        let trap_supported = template.linked_trap == super::cooking_traps::BASIC_CAMPFIRE_TRAP
-            && world.resource::<SummonedObjectTemplates>().1.is_some()
+        let trap_supported = world
+            .resource::<SummonedObjectTemplates>()
+            .1
+            .contains_key(&template.linked_trap)
             && super::cooking_traps::spell_supported(world);
         if !trap_supported {
             return Some(format!(
@@ -302,7 +307,7 @@ pub(crate) fn spawn_transmitted(world: &mut World, ctx: &EffectCtx, effect: &Spe
         return;
     };
     let duration = duration_ms(world, ctx.caster, ctx.spell);
-    let expires_at = (duration > 0).then(|| now(world) + f64::from(duration / 1000));
+    let expires_at = (duration > 0).then(|| history_now(world) + f64::from(duration / 1000));
     spawn_object(
         world,
         (Some(ctx.caster), ctx.spell.id),
@@ -330,7 +335,7 @@ pub(crate) fn spawn_wild(world: &mut World, ctx: &EffectCtx, effect: &SpellEffec
         return;
     };
     let duration = duration_ms(world, ctx.caster, ctx.spell);
-    let expires_at = (duration > 0).then(|| now(world) + f64::from(duration / 1000));
+    let expires_at = (duration > 0).then(|| history_now(world) + f64::from(duration / 1000));
     spawn_object(world, (None, ctx.spell.id), template, dest, map, expires_at);
 }
 
@@ -349,9 +354,13 @@ fn spawn_object(
             .expect("supported template has display bounds")
     };
     let seaforium_spell = template.seaforium_spell;
-    let linked_trap = (template.linked_trap != 0 && template.cooking_focus.is_some())
-        .then(|| world.resource::<SummonedObjectTemplates>().1.clone())
-        .flatten();
+    let linked_trap = template.cooking_focus.and_then(|_| {
+        world
+            .resource::<SummonedObjectTemplates>()
+            .1
+            .get(&template.linked_trap)
+            .cloned()
+    });
     let mut object = world.spawn((
         Position {
             x: dest.position.x,
@@ -392,7 +401,8 @@ fn spawn_object(
 }
 
 pub(crate) fn expire_objects(world: &mut World) {
-    let time = now(world);
+    // TC GameObject.cpp1403/2286 uses GameTime, not capped simulation ticks.
+    let time = history_now(world);
     let mut query = world.query::<(Entity, &SummonedObject)>();
     let expired: Vec<_> = query
         .iter(world)
