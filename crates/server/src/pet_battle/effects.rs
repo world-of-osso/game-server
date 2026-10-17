@@ -227,11 +227,10 @@ impl<R: BattleRng> Runtime<'_, R> {
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
                 let target = if super::rules::damages_enemy_team(ability) {
-                    // Rapid Fire's two authored three-row waves address the same pets.
-                    let order = if ability == 774 {
-                        (effect.order - 1) % 3 + 1
-                    } else {
-                        effect.order
+                    let order = match ability {
+                        774 => (effect.order - 1) % 3 + 1,
+                        920 => effect.order.div_ceil(2),
+                        _ => effect.order,
                     };
                     other_team_slot(target, order)
                 } else {
@@ -322,7 +321,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             50 if !self.required_states(caster, target, p[4], p[5]) => Ok(false),
             26 | 28 | 50 | 52 | 54 | 63 => {
-                let target = if matches!(ability, 527 | 1010) && effect.property == 50 {
+                let target = if matches!(ability, 527 | 920 | 1010) && effect.property == 50 {
                     other_team_slot(target, effect.order.div_ceil(2))
                 } else {
                     target
