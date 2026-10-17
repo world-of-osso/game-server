@@ -39,6 +39,40 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_starfall_uses_legal_level_one_cosmos_and_heals_owned_reserves() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 1972), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 1, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    for state in states.values_mut() {
+        state.health = 100;
+    }
+    assert_eq!(states[&41].selected_abilities, [258, 0, 0]);
+    let mut encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 1972);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 11);
+    let (state, _) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(258), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    assert_eq!(state.teams[0].pets.each_ref().map(|p| p.health), [109; 3]);
+    assert_eq!(state.auras[0].ability, 596);
+    encounter.battle = state;
+    assert_eq!(
+        encounter.owned_health(0),
+        vec![(41, 109), (42, 109), (43, 109)]
+    );
+}
+
+#[test]
 fn wild_pet_battles_level_health_uses_actual_owned_level_and_clamps_persisted_capacity() {
     let catalog = catalog();
     for level in [2, 7, 25] {
