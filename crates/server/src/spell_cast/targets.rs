@@ -15,7 +15,8 @@
 //! without a radius; collision is not modelled), 53 DEST_TARGET_ENEMY, 60 UNIT_CONE_ENTRY (units ahead of the
 //! caster that meet the effect's `conditions`), 63 DEST_TARGET_ANY, 132
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
-//! effect radius behind it; collision is not modelled), 77 UNIT_CHANNEL_TARGET
+//! effect radius behind it; collision is not modelled), 76 DEST_CHANNEL_TARGET
+//! (the live channel destination), 77 UNIT_CHANNEL_TARGET
 //! (the caster's channel target) and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). With no group or pet backend, 56 UNIT_CASTER_AREA_RAID
 //! and 120 UNIT_CASTER_AND_SUMMONS resolve to the caster, and 57
@@ -84,6 +85,8 @@ enum Selector {
     NearbyEntry,
     /// Area center = the explicit target's position, the radius behind it.
     DestTargetBack,
+    /// The live channel's destination, else its target's current position.
+    ChannelDestination,
     /// The caster's channel target.
     ChannelTarget,
     /// The caster's summoned pet.
@@ -143,6 +146,7 @@ fn selector(id: u32) -> Option<Selector> {
         28 => Selector::DynObj(Enemy),
         29 => Selector::DynObj(Ally),
         65 => Selector::DestTargetBack,
+        76 => Selector::ChannelDestination,
         77 => Selector::ChannelTarget,
         24 => Selector::ConeEnemy,
         60 => Selector::ConeEntry,
@@ -462,6 +466,9 @@ pub fn select_targets(
                         radius(effect, slot),
                     )
                 });
+            }
+            Selector::ChannelDestination => {
+                center = channel_destination(world, caster).map(|dest| dest.position);
             }
             Selector::ChannelTarget => {
                 selected_any = true;
@@ -1083,6 +1090,28 @@ fn channel_target(world: &World, caster: Entity) -> Option<Entity> {
         .flatten()
 }
 
+/// TC a352b1fa Spell.cpp:1037–1082: only the active channel supplies selector76.
+fn channel_destination(world: &World, caster: Entity) -> Option<Dest> {
+    let cast = world.get::<CastState>(caster)?;
+    if cast.cast_type != CastType::Channel {
+        return None;
+    }
+    let requested = world
+        .get::<super::PendingCastSpell>(caster)
+        .and_then(|pending| pending.0.cast_destination);
+    if let Some(point) = requested {
+        return Some(Dest {
+            position: Vec3::from_array(point),
+            orientation: orientation(world, caster),
+        });
+    }
+    let target = channel_target(world, caster)?;
+    Some(Dest {
+        position: position(world, target)?,
+        orientation: orientation(world, target),
+    })
+}
+
 /// The destination of one effect: the last of its slots that sets one
 /// (`SelectImplicitTargetDestTargets`, TargetB after TargetA); the facing is the
 /// explicit target's (`EffectTeleportUnits` takes it when the dest has none).
@@ -1100,6 +1129,10 @@ pub fn effect_dest(
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         let selector = selector(id)?;
         let point = match selector {
+            Selector::ChannelDestination => {
+                dest = channel_destination(world, caster);
+                continue;
+            }
             Selector::CenterCaster => position(world, caster),
             Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
             // TC Spell::InitExplicitTargets:666–678; CheckDst must retain the

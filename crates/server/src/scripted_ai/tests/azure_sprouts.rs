@@ -12,7 +12,7 @@ const ORIGINS: [(f32, f32, f32); 7] = [
     (-5114.78, 1277.42, 555.87),
 ];
 
-fn prepare_sprout_templates(h: &mut Harness) {
+pub(super) fn prepare_sprout_templates(h: &mut Harness) {
     let (_directory, path) = prepare_encounter_database("leymor");
     let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = h.app.world().resource::<WorldData>().expected_stats.clone();
@@ -33,7 +33,7 @@ fn prepare_sprout_templates(h: &mut Harness) {
         .expect("prepared native summon level inputs");
 }
 
-fn install_azure_ground(h: &mut Harness, map: InMap) {
+pub(super) fn install_azure_ground(h: &mut Harness, map: InMap) {
     let wdt = h.app.world().resource::<MapStore>().maps[&2515].wdt_file_data_id;
     h.app.insert_resource(crate::ground::GroundMap::new(
         &crate::ground::ground_data_dir(),

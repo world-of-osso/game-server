@@ -2981,6 +2981,7 @@ fn flag_match_with_reconnect(
         }
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
+            crate::currency::PlayerCurrencies::default(),
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
