@@ -453,7 +453,7 @@ pub(super) fn credit(scoreboard: &mut Scoreboard, character_id: u64, stat: u32, 
 }
 
 /// TC BattlegroundScore.cpp:78-80: each PvpStat update credits the connected player once,
-/// whatever the stat amount.
+/// whatever the stat amount. The same drained capture receipt dispatches per-map Honor.
 fn credit_objective_events(world: &mut World) {
     let credits: Vec<_> = world
         .resource_mut::<PvpServerState>()
