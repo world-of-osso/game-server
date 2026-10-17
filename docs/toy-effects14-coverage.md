@@ -1,8 +1,21 @@
 # Toy effects14 — active whole-goal coverage
 
-## Source225–229: pending Necrolord acceptance and retained cooking/quill scope (2026-10-17)
+## Source230–234: Smelly Jelly acceptance and hover/mail/tea/moving-area gaps (2026-10-17)
 
-225 Necrolord Hearthstone182773/340200 authors source10s homebind252 and shared2309/one charge/1800000ms recharge. Test/spec e2d1b991 adds its actual learned-use/saved-bind/missing-bind-refusal/shared-sibling-refusal case; ten affected hearthstone variants are queued/running under the single maintained native job. Acceptance is pending until that output and package/tests check are recorded; no runtime/data change, fabricated RED, covenant eligibility or native certificate is claimed.
+234 Smelly Jelly183903/343827 uses existing174859 with authentic96239/96240/96241/96242/96243 choices. Source self transform56/misc8 lasts600000ms with3600000ms item recovery. Test/spec e651544c adds this exact pool to actual learning/ordinary-expiry/restoration/health/recovery acceptance, now seven disguise IDs. Disguises plus Oomgut pass2/2, zero ignored, eight IDs99.85s after one5m51s maintained native compile. Single shared225/234 package/tests check2m25s/no compiler warnings, fmt/readability/diffcheck pass. No production/data change, manufactured RED or native/weighted-sampling certificate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|230 Mystical Orb of Meditation183856/343141 | Self zero-payload dummy4 plus hover106/base10 for60000ms. Meditation/levitation motion/height/restoration and presentation remain unproved as a combined actual-toy contract; do not discard hover as ordinary art or infer native flight from aura support. |
+|231 Quill of Correspondence183876/343305 | Self script3,86400000ms item recovery. Advertised Ember Court best-friend letter and within-a-day mailed reply require recipient eligibility, persistent delayed delivery and real mail proof; no immediate decorative quill or invented letter/reply. |
+|232 Sinvyr Tea Set183900/343403 | Source cursor87 effect50→358569 for180000ms, inheriting3600000ms spell recovery. Source TDB has goober/type10/display67389; runtime content/base template is absent. Tea-serving interaction remains unresolved, so publishing an inert prop is not closure. Separate identity from lead-required149865 Tea Set; neither is admitted here. |
+|233 Bonestorm Top183901/343411 | Cursor87 effect179 creates area trigger23480 for18000ms, inheriting300000ms spell recovery. Source spinning-across-ground action remains unproved; not a creature summon or stationary cosmetic model substitute. |
+
+`rows230-234-{readonly-source,action-source}.json` retains exact70391 roots, durations/recovery and source/runtime template rows. Source234 proof: `slime234-proof-ledger.json`;225's independent ten-variant acceptance is retained without rerun and shares only the final package check. Existing gaps are not new runtime/data admissions or native results.
+
+## Source225–229: Necrolord source acceptance and retained cooking/quill scope (2026-10-17)
+
+225 Necrolord Hearthstone182773/340200 authors source10s homebind252 and shared2309/one charge/1800000ms recharge. Test/spec e2d1b991 adds its actual learned-use/saved-bind/missing-bind-refusal/shared-sibling-refusal case. Ten affected hearthstone variants pass10/10, zero ignored52.90s after one6m04s maintained native compile. One final package/tests check shared with234 passes2m25s/no compiler warnings; fmt/readability/diffcheck pass. No runtime/data change, fabricated RED, covenant eligibility or native certificate is claimed.
 
 | Source row | Exact retained source boundary and proof level |
 |---|---|
@@ -11,7 +24,7 @@
 |228 Venthyr Sinstone183716/342122 | Source10s homebind252/shared2309 also explicitly advertises Venthyr pledge eligibility. ItemEffect condition0 does not establish or negate the complete rule. Actual source eligibility/use/native acceptance stays open; neither225's bounded case nor earlier hearthstones closes it. |
 |229 Acolyte's Guise183847/341175 | Source1500ms self transform56→173467/misc8,900000ms duration; item-1 inherits3600000ms spell recovery. Runtime173467/display94055 exists. Advertised Necrolord pledge and Maldraxxus-specific reduced recovery remain unproved with actual learned use/lifecycle; no ordinary-disguise shortcut or inferred cooldown amount. |
 
-`rows225-229-{readonly-source,action-source}.json` preserves actual roots/cast/charge/duration/recovery and runtime-content rows. Retained historical cooking/quill proof is revision-scoped; the new225 proof ledger remains pending. Tea Set149865 stays the separate lead-required named gap, with no producer/publication changes.
+`rows225-229-{readonly-source,action-source}.json` preserves actual roots/cast/charge/duration/recovery and runtime-content rows. Retained historical cooking/quill proof is revision-scoped; `hearth225-proof-ledger.json` records the new bounded225 proof. Tea Set149865 stays the separate lead-required named gap, with no producer/publication changes.
 
 ## Source220–224: conditional-fall and reagent/random-action boundaries (2026-10-17)
 
