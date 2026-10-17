@@ -25,6 +25,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 ### Invitation lifecycle
 - [x] Invitations reject already-guilded, already-invited, missing/offline and self targets with Retail GlobalStrings; invitation rights come from persisted actor membership.
 - [x] Online invitees receive GuildInvitation; a persisted pending invitation is delivered on world entry. Decline consumes it.
+- [x] Immediate and persisted delivery carry the inviting guild's real optional registered tabard. Missing designs remain absent; invitation storage is not populated with invented emblems. Real request/paid registration/reopened App+redb controls pass for both optional states (TC Guild.cpp1727–1738; Mainline GuildInviteFrame.lua11).
 - [x] Acceptance cannot replace an existing guild; membership, initial lowest rank and invitation consumption commit in one redb transaction. Accepted membership survives reopen; online member rank views refresh.
 
 ### Bank permissions
