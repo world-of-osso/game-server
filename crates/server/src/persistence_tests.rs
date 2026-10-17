@@ -760,8 +760,12 @@ fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
     for _ in 0..300 {
         app.world_mut().run_schedule(FixedUpdate);
     }
-    let db = &app.world().resource::<GameDatabase>().db;
-    assert_eq!(stored_position(db, character_id).0, 25.0);
+    let db = app
+        .world_mut()
+        .remove_resource::<GameDatabase>()
+        .unwrap()
+        .into_database();
+    assert_eq!(stored_position(&db, character_id).0, 25.0);
 }
 
 fn spawn_saved_player(app: &mut App, name: &str, map_id: u32, x: f32) -> u64 {
@@ -808,15 +812,25 @@ fn periodic_save_never_waits_for_a_busy_durable_writer() {
     let started = std::time::Instant::now();
     app.world_mut().run_schedule(FixedUpdate);
     let elapsed = started.elapsed();
+    let entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<ClientId>>()
+        .single(app.world())
+        .unwrap();
+    app.world_mut().get_mut::<Position>(entity).unwrap().x = 50.0;
+    app.world_mut().get_mut::<Health>(entity).unwrap().current = 33.0;
     release.join().unwrap();
+    let saved = app
+        .world_mut()
+        .remove_resource::<GameDatabase>()
+        .unwrap()
+        .into_database();
     assert!(
         elapsed < std::time::Duration::from_millis(50),
         "save tick waited for writer: {elapsed:?}"
     );
-    assert_eq!(
-        stored_position(&app.world().resource::<GameDatabase>().db, character).0,
-        25.0
-    );
+    assert_eq!(stored_position(&saved, character).0, 25.0);
+    assert_eq!(load_character(&saved, character).unwrap().health, 100.0);
 }
 
 #[test]
@@ -852,7 +866,12 @@ fn periodic_save_writes_every_changed_player_with_map_and_corpse() {
     for _ in 0..300 {
         app.world_mut().run_schedule(FixedUpdate);
     }
-    let db = &app.world().resource::<GameDatabase>().db;
+    let saved_db = app
+        .world_mut()
+        .remove_resource::<GameDatabase>()
+        .unwrap()
+        .into_database();
+    let db = &saved_db;
     assert_eq!(stored_position(db, walker).0, 25.0);
     assert_eq!(stored_position(db, ghost).0, -40.0);
     assert_eq!(crate::maps::persistence::load_character_map(db, walker), 0);
