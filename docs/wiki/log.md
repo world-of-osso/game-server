@@ -1,6 +1,6 @@
 ## 2026-10-17 — Omor coincident source angles
 
-[Coincident geometry](systems/boss-scripts.md#coincident-omor-geometry): actual30637 FALLING/30638 damage and ordinary30686 casting precede zero-horizontal-motion RED0/2/126.60s at8a24ba48. Pinned Position.h atan2(0,0)=0 requires+X reach projection/retreat; replace zero-vector normalization in those paths. Strict GREEN pending; no data/timing changes.
+[Coincident geometry](systems/boss-scripts.md#coincident-omor-geometry): actual30637 FALLING/30638 damage and ordinary30686 casting precede zero-horizontal-motion RED0/2/126.60s at8a24ba48. Pinned Position.h atan2(0,0)=0 requires+X reach projection/retreat; replace zero-vector normalization in those paths. Strict GREEN2/2/85.93s atf44f6a66 precedes ignore removal; nonzero/final controls pending, no data/timing changes.
 
 ## 2026-10-17 — Koranthal destination-delay assertions
 
