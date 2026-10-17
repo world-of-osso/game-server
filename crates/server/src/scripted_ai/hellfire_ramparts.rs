@@ -88,9 +88,27 @@ impl CreatureAi for Gargolmar {
         }
     }
 
+    fn on_spell_cast(&mut self, ctx: &mut Ctx, spell_id: u32) {
+        match spell_id {
+            REQUEST_HEAL => ctx.talk(1),
+            SURGE => {
+                // TC OnSpellCast rolls independently of Surge's impact result.
+                let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+                if roll < 50 {
+                    ctx.talk(2);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn killed_unit(&mut self, ctx: &mut Ctx, _victim: Entity) {
+        ctx.talk(4);
+    }
+
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         self.boss.just_died(ctx);
-        // Death sound 10336, OnSpellCast speech and KilledUnit speech need hooks.
+        // Native death sound10336 remains unimplemented.
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
