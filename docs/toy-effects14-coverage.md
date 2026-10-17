@@ -24,9 +24,9 @@
 
 Exact roots, reachable children, properties/durations, visual/procedural data and actual runtime-content/source model rows: `rows205-209-{readonly-source,action-source}.json`. Pinned `SharedDefines.h` identifies179 as create-area-trigger and90 as target-minipet; current source10 fixture preserves209's earlier bounded CPU contract. Read-only source/documentation only, with no new runtime/data/importer/canonical admission or repeated unchanged gate.
 
-## Source200–204: pending Mogu acceptance and companion/equipment/game boundaries (2026-10-17)
+## Source200–204: Mogu source acceptance and companion/equipment/game boundaries (2026-10-17)
 
-201 Trans-mogu-rifier174873/305123 already has runtime156286 with authentic92868/92880/92874/92871 choices. Source self transform56/misc8 lasts600000ms with3600000ms item/spell recovery. Test/spec924bcde11 adds this exact pool to the existing actual-learning/ordinary-expiry/restoration/health/recovery fixture, now six disguise IDs. Fmt/manual changed-line readability/diffcheck pass; owned native-helper disguise/Oomgut tests are still running and package/tests check is pending in `mogu201-proof-ledger.json`. This is not passing201 acceptance, native all-four presentation or full one-hour recovery proof; no production patch or manufactured RED.
+201 Trans-mogu-rifier174873/305123 already has runtime156286 with authentic92868/92880/92874/92871 choices. Source self transform56/misc8 lasts600000ms with3600000ms item/spell recovery. Test/spec924bcde11 adds this exact pool to the existing actual-learning/ordinary-expiry/restoration/health/recovery fixture, now six disguise IDs. Two affected tests/seven IDs pass2/2 zero ignored107.53s after one14m03s native compile. Native package/tests check2m58s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass; `mogu201-proof-ledger.json` records exact commands/revision and unchanged code scope through the documentation descendants. This bounded CPU contract is not native all-four presentation or full one-hour recovery proof; no production patch or manufactured RED.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -35,7 +35,7 @@ Exact roots, reachable children, properties/durations, visual/procedural data an
 |203 Coifcurl's Close Shave Kit174920/317204 | Source47 summon163441/property4493,1000ms cast/120000ms actor and inherited3600000ms spell recovery. Runtime163441/95179/scale0.5 already exists; property4493 is Control1/Title2/flags67592, source npcflag0/empty AI/script. Existing kit metadata does not establish advertised per-user shaving/appearance consequences; no generic stationary actor or invented barber interaction. |
 |204 Void-Touched Skull174921/317210 | Party target35 dummy3 (source description says friendly target) with1800000ms spell recovery. Throw/pass/timer/void-energy game state remains unresolved; no generic missile, friendly aura or ignored script completes that game. |
 
-`rows200-204-{readonly-source,action-source}.json` retains exact roots, reference records, properties/durations, visual/procedural mapping and actual runtime-content models.201 is test/spec only and still pending execution/check; the other named action gaps remain intact. No runtime-policy/importer/canonical/data changes or new native/full-Toy/master certificate.
+`rows200-204-{readonly-source,action-source}.json` retains exact roots, reference records, properties/durations, visual/procedural mapping and actual runtime-content models.Only201 test/spec acceptance changed; the other named action gaps remain intact. No runtime-policy/importer/canonical/data changes or new native/full-Toy/master certificate.
 
 ## Source195–199: motion/faction/appearance/action boundaries (2026-10-17)
 
