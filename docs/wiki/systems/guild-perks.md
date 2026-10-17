@@ -32,6 +32,22 @@ Actual Human native item6948 use exposed458619 (No Place Like Home):411/+1 charg
 
 `ChargeState.pending` is now a VecDeque of `ChargeRecovery { recovery_ms, ready_at }`, selected at each actual consumption as in TC SpellHistory.cpp834–853. Each entry retains its flat-adjusted base before changeable rates. Flat453 changes future uses without changing consumed entries. Rate changes recompute from each stored base and preserve pending progress, avoiding accumulated integer-millisecond truncation; scripted reductions shift deadlines, and restoration removes the newest missing entries. Owner snapshots report the oldest pending entry, switching duration when that entry recovers; no wire extension is added. At4cb11c77,17/17 charge controls pass: four Hasty cases (including real Human mixed25/10/25-minute consumption), ten rate controls and three owner snapshot controls. First queue implementation reproduced two1ms rate-restoration truncations; recomputing each entry from its recorded base fixes both without changing expectations. Separate haste/ControlDream/script-restoration controls and final checks remain pending. Actual identical-binary Human item6948/8690 native proof passes both skins: two25-minute ordinary uses and two10-minute guild uses, current1→0/max2, four real invitation/removal cycles, exact114 non-guild IDs conserved. Both25/10-minute pending clocks survive guild changes without retiming. Twelve inspected full-HD originals show actual bag/item/cast context; numerical clocks are native owner receipts rather than rendered labels. Fresh processes separate consumption scenarios, not a pending-clock restart-persistence proof. Ledger: `/home/osso/.worktrees/logs/guild-hasty-hearth-2026-10-16-run1/proof-ledger.json`.
 
+## Mobile and resurrection authority audit — 2026-10-17
+
+This is source inspection, not effect acceptance or a behavioral RED/GREEN. Mobile Banking and Quick/Dead remain unimplemented.
+
+| Boundary | Established evidence | Remaining gap |
+|---|---|---|
+| Reputation representation | Shared `CharacterReputation` stores faction values; authenticated `reputation_factions.rs` includes Guild1168 atNeutral0. TC a352b1fa `CriteriaHandler.cpp:2069` reads faction1168 directly. | Current cast-versus-chest-use qualification, not a missing reputation table. Do not substitute membership, rank or default Friendly. |
+| Mobile data | Active83958: script77 without trigger,3600000ms recovery. Child88304/88306: actual206602/206603, type34,300000ms duration. | Pinned Mainline dispatch and the mobile object's complete permission/lifecycle path. |
+| Contemporary fork candidate | RoleplayCore8604a936f3eaceb5034eb9e082e78640bf39fad6 `spell_generic.cpp:5920–5957` checks Friendly1168 at cast and dispatches Alliance88304/Horde88306. SQL binding was retrieved, not merely inferred from a search snippet. | Installed tooltip says Friendly users; it does not explicitly require Friendly casters. Fork behavior is not accepted as Mainline authority. |
+| Resurrection candidate | Historical4.3.4 fork sppcppf91cbb76a414d6706effb53051d27ee3cbf6c9b9 `SpellEffects.cpp:297–299,4198–4200,5744–5746` uses the caster's aura, same-guild check, out-of-combat condition and percentage health multiplication. | Not modern recipient/caster qualification authority. TC a352b1fa has HandleNULL for340; installed Mainline tooltip is unqualified. No formula is transplanted. |
+| Dead movement | Installed83950 second effect is dummy3/+10%; pinned source contains no83950 dispatch. | Actual ghost-speed formula and interaction with other ghost modifiers; a tooltip alone does not establish stacking. |
+
+RoleplayCore's March11,2026 commit9fc5c2e586c1fcf9ea3ebc6a5fce4ca85c5bcba2 added this script/binding and replaced an older hard-coded Alliance-only dispatch. That history proves fork authorship, not Blizzard correctness. The fork is not evidence that pinned TC implemented the missing effect.
+
+Executed retrievals, pinned bytes/hashes and repository metadata: `/home/osso/.worktrees/logs/guild-perk-source-audit-2026-10-17/data/`. Raw source provenance identifies repository, commit and file; this directory is diagnostic evidence, not a runtime dependency. Earlier suggestions that a new guild-scoped reputation provider was required are superseded by the actual field representation above.
+
 ## Sources
 
 Installed Mainline GuildPerks.lua/XML; active GuildPerkSpells rows2/7/10/14/16. TrinityCore a352b1fa Guild.cpp2322 grants the perk store's spells on guild login;3002 removes them on leaving/removal.

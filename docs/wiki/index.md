@@ -1,3 +1,4 @@
+- [Guild effect authority audit](systems/guild-perks.md#mobile-and-resurrection-authority-audit--2026-10-17) — existing faction1168 reputation authority; contemporary Mobile cast/use distinction and historical resurrection candidates remain unaccepted, with exact effect gaps.
 - [Active70448 achievements](systems/dungeon-achievements.md#active70448-achievement-inputs) — named CSV import, source build/key receipt, no historical fallback; census migration adds/removes no roots.
 - [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — current terrain per eligible world-HK recipient; controlled full50/account/pin GREEN4/4 on canonical70448; native BG credit unimplemented.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
