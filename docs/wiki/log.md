@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source295–299 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source295299-exact-scouting-map-discovery-boundaries-2026-10-17): five source2s/self-script3 scouting maps retain distinct flight-point AND map-reveal contracts for Broken Isles, Draenor, Pandaria, Cataclysm-established maps and Northrend. Exact authored nodes/fog/eligibility/persistence remain unresolved; no name-to-all-nodes guess, generic cosmetic/no-op admission, player-progress mutation or positive certificate.240/lead472 and279 draft remain separately tracked.
+
 ## 2026-10-17 — Toy source290–294 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source290294-retained-banner-proof-and-wingsridemetadatascouting-gaps-2026-10-17):290 retains source9 actual banner/destination/owner/map/expiry CPU scope;291 covenant-OR-renown wings,292 outdoor Control4 sphere,293 unresolved187861 metadata/seed action and294 real flight/map discovery remain gaps.293 Toy/Item/on-use rows exist without current ItemSparse/runtime item, so no synthetic name/template or guessed Flags2 policy. No runtime/data change, new admission or fresh positive certificate;240/lead472 and279 draft remain separate.
