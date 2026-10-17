@@ -122,3 +122,7 @@ Terminal state must be sent before End on CollectionChannel: otherwise lethal-ro
 
 - [[world-data]] — static SQLite boundary.
 - [[toys]] — account collections remain outside this turn library.
+
+### Level-based maximum health — 2026-10-17
+
+Actual caller level1..25 now enters existing Internal_InitialLevel17 through `Pet::new`; owned/wild creation supplies Identity.level, never stat-derived/default level. Only577/610 state2=500 and1990=1000 are admitted. Add raw state2 × actual level /100 before the existing max-health percentage/floor path, preserving current-HP clamp and original base cap at `Encounter::owned_health()`. Aura deltas already handle application, refresh and expiry; no parallel stat or persistence system. [Coverage/source/proof boundary](../../pet-battle-effect-coverage.md#level-based-maximum-health--implementation2026-10-17) owns exact results and pending native proof. All ten fixture tables reconcile to active70448; [fresh census](../../pet-battle-census-70448.json)1797/2829/1023 does not rename historical70391. Independent Retail percentage ordering remains open.
