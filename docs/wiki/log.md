@@ -1,6 +1,6 @@
 ## 2026-10-16 — Queued effect64 payment phases
 
-[Spell casting](systems/spell-casting.md#queued-effect64-payment-phases--2026-10-16): source clears child power/reagent ignore bits while native470411 retains parent resources via Attr6=0x20. Actual Flame Shock chain RED1pass/3fail23.12s exposes both wrong payment phases and vanished-target payment; generic full-trigger cost bypass control passes. Shared payment boundary and distinct cost-retaining child route committed, GREEN pending; no native rows/stat/mana/clock/RNG edits.
+[Spell casting](systems/spell-casting.md#queued-effect64-payment-phases--2026-10-16): source clears child power/reagent ignore bits while native470411 retains parent resources via Attr6=0x20. Actual Flame Shock chain RED1pass/3fail23.12s exposes both wrong payment phases and vanished-target payment; generic full-trigger cost bypass control passes. Shared payment boundary and distinct cost-retaining child route pass merged126/0/0 in58.89s (358.280s wrapper), four new+122 adjacent; workspace/all-target check92.274s/0warnings, fmt and independent artifact/wiring/readability pass. Prior missing-concentration-protocol compiler log retained as invalid proof; landed protocol5e4af62/server9eb0b706 cohort integrated756e8352. No native rows/stat/mana/clock/RNG edits.
 
 ## 2026-10-16 — Native queued effect64 integration
 
