@@ -56,7 +56,7 @@ fn assert_missing_caster_aura(h: &Harness) {
         Some("SPELL_FAILED_CASTER_AURASTATE")
     );
     assert!(h.inbox.go.is_empty(), "{:?}", h.inbox.go);
-    assert!(h.inbox.cooldowns.is_empty());
+    assert!(h.inbox.cooldowns.is_empty(), "{:?}", h.inbox.cooldowns);
     assert!(h.inbox.charges.is_empty());
 }
 
