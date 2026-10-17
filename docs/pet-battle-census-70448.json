@@ -7475,5 +7475,67 @@
       "error": "unsupported property 372 at effect 5037"
     }
   ],
-  "unresolved_states": 35
+  "unresolved_states": 35,
+  "source_tables": {
+    "battle_pet_ability": {
+      "csv_sha256": "333aa98cb904861dd7723b5cc2b1e064dc033e1ea1571cef31fd77157d1c5047",
+      "rows": 1404,
+      "fixture_content_sha256": "79629ade0df5a386e8308958f5a7e2eab20341e9d1ce3bb6c00dfcfab02a89cc",
+      "content_identical": true
+    },
+    "battle_pet_ability_turn": {
+      "csv_sha256": "cf928454110ba831fc36724d9edeffa8f6bb47923a6207eecbe8a261519deff7",
+      "rows": 1650,
+      "fixture_content_sha256": "822764fd9a46b8c4e4e63b63c01a82753c26c01d27e69444930a9c9798519ed6",
+      "content_identical": true
+    },
+    "battle_pet_ability_effect": {
+      "csv_sha256": "f7e4df9e14e7c5b7426722fa824318e2761e8ee75d973c8a67964361add5ccb6",
+      "rows": 2829,
+      "fixture_content_sha256": "2fb382345109409757430548d418a2f57531ed6ddc13767d0e6c6d1b0941c54c",
+      "content_identical": true
+    },
+    "battle_pet_effect_properties": {
+      "csv_sha256": "6ef5ccf78620aa6fd4f138949ebfc252e7cf897ee6e7d3a208c22e0a64914e04",
+      "rows": 136,
+      "fixture_content_sha256": "69db6e73beec8c5ab092f4c2948420a8c16d0583966855c4952590ede375845a",
+      "content_identical": true
+    },
+    "battle_pet_state": {
+      "csv_sha256": "e35ef5ff434d632cb9977de6a8a05bf8132b95183cf43c468ee8077b9a07e334",
+      "rows": 123,
+      "fixture_content_sha256": "76ccf6cdd520cc650411869addd649f19cc8def7216b28530cc5ceb89acc06d1",
+      "content_identical": true
+    },
+    "battle_pet_species_state": {
+      "csv_sha256": "703171af0ef37597014ec5abb9789178334e9d41968ab839d08b21f94b1bc300",
+      "rows": 8095,
+      "fixture_content_sha256": "151878f975fa85fad25f9d32a8649c82b2c3d973c68818c12a6f44369ef5c1f0",
+      "content_identical": true
+    },
+    "battle_pet_breed_state": {
+      "csv_sha256": "6b8b45801810105fded321b08bc64685dd31bd56fa399f3e96d562fa205b88a6",
+      "rows": 83,
+      "fixture_content_sha256": "b8c3a33b54e3de497ed1703dc04bb0a84d0c4953f629ffff35f44373ea5abbe3",
+      "content_identical": true
+    },
+    "battle_pet_breed_quality": {
+      "csv_sha256": "840139b005503edda3ec6384514a97aab430327105da9e2800cd31fdcc9d626b",
+      "rows": 6,
+      "fixture_content_sha256": "e1c0723cad85f1c6c34490b2393d600bfeacd7b6205cfc31c61ef84276355b4f",
+      "content_identical": true
+    },
+    "battle_pet_species_x_ability": {
+      "csv_sha256": "2758299630bb3905fd2b2ddbe0f6ee8642db3351cefcdab729b3f24fd121cd6c",
+      "rows": 14993,
+      "fixture_content_sha256": "e8ecfcb3977f029ca3d84a2ca740fe0acceeb7f60c56eec3cfb8809f25aa71a4",
+      "content_identical": true
+    },
+    "battle_pet_ability_state": {
+      "csv_sha256": "ba6a2d25b3e957bb76dbb1b92fcdd1e8a8c4e8f0b50d34dbe8114920d57bb930",
+      "rows": 460,
+      "fixture_content_sha256": "97cbc49c12575067016867f5420774b44a01c6b46e888150dfb9dec2c015af81",
+      "content_identical": true
+    }
+  }
 }
