@@ -174,7 +174,7 @@ pub struct CreatureAddon {
     pub emote_state: u32,
 }
 
-/// `creature_formations` row for a member other than its leader.
+/// `creature_formations` row, including a leader's authored self-membership.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormationInfo {
     pub leader_guid: u32,

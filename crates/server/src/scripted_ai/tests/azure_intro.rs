@@ -7,11 +7,11 @@ const AZURE_MAP: u32 = 2515;
 const FOLLOWER_DIFFICULTY: u32 = 205;
 const STASIS: u32 = 375729;
 const ARCANE_ERUPTION: u32 = 375749;
-// TC a352b1fa UnitDefines.h176; production has no named NPC immunity bit yet.
+// TC a352b1fa UnitDefines.h176; literal retains the independent source assertion.
 const IMMUNE_TO_NPC: u32 = 0x0000_0200;
 
 #[test]
-#[ignore = "RED: NPC immunity attack admission not implemented"]
+#[ignore = "RED: NPC immunity attack admission GREEN pending"]
 fn azure_leymor_sourced_npc_immunity_rejects_npc_attack_admission() {
     let flags = shared::components::UnitFlags(IMMUNE_TO_NPC);
     assert!(
@@ -103,7 +103,7 @@ fn spawn_second_copy(h: &mut Harness) -> (Entity, InMap) {
 }
 
 #[test]
-#[ignore = "RED: copy-local non-following formation depletion not implemented"]
+#[ignore = "RED: copy-local non-following formation depletion GREEN pending"]
 fn azure_leymor_tender_depletion_does_not_wake_another_live_copy() {
     let (mut h, leymor, map) = source_azure_copy();
     let (other_leymor, other_map) = spawn_second_copy(&mut h);
@@ -145,7 +145,7 @@ fn azure_leymor_appears_in_native_stasis_until_tender_group_depletion() {
 }
 
 #[test]
-#[ignore = "RED: copy-local non-following formation depletion not implemented"]
+#[ignore = "RED: copy-local non-following formation depletion GREEN pending"]
 fn azure_leymor_last_native_tender_death_wakes_after_one_second_and_stays_awake() {
     let (mut h, leymor, map) = source_azure_copy();
     let tenders: Vec<_> = h

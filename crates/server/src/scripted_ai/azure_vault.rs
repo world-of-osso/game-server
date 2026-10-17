@@ -1,6 +1,7 @@
-//! TC a352b1fa Leymor Explosive Brand and Telash Frost Bomb expiry hooks.
+//! TC a352b1fa Leymor intro, Explosive Brand and Telash Frost Bomb hooks.
 //! Boss schedules, energy/jump phases and rune/ground area actions remain unported.
 use bevy::prelude::*;
+use shared::components::UnitFlags;
 
 use crate::auras::{
     AuraInstance, RemoveReason, handlers,
@@ -21,7 +22,6 @@ const DATA_LEYMOR_INTRO_DONE: u32 = 4;
 const ACTION_FINISH_LEYMOR_INTRO: i32 = 251501;
 const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
-use shared::components::UnitFlags;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
     name == LEYMOR_SCRIPT
@@ -59,7 +59,9 @@ pub(super) fn finish_leymor_intro(
     let leymor = world
         .query::<(Entity, &shared::components::Npc, &crate::maps::InMap)>()
         .iter(world)
-        .find_map(|(entity, npc, copy)| (npc.entry == LEYMOR && *copy == map).then_some(entity));
+        .find_map(|(entity, npc, copy)| {
+            (npc.template_id == LEYMOR && *copy == map).then_some(entity)
+        });
     if let Some(leymor) = leymor {
         super::dispatch(
             world,
