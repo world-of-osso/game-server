@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source290–294: retained banner proof and wings/ride/metadata/scouting gaps (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|290 Tormented Banner of the Opportune187834/360123 | Target47 summon181826/display102568/scale1 for60000ms, inheriting600000ms spell recovery. Retain [source9's historical actual learning/use/authentic actor/destination/owner/map/stationary/expiry CPU scope](wiki/systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10), including this exact ID and source2yd seasonal-banner position. No new current test/native/pixel/audio certificate. |
+|291 Sparkle Wings187840/360184 | Self complete-zero dummy4 for180000ms,300000ms item recovery; source explicitly requires Night Fae covenant membership OR Renown80 with Night Fae. Eligibility and source wing presentation/lifecycle remain unproved as this combined contract; no copied Blazing Wings admission or invented current-covenant-only gate. |
+|292 Mortis Mover187860/360463 | Source1500ms aura285→360454; child has1500ms target18 summon182103/properties5234 (Control4) plus self dummy4; both durations180000ms, item recovery100000ms. TDB103066/scale1 exists, runtime absent. Advertised outdoor eligibility, standing-on/rolling-sphere motion, control and cleanup remain unproved; no ordinary linked/caster actor substitute. |
+|293 Unresolved item187861 / on-use360464 | Toy row1151/Flags2 and Item row exist, but current70391 ItemSparse and runtime content_item187861 are absent. Root source1000ms persistent-area27/dummy4 at target18 for14000ms says “Plant a seed.” Missing authentic item name/definition is a data gap, not permission to synthesize metadata or name the item after its spell. Actual seed action also remains unproved. |
+|294 Scouting Map: Into the Shadowlands187869/360518 | Source2000ms self script3 advertises discovery of flight points and map reveal. Exact authored flight-node/map-fog changes, eligibility and persistence remain unproved; no generic caster art, guessed node list or no-op success. |
+
+`rows290-294-{readonly-source,action-source}.json` preserves exact70391 roots/children/casts/durations/recovery/property fields and runtime/source model/item presence.293's Flags2 is retained literally, not interpreted as a new availability rule. No metadata fallback, producer/data/canonical change, new admission or positive simulation/native result.240 owned targeted proof/lead472 package gate and279 draft remain separately tracked;149865 Tea Set stays lead-required.
+
 ## Source285–289: critter/cooldown/stage/friends/containment boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
