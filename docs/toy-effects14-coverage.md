@@ -1,5 +1,16 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source170–174: standard/insignia/equipment/linked-hologram boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|170 Alliance War Standard169278/300108 | Permanent self dummy4 plus speed-decrease aura33/base25;10000ms item recovery. Like169's different Horde Standard, this mixed action has no new actual-use/slow/combat-removal acceptance. Prior167–168 War Banner proof does not cover either Standard. |
+|171 Stormpike Insignia169297/196080 and172 Frostwolf Insignia169298/196079 | Both self script77/source10s cast/RequiredAreasID27. Stormpike item/category1091 recovery120000/120000ms differs from Frostwolf120000/1000ms. Descriptions name Dun Baldar/Frostwolf Keep, not executable destination coordinates or rules. Sanctuary routing/eligibility remains unresolved; no hearthstone/homebind or generic teleport substitute. |
+|173 Hell-Bent Bracers169303/300835 | Self dummy4/900000ms,2700000ms item recovery; visual93704 includes kit type10 and seven type17 procedural entries360069–360075 with Value1=62814/62816/64311/60617/39464/60619/60618. Advertised arm-power/equipment presentation remains unproved; no stat bonus or generic cosmetic inferred from the zero dummy payload. |
+|174 Judgment of Mechagon169347/301013 | Linked-summon aura428/300000ms names301014, whose source effects combine154818/property64/front47 summon and self dummy4, with permanent child duration. Published runtime154818 is absent even though content/source154818 exists with92155/scale1/weight1 and faction0/npcflag0/empty AI/script. Content presence is not published availability or successful linked actor/hologram/lifecycle behavior; no generic actor or incomplete child admission. |
+
+`rows170-174-{readonly-source,action-source}.json` preserves exact roots, child effects, casts, durations, visuals/procedurals and distinct runtime/content/source reads. Pinned `SpellAuraEffects.cpp` identifies428 as `SPELL_AURA_LINKED_SUMMON`; that label does not establish this toy's missing child action. Source/documentation only, without runtime/importer/canonical changes, new acceptance or repeat of unchanged code gates.
+
 ## Source165–169: Holographic Hearthstone and banner boundaries (2026-10-17)
 
 165 Holographic Digitalization Hearthstone168907/298068 uses existing source10s homebind252/shared2309 behavior. Test-only9d1214327 adds actual bag learning/UseToy to the saved-bind fixture: absent bind refuses without spending, a displaced caster returns after the ordinary authored cast, charge max1/current0/recharge1800000ms is reported, and Brewfest140 then refuses. Health/model remain unchanged. All eight actual holiday hearthstone variants pass8/8 zero ignored62.43s; fmt/diffcheck/manual changed-line readability pass. Native package/tests check remains pending capacity admission in `hearth165-proof-ledger.json`, not a passed gate. No production change or manufactured RED; cross-map/native presentation and natural30min recharge remain unproved. Source visual86828 includes procedural358629/358630 type22, not a native acceptance claim.
