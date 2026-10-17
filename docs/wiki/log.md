@@ -1,6 +1,6 @@
 ## 2026-10-17 — Omor sourced pull124
 
-[Omor](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): actual periodic30638 damage precedes physical no-reversal REDbf5659cd. Source handlerb509bd01 passes strict movement1/1/58.80s; enable only after this receipt. Direct-child3D-distance/reach controls and ordinary integration pending; map543 obstacle/Detour/dynamic collision and full native proof remain open.
+[Omor](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): actual periodic30638 damage precedes physical no-reversal REDbf5659cd. Source handlerb509bd01 passes strict movement1/1/58.80s; enable only after this receipt. Ordinary Omor7/shared knockback9 pass16/16/435.67s at73932f34, including actual-child3D-distance/reach/no-teleport controls; map543 obstacle/Detour/dynamic collision and full native proof remain open.
 
 ## 2026-10-17 — Omor Orbital source hooks
 
