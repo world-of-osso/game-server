@@ -76,7 +76,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 damage.params[2] = 0;
                 self.damage_effect(caster, target, ability, &damage)
             }
-            76 => self.charged_damage(caster, target, ability, effect),
+            75 | 76 => self.charged_damage(caster, target, ability, effect),
             370 => self.damage_with_species_bonus(caster, target, ability, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
