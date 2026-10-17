@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source critter/passenger/reflection boundaries and retained hearth/vesper proof (2026-10-17)
+
+[Source245–249 matrix](../../toy-effects14-coverage.md#source245249-critterpassengerreflection-gaps-and-retained-hearthvesper-proof-2026-10-17) retains authentic half-critter destruction, wounded-ally carrying and chained reflection-summon gaps. Stretcher properties5075 is Control0, with one zero-probability source model; no fabricated vehicle or arbitrary visible selection.246 linked cooking and249 stationary Vesper retain earlier exact CPU witnesses, not new per-toy native/audio proof. No runtime/data admission or repeated unchanged gate.
+
 ## Pending Dominated helm and coin/launch/linked/covenant boundaries (2026-10-17)
 
 [Source240–244 matrix](../../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17) adds240 test/spec c8feec2e for existing175221/nine-display actual learning/ten-minute restoration/inherited recovery; tests/check remain pending under the capacity-gated job. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
