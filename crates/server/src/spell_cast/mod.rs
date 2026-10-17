@@ -1564,6 +1564,21 @@ fn taught_by_known_spell(world: &World, caster: Entity, spell_id: u32) -> bool {
         })
 }
 
+/// TC CheckCast: ordinary passive spells and AllowCastWhileDead survive this check.
+fn check_ordinary_caster_life(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    const ALLOW_CAST_WHILE_DEAD: u32 = 0x0080_0000;
+    let allows_dead_caster =
+        crate::auras::is_passive(spell) || attributes(spell, 0) & ALLOW_CAST_WHILE_DEAD != 0;
+    if !targets::is_alive(world, caster) && !allows_dead_caster {
+        return Err(CastFailure::CasterDead);
+    }
+    Ok(())
+}
+
 /// Validate everything checked before a cast starts; returns the explicit
 /// target the spell will use.
 fn validate_start(
@@ -1573,9 +1588,7 @@ fn validate_start(
     explicit: Option<Entity>,
     ignore_cast_in_progress: bool,
 ) -> Result<Option<Entity>, CastFailure> {
-    if !targets::is_alive(world, caster) {
-        return Err(CastFailure::CasterDead);
-    }
+    check_ordinary_caster_life(world, caster, spell)?;
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
@@ -2094,9 +2107,7 @@ pub(crate) fn execute_cast(
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    if !targets::is_alive(world, caster) {
-        return Err(CastFailure::CasterDead);
-    }
+    check_ordinary_caster_life(world, caster, spell)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;

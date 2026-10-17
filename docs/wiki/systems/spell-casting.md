@@ -2,6 +2,14 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Ordinary dead-caster admission and execution — 2026-10-17
+
+Both `validate_start` and `execute_cast` unconditionally returned CasterDead. Pinned `Spell.cpp:5748–5749` exempts ordinary passive spells and Attr0 AllowCastWhileDead; `SharedDefines.h:442,459` supplies0x40 and0x00800000. The two boundaries now share one checker using existing `auras::is_passive` and the raw attribute, preserving every later caster/recipient/resource/CC check. Bool-triggered/no-aura-origin casts retain their distinct exemption below; no trigger-origin type or new flag storage is added.
+
+Actual Death Touch5 kills the present NPC without direct health writes. Native15007 Resurrection Sickness is active with AllowCastWhileDead, while native199324 Divine Vision is passive without that bit; both have native AllowAuraWhileDead. Genuine REDcbf6e350 is2pass/3fail7.28s (76.171s wrapper): ordinary15007, ordinary199324 and direct15007 execution all return CasterDead. Living15007 application and unexempt dead116 refusal pass. Positive cases must observe actual stored native auras while the caster remains dead, not empty admission or marker injection. GREEN/final gates pending; receipts `data/class-completeness6-2026-10-12/ordinary-dead-caster-{goal,source,proof-ledger}.json`.
+
+Both positive spells are instant. Their eligibility/application does not certify progression of non-instant casts from a dead actor: `advance_casts` still cancels on death, and source death-transition versus already-dead cast scheduling needs separate qualification. These fixtures are not legal Divine Vision knowledge, whole PvP talent/Sickness effects, self-resurrection94 or passive learn/gain/loss proof. No raw Health/Mana/stat/native rows/flags/clocks/RNG/budgets are changed.
+
 ## Creature bool-trigger dead-caster admission — 2026-10-17
 
 `creature_cast(..., triggered=true)` unconditionally rejected a dead caster. Pinned `Spell.cpp:5748–5749` instead exempts `IsTriggered() && !m_triggeredByAuraSpell`; `SpellDefines.h:498,523` gives the bool constructor FULL_MASK with default null TriggeringAura, and `Spell.cpp:3455–3459` only records an aura origin when one is supplied. This bool API has no aura-origin argument, so its living-caster gate was not native compatibility.
