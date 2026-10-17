@@ -409,23 +409,23 @@ fn alterac_channel_tower_honor_requires_destruction_and_rounds_each_event() {
         );
         assert_team_honor(&entered, 0, 0);
 
-        for (entry, amount) in [(tower_entry, 368), (second_tower, 736)] {
+        for (entry, amount, remaining) in [(tower_entry, 368, 625), (second_tower, 736, 550)] {
             let (banner, at) = objects_in(&mut entered.h, entered.copy, entry)[0];
             entered.h.walk_to(actor, at);
             use_object(&mut entered.h, actor, banner);
             entered.h.advance(8);
             entered.h.advance(240);
-            assert!(
-                objects_in(&mut entered.h, entered.copy, entry).is_empty(),
-                "tower destruction missing: team={team:?}, entry={entry}, health={:?}, cast={:?}, snapshot={:?}",
-                entered.h.app.world().get::<Health>(actor.player),
-                entered
-                    .h
-                    .app
-                    .world()
-                    .get::<shared::casting::CastState>(actor.player),
-                battleground(&entered.h, actor),
+            let snapshot = battleground(&entered.h, actor);
+            let enemy_reinforcements = if team == BgTeam::A {
+                snapshot.score_b
+            } else {
+                snapshot.score_a
+            };
+            assert_eq!(
+                enemy_reinforcements, remaining,
+                "tower destruction: team={team:?}, entry={entry}"
             );
+            assert_eq!(snapshot.phase, BgPhase::InProgress);
             let expected = if team == BgTeam::A {
                 [amount, 0]
             } else {
