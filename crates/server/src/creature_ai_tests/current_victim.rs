@@ -267,3 +267,16 @@ fn current_victim_smaller_existing_reach_is_not_increased_to_two_yards() {
     step(&mut app);
     assert!(app.world().get::<Position>(chaser).unwrap().x > from.x);
 }
+
+#[test]
+#[ignore = "requires real Stockade navigation bake"]
+fn current_victim_missing_server_los_is_not_a_positive_in_range_stop() {
+    let (mut app, _, chaser, from) = fixture();
+    app.world_mut()
+        .remove_resource::<crate::line_of_sight::LineOfSight>();
+    step(&mut app);
+    assert!(
+        app.world().get::<Position>(chaser).unwrap().x > from.x,
+        "no LOS resource cannot certify the new in-range pre-stop"
+    );
+}
