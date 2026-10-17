@@ -87,6 +87,10 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 [Bounded1344](../../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16) keeps self26's six-round policy and routes the two other slots only to friendly Critters. A shared explicit-wearer aura function preserves original caster and existing live/charge/refresh semantics; no caster relabeling or shared team shield. Actual unsupported223 RED observed; other selectors and complete Retail timing remain gated. GREEN9/9 and1764/2829 rows/1010 graphs pass. Both-skin private5961 physically blocks caller then Critter reserve independently at892/892, while non-Critter978 takes28/26 damage; strict snapshots/canonical readback pass and eight fullHD originals are inspected. Final CPU gates pending.
 
+### Launch Rocket75 — 2026-10-17
+
+[Bounded293/294](../../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17) admits exact effect508 and its ready-object aura. Existing charged-damage machinery creates the caster's rocket on first use, launches typed damage on second use and consumes the ready aura even on a miss. Real unsupported75 RED3→GREEN4; setup/delayed launch/re-setup, target dodge, three defender families and malformed-tuple rejection covered. Census1777/2829 rows/1015 graphs. Owned-team/native/final gates remain pending; object-sharing and full Retail timing/VFX are not certified.
+
 ### Limits
 
 Handler references are **not** executable or all-row behavioral coverage. The [matrix](../../pet-battle-effect-coverage.md) records recursive admission separately.45 unsupported referenced IDs (including undefined sentinel0), unknown OverrideIndex/target routing, unadmitted object/special-stat auras and proc events1..4/9/12 (except bounded Leech Life383 and Nevermore/Spell Gulp) remain rejected. Control-duration ordering, exact damage rounding/weak game-table factor and several proc timings remain uncaptured. The separate wild consumer has bounded wire/UI integration; this is not a full Retail parity claim.

@@ -1,3 +1,7 @@
+## 2026-10-17 — Launch Rocket setup and launch
+
+[Bounded75](../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17): exact293/effect508/aura294, existing charged direct-damage path. Unsupported75 RED3→GREEN4;1777/2829 rows/1015 graphs. Native and final gates pending; no generic object-sharing/timing/VFX claim.
+
 ## 2026-10-16 — Armageddon team damage and sacrifice
 
 [Armageddon1025](../pet-battle-effect-coverage.md#armageddon1025--bounded-proof2026-10-16): actual team-route rejection RED1→GREEN8, ordinary typed all-enemy routing and bounded self-kill/Failsafe suppression. Authored Rascal-Bot owned loadout covered;1776/2829 rows/1013 graphs. Both-skin strict native61/58 damage/caller321→0/forced reserve/actual use, eight fullHD originals and canonical loader pass. Final lib118/wild-PvP26/UI12/check1m24/fmt pass without warnings; fixed-protocol setup cleaned after proof.
