@@ -5,6 +5,7 @@
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Azure Leymor intro](investigations/follower-data.md#azure-leymor-intro--2026-10-16) — authored groupAI0 depletion, one-second wake/copy lifetime and NPC immunity predicate; five intro +Brand3/Frost6 controls pass14/14, scopedcheck pending; full phases/native70448 acceptance open.
 - [Azure Frost Bomb hooks](investigations/follower-data.md#azure-frost-bomb--2026-10-16) — sourced finite hit/expiry chain and target-derived ground; native6+3 controls/check/fmt pass, full Telash/Leymor phases and full-Azure acceptance open.
 
 - [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.

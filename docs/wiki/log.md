@@ -1,3 +1,7 @@
+## 2026-10-16 — Leymor intro and non-following formation depletion
+
+[Source boundary](investigations/follower-data.md#azure-leymor-intro--2026-10-16): genuine startup/NPC RED4, then startup1PASS/actual-depletion3RED, then source groupAI0 membership/per-copy key4/one-second wake375749 and NPC mask pass. At6ae44dc0, five intro cases include removed leader and copy/reinitialize isolation; three Brand and six Frost controls pass14/14,0ignored. Independent source/artifact/readability and both format gates pass; scopedcheck/protocol unit control pending. Historical70391 proof, not70448 native acceptance or full boss phases.
+
 ## 2026-10-16 — Leymor Brand expiry hook
 
 [Source boundary](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16): native Brand374567 applied/expired but omitted374570 in genuine8049cebc RED; two controls passed. Finite source expiry hook5f1418c2 passes native3/3, fmt and independent source/artifact gate; six shared Frost controls and zero-warning server check pass. Complete Leymor/native acceptance pending.
