@@ -59,6 +59,12 @@ Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each gran
 
 This checkpoint's OnEnd callbacks cover Arathi, Eye, current Warsong and the Alterac survivor contract below. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
 
+## Random Battleground admission and reward profile — 70448
+
+Random32 admission uses parent map566's source bracket (first20–29), parent minimum5/team, capacity10/team and maximum party5. Map selection weights configured concrete templates; missing Deepwind2245 template excludes that map. Preserve each player's original queue32 independently of the selected concrete map. Cross-range selection policy remains pending; do not remap RangeIndex by level or change existing payouts without that decision.
+
+`RANDOM_BG_WIN_REWARD_PROFILE` remains unresolved: pinned TC a352b1fa defaults and shipped assignments use win first27000/repeat13500 and loss first4500/repeat3500 as kill equivalents, not flat Honor. Reset defaults to06:00 server-local. No amounts, reset authority, first-win/daily state or Random completion grant is adopted.
+
 ## Warsong / Twin Peaks capture Honor
 
 Pinned WSG557 and TwinPeaks526 unconditionally grant current Warsong2106/TwinPeaks726 teams two bonus-kill equivalents on each actual flag capture, including the winning capture. Round the whole two-kill grant once using the retained source bracket: WSG first10–19 gives59; Twin Peaks first30–39 gives121. Credit the assigned accepted team still in the copy through the existing positive-Honor eligibility and durable XP/wallet mirror. Pickup, return, possession and repeated objective updates grant nothing. Consume the source capture PvpStat receipt once; do not infer captures from scores or introduce another timer/queue.
