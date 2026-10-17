@@ -1,3 +1,4 @@
+- [Dragon costume lifecycle118–123](systems/toys.md#dragon-costume-simulation-lifecycle-2026-10-17) — actual learned-use, source displays, natural15min expiry/restoration/reuse; bounded simulation proof, native presentation open.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
 - [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
 - [Gargolmar charge impact](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16) — actual19yd no-motion RED→source-speed/reach/delayed-impact GREEN; two-point subset, obstacle/native proof separate.
