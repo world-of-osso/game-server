@@ -5,13 +5,10 @@ fn slay_fixture() -> (Harness, Entity) {
     let (mut h, boss, _) = super::omor::orbital_fixture();
     let player = h.player();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
-    h.app.world_mut().entity_mut(player).insert((
-        Position {
-            x: origin.x + 5.0,
-            ..origin
-        },
-        crate::persistence::ClientId(1001),
-    ));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x + 5.0,
+        ..origin
+    });
     install_player_death_transition(&mut h);
     (h, boss)
 }
@@ -80,7 +77,6 @@ fn cast_ordinary_shadow_bolt(h: &mut Harness, boss: Entity, target: Entity) {
 }
 
 #[test]
-#[ignore = "source ordinary30686 lethal player KilledUnit acceptance pending implementation"]
 fn encounter_coverage_omor_slay_ordinary_shadow_bolt_speaks_once_on_player_death() {
     let (mut h, boss) = slay_fixture();
     let player = h.player();
@@ -139,7 +135,6 @@ fn encounter_coverage_omor_slay_ordinary_shadow_bolt_speaks_once_on_player_death
 }
 
 #[test]
-#[ignore = "source actual NPC kill KilledUnit acceptance pending implementation"]
 fn encounter_coverage_omor_slay_actual_creature_kill_speaks_once() {
     let (mut h, boss, hound, _) = ordinary_hound_fixture();
     assert!(h.health(hound).current > 0.0);
