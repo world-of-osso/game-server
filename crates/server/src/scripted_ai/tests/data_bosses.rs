@@ -13,6 +13,8 @@ mod azure_intro;
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
 mod azure_mechanic_power;
+#[path = "azure_sprout_death.rs"]
+mod azure_sprout_death;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
