@@ -208,6 +208,47 @@ fn spawn_controlled_native_target(h: &mut Harness, entry: u32) -> Entity {
     target
 }
 
+fn add_level20_group_recipient(h: &mut Harness, character: u64, member: u64) -> Entity {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    let recipient = crate::spell_cast::test_harness::spawn_player(&mut h.app, 9, 2.0);
+    h.app.world_mut().entity_mut(recipient).insert((
+        crate::persistence::ClientId(member),
+        shared::components::Level(20),
+        PlayerAchievementState::default(),
+    ));
+    let connection =
+        crate::spell_cast::test_harness::spawn_peer_connection(&mut h.app, recipient, member);
+    h.app.world_mut().entity_mut(connection).insert((
+        Authenticated { account_id: 3 },
+        InWorld {
+            character_id: member,
+        },
+    ));
+    let online: OnlineView = [(character, "Demonlevels"), (member, "Recipient")]
+        .into_iter()
+        .map(|(id, name)| {
+            (
+                id,
+                OnlineMember {
+                    entity: id,
+                    name: name.into(),
+                    class: 9,
+                    level: 20,
+                    portrait: Default::default(),
+                    dungeon_difficulty: 1,
+                    raid_difficulty: Default::default(),
+                },
+            )
+        })
+        .collect();
+    let mut groups = GroupRegistry::default();
+    groups.invite(character, "Recipient", &online);
+    groups.respond_invite(member, true);
+    assert_eq!(groups.group_members(character).len(), 2);
+    h.app.insert_resource(groups);
+    recipient
+}
+
 #[test]
 fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -216,6 +257,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
     persistence::create_tables(&database);
     let (character, _) = persistence::create_character(&database, 1, "Demonlevels", 1, 9).unwrap();
     let (foreign, _) = persistence::create_character(&database, 2, "Foreign", 1, 9).unwrap();
+    let (member, _) = persistence::create_character(&database, 3, "Recipient", 1, 9).unwrap();
     let mut h = harness_with_plugins(vec![], &[686], 9, false, |app| {
         app.add_plugins(AchievementPlugin);
     })
@@ -231,6 +273,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
         crate::persistence::ClientId(character),
         PlayerAchievementState::default(),
     ));
+    let recipient = add_level20_group_recipient(&mut h, character, member);
     // The production content view gives Lesser Voidwalker418 an untuned level20.
     // Legacy Imp416 says5, but native ContentTuning482 makes its actual level90.
     for (level, expected) in [(19, 0), (20, 1), (21, 2)] {
@@ -289,6 +332,20 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             expected.saturating_sub(u64::from(level >= 20))
         );
         let counters = state.criteria_progress.clone();
+        let recipient_state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(recipient)
+            .unwrap();
+        assert_eq!(
+            recipient_state.criteria_progress.get(&107647),
+            Some(&u64::from(level - 18)),
+            "eligible recipient compares their own20, not killer level"
+        );
+        assert_eq!(
+            recipient_state.criteria_progress.get(&4944),
+            Some(&u64::from(level - 18))
+        );
         h.cast(686, Some(target));
         h.advance(160);
         assert_eq!(
@@ -301,6 +358,10 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             "dead and idle frames cannot replay the victim"
         );
     }
+    h.app
+        .world_mut()
+        .entity_mut(recipient)
+        .insert(InMap::continent(1));
     let imp = spawn_controlled_native_target(&mut h, 416);
     assert_eq!(
         h.app
@@ -349,11 +410,24 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
     assert_eq!(achievements[0].achievement_id, 60938);
     assert_eq!(achievements[0].statistic_value, Some(2));
     assert!(!achievements[0].earned);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(recipient)
+            .unwrap()
+            .criteria_progress
+            .get(&4944),
+        Some(&3),
+        "other map copy cannot receive further kill credit"
+    );
     drop(h);
     let reopened = redb::Database::open(file.path()).unwrap();
     let saved = persistence::load_achievements(&reopened, character);
     assert_eq!(saved.criteria_progress.get(&107647), Some(&2));
     assert_eq!(saved.criteria_progress.get(&4944), Some(&5));
+    let recipient_saved = persistence::load_achievements(&reopened, member);
+    assert_eq!(recipient_saved.criteria_progress.get(&107647), Some(&3));
+    assert_eq!(recipient_saved.criteria_progress.get(&4944), Some(&3));
     assert!(
         persistence::load_achievements(&reopened, foreign)
             .criteria_progress
