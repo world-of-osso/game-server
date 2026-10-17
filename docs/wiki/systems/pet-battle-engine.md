@@ -73,7 +73,7 @@ Only the seven [source-qualified150 pairs](../../pet-battle-effect-coverage.md#t
 
 ### Same-species damage370 — 2026-10-16
 
-[Bounded Dragon's Call2283](../../pet-battle-effect-coverage.md#same-species-dragons-call370--implementation2026-10-16) uses literal `Pet.species: u32` passed from owned/wild Identity; unknown species fail explicitly. Additional matching roster pets increase base points before the existing direct-damage pipeline, excluding caster/enemies and never inferring species from family. The literal source has no alive filter; fainted roster identity is retained. Real owned-team RED reproduces unsupported370; GREEN6 passes,1761/2829 rows/1009 graphs. Native proof pending. Test-only roots and independent Retail dead-slot/timing certification remain excluded.
+[Bounded Dragon's Call2283](../../pet-battle-effect-coverage.md#same-species-dragons-call370--implementation2026-10-16) uses literal `Pet.species: u32` passed from owned/wild Identity; unknown species fail explicitly. Additional matching roster pets increase base points before the existing direct-damage pipeline, excluding caster/enemies and never inferring species from family. The literal source has no alive filter; fainted roster identity is retained. Real owned-team RED reproduces unsupported370; GREEN6 passes,1761/2829 rows/1009 graphs. Both-skin private5961 physical2283 with two matching reserves deals85/77 (boosted75–92 range), updates HP/cooldown3 and retains strict asset mode/tripwire0; four fullHD originals inspected. Final CPU gates pending. Test-only roots and independent Retail dead-slot/timing certification remain excluded.
 
 ### Limits
 
