@@ -1962,3 +1962,11 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 - 2026-10-17: Omor slay environmental/owned-hound/revival/callback-order controls GREEN4/4/99.30s at3715cdd4. Removed both acceptance ignores after strict2/2 receipt; remaining verification uses unchanged death/loot/credit/owner tests. Totem title4 remains unsupported by SummonProperties::is_supported, not a new attribution branch.
 
 - 2026-10-17: Slay unchanged death13/loot32/native-imp owner achievement1 plus enabled30686 player1/source-clock-hound-credit1 GREEN48/48 at487f3072; fmt/diff checks0, owned e9 protocol clean. Existing tests/assertions unchanged; generated loot remains after corpse hook by explicit approval.
+
+- 2026-10-17: Gargolmar heal/slay real2RED→strictGREEN2/2/84.46s;64ordinarynativeSurge+scheduledextras reach genuine missingTalk2RED48.79s, source50% added9c8259bd pendingstrictGREEN. Reconciled historical charge/speech gap descriptions and recorded why a global100ms caster throttle is not TC behavior.
+
+- 2026-10-17: Gargolmar Surge50% strictignoredGREEN1/1/50.75s at9c8259bd after real64castRED; removed allthree speech ignores after their strict receipts. Enabled complete Gargolmar regression group pending.
+
+- 2026-10-17: Enabled Gargolmar8 GREEN8/8/294.43s atce47484e, including charge/reset/Watcher heal/credit and allspeechcases. Readability audit splits two new damage predicates into named ownership/kind terms; only those two cases need scoped final proof.
+
+- 2026-10-17: Gargolmar predicate-only final2/2/63.96s atf7126b3b; other six cases retaince47484e8/8 proof, no broad rerun. Also independently read LEAD kill-hook gate449:766/0/28ignored1785.58s/all sixSlay/EXIT0/FMT0, head5032 reportedLANDED.
