@@ -37,8 +37,7 @@ const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
 const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
-pub(crate) const ERUPTING_FISSURE: u32 = 386660;
-const ERUPTING_FISSURE_SPROUT_SELECTOR: u32 = 394154;
+const ERUPTING_FISSURE: u32 = 386660;
 const EVENT_ERUPTING_FISSURE: u32 = 4;
 const EVENT_EXPLOSIVE_BRAND: u32 = 6;
 const CONSUMING_STOMP: u32 = 374720;
@@ -363,25 +362,6 @@ pub(crate) fn cast_brand_child(
         ctx.caster,
         EXPLOSIVE_BRAND_CHILD,
         None,
-        ctx.depth + 1,
-    );
-}
-
-/// TC boss_leymor.cpp495–513: effect0 HIT casts at the actual hit destination.
-pub(crate) fn cast_fissure_sprout_selector(
-    world: &mut World,
-    ctx: &crate::spell_cast::effects::EffectCtx,
-    _effect: &crate::spell_info::SpellEffect,
-) {
-    let Some(destination) = ctx.dest else {
-        warn!("Erupting Fissure386660 has no hit destination for394154");
-        return;
-    };
-    crate::spell_cast::cast_triggered_at_destination(
-        world,
-        ctx.caster,
-        ERUPTING_FISSURE_SPROUT_SELECTOR,
-        destination.position,
         ctx.depth + 1,
     );
 }
