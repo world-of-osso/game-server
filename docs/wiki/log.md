@@ -1,3 +1,7 @@
+## 2026-10-17 — Native Fissure Sprout hit
+
+[Ordinary Fissure lifecycle](investigations/follower-data.md#native-fissure-sprout-hit--2026-10-17): actual20s parent completion/real qualifying Sprout still-alive RED73.59s→native self-death/owner-stack GREEN1/54.27s, exact8f27/sixteen-source/HEAD guards stable. Initial silent-trigger SpellGo assertion invalidated and attempted implementation reverted before genuine RED; no generic cast-publication change. Test enabled; cancellation and entry/front/copy/destination controls plus final gates pending. Visual159239/full Azure remain open.
+
 ## 2026-10-17 — Sprout death stack consumption
 
 [Native Sprout deaths](investigations/follower-data.md#sprout-death-stack-consumption--2026-10-17): original-caster-first fourteen-child RED→GREEN1/45.34s; actual owner stack consumption, final replicated removal and duplicate-corpse exclusion. Timer/amount assertions and integration gates pending.
