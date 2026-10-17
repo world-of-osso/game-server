@@ -297,7 +297,7 @@ fn encounter_coverage_gargolmar_surge_moves_before_distant_impact() {
     let mut impact = None;
     for _ in 0..20 {
         h.advance(0.05);
-        if h.inbox(0).log.iter().any(|event| {
+        if h.inbox(1).log.iter().any(|event| {
             event.source == Some(boss.to_bits())
                 && event.target == Some(far.to_bits())
                 && event.spell_id == Some(34645)
