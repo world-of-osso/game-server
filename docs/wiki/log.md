@@ -1,3 +1,7 @@
+## 2026-10-17 — Dead-start cast progression
+
+[Spell casting](systems/spell-casting.md#dead-start-cast-progression-and-death-interruption--2026-10-17): native5 and actual DeathPlugin create a dead player; active35058/passive53008 bars cancel incorrectly, NPC death fails immediate interruption, and post-corpse DEAD incorrectly consumes a new spell event. RED3pass/4fail6.07s. Server-only native spell snapshot now records the last observed life bit; NPC death/removal/despawn interrupt and DEAD actor events suspend. GREEN pending. Original cast times/radiusB/variance/resource budgets and all seven fixtures retained; no manual life-state injection or corpse-delay extension.
+
 ## 2026-10-17 — Dead-start versus death-during-cast source qualification
 
 [Spell casting](systems/spell-casting.md#non-instant-progression-qualification--2026-10-17): five read-only probes reconciled with primary files. Already-dead eligible casts progress on player/CORPSE event updates; living→dead interrupts existing generic/channel casts regardless of passive/AllowCast flag. Creature DEAD does not update Unit/events. Newly cached Spell.h confirms IsInterruptable is execution reentrancy, not cast-bar interruptibility. Runtime's unconditional health cancel cannot model both cases. Native35058 requires its actual RadiusB13, not A0; no runtime change/test/census promotion. Existing205+1 proofs retained, non-instant acceptance open.

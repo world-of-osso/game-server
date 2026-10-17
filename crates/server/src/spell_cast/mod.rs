@@ -1566,16 +1566,18 @@ fn taught_by_known_spell(world: &World, caster: Entity, spell_id: u32) -> bool {
         })
 }
 
+fn ordinary_cast_allows_dead_caster(spell: &SpellInfo) -> bool {
+    const ALLOW_CAST_WHILE_DEAD: u32 = 0x0080_0000;
+    crate::auras::is_passive(spell) || attributes(spell, 0) & ALLOW_CAST_WHILE_DEAD != 0
+}
+
 /// TC CheckCast: ordinary passive spells and AllowCastWhileDead survive this check.
 fn check_ordinary_caster_life(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
-    const ALLOW_CAST_WHILE_DEAD: u32 = 0x0080_0000;
-    let allows_dead_caster =
-        crate::auras::is_passive(spell) || attributes(spell, 0) & ALLOW_CAST_WHILE_DEAD != 0;
-    if !targets::is_alive(world, caster) && !allows_dead_caster {
+    if !targets::is_alive(world, caster) && !ordinary_cast_allows_dead_caster(spell) {
         return Err(CastFailure::CasterDead);
     }
     Ok(())
@@ -2018,9 +2020,11 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
         CastType::Channel => channel_allows_moving(world, caster, spell),
     };
     debug!(caster = ?caster, state = ?cast, "Cast state started");
-    world
-        .entity_mut(caster)
-        .insert((cast.clone(), PendingCastSpell(spell.clone())));
+    let pending = PendingCastSpell {
+        spell: spell.clone(),
+        caster_was_alive: targets::is_alive(world, caster),
+    };
+    world.entity_mut(caster).insert((cast.clone(), pending));
     mark_dirty(world, caster);
 }
 
@@ -3187,6 +3191,13 @@ pub(crate) fn receive_stop_requests(world: &mut World) {
     }
 }
 
+/// Creature::Update does not run Unit events in DEAD (after corpse removal).
+fn npc_event_updates_suspended(world: &World, caster: Entity) -> bool {
+    world.get::<Npc>(caster).is_some()
+        && world.get::<crate::combat::DeathState>(caster).is_some()
+        && world.get::<crate::combat::Corpse>(caster).is_none()
+}
+
 pub(crate) fn advance_casts(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
     let mut casts = world.query::<(Entity, &CastState)>();
@@ -3200,10 +3211,23 @@ pub(crate) fn advance_casts(world: &mut World) {
             continue;
         };
         let alive = targets::is_alive(world, caster);
-        if (!cast_while_moving && moving) || !alive {
+        if !alive && npc_event_updates_suspended(world, caster) {
+            continue;
+        }
+        let dead_start_allowed = world
+            .get::<PendingCastSpell>(caster)
+            .is_some_and(|pending| {
+                !pending.caster_was_alive && ordinary_cast_allows_dead_caster(&pending.spell)
+            });
+        let movement_interrupts = !cast_while_moving && moving;
+        let death_interrupts = !alive && !dead_start_allowed;
+        if movement_interrupts || death_interrupts {
             debug!(caster = ?caster, moving, alive, cast_while_moving, "Cast progress interrupted by movement or death");
             cancel_cast(world, caster);
             continue;
+        }
+        if let Some(mut pending) = world.get_mut::<PendingCastSpell>(caster) {
+            pending.caster_was_alive = alive;
         }
         let Some(mut cast) = world.get_mut::<CastState>(caster) else {
             continue;
@@ -3237,10 +3261,15 @@ pub(crate) fn advance_casts(world: &mut World) {
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.
 #[derive(Component)]
-struct PendingCastSpell(SpellInfo);
+struct PendingCastSpell {
+    spell: SpellInfo,
+    /// Life observed at insertion or the previous progress tick, not a native flag.
+    caster_was_alive: bool,
+}
 
 fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Option<Entity>) {
-    let Some(PendingCastSpell(spell)) = world.entity_mut(caster).take::<PendingCastSpell>() else {
+    let Some(PendingCastSpell { spell, .. }) = world.entity_mut(caster).take::<PendingCastSpell>()
+    else {
         debug!(caster = ?caster, spell_id, "Cast completion has no pending spell snapshot");
         return;
     };
