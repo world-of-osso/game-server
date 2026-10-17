@@ -1,4 +1,4 @@
-//! Native aura references/types; TC Spell.cpp5881–5883/SpellInfo.cpp2510–2517.
+//! Native aura references/types; TC Spell.cpp5881–5889/SpellInfo.cpp2510–2517.
 use bevy::prelude::*;
 
 use super::CastFailure;
@@ -17,7 +17,16 @@ pub(super) fn check_caster(
     if required != 0 && !crate::auras::has_aura(world, caster, required) {
         return Err(CastFailure::CasterAuraState);
     }
-    check_caster_exclusion(world, caster, spell)
+    check_caster_exclusion(world, caster, spell)?;
+    let excluded_type = restrictions.exclude_caster_aura_type;
+    if excluded_type != 0
+        && world
+            .get::<ActiveAuras>(caster)
+            .is_some_and(|auras| auras.has_type(excluded_type))
+    {
+        return Err(CastFailure::CasterAuraState);
+    }
+    Ok(())
 }
 
 pub(super) fn check_caster_exclusion(

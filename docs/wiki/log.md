@@ -1,3 +1,7 @@
+## 2026-10-16 — Excluded caster aura-type admission
+
+[Spell casting](systems/spell-casting.md#excluded-caster-aura-type-admission--2026-10-16): actual853 zero-amount stun supplies native449285 excluded12. RED1pass/2fail17.32s proves wrong ordinary error priority and incorrect full-trigger admission; cancellation/native expiry control passes. Shared caster field predicate and metadata-before-generic-CC priority implemented; GREEN pending. Required caster types, midcast/26-positive/whole-ability and legal-build acceptance remain separate.
+
 ## 2026-10-16 — Queued effect64 recipient admission
 
 [Spell casting](systems/spell-casting.md#queued-effect64-recipient-admission--2026-10-16): actual470411→188389 queued child and actual Death Touch5 reproduce payment and aura on a present corpse, RED0pass/2fail33.06s. Cost-retaining child now runs maintained normal recipient validation before cost/payment/hit planning; generic full-trigger/reflection helpers unchanged. Current9c01c758/master53a59762/protocol6b06680 passes merged128/0/0 in27.84s (314.078s wrapper), two new+126 prior; workspace/all-target check39.710s/0warnings and fmt pass. Independent artifact/wiring/readability inspection's returned-recipient finding was corrected, then main verified current128/check. Prior missing-PvP-bracket protocol compile log retained as invalid proof. No raw health/mana/clock/budget edits.

@@ -2,6 +2,14 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Excluded caster aura-type admission — 2026-10-16
+
+`check_caster` consumes `ExcludeCasterAuraType` after existing caster spell references, using the actual caster's active effect types, not amount sums. Native449285 Digestive Spittle excludes type12; actual level-eligible Paladin853 Hammer of Justice supplies a zero-amount type12 stun. Source metadata checks at `Spell.cpp:5881–5889` precede generic `CheckCasterAuras` at6113; ordinary admission now keeps263/form/caster metadata before generic CC refusal. This is that relative priority, not certification of every CheckCast error ordering.
+
+Genuine RED9acb0858 is1pass/2fail17.32s (148.900s wrapper): ordinary NPC incorrectly reports Stunned instead of source CasterAuraState/detail, and full-trigger incorrectly admits the spell. Actual cancellation and native six-second expiry controls pass. Full-mask IGNORE_CASTER_AURAS is distinct from IGNORE_CASTER_AURASTATE, so generic CC bypass does not exempt this field. A recipient-only type control is added without an independent RED claim. GREEN/final gates pending; receipts `data/class-completeness6-2026-10-12/excluded-caster-type-{goal,source,proof-ledger}.json`.
+
+This is native internal/NPC metadata eligibility, not a player-learnable Digestive Spittle or whole ability claim. Ordinary/full-trigger admission and lifetime are exercised; completion and queued routes share the checker but lack an independent type-specific midcast fixture (stun normally interrupts). Six of twelve raw restriction fields now have bounded consumers. Required CasterAuraType is zero throughout native70391 and remains unimplemented;439683's excluded26 is retained as raw/generic field input, not an implemented254 effect or qualified positive cast.
+
 ## Queued effect64 recipient admission — 2026-10-16
 
 Native full-mask child flags do not suppress explicit target admission. `SpellInfo.cpp:2455` refuses a dead recipient unless `IsAllowingDeadTarget` permits it;188389 has Attr2=16384 (not ALLOW_DEAD_TARGET bit1), Targets0 and unit selectors. The queue previously discarded missing entities but accepted a present corpse, then spent30 mana and applied Flame Shock: actual native470411 queues188389, actual Death Touch5 kills the NPC before dispatch. Genuine RED7bb23c5d is0pass/2fail33.06s (160.191s wrapper), including9970 mana versus10000 and an observed corpse aura. No health/mana/stat/clock/native-row/RNG edits.

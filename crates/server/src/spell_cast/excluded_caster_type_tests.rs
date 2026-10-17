@@ -63,6 +63,19 @@ fn native_excluded_caster_type_is_not_ignored_by_full_trigger_crowd_control_flag
 }
 
 #[test]
+fn native_excluded_caster_type_does_not_borrow_the_targets_stun() {
+    let mut h = stunned_fixture();
+    assert!(super::try_cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        DIGESTIVE_SPITTLE,
+        Some(h.npc),
+        0,
+    ));
+    assert!(has_stun_type(&h));
+}
+
+#[test]
 fn native_excluded_caster_type_removal_and_expiry_restore_both_cast_routes() {
     for expire in [false, true] {
         let mut h = stunned_fixture();

@@ -1564,12 +1564,12 @@ fn validate_start(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
-    if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
-        return Err(CastFailure::CrowdControlled(block));
-    }
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
+        return Err(CastFailure::CrowdControlled(block));
+    }
     toy_area::check_cast(world, caster, spell.id)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
