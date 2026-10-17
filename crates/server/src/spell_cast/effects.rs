@@ -110,6 +110,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         41 => super::teleport::jump_to_unit,
         96 => super::charge::hit,
         98 | 144 => super::knockback::knock_back,
+        124 => super::knockback::pull_towards,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
