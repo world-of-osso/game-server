@@ -1694,6 +1694,10 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-16: Theradras source port after real missing-casts RED; Zaetar actual base/Normal projection process RED→GREEN. [Details](systems/boss-scripts.md#maraudon-theradras-source-port).
 - 2026-10-16: Profiled full-population idle debug and eleven-peer release; recorded ranked fixed-step costs and health468 scan RED with native crossing control in [[server-tick-lag]].
+
+- 2026-10-16: [Gargolmar](systems/boss-scripts.md#ramparts-gargolmar-runtime--2026-10-16) source clocks/reset/credit and actual Watcher HP; retained distant-charge RED and NPC log-recipient boundary.
+
+- 2026-10-16: [Omor source preparation](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) authenticated primary/orbital server-side spells/hound base0, producer proof only.
 - 2026-10-16: [Native targeted Hug247](systems/dungeon-achievements.md#native-targeted-hug247); complete qualifiers and native RED→GREEN, census247/1042 only.
 
 - 2026-10-16: Content-tuning participation268 bounded to native15; authored min/max, complete companions, generated5809 and census5519/pinned908+909. Native predicate RED genuine, GREEN pending.
@@ -1704,6 +1708,9 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Content268 integrated gate at a8d4d866 passes217/0/1existingignored +site1/1; serverworkspace/alltargetcheckEXIT0/noRustwarnings. Native100 grants908/909 and strengthened89participation guard pass; readability/independentartifactPASS.
 - 2026-10-16: Final geometry proof: 50 controls pass, warning-free check, unchanged 187770-creature idle debug sustains 19.9–20.0 ticks/s; detection 1.891 ms/step, resize/collision out of top15; private published-schema refresh recorded in [[server-tick-lag]].
 
+- 2026-10-16: Landslide deterministic seed104 runtime RED isolates authored cooldown rejection from TaskScheduler request timing; unchanged timing bounds and source mechanics retained. GREEN3/3 passed18.40s under four test workers at e8ee92a3.
+
+- 2026-10-16: Ordinary encounter gate exposes Vyletongue sampling-window RED; deterministic blocked/unblocked controls and integer-ms inclusive samples retain all source timing bounds.
 - 2026-10-16: Five residual idle systems reproduced with full-population/layout REDs before production changes; existing exclusive queries cached for three topology-discovery costs in [[server-tick-lag]].
 
 - 2026-10-16: All five residual idle microbenchmarks GREEN (6.2–7.4 µs/five updates); merged 86/86 controls pass with b701f32 protocol, live release acceptance pending in [[server-tick-lag]].

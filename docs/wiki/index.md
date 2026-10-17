@@ -521,3 +521,11 @@ Debug logs and root cause analyses.
 - [Landslide source port](systems/boss-scripts.md#maraudon-landslide-source-port) — actual missing-casts RED, one-shot damage threshold and source scheduler port; runtime gate pending.
 
 - [Theradras source port](systems/boss-scripts.md#maraudon-theradras-source-port) — controlled source clocks/effects/fixed death spirit/credit GREEN and actual TDB Normal projection; extra attacks remain unsupported.
+
+- [Gargolmar runtime and charge gap](systems/boss-scripts.md#ramparts-gargolmar-runtime--2026-10-16) — source clocks/reset/credit, real Watcher response; distant effect96 impact remains RED.
+
+- [Omor source preparation](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) — actual orbital server-side spells and hound base0, no invented Normal row; runtime pending.
+
+- [Landslide deterministic admission clock](systems/boss-scripts.md#landslide-deterministic-admission-clock--2026-10-16) — real seed104 RED, source cooldown rejection versus request timing; no timer/tolerance change.
+
+- [SAI protected clock samples](systems/boss-scripts.md#sai-protected-clock-samples--2026-10-16) — actual Vyletongue RED isolates dropped50ms endpoint evidence; no production/tolerance change.
