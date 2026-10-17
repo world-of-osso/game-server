@@ -2,6 +2,14 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Triggered explicit-target aura eligibility — 2026-10-16
+
+The source `TRIGGERED_FULL_MASK=0x0007FFFF` excludes both IGNORE_TARGET_CHECK0x00100000 and IGNORE_CASTER_AURASTATE0x00200000 (`SpellDefines.h:293–302`). Even IGNORE_TARGET_CHECK only overrides BAD_TARGETS, not TARGET_AURASTATE (`Spell.cpp:3488–3492`). Earlier bypass controls document previous server behavior, not source compatibility.
+
+Triggered launch now invokes the existing target aura-spell/type checker on its explicit unit before planning/launch. The existing relation bypass remains separate; no full flag redesign or caster-trigger enforcement is included. Native412677 Aura Stack supplies its own aura then triggers412680 Stack Timer, whose native target exclusion forbids itself. Actual repeated normal parent casts incorrectly refreshed the180-second child: genuine REDe52a1cc7 is2pass/1fail11.95s, with expiry180.05 incorrectly becoming182.2; removal/foreign-unit controls pass. GREEN/final gates pending. Receipts `data/class-completeness6-2026-10-12/triggered-target-aura-{goal,source,proof-ledger}.json`.
+
+Missing explicit/auto-self resolution, caster-trigger references, states and whole flag parity remain open. This proves child metadata eligibility/lifetime only, not complete Aura Stack gameplay or UI.
+
 ## Native target aura-type admission — 2026-10-16
 
 Ordinary resolved-unit admission/completion now consumes `TargetAuraType` and `ExcludeTargetAuraType` after the existing aura-spell references. The target's actual `ActiveAuras.has_type` result supplies presence, without amount interpretation, source-ID exceptions or borrowing another unit's auras. Failure retains the source TargetAuraState/detail contract; type checks are outside vehicle/owner state exemptions in the reference (`SpellInfo.cpp:2513–2517`).
@@ -346,7 +354,7 @@ Relations come from faction reactions ([[factions]]): enemy = `can_attack`, ally
 - 87/104/134 now support selected destination, authored destination-directed enemy cone and line;47 selects the caster-front destination. Other unimplemented IDs still fail a handled cast.
 - Effects with the same implicit targets (and, for areas, the same radii) share the first one's selection, as `Spell::SelectSpellTargets` (Spell.cpp:741-781): Avenger's Shield's interrupt and silence hit every unit its damage chains to.
 - Chains (`targets::chain_targets`, `Spell::SearchChainTargets`, Spell.cpp:2216-2320): an explicit unit target with `EffectChainTargets` > 1 jumps to the living unit nearest the last one within the jump radius (7.5 yd ranged, 5 yd melee, 10 yd otherwise), searched within the radius × the jumps left; `SPELL_ATTR2_CHAIN_FROM_CASTER` searches from the caster over the spell range and `ChainFromInitialTarget` keeps the first target as the source. Each jump multiplies damage and healing by `EffectChainAmplitude` (`m_damageMultipliers`, Spell.cpp:8631-8636). Not modelled: line of sight, the melee front arc (`SPELL_ATTR5_MELEE_CHAIN_TARGETING`), chain heal (target 45 is unsupported) and the ChainTargets/ChainJumpDistance/ChainAmplitude spell mods.
-- Triggered spells take their explicit unit whatever its relation to the caster (`TRIGGERED_IGNORE_TARGET_CHECK`, Spell.cpp:3489-3491).
+- Triggered spells currently retain a relation bypass for explicit units; this is not full native flag parity. Explicit target aura eligibility is checked separately [above](#triggered-explicit-target-aura-eligibility--2026-10-16); full-mask flags do not include IGNORE_TARGET_CHECK.
 
 ## Effects
 

@@ -2758,7 +2758,12 @@ fn launch_triggered_spell(
         warn!("Triggered spell {} skipped: {failure:?}", spell.id);
         return false;
     }
-    // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
+    // Native full-trigger flags do not bypass TARGET_AURASTATE. The existing
+    // relation bypass below remains separate from explicit aura eligibility.
+    if let Err(failure) = aura_spell_restrictions::check_target(world, explicit, spell) {
+        warn!("Triggered spell {} skipped: {failure:?}", spell.id);
+        return false;
+    }
     match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
