@@ -1,3 +1,7 @@
+## 2026-10-17 — Guild effect source authority
+
+[Mobile/resurrection audit](systems/guild-perks.md#mobile-and-resurrection-authority-audit--2026-10-17): existing authenticated faction1168 disproves the missing-reputation-provider assumption. Retrieved and pinned contemporary Mobile and historical resurrection fork candidates; neither establishes Mainline cast/use, resurrection qualification or ghost-stacking policy. No production behavior or effect completion claimed.
+
 ## 2026-10-17 — Guild invitation appearance delivery
 
 [Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
