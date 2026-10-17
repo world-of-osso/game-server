@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Katy's Stampwhistle156833/261602 requires authentic132969/display68512 and property4203 Control1/Assistant35. Use native default TempSummon lifetime, not a pet/minion body or following actor: one stationary source47/3yd-front actor for600000ms. Preserve source GOSSIP|MAILBOX flags, faction35, caster identity,10800000ms item/category2066 recovery and ordinary despawn. Existing mailbox service must open from the real actor, retain distance/death/despawn guards and reject requests after closure; no invented gossip option. Server interaction does not certify native body/rendering or wall lifetime.
+
 - Sightless Eye153293/254568 preserves source aura152's target detected-range modifier-15yd for600000ms, instant cast, area group5454 and300000ms item recovery. Use the existing native creature attack-distance calculation, including its minimum/reach clamps and source level/expansion exceptions; do not treat this as stealth, invisibility or untargetability. Ordinary expiry restores detection, not a timer/cooldown reset. Native visual/wire acceptance remains separate.
 
 - Source aura241 sets replicated `UnitFlags2::FORCE_MOVEMENT` (0x40), preserving unrelated bits. Removing one overlapping241 aura retains the flag; the final removal clears only that bit (TC `HandleForceMoveForward`). Server flag lifecycle alone does not certify native movement or full toy parity.
@@ -126,3 +128,7 @@ Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actio
 - Retail cached `Blizzard_ToyBox.lua`: 229–246 UseToy(itemID), 254–271 account favourites, 135–165 TOYS_UPDATED.
 - TrinityCore a352b1fa `WorldSession::HandleUseItemOpcode`, `Player::CastItemUseSpell`, `SpellHistory::GetCooldownDurations`: item-use dispatch and ItemEffect overrides. Generic aura-56 transform handling excludes zero-entry spell-specific costume logic (`auras/unit_state.rs`).
 - Implementation and preparation commands: [Toy Box system](../wiki/systems/toys.md).
+
+- Source Overtuned Corgi Goggles158149/264091 preserves viewer aura233 payload[3569,53] through real learning/use and cancellation; never replace it with a global ModelDisplay transform. Source duration600000ms is not a ten-minute native-expiry certificate. Viewer-local payload interpretation/rendering remains unimplemented.
+
+- Roar of Rezan160509/272071 emits the real cast event for authored caster sound/animation visual77572, preserves health/global appearance and creates no summon or aura. Preserve item recovery90000ms and ordinary rejection/reuse. This bounded server contract does not certify native audio/animation playback.

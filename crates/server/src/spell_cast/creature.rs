@@ -38,12 +38,12 @@ pub(crate) fn creature_cast(
 ) -> Result<(), CastFailure> {
     let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
     if !triggered {
-        return start_cast(world, caster, &spell, explicit, None);
+        return start_cast(world, caster, &spell, explicit);
     }
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
-    let explicit = validate_target(world, caster, &spell, explicit, Sight::Start(None))?;
+    let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;
     let plan = plan_targets(world, caster, &spell, explicit, false)?;
     log_event(
         world,
@@ -63,7 +63,7 @@ pub(crate) fn creature_cast_ignoring_cooldowns(
 ) -> Result<(), CastFailure> {
     let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
     spell.cast_ignore_cooldowns = true;
-    start_cast(world, caster, &spell, explicit, None)
+    start_cast(world, caster, &spell, explicit)
 }
 
 /// TC TRIGGERED_IGNORE_CAST_IN_PROGRESS: retain cast time, costs, cooldowns,
@@ -75,7 +75,7 @@ pub(crate) fn creature_cast_ignoring_in_progress(
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
     let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
-    let target = super::validate_start(world, caster, &spell, explicit, None, true)?;
+    let target = super::validate_start(world, caster, &spell, explicit, true)?;
     super::begin_validated_cast(world, caster, &spell, target)
 }
 
@@ -88,7 +88,7 @@ pub(crate) fn creature_cast_interrupting_self(
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
     let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
-    let target = super::validate_start(world, caster, &spell, explicit, None, true)?;
+    let target = super::validate_start(world, caster, &spell, explicit, true)?;
     super::cancel_cast(world, caster);
     super::begin_validated_cast(world, caster, &spell, target)
 }
