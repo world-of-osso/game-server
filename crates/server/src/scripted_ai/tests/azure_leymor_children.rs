@@ -179,10 +179,12 @@ fn azure_leymor_fissure_selector_uses_caster_front_entry_and_copy_not_destinatio
         assert!(!crate::spell_cast::targets::is_alive(h.app.world(), child));
     }
     for survivor in [behind, remote, player] {
-        assert!(crate::spell_cast::targets::is_alive(
-            h.app.world(),
-            survivor
-        ));
+        assert!(
+            crate::spell_cast::targets::is_alive(h.app.world(), survivor),
+            "post-tick survivor={survivor:?}, behind={behind:?}, remote={remote:?}, player={player:?}, health={:?}, map={:?}",
+            h.app.world().get::<Health>(survivor),
+            h.app.world().get::<InMap>(survivor),
+        );
     }
     assert_eq!(
         crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
