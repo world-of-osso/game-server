@@ -29,6 +29,8 @@ const AV_CAPTAIN_KILL_EQUIVALENTS: u32 = 3;
 const AV_GENERAL_KILL_EQUIVALENTS: u32 = 4;
 // TC AV EventPlayerDestroyedPoint813–817 / HonorKillBonus539.
 const AV_TOWER_KILL_EQUIVALENTS: u32 = 3;
+// TC AV OnEnd755–790: accumulate two equivalents per controlled tower/living captain.
+const AV_SURVIVOR_KILL_EQUIVALENTS: u32 = 2;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -130,6 +132,30 @@ pub(super) fn award_alterac_npc_honor(world: &mut World, match_id: u64, entry: u
         .bracket;
     let amount = calculate_bonus_honor(bracket, kills);
     award_match_team_honor(world, match_id, team, amount);
+}
+
+/// Called only at an accepted NPC/player-death or objective terminal transition.
+pub(super) fn award_alterac_survivor_honor(world: &mut World, match_id: u64) {
+    let (bracket, survivors) = {
+        let state = world.resource::<PvpServerState>();
+        let matched = &state.battleground_matches[&match_id];
+        if matched.instance.phase != shared::battleground::BgPhase::Ended {
+            return;
+        }
+        let Some(runtime) = matched.alterac.as_ref() else {
+            return;
+        };
+        let super::pvp_alterac::BannerBattle::Alterac(battle) = &runtime.battle else {
+            return;
+        };
+        (matched.instance.bracket, battle.surviving_honor_units())
+    };
+    for (team, units) in [BgTeam::A, BgTeam::B].into_iter().zip(survivors) {
+        if units > 0 {
+            let amount = calculate_bonus_honor(bracket, units * AV_SURVIVOR_KILL_EQUIVALENTS);
+            award_match_team_honor(world, match_id, team, amount);
+        }
+    }
 }
 
 pub(super) fn read_alterac_tower_counters(world: &World) -> Vec<(u64, [u32; 2])> {

@@ -49,6 +49,7 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
     super::honor::award_alterac_tower_changes(world, alterac_towers);
     credit_pvp_stats(world);
     for match_id in changed {
+        super::honor::award_alterac_survivor_honor(world, match_id);
         credit_completed_match(world, match_id);
         send_match_snapshot(world, match_id);
     }
