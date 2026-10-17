@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source140–144: Brewfest hearthstone and corpse/appearance boundaries (2026-10-17)
+
+140 Brewfest Reveler's Hearthstone166747/286353 already uses homebind252,10s cast and shared2309 charge, with item recovery-1/spell recovery0/GCD1500. One additional actual bag-learning/UseToy case uses the existing saved-bind fixture: missing bind refuses before spending, a displaced caster returns to the hydrated persisted bind after the authored cast, charge max1/current0/recharge1800000ms is reported, and Fire Eater139 then refuses. Health/model remain unchanged. All seven holiday source cases pass7/7 zero ignored54.85s at0d73204d; no production patch or manufactured RED. Exact command/revision and separate build/format evidence live in `hearth140-proof-ledger.json` and contracts/check/fmt logs; prior135–139/Scarab scopes remain distinct.
+
+Native Brewfest procedural357992/357995 type17/Value1=33864, wire/pixels/audio, cross-map behavior and natural30min recharge remain unproved. Simulation acceptance does not certify complete hearthstone presentation.
+
+| Source row | Exact retained gap |
+|---|---|
+|141 Lion's Pride166777/290152 and142 Horde's Might166778/290151 fireworks | Both dummy3 roots use source22/corpse-area-enemy93. Descriptions require fresh corpses of the opposite-faction player. Selector93, freshness/faction/player eligibility and the corpse firework action are not established by generic caster fireworks or raid-corpse119 handling; no substituted self firework. |
+|143 Transmorpher Beacon166779/290154 | Usable root is LegacySlot1 and combines149596/property4345 summon,64→294433 and77. Published149596 is absent; TDB has75007 but npcflag0/empty AI/script fields.294433 is area-aura65/dummy4; advertised20min290215 is dummy4 plus64→297571, itself dummy4. The appearance-choice/service/script action remains unresolved, not an ordinary NPC plus invented menu or appearance. |
+|144 Narassin's Soul Gem166784/290219 | Source explicit any-unit target25 dummy4 lasts5000ms and explicitly requires a dead target. Dead-target eligibility and soul trapping remain unestablished; no generic self cosmetic or living-target substitute. |
+
+Sources `rows140-144-{readonly-source,action-source}.json`, `transmorpher143-child297571-source.json` retain exact bindings and inspected TDB rows. Local pinned `SharedDefines.h` names93 `TARGET_CORPSE_SRC_AREA_ENEMY`; the toy policy does not infer its missing semantics from a nearby selector. No new template/importer/canonical changes or native/full-toy claim.
+
 ## Source135–139: Goldtusk table, retained bowl, RC gaps and Fire Eater (2026-10-17)
 
 135 Goldtusk Inn Breakfast Buffet166703/289533 has one ordinary source149876/90570 table: faction35/flags0, empty click/AI/script fields, DisplayScale0.5/Probability0 and M2 FDID963107 (`6hu_magetower_table01.m2`). Source instant cast,47/radius15=3yd,300000ms duration and600000ms item recovery. Maintained-importer RED atcc3fa6fc omits149876 (1 failure,4.539s); real bag-learning/UseToy RED refuses `effect 28, missing summon creature 149876` (1 failure,39.14s). Exact one-entry scenery admission at e860a60d preserves the authentic template/model rather than synthesizing table flags, food or interaction.
