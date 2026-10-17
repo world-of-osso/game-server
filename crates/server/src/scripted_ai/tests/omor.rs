@@ -96,6 +96,21 @@ fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_thre
         threat.threat_for(other.to_bits()) > 0.0,
         "unselected threat retained"
     );
+    h.advance(2.05);
+    let selected_inbox = players
+        .iter()
+        .position(|player| *player == selected)
+        .unwrap();
+    assert!(
+        h.inbox(selected_inbox)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(30638)
+                && event.target == Some(selected.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Whip still targets the genuine falling player after its threat becomes zero"
+    );
 }
 
 #[test]
@@ -180,8 +195,9 @@ fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() 
             x: origin.x + gap,
             ..origin
         });
-        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 35642, Some(boss), true)
-            .expect("actual singleton Orbital");
+        let health = h.health(player).current;
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 35642, Some(boss), false)
+            .expect("actual ordinary singleton Orbital");
         h.advance(0.05);
         let parent = h
             .inbox(0)
@@ -198,9 +214,10 @@ fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() 
             !h.has_aura(boss, 32185),
             "singleton cannot continue into Whip"
         );
-        assert!(
-            !h.inbox(0).spell_gos.iter().any(|go| go.spell_id == 30637),
-            "singleton no knock"
+        assert_eq!(
+            h.health(player).current,
+            health,
+            "singleton no knock damage"
         );
     }
 }

@@ -1,7 +1,7 @@
 //! TC a352b1fa boss_omor_the_unscarred.cpp:186–264, spell/aura hooks only.
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
-use shared::components::{Npc, ThreatTable};
+use shared::components::{Npc, Player, PlayerMotion, ThreatTable};
 
 pub(crate) const ORBITAL_TARGET: u32 = 35642;
 pub(crate) const ORBITAL_WHIP: u32 = 32185;
@@ -38,4 +38,31 @@ pub(super) fn cast_hit(world: &mut World, caster: Entity, target: Entity, depth:
         // ModifyThreatByPercent(-100) retains the reference for Whip's iteration.
         threat.add_threat(target.to_bits(), -amount);
     }
+}
+
+/// Source AuraScript prevents the default self trigger and visits every
+/// falling player threat reference, including references whose threat is zero.
+pub(crate) fn cast_whip_tick(world: &mut World, unit: Entity, trigger: u32) {
+    if world.get::<Npc>(unit).is_none() {
+        return;
+    }
+    let Some(threat) = world.get::<ThreatTable>(unit) else {
+        return;
+    };
+    let players: Vec<_> = threat
+        .entries()
+        .iter()
+        .filter_map(|entry| Entity::try_from_bits(entry.entity))
+        .filter(|&player| is_falling_player(world, player))
+        .collect();
+    for player in players {
+        super::cast_triggered(world, unit, trigger, Some(player), 1);
+    }
+}
+
+fn is_falling_player(world: &World, unit: Entity) -> bool {
+    let falling = world
+        .get::<PlayerMotion>(unit)
+        .is_some_and(|motion| motion.contains(PlayerMotion::FALLING));
+    world.get::<Player>(unit).is_some() && falling
 }
