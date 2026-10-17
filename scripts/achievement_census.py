@@ -212,10 +212,8 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     mythic_ids = qualified_mythic_criteria(criteria, modifiers)
     single_modifiers = qualified_single_modifiers(criteria, modifiers)
     condition_trees = {
-        row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv')).items()
+        row_id for row_id, (_, _, facts) in qualified_conditions(criteria, modifiers, legacy_difficulties(db2 / 'Difficulty.csv'), literal_expressions).items()
         if row_id not in single_modifiers
-        and (int(criteria[row_id]['Type']) in (1, 130)
-             or all(kind != 67 or asset in literal_expressions for kind, asset in facts))
         and all(fact_can_hold(kind, asset, spells, zones, maps, identities, map_types, authored_facts, achievements, node_counts, pet_types) for kind, asset in facts)
     }
     supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, condition_trees)

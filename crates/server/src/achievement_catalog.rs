@@ -1724,15 +1724,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
             .filter(|_| modifier_asset.is_none());
         let resolved = match compiled {
-            Some(CompiledConditions::All { difficulty, facts })
-                if matches!(kind, 1 | 130)
-                    || facts.iter().all(|(fact_kind, asset)| {
-                        *fact_kind != 67 || node_counts::constant_expression(*asset).is_some()
-                    }) =>
-            {
+            Some(CompiledConditions::All { difficulty, facts }) => {
                 load_criteria_facts(conn, facts, &area_children)?.map(|facts| (difficulty, facts))
             }
-            Some(CompiledConditions::All { .. }) => None,
             Some(CompiledConditions::TargetCreatures(entries)) => Some((
                 None,
                 vec![CriteriaFact::TargetCreatures(entries.iter().copied().collect())],
