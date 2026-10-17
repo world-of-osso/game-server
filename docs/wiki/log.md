@@ -1,3 +1,7 @@
+## 2026-10-17 — Omor coincident source angles
+
+[Coincident geometry](systems/boss-scripts.md#coincident-omor-geometry): actual30637 FALLING/30638 damage and ordinary30686 casting precede zero-horizontal-motion RED0/2/126.60s at8a24ba48. Pinned Position.h atan2(0,0)=0 requires+X reach projection/retreat; replace zero-vector normalization in those paths. Strict GREEN pending; no data/timing changes.
+
 ## 2026-10-17 — Koranthal destination-delay assertions
 
 [Koranthal timing](systems/boss-scripts.md#koranthal-destination-delay--2026-10-17): gate413 root is stale immediate timing after masterc99830b5, not OnSpellCast. Valid protocol e9b80b8 A/B each retains2 old failures while actual5s boundary passes. Restore diagnostic bypass; strengthen original tests with early exclusion/exact owned119964 impact/HP and unchanged absolute event clocks. Native data/runtime untouched; corrected original2 GREEN2/2/25.05s at4076e04a/protocol e9b80b8, pushed immediately; lead gate428 owns broad verification.
