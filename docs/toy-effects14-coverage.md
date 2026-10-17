@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source175–179: retained props, collection gap and memory transforms (2026-10-17)
+
+178 Book of the Unshackled170154/303994 and179 Carved Ankoan Charm170155/303995 already have runtime content155896/eight displays and155897/sixteen displays; the separate base creature tables are not their runtime authority. Both source roots are self transform56/misc8/600000ms with item recovery-1 inheriting3600000ms spell recovery. Test-only59d1527ce extends the existing real-learning disguise fixture to these exact pools: actual UseToy/source display membership, before-expiry retention, ordinary50ms-frame expiry/restoration/replicated-aura removal, unchanged health and cooldown refusal both before/after appearance expiry. No production change or manufactured RED.
+
+Five disguise IDs plus Oomgut and six dragon costumes pass8 tests/12IDs, zero ignored120.25s. Native package/tests check33.49s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. Exact commands/revision/source fields and output live in `memories178-179-{active-goal,proof-ledger,pushed-head}.json`, contracts/check/fmt logs and `rows175-179-{readonly-source,action-source}.json`. Membership in an authentic pool is not all-model weighted sampling or native appearance certification; full one-hour recovery passage remains separate.
+
+| Source row | Exact retained boundary and proof level |
+|---|---|
+|175 Heart of a Champion169768/302273 | Mixed self dummy4/script77, source1500ms cast/600000ms aura/900000ms spell recovery. Existing `toyfx_cosmetic_dummy_and_script_deliver_spell_go` includes this exact learned-use/cast receipt. That bounded receipt is not fresh hand-prop pixels, ordinary full aura lifecycle or every script consequence. No new policy or native certificate. |
+|176 Azeroth Mini Collection: Mechagon169796/302445 | Parent linked428/900000ms names302408, whose permanent effects combine self dummy4 and155431/property4112/front47 summon. Runtime Display Base155431/92508 already exists; property4112 is Control1/Title2/flags131594. Base metadata does not establish owned-figure selection/collection/display behavior, nor justify dropping the child's unresolved dummy action. No generic base or invented figure substitute. |
+|177 Brewfest Chowdown Trophy169865/362988 | Retain the existing source11 fixture: actual learned use,183727/92396 at1.5yd front, source300000ms stationary actor and caster302730 aura, owner/map/no-follow assertions and ordinary expiry. Its historical CPU scope is not a newly run trophy test/native body/audio certificate. |
+
+Only178–179 acceptance/spec changed;175/177 retain their exact earlier proof boundaries and176 remains unresolved. No importer, runtime policy, canonical rows or publication changed; no whole-Toy/native/current-master recertification.
+
 ## Source170–174: standard/insignia/equipment/linked-hologram boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |

@@ -1,3 +1,7 @@
+## 2026-10-17 — Memory178–179 lifecycle acceptance
+
+[Exact175–179 matrix](../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17): existing runtime Unshackled/Ankoan transforms gain actual-learning/source-pool/ordinary600000ms restoration and inherited3600000ms recovery acceptance. Eight tests/12IDs120.25s, native check33.49s/no compiler warnings and fmt/readability pass at59d1527ce. No production/data change or fabricated RED. Heart/Trophy earlier scopes retained; Mechagon collection action/native/all-model proof remain separate.
+
 ## 2026-10-17 — Toy source170–174 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source170174-standardinsigniaequipmentlinked-hologram-boundaries-2026-10-17): mixed Alliance Standard, sanctuary script routing, arm-equipment procedural and linked-hologram child remain gaps. Judgment154818/92155 exists in actual runtime content tables; absent base-table rows do not establish missing publication. Corrected earlier base/content misclassification; child behavior remains unproved. No data/runtime admission, borrowed prior native proof or redundant code gate.
