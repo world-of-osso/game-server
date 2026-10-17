@@ -48,11 +48,12 @@ class HeraldTemplateTests(unittest.TestCase):
 
     def assert_source_actors(self, connection):
         self.assertEqual(connection.execute(
-            'SELECT entry,minlevel,maxlevel,ContentTuningID,HealthModifier,ManaModifier,DamageModifier,'
+            'SELECT entry,minlevel,maxlevel,ContentTuningID,LevelScalingDeltaMin,LevelScalingDeltaMax,'
+            'HealthModifier,ManaModifier,DamageModifier,'
             'lootid,mingold,maxgold,AIName,ScriptName FROM content_creature_template '
             f'WHERE entry IN({ACTORS}) ORDER BY entry').fetchall(),
-            [(17537,10,30,220,5.4,1.0,7.5,0,0,0,'','boss_vazruden'),
-             (21252,1,90,328,1.35,1.0,1.0,0,0,0,'','')])
+            [(17537,10,30,220,2,2,5.4,1.0,7.5,0,0,0,'','boss_vazruden'),
+             (21252,1,90,328,0,0,1.35,1.0,1.0,0,0,0,'','')])
         self.assertEqual(connection.execute(
             f'SELECT entry,DifficultyID,ContentTuningID,HealthModifier,DamageModifier,lootid '
             'FROM content_creature_template_difficulty '
