@@ -6,7 +6,8 @@ use crate::spell_cast::effects::{EffectCtx, deal_damage};
 use shared::components::{Health, Player};
 
 #[test]
-fn honor_kill_keeps_lifetime_xp_without_inventing_level_or_wallet_award() {
+fn achievements_criteria_world_honor_kill_keeps_lifetime_xp_without_inventing_level_or_wallet_award()
+ {
     let (mut world, players, file) = native_flag_match(&shared::battleground::warsong_gulch());
     world.init_resource::<Time>();
     world.insert_resource(
@@ -59,6 +60,15 @@ fn honor_kill_keeps_lifetime_xp_without_inventing_level_or_wallet_award() {
     // TC ceil(30 * 1.55) =47, with no group/aura multiplier.
     let progress = serialized_progress(&world, killer);
     assert_eq!(progress["lifetime_honor_xp"], 47);
+    assert_eq!(
+        world
+            .get::<crate::achievement::PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&63413),
+        Some(&1),
+        "one real eligible world kill must credit unconditional authored type35"
+    );
     assert!(
         progress["honor_level"].is_null(),
         "HONOR_LEVEL_XP_CURVE gap"
