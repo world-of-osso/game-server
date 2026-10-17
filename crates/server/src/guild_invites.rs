@@ -45,6 +45,51 @@ mod tests {
             .add_systems(Update, crate::messaging::process_guild_invites);
     }
 
+    /// Private native-proof prerequisite, not an acceptance test or fabricated invitation.
+    #[test]
+    #[ignore = "requires an explicitly selected closed private realm and installed DB2 catalog"]
+    fn guild_invitation_private_register_source_design() {
+        let path =
+            std::env::var("GUILD_INVITATION_PRIVATE_DB").expect("explicit private realm path");
+        let db2 = std::env::var("GUILD_INVITATION_DB2_ROOT").expect("installed DB2 catalog root");
+        let db = redb::Database::open(path).expect("open existing private realm");
+        let owner = persistence::find_character_id_by_name(&db, "Gcperkslead").unwrap();
+        let guest = persistence::find_character_id_by_name(&db, "Gcperkspeer").unwrap();
+        let guild = persistence::load_character_guild(&db, owner).unwrap();
+        assert_eq!(guild.guild_name, "Guild Perks");
+        assert!(persistence::load_pending_guild_invite(&db, guest).is_none());
+        assert!(persistence::guild_tabards::load_design(&db, guild.guild_id).is_none());
+        let design = GuildTabardDesign {
+            icon: 1,
+            icon_color: 2,
+            border: 3,
+            border_color: 4,
+            background_color: 5,
+        };
+        shared::guild_tabards::GuildTabardCatalog::load(std::path::Path::new(&db2))
+            .unwrap()
+            .validate(design)
+            .unwrap();
+        let before = persistence::load_inventory(&db, owner).gold;
+        persistence::guild_tabards::register(&db, owner, design).unwrap();
+        let after = persistence::load_inventory(&db, owner).gold;
+        assert_eq!(
+            before - after,
+            u64::from(shared::guild_creation::TABARD_COST)
+        );
+        assert_eq!(
+            persistence::guild_tabards::load_design(&db, guild.guild_id),
+            Some(design)
+        );
+        println!(
+            "PRIVATE_GUILD_TABARD_REGISTERED guild={} before={} after={} design={}",
+            guild.guild_id,
+            before,
+            after,
+            serde_json::to_string(&design).unwrap()
+        );
+    }
+
     #[test]
     fn guild_invitation_delivers_registered_optional_tabard_immediately_and_after_reopen() {
         for registered in [false, true] {
