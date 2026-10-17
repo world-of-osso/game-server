@@ -82,6 +82,10 @@ impl CreatureAi for Omor {
         }
     }
 
+    fn killed_unit(&mut self, ctx: &mut Ctx, _victim: Entity) {
+        ctx.talk(3);
+    }
+
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         self.boss.just_died(ctx);
         ctx.talk(4);

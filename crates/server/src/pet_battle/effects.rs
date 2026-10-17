@@ -227,10 +227,10 @@ impl<R: BattleRng> Runtime<'_, R> {
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
                 let target = if super::rules::damages_enemy_team(ability) {
-                    let order = if ability == 920 {
-                        effect.order.div_ceil(2)
-                    } else {
-                        effect.order
+                    let order = match ability {
+                        774 => (effect.order - 1) % 3 + 1,
+                        920 => effect.order.div_ceil(2),
+                        _ => effect.order,
                     };
                     other_team_slot(target, order)
                 } else {
