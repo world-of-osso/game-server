@@ -1,6 +1,270 @@
 //! Omor source EventMap and hounds: real Normal-copy admission, not native balance.
 use super::*;
 
+fn orbital_fixture() -> (Harness, Entity, InMap) {
+    let (mut h, boss, map) = bound_boss(17308, 543, 0);
+    let directory = crate::ground::ground_data_dir();
+    let wdt = h.app.world().resource::<MapStore>().maps[&543].wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &directory,
+        std::collections::HashMap::from([(543, wdt)]),
+    ));
+    h.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&directory.join("los"))
+            .expect("authentic eye tables"),
+    );
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    (h, boss, map)
+}
+
+#[test]
+fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_threat() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let players = [h.players[0].0, h.players[1].0];
+    for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
+        h.app.world_mut().entity_mut(player).insert((
+            map,
+            Position {
+                x: origin.x + gap,
+                ..origin
+            },
+            shared::components::PlayerMotion::default(),
+        ));
+    }
+    for player in players {
+        let position = *h.app.world().get::<Position>(player).unwrap();
+        let ground = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .ground_in(map, Vec3::new(position.x, position.y, position.z));
+        assert!(
+            matches!(ground, crate::ground::GroundProbe::Supported(_)),
+            "authentic Ramparts support at {position:?}: {ground:?}"
+        );
+    }
+    h.engage(boss);
+    crate::creature_aggro::add_threat(h.app.world_mut(), boss, players[1], 0.1);
+    for _ in 0..640 {
+        h.advance(0.05);
+        if h.has_aura(boss, 32185) {
+            break;
+        }
+    }
+    assert!(
+        h.inbox(0).spell_gos.iter().any(|go| go.spell_id == 35642),
+        "actual scheduled Orbital parent reached its hit boundary"
+    );
+    assert!(
+        h.has_aura(boss, 32185),
+        "source Orbital target script must cast actual Whip32185"
+    );
+    let falling: Vec<_> = players
+        .into_iter()
+        .filter(|player| {
+            h.app
+                .world()
+                .get::<shared::components::PlayerMotion>(*player)
+                .is_some_and(|motion| motion.contains(shared::components::PlayerMotion::FALLING))
+        })
+        .collect();
+    assert_eq!(
+        falling.len(),
+        1,
+        "source30637 knocks exactly one eligible candidate into falling"
+    );
+    let selected = falling[0];
+    let threat = h
+        .app
+        .world()
+        .get::<shared::components::ThreatTable>(boss)
+        .unwrap();
+    assert_eq!(
+        threat.threat_for(selected.to_bits()),
+        0.0,
+        "source -100% selected threat"
+    );
+    let other = players
+        .into_iter()
+        .find(|player| *player != selected)
+        .unwrap();
+    assert!(
+        threat.threat_for(other.to_bits()) > 0.0,
+        "unselected threat retained"
+    );
+    h.advance(2.05);
+    let selected_inbox = players
+        .iter()
+        .position(|player| *player == selected)
+        .unwrap();
+    assert!(
+        h.inbox(selected_inbox)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(30638)
+                && event.target == Some(selected.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Whip still targets the genuine falling player after its threat becomes zero"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let players = [h.players[0].0, h.players[1].0];
+    for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
+        h.app.world_mut().entity_mut(player).insert((
+            map,
+            Position {
+                x: origin.x + gap,
+                ..origin
+            },
+            shared::components::PlayerMotion::default(),
+        ));
+        crate::creature_aggro::add_threat(h.app.world_mut(), boss, player, 1.0);
+    }
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30637, Some(players[0]), true)
+        .expect("authentic source knock");
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::PlayerMotion>(players[0])
+            .unwrap()
+            .contains(shared::components::PlayerMotion::FALLING),
+        "actual knock starts falling"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 32185, Some(boss), true)
+        .expect("authentic source Whip");
+    h.advance(1.9);
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(30638)),
+        "no early periodic child damage"
+    );
+    let falling_health = h.health(players[0]).current;
+    let grounded_health = h.health(players[1]).current;
+    let caster_health = h.health(boss).current;
+    h.advance(0.15);
+    // cast_triggered deliberately has no SpellGo/CastSuccess publication.
+    let children: Vec<_> = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(30638) && event.kind == CombatLogKind::Damage && event.amount > 0
+        })
+        .map(|event| event.target)
+        .collect();
+    assert_eq!(
+        children,
+        vec![Some(players[0].to_bits())],
+        "only falling player threat, never self/grounded player"
+    );
+    assert!(
+        h.health(players[0]).current < falling_health,
+        "actual authored child damage"
+    );
+    assert_eq!(
+        h.health(players[1]).current,
+        grounded_health,
+        "grounded player unaffected"
+    );
+    assert_eq!(
+        h.health(boss).current,
+        caster_health,
+        "prevent default self-trigger damage"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() {
+    for gap in [3.0, 25.0] {
+        let (mut h, boss, _) = orbital_fixture();
+        let player = h.player();
+        let origin = *h.app.world().get::<Position>(boss).unwrap();
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: origin.x + gap,
+            ..origin
+        });
+        let health = h.health(player).current;
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 35642, Some(boss), false)
+            .expect("actual ordinary singleton Orbital");
+        h.advance(0.05);
+        let parent = h
+            .inbox(0)
+            .spell_gos
+            .iter()
+            .find(|go| go.spell_id == 35642)
+            .expect("singleton parent publication");
+        assert_eq!(
+            parent.hit_targets,
+            vec![player.to_bits()],
+            "retain source singleton even outside20yd"
+        );
+        assert!(
+            !h.has_aura(boss, 32185),
+            "singleton cannot continue into Whip"
+        );
+        assert_eq!(
+            h.health(player).current,
+            health,
+            "singleton no knock damage"
+        );
+    }
+}
+
+#[test]
+fn encounter_coverage_omor_orbital_exact_two_dimensional_cutoff() {
+    // Source exact2D<=20 includes the boundary/raised target, not 20.01yd.
+    for (first_x, first_height, selected) in
+        [(20.0, 0.0, true), (20.01, 0.0, false), (19.0, 25.0, true)]
+    {
+        let (mut h, boss, map) = orbital_fixture();
+        let origin = *h.app.world().get::<Position>(boss).unwrap();
+        let players = [h.players[0].0, h.players[1].0];
+        for (player, x, height) in [(players[0], first_x, first_height), (players[1], 25.0, 0.0)] {
+            h.app.world_mut().entity_mut(player).insert((
+                map,
+                Position {
+                    x: origin.x + x,
+                    y: origin.y + height,
+                    ..origin
+                },
+            ));
+        }
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 35642, Some(boss), false)
+            .expect("ordinary Orbital cutoff cast");
+        h.advance(0.05);
+        let parent = h
+            .inbox(0)
+            .spell_gos
+            .iter()
+            .find(|go| go.spell_id == 35642)
+            .expect("actual Orbital cutoff receipt");
+        let expected = if selected {
+            vec![players[0].to_bits()]
+        } else {
+            Vec::new()
+        };
+        assert_eq!(
+            parent.hit_targets, expected,
+            "cutoff x={first_x} height={first_height}"
+        );
+        assert_eq!(
+            h.has_aura(boss, 32185),
+            selected,
+            "no hook after filtering all candidates"
+        );
+    }
+}
+
 #[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let (mut h, boss, map) = bound_boss(17308, 543, 0);
