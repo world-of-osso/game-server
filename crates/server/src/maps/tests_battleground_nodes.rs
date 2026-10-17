@@ -219,6 +219,138 @@ fn alterac_channel_last_leave_with_fresh_npc_death_unloads_without_loot_panic() 
 }
 
 #[test]
+fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() {
+    for (winner, captain_entry, general_entry, outside_entry) in [
+        (BgTeam::A, 11947, 11946, 11949),
+        (BgTeam::B, 11949, 11948, 11947),
+    ] {
+        let template = shared::battleground::alterac_valley();
+        let mut entered = enter_source_match(&template, [611, 610]);
+        use_second_frames(&mut entered.h);
+        assert_team_honor(&entered, 0, 0);
+        let actor_index = entered
+            .teams
+            .iter()
+            .position(|team| *team == winner)
+            .unwrap();
+        let actor = &entered.players[actor_index];
+        let assert_rewards = |entered: &EnteredMatch, amount| {
+            let expected = if winner == BgTeam::A {
+                [amount, 0]
+            } else {
+                [0, amount]
+            };
+            assert_team_honor(entered, expected[0], expected[1]);
+        };
+        let other_copy = InMap {
+            instance_id: entered.copy.instance_id + 1,
+            ..entered.copy
+        };
+        let (outside_captain, _) =
+            find_alterac_source_npc(&mut entered.h, entered.copy, outside_entry);
+        entered
+            .h
+            .app
+            .world_mut()
+            .entity_mut(outside_captain)
+            .insert(other_copy);
+        kill_alterac_source_npc(&mut entered.h, actor, other_copy, outside_entry);
+        entered.h.receive_pvp_updates(5);
+        let snapshot = battleground(&entered.h, actor);
+        assert_eq!([snapshot.score_a, snapshot.score_b], [700, 700]);
+        assert_team_honor(&entered, 0, 0);
+
+        let (captain, health) =
+            find_alterac_source_npc(&mut entered.h, entered.copy, captain_entry);
+        let dead_index = entered
+            .teams
+            .iter()
+            .enumerate()
+            .find_map(|(index, team)| (*team == winner && index != actor_index).then_some(index))
+            .unwrap();
+        let dead_teammate = entered.players[dead_index].player;
+        crate::combat::deal_direct_damage(entered.h.app.world_mut(), captain, dead_teammate, 1.0e7);
+        entered.h.receive_pvp_updates(5);
+        assert_eq!(
+            entered
+                .h
+                .app
+                .world()
+                .get::<Health>(dead_teammate)
+                .unwrap()
+                .current,
+            0.0
+        );
+        assert_team_honor(&entered, 0, 0);
+        // A normal NPC-caused death does not disqualify the accepted team member from Honor.
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            captain,
+            health + 1.0,
+        );
+        entered.h.receive_pvp_updates(5);
+        let captain_scores = if winner == BgTeam::A {
+            [699, 600]
+        } else {
+            [600, 699]
+        };
+        let snapshot = battleground(&entered.h, actor);
+        assert_eq!([snapshot.score_a, snapshot.score_b], captain_scores);
+        assert_eq!(snapshot.phase, BgPhase::InProgress);
+        // Source20–79 uses79, not player20; round the whole3-kill bonus once.
+        assert_rewards(&entered, 368);
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            captain,
+            health + 1.0,
+        );
+        entered.h.receive_pvp_updates(5);
+        let snapshot = battleground(&entered.h, actor);
+        assert_eq!([snapshot.score_a, snapshot.score_b], captain_scores);
+        assert_rewards(&entered, 368);
+
+        let (general, health) =
+            find_alterac_source_npc(&mut entered.h, entered.copy, general_entry);
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            general,
+            health + 1.0,
+        );
+        entered.h.receive_pvp_updates(5);
+        for who in &entered.players {
+            let snapshot = battleground(&entered.h, who);
+            assert_eq!(snapshot.phase, BgPhase::Ended);
+            assert_eq!(snapshot.outcome, Some(BgOutcome::Winner(winner)));
+        }
+        // General4=490, separate from captain3=368; tower/survivor callbacks remain open.
+        assert_rewards(&entered, 858);
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            general,
+            health + 1.0,
+        );
+        entered.h.receive_pvp_updates(5);
+        assert_rewards(&entered, 858);
+        let world = entered.h.app.world();
+        let character = world.get::<ClientId>(actor.player).unwrap().0;
+        let database = world.resource::<crate::persistence::GameDatabase>();
+        assert_eq!(
+            crate::persistence::load_currencies(&database.db, character).get(1792),
+            858
+        );
+        assert_eq!(
+            crate::persistence::load_pvp(&database.db, character).lifetime_honor_xp,
+            858
+        );
+        leave_and_return(&mut entered);
+    }
+}
+
+#[test]
 fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return() {
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match(&template, [611, 610]);

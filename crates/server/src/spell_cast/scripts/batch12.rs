@@ -117,6 +117,7 @@ pub(super) fn shield_plan(
         dest: None,
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 

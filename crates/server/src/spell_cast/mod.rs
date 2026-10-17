@@ -136,6 +136,7 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
@@ -2190,6 +2191,8 @@ struct PlannedEffect {
     chain_multipliers: Vec<(Entity, f32)>,
     /// Native block hit result, retained across flight for these unit targets.
     blocked_units: Vec<Entity>,
+    /// Source per-cast continuation state; retain hit receipts when the hook is suppressed.
+    prevent_hit_script: bool,
 }
 
 impl PlannedEffect {
@@ -2255,6 +2258,7 @@ fn plan_targets(
                 dest: None,
                 chain_multipliers: Vec::new(),
                 blocked_units: Vec::new(),
+                prevent_hit_script: false,
             })
             .collect());
     }
@@ -2271,6 +2275,7 @@ fn plan_targets(
                 dest: None,
                 chain_multipliers: Vec::new(),
                 blocked_units: Vec::new(),
+                prevent_hit_script: false,
             })
             .collect());
     }
@@ -2306,6 +2311,7 @@ fn plan_targets(
                 dest: None,
                 chain_multipliers: Vec::new(),
                 blocked_units: Vec::new(),
+                prevent_hit_script: false,
             });
             continue;
         }
@@ -2335,6 +2341,11 @@ fn plan_targets(
         warrior_stuns::filter_storm_bolt_targets(
             world, caster, spell, effect, explicit, &mut units,
         );
+        let prevent_hit_script = if spell.id == omor_orbital::ORBITAL_TARGET && effect.index == 0 {
+            omor_orbital::filter_targets(world, caster, &mut units)
+        } else {
+            false
+        };
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {
                 Some(multiplier * effect.chain_amplitude)
@@ -2363,6 +2374,7 @@ fn plan_targets(
             dest,
             chain_multipliers,
             blocked_units: Vec::new(),
+            prevent_hit_script,
         });
     }
     hit::remove_defended_targets(world, caster, spell, &mut plan);
@@ -2477,6 +2489,7 @@ fn resolve_effects(
                 handler(world, &ctx, effect, unit);
             }
             if let Some(hook) = hook
+                && !planned.prevent_hit_script
                 && world.get_entity(unit).is_ok()
             {
                 hook(world, caster, unit, depth);
