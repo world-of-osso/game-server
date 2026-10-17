@@ -87,6 +87,8 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
     add_inbox::<BankFailed>(&mut app);
     add_inbox::<GuildBankContents>(&mut app);
     add_inbox::<GuildRanksState>(&mut app);
+    add_inbox::<GuildInvitation>(&mut app);
+    add_inbox::<GuildInviteResponse>(&mut app);
     add_inbox::<GuildBankFailed>(&mut app);
     add_inbox::<GuildBankLog>(&mut app);
     add_inbox::<MailboxContents>(&mut app);
@@ -186,6 +188,9 @@ pub(crate) fn spawn_connection(
                 pair::<GuildBankContents>(),
                 pair::<GuildRankRequest>(),
                 pair::<GuildRanksState>(),
+                pair::<GuildInvitation>(),
+                pair::<GuildInviteRequest>(),
+                pair::<GuildInviteResponse>(),
                 pair::<GuildBankLog>(),
                 pair::<GuildBankFailed>(),
                 pair::<GuildBankDeposit>(),
