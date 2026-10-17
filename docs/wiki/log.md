@@ -15,6 +15,10 @@
 ## 2026-10-17 — Guild invitation appearance delivery
 
 [Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
+## 2026-10-17 — Omor sourced pull124
+
+[Omor](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): actual periodic30638 damage precedes physical no-reversal REDbf5659cd. Source handlerb509bd01 passes strict movement1/1/58.80s; enable only after this receipt. Ordinary Omor7/shared knockback9 pass16/16/435.67s at73932f34, including actual-child3D-distance/reach/no-teleport controls; map543 obstacle/Detour/dynamic collision and full native proof remain open.
+
 ## 2026-10-17 — Omor Orbital source hooks
 
 [Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
