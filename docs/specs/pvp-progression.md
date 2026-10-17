@@ -59,6 +59,23 @@ Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each gran
 
 This checkpoint's OnEnd callbacks cover Arathi, Eye, current Warsong and the Alterac survivor contract below. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
 
+## Random Battleground admission and reward profile — 70448
+
+**`RANDOM_BG_LEVEL_ELIGIBLE_MAPS` — project policy based on current Retail level-banded Random BG behavior, not a TC port.** Random32 admission uses parent map566's source bracket (first20–29), parent minimum5/team, capacity10/team and maximum party5. Every player's original32 identity must survive concrete map selection, acceptance, transfer and reconnect.
+
+Select only configured concrete templates linked from70448 BML32, using their existing configured weights (Retail weights are undocumented). Each eligible map must have its own PVPDifficulty bracket containing every queued player's level, within its admission bounds. Reject a requested level range explicitly when no configured eligible map exists. Deepwind2245 stays excluded because its template is missing. A level25 party cannot select Deephaul2656; level80 can. The instance retains the selected map's level-matching bracket, never a copied parent RangeIndex. Existing per-map payouts and minimum-to-start remain unchanged; the parent's5/team matchmaking minimum does not lower a concrete map's start minimum. No new UI map-exclusion behavior.
+
+## Fill existing battleground copies
+
+Queue and capacity-release events fill compatible existing Waiting/InProgress battleground copies before creating a new one. The concrete map and every incoming member's selected-map level range must match; rated/arena and Ended copies are excluded. Random32 eligibility remains unchanged, with no redraw. Each character retains their own original queue, including direct/random queues sharing a concrete copy.
+
+- **`BG_BACKFILL_WHOLE_PARTY_SMALLER_TEAM` — project policy:** assign a whole party to the smaller team only when it fits that team's remaining concrete-map capacity; never split it. This replaces TC's per-faction one-player-at-parity limiter. Count outstanding invitations and offline-reserved members, not just entered players. A non-fitting party stays queued; a later smaller fitting party may join.
+- **`BG_BACKFILL_MATCH_ORDER` — project policy:** try existing match IDs in deterministic ascending order before creating a new copy. This is not TC's free-slot push-front ordering.
+
+Preserve match/copy ID, objective state, score, clock and phase. Existing accepted players are not re-invited; late arrivals use existing zero-row scoreboard insertion. Reserve new ownership on an existing InstanceManager copy before inviting/removing queued entries; running-copy acceptance must work through the normal port/WorldPortAck path. Refill on queue requests and existing decline/leave/offline-release events only. No new timers, rewards, source minima or parent queue limits. Arathi's unchanged8/team minimum is reached naturally when later parties fill a Random5v5 Waiting copy.
+
+`RANDOM_BG_WIN_REWARD_PROFILE` remains unresolved: pinned TC a352b1fa defaults and shipped assignments use win first27000/repeat13500 and loss first4500/repeat3500 as kill equivalents, not flat Honor. Reset defaults to06:00 server-local. No amounts, reset authority, first-win/daily state or Random completion grant is adopted.
+
 ## Warsong / Twin Peaks capture Honor
 
 Pinned WSG557 and TwinPeaks526 unconditionally grant current Warsong2106/TwinPeaks726 teams two bonus-kill equivalents on each actual flag capture, including the winning capture. Round the whole two-kill grant once using the retained source bracket: WSG first10–19 gives59; Twin Peaks first30–39 gives121. Credit the assigned accepted team still in the copy through the existing positive-Honor eligibility and durable XP/wallet mirror. Pickup, return, possession and repeated objective updates grant nothing. Consume the source capture PvpStat receipt once; do not infer captures from scores or introduce another timer/queue.

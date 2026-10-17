@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
-use shared::battleground::{BgInstance, BgQueue, template_by_id};
+use shared::battleground::{BgInstance, BgPhase, BgQueue, template_by_id};
 use shared::components::Level;
 use shared::currency::{CONQUEST_CURRENCY_ID, CurrencyWallet, HONOR_CURRENCY_ID};
 use shared::protocol::{
@@ -87,8 +87,14 @@ pub(crate) use pvp_objects::load_battleground_objects;
 pub(crate) use pvp_seething::{capture_azerite, check_azerite_target};
 pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
+#[path = "pvp_bg_backfill.rs"]
+mod bg_backfill;
 #[path = "pvp_leave.rs"]
 mod pvp_leave;
+
+#[path = "pvp_random_bg.rs"]
+pub(crate) mod random_bg;
+
 #[path = "pvp_reconnect.rs"]
 pub(crate) mod reconnect;
 use pvp_leave::process_battleground_leave_requests;
@@ -255,6 +261,8 @@ struct InvitedBattleground {
     accepted: BTreeSet<u64>,
     map: Option<crate::maps::InMap>,
     origins: BTreeMap<u64, crate::maps::WorldLocation>,
+    /// Original requested queue per player; never overwritten by the selected concrete map.
+    original_queues: BTreeMap<u64, u32>,
     flags: Option<shared::battleground::FlagBattle>,
     nodes: Option<shared::battleground::NodeBattle>,
     eye: Option<shared::battleground::EyeBattle>,
@@ -333,11 +341,26 @@ pub(crate) struct PvpServerState {
     arena_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<(u64, u8)>>,
     battleground_matches: BTreeMap<u64, InvitedBattleground>,
     next_battleground_match: u64,
+    battleground_refill_pending: bool,
 }
 
-fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32) -> Option<u64> {
-    let template = template_by_id(battleground_id)?;
-    let matched = state.battleground_queue.try_match(battleground_id)?;
+fn form_battleground_invitation(
+    state: &mut PvpServerState,
+    battleground_id: u32,
+    random_catalog: &random_bg::Catalog,
+) -> Option<u64> {
+    let matched = if battleground_id == shared::battleground::RANDOM_BATTLEGROUND_ID {
+        random_bg::draw_match(&mut state.battleground_queue, random_catalog)?
+    } else {
+        state.battleground_queue.try_match(battleground_id)?
+    };
+    let template = template_by_id(matched.bg_id)?;
+    let original_queues = matched
+        .team_a
+        .iter()
+        .chain(&matched.team_b)
+        .map(|&character| (character, battleground_id))
+        .collect();
     state.next_battleground_match += 1;
     let match_id = state.next_battleground_match;
     state.battleground_matches.insert(
@@ -347,6 +370,7 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
+            original_queues,
             flags: shared::battleground::flag_rules(template.map_id)
                 .map(shared::battleground::FlagBattle::new),
             nodes: shared::battleground::node_rules(template.map_id)
@@ -379,7 +403,12 @@ fn respond_to_battleground_invitation(
     let instance = &mut invitation.instance;
     let is_member = instance.team_a_players.contains(&character_id)
         || instance.team_b_players.contains(&character_id);
-    if !is_member || instance.phase != shared::battleground::BgPhase::Waiting {
+    let accepting = match instance.phase {
+        BgPhase::Waiting => true,
+        BgPhase::InProgress => invitation.arena.is_none(),
+        BgPhase::Ended => false,
+    };
+    if !is_member || !accepting {
         return Err("player has no invitation to this battleground".into());
     }
     if invitation.accepted.contains(&character_id) {
@@ -390,6 +419,8 @@ fn respond_to_battleground_invitation(
     } else {
         instance.team_a_players.retain(|id| *id != character_id);
         instance.team_b_players.retain(|id| *id != character_id);
+        invitation.original_queues.remove(&character_id);
+        state.battleground_refill_pending |= invitation.arena.is_none();
     }
     if instance.team_a_players.is_empty() && instance.team_b_players.is_empty() {
         state.battleground_matches.remove(&match_id);
@@ -402,6 +433,8 @@ pub struct PvpPlugin;
 impl Plugin for PvpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PvpServerState>();
+        app.init_resource::<crate::maps::InstanceManager>();
+        app.init_resource::<random_bg::Catalog>();
         app.init_resource::<crate::group::GroupRegistry>();
         app.init_resource::<arena::Catalog>();
         app.init_resource::<arena_objects::GateCatalog>();
@@ -448,6 +481,10 @@ impl Plugin for PvpPlugin {
         app.add_systems(
             PostUpdate,
             reconnect::expire_offline_players.after(process_battleground_leave_requests),
+        );
+        app.add_systems(
+            PostUpdate,
+            refill_battleground_queues.after(reconnect::expire_offline_players),
         );
         app.add_systems(
             Update,
@@ -528,6 +565,7 @@ fn process_battleground_queue_requests(
     connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     state: ResMut<PvpServerState>,
     groups: Res<crate::group::GroupRegistry>,
+    random_catalog: Res<random_bg::Catalog>,
     time: Res<Time>,
     mut senders: Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
@@ -544,21 +582,30 @@ fn process_battleground_queue_requests(
                     in_world.character_id,
                     request.battleground_id,
                     now,
+                    &random_catalog,
                 )
             } else {
                 let Ok((level, _player, mut player_state)) = players.get_mut(link.0) else {
                     send_pvp_error(conn_entity, &mut senders, "pvp unavailable for player");
                     continue;
                 };
-                queue_for_battleground(
-                    &mut player_state,
-                    state,
-                    in_world.character_id,
-                    level.0,
+                let eligibility = validate_random_queue_levels(
+                    &random_catalog,
                     request.battleground_id,
-                    now,
-                )
-                .map(|message| (vec![(conn_entity, link.0)], message))
+                    &[level.0],
+                );
+                eligibility
+                    .and_then(|()| {
+                        queue_for_battleground(
+                            &mut player_state,
+                            state,
+                            in_world.character_id,
+                            level.0,
+                            request.battleground_id,
+                            now,
+                        )
+                    })
+                    .map(|message| (vec![(conn_entity, link.0)], message))
             };
 
             match result {
@@ -574,13 +621,7 @@ fn process_battleground_queue_requests(
                             );
                         }
                     }
-                    resolve_battleground_matches(
-                        request.battleground_id,
-                        state,
-                        &mut players,
-                        &connections,
-                        &mut senders,
-                    );
+                    state.battleground_refill_pending = true;
                 }
                 Err(error) => {
                     if let Ok((_level, _player, player_state)) = players.get(link.0) {
@@ -645,18 +686,17 @@ fn queue_for_battleground(
     if let Some(queue) = &player_state.queue {
         return Err(format!("already queued for {}", queue_label(queue)));
     }
-    let Some(template) = template_by_id(battleground_id) else {
-        return Err(format!("unknown battleground id {}", battleground_id));
-    };
+    let name = shared::battleground::queue_name(battleground_id)
+        .ok_or_else(|| format!("unknown battleground id {battleground_id}"))?;
     state
         .battleground_queue
         .join_solo(character_id, level, battleground_id, now)
         .map_err(format_bg_queue_error)?;
     player_state.queue = Some(PlayerPvpQueue::Battleground {
         battleground_id,
-        name: template.name.clone(),
+        name: name.clone(),
     });
-    Ok(format!("queued for {}", template.name))
+    Ok(format!("queued for {name}"))
 }
 
 /// TC BattleGroundHandler.cpp189–226: only the leader queues the whole group.
@@ -668,14 +708,17 @@ fn queue_battleground_party(
     leader: u64,
     battleground_id: u32,
     now: u64,
+    random_catalog: &random_bg::Catalog,
 ) -> Result<(Vec<(Entity, Entity)>, String), String> {
     if groups.leader_of(leader) != Some(leader) {
         return Err("only the group leader can queue the party".into());
     }
-    let template = template_by_id(battleground_id)
+    let name = shared::battleground::queue_name(battleground_id)
         .ok_or_else(|| format!("unknown battleground id {battleground_id}"))?;
+    let max_group = shared::battleground::queue_group_limit(battleground_id)
+        .expect("validated battleground queue");
     let members = groups.group_members(leader);
-    if members.len() > usize::from(template.team_size) {
+    if members.len() > usize::from(max_group) {
         return Err("group exceeds the battleground team size".into());
     }
     let mut online = Vec::with_capacity(members.len());
@@ -694,6 +737,7 @@ fn queue_battleground_party(
         levels.push(level.0);
         online.push((connection, player));
     }
+    validate_random_queue_levels(random_catalog, battleground_id, &levels)?;
     state
         .battleground_queue
         .join_group(leader, members, levels, battleground_id, now)
@@ -704,10 +748,10 @@ fn queue_battleground_party(
             .expect("validated online party member");
         player_state.queue = Some(PlayerPvpQueue::Battleground {
             battleground_id,
-            name: template.name.clone(),
+            name: name.clone(),
         });
     }
-    Ok((online, format!("queued for {}", template.name)))
+    Ok((online, format!("queued for {name}")))
 }
 
 fn dequeue_player(
@@ -736,64 +780,109 @@ fn dequeue_player(
     Ok(format!("left {}", queue_label(&queue)))
 }
 
+fn validate_random_queue_levels(
+    catalog: &random_bg::Catalog,
+    queue_id: u32,
+    levels: &[u8],
+) -> Result<(), String> {
+    if queue_id == shared::battleground::RANDOM_BATTLEGROUND_ID {
+        catalog.validate_levels(levels)?;
+    }
+    Ok(())
+}
+
+fn refill_battleground_queues(
+    mut state: ResMut<PvpServerState>,
+    catalog: Res<random_bg::Catalog>,
+    mut instances: ResMut<crate::maps::InstanceManager>,
+    mut players: Query<(&Level, &shared::components::Player, &mut PlayerPvpState)>,
+    connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
+    mut senders: Query<&mut MessageSender<PvpStateUpdate>>,
+) {
+    if !std::mem::take(&mut state.battleground_refill_pending) {
+        return;
+    }
+    for queue_id in state.battleground_queue.queued_ids() {
+        resolve_battleground_matches(
+            queue_id,
+            &mut state,
+            &catalog,
+            &mut instances,
+            &mut players,
+            &connections,
+            &mut senders,
+        );
+    }
+}
+
 fn resolve_battleground_matches(
-    battleground_id: u32,
+    queue_id: u32,
     state: &mut PvpServerState,
+    catalog: &random_bg::Catalog,
+    instances: &mut crate::maps::InstanceManager,
     players: &mut Query<(&Level, &shared::components::Player, &mut PlayerPvpState)>,
     connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
-    while let Some(match_id) = form_battleground_invitation(state, battleground_id) {
-        let invitation = &state.battleground_matches[&match_id];
-        let template = template_by_id(invitation.instance.bg_id).expect("matched template exists");
-        let teams = invitation
-            .instance
-            .team_a_players
-            .iter()
-            .map(|id| (*id, shared::battleground::BgTeam::A))
-            .chain(
-                invitation
-                    .instance
-                    .team_b_players
-                    .iter()
-                    .map(|id| (*id, shared::battleground::BgTeam::B)),
-            );
-        for (character_id, team) in teams {
-            let Some((conn_entity, player_entity)) =
-                connection_for_character(connections, character_id)
-            else {
+    loop {
+        match bg_backfill::fill_existing_copy(state, instances, catalog, queue_id) {
+            Ok(Some(batch)) => {
+                send_battleground_invitations(state, batch, players, connections, senders);
                 continue;
-            };
-            let Ok((_level, _player, mut player_state)) = players.get_mut(player_entity) else {
-                continue;
-            };
-            player_state.queue = None;
-            player_state.battleground = Some(shared::protocol::BattlegroundSnapshot {
-                match_id,
-                battleground_id: template.id,
-                name: template.name.clone(),
-                map_id: template.map_id,
-                team,
-                phase: invitation.instance.phase,
-                accepted: false,
-                invitation_time_left_secs: None,
-                score_a: invitation.displayed_scores().0,
-                score_b: invitation.displayed_scores().1,
-                flags: invitation.flag_objective(),
-                world_states: invitation.world_states(),
-                outcome: invitation.instance.outcome,
-                players: invitation.scoreboard.rows.clone(),
-                honor_reward: None,
-                arena: None,
-            });
-            send_pvp_update(
-                conn_entity,
-                &player_state,
-                Some(format!("battleground ready: {}", template.name)),
-                None,
-                senders,
-            );
+            }
+            Ok(None) => {}
+            Err(message) => {
+                error!("{message}");
+                return;
+            }
         }
+        let Some(batch) = form_battleground_invitation_batch(state, queue_id, catalog) else {
+            return;
+        };
+        send_battleground_invitations(state, batch, players, connections, senders);
+    }
+}
+
+fn form_battleground_invitation_batch(
+    state: &mut PvpServerState,
+    queue_id: u32,
+    catalog: &random_bg::Catalog,
+) -> Option<bg_backfill::Invitations> {
+    let match_id = form_battleground_invitation(state, queue_id, catalog)?;
+    let instance = &state.battleground_matches[&match_id].instance;
+    let characters = instance
+        .team_a_players
+        .iter()
+        .chain(&instance.team_b_players)
+        .copied()
+        .collect();
+    Some(bg_backfill::Invitations {
+        match_id,
+        characters,
+    })
+}
+
+fn send_battleground_invitations(
+    state: &PvpServerState,
+    batch: bg_backfill::Invitations,
+    players: &mut Query<(&Level, &shared::components::Player, &mut PlayerPvpState)>,
+    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
+    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
+) {
+    let invitation = &state.battleground_matches[&batch.match_id];
+    for character in batch.characters {
+        let Some((connection, player)) = connection_for_character(connections, character) else {
+            continue;
+        };
+        let Ok((_, _, mut player_state)) = players.get_mut(player) else {
+            continue;
+        };
+        let snapshot =
+            reconnect::build_match_snapshot(invitation, batch.match_id, character, false);
+        let message = format!("battleground ready: {}", snapshot.name);
+        player_state.queue = None;
+        player_state.battleground = Some(snapshot);
+        send_pvp_update(connection, &player_state, Some(message), None, senders);
     }
 }
 

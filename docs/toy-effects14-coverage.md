@@ -1,5 +1,169 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source195–199: motion/faction/appearance/action boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|195 Nomi's Vintage173727/312049 | Self knockback98/base300/misc-100/200 plus safe-fall aura144/base999 for6000ms; RequiredAreasID6832 and600000ms item recovery. This is not merely a drink or flame cosmetic. Source-area/self-launch/safe-fall behavior remains unproved as a combined actual-toy contract; no no-op/generic visual substitute. |
+|196 N'lyeth, Sliver of N'Zoth173951/313172 | Self language75/misc178, faction243/misc3214/1 and max-health-percent damage165/base60;3600000ms duration/item recovery and RequiredAreasID6916. Advertised outdoor/War Mode eligibility, self-sacrifice, Shath'Yar hostility/language and death removal remain unestablished together. No generic faction flip, PvP permission bypass or cosmetic admission. Visual92159 also authors procedural357234/type1 and357235/type14; metadata is not native proof. |
+|197 Scroll of Aeons173984/314988 | Actual on-use is TriggerType0/LegacySlot1, a self dummy4/1800000ms with inherited3600000ms spell recovery. Separate TriggerType7/slot0 row314407 carries two remove-aura164 slots naming313353/314393; it is not the journal's on-use root. Soul-appearance behavior remains unproved; no selection of the auxiliary row or arbitrary transform by name. |
+|198 Glimmerfly Cocoon174445/315240 | Source2000ms cast, script3 with targets47/86 and120000ms spell recovery. Cocoon-opening action remains unresolved; the root does not name an executable child here. No guessed pet/critter/release behavior or generic summon. |
+|199 Shadowy Disguise174830/316646 | Self dummy4 has nonzero misc150550/11,15000ms duration and300000ms item recovery; visual92809 authors procedural474/type1. It is not a complete-zero cosmetic signature or source transform56. Specific shadowy-figure appearance remains unproved; no copied transform template or ignored payload. |
+
+Exact roots, trigger/slot distinctions, effect/aura/area/duration/visual fields and procedural mapping live in `rows195-199-{readonly-source,action-source}.json`. Pinned `SharedDefines.h` names98 knockback,164 remove-aura and165 max-health-percent damage; `SpellAuraEffects.cpp` identifies144 safe fall,75 language and243 faction. Current ToyCatalog selects TriggerType0 before slot order. Read-only source/documentation only; no policy/runtime/importer/canonical/data changes, new acceptance or repeated code gate.
+
+## Source190–194: Eternal Traveler and mount/control/portal boundaries (2026-10-17)
+
+190 Eternal Traveler's Hearthstone172179/308742 already uses source10s homebind252 and shared2309 charge. Test-only9e56fbe2a adds its actual bag-learning/UseToy case to the existing saved-bind fixture: missing bind refuses before spending; after displacement the authored cast returns to persisted bind, reports max1/current0/recharge1800000ms, and Holographic165 refuses on that shared charge. Health/model remain unchanged. Nine actual holiday variants pass9/9 zero ignored79.23s; native package/tests check13.81s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `hearth190-proof-ledger.json` records exact commands/revision. No production change or invented RED.
+
+Source190's multiple visual branches contain procedural types1/14/15; the simulation contract is not native branch/race/appearance/audio certification. Cross-map wire behavior and natural30min recharge remain separate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|191 Wild Holly172219/308923 | Self dummy4/3600000ms with60000ms item recovery. Source description requires Feast of Winter Veil and transforms the mount, not the player's ordinary body. Mounted-state eligibility, holiday gating and authentic festive mount appearance remain unresolved; no generic self cosmetic or guessed mount display. |
+|192 Crashin' Thrashin' Juggernaught172222/308921 and193 Battleship172223/308922 | Source18 summons158459/93523 and158455/93522 via4728 Control3/faction1616/flags4, alongside self auras25/321/37 with misc85; source3000ms cast/300000ms duration. Runtime content actors are absent. RC possession, action bar and attacks against other toys remain unresolved; no ordinary noncontrolled actor or generic banner/control substitute. |
+|194 Wormhole Generator: Shadowlands172924/324031 | Source47 summon169501/property3539,5000ms cast/300000ms duration and900000ms item/spell recovery. Runtime content169501 is absent; source29886/scale1/weight0 has npcflag0/empty AI/script. Portal metadata does not implement authored point selection/eligibility/transport; no invented destinations or copied Pandaria random teleport. |
+
+`rows190-194-{readonly-source,action-source}.json` retains exact roots, properties/durations, visual branches and actual runtime-content/source actor/model rows. Only190 acceptance/spec changed;191–194 remain named action/control/service gaps. No runtime-policy/importer/canonical/data changes, extra publication or full-Toy/native/master recertification.
+
+## Source185–189: midday source acceptance and interactive boundaries (2026-10-17)
+
+187 Jar of Sunwarmed Sand170380/304369 has existing self screen-effect260/misc1719/7 and7200000ms aura with86400000ms item recovery. Test/spec9ec632d3a extends the existing Shadescale180 actual-learning/aura/replication/cancel fixture to this second source and checks both reported recoveries remain spent after cancellation. The expanded source fixture plus feather-fall, cosmetic/script and five-ID disguise controls pass4/4 zero ignored57.78s after a single26m32s cold native-slot compile. Native package/tests check3m04s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. `midday187-proof-ledger.json` records exact commands/revision and code scope; no duplicate run or reset. No production patch, invented RED, native midday certificate or full two-hour/24-hour passage proof.
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|185 Flopping Fish170203/304502 | Source47 summon156051/property64/60000ms actor and3600000ms item recovery. Runtime content156051 is absent; source has npcflag16777216 and fifteen91102–91088 displays at0.1scale. Fish placement/kicking interaction remains unresolved; no ordinary noninteractive actor or substitute fish. |
+|186 Symbol of Gral170204/304372 | Self dummy4/3600000ms and7200000ms item recovery. Advertised Gral blessing/presentation remains unproved; the empty dummy payload does not authorize a fabricated gameplay benefit or generic cosmetic admission. |
+|188 Memento of the Deeps170469/304550 | Source47 summon156074/property1362/120000ms actor,3600000ms item recovery; published runtime content156074 is absent. Source92601/scale1/weight0 and faction0/npcflag0/empty AI/script are metadata, not the described interact-to-recall-allies action. No generic seashell actor or invented memory interaction. |
+|189 Underlight Sealamp170476/304620 | Existing runtime156086/92605/DisplayScale0.35, source47/property1362/180000ms and3600000ms item recovery. Retain prior actual-learning/source-scale CPU proof and both-skin native meshes/root0.35/no pet frame, state-kit ground attachment and natural180-second removal witnesses below. This revisit adds no new lamp test/native certificate or speculative gameplay. |
+
+Exact roots, durations/properties/visual fields and distinct actual runtime-content/source actor/model rows are retained in `rows185-189-{readonly-source,action-source}.json`. No new data/importer/runtime-policy/canonical publication;189's historical native scope and187's new bounded CPU acceptance remain separate.
+
+## Source180–184: retained midnight/sign proof and equipment gaps (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|180 Shadescale170187/304370 | Self screen-effect260/misc1720/7,7200000ms source duration and3600000ms item recovery. Existing imported-item acceptance proves actual bag learning/UseToy, SpellGo, aura payload/replication and cancellation. That historical CPU scope is not a fresh native midnight-sky/pixels certificate or natural two-hour expiry proof. No new weather rule inferred. |
+|181 Shirakess Warning Sign170196/304505 and182 Swarthy Warning Sign170197/438546 | Source47/property3077 summons156052/92597 and218978/117639 respectively, model scale0.6/source60000ms lifetime/3600000ms item recovery. Existing actual-source actor/owner/map/scale/expiry proof and separate both-skin native mesh/removal receipts remain below. Those bounded actor proofs do not implement the described message carving,148628 extended lifetime or changed visibility to other players; interaction/persistence remains a named gap, not a complete warning-sign claim. |
+|183 Eternal Palace Dining Set170198/304373 | Self dummy4/3600000ms with7200000ms item recovery. Selected visual89162/89164 kits author procedural358888–358891 type17, Value1=170382/170381. Specific dining-equipment presentation/action remains unproved; a plain self aura or generic table is not this source payload. No additional admission. |
+|184 Zanj'ir Weapon Rack170199/304504 | Self dummy4/3600000ms with7200000ms item recovery. Visuals89237–89242 include procedural358940–358945 type17, Value1=169102/169102/169090/169094/170465/169089. Specific naga-equipment choice/presentation remains unproved; neither a copied ordinary weapon attachment nor arbitrary rack actor establishes it. No additional admission. |
+
+`rows180-184-{readonly-source,action-source}.json` retains exact root effects, durations and per-visual procedural mapping. Earlier imported-item/sign simulation and native receipts remain revision-scoped, without rerunning unchanged tests or claiming message-writing/native midnight/equipment completion. No runtime/importer/canonical/data changes.
+
+## Source175–179: retained props, collection gap and memory transforms (2026-10-17)
+
+178 Book of the Unshackled170154/303994 and179 Carved Ankoan Charm170155/303995 already have runtime content155896/eight displays and155897/sixteen displays; the separate base creature tables are not their runtime authority. Both source roots are self transform56/misc8/600000ms with item recovery-1 inheriting3600000ms spell recovery. Test-only59d1527ce extends the existing real-learning disguise fixture to these exact pools: actual UseToy/source display membership, before-expiry retention, ordinary50ms-frame expiry/restoration/replicated-aura removal, unchanged health and cooldown refusal both before/after appearance expiry. No production change or manufactured RED.
+
+Five disguise IDs plus Oomgut and six dragon costumes pass8 tests/12IDs, zero ignored120.25s. Native package/tests check33.49s/no compiler warnings and fmt/manual changed-line readability/diffcheck pass. Exact commands/revision/source fields and output live in `memories178-179-{active-goal,proof-ledger,pushed-head}.json`, contracts/check/fmt logs and `rows175-179-{readonly-source,action-source}.json`. Membership in an authentic pool is not all-model weighted sampling or native appearance certification; full one-hour recovery passage remains separate.
+
+| Source row | Exact retained boundary and proof level |
+|---|---|
+|175 Heart of a Champion169768/302273 | Mixed self dummy4/script77, source1500ms cast/600000ms aura/900000ms spell recovery. Existing `toyfx_cosmetic_dummy_and_script_deliver_spell_go` includes this exact learned-use/cast receipt. That bounded receipt is not fresh hand-prop pixels, ordinary full aura lifecycle or every script consequence. No new policy or native certificate. |
+|176 Azeroth Mini Collection: Mechagon169796/302445 | Parent linked428/900000ms names302408, whose permanent effects combine self dummy4 and155431/property4112/front47 summon. Runtime Display Base155431/92508 already exists; property4112 is Control1/Title2/flags131594. Base metadata does not establish owned-figure selection/collection/display behavior, nor justify dropping the child's unresolved dummy action. No generic base or invented figure substitute. |
+|177 Brewfest Chowdown Trophy169865/362988 | Retain the existing source11 fixture: actual learned use,183727/92396 at1.5yd front, source300000ms stationary actor and caster302730 aura, owner/map/no-follow assertions and ordinary expiry. Its historical CPU scope is not a newly run trophy test/native body/audio certificate. |
+
+Only178–179 acceptance/spec changed;175/177 retain their exact earlier proof boundaries and176 remains unresolved. No importer, runtime policy, canonical rows or publication changed; no whole-Toy/native/current-master recertification.
+
+## Source170–174: standard/insignia/equipment/linked-hologram boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|170 Alliance War Standard169278/300108 | Permanent self dummy4 plus speed-decrease aura33/base25;10000ms item recovery. Like169's different Horde Standard, this mixed action has no new actual-use/slow/combat-removal acceptance. Prior167–168 War Banner proof does not cover either Standard. |
+|171 Stormpike Insignia169297/196080 and172 Frostwolf Insignia169298/196079 | Both self script77/source10s cast/RequiredAreasID27. Stormpike item/category1091 recovery120000/120000ms differs from Frostwolf120000/1000ms. Descriptions name Dun Baldar/Frostwolf Keep, not executable destination coordinates or rules. Sanctuary routing/eligibility remains unresolved; no hearthstone/homebind or generic teleport substitute. |
+|173 Hell-Bent Bracers169303/300835 | Self dummy4/900000ms,2700000ms item recovery; visual93704 includes kit type10 and seven type17 procedural entries360069–360075 with Value1=62814/62816/64311/60617/39464/60619/60618. Advertised arm-power/equipment presentation remains unproved; no stat bonus or generic cosmetic inferred from the zero dummy payload. |
+|174 Judgment of Mechagon169347/301013 | Linked-summon aura428/300000ms names301014, whose source effects combine154818/property64/front47 summon and self dummy4, with permanent child duration. Runtime content154818 already exists with92155/scale1/weight1 and faction0/npcflag0/empty AI/script. WorldData loads `content_creature_template` and `content_creature_template_model`; absence from the separate base `creature_template` is not a runtime-template omission. Existing template availability does not prove successful linked actor/hologram/lifecycle behavior; no generic actor or incomplete child admission. |
+
+`rows170-174-{readonly-source,action-source}.json` preserves exact roots, child effects, casts, durations, visuals/procedurals and distinct base/content/source reads, interpreted against the actual WorldData content-table loader. Pinned `SpellAuraEffects.cpp` identifies428 as `SPELL_AURA_LINKED_SUMMON`; that label does not establish this toy's missing child action. Source/documentation only, without runtime/importer/canonical changes, new acceptance or repeat of unchanged code gates.
+
+## Source165–169: Holographic Hearthstone and banner boundaries (2026-10-17)
+
+165 Holographic Digitalization Hearthstone168907/298068 uses existing source10s homebind252/shared2309 behavior. Test-only9d1214327 adds actual bag learning/UseToy to the saved-bind fixture: absent bind refuses without spending, a displaced caster returns after the ordinary authored cast, charge max1/current0/recharge1800000ms is reported, and Brewfest140 then refuses. Health/model remain unchanged. All eight actual holiday hearthstone variants pass8/8 zero ignored62.43s; fmt/diffcheck/manual changed-line readability pass. Native package/tests check passes1m09s without compiler warnings after capacity admission; `hearth165-proof-ledger.json` records exact commands/revision and code-equivalence through the documentation-only descendants. No production change or manufactured RED; cross-map/native presentation and natural30min recharge remain unproved. Source visual86828 includes procedural358629/358630 type22, not a native acceptance claim.
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|166 Rustbolt Banner169108/299846 | Cursor87 effect50 names333298,180000ms source duration and category1246 recovery180000ms. Published/content333298 is absent; TDB type5/display57836/size0.6 resolves source FDID3037230. Authentic holographic-object metadata is not passing placement/lifecycle or native presentation; no generic banner substitution or data admission. |
+|167 Alliance War Banner169275/300104 and168 Horde War Banner169276/300144 | Retain source20's exact real-learning/application/combat-interruption and both-skin back-model/removal witnesses below. Those historical bounded proofs do not become a fresh current-master/native gate merely because source order revisits them. |
+|169 Horde War Standard169277/300141 | Permanent self dummy4 plus speed-decrease aura33/base25, with10000ms item recovery. The mixed standard/slow/combat-removal behavior is not established by167–168's different two War Banners or their cosmetic admission; no copied appearance or extra admission. |
+
+`rows165-169-{readonly-source,action-source}.json` retains exact root effects, cast/category/duration fields, selected visual/procedural data and333298 source/published absence. No importer/canonical change or full-Toy recertification;165's new test scope and prior167–168/native scopes remain distinct.
+
+## Source160–164: robot/teleport/whistle boundaries and retained Ocean proof (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|160 Blingtron7000 168667/298926 | Source47 summon153897/property3371,660000ms actor duration and14400000ms item recovery. Property3371 is Control0/Title7/flags2048; published153897 is absent. TDB source92505/scale1.2/weight1 has faction0/npcflag0/empty AI/script. Authentic robot metadata does not establish daily gifts or fighting other Blingtrons; no ordinary actor/service substitute or admission. |
+|161 Wormhole Generator: Kul Tiras168807/299083 and162 Zandalar168808/299084 | Both self script3,3000ms cast and900000ms item/spell recovery. Neither root authors a child/destination in these effect rows. Existing126755 Pandaria code chooses its own nine pinned source teleports; it is not evidence for these two location sets or destination selection. No copied Pandaria handler or invented coordinates. |
+|163 Ocean Simulator168824/298869 | Existing audited self dummy4,2000ms cast and180000ms aura. Prior exact-source simulation, both-skin native apply/remove and authenticated nonzero PCM witnesses remain recorded in the earlier Gaze/Ocean coverage below. This source-order revisit adds no acceptance test, current-master/native certificate or physical-output audibility claim; do not confuse it with unresolved Hyper-Compressed Ocean158. |
+|164 item168836/253937 | Root name is Flight Master's Whistle; root ItemSparse display remains null in this capsule. Self dummy3, shared charge1854 and required-area5550 remain source metadata. Description redirects to227334, whose source effect summons114281/property2061 with target42/138. A description reference is not an executable child edge; flight-master destination/transport/service behavior remains unproved, with no generic summon or invented destination. |
+
+Exact70391 roots, effects, casts, durations, properties and inspected153897 source/published absence are retained in `rows160-164-{readonly-source,action-source}.json`. Current `spell_cast/toy_wormhole.rs` explicitly implements only pinned Pandaria126755/126756–126764. Documentation/source inspection only; no runtime/importer/canonical changes, new data publication or rerun of unchanged historical gates.
+
+## Source155–159: equipment/light/ocean/gift boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|155 Mechagonian Sawblades167931/294703 | Self dummy4/900000ms; visuals85604/87847 reference procedural358463/358464/358739 type17 with Value1=150764/137619/165600. The source equipment/spinning presentation is not established by a copied ordinary weapon attachment or zero-aura admission. |
+|156 Apexis Focusing Shard168012/295017 | Paired target25/self dummy4 effects,60000ms source duration and visual85709. Targeted light/channel behavior remains unproved; a self cosmetic alone is not that paired action. No generic marker admission. |
+|157 Banner of the Burning Blade168014/295037 | Self dummy4/600000ms and visual85713. The specific banner presentation/lifecycle remains unproved; no different Gladiator/War Banner chosen by name, and no new aura4 whitelist. |
+|158 Hyper-Compressed Ocean168016/295044 | Source cursor87 summon152121/property64/900000ms; published152121 is absent. TDB names a fishing icon but faction0/npcflag0/empty AI/script/addon state; its sole91526 display resolves FDID124640, `creature/invisiblestalker/invisiblestalker.m2`. An invisible ordinary actor does not establish the ocean/fishing/loot interaction, and no synthetic pool or source substitution is admitted. |
+|159 Twitching Eyeball168123/295689 | Self dummy4/3600000ms; visual84347 references procedural358470/type17/Value1=168004. The specific appearance/gift payload remains unproved; no generic eye attachment or extra gameplay effects inferred from the description. |
+
+Evidence `rows155-159-{readonly-source,action-source}.json` retains exact root/target/duration/kit/model fields; `ocean158-readonly-model-source.json` links source91526 to its actual local-listfile body. Read-only source continuation only: no additional policy/importer/canonical rows, simulation/native certificate or rerun of unchanged151/prior code gates.
+
+## Source150–154: Azerite real-ground recovery and interaction gaps (2026-10-17)
+
+151 Azerite Firework Launcher166877/290627 was already admitted by the audited one-shot caster-kit policy and covered by the three-ID source18 flat-ground fixture. New test-only acceptance at79a93ee7 uses actual778027 terrain/Northshire9: real bag learning and journal use, one cast event, source600000ms item recovery, immediate and near599s refusal without another cast, then reuse after ordinary50ms-frame passage of the original deadline. Exactly two cast events, unchanged health/body/position and no root aura/summon are asserted. No clock/cooldown reset, policy change or fabricated RED.
+
+The new case plus existing caster-kit source/drift and90s Roar controls pass4/4 zero ignored39.16s. Package/tests check32.03s and fmt/manual changed-line readability pass without warnings. `azerite151-proof-ledger.json` records exact commands/revision; contracts/check/fmt logs retain output. Source speed25 and skyward visual authoring are not native projectile/particle/audio, wire or wall-clock certification. No whole-Toy repeat or new database rows.
+
+| Source row | Exact retained interaction/action gap |
+|---|---|
+|150 Kojo's Master Matching Set166851/290618 | Dummy4 plus140→281580, whose two force-cast slots name279557/271379. Shell-game UI/state/action remains unestablished; a concentration aura or generic force-cast is not a completed matching game. |
+|152 Rallying War Banner166879/290636 | Script77 with source47/31. The planted-banner/nearby-troop rally action is not established by a different ordinary banner or no-op caster visual; no substitute or new admission. |
+|153 Meerah's Jukebox166880/288851 | Mixed140→288865 (dummy4),140→290701 (effect50/misc321012) and77. Object/music/nearby-entry behavior remains unresolved; neither a generic crate nor an ignored script establishes the advertised jukebox hit. |
+|154 Secret Fish Goggles167698/293671 | Periodic23/26000ms triggers293698→151583/property4602 Control0/flags65536. Published151583 is absent; source Secret Fish has faction0/npcflag0/empty AI/script. Secret-fish spawning/visibility/collection action remains unproved; no generic detect-invisibility aura or plain actor substitute. |
+
+Exact roots, child effects and inspected source fish metadata: `rows150-154-{readonly-source,action-source}.json`.151 adds only actual-source acceptance for existing behavior; the other named gaps remain open, without importer/runtime/canonical/native changes.
+
+## Source145–149: procedural/control/script and tea-table boundaries (2026-10-17)
+
+| Source row | Exact retained source gap |
+|---|---|
+|145 Detoxified Blight Grenade166785/290225 | Projectile32/target25 triggers290224: zero dummy4,300000ms aura, visual84035/state kit108567. Besides model attachments, the kit authors procedural358152/type1 with Value0=5107264/Value2=1. Complete target-coating behavior remains unproved; neither ordinary projectile transport nor a generic zero-aura admission establishes it. Source parent speed10 and inherited600000ms spell recovery are metadata, not new timing/appearance acceptance. |
+|146 Sentinel's Glaive166787/290247 and147 Shredder Blade166788/290267 | Both pair149640/149646 summons with caster dummy4; property4621 is Control4/Title0/flags1048576. The special control/spinning action remains unimplemented. Source models328(weight0)/70050(weight1) do not authorize an ordinary actor or copied generic caster animation. |
+|148 Highborne Memento166790/290280 | Two zero dummy3 self slots. Authored caster attachments, animation365173 and sounds125986/125987 are not sufficient to establish the described possession script/action. No invented transform, control behavior or visual-only admission. |
+|149 Bewitching Tea Set166808/290483 | Published149865 remains absent and explicitly retained as a gap. Source149865/90552/scale1/weight1 resolves M2 FDID1852946, `8hu_kultiras_tablesmall02.m2`; source47 radius73=1.5yd,300000ms actor duration and900000ms item recovery. Authentic table metadata alone is not publication or passing actual-use evidence. No149865 producer admission, copied database publication, food interaction or native presentation claim. |
+
+Exact roots/authoring fields: `rows145-149-{readonly-source,action-source}.json`; Tea Set source/body/publication preflight: `tea149-readonly-preflight.json`. Controlled omission probes remain negative evidence only: maintained-copy importer fails on missing149865 (1.652s); actual-use comparison passes135 and refuses149 at missing149865 (1 pass/1 fail,44.15s). `tea149-proof-ledger.json` records those exact scopes. The positive draft is retained outside the passing suite;135's fixture is restored byte-identically to published0942f73d. No149 admission or positive lifecycle proof, no runtime/importer/canonical change for this source packet, and no full-toy/native recertification.
+
+## Source140–144: Brewfest hearthstone and corpse/appearance boundaries (2026-10-17)
+
+140 Brewfest Reveler's Hearthstone166747/286353 already uses homebind252,10s cast and shared2309 charge, with item recovery-1/spell recovery0/GCD1500. One additional actual bag-learning/UseToy case uses the existing saved-bind fixture: missing bind refuses before spending, a displaced caster returns to the hydrated persisted bind after the authored cast, charge max1/current0/recharge1800000ms is reported, and Fire Eater139 then refuses. Health/model remain unchanged. All seven holiday source cases pass7/7 zero ignored54.85s at0d73204d; no production patch or manufactured RED. Exact command/revision and separate build/format evidence live in `hearth140-proof-ledger.json` and contracts/check/fmt logs; prior135–139/Scarab scopes remain distinct.
+
+Native Brewfest procedural357992/357995 type17/Value1=33864, wire/pixels/audio, cross-map behavior and natural30min recharge remain unproved. Simulation acceptance does not certify complete hearthstone presentation.
+
+| Source row | Exact retained gap |
+|---|---|
+|141 Lion's Pride166777/290152 and142 Horde's Might166778/290151 fireworks | Both dummy3 roots use source22/corpse-area-enemy93. Descriptions require fresh corpses of the opposite-faction player. Selector93, freshness/faction/player eligibility and the corpse firework action are not established by generic caster fireworks or raid-corpse119 handling; no substituted self firework. |
+|143 Transmorpher Beacon166779/290154 | Usable root is LegacySlot1 and combines149596/property4345 summon,64→294433 and77. Published149596 is absent; TDB has75007 but npcflag0/empty AI/script fields.294433 is area-aura65/dummy4; advertised20min290215 is dummy4 plus64→297571, itself dummy4. The appearance-choice/service/script action remains unresolved, not an ordinary NPC plus invented menu or appearance. |
+|144 Narassin's Soul Gem166784/290219 | Source explicit any-unit target25 dummy4 lasts5000ms and explicitly requires a dead target. Dead-target eligibility and soul trapping remain unestablished; no generic self cosmetic or living-target substitute. |
+
+Sources `rows140-144-{readonly-source,action-source}.json`, `transmorpher143-child297571-source.json` retain exact bindings and inspected TDB rows. Local pinned `SharedDefines.h` names93 `TARGET_CORPSE_SRC_AREA_ENEMY`; the toy policy does not infer its missing semantics from a nearby selector. No new template/importer/canonical changes or native/full-toy claim.
+
+## Source135–139: Goldtusk table, retained bowl, RC gaps and Fire Eater (2026-10-17)
+
+135 Goldtusk Inn Breakfast Buffet166703/289533 has one ordinary source149876/90570 table: faction35/flags0, empty click/AI/script fields, DisplayScale0.5/Probability0 and M2 FDID963107 (`6hu_magetower_table01.m2`). Source instant cast,47/radius15=3yd,300000ms duration and600000ms item recovery. Maintained-importer RED atcc3fa6fc omits149876 (1 failure,4.539s); real bag-learning/UseToy RED refuses `effect 28, missing summon creature 149876` (1 failure,39.14s). Exact one-entry scenery admission at e860a60d preserves the authentic template/model rather than synthesizing table flags, food or interaction.
+
+Importer identity/scale/idempotence passes1/1,2.554s; actual learned use passes1/1,35.58s after aligning the private protocol with actual upstream7a3f9c0. The stale6b protocol produced12 pre-test ABI errors for real AchievementDelta/Guide-clock/Alterac methods, not a runtime RED or an excuse for invented fields. Server simulation now proves one90570 actor/scale0.5, source3yd XZ front offset, owner/map/faction/non-pet/non-follow identity, unchanged placement after owner movement, ordinary50ms-frame retention just before300s expiry and removal afterward, unchanged player body/health and600s recovery still refusing use. Source47 collision/elevation, native table/food presentation, loot/interactions and full-toy parity remain unproved; no destination handler was changed.
+
+136 Bowl of Glowing Pufferfish166704/289536 retains its existing actual Group28 contract (149954/76142, scale0.6, group privacy,300000ms lifetime), refreshed in the bounded gate below.137 Blight Bomber166743/289887 and138 Glaive Tosser166744/289888 author149448/149447 with property428 Control3/faction1616 plus caster37/25/321 auras. They require real remote-control/action-bar attacks, not ordinary actors or caster immobility; no possession admission or replacement.
+
+139 Fire Eater's Hearthstone166746/286331 already uses homebind252, source10s cast and shared2309 charge with item recovery-1/spell recovery0/GCD1500. One new actual bag-learning/UseToy case reuses the saved-bind fixture: missing bind refuses before spending, the displaced player returns after the source cast, charge max1/current0/recharge1800000ms is reported and Noble Gardener125 then refuses. Body/health remain unchanged. Native procedural358001–358004 type17/Value1=35280/35279, wire/pixels/audio, cross-map behavior and full natural30min recharge remain separate.
+
+Atb697271b/protocol7a3f9c0, final bounded9 tests pass zero ignored147.33s:135 table, six holiday hearthstones including139,136 bowl and126 Personal Anchor refusal. Maintained importer preservation/idempotence/rollback controls pass3/3,6.268s; package/tests check2m04s, fmt/manual changed-line readability clean without warnings. No whole-Toy repeat or native certificate. Exact RED/GREEN/final commands/revisions remain in `breakfast135-{proof-ledger,final-proof-ledger,protocol-alignment}.json`, use/import/final-contracts/check/fmt logs and `hearth139-visual-source.json`.
+
+COPY-only dry-run receipt `breakfast135-canonical-copy-receipt.json` starts at canonical SHA25648e60d673ac15e6b4403c95f6c1e8f82708680f402d9e47cc310d23c985098b4 and produces8f27e3923fc8539042627d38098fe5aae6ef482078528ef9cb1f72bbd3c2ca18. Exactly149876 and its one90570/0.5/0.0 model row are added; no existing runtime template/model/addon/item rows are removed or changed, and no addon/item rows are added. At dry-run time integrity passed and the original canonical remained48e60d67. After lead gate432 (270 passed), the lead independently reproduced the receipt hash and published8f27e392, with backup `world.db.pre-toy135-20261017` (channel635). Agent read-only hash/model verification matches the copy's output and exact149876/90570/0.5/0.0 row; `breakfast135-publication-ack.json` records that acknowledgment. Canonical publication was performed by the lead, not this agent.
+
 ## Source130–134: companion/weapon/healer/corpse/music boundaries (2026-10-17)
 
 | Source row | Exact retained boundary / proof level |

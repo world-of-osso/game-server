@@ -13,6 +13,8 @@ mod azure_intro;
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
 mod azure_mechanic_power;
+#[path = "azure_sprout_death.rs"]
+mod azure_sprout_death;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
@@ -21,6 +23,8 @@ mod azure_telash;
 mod celebras;
 #[path = "gargolmar.rs"]
 mod gargolmar;
+#[path = "gargolmar_speech.rs"]
+mod gargolmar_speech;
 #[path = "gizlock.rs"]
 mod gizlock;
 #[path = "gnomeregan.rs"]
@@ -35,6 +39,8 @@ mod maraudon;
 mod noxxion;
 #[path = "omor.rs"]
 mod omor;
+#[path = "omor_slay.rs"]
+mod omor_slay;
 #[path = "theradras.rs"]
 mod theradras;
 #[path = "vyletongue.rs"]

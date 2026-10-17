@@ -463,7 +463,8 @@ fn battleground_admission_retains_source_bracket_without_mixing_queued_players()
         )
         .unwrap();
     }
-    let id = form_battleground_invitation(&mut state, 1018).unwrap();
+    let id =
+        form_battleground_invitation(&mut state, 1018, &random_bg::Catalog::default()).unwrap();
     let invitation = &state.battleground_matches[&id];
     assert_eq!(
         invitation.instance.bracket,
@@ -479,7 +480,44 @@ fn battleground_admission_retains_source_bracket_without_mixing_queued_players()
     roster.sort_unstable();
     assert_eq!(roster, (2..=17).collect::<Vec<_>>());
     assert!(state.battleground_queue.is_queued(1));
-    assert!(form_battleground_invitation(&mut state, 1018).is_none());
+    assert!(
+        form_battleground_invitation(&mut state, 1018, &random_bg::Catalog::default()).is_none()
+    );
+}
+
+#[test]
+fn random_queue_level25_parties_form_configured_level_matching_map() {
+    let mut state = PvpServerState::default();
+    for leader in [1, 6] {
+        state
+            .battleground_queue
+            .join_group(leader, (leader..leader + 5).collect(), vec![25; 5], 32, 0)
+            .unwrap();
+    }
+    let id = form_battleground_invitation(&mut state, 32, &random_bg::tests::source_catalog(&[]))
+        .expect("ordinary Random32 parties receive a configured-map invitation");
+    let invitation = &state.battleground_matches[&id];
+    let template = template_by_id(invitation.instance.bg_id).unwrap();
+    assert!([566, 726, 727, 761, 998, 1803, 2106, 2107, 2656].contains(&template.map_id));
+    assert_eq!(invitation.original_queues.len(), 10);
+    for character in 1..=10 {
+        assert_eq!(invitation.original_queues.get(&character), Some(&32));
+    }
+    assert_ne!(
+        template.map_id, 2656,
+        "level25 cannot select Deephaul's80-only bracket"
+    );
+    assert_eq!(
+        invitation.instance.bracket,
+        shared::battleground::LevelBracket::new(20, 29)
+    );
+    assert_eq!(
+        (
+            invitation.instance.team_a_players.len(),
+            invitation.instance.team_b_players.len()
+        ),
+        (5, 5)
+    );
 }
 
 #[test]
@@ -505,7 +543,9 @@ fn matched_warsong_players_keep_an_invitation_until_their_response() {
     for (index, player) in players.iter_mut().enumerate() {
         queue_for_battleground(player, &mut state, index as u64 + 1, 90, template.id, 0).unwrap();
     }
-    let match_id = form_battleground_invitation(&mut state, template.id).unwrap();
+    let match_id =
+        form_battleground_invitation(&mut state, template.id, &random_bg::Catalog::default())
+            .unwrap();
     assert!(state.battleground_queue.is_empty());
     let invitation = state
         .battleground_matches
@@ -538,6 +578,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
+            original_queues: BTreeMap::new(),
             flags: Default::default(),
             nodes: None,
             eye: None,
@@ -845,6 +886,7 @@ fn native_flag_match_in_world(
         accepted: players.iter().map(|p| p.0).collect(),
         map: Some(map),
         origins: BTreeMap::new(),
+        original_queues: BTreeMap::new(),
         flags: shared::battleground::flag_rules(template.map_id)
             .map(shared::battleground::FlagBattle::new),
         nodes: None,
