@@ -1,6 +1,6 @@
 ## 2026-10-16 — Same-species pet damage370
 
-[Dragon's Call2283](../pet-battle-effect-coverage.md#same-species-dragons-call370--implementation2026-10-16): explicit species identity from the owned/wild factory, existing direct-damage reuse and bounded real root; test-only templates rejected. Actual owned-team unsupported370 RED→GREEN6,1761/2829 rows (62.25%)/1009 graphs. Both-skin private5961 actual2283 deals85/77 with two matching reserves, HP/cooldown3 and strict-mode/tripwire0; four fullHD originals inspected. Adopted70448 canonical model closure/readback pass; final CPU gates pending, no blanket parity claim.
+[Dragon's Call2283](../pet-battle-effect-coverage.md#same-species-dragons-call370--implementation2026-10-16): explicit species identity from the owned/wild factory, existing direct-damage reuse and bounded real root; test-only templates rejected. Actual owned-team unsupported370 RED→GREEN6,1761/2829 rows (62.25%)/1009 graphs. Both-skin private5961 actual2283 deals85/77 with two matching reserves, HP/cooldown3 and strict-mode/tripwire0; four fullHD originals inspected. Adopted70448 canonical model closure/readback pass; final96/23/12/check/fmt and focused post-gate matrix1 pass, with no redundant broad rerun or blanket parity claim.
 
 ## 2026-10-16 — Bench pet resurrection112
 
