@@ -1,0 +1,169 @@
+{
+  "identity": {
+    "product": "wow",
+    "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
+    "build": "12.1.5.70448",
+    "build_config_sha256": "f80e4cb45b64a3e00f94db5b6eafc45dfdd03b0734282c1369bcff9443062ba1",
+    "root_content_key": "e84483ee756c69a7dc5fbff04af81316",
+    "encoding_content_key": "c36d0a7a0645d12c52932ec8c8f7fea2",
+    "extraction_source": "authenticated-local-CASC-content-root"
+  },
+  "active_source": "data/db2/active",
+  "tables": {
+    "Achievement": {
+      "fdid": 1260179,
+      "content_key": "d06d616241cbc430f76a63b26e452c1c",
+      "db2_sha256": "d64d947a474cfa0a5d3cd22c833c8fe5a7f934c8adc323c7e7b3c777842eddca",
+      "schema_sha256": "424223757300becd5e5fb9c71dcdbc4b89e48237f831aa7f627a0fb9f9565fa3",
+      "content_authenticated": true,
+      "extraction_warnings": [],
+      "layout": "6FC5281B",
+      "rows": 14136,
+      "unreadable_records": 0,
+      "id_column": "ID",
+      "csv_sha256": "de73bbc672fd9d8c418809c52a4a7d8f390b2b8214a39086333cb60bc0e500bb"
+    },
+    "Achievement_Category": {
+      "fdid": 1324299,
+      "content_key": "3c7936ac3ba0d255f12e4b350974572d",
+      "db2_sha256": "aec1cdb257a194e366debab81fcb5975c116cffdef936a100938c98a6448b110",
+      "schema_sha256": "35bfd868e90924154a6a80e444e8641b93141d012fb8f6dbb7372fa7e768dd85",
+      "content_authenticated": true,
+      "extraction_warnings": [],
+      "layout": "67B2B4BD",
+      "rows": 243,
+      "unreadable_records": 0,
+      "id_column": "ID",
+      "csv_sha256": "30839722043dbb91866fe6efda97bc1d984ca13e039ded7bc68d09ea989c46d7"
+    },
+    "Criteria": {
+      "fdid": 1263817,
+      "content_key": "71952448c1a5dfba1f33179376b657f9",
+      "db2_sha256": "e275a62ec727b88dc6f3bd8f81ac8670c25c49fc6ae850cef09204974b663245",
+      "schema_sha256": "d3f304f3b24be6f410437261522d14ce747c189ddbe176801f5b4b3fe54f279b",
+      "content_authenticated": false,
+      "extraction_warnings": [
+        "CASC warning: FDID 1263817 has encrypted chunks with unknown TACT keys, zero-filled: CF9022A9913B1B4D (chunk 6, 10 bytes at offset 687274)",
+        "FDID 1263817 missing TACT keys (zero-filled): CF9022A9913B1B4D (chunk 6, 10 bytes at offset 687274)"
+      ],
+      "layout": "53D03513",
+      "rows": 66670,
+      "unreadable_records": 1,
+      "id_column": "ID",
+      "csv_sha256": "5c63e0bcb9b6f77a9bf4d2f562109acf373fa7d1ce97f749a20612a6152e67eb"
+    },
+    "CriteriaTree": {
+      "fdid": 1263818,
+      "content_key": "22bb8924aaae1308ad3493e1c321ae00",
+      "db2_sha256": "39676d0ca4766f418cc028d8d60bcc7a6456ad0354a1776961815a60d6f4b20d",
+      "schema_sha256": "5ecbd45bba3ca00a77eb4c96f13a24aac42349249968ccd22f6b1e66144865dc",
+      "content_authenticated": false,
+      "extraction_warnings": [
+        "CASC warning: FDID 1263818 has encrypted chunks with unknown TACT keys, zero-filled: CF9022A9913B1B4D (chunk 20, 203 bytes at offset 4501575)",
+        "FDID 1263818 missing TACT keys (zero-filled): CF9022A9913B1B4D (chunk 20, 203 bytes at offset 4501575)"
+      ],
+      "layout": "FF97AE12",
+      "rows": 121814,
+      "unreadable_records": 8,
+      "id_column": "ID",
+      "csv_sha256": "a3156257710bce60b2b7b02648bbeee7a502b204143bbc12f07f887a378fab72"
+    },
+    "ModifierTree": {
+      "fdid": 1267645,
+      "content_key": "8ebfa01e7768ff105f2e16357a69fb5c",
+      "db2_sha256": "8166200530be380d03a4c72fef50c03193b3ead7d5722c455d77b49efbe14893",
+      "schema_sha256": "b35704ac45b41bf54fca99a2865b0fd66e880a2e013369a2f517b2ceda3a8573",
+      "content_authenticated": true,
+      "extraction_warnings": [],
+      "layout": "F13BB1D8",
+      "rows": 317483,
+      "unreadable_records": 0,
+      "id_column": "ID",
+      "csv_sha256": "9afe5f7734828630b7088be5c5f1f5c36f954a86ea85305927b298a502bb5b90"
+    },
+    "Difficulty": {
+      "fdid": 1352127,
+      "content_key": "9284562a372a1d133422d7b363661039",
+      "db2_sha256": "9a298045685d56984b2281f53f96d978994b30b7fffbc48d5b59a80a7b58693c",
+      "schema_sha256": "02807f9728001c1eb5ed586e1ce1c46398ba39242c577ea26557dbb856042ef8",
+      "content_authenticated": true,
+      "extraction_warnings": [],
+      "layout": "B810C351",
+      "rows": 60,
+      "unreadable_records": 0,
+      "id_column": "ID",
+      "csv_sha256": "e5ca0536f7488bd637bff55329ed94eb191ddbe19015929633d9594c1fb8468d"
+    },
+    "Faction": {
+      "fdid": 1361972,
+      "content_key": "1da8906fc321b68ee9d16592608c6988",
+      "db2_sha256": "31c420949877e4d00f82ac3bb59b81aab61c31e79ca76619db68ce1b4ea870ed",
+      "schema_sha256": "b0e2af7c289d449f2f1febbf5b9d099c11c486d46d983c3d65b56d0204d3549f",
+      "content_authenticated": true,
+      "extraction_warnings": [],
+      "layout": "E7553DC7",
+      "rows": 870,
+      "unreadable_records": 0,
+      "id_column": "ID",
+      "csv_sha256": "822bafc2f83a926bcc41f695e27e63340d1346d7b381a8d095fa0904871d4d64"
+    },
+    "WorldStateExpression": {
+      "fdid": 1332558,
+      "content_key": "4801ac416b9616f873cbc77f68fa0e1d",
+      "db2_sha256": "c84bd0bd96f1cdccfde2d6cae83110a036f90dd377e8b09f95c1c3a6cbc0c8d6",
+      "schema_sha256": "5668050b1d961f33fe54817b699c12b63878f1dd86c855d02aed09b24ed6e9c9",
+      "content_authenticated": false,
+      "extraction_warnings": [
+        "CASC warning: FDID 1332558 has encrypted chunks with unknown TACT keys, zero-filled: 2FBD53C07215527F (chunk 9, 39 bytes at offset 2077706)",
+        "FDID 1332558 missing TACT keys (zero-filled): 2FBD53C07215527F (chunk 9, 39 bytes at offset 2077706)"
+      ],
+      "layout": "CA33F540",
+      "rows": 42810,
+      "unreadable_records": 1,
+      "id_column": "ID",
+      "csv_sha256": "69416ba7fa70a8ab36945239bafc02661abe1541d3cbc7edd45e4ec0f7415af8"
+    }
+  },
+  "sqlite_delta_from70391": {
+    "achievement": {
+      "rows": 14136,
+      "added": 0,
+      "removed": 0,
+      "changed": 0,
+      "old_build": "12.1.5.70391",
+      "new_build": "12.1.5.70448"
+    },
+    "achievement_category": {
+      "rows": 243,
+      "added": 0,
+      "removed": 0,
+      "changed": 0,
+      "old_build": "12.1.5.70391",
+      "new_build": "12.1.5.70448"
+    },
+    "criteria": {
+      "rows": 66670,
+      "added": 7,
+      "removed": 0,
+      "changed": 6,
+      "old_build": "12.1.5.70391",
+      "new_build": "12.1.5.70448"
+    },
+    "criteria_tree": {
+      "rows": 121814,
+      "added": 0,
+      "removed": 3,
+      "changed": 87398,
+      "old_build": "12.1.5.70391",
+      "new_build": "12.1.5.70448"
+    }
+  },
+  "generated_predicates": {
+    "mythic": 64,
+    "single": 149,
+    "conditions": 5811,
+    "rank_factions": 241,
+    "node_counts": 2
+  },
+  "boundary": "Active readable records only, no historical substitution. CriteriaTree named Flags/OrderIndex corrects previous raw-offset reversal. Auxiliary WorldMapOverlay stays separately pinned69933; not a complete current-content/playability certificate."
+}
