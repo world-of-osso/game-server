@@ -1,6 +1,9 @@
 ## 2026-10-16 — Eligible victim race53
 
 [Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Native/account GREEN3/3 proves both full ten-race grants and group/reopened date. Census5529/1841 adds246/1005; post-master filter224/0/1existingignored+site1/1, workspace/all-targetcheck/fmt/diff pass and independent artifact/readability complete.
+## 2026-10-16 — Refuge Critter shields223
+
+[Bounded1344](../pet-battle-effect-coverage.md#refuge223--implementation2026-10-16): independent Block759 for user/other friendly Critters, explicit wearer/original caster and shared self26 duration policy. Actual unsupported223 RED→GREEN9;1764/2829 rows (62.35%)/1010 graphs,2232/2. Both-skin private5961 independent caller/Critter blocks keep892/892, non-Critter978 takes28/26; eight fullHD originals/ExtractedOnly/tripwire0/canonical4-asset closure pass. Final CPU gates pending; no generic selector/full Retail timing claim.
 
 ## 2026-10-16 — Same-species pet damage370
 
