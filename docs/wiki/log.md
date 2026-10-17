@@ -1,6 +1,6 @@
 ## 2026-10-17 — Leymor first Fissure clock
 
-[Source boundary](investigations/follower-data.md#leymor-first-fissure-clock--2026-10-17): e2a87993 reaches genuine missing20s386660 CastState RED27.99s after native floor/templates/fourteen ordinary Sprouts/living-victim/no-early-cast prerequisites. Minimal source event/victim cast/48s after-execution repeat is implemented; targeted GREEN pending. Source394154 target110 and sprout lifecycle remain unported; no timing, damage, geometry or data override. Frozen Icy candidate eec25f11 remains separate.
+[Source boundary](investigations/follower-data.md#leymor-first-fissure-clock--2026-10-17): e2a87993 reaches genuine missing20s386660 CastState RED27.99s after native floor/templates/fourteen ordinary Sprouts/living-victim/no-early-cast prerequisites. Minimal source event/victim cast/48s after-execution repeat passes native1/32.44s at31b0bbb8, with strict48e6 before/after and four source-native-root SHA matches; first-clock test enabled only after GREEN. Next ignored31sBrand/45sStomp native tests require real prerequisites/firstFissure/living victim before genuine RED; no such production yet. Source394154 target110 and sprout lifecycle remain unported; no timing, damage, geometry or data override. Frozen Icy candidate eec25f11 remains separate; its final independent artifact follow-up now passes.
 
 ## 2026-10-17 — Telash startup prerequisites
 
