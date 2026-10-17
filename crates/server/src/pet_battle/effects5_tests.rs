@@ -2,6 +2,115 @@ use super::effects2_tests::use_ability;
 use super::*;
 
 #[test]
+fn pet_battle_dragons_call_routes_same_species_bonus_for_both_teams_and_all_active_slots() {
+    let c = catalog();
+    for team in 0..2 {
+        for active in 0..3 {
+            for (matching, expected) in [(0, 150), (1, 192), (2, 234)] {
+                let mut b = battle(&c, 6, 7, [2283, 110, 123]);
+                b.teams[team].active = active;
+                for pet in &mut b.teams[team].pets {
+                    pet.species = 3256;
+                    pet.abilities[0] = 2283;
+                }
+                for pet in &mut b.teams[1 - team].pets {
+                    pet.species = 2621;
+                }
+                b.teams[team].pets[active].species = 2621;
+                let reserves: Vec<_> = (0..3).filter(|slot| *slot != active).collect();
+                for slot in reserves.iter().take(matching) {
+                    b.teams[team].pets[*slot].species = 2621;
+                }
+                let target = b.active(1 - team);
+                let mut actions = [Action::Pass; 2];
+                actions[team] = Action::Ability(2283);
+                let (b, events) = b.step(&c, actions, &mut Fixed(500_000)).unwrap();
+                assert_eq!(
+                    damage(&events),
+                    vec![expected],
+                    "team{team}/active{active}/matching{matching}"
+                );
+                assert!(events.iter().any(|event| matches!(event,
+                    Event::Damage { target: recipient, periodic: false, .. } if *recipient == target
+                )));
+                assert!(b.teams[team].pets.iter().all(|pet| pet.health == 10000));
+                assert_eq!(b.teams[team].pets[active].cooldowns[&2283], 3);
+            }
+        }
+    }
+}
+
+#[test]
+fn pet_battle_dragons_call_counts_fainted_roster_member_without_reviving_it() {
+    let c = catalog();
+    let mut b = battle(&c, 6, 7, [2283, 110, 123]);
+    b.teams[0].pets[0].species = 2621;
+    b.teams[0].pets[1].species = 2621;
+    b.teams[0].pets[1].health = 0;
+    let dead = c.state_id("Is_Dead").unwrap();
+    b.teams[0].pets[1].states.insert(dead, 1);
+    b.teams[0].pets[2].species = 3256;
+    let (b, events) = use_ability(&b, &c, 2283);
+    assert_eq!(damage(&events), vec![192]);
+    assert_eq!(b.teams[0].pets[1].health, 0);
+    assert_eq!(b.teams[0].pets[1].state(dead), 1);
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, Event::Revived(_)))
+    );
+}
+
+#[test]
+fn pet_battle_dragons_call_preserves_direct_attack_miss_rules() {
+    let c = catalog();
+    let mut b = battle(&c, 6, 7, [2283, 110, 123]);
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Stat_Accuracy").unwrap(), -100);
+    let (b, events) = use_ability(&b, &c, 2283);
+    assert!(damage(&events).is_empty());
+    assert!(
+        events
+            .iter()
+            .any(|event| matches!(event, Event::Miss { .. }))
+    );
+    assert_eq!(b.teams[1].pets[0].health, 10000);
+}
+
+#[test]
+fn pet_battle_dragons_call_test_only_templates_and_unestablished_parameters_reject_before_rng() {
+    struct NoDraw;
+    impl BattleRng for NoDraw {
+        fn draw(&mut self) -> u32 {
+            panic!("rejected370 must not draw RNG");
+        }
+    }
+    let mut c = catalog();
+    for ability in [2259, 2280] {
+        let b = battle(&c, 6, 7, [ability, 110, 123]);
+        assert!(
+            b.step(&c, [Action::Ability(ability), Action::Pass], &mut NoDraw)
+                .is_err()
+        );
+    }
+    c.effects.get_mut(&4161).unwrap().params[3] = 1;
+    let b = battle(&c, 6, 7, [2283, 110, 123]);
+    assert!(
+        b.step(&c, [Action::Ability(2283), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
+}
+
+#[test]
+fn pet_battle_dragons_call_unknown_species_identity_is_not_synthesized() {
+    let c = catalog();
+    let stats = calculate_stats(&c, 2621, 3, 3, 2).unwrap();
+    assert!(Pet::new(&c, 0, stats, 1, [393, 2283, 0], States::new()).is_err());
+    assert!(Pet::new(&c, u32::MAX, stats, 1, [393, 2283, 0], States::new()).is_err());
+}
+
+#[test]
 fn pet_battle_bench_resurrection_revives_only_dead_reserves_for_every_active_slot() {
     let c = catalog();
     let dead = c.state_id("Is_Dead").unwrap();
