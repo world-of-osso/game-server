@@ -172,6 +172,7 @@ pub enum Hook {
         spell_id: u32,
     },
     JustEngagedWith(Entity),
+    KilledUnit(Entity),
     JustDied(Option<Entity>),
     /// `DamageTaken(attacker, damage)` with the health the damage was taken from.
     DamageTaken {
@@ -223,6 +224,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn channel_finished(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
     fn on_spell_cast(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
     fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {}
+    fn killed_unit(&mut self, _ctx: &mut Ctx, _victim: Entity) {}
     fn just_died(&mut self, _ctx: &mut Ctx, _killer: Option<Entity>) {}
     fn damage_taken(&mut self, _ctx: &mut Ctx, _attacker: Option<Entity>, _damage: DamageTaken) {}
     /// `CreatureAI::EnterEvadeMode`: the generic evade already ran
@@ -527,6 +529,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::ChannelFinished { spell_id } => ai.channel_finished(&mut ctx, spell_id),
         Hook::SpellCast { spell_id } => ai.on_spell_cast(&mut ctx, spell_id),
         Hook::JustEngagedWith(who) => ai.just_engaged_with(&mut ctx, who),
+        Hook::KilledUnit(victim) => ai.killed_unit(&mut ctx, victim),
         Hook::JustDied(killer) => ai.just_died(&mut ctx, killer),
         Hook::DamageTaken {
             attacker,

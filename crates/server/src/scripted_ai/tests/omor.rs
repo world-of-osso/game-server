@@ -1,7 +1,7 @@
 //! Omor source EventMap and hounds: real Normal-copy admission, not native balance.
 use super::*;
 
-fn orbital_fixture() -> (Harness, Entity, InMap) {
+pub(super) fn orbital_fixture() -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss(17308, 543, 0);
     let directory = crate::ground::ground_data_dir();
     let wdt = h.app.world().resource::<MapStore>().maps[&543].wdt_file_data_id;
@@ -34,7 +34,7 @@ fn read_summon_speech_observer() -> Position {
     Position { x, y, z }
 }
 
-fn summon_speech_fixture() -> (Harness, Entity, InMap) {
+pub(super) fn summon_speech_fixture() -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = orbital_fixture();
     let mut observer = read_summon_speech_observer();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
