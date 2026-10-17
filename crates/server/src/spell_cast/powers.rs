@@ -17,10 +17,13 @@ use std::path::Path;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use rusqlite::Connection;
-use shared::components::{CombatStatus, Health, Mana, Player, PowerEntry, PowerType, UnitPowers};
+use shared::components::{
+    CombatStatus, Health, Mana, Npc, Player, PowerEntry, PowerType, UnitFlags, UnitPowers,
+};
 
 use crate::grid_activity::GridDormant;
 use crate::spell_info::ClassSpells;
+use crate::world_data::WorldData;
 
 /// Alternate (encounter/quest/mount) bars are not class resources.
 const ALTERNATE_POWERS: [i32; 4] = [10, 23, 24, 25];
@@ -336,6 +339,8 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static crate::auras::AuraStatMods>,
         Option<&'static crate::stats::CharacterStats>,
         Option<&'static crate::death::PlayerDeathState>,
+        Option<&'static Npc>,
+        Option<&'static UnitFlags>,
     ),
     Without<GridDormant>,
 >;
@@ -351,6 +356,7 @@ type RegenQuery<'w, 's> = Query<
 pub(crate) fn regenerate_powers(
     time: Res<Time>,
     table: Option<Res<PowerTypeTable>>,
+    world_data: Option<Res<WorldData>>,
     mut units: RegenQuery,
 ) {
     let Some(table) = table else {
@@ -358,7 +364,10 @@ pub(crate) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (mut pools, mana, combat, mods, stats, death) in &mut units {
+    for (mut pools, mana, combat, mods, stats, death, npc, flags) in &mut units {
+        if !read_creature_power_regeneration(npc, flags, world_data.as_deref()) {
+            continue;
+        }
         if death.is_some_and(|death| death.state != shared::death::DeathState::Alive) {
             continue;
         }
@@ -405,6 +414,29 @@ pub(crate) fn regenerate_powers(
         }
         pools.bypass_change_detection().mana_regen_per_sec = mana_rate;
     }
+}
+
+/// TC Creature.cpp949-955 gates native regeneration on the authored flag.
+/// Existing player-controlled companion pools retain their player-resource path.
+fn read_creature_power_regeneration(
+    npc: Option<&Npc>,
+    flags: Option<&UnitFlags>,
+    data: Option<&WorldData>,
+) -> bool {
+    let Some(npc) = npc else {
+        return true;
+    };
+    if flags.is_some_and(|flags| flags.0 & crate::faction::UNIT_FLAG_PLAYER_CONTROLLED != 0) {
+        return true;
+    }
+    let Some(template) = data.and_then(|data| data.templates.get(&npc.template_id)) else {
+        warn!(
+            entry = npc.template_id,
+            "Native power regeneration requires creature template data"
+        );
+        return false;
+    };
+    template.regenerates_power
 }
 
 /// Signed rate (raw units per second, before aura multipliers) and the value it

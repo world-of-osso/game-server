@@ -15,6 +15,8 @@ mod honor_progress;
 mod honor_race;
 #[path = "pvp_kill_criteria_tests.rs"]
 mod kill_criteria;
+#[path = "pvp_lifetime_honor_tests.rs"]
+mod lifetime_honor;
 use crate::pvp::pvp_support::build_pvp_snapshot;
 use shared::currency::{CurrencyWallet, currency_by_id};
 use shared::protocol::CurrencyStateUpdate;
