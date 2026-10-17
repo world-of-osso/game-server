@@ -1,6 +1,6 @@
 # Dungeon achievements
 
-Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
+Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md). [Client criterion flags, source templates and triple proof](../../../../game-engine/docs/wiki/systems/dungeon-achievements.md#authored-criterion-presentation--2026-10-17).
 
 ## Actual killed-creature level21
 
