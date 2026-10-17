@@ -275,6 +275,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     # Katy's Stampwhistle: preserve source Assistant35 and mailbox NPC flags.
     # Service and summon-category acceptance remain separate runtime gates.
     132969,
+    # Gnoll Barrel: authentic paired identities; target-dummy combat is separate.
+    143119, 143120,
     # Scarab Storm: source guardian routing/count remains a separate runtime boundary.
     51113,
     # Spirit of Bashiok: one stationary source actor; native18/78 placement is separate.
