@@ -190,3 +190,15 @@ Character achievement247 / criterion2379 uses native DoEmote54 TextEmote56. Pres
 
 - EarnHonorableKill35 increments once per eligible native world-player death for existing living, in-range recipients. Same-team, gray, inactive, no-credit, self and wrong-copy victims reject; no new battleground/arena policy. Eligibility precedes Honor XP: a below-minimum-level recipient may earn kill credit while receiving zero XP. Account contributions sum, not max.
 - G.N.E.R.D. Rage1261 retains authored criterion3882/aura48890 and the installed ten-kill threshold. Actual item37583 use must finish its authored1000ms cast before supplying the aura. Nonlethal damage, idle/dead replay and kills after aura removal cannot add its counter. Persist quantity and original earned date. Lifetime113, area31, class52 and race53 remain separate.
+
+## Eligible victim race53
+
+- Credit DeliverKillingBlowToRace53 from the same native eligible world-player death reward as35, using the actual victim Player.race for every existing eligible reward recipient. The pinned TC name does not limit this credit to the final attacker. Match positive authored playable race IDs exactly; retain every qualifier and sum account contributions. No scoreboard faction, killer race or kill request may substitute.
+- Preserve the full ten distinct one-kill leaves of faction-specific Know Thy Enemy246/1005, including Dracthyr70/52. Nonlethal/friendly/gray/dead/idle replay cannot add race credit; an eligible nearby group recipient must receive its own contribution without dealing the final blow. Persist contributions and account original dates across normal reconstruction. No class52/area31/lifetime113 or new BG/arena policy in this slice.
+
+
+## Eligible victim class52
+
+- Credit DeliverKillingBlowToClass52 at the existing eligible world-player death reward, from actual victim Player.class for every eligible recipient, including the living nearby group member without the final blow. Match positive authored class1..13 exactly, retain all companions and sum account contributions. Neither killer class nor victim race may substitute.
+- That Takes Class245 retains all thirteen authored one-kill leaves, including Monk10, Demon Hunter12 and Evoker13. Require native lethal damage; reject nonlethal/friendly/gray/dead replay and unrelated recipients. Zero Honor XP cannot suppress eligible credit. Persist contributions and original account earned date across reconstruction. Area31/lifetime113 and new BG/arena policies remain out of scope.
+- Tests: `pvp_honor_class_tests.rs` full native thirteen-class grant/group/reopen; `achievement_catalog_tests.rs` account sum.

@@ -451,6 +451,30 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'creature script identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_omor_primary_uses_installed_bit_zero_and_keeps_gargolmar(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('omor')
+        self.assertIsNotNone(profile, 'pinned Omor primary is missing')
+        primary, _ = profile
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(1891,543,0);
+            INSERT INTO tdb_creature_template VALUES(17308,'boss_omor_the_unscarred'),(17540,'');
+            INSERT INTO raid_encounter_creature VALUES(543,17306,1893,2,527,1104,18236);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=543 ORDER BY bit').fetchall(),
+            [(17308,1891,0,528,1105,18237),(17306,1893,2,527,1104,18236)])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=17308")
+        with self.assertRaisesRegex(ValueError, 'creature script identity'):
+            prepare_bindings(self.db, [primary])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='boss_omor_the_unscarred' WHERE entry=17308")
+        self.db.execute('UPDATE dungeon_encounter SET Bit=1 WHERE ID=1891')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_source_identity_drift_refused_before_mutation(self):
         binding = dict(map_id=2813,entry=234648,encounter_id=3101,bit=1,
                        script='boss_kystia_manaheart',journal_id=2679,actor_id=5847,display_id=124578)

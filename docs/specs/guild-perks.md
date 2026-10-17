@@ -35,7 +35,9 @@ Mainline installed `GuildPerkSpells` membership grants/removal, following Trinit
 - [x] Real persisted join, changed specialization, quit and fresh-process class-knowledge test GREEN1/1 at serveree29a3bd/protoe50b02c.
 - [x] Existing-member login, online forced removal/rejoin and offline removal/reopen controls GREEN2/2 at5dd1cfa9.
 - [x] Supported Mount Up172/211 and map suppression landed;210 remains a named blocked context.
-- [ ] Hasty Hearth, Mobile Banking and Quick/Dead remain separately qualified. Guild Mail has a real same-guild zero-delay control.
+- [x] Hasty Hearth is separately qualified below. Guild Mail has a real same-guild zero-delay control.
+- [ ] Mobile Banking remains source-blocked: installed83958 is script effect77 without an authored trigger;88304/88306 summon206602/206603, but the pinned TC source supplies no dispatch binding. Its installed tooltip requires Friendly guild reputation; no guild-specific reputation eligibility authority is established. A description's88306 duration reference is not proof of dispatch or permission.
+- [ ] Quick/Dead83950 remains source-blocked: installed aura340 carries50% but TC a352b1fa SpellAuraEffects.cpp412 uses HandleNULL; SpellAuraDefines.h427 names a guild-member resurrector whereas the installed tooltip is unqualified. Its second effect is dummy3/+10% dead movement, without a pinned script. Recipient/caster/guild, health calculation and dead-speed handling are not fabricated from catalog knowledge.
 - [x] Bounded catalog/membership/UI slice landed; actual UDP invitation/removal/rejoin/quit and native fresh-process owner readback passed.
 
 ## Out of scope

@@ -25,6 +25,7 @@ fn achievements_criteria_content268_full_hundred_settlements_grant_both_factions
         .race = 2;
     let matched = BgMatch {
         bg_id: template.id,
+        bracket: template.bracket,
         team_a: players.iter().step_by(2).map(|p| p.0).collect(),
         team_b: players.iter().skip(1).step_by(2).map(|p| p.0).collect(),
     };
