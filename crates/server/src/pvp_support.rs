@@ -126,6 +126,7 @@ pub(super) fn format_bg_queue_error(error: BgQueueError) -> String {
         BgQueueError::EmptyGroup => "empty battleground group".into(),
         BgQueueError::LevelCountMismatch => "battleground level count mismatch".into(),
         BgQueueError::DuplicatePlayer => "duplicate battleground player".into(),
+        BgQueueError::GroupTooLarge => "group exceeds the battleground queue limit".into(),
         BgQueueError::Deserter => "player has deserter".into(),
     }
 }
