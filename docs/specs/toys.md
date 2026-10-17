@@ -128,3 +128,7 @@ Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actio
 - Retail cached `Blizzard_ToyBox.lua`: 229–246 UseToy(itemID), 254–271 account favourites, 135–165 TOYS_UPDATED.
 - TrinityCore a352b1fa `WorldSession::HandleUseItemOpcode`, `Player::CastItemUseSpell`, `SpellHistory::GetCooldownDurations`: item-use dispatch and ItemEffect overrides. Generic aura-56 transform handling excludes zero-entry spell-specific costume logic (`auras/unit_state.rs`).
 - Implementation and preparation commands: [Toy Box system](../wiki/systems/toys.md).
+
+- Source Overtuned Corgi Goggles158149/264091 preserves viewer aura233 payload[3569,53] through real learning/use and cancellation; never replace it with a global ModelDisplay transform. Source duration600000ms is not a ten-minute native-expiry certificate. Viewer-local payload interpretation/rendering remains unimplemented.
+
+- Roar of Rezan160509/272071 emits the real cast event for authored caster sound/animation visual77572, preserves health/global appearance and creates no summon or aura. Preserve item recovery90000ms and ordinary rejection/reuse. This bounded server contract does not certify native audio/animation playback.
