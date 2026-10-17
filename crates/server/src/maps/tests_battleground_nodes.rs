@@ -12,6 +12,38 @@ struct EnteredMatch {
 }
 
 #[test]
+fn random_queue_normal_party_projects_original32_to_every_member() {
+    let mut h = harness_with(|app| {
+        app.add_plugins((crate::group::GroupPlugin, crate::pvp::PvpPlugin));
+    }).unwrap();
+    let players: Vec<_> = (1..=5)
+        .map(|id| h.spawn(id, STORMWIND, STOCKADE_ENTRANCE_TRIGGER))
+        .collect();
+    for who in &players {
+        h.app.world_mut().entity_mut(who.player).insert((
+            crate::pvp::PlayerPvpState::default(),
+            shared::components::Level(25),
+        ));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<QueueForBattleground>(),
+            pair::<PvpStateUpdate>(),
+        ));
+    }
+    form_source_five_player_parties(&mut h, &players, 25);
+    h.app.world_mut()
+        .get_mut::<MessageSender<QueueForBattleground>>(players[0].connection).unwrap()
+        .send::<PvpChannel>(QueueForBattleground { battleground_id: 32 });
+    let updates = h.receive_pvp_updates(5);
+    for who in &players {
+        let state = h.app.world().get::<crate::pvp::PlayerPvpState>(who.player).unwrap();
+        assert!(matches!(state.queue,
+            Some(crate::pvp::PlayerPvpQueue::Battleground { battleground_id: 32, .. })
+        ), "ordinary party member retains original queue32; receipts={:?}", updates.get(&who.connection));
+        assert!(state.battleground.is_none(), "five total players cannot start a parent5v5 match");
+    }
+}
+
+#[test]
 fn arathi_four_normal_five_player_parties_enter_one_twenty_player_match() {
     let template = shared::battleground::arathi_basin();
     let mut entered = enter_source_match_queued(
