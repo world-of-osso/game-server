@@ -65,6 +65,7 @@ pub fn supported_property(property: u32) -> bool {
             | 44
             | 59
             | 66
+            | 75
             | 76
             | 96
             | 100
@@ -134,7 +135,7 @@ fn validate_ability_graph(
     if let Some(states) = catalog.ability_states.get(&ability) {
         for state in states.keys() {
             let name = &catalog.states[state];
-            let known_object = matches!(ability, 189 | 333) || is_two_way_wall(ability);
+            let known_object = matches!(ability, 189 | 294 | 333) || is_two_way_wall(ability);
             if name == "Mechanic_IsObject" && !known_object {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
@@ -245,6 +246,7 @@ fn validate_ability_graph(
                     | 62
                     | 66
                     | 68
+                    | 75
                     | 76
                     | 96
                     | 141
@@ -308,6 +310,13 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && effect.order == 2
                 && effect.aura == 0
                 && p.iter().all(|v| *v == 0)
+        }
+        // Launch Rocket's first use sets up294; its second use launches the rocket.
+        75 => {
+            catalog.turns[&effect.turn].ability == 293
+                && effect.order == 1
+                && effect.aura == 294
+                && p == [45, 100, 0, 0, 0, 0]
         }
         // Fade explicitly swaps its user randomly after removing the dodge aura.
         // Other107 descriptions do not establish random versus selected routing.
