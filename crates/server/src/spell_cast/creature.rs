@@ -41,9 +41,7 @@ pub(crate) fn creature_cast(
     if !triggered {
         return start_cast(world, caster, &spell, explicit);
     }
-    if !targets::is_alive(world, caster) {
-        return Err(CastFailure::CasterDead);
-    }
+    // Bool FULL_MASK has no triggering aura: TC CheckCast permits a dead caster.
     super::aura_spell_restrictions::check_caster(world, caster, &spell)?;
     let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;
     super::aura_spell_restrictions::check_target(world, explicit, &spell)?;

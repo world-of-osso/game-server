@@ -2,6 +2,12 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Creature bool-trigger dead-caster admission — 2026-10-17
+
+`creature_cast(..., triggered=true)` unconditionally rejected a dead caster. Pinned `Spell.cpp:5748–5749` instead exempts `IsTriggered() && !m_triggeredByAuraSpell`; `SpellDefines.h:498,523` gives the bool constructor FULL_MASK with default null TriggeringAura, and `Spell.cpp:3455–3459` only records an aura origin when one is supplied. This bool API has no aura-origin argument, so its living-caster gate was not native compatibility.
+
+Actual Death Touch5 kills the present NPC without direct health writes. Genuine REDe214ccf5 is2pass/2fail10.64s (116.157s wrapper): dead bool-triggered116 incorrectly returns CasterDead, and dead bool-triggered205406 reports CasterDead instead of its still-required214502 CasterAuraState. Living bool-triggered116 and dead ordinary116 controls pass. The unconditional gate is removed; all caster/target aura checks, recipient validation, cost/time/CC bypass and depth1 remain unchanged. Native116's228597 child is loaded, but these fixtures prove admission, not full Frostbolt flight/damage from a dead actor. GREEN/final gates pending; receipts `data/class-completeness6-2026-10-12/creature-trigger-dead-caster-{goal,proof-ledger}.json`. Ordinary passive/AllowCastWhileDead and aura-origin trigger policy remain separate.
+
 ## Normal explicit AllowDeadTarget admission — 2026-10-17
 
 The maintained `validate_target` used `target_alive == resurrects`, treating every non-resurrection spell as living-only. Native9454 Freeze has AllowDeadTarget, independent of the aura's missing AllowAuraWhileDead. Actual Death Touch5 leaves a present corpse; player request, ordinary creature and triggered creature entry all incorrectly rejected9454 with InvalidTarget. Genuine RED24687a16 is2pass/3fail12.93s (164.091s wrapper), with actual living Freeze stun and corpse Flame Shock/no-payment controls passing. No raw health/mana/stat/row/flag/clock/RNG/budget mutations.
