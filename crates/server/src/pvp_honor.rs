@@ -24,6 +24,9 @@ const PLAYER_COMBAT_REACH: f32 = 1.5;
 const ISLE_COMMANDER_HONOR: u32 = 500;
 // TC Isle OnUpdate324–334: each source resource reinforcement also grants12.
 const ISLE_RESOURCE_HONOR: u32 = 12;
+// TC AV HonorKillBonus535–539 / OnUnitKilled653–684.
+const AV_CAPTAIN_KILL_EQUIVALENTS: u32 = 3;
+const AV_GENERAL_KILL_EQUIVALENTS: u32 = 4;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -73,11 +76,16 @@ pub(super) fn award_battleground_completion(
     if !matches!(map_id, 2107 | 566) {
         return; // Other per-map callbacks remain unimplemented, not generic rewards.
     }
-    let bonus = (f32::from(bracket.max_level.min(80)) * 1.55).ceil() as u32;
+    let bonus = calculate_bonus_honor(bracket, 1);
     if won {
         award_battleground_honor(world, player, bonus);
     }
     award_battleground_honor(world, player, bonus);
+}
+
+fn calculate_bonus_honor(bracket: shared::battleground::LevelBracket, kills: u32) -> u32 {
+    // Preserve TC Formulas.h's multiplier * level *1.55 order, then ceil once.
+    (kills as f32 * f32::from(bracket.max_level.min(80)) * 1.55).ceil() as u32
 }
 
 fn award_battleground_honor(world: &mut World, player: Entity, amount: u32) {
@@ -103,11 +111,27 @@ pub(super) fn award_isle_commander_honor(world: &mut World, match_id: u64) {
         Some(BgOutcome::Winner(team)) => team,
         _ => panic!("accepted Isle commander death must declare a winner"),
     };
-    award_isle_team_honor(world, match_id, winner, ISLE_COMMANDER_HONOR);
+    award_match_team_honor(world, match_id, winner, ISLE_COMMANDER_HONOR);
 }
 
-fn award_isle_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount: u32) {
-    let (map, roster) = read_isle_team_roster(world, match_id, team);
+/// Only the source battle-accepted captain/general death supplies this callback.
+pub(super) fn award_alterac_npc_honor(world: &mut World, match_id: u64, entry: u32) {
+    let (team, kills) = match entry {
+        11947 => (BgTeam::A, AV_CAPTAIN_KILL_EQUIVALENTS),
+        11949 => (BgTeam::B, AV_CAPTAIN_KILL_EQUIVALENTS),
+        11946 => (BgTeam::A, AV_GENERAL_KILL_EQUIVALENTS),
+        11948 => (BgTeam::B, AV_GENERAL_KILL_EQUIVALENTS),
+        _ => return, // Mine ownership has no matching NPC Honor award in this source hook.
+    };
+    let bracket = world.resource::<PvpServerState>().battleground_matches[&match_id]
+        .instance
+        .bracket;
+    let amount = calculate_bonus_honor(bracket, kills);
+    award_match_team_honor(world, match_id, team, amount);
+}
+
+fn award_match_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount: u32) {
+    let (map, roster) = read_match_team_roster(world, match_id, team);
     let recipients: Vec<_> = world
         .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
         .iter(world)
@@ -121,7 +145,7 @@ fn award_isle_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount:
     }
 }
 
-fn read_isle_team_roster(world: &World, match_id: u64, team: BgTeam) -> (InMap, Vec<u64>) {
+fn read_match_team_roster(world: &World, match_id: u64, team: BgTeam) -> (InMap, Vec<u64>) {
     let state = world.resource::<PvpServerState>();
     let matched = &state.battleground_matches[&match_id];
     let members = match team {
@@ -133,7 +157,10 @@ fn read_isle_team_roster(world: &World, match_id: u64, team: BgTeam) -> (InMap, 
         .filter(|character| matched.accepted.contains(character))
         .copied()
         .collect();
-    (matched.map.expect("accepted Isle match has a map"), roster)
+    (
+        matched.map.expect("accepted battleground match has a map"),
+        roster,
+    )
 }
 
 /// A/B counters around the exclusive objective advance, not across combat/death systems.
@@ -181,7 +208,7 @@ fn award_isle_resource_team(
         .checked_sub(before)
         .expect("Isle objective advance only adds resource reinforcements");
     for _ in 0..grants {
-        award_isle_team_honor(world, match_id, team, ISLE_RESOURCE_HONOR);
+        award_match_team_honor(world, match_id, team, ISLE_RESOURCE_HONOR);
     }
 }
 

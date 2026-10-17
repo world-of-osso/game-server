@@ -1,3 +1,7 @@
+## 2026-10-17 — Guild invitation appearance delivery
+
+[Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
+
 ## 2026-10-16 — Eligible victim class52
 
 [Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN2/2; structural5530/1841 adds245 only.
@@ -6,7 +10,7 @@
 [Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
 ## 2026-10-17 — Telash startup prerequisites
 
-[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test remains ignored after genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; no Telash production change.
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test reached genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; native primary-pool binding exposes actual61.5vs60 from unauthored generic regeneration; authored-flag consumer preserves the controlled path and passes native2/2 at933bb833. Both regressions enabled after GREEN;958289d1 affected19+17resource+11guardian cases pass47, check/fmt pass with zero warnings and confirmed48e6 before/after. Nextnative389453 periodic+2/sec test reaches genuine60vs62 RED31.32s and stays ignored until GREEN. Rune startup/combat phases remain unported.
 
 ## 2026-10-17 — Leymor native Sprouts destination boundary
 
