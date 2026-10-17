@@ -2049,6 +2049,7 @@ pub(crate) fn execute_cast(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
+    mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
