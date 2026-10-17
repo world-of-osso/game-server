@@ -1754,3 +1754,10 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16): authentic paired template import RED→GREEN, real area/cursor/source300s simulation lifecycle,147/147 Toy gate; target-dummy combat and missing native533501 body remain separate.
 
 - 2026-10-16: [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16): separate catalog/child-position REDs, exact302746/display16675, actual cooking/CozyFire/source300s cleanup and source-drift refusals;149 Toy+29 affected gates pass, native appearance/full trigger parity separate.
+- 2026-10-17: [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) reads real current terrain at the existing HK boundary, retains ancestry/companions and account SUM; native/account behavioral RED2/2, full50 GREEN pending. Imported70391 structural census5533/1841 adds only224/1151/12411; area metadata is70448, no reconciled70448 achievement-profile claim.
+
+- 2026-10-17: [Active70448 achievement inputs](systems/dungeon-achievements.md#active70448-achievement-inputs) regenerated from active CSVs; named tree Flags/OrderIndex fixes prior raw offsets. Build/key receipt, active predicates and5533/1841 census reconciled (no root delta from migration). Importer behavioralRED→GREEN4/4; canonical publication lead-owned.
+
+- 2026-10-17: area31 on canonical70448 at18856aaf passes controlled native full50, accountSUM, ancestry/timer and pinned census4/4(13.70s); no registered BG policy/credit added. Required integration/check gates pending.
+
+- 2026-10-17: area31/current70448 final integration1c67a39c passes required workspace four-filter228/0/1existing ignored(345.74s), site-export1/1, workspace/all-target check, three-repo fmt/diff. Importer/predicate70448 source reconciliation precedes native GREEN. No new BG policy/playability certificate; lead landing/rendered/fresh UDP remain separate.
