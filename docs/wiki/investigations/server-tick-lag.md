@@ -118,15 +118,15 @@ The first final-profile attempt exposed a stale private snapshot lacking the new
 
 Follow-up starts on official `d89a3dbc`, protocol master `b701f32`, and preserves gameplay/timer/profile settings. Each of five systems first received a full-population benchmark (250000 entities, 4096 optional-component layouts, warm-up then five updates, fastest of three samples). Layout diversity models the cost of discovering matching archetypes as well as entity iteration; this is not an exact production archetype census. The final isolated-maintenance guard is 100 µs for five empty updates, not a new server tick policy. Initial 1 ms calibration passed three cases, so those three were rerun against the tighter guard before production edits.
 
-| System | RED for five idle updates | Boundary |
+| System | RED / GREEN for five idle updates | Boundary |
 |---|---:|---|
-| Threat membership replication | 15.884 ms | unchanged full-population threat tables |
-| Detection geometry | 57.796 ms | unchanged active entities without observers |
-| Aura initialization | 371.826 µs | all units already initialized, diverse layouts |
-| Creature health regeneration | 610.949 µs | dormant timers, diverse layouts |
-| JustAppeared | 165.404 µs | no pending hooks, diverse layouts |
+| Threat membership replication | 15.884 ms / 7.364 µs | unchanged full-population threat tables |
+| Detection geometry | 57.796 ms / 6.833 µs | unchanged active entities without observers |
+| Aura initialization | 371.826 µs / 7.424 µs | all units already initialized, diverse layouts |
+| Creature health regeneration | 610.949 µs / 6.713 µs | dormant timers, diverse layouts |
+| JustAppeared | 165.404 µs / 6.152 µs | no pending hooks, diverse layouts |
 
-Aura initialization, health regeneration and JustAppeared rebuilt exclusive-system `QueryState`s each update, rediscovering world archetypes even with no eligible entities. Persist their existing filtered queries as exclusive-system parameters: Bevy updates matched archetypes when topology changes. The actual initialization, timer subtraction/interval/cast/health rules and deferred JustAppeared dispatch ordering are unchanged. Threat and detection fixes and post-change proof remain pending.
+Aura initialization, health regeneration and JustAppeared rebuilt exclusive-system `QueryState`s each update, rediscovering world archetypes even with no eligible entities. Persist their existing filtered queries as exclusive-system parameters: Bevy updates matched archetypes when topology changes. The actual initialization, timer subtraction/interval/cast/health rules and deferred JustAppeared dispatch ordering are unchanged. The five GREEN benchmarks and 81 functional controls pass on merged `cc6eb7d4` with protocol `b701f32`: 86/86 tests in 273.04 seconds, compilation separate. Controls include active and woken threat reset/re-add, native polymorph and ordinary regeneration/evade timing, aura initialization/passive/cancel behavior, interest and reciprocal visibility, native Kystia/Minion of Zul JustAppeared and mirror respawn-versus-reset effects. Runtime check, matching release build and eleven-peer acceptance remain separate pending proofs.
 
 Threat membership change checks now use the active-grid index instead of every dormant threat table. Grid wake publishes the current table before ordinary visibility/replication, even when its edits occurred several dormant ticks earlier; active direct component edits still use change detection and preserve entry order, empty-list clearing and dirty publication. No threat authority, selection, damage or healing calculations change. A concrete wake/clear/re-add regression accompanies existing aggro and threat controls.
 
