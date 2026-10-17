@@ -1,3 +1,4 @@
+- [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
 - [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
 - [Gargolmar charge impact](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16) — actual19yd no-motion RED→source-speed/reach/delayed-impact GREEN; two-point subset, obstacle/native proof separate.
 - [Omor wild summon lifetime](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) — owner-death RED→GREEN with authored expiry/minion controls; strict bounded runtime re-enabled, full native acceptance open.

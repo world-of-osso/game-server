@@ -1,6 +1,16 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_honor_class52_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(2359, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&2359), Some(&7));
+}
+
+#[test]
 fn achievements_criteria_honor_race53_account_contributions_sum_not_max() {
     let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
         criteria_progress: [(2370, count)].into(),
@@ -1417,9 +1427,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Imported70391: native Hug, Call to Arms and seven complete type35 roots.
+    // Imported70391: full class245, both race roots, Hug and seven type35 roots.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5529);
+    assert_eq!(union.len(), 5530);
+    assert!(union.contains(&245), "full thirteen-class That Takes Class");
     assert!(
         union.contains(&246) && union.contains(&1005),
         "both full Know Thy Enemy roots"
