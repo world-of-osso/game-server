@@ -668,6 +668,6 @@ Akunda child-boundary follow-up: after exact trap admission, the initial expecte
 
 ## Forlorn Toll85 source summon (2026-10-16)
 
-163463/279223 has source1.5s cast, effect32/target47 and3s speed-as-delay flag0x10; it triggers279222, whose effect28 summons143222/property4345 Control0/Title0/flags2056 with60s source duration and radius index15=3yd. Item recovery is30000ms. Authenticated TDB identity143222 Wandering Soul has faction35/zero flags/empty AI/script/MovementType0 and ten weighted source models81277/88427/88428/88429/81278/88430/88431/88432/81205/88433, each probability1/scale1.
+163463/279223 has source1.5s cast, effect32/target47 and3s speed-as-delay flag0x10; it triggers279222, whose effect28 summons143222/property4345 Control0/Title0/flags2056 with60s source duration and radius index15=3yd. Item recovery is30000ms. Source TDB identity143222 Wandering Soul has faction35/zero flags/empty AI/script/MovementType0 and ten weighted source models81277/88427/88428/88429/81278/88430/88431/88432/81205/88433, each probability1/scale1.
 
 Current canonical initially contains zero143222. Genuine maintained importer RED leaves source identity absent after import (0/1,14.173s, `forlorn85-import-red.log`); add only143222 to the existing additive allowlist. No guessed wandering AI or generic ghost. Import GREEN/idempotence, actual learned-use flight/actor/recovery/expiry and native appearance boundaries pending. Sources `rows85-88-readonly-source.json`, `forlorn85-readonly-child-npc.json`, `forlorn85-action-source.json`, `forlorn85-cast-time-source.json`.
