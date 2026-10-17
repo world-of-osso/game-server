@@ -15,10 +15,10 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 31, 32, 33, 35, 52, 53, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37,
-    41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114,
-    130, 151, 152, 157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219, 220,
-    221, 245, 246, 253,
+    0, 1, 31, 32, 33, 35, 113, 52, 53, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36,
+    37, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110,
+    114, 130, 151, 152, 157, 158, 160, 162, 165, 13, 54, 55, 56, 90, 91, 97, 103, 105, 216, 219,
+    220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -86,6 +86,8 @@ pub(crate) enum CriteriaEvent {
     HonorableKillClass(u8),
     /// Actual current terrain area of this eligible recipient; includes authored ancestors.
     HonorableKillInArea(u32),
+    /// Absolute persisted character lifetime HK, read after the eligible kill increment or login.
+    LifetimeHonorableKills(u64),
     /// One native battleground/arena kill reward; world honor eligibility is separate.
     KillPlayer,
     UseItem(u32),
@@ -226,6 +228,7 @@ impl CriteriaEvent {
             Self::HonorableKillRace(_) => 53,
             Self::HonorableKillClass(_) => 52,
             Self::HonorableKillInArea(_) => 31,
+            Self::LifetimeHonorableKills(_) => 113,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -326,6 +329,7 @@ impl CriteriaEvent {
             Self::KillAnyCreature(_)
             | Self::DeliveredKillingBlow
             | Self::EarnHonorableKill
+            | Self::LifetimeHonorableKills(_)
             | Self::TotalExaltedFactions(_)
             | Self::TotalReveredFactions(_)
             | Self::TotalHonoredFactions(_)
@@ -1041,7 +1045,8 @@ impl AchievementCatalog {
         // TC SetCriteriaProgress does not create a first zero-valued progress row.
         if matches!(
             event,
-            CriteriaEvent::KnowSkillLineSpells(_, 0)
+            CriteriaEvent::LifetimeHonorableKills(0)
+                | CriteriaEvent::KnowSkillLineSpells(_, 0)
                 | CriteriaEvent::LearnTradeskillSkillLine(_, 0)
                 | CriteriaEvent::OwnUniquePets(0)
                 | CriteriaEvent::OwnToys(0)
@@ -1072,6 +1077,7 @@ impl AchievementCatalog {
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
             CriteriaEvent::FallWithoutDying(distance) => u64::from(distance),
+            CriteriaEvent::LifetimeHonorableKills(count) => count,
             CriteriaEvent::PersonalArenaRating { rating, .. } => (*counter).max(u64::from(rating)),
             CriteriaEvent::MostMoneyOwned(amount)
             | CriteriaEvent::HighestAuctionBid(amount)
@@ -1790,7 +1796,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 24 | 35 | 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 24 | 35 | 113 | 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

@@ -206,3 +206,9 @@ Character achievement247 / criterion2379 uses native DoEmote54 TextEmote56. Pres
 - Credit DeliverKillingBlowToClass52 at the existing eligible world-player death reward, from actual victim Player.class for every eligible recipient, including the living nearby group member without the final blow. Match positive authored class1..13 exactly, retain all companions and sum account contributions. Neither killer class nor victim race may substitute.
 - That Takes Class245 retains all thirteen authored one-kill leaves, including Monk10, Demon Hunter12 and Evoker13. Require native lethal damage; reject nonlethal/friendly/gray/dead replay and unrelated recipients. Zero Honor XP cannot suppress eligible credit. Persist contributions and original account earned date across reconstruction. Area31/lifetime113 and new BG/arena policies remain out of scope.
 - Tests: `pvp_honor_class_tests.rs` full native thirteen-class grant/group/reopen; `achievement_catalog_tests.rs` account sum.
+
+## Lifetime honorable kills113
+
+Project the real persisted per-character lifetime-HK count after its eligible world-kill increment and on normal login (TC CriteriaHandler747–749/4989). Use PROGRESS_SET, not an event increment, maximum or a type35/Honor XP alias. A first zero total creates no progress row. Retain all authored companions and thresholds, including roots238(1),513(100),39935(100) and higher roots through250000. Account contributions sum distinct character absolute totals through the existing account model.
+
+Follow [LIFETIME_HK_TRACKING_STARTS_AT_ZERO](pvp-progression.md#lifetime_hk_tracking_starts_at_zero) for new/pre-existing character state. Reopen/relog must reconstruct the113 projection from PvP authority, retaining original earned dates and never adding a kill on login or idle updates. No native BG eligibility or historical backfill is implied.
