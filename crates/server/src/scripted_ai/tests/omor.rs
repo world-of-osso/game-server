@@ -24,7 +24,8 @@ fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_thre
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let players = [h.players[0].0, h.players[1].0];
-    for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
+    // Outside the source4.5yd contact-retreat boundary, still within20yd Orbital.
+    for (player, gap) in players.into_iter().zip([5.0, 8.0]) {
         h.app.world_mut().entity_mut(player).insert((
             map,
             Position {
@@ -385,12 +386,181 @@ fn encounter_coverage_omor_orbital_exact_two_dimensional_cutoff() {
 }
 
 #[test]
+fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
+    let (mut h, boss, _) = bound_boss(17308, 543, 0);
+    let player = h.player();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x + 3.0,
+        ..origin
+    });
+    let speech = h.app.world().resource::<CreatureTexts>().groups[&17308][&5][0]
+        .male_text
+        .clone();
+    assert!(!speech.is_empty(), "actual authored shield text must load");
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    h.engage(boss);
+    h.hit_pct(boss, 81.0);
+    h.advance(4.2);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 31901),
+        "actual health-threshold scheduled shield reaches successful cast boundary"
+    );
+    assert!(
+        h.has_aura(boss, 31901),
+        "actual authored Demonic Shield aura"
+    );
+    let emotes: Vec<_> = h
+        .inbox(0)
+        .chat
+        .iter()
+        .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+        .collect();
+    assert_eq!(
+        emotes.len(),
+        1,
+        "OnSpellCast31901 must speak exactly one authored group5 emote"
+    );
+    assert_eq!(emotes[0].content, speech);
+    assert!(
+        h.inbox(1).chat.is_empty(),
+        "other map copy must not hear shield emote"
+    );
+    h.hit_pct(boss, 1.0);
+    h.advance(1.0);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        1,
+        "further damage/aura ticks cannot repeat an OnSpellCast hook"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), true)
+        .expect("actual creature full-mask shield");
+    h.advance(0.05);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), boss, 31901, Some(boss), 1);
+    h.advance(0.05);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        3,
+        "ordinary, creature-triggered and generic-triggered successful casts each fire once"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30686, Some(player), false)
+        .expect("actual source cast occupies caster");
+    assert_eq!(
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), false),
+        Err(crate::spell_cast::CastFailure::InProgress),
+        "no admission bypass"
+    );
+    h.advance(0.05);
+    assert_eq!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
+            .count(),
+        3,
+        "rejected shield cast cannot speak"
+    );
+    assert!(
+        h.inbox(1).chat.is_empty(),
+        "no triggered route leaks across map copies"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_caster_holds_inside_authored_range() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    let target = Position {
+        x: origin.x + 20.0,
+        ..origin
+    };
+    h.app.world_mut().entity_mut(player).insert((map, target));
+    let ground = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, Vec3::new(target.x, target.y, target.z));
+    assert!(
+        matches!(ground, crate::ground::GroundProbe::Supported(_)),
+        "authentic20yd target support: {ground:?}"
+    );
+    h.engage(boss);
+    h.advance(15.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .filter(|go| go.caster == boss.to_bits() && go.spell_id == 30686)
+            .count()
+            >= 2,
+        "real source ranged casting, not paused AI"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        (position.x - origin.x).abs() < 0.01 && (position.z - origin.z).abs() < 0.01,
+        "source100yd caster must hold at20yd, not generic melee chase: {origin:?} -> {position:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_omor_caster_retreats_from_contact_without_melee() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+    ));
+    h.engage(boss);
+    h.advance(5.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 30686),
+        "real source cast completes before movement resumes"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        position.x < origin.x - 0.05,
+        "ChaseRange100 minRange0 plus reach-sum4.5 requires retreat from3yd: {origin:?} -> {position:?}"
+    );
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(boss.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()),
+        "source Attack(victim,false) must not produce melee swings"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
-    let (mut h, boss, map) = bound_boss(17308, 543, 0);
+    let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(Position {
-        x: origin.x + 3.0,
+        // Source melee range, but outside4.5yd caster retreat; dedicated3yd case covers retreat.
+        x: origin.x + 5.0,
         ..origin
     });
     let mut visibility = crate::interest::NetworkVisibility::default();

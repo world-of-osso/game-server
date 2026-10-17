@@ -4,6 +4,17 @@
 ## 2026-10-17 — Level-based pet maximum health
 
 [Bounded state2](../pet-battle-effect-coverage.md#level-based-maximum-health--implementation2026-10-17): explicit actual level1..25,5/5/10HP per level, existing percentage/floor/cap and owned-health persistence boundary. Core/owned unsupported-state RED and missing-metadata no-RNG RED precede GREEN; obsolete576 negative removed with remaining negatives retained. All ten fixture tables match active70448; fresh1797/2829/1023 census preserves historical70391. Library139 unchanged passes plus corrected negative1/1, wild/PvP29 plus real-ground configured achievement1/1, check51.00s/no warnings and fmt pass. Initial failures remain documented rather than claiming one all-green broad run. Native proof remains ordered after lead landing.
+## 2026-10-17 — Koranthal destination-delay assertions
+
+[Koranthal timing](systems/boss-scripts.md#koranthal-destination-delay--2026-10-17): gate413 root is stale immediate timing after masterc99830b5, not OnSpellCast. Valid protocol e9b80b8 A/B each retains2 old failures while actual5s boundary passes. Restore diagnostic bypass; strengthen original tests with early exclusion/exact owned119964 impact/HP and unchanged absolute event clocks. Native data/runtime untouched; corrected GREEN pending.
+
+## 2026-10-17 — Omor caster hold/retreat
+
+[Caster movement](systems/boss-scripts.md#omor-caster-hold-and-retreat--2026-10-17): complete pinned UnitAI/MovementDefines/ChaseMovementGenerator establish non-melee ranged attack,100+both-reaches tolerance and contact retreat. Actual20yd approach/no3yd retreat RED2d93e936→strict GREEN2/2/86.49s at51cc638d; direct grounded driver only. Ordinary Omor10/source-range2/Gargolmar4/knockback9 GREEN25/25/539.12s ataa75ea23 includes numeric endpoints; obstacle-generated paths/100ms/native chase parity remain open.
+
+## 2026-10-17 — Omor Shield OnSpellCast
+
+[Shield cast emote](systems/boss-scripts.md#omor-shield-cast-emote--2026-10-17): natural31901/aura/no-emote RED91b61927→strict GREEN1/1/53.34s at15260692. Common successful-cast hook covers ordinary and both triggered routes, rejected requests stay silent; other-copy/repetition controls pass. Ordinary Omor8/missile9 integration GREEN17/17/291.23s atbf090cf6; summon-chance/slay/caster100yd remain open.
 
 ## 2026-10-17 — Lock-On target charge
 
@@ -1854,8 +1865,15 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 
 - 2026-10-17: lifetime113 final integration772a3be6 passes required workspace four-filter231/0/1existing ignored(353.60s), site-export1/1, workspace/all-target check and three-repo fmt/diff. Active70448 census5544/1843, all243matrix/pin exact; bounded artifact/readability checks pass. LIFETIME_HK_TRACKING_STARTS_AT_ZERO remains explicit; native higher thresholds/BG/rendered/freshUDP/remoteCI/lead landing are not certified.
 
+## 2026-10-17 — Resurrection guild perk excluded by user
+
+User clarification: World of Osso has no resurrection guild perk. Removed Quick/Dead from pending effect coverage; historical installed-data/native receipts are not project requirements. Mobile Banking remains active with the separately specified2h policy.
 ## 2026-10-17 — Pending-only netdelta producer controls
 
 [Combat publication](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17): dedicated marked-peer/quiet-frame proof, real level-stream/reconnect equivalence and Stockade earned-delta/toast isolation now pass alongside repaired transport-free criteria and explicit HostClient fixtures. Detailed source scopes/counts live on the investigation page. Merged engine checks and genuine UDP byte/latency/performance remeasurement remain pending.
 
 - 2026-10-16: [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16): exact ten-model source identity, retained unitless destination flight after genuine early-arrival RED;150 Toy+49 affected+3 importer controls pass, native appearances/publication separate.
+
+## 2026-10-17 — Mobile Banking user policy implemented
+
+User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed3600000ms. Installed faction children/type34/lifetime and Friendly1168 chest-user gate; no Friendly cast gate. Real server5/5 and tooltip1/1 GREEN; midcast loss checked before consumption. Native actual5min/2h both-skin proof pending. Resurrection perk excluded by user, not a gap.
