@@ -834,6 +834,184 @@ fn periodic_save_never_waits_for_a_busy_durable_writer() {
 }
 
 #[test]
+fn twenty_world_port_acks_and_due_save_never_wait_for_a_busy_writer_and_survive_reopen() {
+    use crate::auth::{Authenticated, InWorld};
+    use crate::maps::{
+        InMap, InstanceManager, MapStore, MapTransfer, ServerClock, TeleportOptions,
+    };
+    use crate::networking::PlayerLink;
+    use lightyear::connection::host::HostClient;
+    use lightyear::prelude::*;
+    use shared::components::{Level, MovementControl, Rotation};
+    use shared::protocol::{TransferChannel, WorldPortAck};
+
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let database = Database::create(file.path()).unwrap();
+    create_tables(&database);
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&source).unwrap();
+    let start = shared::battleground::flag_rules(489).unwrap().starts[0];
+    let destination = maps.safe_locs[&start];
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.add_plugins(shared::ProtocolPlugin);
+    // Advance the real fixed-save system explicitly; wire delivery must not consume
+    // its 300-tick interval while arranging the burst.
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::ZERO,
+    ));
+    app.insert_resource(GameDatabase::new(database));
+    app.insert_resource(maps);
+    app.init_resource::<InstanceManager>();
+    app.insert_resource(ServerClock {
+        fixed_unix: Some(1790812900),
+        offset_secs: 0,
+    });
+    app.add_systems(Update, crate::maps::transfer::receive_world_port_acks);
+    app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
+    app.finish();
+    app.cleanup();
+    let mut players = Vec::new();
+    let mut connections = Vec::new();
+    let mut roster = Vec::new();
+    for index in 0..20_u8 {
+        let name = format!("Port{}", char::from(b'a' + index));
+        let (id, _) =
+            create_character(&app.world().resource::<GameDatabase>().db, 1, &name, 1, 1).unwrap();
+        roster.push(id);
+        let player = app
+            .world_mut()
+            .spawn((
+                Player {
+                    name,
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                ClientId(id),
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                Level(80),
+                Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                MovementControl::default(),
+                InMap::continent(0),
+            ))
+            .id();
+        let connection = app
+            .world_mut()
+            .spawn((
+                RemoteId(PeerId::Local(id)),
+                Connected,
+                HostClient { buffer: Vec::new() },
+                Authenticated { account_id: 1 },
+                InWorld { character_id: id },
+                PlayerLink(player),
+                MessageSender::<WorldPortAck>::default(),
+                MessageReceiver::<WorldPortAck>::default(),
+            ))
+            .id();
+        players.push((id, player));
+        connections.push(connection);
+    }
+    let copy = app
+        .world_mut()
+        .resource_scope(|world, mut manager: Mut<InstanceManager>| {
+            manager.create_battleground_map(
+                world.resource::<MapStore>(),
+                489,
+                &roster,
+                20,
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1790812900,
+                },
+            )
+        })
+        .unwrap();
+    app.update();
+    for (_, player) in &players {
+        let origin = crate::maps::transfer::current_location(app.world(), *player, 0);
+        app.world_mut()
+            .entity_mut(*player)
+            .remove::<InMap>()
+            .insert((
+                destination.bevy_position(),
+                MapTransfer {
+                    map_id: 489,
+                    destination,
+                    origin,
+                    options: TeleportOptions::default(),
+                },
+            ));
+    }
+    for _ in 0..299 {
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    for connection in &connections {
+        app.world_mut()
+            .get_mut::<MessageSender<WorldPortAck>>(*connection)
+            .unwrap()
+            .send::<TransferChannel>(WorldPortAck);
+    }
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = std::time::Instant::now();
+    for _ in 0..3 {
+        app.update();
+    }
+    app.world_mut().run_schedule(FixedUpdate);
+    let elapsed = started.elapsed();
+    for (_, player) in &players {
+        assert_eq!(app.world().get::<InMap>(*player), Some(&copy));
+        assert!(app.world().get::<MapTransfer>(*player).is_none());
+        app.world_mut().get_mut::<Position>(*player).unwrap().x += 50.0;
+        app.world_mut().get_mut::<Health>(*player).unwrap().current = 33.0;
+    }
+    release.join().unwrap();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "20 WorldPortAck/save burst blocked: {elapsed:?}"
+    );
+    drop(app); // FIFO drain must retain submission-time destinations, not later live state.
+    let db = Database::open(file.path()).unwrap();
+    let expected = destination.position;
+    for id in roster {
+        assert_eq!(crate::maps::persistence::load_character_map(&db, id), 489);
+        assert_eq!(
+            stored_position(&db, id),
+            (expected.x, expected.y, expected.z)
+        );
+        assert_eq!(load_character(&db, id).unwrap().health, 100.0);
+    }
+}
+
+#[test]
 fn periodic_save_writes_every_changed_player_with_map_and_corpse() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
