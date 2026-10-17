@@ -72,19 +72,39 @@ fn random_queue_normal_party_projects_original32_to_every_member() {
 fn random_queue_parties_enter_selected_map_keep_original32_and_source_start_minimum() {
     let template = shared::battleground::arathi_basin();
     let mut entered = enter_source_match_queued(
-        &template, node_rules(template.map_id).unwrap().starts,
-        |app| { app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018])); },
+        &template,
+        node_rules(template.map_id).unwrap().starts,
+        |app| {
+            app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
+        },
         SourceQueueFixture::RandomPartiesOfFive,
     );
     assert_eq!(entered.players.len(), 10);
     for who in &entered.players {
         let snapshot = battleground(&entered.h, who);
         assert_eq!(snapshot.battleground_id, 1018);
-        assert_eq!(snapshot.phase, BgPhase::Waiting, "parent5/team does not lower Arathi's8/team start minimum");
+        assert_eq!(
+            snapshot.phase,
+            BgPhase::Waiting,
+            "parent5/team does not lower Arathi's8/team start minimum"
+        );
         assert_eq!(entered.h.map_of(who), Some(entered.copy));
         let character = entered.h.app.world().get::<ClientId>(who.player).unwrap().0;
-        assert_eq!(crate::pvp::random_bg::tests::original_queue(entered.h.app.world(), entered.match_id, character), Some(32));
-        let pvp = &entered.h.app.world().get::<crate::pvp::PlayerPvpState>(who.player).unwrap().progress;
+        assert_eq!(
+            crate::pvp::random_bg::tests::original_queue(
+                entered.h.app.world(),
+                entered.match_id,
+                character
+            ),
+            Some(32)
+        );
+        let pvp = &entered
+            .h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(who.player)
+            .unwrap()
+            .progress;
         assert_eq!((pvp.lifetime_honor_xp, pvp.honor), (0, 0));
     }
     leave_and_return(&mut entered);
@@ -2852,7 +2872,10 @@ fn enter_source_match_with_arrival(
     let mut h = harness_with(|app| {
         app.insert_resource(crate::persistence::GameDatabase { db });
         app.insert_resource(objects);
-        if matches!(queue_fixture, SourceQueueFixture::FourPartiesOfFive | SourceQueueFixture::RandomPartiesOfFive) {
+        if matches!(
+            queue_fixture,
+            SourceQueueFixture::FourPartiesOfFive | SourceQueueFixture::RandomPartiesOfFive
+        ) {
             app.add_plugins(crate::group::GroupPlugin);
         }
         if template.map_id == 727 {
@@ -2931,7 +2954,11 @@ fn enter_source_match_with_arrival(
     let level = (template.bracket.min_level..=template.bracket.max_level)
         .find(|&level| shared::battleground::source_level_bracket(template.map_id, level).is_some())
         .expect("source fixture needs an authored PVPDifficulty level");
-    let level = if matches!(queue_fixture, SourceQueueFixture::RandomPartiesOfFive) { 25 } else { level };
+    let level = if matches!(queue_fixture, SourceQueueFixture::RandomPartiesOfFive) {
+        25
+    } else {
+        level
+    };
     let players: Vec<_> = (1..=count)
         .map(|id| h.spawn(id, STORMWIND, origin))
         .collect();
@@ -2966,7 +2993,12 @@ fn enter_source_match_with_arrival(
             .get_mut::<MessageSender<QueueForBattleground>>(who.connection)
             .unwrap()
             .send::<PvpChannel>(QueueForBattleground {
-                battleground_id: if matches!(queue_fixture, SourceQueueFixture::RandomPartiesOfFive) { 32 } else { template.id },
+                battleground_id: if matches!(queue_fixture, SourceQueueFixture::RandomPartiesOfFive)
+                {
+                    32
+                } else {
+                    template.id
+                },
             });
     }
     h.receive_pvp_updates(5);
