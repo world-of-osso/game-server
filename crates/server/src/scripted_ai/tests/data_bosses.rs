@@ -9,6 +9,8 @@ mod azure_explosive_brand;
 mod azure_frost_bomb;
 #[path = "azure_intro.rs"]
 mod azure_intro;
+#[path = "azure_leymor_children.rs"]
+mod azure_leymor_children;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]

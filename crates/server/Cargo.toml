@@ -6,6 +6,9 @@ rust-version.workspace = true
 
 [dependencies]
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "74e67cf" }
+# Read-only packet iteration and exact send-stage ordering for diagnostic census only.
+lightyear_link = { version = "0.28", optional = true, features = ["test_utils"] }
+lightyear_transport = { version = "0.28", optional = true }
 # Baked line-of-sight tiles and eye points (docs/specs/line-of-sight.md).
 # Reuse the authored M2 collision parser for live arena GO hulls.
 los = { path = "../los", features = ["bake"] }
@@ -37,7 +40,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [features]
 # Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).
-system-timings = ["bevy/trace"]
+system-timings = ["bevy/trace", "dep:lightyear_link", "dep:lightyear_transport"]
 
 [[bin]]
 name = "game-server"
@@ -52,6 +55,8 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+# Measure publication bytes with the exact codec used by Lightyear messages.
+lightyear_serde = "0.28"
 # Bake concrete collision fixtures for fleeing's real Detour path boundary.
 navigation = { path = "../navigation", features = ["bake"] }
 # Real local M2/MDDF collision-floor fixtures.
