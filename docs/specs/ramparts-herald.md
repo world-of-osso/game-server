@@ -12,6 +12,11 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - [x] The `herald` spell producer preserves every field of the seven authored18430/20538/30693/30694/30696/30698/30699 spell/effect pairs, idempotently; missing input refuses atomically without unrelated-data changes.
 - [ ] Preserve group357's actual ordinary initial population: Herald and two17517 Sentries, groupFlags0. Its forced reset must not require changing it into a manual-spawn group.
 
+### Prepared actors
+
+- [ ] Project17537's actual base0 and Heroic2, and21252's actual base0/Normal1/Heroic2, with source models/addons. Do not create a Normal1 row for17537; preserve unrelated difficulties, Nazan, population, bindings and group357's flags.
+- [ ] Resolve Nazan17536's sourceCT0 through its real map/area context before runtime use. Record `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` until implemented; neither legacy62 nor an uncontextualized level1 cache is acceptance.
+
 ### Lifecycle and phases
 
 - [ ] Two actual17517 Sentry deaths in one copy start the Herald once through source action1730700; other copies and unrelated deaths do not contribute.
@@ -41,6 +46,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ## Tests asserting this spec
 
+- `scripts/tests/test_herald_templates.py` — actual-world-copy CLI projection of17537/21252 and identity refusal; not yet GREEN.
 - `scripts/tests/test_herald_binding_cli.py` — pinned-source/70448 binding CLI, primary-only preservation and named identity gaps; GREEN with unchanged binding controls and warning-free affected producer fixtures.
 - `scripts/tests/fixtures/herald-binding/` — exact pinned TC files and extracted active70448 identity rows, with original source hashes.
 - `scripts/tests/test_encounter_serverside_spells.py` — real CLI fixture for all seven authored spell/effect rows, idempotence, unrelated-data preservation and atomic refusal; producer suite GREEN6/6.
