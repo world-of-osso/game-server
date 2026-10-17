@@ -49,7 +49,7 @@ fn toyfx85_forlorn_real_learning_cast_flight_source_displays_recovery_and_soul_e
         UnitScale(1.0),
         Rotation {
             x: 0.0,
-            y: 0.0,
+            y: std::f32::consts::FRAC_PI_2, // Bevy yaw maps to WoW facing0.
             z: 0.0,
         },
     ));
