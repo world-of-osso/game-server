@@ -20,7 +20,6 @@ fn orbital_fixture() -> (Harness, Entity, InMap) {
 }
 
 #[test]
-#[ignore = "RED: Omor Orbital target SpellScript not ported"]
 fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_threat() {
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
@@ -114,7 +113,6 @@ fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_thre
 }
 
 #[test]
-#[ignore = "RED: Omor Whip falling-player periodic AuraScript not ported"]
 fn encounter_coverage_omor_orbital_whip_targets_falling_threat_not_its_caster() {
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
@@ -218,6 +216,51 @@ fn encounter_coverage_omor_orbital_singleton_keeps_hit_without_script_effects() 
             h.health(player).current,
             health,
             "singleton no knock damage"
+        );
+    }
+}
+
+#[test]
+fn encounter_coverage_omor_orbital_exact_two_dimensional_cutoff() {
+    // Source exact2D<=20 includes the boundary/raised target, not 20.01yd.
+    for (first_x, first_height, selected) in
+        [(20.0, 0.0, true), (20.01, 0.0, false), (19.0, 25.0, true)]
+    {
+        let (mut h, boss, map) = orbital_fixture();
+        let origin = *h.app.world().get::<Position>(boss).unwrap();
+        let players = [h.players[0].0, h.players[1].0];
+        for (player, x, height) in [(players[0], first_x, first_height), (players[1], 25.0, 0.0)] {
+            h.app.world_mut().entity_mut(player).insert((
+                map,
+                Position {
+                    x: origin.x + x,
+                    y: origin.y + height,
+                    ..origin
+                },
+            ));
+        }
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 35642, Some(boss), false)
+            .expect("ordinary Orbital cutoff cast");
+        h.advance(0.05);
+        let parent = h
+            .inbox(0)
+            .spell_gos
+            .iter()
+            .find(|go| go.spell_id == 35642)
+            .expect("actual Orbital cutoff receipt");
+        let expected = if selected {
+            vec![players[0].to_bits()]
+        } else {
+            Vec::new()
+        };
+        assert_eq!(
+            parent.hit_targets, expected,
+            "cutoff x={first_x} height={first_height}"
+        );
+        assert_eq!(
+            h.has_aura(boss, 32185),
+            selected,
+            "no hook after filtering all candidates"
         );
     }
 }
