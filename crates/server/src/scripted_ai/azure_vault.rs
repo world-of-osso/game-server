@@ -1,6 +1,7 @@
-//! TC a352b1fa Leymor Explosive Brand and Telash Frost Bomb expiry hooks.
-//! Boss schedules, energy/jump phases and rune/ground area actions remain unported.
+//! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
+//! Other boss schedules, energy/jump phases and rune/ground actions remain unported.
 use bevy::prelude::*;
+use shared::components::UnitFlags;
 
 use crate::auras::{
     AuraInstance, RemoveReason, handlers,
@@ -13,6 +14,148 @@ const FROZEN_GROUND: u32 = 387149;
 const FROST_BOMB_DAMAGE: u32 = 386910;
 const EXPLOSIVE_BRAND: u32 = 374567;
 const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
+const LEYMOR_SCRIPT: &str = "boss_leymor";
+const AZURE_INSTANCE: &str = "instance_azure_vault";
+const STASIS: u32 = 375729;
+const LEYMOR: u32 = 186644;
+const DATA_LEYMOR_INTRO_DONE: u32 = 4;
+const ACTION_FINISH_LEYMOR_INTRO: i32 = 251501;
+const EVENT_AWAKEN: u32 = 1;
+const ARCANE_ERUPTION: u32 = 375749;
+const INFUSED_STRIKE: u32 = 374789;
+const EVENT_INFUSED_STRIKE: u32 = 5;
+pub(crate) const LEY_LINE_SPROUTS: u32 = 374364;
+const LEY_LINE_SPROUTS_MISSILE: u32 = 374362;
+const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
+    (-5129.39, 1253.30, 555.58),
+    (-5101.68, 1253.71, 555.90),
+    (-5114.70, 1230.28, 555.89),
+    (-5141.62, 1230.33, 555.83),
+    (-5155.62, 1253.60, 555.87),
+    (-5141.42, 1276.70, 555.89),
+    (-5114.78, 1277.42, 555.87),
+];
+const EVENT_LEY_LINE_SPROUTS: u32 = 2;
+
+pub(super) fn is_creature_script(name: &str) -> bool {
+    name == LEYMOR_SCRIPT
+}
+
+pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn super::CreatureAi>> {
+    let map = world.get::<crate::maps::InMap>(actor)?;
+    let maps = world.get_resource::<crate::maps::MapStore>()?;
+    if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(AZURE_INSTANCE) {
+        return None;
+    }
+    Some(Box::new(Leymor {
+        boss: super::instance_script::bound_boss(world, actor)?,
+        tasks: super::EventMap::default(),
+    }))
+}
+
+/// TC instance_azure_vault::OnCreatureGroupDepleted: match this group's leader only.
+pub(super) fn finish_leymor_intro(
+    world: &mut World,
+    map: crate::maps::InMap,
+    leader_ids: &crate::zones::CreatureStringIds,
+) {
+    let is_azure = world
+        .get_resource::<crate::maps::MapStore>()
+        .and_then(|maps| maps.instance_scripts.get(&map.map_id))
+        .is_some_and(|name| name == AZURE_INSTANCE);
+    if !is_azure || !leader_ids.has("leymor_arcane_tender") {
+        return;
+    }
+    if super::instance_script::get_data(world, map, DATA_LEYMOR_INTRO_DONE) != 0 {
+        return;
+    }
+    super::instance_script::set_data(world, map, DATA_LEYMOR_INTRO_DONE, 1);
+    let leymor = world
+        .query::<(Entity, &shared::components::Npc, &crate::maps::InMap)>()
+        .iter(world)
+        .find_map(|(entity, npc, copy)| {
+            (npc.template_id == LEYMOR && *copy == map).then_some(entity)
+        });
+    if let Some(leymor) = leymor {
+        super::dispatch(
+            world,
+            leymor,
+            super::Hook::DoAction(ACTION_FINISH_LEYMOR_INTRO),
+        );
+    }
+}
+
+struct Leymor {
+    boss: super::boss_ai::BossAi,
+    tasks: super::EventMap,
+}
+
+impl super::boss_ai::BossScript for Leymor {
+    fn boss_ai(&mut self) -> &mut super::boss_ai::BossAi {
+        &mut self.boss
+    }
+
+    fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
+        match event_id {
+            EVENT_INFUSED_STRIKE => ctx.do_cast_victim(INFUSED_STRIKE),
+            EVENT_LEY_LINE_SPROUTS => ctx.do_cast_self(LEY_LINE_SPROUTS),
+            _ => return,
+        }
+        self.boss.events.repeat(48_000);
+    }
+}
+
+impl super::CreatureAi for Leymor {
+    fn reset(&mut self, ctx: &mut super::Ctx) {
+        self.tasks.reset();
+        self.boss.reset(ctx);
+    }
+
+    fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        let Some(map) = ctx.map() else {
+            return;
+        };
+        if super::instance_script::get_data(ctx.world, map, DATA_LEYMOR_INTRO_DONE) != 0 {
+            return;
+        }
+        if let Some(mut flags) = ctx.world.get_mut::<UnitFlags>(ctx.me) {
+            flags.0 |= UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
+        }
+        ctx.do_cast_self(STASIS);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
+        self.boss.just_engaged_with(ctx);
+        self.boss.events.schedule(EVENT_LEY_LINE_SPROUTS, 3_000);
+        self.boss.events.schedule(EVENT_INFUSED_STRIKE, 10_000);
+    }
+
+    fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
+        self.tasks.reset();
+        self.boss.just_died(ctx);
+    }
+
+    fn do_action(&mut self, _ctx: &mut super::Ctx, action: i32) {
+        if action == ACTION_FINISH_LEYMOR_INTRO {
+            self.tasks.schedule(EVENT_AWAKEN, 1_000);
+        }
+    }
+
+    fn update_ai(&mut self, ctx: &mut super::Ctx, diff_ms: u32) {
+        self.tasks.update(u64::from(diff_ms));
+        if self.tasks.execute_event() == Some(EVENT_AWAKEN) {
+            crate::auras::remove_auras(ctx.world, ctx.me, RemoveReason::Cancelled, |aura| {
+                aura.spell_id == STASIS
+            });
+            if let Some(mut flags) = ctx.world.get_mut::<UnitFlags>(ctx.me) {
+                flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
+            }
+            ctx.do_cast_self(ARCANE_ERUPTION);
+            ctx.talk(0);
+        }
+        super::boss_ai::boss_update_ai(self, ctx, diff_ms);
+    }
+}
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
@@ -29,6 +172,27 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// TC a352b1fa374364 effect0 OnEffectHit: two native missiles per authored origin.
+pub(crate) fn cast_sprout_missiles(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    for (x, y, z) in SPROUT_GROUP_ORIGINS {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+        let position = Vec3::new(x, y, z);
+        for _ in 0..2 {
+            crate::spell_cast::cast_triggered_at_destination(
+                world,
+                ctx.caster,
+                LEY_LINE_SPROUTS_MISSILE,
+                position,
+                ctx.depth + 1,
+            );
+        }
+    }
 }
 
 /// OnEffectHitTarget, effect0/SPELL_EFFECT_DUMMY.

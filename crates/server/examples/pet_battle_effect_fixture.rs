@@ -14,13 +14,18 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
             .min_by_key(|row| (row.level, row.ability))
             .map_or(0, |row| row.ability)
     });
-    if species == 2621 {
-        let call = catalog
+    let chosen = match species {
+        1142 => Some(762),
+        1320 => Some(989),
+        _ => None,
+    };
+    if let Some(ability) = chosen {
+        let authored = catalog
             .species_abilities
             .iter()
-            .find(|row| row.species == species && row.ability == 2283 && row.level <= level)
-            .expect("Authored Dragon's Call option must be unlocked");
-        abilities[call.slot as usize] = call.ability;
+            .find(|row| row.species == species && row.ability == ability && row.level <= level)
+            .expect("Authored miss-branch option must be unlocked");
+        abilities[authored.slot as usize] = authored.ability;
     }
     abilities
 }
@@ -28,16 +33,20 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
 fn seed_fixture_pets(catalog: &Catalog) -> (PetJournal, BTreeMap<u64, serde_json::Value>) {
     let mut journal = PetJournal::default();
     let mut states = BTreeMap::new();
-    for (guid, species) in [(41, 2621), (42, 2621), (43, 2621)] {
-        let level = 2;
+    for (guid, species, level) in [(41, 1142, 10), (42, 1320, 2), (43, 39, 4)] {
         journal
             .add_with_guid(species, level, PetQuality::Rare, 3, guid)
             .unwrap();
         let abilities = fixture_abilities(catalog, species, level);
         let stats = calculate_stats(catalog, species, 3, 3, level).unwrap();
+        let health = if species == 1320 {
+            stats.health / 2
+        } else {
+            stats.health
+        };
         states.insert(
             guid,
-            serde_json::json!({"health": stats.health, "selected_abilities": abilities}),
+            serde_json::json!({"health": health, "selected_abilities": abilities}),
         );
     }
     (journal, states)
@@ -81,6 +90,6 @@ fn main() {
     let (journal, states) = seed_fixture_pets(&catalog);
     save_fixture_pets(&journal, &states);
     println!(
-        "Seeded private account1: three level2 Lil' Nefarian2621 with authored Dragon's Call2283; not acquisition proof"
+        "Seeded private account1: Clockem1142/10 Haymaker762, injured LilBling1320/2 Gift989 and Squirrel39/4; not acquisition proof"
     );
 }

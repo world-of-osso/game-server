@@ -4,16 +4,22 @@ use crate::spell_cast::test_harness::*;
 use shared::components::{CombatStatus, Level, Position};
 use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, UseItem};
 
+#[path = "toys_akunda_tests.rs"]
+mod akunda;
 #[path = "toys_bashiok_tests.rs"]
 mod bashiok;
 #[path = "toys_flute_tests.rs"]
 mod flute;
 #[path = "toys_force_forward_tests.rs"]
 mod force_forward;
+#[path = "toys_gnoll_barrel_tests.rs"]
+mod gnoll_barrel;
 #[path = "toys_group_inheritance_tests.rs"]
 mod group_inheritance;
 #[path = "toys_group_tests.rs"]
 mod group_private;
+#[path = "toys_hearthstone_tests.rs"]
+mod hearthstones;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
 #[path = "toys_podium_tests.rs"]

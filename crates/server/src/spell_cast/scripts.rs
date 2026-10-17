@@ -29,6 +29,16 @@ pub(crate) use batch9::hostile_ground_fields;
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
+/// OnEffectHit runs once per effect without replacing generic or aura dispatch.
+pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    match (spell, index) {
+        (crate::scripted_ai::azure_vault::LEY_LINE_SPROUTS, 0) => {
+            Some(crate::scripted_ai::azure_vault::cast_sprout_missiles)
+        }
+        _ => None,
+    }
+}
+
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     if spell == 96538 && index == 0 {
         return Some(crate::pvp::arena_dalaran::cast_pipe_search);

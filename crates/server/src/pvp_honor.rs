@@ -2,12 +2,16 @@
 //! HONOR_LEVEL_XP_CURVE: keep lifetime XP; never use TC's self-declared8800 guess.
 use bevy::prelude::*;
 use lightyear::prelude::MessageSender;
+use shared::battleground::{BgOutcome, BgTeam};
 use shared::components::{CurrentPvpFaction, Health, Level, Player, Position, UnitScale};
-use shared::protocol::{PvpChannel, PvpStateUpdate};
+use shared::currency::{CurrencyWallet, HONOR_CURRENCY_ID, currency_by_id};
+use shared::protocol::{CurrencyChannel, CurrencyStateUpdate, PvpChannel, PvpStateUpdate};
 
-use super::{PlayerPvpState, pvp_support};
+use super::{PlayerPvpState, PvpServerState, pvp_support};
 use crate::auras::ActiveAuras;
+use crate::auth::{Authenticated, InWorld};
 use crate::maps::InMap;
+use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 
 const MIN_HONOR_PLAYER_LEVEL: u8 = 10;
@@ -16,6 +20,8 @@ const HONOR_GAIN_FROM_SOURCE: u32 = 212;
 const HONOR_GAIN: u32 = 491;
 const INACTIVE: u32 = 43681;
 const PLAYER_COMBAT_REACH: f32 = 1.5;
+// TC Isle HonorRewards193–197 / OnUnitKilled383–394, not a bonus-kill multiplier.
+const ISLE_COMMANDER_HONOR: u32 = 500;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -30,14 +36,75 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
             continue;
         };
         // TC RewardHonor updates35 before AddHonorXP's minimum-level/zero-XP checks.
-        crate::achievement::record_player_event(
-            world,
-            player,
-            crate::achievement::CriteriaEvent::EarnHonorableKill,
-        );
+        crate::achievement::record_world_honorable_kill(world, player, victim);
         let amount = calculate_kill_xp(world, player, level, victim_level, recipients.len());
-        award_lifetime_xp(world, player, amount);
+        award_honor(world, player, amount);
     }
+}
+
+/// BG_END_BONUS_ONCE_PER_MATCH normalizes TC's per-player OnEnd placement.
+/// Arathi OnEnd574–585 / Eye OnEnd437–448: winner1, then everyone1.
+pub(super) fn award_battleground_completion(
+    world: &mut World,
+    player: Entity,
+    map_id: u32,
+    bracket: shared::battleground::LevelBracket,
+    won: bool,
+) {
+    if !matches!(map_id, 2107 | 566) {
+        return; // Other per-map callbacks remain unimplemented, not generic rewards.
+    }
+    let bonus = (f32::from(bracket.max_level.min(80)) * 1.55).ceil() as u32;
+    if won {
+        award_battleground_honor(world, player, bonus);
+    }
+    award_battleground_honor(world, player, bonus);
+}
+
+fn award_battleground_honor(world: &mut World, player: Entity, amount: u32) {
+    let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
+        return;
+    };
+    let inactive = world
+        .get::<ActiveAuras>(player)
+        .is_some_and(|auras| auras.has_spell(INACTIVE));
+    if level < MIN_HONOR_PLAYER_LEVEL || inactive {
+        return;
+    }
+    // RewardHonor(nullptr,...) does not apply victim-only group/aura/rest modifiers.
+    award_honor(world, player, amount);
+}
+
+/// Called only after the source Isle battle accepts an actual commander death.
+pub(super) fn award_isle_commander_honor(world: &mut World, match_id: u64) {
+    let (map, roster) = read_isle_winning_roster(world, match_id);
+    let recipients: Vec<_> = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .filter(|(link, owner)| {
+            roster.contains(&owner.character_id) && world.get::<InMap>(link.0) == Some(&map)
+        })
+        .map(|(link, _)| link.0)
+        .collect();
+    for player in recipients {
+        award_battleground_honor(world, player, ISLE_COMMANDER_HONOR);
+    }
+}
+
+fn read_isle_winning_roster(world: &World, match_id: u64) -> (InMap, Vec<u64>) {
+    let state = world.resource::<PvpServerState>();
+    let matched = &state.battleground_matches[&match_id];
+    let winners = match matched.instance.outcome {
+        Some(BgOutcome::Winner(BgTeam::A)) => &matched.instance.team_a_players,
+        Some(BgOutcome::Winner(BgTeam::B)) => &matched.instance.team_b_players,
+        _ => panic!("accepted Isle commander death must declare a winner"),
+    };
+    let roster = winners
+        .iter()
+        .filter(|character| matched.accepted.contains(character))
+        .copied()
+        .collect();
+    (matched.map.expect("accepted Isle match has a map"), roster)
 }
 
 fn world_kill_map(world: &World, killer: Entity, victim: Entity) -> Option<InMap> {
@@ -161,29 +228,74 @@ fn maximum_honor_modifier(world: &World, player: Entity, kind: u32, kill_only: b
         .fold(0.0, f32::max)
 }
 
-fn award_lifetime_xp(world: &mut World, player: Entity, amount: u32) {
-    if amount == 0 {
+/// HONOR_WALLET_MIRRORS_HONOR_XP is our binding, not TC wallet behavior.
+/// Callers supply the final TC-derived amount; the holding cap never reduces XP.
+pub(super) fn award_honor(world: &mut World, player: Entity, amount: u32) {
+    if amount == 0 || world.get::<PlayerPvpState>(player).is_none() {
         return;
     }
-    let Some(mut state) = world.get_mut::<PlayerPvpState>(player) else {
-        return;
-    };
-    state.progress.lifetime_honor_xp += u64::from(amount);
-    let progress = state.progress.clone();
-    let update = PvpStateUpdate {
-        snapshot: Some(pvp_support::build_pvp_snapshot(&state)),
-        message: None,
-        error: None,
+    let (wallet, added) = credit_honor_wallet(world, player, amount);
+    let progress = {
+        let mut state = world
+            .get_mut::<PlayerPvpState>(player)
+            .expect("honor recipient state");
+        state.progress.lifetime_honor_xp += u64::from(amount);
+        super::sync_progress_currencies_from_wallet(&mut state.progress, &wallet);
+        state.progress.clone()
     };
     let character = world
         .get::<ClientId>(player)
         .expect("reward recipient identity")
         .0;
     let db = world.resource::<GameDatabase>();
+    persistence::save_currencies(&db.db, character, &wallet);
     persistence::save_pvp(&db.db, character, &progress);
-    if let Some(connection) = crate::spell_cast::owner_connection(world, player)
-        && let Some(mut sender) = world.get_mut::<MessageSender<PvpStateUpdate>>(connection)
-    {
-        sender.send::<PvpChannel>(update);
+    send_honor_updates(world, player, &wallet, added);
+    if added > 0 {
+        crate::achievement::record_player_event(
+            world,
+            player,
+            crate::achievement::CriteriaEvent::CurrencyGained(HONOR_CURRENCY_ID, added),
+        );
+    }
+}
+
+fn credit_honor_wallet(world: &mut World, player: Entity, amount: u32) -> (CurrencyWallet, u32) {
+    let mut wallet = world
+        .get_mut::<crate::currency::PlayerCurrencies>(player)
+        .expect("honor recipient currency wallet");
+    let definition = currency_by_id(HONOR_CURRENCY_ID).expect("source Honor1792 definition");
+    let added = wallet
+        .0
+        .add(HONOR_CURRENCY_ID, amount, definition)
+        .expect("known Honor identity must accept an authoritative award");
+    (wallet.0.clone(), added)
+}
+
+fn send_honor_updates(world: &mut World, player: Entity, wallet: &CurrencyWallet, added: u32) {
+    let Some(connection) = crate::spell_cast::owner_connection(world, player) else {
+        return;
+    };
+    let snapshot = pvp_support::build_pvp_snapshot(
+        world
+            .get::<PlayerPvpState>(player)
+            .expect("honor recipient state"),
+    );
+    if let Some(mut sender) = world.get_mut::<MessageSender<PvpStateUpdate>>(connection) {
+        sender.send::<PvpChannel>(PvpStateUpdate {
+            snapshot: Some(snapshot),
+            message: None,
+            error: None,
+        });
+    }
+    if added == 0 {
+        return;
+    }
+    if let Some(mut sender) = world.get_mut::<MessageSender<CurrencyStateUpdate>>(connection) {
+        sender.send::<CurrencyChannel>(CurrencyStateUpdate {
+            snapshot: Some(crate::currency::build_currency_snapshot(wallet)),
+            message: Some(format!("earned {added} Honor")),
+            error: None,
+        });
     }
 }

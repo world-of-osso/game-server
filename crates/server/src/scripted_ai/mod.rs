@@ -277,6 +277,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
     }
+    if azure_vault::is_creature_script(script_name) {
+        return azure_vault::creature_ai(world, creature);
+    }
     if murder_row::is_creature_script(script_name) {
         return murder_row::creature_ai(world, creature, script_name);
     }
@@ -312,6 +315,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || ragefire_chasm::is_creature_script(script_name)
         || wailing_caverns::is_creature_script(script_name)
         || maraudon::is_creature_script(script_name)
+        || azure_vault::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
