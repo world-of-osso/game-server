@@ -212,6 +212,66 @@ fn eye_completion_mirrors_source_bonuses_on_the_real_presence_resource_win() {
     );
 }
 
+#[test]
+fn arathi_resource_honor_final_unclamped_tick_excludes_external_score_seed() {
+    let template = arathi_basin();
+    let (mut world, players, file) = honor_match(&template, 30);
+    {
+        let mut state = world.resource_mut::<PvpServerState>();
+        let matched = state.battleground_matches.get_mut(&17).unwrap();
+        let mut nodes = NodeBattle::new(node_rules(2107).unwrap());
+        for entry in [227420, 227522, 227536, 227538, 227544] {
+            nodes.assault(entry, BgTeam::A).unwrap();
+        }
+        matched.nodes = Some(nodes);
+    }
+    pvp_objective::update_battleground_objectives(&mut world);
+    advance_objective(&mut world, 60_000);
+    advance_objective(&mut world, 2000);
+    {
+        let mut state = world.resource_mut::<PvpServerState>();
+        let matched = state.battleground_matches.get_mut(&17).unwrap();
+        assert_eq!(matched.instance.score_a.score, 120);
+        matched.instance.add_score(BgTeam::A, 1370, &template);
+        assert_eq!(matched.instance.score_a.score, 1490);
+        assert_eq!(matched.instance.phase, BgPhase::InProgress);
+    }
+    assert_eq!(
+        wallet(&world, players[0].1),
+        0,
+        "external score baseline is not resource income"
+    );
+    advance_objective(&mut world, 2000);
+    let instance = &world.resource::<PvpServerState>().battleground_matches[&17].instance;
+    assert_eq!(instance.score_a.score, 1500);
+    assert_eq!(instance.phase, BgPhase::Ended);
+    for (index, (_, player)) in players.iter().enumerate() {
+        let expected = if index % 2 == 0 { 183 } else { 61 };
+        assert_eq!(wallet(&world, *player), expected);
+        assert_eq!(
+            world
+                .get::<PlayerPvpState>(*player)
+                .unwrap()
+                .progress
+                .lifetime_honor_xp,
+            u64::from(expected)
+        );
+    }
+    advance_objective(&mut world, 2000);
+    assert_eq!(wallet(&world, players[0].1), 183, "terminal replay");
+    let character = players[0].0;
+    drop(world);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::persistence::load_currencies(&db, character).get(1792),
+        183
+    );
+    assert_eq!(
+        crate::persistence::load_pvp(&db, character).lifetime_honor_xp,
+        183
+    );
+}
+
 fn honor_match(
     template: &shared::battleground::BgTemplate,
     level: u8,

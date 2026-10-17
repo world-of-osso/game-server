@@ -3,7 +3,8 @@ use chrono::{TimeZone, Utc};
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use rusqlite::{Connection, OpenFlags};
 use shared::protocol::{
-    AdventureGuideRequest, AdventureGuideSnapshot, InstanceChannel, PerksActivityProgress,
+    AdventureGuideClock, AdventureGuideRequest, AdventureGuideSnapshot, InstanceChannel,
+    PerksActivityProgress,
 };
 
 fn attach_requests(h: &mut crate::bank_test_harness::Harness) {
@@ -13,6 +14,8 @@ fn attach_requests(h: &mut crate::bank_test_harness::Harness) {
         MessageReceiver::<AdventureGuideRequest>::default(),
         MessageSender::<AdventureGuideSnapshot>::default(),
         MessageReceiver::<AdventureGuideSnapshot>::default(),
+        MessageSender::<AdventureGuideClock>::default(),
+        MessageReceiver::<AdventureGuideClock>::default(),
     ));
 }
 fn request(
@@ -386,6 +389,8 @@ fn adventure_guide_query_replies_instead_of_inventing_missing_catalog_content() 
         MessageReceiver::<AdventureGuideRequest>::default(),
         MessageSender::<AdventureGuideSnapshot>::default(),
         MessageReceiver::<AdventureGuideSnapshot>::default(),
+        MessageSender::<AdventureGuideClock>::default(),
+        MessageReceiver::<AdventureGuideClock>::default(),
     ));
     h.app
         .world_mut()

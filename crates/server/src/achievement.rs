@@ -21,6 +21,9 @@ pub(crate) use catalog::{
 };
 #[path = "achievement_account.rs"]
 mod account_store;
+#[path = "achievement_publication.rs"]
+mod publication;
+pub(crate) use publication::flush_updates as flush_achievement_updates;
 #[path = "dungeon_progress.rs"]
 mod dungeon;
 #[path = "achievement_kills.rs"]
@@ -108,6 +111,12 @@ impl Plugin for AchievementPlugin {
         app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(PostUpdate, kills::publish_rewarded_creature_kills);
         app.add_systems(
+            PostUpdate,
+            flush_achievement_updates
+                .after(kills::publish_rewarded_creature_kills)
+                .before(MessageSystems::Send),
+        );
+        app.add_systems(
             Update,
             (
                 send_initial_achievement_snapshot.after(InitializeSpellKnowledge),
@@ -151,6 +160,10 @@ fn send_initial_achievement_snapshot(world: &mut World) {
             player,
             toasts.iter().map(|toast| toast.achievement_id),
         );
+        world.entity_mut(connection).remove::<(
+            publication::AchievementPublication,
+            crate::adventure_guide::GuidePublication,
+        )>();
         send_updates(world, connection, snapshot, Vec::new());
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
@@ -1326,26 +1339,11 @@ fn send_updates(
     toasts: Vec<AchievementToastSnapshot>,
 ) {
     crate::adventure_guide::refresh_for_connection(world, connection);
-    let Some(mut sender) = world.get_mut::<MessageSender<AchievementStateUpdate>>(connection)
-    else {
-        return;
-    };
-    if toasts.is_empty() {
-        sender.send::<AchievementChannel>(AchievementStateUpdate {
-            snapshot: Some(snapshot),
-            completed: None,
-            message: Some("achievement progress updated".into()),
-            error: None,
-        });
-        return;
-    }
-    for toast in toasts {
-        sender.send::<AchievementChannel>(AchievementStateUpdate {
-            snapshot: Some(snapshot.clone()),
-            completed: Some(toast),
-            message: Some("achievement completed".into()),
-            error: None,
-        });
+    if world
+        .get::<MessageSender<AchievementStateUpdate>>(connection)
+        .is_some()
+    {
+        publication::queue_update(world, connection, snapshot, toasts);
     }
 }
 
@@ -1693,3 +1691,7 @@ mod tests;
 #[cfg(test)]
 #[path = "achievement_unknown_spell_tests.rs"]
 mod unknown_spell_tests;
+
+#[cfg(test)]
+#[path = "achievement_send_perf_tests.rs"]
+mod send_perf_tests;

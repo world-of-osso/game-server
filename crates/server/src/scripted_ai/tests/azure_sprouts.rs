@@ -86,6 +86,40 @@ fn prove_native_summon_prerequisite(h: &mut Harness, leymor: Entity) {
 }
 
 #[test]
+#[ignore = "RED: native sprout JustAppeared374161 self-aura unported"]
+fn azure_leymor_sprouts_native_children_apply_their_authored_spawn_aura() {
+    let (mut h, leymor) = super::azure_combat::prepare_leymor_for_later_clock();
+    h.advance(0.1);
+    let map = *h.app.world().get::<InMap>(leymor).unwrap();
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(
+        children.len(),
+        14,
+        "ordinary native children before aura RED"
+    );
+    for &child in &children {
+        assert_eq!(h.app.world().get::<InMap>(child), Some(&map));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::spell_cast::summon::SummonedCreature>(child)
+                .unwrap()
+                .owner,
+            leymor,
+            "actual native summoner prerequisite"
+        );
+    }
+    let missing: Vec<_> = children
+        .into_iter()
+        .filter(|&child| !h.has_aura(child, 374161))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "native374161 self-aura missing on {missing:?}"
+    );
+}
+
+#[test]
 fn azure_leymor_sprouts_parent_summons_two_native_children_per_authored_origin() {
     let (mut h, leymor) = super::azure_combat::wake_leymor();
     let map = *h.app.world().get::<InMap>(leymor).unwrap();
