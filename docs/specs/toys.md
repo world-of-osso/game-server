@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Azerite Firework Launcher166877/290627 retains its existing caster-ground62 one-shot cast without gameplay aura, summon, health/body/position changes. Enforce the source600000ms item recovery: refuse immediate and near-expiry reuse, then allow reuse after ordinary simulation passage. Actual terrain/learning/recovery acceptance is separate from native skyward animation, particles, audio and wall-clock timing.
+
 - Goldtusk Inn Breakfast Buffet166703/289533 requires authentic149876/display90570 with model DisplayScale0.5, source faction35 and unchanged empty interaction/AI/script fields. Maintained additive import preserves the exact TDB model row, including its zero probability. Real learned use places one non-pet/non-follow table at source47's3yd XZ offset for300000ms; preserve600000ms item recovery after ordinary expiry, owner/map and player body/health. Source47 collision/elevation, food/loot interactions and native appearance are not established by this bounded template/lifecycle contract.
 
 - [ ] Establish Citizens Brigade166247/287080 child287079's permanent Personal Anchor action before admitting its linked summon. Authentic148048 model availability alone must not discard the unresolved dummy effect; preserve explicit refusal without cast, actor or recovery spending. [Source126 boundary](../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17).
