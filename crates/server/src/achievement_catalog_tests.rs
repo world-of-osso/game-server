@@ -1453,9 +1453,12 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Imported70391: full class245, both race roots, Hug and seven type35 roots.
+    // Imported70391: all three area31 roots retain full authored thresholds.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5530);
+    assert_eq!(union.len(), 5533);
+    for id in [224, 1151, 12411] {
+        assert!(union.contains(&id), "full authored area31 root{id}");
+    }
     assert!(union.contains(&245), "full thirteen-class That Takes Class");
     assert!(
         union.contains(&246) && union.contains(&1005),

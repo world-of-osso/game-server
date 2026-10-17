@@ -1732,3 +1732,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Holiday hearthstone learned use](systems/toys.md#holiday-hearthstone-learned-use-2026-10-16): real persisted bind/source10s cast and shared2309 charge acceptance,146/146 Toy tests; source type17 appearance/cross-map/wall recharge remain separate.
 
 - 2026-10-16: [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16): authentic paired template import RED→GREEN, real area/cursor/source300s simulation lifecycle,147/147 Toy gate; target-dummy combat and missing native533501 body remain separate.
+
+- 2026-10-17: [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) reads real current terrain at the existing HK boundary, retains ancestry/companions and account SUM; native/account behavioral RED2/2, full50 GREEN pending. Imported70391 structural census5533/1841 adds only224/1151/12411; area metadata is70448, no reconciled70448 achievement-profile claim.

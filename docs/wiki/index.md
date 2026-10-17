@@ -1,3 +1,4 @@
+- [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — real current terrain per eligible recipient; full50 authored root and native/account RED, GREEN pending.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
 - [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
 - [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.
