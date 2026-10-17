@@ -22,11 +22,13 @@ Lead full-workspace gate441 exposed the news fixture reading0 rows immediately a
 
 | Reader | Coherent route after conversion | Proof |
 |---|---|---|
-| Guild news request/sticky and dirty publication | Typed read/mutation jobs on the existing FIFO; receipts precede replies and subscriber comparisons | Separate query/subscriber ordering REDs; GREEN pending |
-| Character selection and Guide missing-component load | Existing AccountProgressCache contribution inserted before enqueue; account ID preserved at selection | Actual SelectCharacter default/legacy and Guide overwrite REDs; GREEN pending |
+| Guild news request/sticky and dirty publication | Typed read/mutation jobs on the existing FIFO; receipts precede replies and subscriber comparisons | Separate query/subscriber ordering RED→GREEN |
+| Character selection and Guide missing-component load | Existing AccountProgressCache contribution inserted before enqueue; account ID preserved at selection | Actual SelectCharacter default/legacy and Guide overwrite RED→GREEN |
 | Live achievement window/comparison and account aggregation | PlayerAchievementState components; owned account cache, read-only cold-cache initialization before first enqueue | Existing scope/migration/evaluation controls retained |
 | Raw achievement initialization/migration | Test/offline-only API (`cfg(test)`), unavailable to production callers | Production check plus pending-write login controls |
 | Reopen and site-data export | Ordinary database close drains writer; offline exporter reads supplied COPY through one read transaction | Crash/reopen controls; `SITE_COPY_LIVE_REDB_SNAPSHOT` explicitly deferred |
+
+Reader follow-up verification atbc2db490 passed22/23 controls; only an unrequested cold-producer50ms bound added to the original news fixture failed. Instrumented cold work was93.2ms. Per lead instruction, f17b729a replaces that new bound with an explicitly held writer: event evaluation returns while the hold remains pending, both durable rows remain absent until release, then the original metadata/one-row/duplicate/reopen assertions pass. Evidence is22 unaffected controls plus1 corrected control,0ignored; all four runtime ordering REDs are GREEN. Existing specified50ms/250ms timing controls remain unchanged. Targeted lead gate/check/fmt and post-landing live acceptance remain pending.
 
 The site refresh's raw SSH copy has a pre-existing torn-read risk and may lag pending work; lead explicitly accepts website lag and excludes capture/ops/security/deploy changes from this head. The named gap is not represented as a fixed capture boundary.
 

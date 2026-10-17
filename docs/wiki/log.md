@@ -1,3 +1,7 @@
+## 2026-10-17 — FIFO reader coherence
+
+[Reader audit and ordering proof](investigations/server-tick-lag.md#reader-coherence-follow-up): full gate exposed a durable news read racing queued writes. Requests/publications now read on the same FIFO; login/Guide use writer-fed character contributions. Raw migration helpers are unavailable in production. Original news assertions retained behind an explicitly controlled commit boundary; targeted re-gate/live acceptance remain open. Site live-copy capture explicitly excluded as `SITE_COPY_LIVE_REDB_SNAPSHOT`.
+
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
