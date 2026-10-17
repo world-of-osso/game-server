@@ -415,7 +415,17 @@ fn alterac_channel_tower_honor_requires_destruction_and_rounds_each_event() {
             use_object(&mut entered.h, actor, banner);
             entered.h.advance(8);
             entered.h.advance(240);
-            assert!(objects_in(&mut entered.h, entered.copy, entry).is_empty());
+            assert!(
+                objects_in(&mut entered.h, entered.copy, entry).is_empty(),
+                "tower destruction missing: team={team:?}, entry={entry}, health={:?}, cast={:?}, snapshot={:?}",
+                entered.h.app.world().get::<Health>(actor.player),
+                entered
+                    .h
+                    .app
+                    .world()
+                    .get::<shared::casting::CastState>(actor.player),
+                battleground(&entered.h, actor),
+            );
             let expected = if team == BgTeam::A {
                 [amount, 0]
             } else {
