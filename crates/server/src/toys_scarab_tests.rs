@@ -19,7 +19,7 @@ fn assert_source_guardian_scatter_point(
     };
     assert_eq!(
         point.y, height,
-        "scatter height must match projected source ground"
+        "scatter height must match projected source ground: destination={destination:?}, point={point:?}"
     );
 }
 
