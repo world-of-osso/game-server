@@ -79,7 +79,9 @@ fn toyfx85_forlorn_real_learning_cast_flight_source_displays_recovery_and_soul_e
     let first_position = *h.app.world().get::<Position>(first).unwrap();
     assert!(
         (first_position.x - origin.x - 3.0).abs() < 0.01,
-        "source47/radius3 front"
+        "source47/radius3: soul={first_position:?}, origin={origin:?}, caster={:?}, facing={:?}",
+        h.app.world().get::<Position>(caster),
+        h.app.world().get::<Rotation>(caster)
     );
     assert!((first_position.z - origin.z).abs() < 0.01);
     assert_eq!(
