@@ -233,6 +233,22 @@ pub(crate) fn forget_matches_for_reconnect_fixture(world: &mut World) {
     world.insert_resource(PvpServerState::default());
 }
 
+/// Controlled pre-terminal baseline; subsequent channel fixtures must produce the actual end.
+#[cfg(test)]
+pub(crate) fn seed_terminal_reinforcements(
+    world: &mut World,
+    match_id: u64,
+    team: shared::battleground::BgTeam,
+    amount: u32,
+) {
+    let mut state = world.resource_mut::<PvpServerState>();
+    let matched = state.battleground_matches.get_mut(&match_id).unwrap();
+    match team {
+        shared::battleground::BgTeam::A => matched.instance.score_a.reinforcements = amount,
+        shared::battleground::BgTeam::B => matched.instance.score_b.reinforcements = amount,
+    }
+}
+
 #[derive(Debug)]
 struct InvitedBattleground {
     instance: BgInstance,

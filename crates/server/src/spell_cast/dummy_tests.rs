@@ -41,6 +41,50 @@ fn dummy_priest_penance_channels_three_damage_bolts() {
 }
 
 #[test]
+fn dummy_channel_destination_uses_live_channel_not_unrelated_explicit_unit() {
+    let mut h =
+        harness(Vec::new(), &[47540, 47758, 47666, 387152], 5).expect("real world.db required");
+    let child = world_db().unwrap().store.get(387152).unwrap().clone();
+    let effect = child
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let destination = |h: &Harness, explicit| {
+        super::targets::effect_dest(h.app.world(), h.caster, explicit, effect, None)
+    };
+    assert!(
+        destination(&h, Some(h.caster)).is_none(),
+        "no destination without a channel"
+    );
+    h.cast_and_deliver(47540, Some(h.npc));
+    let target_position = super::targets::position(h.app.world(), h.npc).unwrap();
+    assert_eq!(
+        destination(&h, Some(h.caster)).unwrap().position,
+        target_position
+    );
+    // An actual channel destination takes priority over its unit target.
+    let requested = super::targets::position(h.app.world(), h.caster).unwrap();
+    assert_ne!(
+        requested, target_position,
+        "distinct existing native unit positions"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<super::PendingCastSpell>(h.caster)
+        .unwrap()
+        .0
+        .cast_destination = Some(requested.to_array());
+    assert_eq!(destination(&h, Some(h.npc)).unwrap().position, requested);
+    let caster = h.caster;
+    super::cancel_cast(h.app.world_mut(), caster);
+    assert!(
+        destination(&h, Some(h.caster)).is_none(),
+        "ended channels supply no destination"
+    );
+}
+
+#[test]
 fn dummy_priest_penance_channels_three_healing_bolts() {
     let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750], 5)
         .expect("real world.db required");
