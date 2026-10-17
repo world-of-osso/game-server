@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source185–189 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source185189-midday-acceptance-pending-and-interactive-boundaries-2026-10-17): new Jar187 test/spec9ec632d3a retains exact day/night screen IDs, duration and cancel-preserved item recovery; execution/check still pending, fmt/readability pass. Fish-kicking/Gral/memento actions remain gaps; earlier Sealamp CPU/native/body/scale/state-kit/expiry scope retained without new certification. No production/data change.
+
 ## 2026-10-17 — Toy source180–184 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source180184-retained-midnightsign-proof-and-equipment-gaps-2026-10-17): retain earlier Shadescale learned-use/aura/cancel and both warning-sign actor/native expiry scopes without claiming native midnight or sign message carving/extended visibility. Dining/naga-equipment procedural payloads remain gaps. No runtime/data admission, native recertification or duplicate gate.
