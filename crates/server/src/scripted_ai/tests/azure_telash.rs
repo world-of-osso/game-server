@@ -185,6 +185,11 @@ fn azure_telash_frost_bomb_starts_at_three_point_five_and_lands_native_aura() {
 #[test]
 #[ignore = "RED: native Icy Devastator first rescheduled14.3s cast not implemented"]
 fn azure_telash_icy_devastator_follows_first_frost_reschedule_and_native_damage() {
+    bevy::log::tracing_subscriber::fmt()
+        .with_env_filter("game_server::spell_cast=warn,game_server::auras=warn")
+        .with_test_writer()
+        .try_init()
+        .expect("isolated native Icy child admission trace");
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     let player = h.player();
     let mut visibility = crate::interest::NetworkVisibility::default();
@@ -221,8 +226,23 @@ fn azure_telash_icy_devastator_follows_first_frost_reschedule_and_native_damage(
         .expect("source firstFrost reschedule starts Icy Devastator at14.3s");
     assert_eq!(cast.spell_id, ICY_DEVASTATOR);
     let remaining = cast.duration - cast.elapsed;
+    eprintln!(
+        "ICY_START type={:?} duration={} elapsed={} target={}",
+        cast.cast_type, cast.duration, cast.elapsed, cast.target
+    );
     // Keep native cast/channel duration and give its1000ms trigger387152 a real tick.
     h.advance(remaining + 1.2);
+    eprintln!(
+        "ICY_AFTER player_hp={} aura={} child_events={:?}",
+        h.app.world().get::<Health>(player).unwrap().current,
+        h.has_aura(player, ICY_DEVASTATOR),
+        h.inbox(0)
+            .log
+            .iter()
+            .filter(|event| event.spell_id == Some(ICY_DEVASTATOR_DAMAGE))
+            .map(|event| (&event.kind, event.source, event.target, event.amount))
+            .collect::<Vec<_>>()
+    );
     assert!(
         h.inbox(0)
             .spell_gos
