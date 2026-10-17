@@ -65,6 +65,8 @@ This checkpoint's OnEnd callbacks cover Arathi, Eye, current Warsong and the Alt
 
 Select only configured concrete templates linked from70448 BML32, using their existing configured weights (Retail weights are undocumented). Each eligible map must have its own PVPDifficulty bracket containing every queued player's level, within its admission bounds. Reject a requested level range explicitly when no configured eligible map exists. Deepwind2245 stays excluded because its template is missing. A level25 party cannot select Deephaul2656; level80 can. The instance retains the selected map's level-matching bracket, never a copied parent RangeIndex. Existing per-map payouts and minimum-to-start remain unchanged; the parent's5/team matchmaking minimum does not lower a concrete map's start minimum. No new UI map-exclusion behavior.
 
+`BG_FILL_EXISTING_COPY` remains an accepted gap for this slice. Parent5/team can select a map whose unchanged start minimum is8/team; it remains Waiting. Later parties currently form a new copy instead of filling that one. Do not lower start criteria; fill-existing-copy is separate work.
+
 `RANDOM_BG_WIN_REWARD_PROFILE` remains unresolved: pinned TC a352b1fa defaults and shipped assignments use win first27000/repeat13500 and loss first4500/repeat3500 as kill equivalents, not flat Honor. Reset defaults to06:00 server-local. No amounts, reset authority, first-win/daily state or Random completion grant is adopted.
 
 ## Warsong / Twin Peaks capture Honor
