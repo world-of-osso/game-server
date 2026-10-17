@@ -262,6 +262,27 @@ fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() 
 
         let (captain, health) =
             find_alterac_source_npc(&mut entered.h, entered.copy, captain_entry);
+        let dead_index = entered
+            .teams
+            .iter()
+            .enumerate()
+            .find_map(|(index, team)| (*team == winner && index != actor_index).then_some(index))
+            .unwrap();
+        let dead_teammate = entered.players[dead_index].player;
+        crate::combat::deal_direct_damage(entered.h.app.world_mut(), captain, dead_teammate, 1.0e7);
+        entered.h.receive_pvp_updates(5);
+        assert_eq!(
+            entered
+                .h
+                .app
+                .world()
+                .get::<Health>(dead_teammate)
+                .unwrap()
+                .current,
+            0.0
+        );
+        assert_team_honor(&entered, 0, 0);
+        // A normal NPC-caused death does not disqualify the accepted team member from Honor.
         crate::combat::deal_direct_damage(
             entered.h.app.world_mut(),
             actor.player,
@@ -270,9 +291,9 @@ fn alterac_channel_captain_general_honor_uses_source_bracket_and_single_death() 
         );
         entered.h.receive_pvp_updates(5);
         let captain_scores = if winner == BgTeam::A {
-            [700, 600]
+            [699, 600]
         } else {
-            [600, 700]
+            [600, 699]
         };
         let snapshot = battleground(&entered.h, actor);
         assert_eq!([snapshot.score_a, snapshot.score_b], captain_scores);
