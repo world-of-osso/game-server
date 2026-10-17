@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 const ROWS: TableDefinition<u64, &[u8]> = TableDefinition::new("writer_proof");
 
-fn wait(receipt: &CommitReceipt) -> Result<(), String> {
+fn wait<T: Clone>(receipt: &CommitReceipt<T>) -> Result<T, String> {
     let deadline = Instant::now() + Duration::from_secs(3);
     loop {
         if let Some(result) = receipt.result() {
@@ -120,5 +120,42 @@ fn fifo_writer_reports_failed_commit_and_continues_later_jobs() {
             .unwrap()
             .value(),
         b"durable"
+    );
+}
+
+#[test]
+fn fifo_typed_receipts_withhold_values_and_report_panics_before_continuing() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = Arc::new(Database::create(dir.path().join("typed.redb")).unwrap());
+    let writer = PersistenceWriter::start(Arc::clone(&db));
+    let held = db.begin_write().unwrap();
+    let value = writer.enqueue_result("owned typed snapshot", |db| {
+        persist(db, 41, b"committed typed value")?;
+        Ok(41_u64)
+    });
+    let panic = writer.enqueue_result("typed panic", |_| -> Result<u64, String> {
+        panic!("typed write failed");
+    });
+    let later = writer.enqueue_result("later typed value", |db| {
+        persist(db, 42, b"after failure")?;
+        Ok(42_u64)
+    });
+    assert!(value.result().is_none());
+    assert!(panic.result().is_none());
+    assert!(later.result().is_none());
+    held.abort().unwrap();
+    assert_eq!(wait(&value), Ok(41));
+    assert_eq!(wait(&panic), Err("typed write failed".into()));
+    assert_eq!(wait(&later), Ok(42));
+    assert_eq!(
+        db.begin_read()
+            .unwrap()
+            .open_table(ROWS)
+            .unwrap()
+            .get(42)
+            .unwrap()
+            .unwrap()
+            .value(),
+        b"after failure"
     );
 }

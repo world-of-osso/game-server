@@ -56,6 +56,9 @@ pub(crate) struct MonthlySummary {
     pub end_unix: i64,
 }
 
+#[derive(Component, Clone)]
+pub(crate) struct MonthSettlement(pub crate::persistence_writer::CommitReceipt);
+
 pub(crate) fn calendar_month(now: i64) -> shared::protocol::JournalMonth {
     month::month_at(now, 0, now)
 }
@@ -141,7 +144,12 @@ fn update_tracking(world: &mut World, player: Entity, id: u32, tracked: bool) {
     }
 }
 
-fn persist_month_state(world: &World, connection: Entity, player: Entity, character: u64) {
+fn persist_month_state(
+    world: &World,
+    connection: Entity,
+    player: Entity,
+    character: u64,
+) -> crate::persistence_writer::CommitReceipt {
     let state = world
         .get::<PlayerAchievementState>(player)
         .expect("monthly state initialized");
@@ -154,7 +162,7 @@ fn persist_month_state(world: &World, connection: Entity, player: Entity, charac
         account,
         character,
         state,
-    );
+    )
 }
 
 fn send_snapshot(world: &mut World, connection: Entity, player: Entity, character: u64) {
@@ -168,7 +176,7 @@ fn settle_and_project_month(
     player: Entity,
     character: u64,
 ) -> AdventureGuideSnapshot {
-    persist_month_state(world, connection, player, character);
+    let contribution = persist_month_state(world, connection, player, character);
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let state = world
         .get::<PlayerAchievementState>(player)
@@ -225,13 +233,23 @@ fn settle_and_project_month(
             .get::<Authenticated>(connection)
             .expect("authenticated monthly award")
             .account_id;
-        crate::trading_post_store::settle(
-            &world.resource::<GameDatabase>().db,
-            account,
-            snapshot.month.start_unix,
-            snapshot.points,
-            &data.thresholds,
-        );
+        let month = snapshot.month.start_unix;
+        let points = snapshot.points;
+        let thresholds = data.thresholds.clone();
+        let receipt =
+            world
+                .resource::<GameDatabase>()
+                .writer
+                .enqueue("Guide Tender settlement", move |db| {
+                    contribution
+                        .result()
+                        .expect("preceding FIFO contribution completed")?;
+                    crate::trading_post_store::settle(db, account, month, points, &thresholds);
+                    Ok(())
+                });
+        world
+            .entity_mut(connection)
+            .insert(MonthSettlement(receipt));
     }
     world.entity_mut(connection).insert(MonthlySummary {
         points: snapshot.points,

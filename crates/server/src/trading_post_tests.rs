@@ -68,7 +68,8 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
         .unwrap()
         .send::<InstanceChannel>(command);
     let mut replies = Vec::new();
-    for _ in 0..10 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while replies.is_empty() && std::time::Instant::now() < deadline {
         h.app.update();
         replies.extend(
             h.app
@@ -77,6 +78,7 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
                 .unwrap()
                 .receive(),
         );
+        std::thread::yield_now();
     }
     replies.pop().expect("Trading Post server reply")
 }

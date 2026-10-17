@@ -296,11 +296,17 @@ fn read_state(txn: &WriteTransaction, account: u64) -> State {
 }
 
 pub(crate) fn load(db: &Database, account: u64) -> State {
-    let txn = db.begin_write().expect("begin Trading Post account read");
-    let state = read_state(&txn, account);
-    txn.commit()
-        .expect("commit Trading Post table initialization");
-    state
+    let txn = db.begin_read().expect("begin Trading Post account read");
+    let table = match txn.open_table(ACCOUNTS) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return State::default(),
+        Err(error) => panic!("open Trading Post account: {error}"),
+    };
+    table
+        .get(account)
+        .expect("read Trading Post account")
+        .map(|row| serde_json::from_slice(row.value()).expect("decode Trading Post account"))
+        .unwrap_or_default()
 }
 
 fn write_state(txn: &WriteTransaction, account: u64, state: &State) {
