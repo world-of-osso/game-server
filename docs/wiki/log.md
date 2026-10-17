@@ -1,6 +1,6 @@
 ## 2026-10-17 — Sprout native spawn aura
 
-[Source boundary](investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): genuine eaad1801 native374161 RED38.63s follows all fourteen ordinary child/owner/map prerequisites. Prepared import preserves actual `npc_ley_line_sprouts`; missing runtime factory/non-boss branch, not data identity, is the cause. Minimal script binding/JustAppeared self-aura implemented before targeted GREEN; no data/stats/geometry changes. ArcanePower/92, aura395 actions and full lifecycle remain separate;803defbf finite clock/child candidate frozen.
+[Source boundary](investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): genuine eaad1801 native374161 RED38.63s follows all fourteen ordinary child/owner/map prerequisites. Prepared import preserves actual `npc_ley_line_sprouts`; missing runtime factory/non-boss branch, not data identity, is the cause. Minimal script binding/JustAppeared self-aura at39107add passes native1/32.80s with exact48e6/eight-source/frozenHEAD before-after; enabled only after GREEN. Next two native ArcanePower14/unowned92 cases ignored pending genuine RED, with actual self-aura/summoner/capacity99 prerequisites; no power/92/stacking production or data/stats/geometry changes. ArcanePower/92, aura395 actions and full lifecycle remain separate;803defbf finite clock/child candidate frozen.
 
 ## 2026-10-17 — Leymor first Fissure clock
 

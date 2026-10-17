@@ -2,6 +2,7 @@
 use super::*;
 
 const SPROUT: u32 = 190509;
+const ARCANE_POWER: u32 = 374736;
 const ORIGINS: [(f32, f32, f32); 7] = [
     (-5129.39, 1253.30, 555.58),
     (-5101.68, 1253.71, 555.90),
@@ -86,7 +87,6 @@ fn prove_native_summon_prerequisite(h: &mut Harness, leymor: Entity) {
 }
 
 #[test]
-#[ignore = "RED: native sprout JustAppeared374161 self-aura unported"]
 fn azure_leymor_sprouts_native_children_apply_their_authored_spawn_aura() {
     let (mut h, leymor) = super::azure_combat::prepare_leymor_for_later_clock();
     h.advance(0.1);
@@ -116,6 +116,99 @@ fn azure_leymor_sprouts_native_children_apply_their_authored_spawn_aura() {
     assert!(
         missing.is_empty(),
         "native374161 self-aura missing on {missing:?}"
+    );
+}
+
+fn prepare_arcane_power_prerequisites() -> (Harness, Entity) {
+    let (mut h, leymor) = super::azure_combat::prepare_leymor_for_later_clock();
+    h.advance(0.1);
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(
+        children.len(),
+        14,
+        "ordinary native summons before power RED"
+    );
+    for child in children {
+        assert!(
+            h.has_aura(child, 374161),
+            "actual spawn self-aura prerequisite"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::spell_cast::summon::SummonedCreature>(child)
+                .unwrap()
+                .owner,
+            leymor
+        );
+    }
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(ARCANE_POWER)
+        .expect("native Arcane Power data");
+    assert_eq!(
+        spell.aura_options.as_ref().unwrap().cumulative_aura,
+        99,
+        "native stack-capacity prerequisite, not a manufactured budget"
+    );
+    (h, leymor)
+}
+
+#[test]
+#[ignore = "RED: native Sprouts do not yet apply374736 through summoner92"]
+fn azure_leymor_sprout_power_adds_one_native_aura_count_per_real_child() {
+    let (h, leymor) = prepare_arcane_power_prerequisites();
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        14,
+        "one native Arcane Power application per actual ordinary summon"
+    );
+    for child in h.creatures_of(SPROUT) {
+        assert!(!h.has_aura(child, ARCANE_POWER), "not the casting sprout");
+    }
+    for &(player, _, _) in &h.players {
+        assert!(!h.has_aura(player, ARCANE_POWER), "not a nearby player");
+    }
+}
+
+#[test]
+#[ignore = "RED: native summoner92 selector is not implemented"]
+fn azure_leymor_sprout_power_unowned_caster_does_not_use_explicit_or_self() {
+    let (mut h, leymor) = prepare_arcane_power_prerequisites();
+    assert!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::summon::SummonedCreature>(leymor)
+            .is_none()
+    );
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(ARCANE_POWER)
+        .unwrap()
+        .clone();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let explicit = h.player();
+    let selected = crate::spell_cast::targets::select_targets(
+        h.app.world_mut(),
+        leymor,
+        Some(explicit),
+        &spell,
+        effect,
+        0,
+        true,
+    )
+    .expect("native summoner92 selection resolves without an invented target");
+    assert!(
+        selected.is_empty(),
+        "an unowned caster has no summoner target"
     );
 }
 
