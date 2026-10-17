@@ -228,13 +228,20 @@ fn combat_progress_send_budget_for_eleven_players_does_not_resend_full_catalogs(
         total_bytes <= PEERS * INCREMENTAL_BYTES_PER_PEER,
         "incremental publication bytes: {total_bytes}"
     );
-    for peer in received {
+    for (peer, received) in fixture.peers.iter().zip(received) {
+        let state = fixture
+            .app
+            .world()
+            .get::<PlayerAchievementState>(peer.player)
+            .unwrap();
+        assert_eq!(
+            state.criteria_progress.get(&162),
+            Some(&1515),
+            "five real effective-damage credits retained"
+        );
         assert!(
-            peer.deltas[0]
-                .progress_upserts
-                .iter()
-                .any(|row| row.current == 1515),
-            "all five effective damage credits retained"
+            received.deltas[0].progress_upserts.is_empty(),
+            "raw statistics are not grant-snapshot progress rows"
         );
     }
 }
@@ -350,12 +357,18 @@ fn apply_delta(snapshot: &mut AchievementSnapshot, delta: AchievementDelta) {
 fn combat_progress_stream_equals_full_state_and_reconnect_replaces_baseline() {
     let mut fixture = fixture();
     let mut projected = fixture.baselines.clone();
-    for damage in [123, 456] {
+    for level in [10, 20] {
         for peer in &fixture.peers {
+            fixture
+                .app
+                .world_mut()
+                .get_mut::<Level>(peer.player)
+                .unwrap()
+                .0 = level;
             record_criteria_event(
                 fixture.app.world_mut(),
                 peer.player,
-                CriteriaEvent::DamageDealt(damage),
+                CriteriaEvent::ReachLevel(level),
             );
         }
         let received = fixture.advance();
@@ -475,12 +488,25 @@ fn combat_publication_stream_replaces_earned_ids_and_removes_and_restores_progre
     apply_delta(&mut projected, second.deltas.into_iter().next().unwrap());
     assert_eq!(projected, restored);
     send_updates(fixture.app.world_mut(), connection, restored, Vec::new());
-    let unchanged = fixture.advance().remove(0);
-    assert!(unchanged.achievements.is_empty() && unchanged.deltas.is_empty());
+    let refreshed = fixture.advance().remove(0);
+    assert!(refreshed.achievements.is_empty());
+    assert_eq!(
+        refreshed.deltas,
+        vec![AchievementDelta {
+            earned_ids: None,
+            progress_upserts: Vec::new(),
+            removed_progress_ids: Vec::new()
+        }],
+        "explicit progress notification still invalidates paginated statistics"
+    );
+    assert!(
+        fixture.advance().remove(0).deltas.is_empty(),
+        "no unsolicited idle refresh"
+    );
 }
 
 #[test]
-fn combat_guide_query_and_content_changes_coalesce_without_losing_clock() {
+fn combat_guide_query_and_content_changes_preserve_the_clock() {
     let mut fixture = fixture();
     let connection = fixture.peers[0].connection;
     fixture
@@ -502,8 +528,11 @@ fn combat_guide_query_and_content_changes_coalesce_without_losing_clock() {
         "explicit query still returns complete Guide"
     );
     assert!(
-        queried.clocks.is_empty(),
-        "queued clock and forced full cannot overtake each other"
+        queried
+            .clocks
+            .iter()
+            .all(|clock| clock.now_unix == queried.guides[0].month.now_unix),
+        "a clock preceding the later query reply agrees with that full state"
     );
     assert_eq!(queried.guides[0].month.now_unix, 1_792_180_801);
     let activity = queried.guides[0].activities[0].id;
