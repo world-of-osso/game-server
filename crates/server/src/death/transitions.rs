@@ -20,6 +20,7 @@ type PlayerDeathTransitionQuery<'w, 's> = Query<
         &'static crate::persistence::ClientId,
         &'static Player,
         &'static crate::maps::InMap,
+        Option<&'static mut crate::combat::KillingBlow>,
     ),
     With<Player>,
 >;
@@ -52,11 +53,22 @@ pub(crate) fn process_player_death_transitions(
             params.counters.players_visited += 1;
         }
 
-        let Ok((position, mut health, durability, death_state, client_id, player, map)) =
-            params.players.get_mut(player_entity)
+        let Ok((
+            position,
+            mut health,
+            durability,
+            death_state,
+            client_id,
+            player,
+            map,
+            killing_blow,
+        )) = params.players.get_mut(player_entity)
         else {
             continue;
         };
+        // Consume the current lethal cause even if resurrection invalidated its
+        // queued transition; a later environmental death must not inherit it.
+        let killer = killing_blow.and_then(|mut cause| cause.0.take());
         if !should_process_player_death(&health, death_state) {
             continue;
         }
@@ -83,6 +95,11 @@ pub(crate) fn process_player_death_transitions(
             .commands
             .entity(player_entity)
             .insert(death_state.clone());
+        if let Some(killer) = killer {
+            params.commands.queue(move |world: &mut World| {
+                crate::combat::notify_killed_unit(world, killer, player_entity);
+            });
+        }
         params.commands.queue(move |world: &mut World| {
             crate::damage_meter::record_player_death_transition(world, player_entity);
             crate::mythic_plus::record_death(world, player_entity);

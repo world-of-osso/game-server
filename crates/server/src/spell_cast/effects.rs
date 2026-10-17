@@ -1268,6 +1268,9 @@ fn push_damage_event(
 }
 
 fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
+    world
+        .entity_mut(target)
+        .insert(crate::combat::KillingBlow(Some(killer)));
     if world.get::<Npc>(target).is_some() {
         crate::combat::mark_npc_dead_world(world, target);
     } else {
