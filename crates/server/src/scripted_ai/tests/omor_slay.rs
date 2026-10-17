@@ -68,13 +68,9 @@ fn encounter_coverage_omor_slay_ordinary_shadow_bolt_speaks_once_on_player_death
         "nonlethal damage cannot speak slay"
     );
     h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1.0;
-    // Native miss/resist rolls remain; bounded retries use ordinary casts and clocks.
-    for _ in 0..8 {
-        if h.health(player).current <= 0.0 {
-            break;
-        }
-        cast_ordinary_shadow_bolt(&mut h, boss, player);
-    }
+    // The initial ordinary bolt engages the real source scheduler. Let its next
+    // native cast finish instead of competing with it or bypassing InProgress.
+    h.advance(14.1);
     assert_eq!(h.health(player).current, 0.0, "actual lethal30686 impact");
     let death = h
         .app
