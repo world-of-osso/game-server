@@ -125,3 +125,56 @@ fn encounter_coverage_gargolmar_speech_actual_melee_kill_speaks_once() {
     );
     assert!(h.inbox(1).chat.is_empty());
 }
+
+#[test]
+#[ignore = "source ordinary34645 OnSpellCast50percent Talk2 acceptance pending implementation"]
+fn encounter_coverage_gargolmar_speech_surge_casts_have_both_source_chance_outcomes() {
+    let (mut h, boss, _) = super::gargolmar::pull_gargolmar();
+    let player = h.player();
+    let mut actual_casts = 0;
+    let mut spoken = 0;
+    // Source has no mana cost or category recovery; keep ordinary admission and
+    // real AI clocks. Scheduled Surge casts count too, rather than resetting AI.
+    for trial in 0..64 {
+        let casts_before = spell_gos(&h, boss, 34645).len();
+        let speech_before = authored_yells(&h, boss, 2);
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 34645, Some(player), false)
+            .unwrap_or_else(|failure| panic!("native ordinary Surge trial{trial}: {failure:?}"));
+        h.advance(1.1);
+        let casts = spell_gos(&h, boss, 34645).len() - casts_before;
+        let speech = authored_yells(&h, boss, 2) - speech_before;
+        assert!(casts >= 1, "actual ordinary Surge SpellGo for trial{trial}");
+        assert!(
+            speech <= casts,
+            "at most one source yell per successful cast"
+        );
+        actual_casts += casts;
+        spoken += speech;
+        assert!(
+            h.health(player).current > 0.0,
+            "native encounter buffer stays alive"
+        );
+        assert!(
+            h.inbox(1).chat.is_empty(),
+            "other copy cannot hear Surge speech"
+        );
+    }
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.source == Some(boss.to_bits())
+                && event.target == Some(player.to_bits())
+                && event.spell_id == Some(34645)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "actual source Surge impact occurs; misses still retain successful-cast hooks"
+    );
+    assert!(
+        spoken > 0,
+        "source34645 roll50percent must sometimes emit actual Talk2"
+    );
+    assert!(
+        spoken < actual_casts,
+        "source50percent branch must sometimes remain quiet"
+    );
+}
