@@ -9,7 +9,7 @@ use std::thread::JoinHandle;
 #[path = "persistence_writer_tests.rs"]
 mod tests;
 
-type WriteOperation = Box<dyn FnOnce(&Database) -> Result<(), String> + Send>;
+type WriteOperation = Box<dyn FnOnce(&Database, &WriterMetrics) + Send>;
 
 #[derive(Clone)]
 pub(crate) struct CommitReceipt<T = ()>(Arc<Mutex<Option<Result<T, String>>>>);
@@ -28,7 +28,6 @@ pub(crate) struct WriterMetrics {
 }
 
 struct Job {
-    name: &'static str,
     operation: WriteOperation,
 }
 
@@ -47,7 +46,7 @@ impl PersistenceWriter {
             .name("persistence-writer".into())
             .spawn(move || {
                 for job in receiver {
-                    execute_job(&db, job, &worker_metrics);
+                    (job.operation)(&db, &worker_metrics);
                 }
             })
             .expect("start FIFO persistence writer");
@@ -74,12 +73,10 @@ impl PersistenceWriter {
         let receipt = CommitReceipt(Arc::new(Mutex::new(None)));
         let completion = receipt.clone();
         let job = Job {
-            name,
-            operation: Box::new(move |db| {
+            operation: Box::new(move |db, metrics| {
                 let result = catch_operation(db, operation);
-                let status = result.as_ref().map(|_| ()).map_err(Clone::clone);
+                record_result(name, &result, metrics);
                 *completion.0.lock().expect("persistence receipt lock") = Some(result);
-                status
             }),
         };
         self.metrics.submitted.fetch_add(1, Ordering::Relaxed);
@@ -119,14 +116,14 @@ fn catch_operation<T>(
     )
 }
 
-fn execute_job(db: &Database, job: Job, metrics: &WriterMetrics) {
-    match (job.operation)(db) {
-        Ok(()) => {
+fn record_result<T>(name: &'static str, result: &Result<T, String>, metrics: &WriterMetrics) {
+    match result {
+        Ok(_) => {
             metrics.committed.fetch_add(1, Ordering::Relaxed);
         }
         Err(error) => {
             metrics.failed.fetch_add(1, Ordering::Relaxed);
-            bevy::log::error!(operation = job.name, %error, "Persistence commit failed");
+            bevy::log::error!(operation = name, %error, "Persistence commit failed");
         }
     }
 }
