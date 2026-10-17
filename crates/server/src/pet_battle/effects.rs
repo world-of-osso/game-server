@@ -77,6 +77,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             76 => self.charged_damage(caster, target, ability, effect),
+            370 => self.damage_with_species_bonus(caster, target, ability, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
                 let caster_speed = self.speed(caster);
@@ -322,6 +323,26 @@ impl<R: BattleRng> Runtime<'_, R> {
                 effect.property, effect.id
             )),
         }
+    }
+    fn damage_with_species_bonus(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let species = self.battle.pet(caster).species;
+        let matching_reserves = self.battle.teams[caster.team]
+            .pets
+            .iter()
+            .enumerate()
+            .filter(|(slot, pet)| *slot != caster.slot && pet.species == species)
+            .count() as i32;
+        let mut damage = effect.clone();
+        damage.property = 24;
+        damage.params[0] += matching_reserves * effect.params[2];
+        damage.params[2] = 0;
+        self.damage_effect(caster, target, ability, &damage)
     }
     fn charged_damage(
         &mut self,

@@ -246,6 +246,7 @@ fn pet_battle_169_scorched_earth_ticks_both_fronts_elemental_immune() {
     assert_eq!(next.teams[0].pets[1].health, 10000);
     b.teams[1].pets[0] = Pet::new(
         &c,
+        39,
         b.teams[1].pets[0].stats,
         6,
         [110, 119, 123],
@@ -459,6 +460,7 @@ fn pet_battle_80_weather_all_slots_replace_expire_elemental() {
     let mut b = battle(&c, 7, 7, [256, 595, 123]);
     b.teams[1].pets[2] = Pet::new(
         &c,
+        39,
         b.teams[1].pets[2].stats,
         6,
         [110, 119, 123],

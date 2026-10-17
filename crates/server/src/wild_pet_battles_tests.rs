@@ -39,6 +39,61 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_dragons_call_counts_same_species_not_family_or_enemy_team() {
+    let catalog = catalog();
+    for (matching_reserves, expected_damage) in [(0, 53), (1, 68), (2, 83)] {
+        let mut journal = PetJournal::default();
+        for slot in 0..3 {
+            let species = if slot == 0 || slot <= matching_reserves {
+                2621
+            } else {
+                3256
+            };
+            journal
+                .add_with_guid(species, 2, PetQuality::Rare, 3, 41 + slot as u64)
+                .unwrap();
+        }
+        let states = owned_states(&catalog, &journal);
+        let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+        let allies = build_team(&catalog, &identities, &states).unwrap();
+        assert_eq!(allies.pets[0].stats.power, 23);
+        let enemies = build_team(
+            &catalog,
+            &std::array::from_fn::<_, 3, _>(|_| Identity {
+                guid: None,
+                species: 2621,
+                level: 25,
+                breed: 3,
+                quality: PetQuality::Rare,
+            }),
+            &OwnedBattleStates::new(),
+        )
+        .unwrap();
+        let battle = Battle::new([allies, enemies]).unwrap();
+        let (_, events) = battle
+            .step(
+                &catalog.turns,
+                [Action::Ability(2283), Action::Pass],
+                &mut Fixed(500_000),
+            )
+            .unwrap();
+        let damage: Vec<_> = events
+            .iter()
+            .filter_map(|event| match event {
+                Event::Damage { amount, .. } => Some(*amount),
+                _ => None,
+            })
+            .collect();
+        // Current70391 root2283: (25 + 7*matching reserves) * (1 + .05*power23).
+        assert_eq!(
+            damage,
+            vec![expected_damage],
+            "matching reserves={matching_reserves}"
+        );
+    }
+}
+
+#[test]
 fn wild_pet_battles_bench_resurrection_reloads_dead_owned_reserves() {
     let catalog = catalog();
     let directory = tempfile::tempdir().unwrap();
