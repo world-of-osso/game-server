@@ -1,3 +1,4 @@
+- [Gargolmar charge impact](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16) — actual19yd no-motion RED→source-speed/reach/delayed-impact GREEN; two-point subset, obstacle/native proof separate.
 - [Omor wild summon lifetime](systems/boss-scripts.md#ramparts-omor-source-preparation--2026-10-16) — owner-death RED→GREEN with authored expiry/minion controls; strict bounded runtime re-enabled, full native acceptance open.
 - [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.
 - [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
