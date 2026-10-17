@@ -644,3 +644,7 @@ Current SpellCooldowns has recovery0/category recovery0/GCD1500; ItemEffect reco
 ## Cursed Vision80 named remote-view gap (2026-10-16)
 
 163200/279058 has viewer233 misc[1728,154], aura76 misc[15,0] and aura260 misc[41,7], not a plain global transform. Canonical census explicitly refuses76; existing233 acceptance does not supply remote sight/camera interpretation. Retain this gap without fake display1728 or generic camera substitution. `rows80-84-readonly-source.json` records raw source. Next81 has authentic TDB143119/143120 identities but missing canonical templates; test-first importer proof pending, target-dummy behavior separate.
+
+## Gnoll Barrel81 authentic template admission (2026-10-16)
+
+163201/279063 uses two effect28 source actors143119 Gnoll Target Dummy/display38854 and143120 Target Barrel/display38857, property2910 Control0/Title0/flags256. Genuine maintained-importer RED leaves both content identities absent despite authentic TDB rows/models (0/1,1.569s, `gnoll81-import-red.log`). Added only those two entries to the existing additive toy template allowlist, retaining exact faction35, zero npc/unit flags, empty AIName/ScriptName and source model fields. No invented attackability, taunt or combat AI; GREEN/idempotence and actual learned-use/source eligibility/lifecycle pending. Source template/model publication does not prove the description's target-dummy combat behavior.
