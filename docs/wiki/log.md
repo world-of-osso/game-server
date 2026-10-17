@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source160–164 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source160164-robotteleportwhistle-boundaries-and-retained-ocean-proof-2026-10-17): Blingtron7000 missing actor/service, Kul Tiras/Zandalar script destinations and whistle transport remain unresolved. Ocean Simulator retains earlier revision-scoped simulation/native/PCM proof, not new current-master certification. Source/doc inspection only; no runtime/data admission or redundant gate.
+
 ## 2026-10-17 — Literal world-state source boundary
 
 [Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN2bcef1424/4 proves both full-five-spell grants/reopened dates plus false/pin/Gilneas controls. Integrated4bcd410a affected workspace240/0/1ignored+site1, one-hour-later relog dates, workspace/all-target check/no Rust warnings and3repo/native-Godot fmt/diff pass. Independent boundedModeB/readability PASS; missing Mephistroth/Warfront/raid availability unclaimed.
