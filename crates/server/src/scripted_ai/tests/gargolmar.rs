@@ -1,7 +1,7 @@
 //! Pinned Gargolmar EventMap, incoming-damage phases and isolated credit.
 use super::*;
 
-fn pull_gargolmar() -> (Harness, Entity, InMap) {
+pub(super) fn pull_gargolmar() -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss(17306, 543, 2);
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let player = h.player();

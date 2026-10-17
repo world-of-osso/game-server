@@ -2,6 +2,9 @@ use super::*;
 use shared::battleground::{BgOutcome, BgPhase, BgTeam, BgTemplate, node_rules};
 use shared::protocol::BattlegroundSnapshot;
 
+#[path = "tests_battleground_backfill.rs"]
+mod backfill;
+
 struct EnteredMatch {
     h: Harness,
     players: Vec<Traveler>,
@@ -2840,6 +2843,7 @@ fn enter_source_match_with(
 enum SourceQueueFixture {
     SoloMinimum,
     FourPartiesOfFive,
+    FourPartiesOfFiveAt25,
     RandomPartiesOfFive,
 }
 
@@ -2874,7 +2878,9 @@ fn enter_source_match_with_arrival(
         app.insert_resource(objects);
         if matches!(
             queue_fixture,
-            SourceQueueFixture::FourPartiesOfFive | SourceQueueFixture::RandomPartiesOfFive
+            SourceQueueFixture::FourPartiesOfFive
+                | SourceQueueFixture::FourPartiesOfFiveAt25
+                | SourceQueueFixture::RandomPartiesOfFive
         ) {
             app.add_plugins(crate::group::GroupPlugin);
         }
@@ -2946,7 +2952,7 @@ fn enter_source_match_with_arrival(
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
     let count = match queue_fixture {
         SourceQueueFixture::SoloMinimum => u64::from(template.min_players_per_team) * 2,
-        SourceQueueFixture::FourPartiesOfFive => 20,
+        SourceQueueFixture::FourPartiesOfFive | SourceQueueFixture::FourPartiesOfFiveAt25 => 20,
         SourceQueueFixture::RandomPartiesOfFive => 10,
     };
     // BattlemasterList's broad admission minimum need not have a PVPDifficulty row
@@ -2954,7 +2960,10 @@ fn enter_source_match_with_arrival(
     let level = (template.bracket.min_level..=template.bracket.max_level)
         .find(|&level| shared::battleground::source_level_bracket(template.map_id, level).is_some())
         .expect("source fixture needs an authored PVPDifficulty level");
-    let level = if matches!(queue_fixture, SourceQueueFixture::RandomPartiesOfFive) {
+    let level = if matches!(
+        queue_fixture,
+        SourceQueueFixture::RandomPartiesOfFive | SourceQueueFixture::FourPartiesOfFiveAt25
+    ) {
         25
     } else {
         level
@@ -2982,7 +2991,9 @@ fn enter_source_match_with_arrival(
     }
     let queue_members: Vec<_> = match queue_fixture {
         SourceQueueFixture::SoloMinimum => players.iter().collect(),
-        SourceQueueFixture::FourPartiesOfFive | SourceQueueFixture::RandomPartiesOfFive => {
+        SourceQueueFixture::FourPartiesOfFive
+        | SourceQueueFixture::FourPartiesOfFiveAt25
+        | SourceQueueFixture::RandomPartiesOfFive => {
             form_source_five_player_parties(&mut h, &players, level);
             players.iter().step_by(5).collect()
         }
