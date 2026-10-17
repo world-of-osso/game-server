@@ -1,7 +1,7 @@
 //! TC a352b1fa Gargolmar OnSpellCast30642 Talk1 and KilledUnit Talk4.
 use super::*;
 
-fn authored_yells(h: &Harness, boss: Entity, group: u8) -> usize {
+fn count_authored_yells(h: &Harness, boss: Entity, group: u8) -> usize {
     let texts = &h.app.world().resource::<CreatureTexts>().groups[&17306][&group];
     let name = &h
         .app
@@ -24,10 +24,9 @@ fn authored_yells(h: &Harness, boss: Entity, group: u8) -> usize {
 }
 
 #[test]
-#[ignore = "source successful native30642 Talk1 acceptance pending implementation"]
 fn encounter_coverage_gargolmar_speech_heal_request_success_speaks_once() {
     let (mut h, boss, _) = super::gargolmar::pull_gargolmar();
-    assert_eq!(authored_yells(&h, boss, 1), 0);
+    assert_eq!(count_authored_yells(&h, boss, 1), 0);
     h.hit_pct(boss, 61.0);
     h.advance(0.2);
     assert_eq!(
@@ -36,7 +35,7 @@ fn encounter_coverage_gargolmar_speech_heal_request_success_speaks_once() {
         "actual incoming-below40 source task completes ordinary30642"
     );
     assert_eq!(
-        authored_yells(&h, boss, 1),
+        count_authored_yells(&h, boss, 1),
         1,
         "successful source30642 must emit authored heal-request Talk1"
     );
@@ -48,7 +47,7 @@ fn encounter_coverage_gargolmar_speech_heal_request_success_speaks_once() {
         "subsequent damage does not rearm source one-shot"
     );
     assert_eq!(
-        authored_yells(&h, boss, 1),
+        count_authored_yells(&h, boss, 1),
         1,
         "later damage and aura ticks cannot repeat cast speech"
     );
@@ -75,7 +74,7 @@ fn encounter_coverage_gargolmar_speech_death_preempts_pending_heal_request() {
         "source task never completes after actual lethal damage"
     );
     assert_eq!(
-        authored_yells(&h, boss, 1),
+        count_authored_yells(&h, boss, 1),
         0,
         "scheduling or taking damage is not successful OnSpellCast"
     );
@@ -83,7 +82,6 @@ fn encounter_coverage_gargolmar_speech_death_preempts_pending_heal_request() {
 }
 
 #[test]
-#[ignore = "source native melee KilledUnit Talk4 acceptance pending implementation"]
 fn encounter_coverage_gargolmar_speech_actual_melee_kill_speaks_once() {
     let (mut h, boss, _) = super::gargolmar::pull_gargolmar();
     super::omor_slay::install_player_death_transition(&mut h);
@@ -113,13 +111,13 @@ fn encounter_coverage_gargolmar_speech_actual_melee_kill_speaks_once() {
     assert_eq!(corpse.state, shared::death::DeathState::Dead);
     assert!(corpse.corpse.is_some());
     assert_eq!(
-        authored_yells(&h, boss, 4),
+        count_authored_yells(&h, boss, 4),
         1,
         "actual killer Gargolmar must emit authored slay Talk4"
     );
     h.advance(1.0);
     assert_eq!(
-        authored_yells(&h, boss, 4),
+        count_authored_yells(&h, boss, 4),
         1,
         "dead victim cannot produce repeated slay"
     );
@@ -127,7 +125,6 @@ fn encounter_coverage_gargolmar_speech_actual_melee_kill_speaks_once() {
 }
 
 #[test]
-#[ignore = "source ordinary34645 OnSpellCast50percent Talk2 acceptance pending implementation"]
 fn encounter_coverage_gargolmar_speech_surge_casts_have_both_source_chance_outcomes() {
     let (mut h, boss, _) = super::gargolmar::pull_gargolmar();
     let player = h.player();
@@ -137,12 +134,12 @@ fn encounter_coverage_gargolmar_speech_surge_casts_have_both_source_chance_outco
     // real AI clocks. Scheduled Surge casts count too, rather than resetting AI.
     for trial in 0..64 {
         let casts_before = spell_gos(&h, boss, 34645).len();
-        let speech_before = authored_yells(&h, boss, 2);
+        let speech_before = count_authored_yells(&h, boss, 2);
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, 34645, Some(player), false)
             .unwrap_or_else(|failure| panic!("native ordinary Surge trial{trial}: {failure:?}"));
         h.advance(1.1);
         let casts = spell_gos(&h, boss, 34645).len() - casts_before;
-        let speech = authored_yells(&h, boss, 2) - speech_before;
+        let speech = count_authored_yells(&h, boss, 2) - speech_before;
         assert!(casts >= 1, "actual ordinary Surge SpellGo for trial{trial}");
         assert!(
             speech <= casts,
