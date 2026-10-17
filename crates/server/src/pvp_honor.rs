@@ -30,7 +30,7 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
             continue;
         };
         // TC RewardHonor updates35 before AddHonorXP's minimum-level/zero-XP checks.
-        crate::achievement::record_criteria_event(
+        crate::achievement::record_player_event(
             world,
             player,
             crate::achievement::CriteriaEvent::EarnHonorableKill,
