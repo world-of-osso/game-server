@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Self hits alongside destination missiles (2026-10-17)
+
+TC a352b1fa `Spell.cpp:2486–2521,4096–4138` keeps caster-targeted hits at zero delay even when other effects have a traveling destination. `missiles::hit_delays` preserves that separation; unitless effects land at the destination delay, not alongside the early self hit. Native Recuperate1231411 combines a self trigger1231418 with destination effect179 (`CREATE_AREATRIGGER`, properties38187) and Speed10: delaying the self trigger broke its immediate aura application and full-health termination tests. Shared aura-stack slots are unchanged. This fix addresses hit timing only; these tests do not certify area-trigger behavior or visuals.
+
 ## Native damage prerequisite fixtures — 2026-10-16
 
 Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.
@@ -23,6 +27,14 @@ Rewind363534's native effect0 already scales each periodic heal by0.4 SP. SpellM
 Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulfill the s4=6 total-count field. Behavioral tests certify cadence, wire cancellation, cap/overflow and rejected friendly casts. No additional six-point grant, registration-only no-op or production Mind Flay change.
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
+
+## Native power drain8 — 2026-10-17
+
+`effects.rs::power_drain` implements pinned TC a352b1fa `SpellEffects.cpp1146–1180`: target must be alive and its `PowerPools.order` primary must match MiscValue. A stored secondary/legacy Mana component alone is insufficient. The handler truncates the native base before existing supported SP/AP and damage-done modifiers, adds truncated signed native variance, then applies supported damage-taken modifiers with integer truncation. No health, armor, crit or absorb resolution runs for the drain.
+
+`change_power` supplies the actual removal after the zero floor. Only a different caster receives that amount times native Amplitude (caster spell-mod operation27), truncated and passed through ordinary energize clamping/logging. Native3405 amplitude0 grants nothing;46453 uses integer17 plus the fixture's100SP, not rounded18. Imported16094 retains its independent damage and slow effects. Tests use naturally spawned Skul10393 mana10922 and actual1459 costs, without changing imported effects, variance, actor pools or clocks. Initial native RED: four missing-drain failures, two exclusion guards pass. At merged26f5332a (implementation94fa4444), all six pass in18.34s/146.040s total; [proof ledger](../../../data/class-completeness6-2026-10-12/power-drain-proof-ledger.json). The first stale-protocol compilation failure is not behavioral RED.
+
+[Contract](../../specs/class-completeness.md). Sources: TC `Spell.h803`, `Unit.cpp6828/7011`, `SpellInfo.cpp754–759`, `SpellDefines.h181`; hashed receipt `data/class-completeness6-2026-10-12/power-drain-source.json`. Existing unimplemented damage modifiers and the distinct power-drain execute-log packet remain gaps; no full13/40, whole-ability, timing, legal-loadout or rendered acceptance claim.
 
 ## Level80 class completeness
 
