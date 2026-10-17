@@ -112,7 +112,7 @@ fn azure_leymor_sprout_mechanic_power_amplifies_ordinary_stomp_from_native_stack
         .find(|effect| effect.index == 0)
         .unwrap();
     assert_eq!((effect.aura_type, effect.misc_values[0]), (276, 22));
-    let expected_scale = 1.0 + f64::from(effect.amount) * f64::from(power.stacks) / 100.0;
+    let amount_per_stack = f64::from(effect.amount);
     let damage_spell = h
         .app
         .world()
@@ -142,9 +142,19 @@ fn azure_leymor_sprout_mechanic_power_amplifies_ordinary_stomp_from_native_stack
     );
     // Six fixture seconds plus0.1 then39.1 reaches the ordinary45.2s channel.
     h.advance(39.1);
+    // Native Fissure/Brand deaths change the original fourteen-stack snapshot.
+    // Sample the actual Stomp channel, without forcing any Sprout to survive.
+    let (stacks_at_stomp, living_sprouts, corpses) = stack_boundary(&h);
+    assert!(
+        stacks_at_stomp > 0,
+        "ordinary Stomp has native stacks to amplify it"
+    );
+    assert_eq!(stacks_at_stomp as usize, living_sprouts);
+    assert_eq!(living_sprouts + corpses, children.len());
+    let expected_scale = 1.0 + amount_per_stack * f64::from(stacks_at_stomp) / 100.0;
     eprintln!(
         "native276 before_stomp stacks/living/corpses={:?}",
-        stack_boundary(&h)
+        (stacks_at_stomp, living_sprouts, corpses)
     );
     let channel = h.app.world().get::<CastState>(leymor).unwrap();
     assert_eq!(channel.spell_id, STOMP);
