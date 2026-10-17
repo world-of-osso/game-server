@@ -275,6 +275,7 @@ struct LootStore<'w> {
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
     catalog: Res<'w, VendorCatalog>,
+    scaling: Option<Res<'w, crate::item_stats::ItemScalingTables>>,
     gold: ResMut<'w, GoldUpdateQueue>,
     quests: Option<Res<'w, QuestDb>>,
     quest_dirty: Option<ResMut<'w, crate::quest::QuestDirty>>,
@@ -405,6 +406,18 @@ impl LootStore<'_> {
         }
         let gold = model.gold();
         save_inventory_record(db, character_id, &model.into_record());
+        if let LootContent::Item { item_id, .. } = content {
+            crate::guild_news::record_item(
+                db,
+                character_id,
+                *item_id,
+                templates
+                    .get(shared::item_data::ItemDefinitionSource::Retail, *item_id)
+                    .expect("committed loot item template"),
+                self.scaling.as_deref(),
+                crate::guild_news::ItemNewsSource::Looted,
+            );
+        }
         self.gold.record(character_id, gold);
         match content {
             LootContent::Item { item_id, count, .. } => {
@@ -553,6 +566,15 @@ fn generate_corpse_loot(
         );
         let (loot, shared) =
             groups.distribute(corpse, npc.template_id, difficulty_id, &rewarded, &rolls);
+        bevy::log::debug!(
+            corpse = corpse.to_bits(),
+            entry = npc.template_id,
+            rewarded = ?rewarded,
+            personal_loot = loot.looters.values().any(|slots| slots.iter().any(Option::is_some)),
+            shared_loot = shared.has_loot(),
+            pending_rolls = shared.has_pending_rolls(),
+            "generated corpse loot"
+        );
         if loot.looters.is_empty() && !shared.has_loot() {
             corpse_looted(&mut decay, &mut death);
         }

@@ -13,8 +13,12 @@
 //! `CREATE_ITEM` (24) stores the item and rolls `Player::UpdateCraftSkill`.
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
+mod concentration;
 mod data;
 mod gathering;
+#[cfg(test)]
+mod modern_crafting_fixture;
+mod quality_reagents;
 pub(crate) mod specializations;
 mod trainer;
 pub(crate) use gathering::GatherProgress;
@@ -289,11 +293,18 @@ pub struct ProfessionPlugin;
 impl Plugin for ProfessionPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((TrainerPlugin, specializations::SpecializationsPlugin))
-            .add_systems(Update, receive_craft_requests)
+            .add_systems(
+                Update,
+                (
+                    receive_craft_requests,
+                    quality_reagents::receive_allocations,
+                ),
+            )
             .add_systems(
                 FixedUpdate,
                 continue_craft_queues.after(crate::spell_cast::advance_casts),
             )
+            .add_systems(Update, concentration::receive_queries)
             .add_systems(PostUpdate, save_and_send_professions);
     }
 }
@@ -509,7 +520,21 @@ pub(crate) fn store_created_item(
             bags.character_id,
             (item_id, count),
         )
-        .map(|_| bags.character_id)
+        .map(|_| {
+            let template = bags
+                .templates
+                .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+                .expect("committed craft template");
+            crate::guild_news::record_item(
+                &bags.db.db,
+                bags.character_id,
+                item_id,
+                template,
+                world.get_resource::<crate::item_stats::ItemScalingTables>(),
+                crate::guild_news::ItemNewsSource::Crafted,
+            );
+            bags.character_id
+        })
     })
     .ok_or("caster has no bags")??;
     let mut updates = world.resource_mut::<GoldUpdateQueue>();
@@ -530,10 +555,9 @@ pub(crate) fn check_cast_items(
         .iter()
         .any(|effect| matches!(effect.effect, EFFECT_QUALITY_CRAFT | EFFECT_RECRAFT));
     if needs_quality_operation {
-        return Err(CastFailure::Unsupported(
-            "Quality crafting/recrafting is unavailable: authentic operation evaluator is missing"
-                .into(),
-        ));
+        return shared::profession::evaluate_crafted_quality()
+            .map(|_| ())
+            .map_err(|gap| CastFailure::Unsupported(gap.to_string()));
     }
     let Some(data) = world.get_resource::<ProfessionData>() else {
         return Ok(());

@@ -14,7 +14,9 @@ use super::*;
 use crate::hunter_pet::{HunterPetPlugin, PetStable};
 use crate::persistence::pet_store::{StoredPet, StoredPetStable, save_pet_stable};
 use crate::persistence::{self, GameDatabase};
-use crate::spell_cast::test_harness::{Harness, harness_with_plugins};
+use crate::spell_cast::test_harness::{
+    Harness, SUNWELL_RADIANCE, apply_native_enemy_dodge_reduction_to, harness_with_plugins,
+};
 use crate::world_data::{CreatureTemplate, WorldData, load_expected_stats, load_templates};
 
 /// `CLASS_HUNTER`.
@@ -103,6 +105,8 @@ fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
         DASH,
         BM_KILL_COMMAND,
         BM_KILL_COMMAND_DAMAGE,
+        SUNWELL_RADIANCE,
+        6590, // Native Increase Melee Hit Chance effect0: aura54 +100.
     ];
     let mut h = harness_with_plugins(Vec::new(), &ids, CLASS_HUNTER, false, |app| {
         app.insert_resource(WorldData {
@@ -170,6 +174,26 @@ fn pet_control_bm_kill_command_native_called_wolf_deals_named_damage_to_owner_ta
             .unwrap()
             .owner,
         owner
+    );
+    // Named pet-child damage must hit; creature miss/dodge have separate tests.
+    apply_native_enemy_dodge_reduction_to(&mut p.h, p.pet);
+    crate::auras::apply_aura(
+        p.h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: p.pet,
+            target: p.pet,
+            spell_id: 6590,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        p.h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(p.pet)
+            .unwrap()
+            .modifier(54),
+        100.0
     );
     let health_before = p.h.health(target);
     p.h.set_power(PowerType::Focus, 100.0);

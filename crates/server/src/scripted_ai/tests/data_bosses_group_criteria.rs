@@ -1,5 +1,5 @@
 use super::*;
-use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+use crate::achievement::PlayerAchievementState;
 use crate::group::{GroupRegistry, OnlineMember, OnlineView};
 
 fn raid_roster(leader: u64, members: usize) -> GroupRegistry {
@@ -38,9 +38,8 @@ fn raid_roster(leader: u64, members: usize) -> GroupRegistry {
 fn achievements_criteria_native_malygos_uses_full_roster_not_nearby_or_online_tappers() {
     for members in [0, 8, 9] {
         let (mut h, boss, map) = bound_boss_at_difficulty(28859, 616, 0, 3, None);
-        let conn = Connection::open(world_db_path()).unwrap();
         h.app
-            .insert_resource(load_achievement_catalog(&conn).unwrap());
+            .insert_resource(crate::test_data::achievement_catalog());
         let file = tempfile::NamedTempFile::new().unwrap();
         let db = redb::Database::create(file.path()).unwrap();
         crate::persistence::create_tables(&db);

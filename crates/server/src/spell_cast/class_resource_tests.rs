@@ -204,7 +204,9 @@ fn spend_runes(h: &mut Harness, count: f32) {
 
 #[test]
 fn obliterate_puts_the_two_lowest_ready_runes_on_cooldown() {
-    let Some(mut h) = harness(Vec::new(), &[OBLITERATE], DEATH_KNIGHT) else {
+    let Some(mut h) =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[OBLITERATE], DEATH_KNIGHT)
+    else {
         return;
     };
     h.advance(1);

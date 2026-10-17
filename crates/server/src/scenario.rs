@@ -5,6 +5,9 @@ use shared::protocol::{InstanceChannel, ScenarioProgress, ScenarioStage};
 use std::collections::HashMap;
 
 #[cfg(test)]
+#[path = "scenario_step82_tests.rs"]
+mod step82_tests;
+#[cfg(test)]
 #[path = "scenario_tests.rs"]
 mod tests;
 
@@ -199,6 +202,16 @@ pub(super) fn send_entry_progress(world: &mut World) {
         send_snapshot(world, connection, map);
         world.entity_mut(connection).insert(LastScenarioMap(map));
     }
+}
+
+/// Current authored step identity; the run's vector position is never an ordinal.
+pub(super) fn current_step_id(world: &World, map: InMap) -> Option<u32> {
+    let (id, run) = world.get_resource::<ScenarioRuns>()?.0.get(&map)?;
+    let definition = world
+        .get_resource::<ScenarioCatalog>()?
+        .definitions
+        .get(id)?;
+    definition.steps.get(run.step).map(|step| step.id)
 }
 
 fn snapshot(world: &World, map: InMap) -> ScenarioProgress {

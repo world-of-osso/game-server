@@ -261,7 +261,8 @@ fn dummy_warrior_shield_block_applies_six_second_block_aura() {
 
 #[test]
 fn dummy_warrior_bloodthirst_damages_generates_rage_and_heals_three_percent() {
-    let mut h = harness(Vec::new(), &[23881, 117313, 184362], 1).expect("real world.db required");
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[23881, 117313, 184362], 1)
+        .expect("real world.db required");
     h.app
         .world_mut()
         .get_mut::<Health>(h.caster)
@@ -306,7 +307,8 @@ fn dummy_warrior_bloodthirst_enrage_uses_effect_two_chance() {
             .find(|effect| effect.index == 2)
             .unwrap()
             .base_points = chance;
-        let mut h = harness(vec![spell], &[117313, 184362], 1).unwrap();
+        let mut h =
+            harness_with_native_enemy_dodge_reduction(vec![spell], &[117313, 184362], 1).unwrap();
         h.cast_and_deliver(23881, Some(h.npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert_eq!(
@@ -319,7 +321,9 @@ fn dummy_warrior_bloodthirst_enrage_uses_effect_two_chance() {
 #[test]
 fn dummy_warrior_rampage_spends_rage_hits_and_enrages() {
     let ids = [184367, 184707, 184709, 201364, 201363, 184362];
-    let mut h = harness(Vec::new(), &ids, 1).expect("real world.db required");
+    // Every sourced child must hit here; avoidance has separate native tests.
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1)
+        .expect("real world.db required");
     h.set_power(PowerType::Rage, 1000.0);
     h.cast_and_deliver(184367, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);

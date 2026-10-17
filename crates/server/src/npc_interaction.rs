@@ -436,12 +436,13 @@ fn process_interact_requests(
                 senders.closed(connection, previous);
             }
             current = Some(interaction.0.npc);
-            senders.opened(connection, interaction.0.npc, interaction.1);
             let player = link.0;
             let npc = interaction.0.npc;
             let entry = interaction.2;
-            commands.entity(connection).insert(interaction.0);
             commands.queue(move |world: &mut World| {
+                if !crate::scripted_ai::creature_gossip_hello(world, player, npc) {
+                    send_opening(world, connection, interaction.0, interaction.1);
+                }
                 // Player::TalkedToCreature: only the actor receives TALKTO credit.
                 crate::quest::event_credit(
                     world,
@@ -655,6 +656,55 @@ fn apply_opening(
     (interaction, opening.kind)
 }
 
+fn player_connection(world: &mut World, player: Entity) -> Option<Entity> {
+    world
+        .query::<(Entity, &PlayerLink)>()
+        .iter(world)
+        .find_map(|(connection, link)| (link.0 == player).then_some(connection))
+}
+
+fn send_opening(
+    world: &mut World,
+    connection: Entity,
+    interaction: ActiveInteraction,
+    kind: InteractionKind,
+) {
+    if let Some(mut sender) = world.get_mut::<MessageSender<InteractionOpened>>(connection) {
+        sender.send::<InteractionChannel>(InteractionOpened {
+            npc: interaction.npc.to_bits(),
+            kind,
+        });
+    }
+    world.entity_mut(connection).insert(interaction);
+}
+
+/// Player::PrepareGossipMenu/SendPreparedGossip for a source script. Normal
+/// ingress still validates authored NPC flags before invoking the callback.
+pub(crate) fn prepare_gossip_menu(world: &mut World, player: Entity, npc: Entity, menu_id: u32) {
+    let connection = player_connection(world, player).expect("gossip player connection");
+    let flags = *world.get::<NpcFlags>(npc).expect("gossip NPC flags");
+    let opening = world.resource::<GossipCatalog>().submenu(menu_id, flags);
+    send_opening(
+        world,
+        connection,
+        ActiveInteraction {
+            npc,
+            role: None,
+            auction_house: None,
+            gossip_actions: opening.actions,
+        },
+        opening.kind,
+    );
+}
+
+pub(crate) fn close_gossip_menu(world: &mut World, player: Entity, npc: Entity) {
+    let connection = player_connection(world, player).expect("gossip player connection");
+    if let Some(mut sender) = world.get_mut::<MessageSender<InteractionClosed>>(connection) {
+        sender.send::<InteractionChannel>(InteractionClosed { npc: npc.to_bits() });
+    }
+    world.entity_mut(connection).remove::<ActiveInteraction>();
+}
+
 type GossipReceivers<'w, 's> = Query<
     'w,
     's,
@@ -703,14 +753,25 @@ fn process_gossip_selections(
                 },
                 GossipAction::Close => {
                     current = None;
-                    senders.closed(connection, npc);
-                    commands.entity(connection).remove::<ActiveInteraction>();
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        crate::scripted_ai::creature_gossip_select(world, player, npc);
+                        if world.get::<ActiveInteraction>(connection).is_some() {
+                            close_gossip_menu(world, player, npc);
+                        }
+                    });
                     continue;
                 }
             };
             let (interaction, kind) = apply_opening(&world, npc, opening);
-            senders.opened(connection, npc, kind);
-            commands.entity(connection).insert(interaction.clone());
+            let player = link.0;
+            let next = interaction.clone();
+            commands.queue(move |world: &mut World| {
+                crate::scripted_ai::creature_gossip_select(world, player, npc);
+                if world.get::<ActiveInteraction>(connection).is_some() {
+                    send_opening(world, connection, next, kind);
+                }
+            });
             current = Some(interaction);
         }
     }

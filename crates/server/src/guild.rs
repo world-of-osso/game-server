@@ -102,6 +102,7 @@ pub(crate) mod charters;
 mod guild_invites;
 #[path = "guild_ranks.rs"]
 mod guild_ranks;
+pub(crate) use guild_invites::load_pending_invitation;
 #[cfg(test)]
 use guild_ranks::apply_rank_request;
 pub(crate) use guild_ranks::{character_has_right, snapshot as guild_rank_snapshot};
@@ -110,7 +111,13 @@ pub struct GuildPlugin;
 
 impl Plugin for GuildPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<crate::guild_bank::ChangedGuilds>()
+        app.init_resource::<crate::gold::GoldUpdateQueue>()
+            .init_resource::<crate::guild_news_network::Subscribers>()
+            .add_systems(
+                PostUpdate,
+                crate::guild_news_network::publish.before(crate::inventory::InventoryDeltas),
+            )
+            .init_resource::<crate::guild_bank::ChangedGuilds>()
             .add_systems(
                 Update,
                 (
@@ -122,6 +129,7 @@ impl Plugin for GuildPlugin {
                     process_profile_text_updates,
                     process_set_officer_note_requests,
                     guild_ranks::process_rank_requests,
+                    crate::guild_news_network::receive,
                 )
                     .chain(),
             );

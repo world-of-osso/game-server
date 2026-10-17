@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Native damage prerequisite fixtures — 2026-10-16
+
+Charred Warblades heal-lifecycle and Warrior Rampage child-damage tests require actual landed melee hits. Their ordinary hostile NPC has native3% dodge (`spell_cast/hit.rs`), so asserting positive damage from every unqualified weapon hit was stochastic. At master379c2c6b the nine tests first passed, then unchanged Rampage failed on201364; a128-hit diagnostic failed on Chaos201428 at hit42 with an actual `Miss(Dodge)` event. Auras cannot accumulate Fire damage from a dodged hit.
+
+These damage-only fixtures now use existing `harness_with_native_enemy_dodge_reduction`: actual Sunwell Radiance45769 effect1 applies native aura251/-20 enemy dodge. No spell attributes, production evade guard, kit, stat formula or hit resolver change. Dedicated avoidance tests retain the ordinary harness. The bounded repeated-hit regression asserts positive source-derived heal input while retaining actual combat logs on failure; it does not retry missed hits or fabricate damage. Named regression results live in the follower master-RED proof ledger; no full-suite acceptance follows from these focused tests.
+
 ## Readiness clock isolation — 2026-10-15
 
 `history_now` reads Bevy `Time<Real>` for SpellHistory deadlines, owner snapshots, charge recovery, queue GCD admission, school lockouts, rate changes, resets and ready-time credit. Generic `now`, aura time, cast/channel delta and missile clocks remain unchanged. No global simulation clamp change. [Contract](../../specs/class-completeness.md#readiness-elapsed-time).
@@ -190,10 +196,16 @@ Effect 179 dispatches once per cast through `area_trigger.rs`. Radius is the fir
 
 The nine matrix roots all lack trigger bindings, including Wildfire Bomb's child 265163. Purging Breath 1287715 → 1287711 supplies an authentic non-matrix damage binding for engine proof. Local AreaTriggerCreateProperties (FDID 1937227) contains none of these matrix create-property IDs: their server actions/scripts cannot be reconstructed from that client table. Selector87 destination propagation was added by master toy-effects4; area-trigger actions without bindings and moving-orb behavior remain unclaimed.
 
+## Authoritative target LOS — 2026-10-16
+
+[Contract](../../specs/line-of-sight.md#player-casts-authoritative-target-visibility). Stockade's moving Petty Criminal advanced about4yd during845ms between the native request sample and server receipt. The former client-endpoint check refused it despite a clear authoritative ray (`end_in_body=false`, segment clear, caster origin correct).
+
+Player cast start now uses the same authoritative eye-to-eyes/chest/feet search as creatures. Client ray age cannot authorize or reject visibility; walls/live hulls still govern the search. Internal queued casts retain spell and target, not client geometry. Player cast completion keeps its existing start-only LOS policy. No tolerance increase or retry was introduced. Regression sends an ordinary loopback cast, moves its target4.25yd before delivery, and checks the resulting cast; doorway/wall controls distinguish stale evidence from genuine obstruction. Native release-server acceptance remains separate from this regression.
+
 ## Pipeline
 
 1. **Receive** (`Update`): only an authenticated in-world connection's `PlayerLink` player casts. The spell resolves by ID or unique exact name. Explicit target = `target_entity`, else the server `CombatTarget`.
-2. **Queue or validate:** after spell resolution and known-spell admission, hold one `QueuedSpellCast` (spell snapshot, explicit target and witness) while cast/GCD remaining time is positive and at most 750 ms (user decision 2026-10-15; Retail/TrinityCore use 400 ms). New admitted requests replace it. No resource, target or cooldown validation at admission. Outside that window use immediate validation. `start_queued_casts` runs after `advance_casts` and due missile effects in the fixed chain, waits for both active cast and applicable GCD to end, takes the slot once and calls the normal start path. Full validation then runs in order:
+2. **Queue or validate:** after spell resolution and known-spell admission, hold one `QueuedSpellCast` (spell snapshot and explicit target) while cast/GCD remaining time is positive and at most 750 ms (user decision 2026-10-15; Retail/TrinityCore use 400 ms). New admitted requests replace it. No resource, target or cooldown validation at admission. Outside that window use immediate validation. `start_queued_casts` runs after `advance_casts` and due missile effects in the fixed chain, waits for both active cast and applicable GCD to end, takes the slot once and calls the normal start path. Full validation then runs in order:
    - player casters must know the spell (`class_progression::knows_spell` on [[class-progression]] `KnownSpells`; NPCs exempt; triggered spells skip it);
    - caster alive;
    - not stunned, silenced or pacified ([[auras]] crowd control);

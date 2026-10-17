@@ -806,6 +806,13 @@ fn spawn_summon(
         ));
     }
     drop(entity);
+    // TC TemporarySummon.cpp: Guardian::InitSummon calls TempSummon::InitSummon,
+    // including the creature summoner's JustSummoned (BossAI's SummonList).
+    world
+        .entity_mut(actor)
+        .insert(crate::zones::TempSummon { summoner: owner });
+    crate::scripted_ai::dispatch(world, actor, crate::scripted_ai::Hook::IsSummonedBy(owner));
+    crate::scripted_ai::dispatch(world, owner, crate::scripted_ai::Hook::JustSummoned(actor));
     super::log_summon(world, owner, actor, ctx.spell);
 }
 
@@ -863,7 +870,10 @@ pub(super) fn expire_summons(world: &mut World) {
         .filter(|(_, summon, map)| {
             summon.expires_at.is_some_and(|expiry| now >= expiry)
                 || world.get::<InMap>(summon.owner) != Some(*map)
-                || !super::targets::is_alive(world, summon.owner)
+                // TC TempSummon::Update retains wild summons' own lifetimes.
+                // Only minion ownership ties this cleanup to owner death.
+                || (summon.properties.is_minion()
+                    && !super::targets::is_alive(world, summon.owner))
         })
         .map(|(entity, _, _)| entity)
         .collect();

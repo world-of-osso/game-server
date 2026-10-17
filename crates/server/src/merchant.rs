@@ -550,6 +550,7 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     } else {
         shop.save(customer.character_id, model);
     }
+    crate::guild_news::record_purchase(shop.db(), customer.character_id, slot.item_id, &template);
     shop.gold
         .record_acquisition(customer.character_id, slot.item_id, items);
     // TC Player::BuyItemFromVendorSlot (Player.cpp:23902): one committed purchase.

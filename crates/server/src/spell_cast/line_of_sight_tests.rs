@@ -1,5 +1,5 @@
-//! Player casts and their line of sight witness ray (docs/specs/line-of-sight.md, Player
-//! casts) against the real map 0 bake (`los-bake --map 0`, the ground directory's `los/`)
+//! Authoritative player cast LOS with delayed or irrelevant client rays
+//! (docs/specs/line-of-sight.md) against the real map 0 bake (`los-bake --map 0`, the ground directory's `los/`)
 //! and world.db spells.
 
 use bevy::prelude::*;
@@ -9,7 +9,7 @@ use shared::protocol::{CastFailed, WitnessRay};
 use shared::spell_data::CastFailReason;
 
 use super::test_harness::*;
-use crate::line_of_sight::{LineOfSight, WITNESS_END_TOLERANCE};
+use crate::line_of_sight::LineOfSight;
 use crate::maps::InMap;
 
 const FIREBALL: u32 = 133;
@@ -113,34 +113,66 @@ fn a_cast_at_a_kobold_behind_the_stormwind_wall_fails_with_line_of_sight() {
 }
 
 #[test]
-fn a_cast_through_the_northshire_abbey_doorway_needs_its_witness_ray() {
+fn a_clear_doorway_cast_does_not_trust_client_ray_endpoints() {
     // The kobold in the hall, the mage on the steps of the west door 30 yd away.
-    let Some(mut h) = harness_at((-8909.2, -146.6, 81.95), (-8896.5, -173.8, 81.58)) else {
+    let Some(h) = harness_at((-8909.2, -146.6, 81.95), (-8896.5, -173.8, 81.58)) else {
         return;
     };
     let (found, _) = search(&h);
     let found = found.expect("a clear ray through the doorway");
-    assert_eq!(cast(&mut h, None), Some(CastFailReason::LineOfSight));
-    // Forged: the same ray ending 3 yd past the latency tolerance above the kobold.
+    // Client endpoints do not change the server's clear authoritative geometry.
     let above = WitnessRay {
-        end: [
-            found.end[0],
-            found.end[1] + WITNESS_END_TOLERANCE + 3.0,
-            found.end[2],
-        ],
+        end: [found.end[0], found.end[1] + 5.0, found.end[2]],
         ..found
     };
-    assert_eq!(cast(&mut h, Some(above)), Some(CastFailReason::LineOfSight));
     // Forged: starting 3 yd beside the mage's eyes.
     let beside = WitnessRay {
         start: [found.start[0] + 3.0, found.start[1], found.start[2]],
         ..found
     };
-    assert_eq!(
-        cast(&mut h, Some(beside)),
-        Some(CastFailReason::LineOfSight)
+    for witness in [None, Some(above), Some(beside), Some(found)] {
+        let mut h = harness_at((-8909.2, -146.6, 81.95), (-8896.5, -173.8, 81.58)).unwrap();
+        assert_eq!(
+            cast(&mut h, witness),
+            None,
+            "authoritative clear cast starts"
+        );
+    }
+}
+
+#[test]
+fn moved_target_accepts_authoritative_clear_sight_at_request_receipt() {
+    let Some(mut h) = harness_at((-8909.2, -146.6, 81.95), (-8896.5, -173.8, 81.58)) else {
+        return;
+    };
+    let sampled = search(&h).0.expect("client samples a clear doorway ray");
+    h.cast_witnessed(FIREBALL, Some(h.npc), Some(sampled));
+    let before = *h.app.world().get::<Position>(h.npc).unwrap();
+    let caster = *h.app.world().get::<Position>(h.caster).unwrap();
+    let direction = Vec3::new(caster.x - before.x, 0.0, caster.z - before.z).normalize();
+    let moved = Vec3::new(before.x, before.y, before.z) + direction * 4.25;
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: moved.x,
+        y: moved.y,
+        z: moved.z,
+    });
+    assert!(Vec3::new(before.x, before.y, before.z).distance(moved) > 2.0);
+    assert!(
+        search(&h).0.is_some(),
+        "authoritative ray is clear at receipt"
     );
-    assert_eq!(cast(&mut h, Some(found)), None, "the cast starts");
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.app.world().get::<CastState>(h.caster).is_some());
+    // Advance until the real owner outcome arrives, not merely accepted CastState.
+    for _ in 0..200 {
+        if h.inbox.go.iter().any(|go| go.spell_id == FIREBALL) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == FIREBALL));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
 }
 
 #[test]

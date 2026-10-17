@@ -2022,13 +2022,19 @@ fn enter_source_match_with(
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
     let count = u64::from(template.min_players_per_team) * 2;
+    // BattlemasterList's broad admission minimum need not have a PVPDifficulty row
+    // (Deephaul allows19–90 there, but its first authored match bracket is80).
+    let level = (template.bracket.min_level..=template.bracket.max_level)
+        .find(|&level| shared::battleground::source_level_bracket(template.map_id, level).is_some())
+        .expect("source fixture needs an authored PVPDifficulty level");
     let players: Vec<_> = (1..=count)
         .map(|id| h.spawn(id, STORMWIND, origin))
         .collect();
     for who in &players {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
-            shared::components::Level(template.bracket.min_level),
+            crate::currency::PlayerCurrencies::default(),
+            shared::components::Level(level),
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
             shared::components::CurrentPvpFaction(2),
         ));
@@ -2275,7 +2281,34 @@ fn node_match(template: BgTemplate) {
     assert!(score.objective_scores.contains(&(rules.defense_stat, 0)));
     use_second_frames(h);
     h.advance(120);
+    if template.map_id == 2107 {
+        // Source fixture enters at10: its PVPDifficulty maximum19 gives30 per bonus.
+        assert_player_completion_honor(&entered, 60, 30);
+    }
     win_leave_and_return(&mut entered, 1500);
+}
+
+fn assert_player_completion_honor(entered: &EnteredMatch, winner: u32, other: u32) {
+    let world = entered.h.app.world();
+    for (who, team) in entered.players.iter().zip(&entered.teams) {
+        let expected = if *team == BgTeam::A { winner } else { other };
+        assert_eq!(
+            world
+                .get::<crate::currency::PlayerCurrencies>(who.player)
+                .unwrap()
+                .0
+                .get(1792),
+            expected
+        );
+        let progress = &world
+            .get::<crate::pvp::PlayerPvpState>(who.player)
+            .unwrap()
+            .progress;
+        assert_eq!(
+            (progress.honor, progress.lifetime_honor_xp),
+            (expected, u64::from(expected))
+        );
+    }
 }
 
 #[test]
@@ -2305,12 +2338,7 @@ fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -
     let rules = node_rules(template.map_id).unwrap();
     let mut entered = enter_source_match_with(template, rules.starts, |app| {
         app.insert_resource(crate::persistence::GameDatabase { db: database });
-        let conn = Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .unwrap();
-        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        app.insert_resource(crate::test_data::achievement_catalog());
         app.add_plugins(crate::achievement::AchievementPlugin);
     });
     // Authentication loads this component before gameplay (auth_character.rs468).
@@ -3040,5 +3068,7 @@ fn eye_of_the_storm_channel_towers_flag_drop_victory_and_origin_return() {
     assert!(battleground(h, carrier).world_states.contains(&(8863, 1)));
 
     h.advance(300);
+    // Source fixture enters at20: maximum29 gives45 per bonus, including the dead carrier.
+    assert_player_completion_honor(&entered, 90, 45);
     win_leave_and_return(&mut entered, 1500);
 }

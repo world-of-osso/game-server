@@ -68,7 +68,6 @@ fn achievements_criteria_absent_aura_native_marks_and_kills_persist() {
         (96028, 29405, 10458, Some(196665)),
         (96028, 29405, 10458, Some(196666)),
     ] {
-        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
         let file = tempfile::NamedTempFile::new().unwrap();
         let db = redb::Database::create(file.path()).unwrap();
         persistence::create_tables(&db);
@@ -80,7 +79,7 @@ fn achievements_criteria_absent_aura_native_marks_and_kills_persist() {
         .unwrap();
         h.app.insert_resource(GameDatabase { db });
         h.app
-            .insert_resource(load_achievement_catalog(&conn).unwrap());
+            .insert_resource(crate::test_data::achievement_catalog());
         h.app.world_mut().entity_mut(h.caster).insert((
             persistence::ClientId(character),
             PlayerAchievementState::default(),

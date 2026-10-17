@@ -55,6 +55,8 @@ pub(super) fn send_pvp_error(
 
 pub(super) fn build_pvp_snapshot(state: &PlayerPvpState) -> PvpSnapshot {
     PvpSnapshot {
+        lifetime_honor_xp: state.progress.lifetime_honor_xp,
+        honor_level: state.progress.honor_level,
         honor: state.progress.honor,
         honor_max: state.progress.honor_max,
         conquest: state.progress.conquest,

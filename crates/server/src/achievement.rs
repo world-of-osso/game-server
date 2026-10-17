@@ -47,6 +47,9 @@ pub struct PlayerAchievementState {
     /// Presentation-only aggregate; never serialized into character contributions.
     #[serde(skip)]
     pub account: Option<Box<PlayerAchievementState>>,
+    /// Disposable derived tree results; excluded from persistence and logical equality.
+    #[serde(skip)]
+    pub(crate) evaluation: catalog::EvaluationCache,
 }
 
 /// One-time migration of the six former level placeholders. Counter-bearing rows
@@ -898,6 +901,24 @@ fn personal_arena_rating_event(
     Some(CriteriaEvent::PersonalArenaRating { bracket, rating })
 }
 
+/// TC RewardHonor6754-6757: actual victim identity for every eligible world-HK recipient.
+pub(crate) fn record_world_honorable_kill(world: &mut World, player: Entity, victim: Entity) {
+    let victim = world
+        .get::<Player>(victim)
+        .expect("validated world honor victim");
+    let race = victim.race;
+    let class = victim.class;
+    record_criteria_events(
+        world,
+        player,
+        &[
+            CriteriaEvent::EarnHonorableKill,
+            CriteriaEvent::HonorableKillRace(race),
+            CriteriaEvent::HonorableKillClass(class),
+        ],
+    );
+}
+
 pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {
     record_criteria_event(world, player, event);
 }
@@ -1025,25 +1046,83 @@ pub(crate) fn event_conditions(
     events: &[CriteriaEvent],
 ) -> PlayerConditions {
     let mut conditions = player_conditions(world, player);
+    if let Some(reference) = conditions.player.as_mut() {
+        // Login74 already rebuilds these facts from this character's persisted rewards.
+        reference.rewarded_quests = events
+            .iter()
+            .filter_map(|event| match event {
+                CriteriaEvent::CompleteQuest(quest) => Some(*quest),
+                _ => None,
+            })
+            .collect();
+    }
     for event in events {
-        if let CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) = event {
-            conditions
-                .hit_units
-                .insert(*target, read_spell_hit_unit(world, *target));
+        match event {
+            CriteriaEvent::LandTargetedSpell(_, _, _, Some(target)) => {
+                conditions
+                    .hit_units
+                    .insert(*target, read_spell_hit_unit(world, *target));
+            }
+            CriteriaEvent::DoEmote(_, Some(target)) => {
+                if let Some(unit) = read_emote_target(world, player, *target) {
+                    conditions.hit_units.insert(*target, unit);
+                }
+            }
+            _ => {}
         }
     }
     conditions
 }
 
-fn read_spell_hit_unit(world: &World, target: Entity) -> catalog::SpellHitUnit {
-    catalog::SpellHitUnit {
+fn read_spell_hit_unit(world: &World, target: Entity) -> catalog::CriteriaTargetUnit {
+    catalog::CriteriaTargetUnit {
         creature_entry: world
             .get::<shared::components::Npc>(target)
             .map(|npc| npc.template_id),
         auras: world
             .get::<crate::auras::ActiveAuras>(target)
             .map(|auras| auras.iter().map(|aura| aura.spell_id).collect()),
+        ..Default::default()
     }
+}
+
+/// TC GetUnit resolves the requested entity on the reference player's exact map copy.
+fn read_emote_target(
+    world: &World,
+    player: Entity,
+    target: Entity,
+) -> Option<catalog::CriteriaTargetUnit> {
+    let map = world.get::<InMap>(player)?;
+    if world.get::<InMap>(target) != Some(map) {
+        return None;
+    }
+    let is_player = world.get::<Player>(target).is_some();
+    let npc = world.get::<shared::components::Npc>(target);
+    if !is_player && npc.is_none() {
+        return None;
+    }
+    let hostile = emote_target_hostility(world, player, target);
+    Some(catalog::CriteriaTargetUnit {
+        creature_entry: npc.map(|npc| npc.template_id),
+        is_player,
+        dead: world
+            .get::<shared::components::Health>(target)
+            .map(|health| health.current <= 0.0),
+        hostile,
+        ..Default::default()
+    })
+}
+
+/// Missing faction authority is unknown, not a hostile opponent inferred from race.
+fn emote_target_hostility(world: &World, player: Entity, target: Entity) -> Option<bool> {
+    let templates = world.get_resource::<crate::faction::FactionTemplates>()?;
+    let actor = world.get::<shared::components::UnitFactionTemplate>(player)?;
+    let target_faction = world.get::<shared::components::UnitFactionTemplate>(target)?;
+    templates.0.get(&actor.0)?;
+    templates.0.get(&target_faction.0)?;
+    Some(crate::spell_cast::targets::is_hostile(
+        world, player, target,
+    ))
 }
 
 /// Same native learned spell sources used by type34, never SpellStore membership.
@@ -1112,11 +1191,13 @@ fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option
         auras_known: world.get::<crate::auras::ActiveAuras>(player).is_some(),
         known_spells: known_player_spell_ids(world, player),
         spell_knowledge_complete: spell_knowledge_complete(world, player),
+        rewarded_quests: BTreeSet::new(),
         earned_achievements: earned_player_achievement_ids(world, player),
         account_achievements_known: world
             .get::<PlayerAchievementState>(player)
             .is_some_and(|state| state.account.is_some()),
         battle_pet_team_min_level: battle_pet_team_min_level(world, player),
+        scenario_step: map.and_then(|map| scenario::current_step_id(world, map)),
         area: world
             .get::<AchievementTracker>(player)
             .and_then(|tracker| tracker.last_processed_area),
@@ -1196,6 +1277,14 @@ fn update_player_events(
                     now,
                 },
             ));
+        }
+        if !toasts.is_empty()
+            && let Some((_, character)) = owner
+        {
+            world.init_resource::<crate::gold::GoldUpdateQueue>();
+            world
+                .resource_mut::<crate::gold::GoldUpdateQueue>()
+                .record_news(character);
         }
         let snapshot = catalog.snapshot(&state, race);
         world.entity_mut(player).insert(state);
@@ -1573,6 +1662,9 @@ fn query_comparison_target(
 #[cfg(test)]
 #[path = "achievement_absent_aura_tests.rs"]
 mod absent_aura_tests;
+#[cfg(test)]
+#[path = "achievement_completed_quest_tests.rs"]
+mod completed_quest_tests;
 #[cfg(test)]
 #[path = "achievement_creature_type_tests.rs"]
 mod creature_type_tests;

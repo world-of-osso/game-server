@@ -118,6 +118,7 @@ fn arena_live_collision_leaves_unrelated_map_input_and_gravity_unchanged() {
     let start = flat_spot(50.0);
     let (mut app, player, connection) = flat_app(50.0);
     app.insert_resource(crate::pvp::arena::Catalog::load(&db).unwrap());
+    app.add_observer(crate::game_objects::collision::index_collision_model);
     app.add_systems(
         FixedUpdate,
         crate::game_objects::collision::sync_live_objects

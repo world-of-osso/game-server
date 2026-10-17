@@ -5,7 +5,9 @@ use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
 
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_native_enemy_dodge_reduction,
+};
 
 const POWER_STRIKE: u32 = 121_817;
 const POWER_STRIKE_PROC: u32 = 129_914;
@@ -53,7 +55,7 @@ fn class_completeness_native_power_strike_proc_adds_one_chi_on_a_melee_ability_o
     let mut final_chi = Vec::new();
     for proc_ready in [false, true] {
         let ids = [POWER_STRIKE_PROC, POWER_STRIKE_ENERGIZE, BLACKOUT_KICK];
-        let mut h = harness(Vec::new(), &ids, MONK).unwrap();
+        let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, MONK).unwrap();
         let unit = h.caster;
         h.set_power(PowerType::Chi, 3.0);
         if proc_ready {

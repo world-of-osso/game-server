@@ -650,6 +650,61 @@ fn loot_appearance_item(item_id: u32, appearance: u32, collected: bool) {
 }
 
 #[test]
+fn guild_news_committed_loot_uses_authentic_quality_and_excludes_refusal_retake() {
+    let mut h = harness(true).unwrap();
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    crate::persistence_character::set_character_guild_by_id(
+        db,
+        h.looter.character_id,
+        7,
+        "Looters",
+    )
+    .unwrap();
+    // Controlled slot receipt, not a claim that a Kobold drops Thunderfury.
+    let corpse = h.kill_kobold();
+    h.app.world_mut().entity_mut(corpse).insert(CorpseLoot {
+        looters: [(
+            h.looter.character_id,
+            vec![Some(LootContent::Item {
+                item_id: 19019,
+                name: "Thunderfury, Blessed Blade of the Windseeker".into(),
+                quality: 0,
+                count: 1,
+            })],
+        )]
+        .into(),
+    });
+    h.take_slot(corpse, 0);
+    assert_eq!(h.count_of(19019), 0);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert!(
+        crate::guild_news::query(db, h.looter.character_id)
+            .entries
+            .is_empty()
+    );
+    h.open(corpse, false);
+    h.take_slot(corpse, 0);
+    assert_eq!(h.count_of(19019), 1);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let entries = crate::guild_news::query(db, h.looter.character_id).entries;
+    assert_eq!(entries.len(), 1);
+    assert!(
+        matches!(&entries[0].kind, shared::protocol::GuildNewsKind::ItemLooted {
+        member, item_id: 19019
+    } if member == "Looter")
+    );
+    h.take_slot(corpse, 0);
+    let ordinary = h.kill_kobold();
+    h.stock(ordinary);
+    h.open(ordinary, true);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        crate::guild_news::query(db, h.looter.character_id).entries,
+        entries
+    );
+}
+
+#[test]
 fn transmogacq_looting_class_restricted_bop_collects_on_a_different_class() {
     // Warrior loots paladin-only Verigan's Fist: collection is not equip eligibility.
     loot_appearance_item(6953, 2288, true);

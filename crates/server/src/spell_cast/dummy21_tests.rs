@@ -18,7 +18,7 @@ fn fixture() -> Harness {
             spell
         })
         .collect();
-    let mut h = harness(spells, &ids, 11).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(spells, &ids, 11).unwrap();
     let caster = h.caster;
     h.cast_and_deliver(768, Some(caster));
     h.advance(35);

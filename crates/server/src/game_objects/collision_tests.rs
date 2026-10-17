@@ -15,6 +15,7 @@ fn source_ship_deck_collision_follows_the_transport_only_in_its_copy() {
         ..copy
     };
     let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
     app.insert_resource(GroundMap::new(&data, HashMap::new()));
     app.add_systems(FixedUpdate, sync_live_objects);
     let entity = app
@@ -83,6 +84,58 @@ fn source_ship_deck_collision_follows_the_transport_only_in_its_copy() {
             .ground_in(copy, feet),
         crate::ground::GroundProbe::Supported(_)
     ));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((GameObjectCollision(true), GameObjectVisible(false)));
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(copy, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((GameObjectVisible(true), other));
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(copy, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    assert!(matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    let mut unrelated = ship.info.clone();
+    unrelated.go_type = 5;
+    app.world_mut().entity_mut(entity).insert(unrelated);
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    app.world_mut().entity_mut(entity).insert(ship.info.clone());
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
+    app.world_mut().despawn(entity);
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(!matches!(
+        app.world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(other, feet),
+        crate::ground::GroundProbe::Supported(_)
+    ));
 }
 
 fn arena_app(map_id: u32) -> (App, Vec<(Entity, crate::game_objects::GameObjectSpawn)>) {
@@ -102,6 +155,7 @@ fn arena_app(map_id: u32) -> (App, Vec<(Entity, crate::game_objects::GameObjectS
         .unwrap();
     let spawns = crate::game_objects::load_game_object_spawns(&db).unwrap();
     let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
     app.insert_resource(GroundMap::new(&data, HashMap::from([(map_id, wdt)])));
     app.insert_resource(LineOfSight::load(&data.join("los")).unwrap());
     app.insert_resource(catalog);
@@ -332,4 +386,46 @@ fn arena_live_collision_six_position_query_microbenchmark() {
             "live/static six-position query+sync microbenchmark p95 must fit a 16.666ms query budget; not whole-frame/tick proof"
         );
     }
+}
+
+#[test]
+fn unrelated_world_objects_fit_one_catch_up_frame() {
+    let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let spawn = crate::game_objects::load_game_object_spawns(&db)
+        .unwrap()
+        .0
+        .into_iter()
+        .find(|spawn| spawn.map_id == 0 && spawn.info.go_type != 15)
+        .expect("authored nontransport world object");
+    let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
+    app.insert_resource(GroundMap::new(&data, HashMap::new()));
+    app.add_systems(Update, sync_live_objects);
+    app.world_mut().spawn_batch((0..250_000).map(|_| {
+        (
+            InMap::continent(0),
+            crate::game_objects::game_object_bundle(&spawn),
+        )
+    }));
+    app.update();
+    let fastest = (0..3)
+        .map(|_| {
+            let start = Instant::now();
+            for _ in 0..5 {
+                app.update();
+            }
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    eprintln!("250000 unrelated objects/five collision updates: {fastest:?}");
+    assert!(
+        fastest < std::time::Duration::from_millis(50),
+        "unrelated objects exhaust collision frame: {fastest:?}"
+    );
 }

@@ -5,7 +5,9 @@ use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
 
 use super::*;
-use crate::spell_cast::test_harness::{Harness, harness, world_db};
+use crate::spell_cast::test_harness::{
+    Harness, harness, harness_with_native_enemy_dodge_reduction, world_db,
+};
 use crate::spell_info::SpellStore;
 use crate::stats::CharacterStats;
 
@@ -88,7 +90,8 @@ fn class_completeness_native_critical_chaos_changes_actual_chaos_strike_fury_ref
         if talented {
             ids.push(CRITICAL_CHAOS);
         }
-        let mut h = harness(vec![refund], &ids, DEMON_HUNTER).unwrap();
+        let mut h =
+            harness_with_native_enemy_dodge_reduction(vec![refund], &ids, DEMON_HUNTER).unwrap();
         set_crit(&mut h, GUARANTEED_PROC_CRIT);
         let unit = h.caster;
         if talented {

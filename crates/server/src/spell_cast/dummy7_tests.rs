@@ -30,7 +30,8 @@ fn landed(h: &Harness) {
 
 #[test]
 fn dummy7_colossus_smash_marks_each_hit_enemy_and_only_amplifies_owners_damage() {
-    let mut h = harness(Vec::new(), &[167105, 208086, 108853], 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &[167105, 208086, 108853], 1)
+        .unwrap();
     let near = spawn_npc(&mut h.app, 4.0);
     let far = spawn_npc(&mut h.app, 40.0);
     let foreign = spawn_player(&mut h.app, 1, 0.0);
@@ -123,7 +124,8 @@ fn heartbreaker(rank: bool) {
     if rank {
         ids.push(221536);
     }
-    let mut h = harness(Vec::new(), &ids, 6).unwrap();
+    // Every chain target must hit; avoidance has separate native tests.
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 6).unwrap();
     let near = spawn_npc(&mut h.app, 4.0);
     let far = spawn_npc(&mut h.app, 40.0);
     let ally = spawn_player(&mut h.app, 6, 4.0);
@@ -214,7 +216,7 @@ fn raging_blow(chance: f32, rank: bool) {
     if rank {
         ids.push(383854);
     }
-    let mut h = harness(vec![root], &ids, 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(vec![root], &ids, 1).unwrap();
     h.cast_and_deliver(85288, Some(h.npc));
     h.advance(4);
     landed(&h);
@@ -233,7 +235,7 @@ fn raging_blow(chance: f32, rank: bool) {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat]
-        .used;
+        .used();
     let reset = rank && chance == 100.0;
     assert_eq!(used, if reset { 0 } else { 1 });
     // This real one-charge proc marker can be consumed by the root's damage
@@ -267,7 +269,7 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
         .find(|e| e.index == 0)
         .unwrap()
         .base_points = 0.0;
-    let mut h = harness(vec![root.clone()], &ids, 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(vec![root.clone()], &ids, 1).unwrap();
     h.cast_and_deliver(85288, Some(h.npc));
     h.advance(4);
     landed(&h);
@@ -278,7 +280,7 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat]
-        .next_ready_at;
+        .next_ready_at();
     h.advance(35);
     root.effects
         .iter_mut()
@@ -307,8 +309,8 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
         .get::<super::SpellHistory>(h.caster)
         .unwrap()
         .charges[&cat];
-    assert_eq!(charges.used, 1);
-    assert_eq!(charges.next_ready_at, oldest);
+    assert_eq!(charges.used(), 1);
+    assert_eq!(charges.next_ready_at(), oldest);
 }
 #[test]
 fn dummy7_raging_blow_rank_zero_chance_keeps_recharge() {
@@ -324,7 +326,7 @@ fn whirlwind(rank: bool, enemies: usize) {
     if rank {
         ids.push(12950);
     }
-    let mut h = harness(Vec::new(), &ids, 1).unwrap();
+    let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
     h.app
         .world_mut()
         .get_mut::<shared::components::Position>(h.npc)

@@ -13,6 +13,7 @@ const NON_PLAYER_UI_FLAGS: u32 = 0x2 | 0x4000 | 0x100000;
 const STATISTIC_FLAG: u32 = 0x1;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone))]
 struct WindowDefinition {
     id: u32,
     category: u32,
@@ -26,6 +27,7 @@ struct WindowDefinition {
 }
 
 #[derive(Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub(super) struct WindowData {
     categories: BTreeMap<u32, AchievementCategoryEntry>,
     definitions: BTreeMap<u32, WindowDefinition>,
@@ -179,6 +181,29 @@ fn paginate<T>(rows: impl Iterator<Item = (u32, T)>, size: usize) -> (Vec<T>, Op
 }
 
 impl AchievementCatalog {
+    /// TC AchievementMgr.cpp475: real earned achievements need SHOW_IN_GUILD_NEWS.
+    pub(crate) fn build_guild_news_achievement(
+        &self,
+        id: u32,
+        member: &str,
+    ) -> Option<(shared::protocol::GuildNewsKind, bool)> {
+        const SHOW_IN_GUILD_NEWS: u32 = 0x1000;
+        const SHOW_IN_GUILD_HEADER: u32 = 0x2000;
+        let definition = self.window.definitions.get(&id)?;
+        if definition.flags & SHOW_IN_GUILD_NEWS == 0 {
+            return None;
+        }
+        Some((
+            shared::protocol::GuildNewsKind::PlayerAchievement {
+                member: member.into(),
+                achievement_id: id,
+                name: definition.name.clone(),
+                description: definition.description.clone(),
+            },
+            definition.flags & SHOW_IN_GUILD_HEADER != 0,
+        ))
+    }
+
     pub fn page(
         &self,
         state: &PlayerAchievementState,

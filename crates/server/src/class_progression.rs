@@ -47,9 +47,16 @@ const ACQUIRE_AUTOMATIC_SKILL_RANK: u32 = 1;
 
 /// Spells the player knows, in learn order. Cast validation reads this.
 #[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
-pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>);
+pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>, Vec<u32>);
 
 impl KnownSpells {
+    /// Membership-derived grants are separate from baseline/profession knowledge.
+    pub(crate) fn guild_grants(&self) -> &[u32] {
+        &self.2
+    }
+    pub(crate) fn set_guild_grants(&mut self, spells: &[u32]) {
+        self.2 = spells.to_vec();
+    }
     pub(crate) fn pvp_grants(&self) -> &[(u32, u32)] {
         &self.1
     }
@@ -61,7 +68,7 @@ impl KnownSpells {
 
     #[cfg(test)]
     pub(crate) fn fixture(spells: Vec<u32>) -> Self {
-        Self(spells, Vec::new())
+        Self(spells, Vec::new(), Vec::new())
     }
 
     pub fn contains(&self, spell_id: u32) -> bool {
@@ -79,7 +86,11 @@ impl KnownSpells {
             .iter()
             .map(|&(spell, _)| spell)
             .filter(|id| !self.0.contains(id) || self.1.iter().any(|&(_, base)| base == *id));
-        baseline.chain(grants)
+        let guild =
+            self.2.iter().copied().filter(|id| {
+                !self.0.contains(id) && !self.1.iter().any(|&(spell, _)| spell == *id)
+            });
+        baseline.chain(grants).chain(guild)
     }
 }
 
@@ -621,6 +632,7 @@ fn init_player_progression(
         let mut known = KnownSpells(
             evaluated.known.iter().map(|spell| spell.spell_id).collect(),
             Vec::new(),
+            Vec::new(),
         );
         merge_learned_spells(&mut known, professions);
         let mut bar = ActionBar(match &stored {
@@ -712,6 +724,7 @@ fn refresh_player(
     let mut new_known = KnownSpells(
         evaluated.known.iter().map(|spell| spell.spell_id).collect(),
         Vec::new(),
+        known.2.clone(),
     );
     merge_learned_spells(&mut new_known, professions);
     if *spec == new_spec {

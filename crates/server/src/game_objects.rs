@@ -322,7 +322,10 @@ pub struct GameObjectPlugin;
 impl Plugin for GameObjectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameObjectSpawns>()
-            .add_plugins(crate::gathering::GatheringPlugin)
+            .add_plugins((
+                crate::gathering::GatheringPlugin,
+                collision::CollisionIndexPlugin,
+            ))
             .add_systems(
                 FixedUpdate,
                 collision::sync_live_objects

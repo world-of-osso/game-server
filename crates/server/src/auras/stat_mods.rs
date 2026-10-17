@@ -32,6 +32,8 @@ pub struct AuraStatMods {
     pub healing_done_mult: f32,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
     pub healing_taken_mult: f32,
+    /// MOD_AUTOATTACK_CRIT_CHANCE334: signed additive percentage points.
+    pub autoattack_crit_pct: f32,
     /// MOD_AUTOATTACK_DAMAGE 344.
     pub autoattack_damage_mult: f32,
     /// MOD_AUTOATTACK_RANGE153: signed additive yards, attacker-owned only.
@@ -101,6 +103,7 @@ impl Default for AuraStatMods {
             critical_damage_mods: Vec::new(),
             healing_done_mult: 1.0,
             healing_taken_mult: 1.0,
+            autoattack_crit_pct: 0.0,
             autoattack_damage_mult: 1.0,
             autoattack_range_bonus: 0.0,
             summon_damage_mult: 1.0,
@@ -244,8 +247,10 @@ struct Accumulator {
     mounted: bool,
     fastest_mounted: f32,
     always_mounted: f32,
+    mounted_not_stack: f32,
     fastest_flight: f32,
     always_flight: f32,
+    flight_not_stack: f32,
     slowest: f32,
     /// Strongest positive absolute speed cap (yards/second), not a percent.
     normal_speed_cap: f32,
@@ -270,11 +275,17 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     }
     let (run, flight) = if acc.mounted {
         (
-            pct(acc.fastest_mounted) * acc.always_mounted,
-            pct(acc.fastest_flight) * acc.always_flight,
+            pct(acc.fastest_mounted) * acc.always_mounted.max(pct(acc.mounted_not_stack)),
+            pct(acc.fastest_flight) * acc.always_flight.max(pct(acc.flight_not_stack)),
         )
     } else {
-        (pct(acc.fastest) * acc.always, 1.0)
+        (pct(acc.fastest) * acc.always, pct(acc.flight_not_stack))
+    };
+    //172/211 affect run/flight only, not the existing swim normalization path.
+    let swim = if acc.mounted {
+        pct(acc.fastest_mounted) * acc.always_mounted
+    } else {
+        pct(acc.fastest) * acc.always
     };
     // Unit::UpdateSpeed applies normalization before the strongest slow.
     // Both the server's run and flight base speeds are 7 yards/second.
@@ -296,7 +307,7 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     };
     acc.combat.movement_speed = slowed(capped(run, BASE_SPEED));
     acc.combat.flight_speed = slowed(capped(flight, BASE_SPEED));
-    acc.combat.swim_speed = slowed(capped(run, BASE_SWIM_SPEED));
+    acc.combat.swim_speed = slowed(capped(swim, BASE_SWIM_SPEED));
     acc.stats.haste_pct += acc.haste_not_stack;
     (acc.stats, acc.combat)
 }
@@ -424,6 +435,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }),
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
             MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
+            MOD_AUTOATTACK_CRIT_CHANCE => combat.autoattack_crit_pct += amount,
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
             MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,
             MOD_SUMMON_DAMAGE => combat.summon_damage_mult *= pct(amount),
@@ -449,10 +461,14 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOUNTED => acc.mounted = true,
             MOD_INCREASE_MOUNTED_SPEED => acc.fastest_mounted = acc.fastest_mounted.max(amount),
             MOD_MOUNTED_SPEED_ALWAYS => acc.always_mounted *= pct(amount),
+            MOD_MOUNTED_SPEED_NOT_STACK => {
+                acc.mounted_not_stack = acc.mounted_not_stack.max(amount)
+            }
             MOD_INCREASE_MOUNTED_FLIGHT_SPEED => {
                 acc.fastest_flight = acc.fastest_flight.max(amount)
             }
             MOD_MOUNTED_FLIGHT_SPEED_ALWAYS => acc.always_flight *= pct(amount),
+            MOD_FLIGHT_SPEED_NOT_STACK => acc.flight_not_stack = acc.flight_not_stack.max(amount),
             MOD_DECREASE_SPEED => acc.slowest = acc.slowest.min(amount),
             MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
             MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,

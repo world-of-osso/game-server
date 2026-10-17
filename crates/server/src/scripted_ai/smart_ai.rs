@@ -66,6 +66,7 @@ const EVENT_SUMMONED_UNIT: u32 = 17;
 const EVENT_SUMMON_DESPAWNED: u32 = 35;
 const EVENT_JUST_SUMMONED: u32 = 54;
 const EVENT_SPELLHIT: u32 = 8;
+const EVENT_RANGE: u32 = 9;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
 const EVENT_RESPAWN: u32 = 11;
@@ -233,6 +234,7 @@ fn supports_event(kind: u32) -> bool {
     matches!(
         kind,
         EVENT_UPDATE_IC
+            | EVENT_RANGE
             | EVENT_AGGRO
             | EVENT_DEATH
             | EVENT_FOLLOW_COMPLETED
@@ -524,6 +526,7 @@ impl SmartAi {
                     self.process_action(ctx, index, invoker);
                 }
             }
+            EVENT_RANGE => self.process_range_event(ctx, index),
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
                     self.recalc_timer(index, event.event_params[2], event.event_params[3]);
@@ -587,6 +590,27 @@ impl SmartAi {
                 }
             }
             _ => {}
+        }
+    }
+
+    /// TC SmartScript.cpp3226–3235: engaged victim in reach-adjusted3D range;
+    /// an excluded victim gets a predictable500ms recheck, not the action repeat.
+    fn process_range_event(&mut self, ctx: &mut Ctx, index: usize) {
+        if !ctx.is_engaged() {
+            return;
+        }
+        let Some(victim) = ctx.victim() else {
+            return;
+        };
+        let event = &self.events[index];
+        let [min, max, repeat_min, repeat_max, ..] = event.event_params;
+        let in_range = super::model_reach::distance(ctx.world, ctx.me, victim)
+            .is_some_and(|distance| distance >= min as f32 && distance < max as f32);
+        if in_range {
+            self.recalc_timer(index, repeat_min, repeat_max);
+            self.process_action(ctx, index, Some(victim));
+        } else {
+            self.recalc_timer(index, 500, 500);
         }
     }
 
@@ -1096,8 +1120,10 @@ impl CreatureAi for SmartAi {
                 continue;
             }
             let event = &self.events[index];
-            if !matches!(event.event_type, EVENT_UPDATE_IC | EVENT_HAS_AURA)
-                || !self.in_phase(event.phase_mask)
+            if !matches!(
+                event.event_type,
+                EVENT_UPDATE_IC | EVENT_RANGE | EVENT_HAS_AURA
+            ) || !self.in_phase(event.phase_mask)
             {
                 continue;
             }
