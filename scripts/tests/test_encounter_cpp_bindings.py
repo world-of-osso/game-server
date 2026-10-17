@@ -316,6 +316,31 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encounter identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_theradras_primary_keeps_bit_seven_and_excludes_spirit(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('theradras')
+        self.assertIsNotNone(profile, 'source Theradras primary missing')
+        primary, _ = profile
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(429,349,7);
+            INSERT INTO tdb_creature_template(entry,ScriptName) VALUES
+                (12201,'boss_princess_theradras'),(12238,'');
+            INSERT INTO raid_encounter_creature VALUES(349,12203,426,4,429,999,12293);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db, [primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=349 ORDER BY bit').fetchall(),
+            [(12203,426,4,429,999,12293),(12201,429,7,431,1001,12292)])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=12201")
+        with self.assertRaisesRegex(ValueError, 'creature script identity'):
+            prepare_bindings(self.db, [primary])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='boss_princess_theradras' WHERE entry=12201")
+        self.db.execute('UPDATE dungeon_encounter SET Bit=6 WHERE ID=429')
+        with self.assertRaisesRegex(ValueError, 'encounter identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_thermaplugg_primary_preserves_bosses_and_excludes_walking_bombs(self):
         import encounter_cpp_bindings as bindings
         profile = bindings.PROFILES.get('thermaplugg')
@@ -401,6 +426,28 @@ class PrimaryActorTests(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT * FROM tdb_creature_template_model').fetchall(), [(61463,42247)])
         self.assertEqual(self.db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(),[(12118,)])
         self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=61463")
+        with self.assertRaisesRegex(ValueError, 'creature script identity'):
+            prepare_bindings(self.db, [primary])
+
+    def test_gargolmar_primary_uses_db2_bit_not_source_ordinal_and_excludes_companions(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('gargolmar')
+        self.assertIsNotNone(profile, 'pinned Watchkeeper Gargolmar primary is missing')
+        primary, _ = profile
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(1893,543,2);
+            INSERT INTO tdb_creature_template VALUES(17306,'boss_watchkeeper_gargolmar');
+            INSERT INTO raid_encounter_creature VALUES(349,12201,429,7,431,1001,12292);
+        ''')
+        rows = prepare_bindings(self.db, [primary])
+        for _ in range(2):
+            self.db.executescript(binding_sql(rows))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=543').fetchall(),
+            [(17306,1893,2,527,1104,18236)])
+        self.assertEqual(self.db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=349').fetchall(), [(12201,)])
+        self.db.execute("UPDATE tdb_creature_template SET ScriptName='' WHERE entry=17306")
         with self.assertRaisesRegex(ValueError, 'creature script identity'):
             prepare_bindings(self.db, [primary])
 

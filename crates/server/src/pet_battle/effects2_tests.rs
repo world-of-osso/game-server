@@ -208,7 +208,7 @@ fn pet_battle_leech_life_heals_after_hit_only_and_web_doubles() {
     }
 }
 
-fn use_ability(b: &Battle, c: &Catalog, id: u32) -> (Battle, Vec<Event>) {
+pub(super) fn use_ability(b: &Battle, c: &Catalog, id: u32) -> (Battle, Vec<Event>) {
     b.step(c, [Action::Ability(id), Action::Pass], &mut Fixed(500000))
         .unwrap()
 }

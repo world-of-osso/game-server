@@ -10,6 +10,12 @@ use crate::auras::{
     scripts::{AuraScript, AuraScripts},
 };
 
+const THERADRAS_SCRIPT: &str = "boss_princess_theradras";
+const DUST_FIELD: u32 = 21909;
+const BOULDER: u32 = 21832;
+const THRASH: u32 = 3391;
+const REPULSIVE_GAZE: u32 = 21869;
+const ZAETARS_SPIRIT: u32 = 12238;
 const NOXXION_SCRIPT: &str = "boss_noxxion";
 const CELEBRAS_SCRIPT: &str = "boss_celebras_the_cursed";
 const WRATH: u32 = 21807;
@@ -26,7 +32,10 @@ const SUMMON_DUMMY: u32 = 21708;
 const SUMMON_SPAWNS: u32 = 21707;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, NOXXION_SCRIPT | CELEBRAS_SCRIPT | LANDSLIDE_SCRIPT)
+    matches!(
+        name,
+        NOXXION_SCRIPT | CELEBRAS_SCRIPT | LANDSLIDE_SCRIPT | THERADRAS_SCRIPT
+    )
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -49,7 +58,79 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
             boss: BossAi::new(4),
             landslide: false,
         })),
+        THERADRAS_SCRIPT => Some(Box::new(Theradras {
+            boss: BossAi::new(7),
+        })),
         _ => None,
+    }
+}
+
+struct Theradras {
+    boss: BossAi,
+}
+
+impl CreatureAi for Theradras {
+    fn reset(&mut self, ctx: &mut Ctx) {
+        self.boss.reset(ctx);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
+        self.boss.just_engaged_with(ctx);
+        self.boss.events.schedule_range(DUST_FIELD, 20_000, 25_000);
+        self.boss.events.schedule_range(BOULDER, 20_000, 30_000);
+        self.boss.events.schedule_range(THRASH, 10_000, 20_000);
+        self.boss
+            .events
+            .schedule_range(REPULSIVE_GAZE, 25_000, 35_000);
+    }
+
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        self.boss.just_died(ctx);
+        // The pinned source supplies fixed WoW coordinates, not the corpse position.
+        ctx.summon_creature(ZAETARS_SPIRIT, [28.1887, 62.3964, -123.161, 4.31096]);
+    }
+
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        boss_update_ai(self, ctx, diff_ms);
+    }
+}
+
+impl BossScript for Theradras {
+    fn boss_ai(&mut self) -> &mut BossAi {
+        &mut self.boss
+    }
+
+    fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
+        let repeat = match event {
+            DUST_FIELD => {
+                ctx.do_cast_self(DUST_FIELD);
+                (20_000, 25_000)
+            }
+            BOULDER => {
+                if let Some(target) = ctx.select_target_random(0.0, false) {
+                    ctx.do_cast_at(Some(target), BOULDER, false);
+                }
+                (15_000, 25_000)
+            }
+            THRASH => {
+                ctx.do_cast_self(THRASH);
+                (10_000, 20_000)
+            }
+            REPULSIVE_GAZE => {
+                ctx.do_cast_self(REPULSIVE_GAZE);
+                (30_000, 40_000)
+            }
+            _ => return,
+        };
+        self.boss.events.repeat_from_due_range(repeat.0, repeat.1);
     }
 }
 
