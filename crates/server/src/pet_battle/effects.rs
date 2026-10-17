@@ -50,6 +50,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             150 | 168 => self.add_aura_effect(caster, target, effect),
             107 => self.fade_swap(caster, effect),
+            67 => Ok(self.equalize_health(caster, target, effect)),
             68 => self.percent_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
@@ -367,6 +368,21 @@ impl<R: BattleRng> Runtime<'_, R> {
         charge.property = 26;
         charge.params[2] = -1;
         self.add_aura_effect(caster, target, &charge)
+    }
+    fn equalize_health(&mut self, caster: PetRef, target: PetRef, effect: &Effect) -> bool {
+        let mut accuracy = effect.clone();
+        accuracy.params[1] = effect.params[0];
+        if !self.hit(caster, target, &accuracy) {
+            return false;
+        }
+        let combined_health =
+            i64::from(self.battle.pet(caster).health) + i64::from(self.battle.pet(target).health);
+        let shared_health = (combined_health / 2) as i32;
+        for recipient in [caster, target] {
+            let pet = self.battle.pet_mut(recipient);
+            pet.health = shared_health.min(pet.stats.health);
+        }
+        true
     }
     fn heal_other_ally(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
         let p = effect.params;

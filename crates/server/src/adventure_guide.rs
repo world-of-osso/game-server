@@ -5,6 +5,8 @@ mod catalog;
 mod conditions;
 #[path = "adventure_guide_month.rs"]
 mod month;
+#[path = "adventure_guide_publication.rs"]
+mod publication;
 use crate::{
     achievement::{AchievementCatalog, CriteriaEvent, PlayerAchievementState},
     auth::{Authenticated, InWorld},
@@ -15,6 +17,7 @@ use bevy::prelude::*;
 use catalog::CatalogData;
 use lightyear::prelude::*;
 pub(crate) use month::MonthlyCriteriaState;
+pub(crate) use publication::GuidePublication;
 use shared::components::Level;
 use shared::protocol::{
     AdventureGuideRequest, AdventureGuideSnapshot, InstanceChannel, PerksActivityProgress,
@@ -64,6 +67,12 @@ impl Plugin for AdventureGuidePlugin {
             .init_resource::<crate::maps::ServerClock>()
             .init_resource::<crate::guild_bank::DailyReset>();
         app.add_systems(Update, receive_requests);
+        app.add_systems(
+            PostUpdate,
+            publication::flush_updates
+                .after(crate::achievement::flush_achievement_updates)
+                .before(MessageSystems::Send),
+        );
     }
 }
 
@@ -150,9 +159,7 @@ fn persist_month_state(world: &World, connection: Entity, player: Entity, charac
 
 fn send_snapshot(world: &mut World, connection: Entity, player: Entity, character: u64) {
     let snapshot = settle_and_project_month(world, connection, player, character);
-    if let Some(mut sender) = world.get_mut::<MessageSender<AdventureGuideSnapshot>>(connection) {
-        sender.send::<InstanceChannel>(snapshot);
-    }
+    publication::queue_update(world, connection, snapshot, true);
 }
 
 fn settle_and_project_month(
@@ -405,9 +412,7 @@ pub(crate) fn refresh_for_connection(world: &mut World, connection: Entity) {
     let Some(snapshot) = settle_month_for_connection(world, connection) else {
         return;
     };
-    if let Some(mut sender) = world.get_mut::<MessageSender<AdventureGuideSnapshot>>(connection) {
-        sender.send::<InstanceChannel>(snapshot);
-    }
+    publication::queue_update(world, connection, snapshot, false);
 }
 
 /// Settle gameplay credit without publishing the full Guide ahead of vendor replies.

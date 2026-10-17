@@ -4,6 +4,7 @@
 - [Lifetime honorable kills113](systems/dungeon-achievements.md#lifetime-honorable-kills113) — persisted per-character authority/absolute login projection; named zero-start policy, native full100/relog/account/pin/BG controls GREEN6/6.
 - [Active70448 achievements](systems/dungeon-achievements.md#active70448-achievement-inputs) — named CSV import, source build/key receipt, no historical fallback; census migration adds/removes no roots.
 - [Recipient area31](systems/dungeon-achievements.md#eligible-recipient-area31) — current terrain per eligible world-HK recipient; controlled full50/account/pin GREEN4/4 on canonical70448; native BG credit unimplemented.
+- [Combat publication fanout](investigations/server-tick-lag.md#combat-publication-fanout-2026-10-17) — measured full-catalog fanout replaced by pending-only deltas/Guide clocks;94 publisher/native controls pass, merged consumer checks and live comparison pending.
 - [Eligible victim class52](systems/dungeon-achievements.md#eligible-victim-class52) — full thirteen-class245 native/account RED→GREEN2/2; exact victim identity at existing reward boundary.
 - [Eligible victim race53](systems/dungeon-achievements.md#eligible-victim-race53) — native/account RED→GREEN3/3, both full ten-race faction grants and group recipient/reopened date.
 - [Gargolmar charge impact](systems/boss-scripts.md#ramparts-gargolmar-charge-impact--2026-10-16) — actual19yd no-motion RED→source-speed/reach/delayed-impact GREEN; two-point subset, obstacle/native proof separate.
@@ -11,6 +12,7 @@
 - [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.
 - [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Authoritative target LOS](systems/spell-casting.md#authoritative-target-los--2026-10-16) — moving-target receipt boundary replaces stale client endpoint validation; native release acceptance remains separate.
+- [Leymor first Fissure clock](investigations/follower-data.md#leymor-first-fissure-clock--2026-10-17) — genuine missing20s cast RED→native cast/victimGo GREEN1; next31sBrand/45sStomp genuineRED2/63.46s after native prerequisites; source clocks nativeGREEN2 after fixture self-cast receipt correction; Brand/Stomp native child RED2 plus cancellation controlPASS66.11s; minimal hooks nativeGREEN3/55.33s, consolidated Azure29/check0/fmt0/sourcePASS, artifact follow-up pending; next Sprout spawn-aura genuine0/14RED38.63s, child110/lifecycle open.
 - [Telash startup prerequisites](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17) — nativeEnergy60/100/controlled-resource GREEN2;47affected/check/fmt pass on confirmed48e6, direct+2/sec nativeGREEN1/20affected/check/fmt pass; engagement/3.5sFrost nativeGREEN2/composite22controls; first14.3sIcy native cast/channel/387152 damage GREEN1 plus destination/Penance4 controls after unsupported76 RED; affected27 across explicit scopes/check/fmt/source inspection pass, artifact follow-up pending; rune/jump gaps, no phase proof.
 - [Leymor native Sprouts children](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16) — parent0/14 RED→one ordinary parent/fourteen owned native children GREEN on active70448;17affected/check/fmt/sourceinspection pass; lifecycle/fullAzure open.
 - [Leymor Sprouts clock](investigations/follower-data.md#azure-leymor-sprouts-clock--2026-10-16) — native first3s cast/completed self-target SpellGo GREEN; child summons/lifecycle and fullAzure70448 remain open.
@@ -23,6 +25,7 @@
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
 
+- [Life Exchange health redistribution](systems/pet-battle-engine.md#life-exchange67--2026-10-17) — bounded277/493, unsupported67 RED3→GREEN4 and strict both-skin HP98/108 projection; Tormented Spirit framing rejected; final lib126/check/fmt pass, Retail rounding/proc feedback unclaimed.
 - [Launch Rocket setup and launch](systems/pet-battle-engine.md#launch-rocket75--2026-10-17) — bounded293/294, real unsupported75 RED3→GREEN4 and wild/PvP27; strict both-skin physical setup/launch win; final lib122/check/fmt pass, prior unchanged UI12 retained.
 - [Armageddon team damage and sacrifice](systems/pet-battle-engine.md#armageddon1025--2026-10-16) — bounded1025 all living enemies/self-kill/Failsafe suppression; RED1→GREEN8, strict both-skin death/forced-reserve/use proof; final lib118/wild-PvP26/UI12/check/fmt pass.
 - [Invitation appearance delivery](systems/guild-lifecycle.md#invitation-appearance-delivery) — shared immediate/persisted real optional-design loader, request/reopen controls and four actual native invitations/declines; paid private prerequisite and proof exclusions explicit.
@@ -40,6 +43,18 @@
 - [Electrocutioner primary and source mana gap](systems/boss-scripts.md#gnomeregan-electrocutioner-binding-and-source-gap--2026-10-16) — authenticated6235/380/bit3 binding and controlled death credit; ordinary SAI Shock fails authored mana admission, named mechanics acceptance remains open.
 - [Alliance escort counters](systems/boss-scripts.md#alliance-escort-counters--2026-10-15) — Feero4484 counter63/event77; both skins earned all-three-wave credit; source receipts and escort grid-lifecycle closure.
 # Wiki Index
+
+- [Toy source boundaries89–93](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) — child scripts, owned-critter150 and procedural headwear remain unresolved; [94–98](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) adds source-action/procedural boundaries; [99–103](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) separates existing contracts from missing actions.
+
+- [Lunar/Peddlefeet hearthstone learned use](systems/toys.md#lunarpeddlefeet-hearthstone-learned-use-2026-10-17) — persisted bind/source cast/shared2309 charge;5 scoped tests pass, native presentation separate.
+
+- [Source disguise recovery precedence](systems/toys.md#source-disguise-recovery-precedence-2026-10-17) — three actual learned-use/lifetime cases; item overrides versus inherited spell recovery, native bodies separate.
+
+- [Oomgut source transform lifecycle](systems/toys.md#oomgut-source-transform-lifecycle-2026-10-17) — actual ten-minute expiry/restoration and two-hour recovery report; scoped14-case acceptance, native appearances separate.
+
+- [Flashback screen-effect boundary](../toy-effects14-coverage.md#flashback88-screen-effect-boundary-2026-10-17) — source260/1473 is not world-phase proof; actual chapel use/native presentation open.
+
+- [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16) — source soul import and genuine early-arrival RED→fixed flight/lifecycle;150 Toy+49 affected pass, canonical publication/native appearances separate.
 
 - [Optional cost spell modifiers](systems/auras.md#optional-cost-spell-modifiers-2026-10-16) — native Practiced Strikes/Protection Execute RED3/2→GREEN38 plus merged5; optional spend excludes flat and retains percentage modifiers; workspace check passes.
 - [Additional optional resource cost](systems/auras.md#additional-optional-resource-cost-2026-10-16) — native63 six/seven-point Envenom RED→GREEN5; merged32 resource controls and current-master workspace check pass; full talent/legal/fresh UDP acceptance open.
