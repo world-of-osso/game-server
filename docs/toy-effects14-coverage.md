@@ -652,3 +652,10 @@ Current SpellCooldowns has recovery0/category recovery0/GCD1500; ItemEffect reco
 Current whole-Toy147/147 zero ignored852.62s; server package/tests check1m33s, fmt/manual readability/no warnings pass at server5f4e26d9/enginefe23e7355/protocol07a8faa0; later docs-only. Canonical393 still refuses missing143119/143120; prepared394 admits163201, classification only. Copy-only maintained import of current canonical454c2454 inserts exactly two templates/two models and yields SHA256473707e7b066cf547207a11910972cb1cdc75efc48bda14683b7d3fa5888659b; canonical remains lead-owned. `gnoll81-canonical-import-receipt.json` contains full rows/counts/command.
 
 Source template/model publication does not prove the description's target-dummy combat behavior. Native body preflight cannot expand missing local M2 533501 (whack_a_gnoll); frozen70391 resolution has content keyadfe64eea1520eee237672ced583343a, but no local body file is claimed. Barrel575756/skin575757/BLP2203733 are present but presence alone is not authentication/rendering. No native wire/pixels/audio, indoor/WMO eligibility or target-dummy combat/full-toy claim.
+
+## Full1166 named gaps82–83 (2026-10-16)
+
+- Weary Spirit Binding Return163206/279066 retains homebind effect252/self+target9, but same70391 identity has one Item and one Toy row with zero ItemSparse rows. Current unresolved-item refusal is not solved by fabricating an item; `spirit82-source-identity-gap.json` pins counts.
+- Party Totem163210/279072 uses effect28 entry143125/property4492 Control1/Title27/Slot-1/flags8390656, destination138, plus effect77. TDB source identity/display46458/model scale0.4 and empty AI/ScriptName do not establish specialized title27/effect77 gameplay. Native admission remains unsupported, not a generic assistant/guardian replacement.
+
+Exact root/NPC sources: `rows80-84-readonly-source.json`, `rows81-83-readonly-npc.json`; pinned4066 root-script bindings include none of279063/279072/279076/279077. Next84 uses source279076→279077, with visible linked trap302746/display16675, not invisible31442/display0. Source profile/chain and actual learning tests are separate requirements.
