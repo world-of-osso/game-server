@@ -22,7 +22,6 @@ fn prepare_running_stomp() -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "RED: ordinary Stomp natural channel-finish374731 hook unported"]
 fn azure_leymor_child_stomp_natural_channel_finish_deals_native_damage_once() {
     let (mut h, leymor) = prepare_running_stomp();
     assert!(
@@ -49,7 +48,6 @@ fn azure_leymor_child_stomp_natural_channel_finish_deals_native_damage_once() {
 }
 
 #[test]
-#[ignore = "Control: cancellation must not dispatch natural Stomp finish"]
 fn azure_leymor_child_stomp_cancelled_channel_never_deals_finish_damage() {
     let (mut h, leymor) = prepare_running_stomp();
     crate::spell_cast::cancel_cast(h.app.world_mut(), leymor);
@@ -65,7 +63,6 @@ fn azure_leymor_child_stomp_cancelled_channel_never_deals_finish_damage() {
 }
 
 #[test]
-#[ignore = "RED: ordinary Brand effect0 once-child374582 hook unported"]
 fn azure_leymor_child_brand_emits_one_native_field_for_two_real_aura_recipients() {
     let (mut h, leymor) = prepare_leymor_for_later_clock();
     h.advance(24.8);
