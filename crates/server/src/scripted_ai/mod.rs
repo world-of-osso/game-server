@@ -15,6 +15,7 @@
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
 
+pub(crate) mod azure_vault;
 pub mod boss_ai;
 pub mod bossmod;
 pub mod creature_text;
@@ -81,6 +82,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, maraudon::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
+            .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
             .add_systems(
