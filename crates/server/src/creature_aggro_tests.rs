@@ -954,3 +954,40 @@ fn a_player_on_another_map_at_the_spiders_coordinates_is_not_attacked() {
         Some(&CreatureState::Idle)
     );
 }
+
+#[test]
+fn threat_membership_wakes_with_current_entries_and_tracks_active_edits() {
+    let mut app = App::new();
+    app.add_observer(replicate_woken_threat_list);
+    app.add_systems(Update, replicate_threat_list_system);
+    let victim = app.world_mut().spawn_empty().id();
+    let npc = app
+        .world_mut()
+        .spawn((ThreatTable::default(), GridDormant))
+        .id();
+    app.update();
+    app.world_mut()
+        .get_mut::<ThreatTable>(npc)
+        .unwrap()
+        .add_threat(victim.to_bits(), 100.0);
+    app.update();
+    app.update();
+    app.world_mut().entity_mut(npc).remove::<GridDormant>();
+    app.update();
+    assert_eq!(
+        app.world().get::<UnitThreatList>(npc).unwrap().0,
+        vec![victim.to_bits()]
+    );
+    app.world_mut().get_mut::<ThreatTable>(npc).unwrap().reset();
+    app.update();
+    assert!(app.world().get::<UnitThreatList>(npc).unwrap().0.is_empty());
+    app.world_mut()
+        .get_mut::<ThreatTable>(npc)
+        .unwrap()
+        .add_threat(victim.to_bits(), 2.0);
+    app.update();
+    assert_eq!(
+        app.world().get::<UnitThreatList>(npc).unwrap().0,
+        vec![victim.to_bits()]
+    );
+}

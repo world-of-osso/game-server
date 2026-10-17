@@ -1730,11 +1730,10 @@ pub fn interrupt_auras(
 // --- Systems ---
 
 /// Every unit (player or NPC) carries `ActiveAuras`, `UnitAuras` and `AuraStatMods`.
-fn init_unit_auras(world: &mut World) {
-    let units: Vec<Entity> = world
-        .query_filtered::<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>()
-        .iter(world)
-        .collect();
+type UnitsMissingAuras = QueryState<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>;
+
+fn init_unit_auras(world: &mut World, missing: &mut UnitsMissingAuras) {
+    let units: Vec<Entity> = missing.iter(world).collect();
     // Casts and summon cleanup mutate units immediately. Deferred defaults can
     // overwrite a freshly applied aura or insert into a unit already despawned.
     for unit in units {
@@ -2079,3 +2078,23 @@ mod mage_tests;
 
 #[cfg(test)]
 pub(crate) mod mount_tests;
+
+#[cfg(test)]
+#[test]
+fn idle_aura_init_full_population_is_bounded() {
+    let mut app = App::new();
+    app.add_systems(Update, init_unit_auras);
+    crate::test_data::populate_idle_world(app.world_mut(), || {
+        (
+            Npc {
+                template_id: 30,
+                name: String::new(),
+            },
+            ActiveAuras::default(),
+        )
+    });
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_aura_init_full_population_is_bounded",
+    );
+}
