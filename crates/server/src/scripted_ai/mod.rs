@@ -15,6 +15,7 @@
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
 
+pub(crate) mod azure_vault;
 pub mod boss_ai;
 pub mod bossmod;
 pub mod creature_text;
@@ -82,6 +83,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, maraudon::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
+            .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
             .add_systems(
@@ -414,16 +416,18 @@ fn update_creature_ai(world: &mut World) {
 /// The head of `Creature::Update`: `JustAppeared` once after AddToMap or Respawn.
 /// `Map::Update` updates objects before relocation notifies, so this precedes the
 /// tick's sight and aggro.
-fn trigger_just_appeared(world: &mut World) {
-    let creatures: Vec<Entity> = world
-        .query_filtered::<Entity, (
-            With<TriggerJustAppeared>,
-            With<CreatureAiState>,
-            Without<DeathState>,
-            Without<GridDormant>,
-        )>()
-        .iter(world)
-        .collect();
+type AppearingCreatures = QueryState<
+    Entity,
+    (
+        With<TriggerJustAppeared>,
+        With<CreatureAiState>,
+        Without<DeathState>,
+        Without<GridDormant>,
+    ),
+>;
+
+fn trigger_just_appeared(world: &mut World, appearing: &mut AppearingCreatures) {
+    let creatures: Vec<Entity> = appearing.iter(world).collect();
     for creature in creatures {
         // An earlier creature's hook may have despawned this one.
         let Ok(mut entity) = world.get_entity_mut(creature) else {
@@ -883,3 +887,15 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn idle_just_appeared_full_population_is_bounded() {
+    let mut app = App::new();
+    app.add_systems(Update, trigger_just_appeared);
+    crate::test_data::populate_idle_world(app.world_mut(), || crate::grid_activity::GridDormant);
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_just_appeared_full_population_is_bounded",
+    );
+}

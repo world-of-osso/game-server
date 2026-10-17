@@ -1,6 +1,9 @@
 //! Using real food and water from the bags (`process_use_requests`) on real 50 ms ticks
 //! against data/world.db.
 
+#[path = "item_use_honor_criteria_tests.rs"]
+mod honor_criteria;
+
 use shared::components::{CombatStatus, Health, PlayerStandState, StandState};
 use shared::protocol::{
     CastFailed, InventoryChannel, InventoryError, InventoryErrorReason, ItemLocation, UseItem,

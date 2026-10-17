@@ -14,13 +14,13 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
             .min_by_key(|row| (row.level, row.ability))
             .map_or(0, |row| row.ability)
     });
-    if species == 1145 {
-        let wall = catalog
+    if species == 2621 {
+        let call = catalog
             .species_abilities
             .iter()
-            .find(|row| row.species == species && row.ability == 479 && row.level <= level)
-            .expect("Authored Ice Barrier option must be unlocked");
-        abilities[wall.slot as usize] = wall.ability;
+            .find(|row| row.species == species && row.ability == 2283 && row.level <= level)
+            .expect("Authored Dragon's Call option must be unlocked");
+        abilities[call.slot as usize] = call.ability;
     }
     abilities
 }
@@ -28,8 +28,8 @@ fn fixture_abilities(catalog: &Catalog, species: u32, level: u8) -> [u32; 3] {
 fn seed_fixture_pets(catalog: &Catalog) -> (PetJournal, BTreeMap<u64, serde_json::Value>) {
     let mut journal = PetJournal::default();
     let mut states = BTreeMap::new();
-    for (guid, species) in [(41, 1145), (42, 39), (43, 39)] {
-        let level = 25;
+    for (guid, species) in [(41, 2621), (42, 2621), (43, 2621)] {
+        let level = 2;
         journal
             .add_with_guid(species, level, PetQuality::Rare, 3, guid)
             .unwrap();
@@ -69,6 +69,7 @@ fn save_fixture_pets(journal: &PetJournal, states: &BTreeMap<u64, serde_json::Va
 }
 
 #[test]
+#[ignore = "Writes the stopped, owned private5961 journal; run deliberately with --ignored"]
 fn seed_owned_private_effect_journal() {
     main();
 }
@@ -80,6 +81,6 @@ fn main() {
     let (journal, states) = seed_fixture_pets(&catalog);
     save_fixture_pets(&journal, &states);
     println!(
-        "Seeded private account1: Mr. Bigglesworth1145 Ice Barrier479 plus two Mechanical Squirrel39 reserves; not acquisition proof"
+        "Seeded private account1: three level2 Lil' Nefarian2621 with authored Dragon's Call2283; not acquisition proof"
     );
 }
