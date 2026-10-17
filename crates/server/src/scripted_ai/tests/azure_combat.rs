@@ -37,8 +37,21 @@ fn wake_leymor() -> (Harness, Entity) {
 fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() {
     let (mut h, leymor) = wake_leymor();
     let player = h.player();
+    // Population fixtures otherwise park the player at the Serpent's distant spawn.
+    let position = *h.app.world().get::<Position>(leymor).unwrap();
+    h.app.world_mut().entity_mut(player).insert(position);
     h.engage(leymor);
     h.advance(9.8);
+    assert!(h.app.world().get::<Health>(player).unwrap().current > 0.0);
+    assert_eq!(
+        (Ctx {
+            world: h.app.world_mut(),
+            me: leymor,
+        })
+        .victim(),
+        Some(player),
+        "source combat clock has an actual living victim"
+    );
     assert!(!h.has_aura(player, INFUSED_STRIKE));
     assert_eq!(h.casts(0, leymor, INFUSED_STRIKE), 0);
     h.advance(0.3);
