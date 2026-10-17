@@ -1,6 +1,6 @@
 ## 2026-10-16 — Native required caster aura-spell admission
 
-[Spell casting](systems/spell-casting.md#native-required-caster-aura-spell-admission--2026-10-16): actual Voidform/Sheilun casts and two-second cloud loss RED3pass/6fail9.05s precede the shared caster identity check. Positive heal, recipient/expiry/NPC/full-trigger controls included. Initial23/24 exposed a fixture's incorrect empty-GCD expectation; the actual native205406/category133/1500ms packet is now asserted exactly, without production changes. Current merged52/final gates pending. Target322109→1221044 notification producer remains unqualified and is not invented.
+[Spell casting](systems/spell-casting.md#native-required-caster-aura-spell-admission--2026-10-16): actual Voidform/Sheilun casts and two-second cloud loss RED3pass/6fail9.05s precede the shared caster identity check. Positive heal, recipient/expiry/NPC/full-trigger controls included. Initial23/24 exposed a fixture's incorrect empty-GCD expectation; the actual native205406/category133/1500ms packet is now asserted exactly, without production changes. Current merged52/0/0 passes19.79s, cold rebuild416.895s/0warnings; fmt/manual Rust readability pass, workspace/all-target check pending. Target322109→1221044 notification producer remains unqualified and is not invented.
 
 ## 2026-10-16 — Native excluded aura-spell admission
 
