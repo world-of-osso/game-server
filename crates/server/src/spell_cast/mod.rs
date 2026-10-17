@@ -62,6 +62,8 @@ pub mod creature;
 #[cfg(test)]
 mod creature_trigger_aura_tests;
 #[cfg(test)]
+mod creature_trigger_dead_caster_tests;
+#[cfg(test)]
 mod creature_type_damage_tests;
 #[cfg(test)]
 mod critical_block_tests;
