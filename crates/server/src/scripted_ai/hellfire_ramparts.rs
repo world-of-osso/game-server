@@ -89,8 +89,16 @@ impl CreatureAi for Gargolmar {
     }
 
     fn on_spell_cast(&mut self, ctx: &mut Ctx, spell_id: u32) {
-        if spell_id == REQUEST_HEAL {
-            ctx.talk(1);
+        match spell_id {
+            REQUEST_HEAL => ctx.talk(1),
+            SURGE => {
+                // TC OnSpellCast rolls independently of Surge's impact result.
+                let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+                if roll < 50 {
+                    ctx.talk(2);
+                }
+            }
+            _ => {}
         }
     }
 
