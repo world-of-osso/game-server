@@ -26,6 +26,23 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY, literal_expressions)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_native_killed_level_zero_retains_demon_and_rejects_unavailable_sources(self):
+        criteria = {107647: dict(self.criteria[1], Type='78', Asset='0', ModifierTreeId='390445')}
+        mods = {390445: node(0, 4, amount=1),
+                390446: node(390445, 2, 21, 0, amount=1),
+                390447: node(390445, 2, 30, 3, amount=1)}
+        self.assertEqual(self.compile(mods, criteria), {107647: [None, ((21, 0), (30, 3))]})
+        self.assertEqual(self.compile({**mods, 390448: node(390445, 2, 999, 1)}, criteria), {})
+        for kind in ('0', '17', '29', '54', '70', '74', '110', '165'):
+            criteria[107647]['Type'] = kind
+            self.assertEqual(self.compile(mods, criteria), {})
+        criteria[107647]['Type'] = '78'
+        for field, value in [('Operator', '3'), ('Asset', '1'),
+                             ('SecondaryAsset', '1'), ('TertiaryAsset', '1')]:
+            invalid = copy.deepcopy(mods)
+            invalid[390446][field] = value
+            self.assertEqual(self.compile(invalid, criteria), {})
+
     def test_positive_world_state_keeps_literal_identity_and_every_native_cast_companion(self):
         criteria = {43403: dict(self.criteria[1], Type='29', Asset='314318', ModifierTreeId='12710')}
         mods = {12710: node(0, 4), 12711: node(12710, 2, 67, 5497)}
