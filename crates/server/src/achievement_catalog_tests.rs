@@ -1407,9 +1407,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    // Installed70391: 5517 + native Hug247 + both faction-specific Call to Arms.
+    // Imported70391: native Hug, Call to Arms and seven complete type35 roots.
     // Structural union, not queue/admission, travel or acquisition proof.
-    assert_eq!(union.len(), 5520);
+    assert_eq!(union.len(), 5527);
+    assert!(union.contains(&1261), "authored ten-kill G.N.E.R.D. Rage");
     assert!(union.contains(&247), "native dead hostile player Hug");
     for achievement in [908, 909, 18202, 18203, 18205, 18206] {
         assert!(
