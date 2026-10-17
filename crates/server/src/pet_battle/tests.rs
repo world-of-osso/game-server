@@ -60,7 +60,7 @@ fn fixture_db() -> Connection {
 fn pet_battle_locked_ability_slots_cannot_be_used() {
     let catalog = catalog();
     let stats = calculate_stats(&catalog, 39, 3, 3, 1).unwrap();
-    let pet = Pet::new(&catalog, 39, stats, 9, [110, 0, 0], States::new()).unwrap();
+    let pet = Pet::new(&catalog, 39, 1, stats, 9, [110, 0, 0], States::new()).unwrap();
     let team = Team {
         pets: [pet.clone(), pet.clone(), pet],
         active: 0,
@@ -110,10 +110,11 @@ fn battle(catalog: &Catalog, family: usize, target_family: usize, abilities: [u3
         power: 100,
         speed: 100,
     };
-    let caster = Pet::new(catalog, 39, stats, family, abilities, States::new()).unwrap();
+    let caster = Pet::new(catalog, 39, 1, stats, family, abilities, States::new()).unwrap();
     let target = Pet::new(
         catalog,
         39,
+        1,
         stats,
         target_family,
         [110, 119, 123],
