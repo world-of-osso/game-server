@@ -69,8 +69,16 @@ impl CreatureAi for Omor {
     }
 
     fn on_spell_cast(&mut self, ctx: &mut Ctx, spell_id: u32) {
-        if spell_id == DEMONIC_SHIELD {
-            ctx.talk(5);
+        match spell_id {
+            SUMMON_HOUND => {
+                // TC OnSpellCast: roll_chance(30), independent of summon lifetime.
+                let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+                if roll < 30 {
+                    ctx.talk(0);
+                }
+            }
+            DEMONIC_SHIELD => ctx.talk(5),
+            _ => {}
         }
     }
 

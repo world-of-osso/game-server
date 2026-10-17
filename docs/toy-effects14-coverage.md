@@ -1,5 +1,30 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source145–149: procedural/control/script and tea-table boundaries (2026-10-17)
+
+| Source row | Exact retained source gap |
+|---|---|
+|145 Detoxified Blight Grenade166785/290225 | Projectile32/target25 triggers290224: zero dummy4,300000ms aura, visual84035/state kit108567. Besides model attachments, the kit authors procedural358152/type1 with Value0=5107264/Value2=1. Complete target-coating behavior remains unproved; neither ordinary projectile transport nor a generic zero-aura admission establishes it. Source parent speed10 and inherited600000ms spell recovery are metadata, not new timing/appearance acceptance. |
+|146 Sentinel's Glaive166787/290247 and147 Shredder Blade166788/290267 | Both pair149640/149646 summons with caster dummy4; property4621 is Control4/Title0/flags1048576. The special control/spinning action remains unimplemented. Source models328(weight0)/70050(weight1) do not authorize an ordinary actor or copied generic caster animation. |
+|148 Highborne Memento166790/290280 | Two zero dummy3 self slots. Authored caster attachments, animation365173 and sounds125986/125987 are not sufficient to establish the described possession script/action. No invented transform, control behavior or visual-only admission. |
+|149 Bewitching Tea Set166808/290483 | Published149865 remains absent and explicitly retained as a gap. Source149865/90552/scale1/weight1 resolves M2 FDID1852946, `8hu_kultiras_tablesmall02.m2`; source47 radius73=1.5yd,300000ms actor duration and900000ms item recovery. Authentic table metadata alone is not publication or passing actual-use evidence. No149865 producer admission, copied database publication, food interaction or native presentation claim. |
+
+Exact roots/authoring fields: `rows145-149-{readonly-source,action-source}.json`; Tea Set source/body/publication preflight: `tea149-readonly-preflight.json`. Controlled omission probes remain negative evidence only: maintained-copy importer fails on missing149865 (1.652s); actual-use comparison passes135 and refuses149 at missing149865 (1 pass/1 fail,44.15s). `tea149-proof-ledger.json` records those exact scopes. The positive draft is retained outside the passing suite;135's fixture is restored byte-identically to published0942f73d. No149 admission or positive lifecycle proof, no runtime/importer/canonical change for this source packet, and no full-toy/native recertification.
+
+## Source140–144: Brewfest hearthstone and corpse/appearance boundaries (2026-10-17)
+
+140 Brewfest Reveler's Hearthstone166747/286353 already uses homebind252,10s cast and shared2309 charge, with item recovery-1/spell recovery0/GCD1500. One additional actual bag-learning/UseToy case uses the existing saved-bind fixture: missing bind refuses before spending, a displaced caster returns to the hydrated persisted bind after the authored cast, charge max1/current0/recharge1800000ms is reported, and Fire Eater139 then refuses. Health/model remain unchanged. All seven holiday source cases pass7/7 zero ignored54.85s at0d73204d; no production patch or manufactured RED. Exact command/revision and separate build/format evidence live in `hearth140-proof-ledger.json` and contracts/check/fmt logs; prior135–139/Scarab scopes remain distinct.
+
+Native Brewfest procedural357992/357995 type17/Value1=33864, wire/pixels/audio, cross-map behavior and natural30min recharge remain unproved. Simulation acceptance does not certify complete hearthstone presentation.
+
+| Source row | Exact retained gap |
+|---|---|
+|141 Lion's Pride166777/290152 and142 Horde's Might166778/290151 fireworks | Both dummy3 roots use source22/corpse-area-enemy93. Descriptions require fresh corpses of the opposite-faction player. Selector93, freshness/faction/player eligibility and the corpse firework action are not established by generic caster fireworks or raid-corpse119 handling; no substituted self firework. |
+|143 Transmorpher Beacon166779/290154 | Usable root is LegacySlot1 and combines149596/property4345 summon,64→294433 and77. Published149596 is absent; TDB has75007 but npcflag0/empty AI/script fields.294433 is area-aura65/dummy4; advertised20min290215 is dummy4 plus64→297571, itself dummy4. The appearance-choice/service/script action remains unresolved, not an ordinary NPC plus invented menu or appearance. |
+|144 Narassin's Soul Gem166784/290219 | Source explicit any-unit target25 dummy4 lasts5000ms and explicitly requires a dead target. Dead-target eligibility and soul trapping remain unestablished; no generic self cosmetic or living-target substitute. |
+
+Sources `rows140-144-{readonly-source,action-source}.json`, `transmorpher143-child297571-source.json` retain exact bindings and inspected TDB rows. Local pinned `SharedDefines.h` names93 `TARGET_CORPSE_SRC_AREA_ENEMY`; the toy policy does not infer its missing semantics from a nearby selector. No new template/importer/canonical changes or native/full-toy claim.
+
 ## Source135–139: Goldtusk table, retained bowl, RC gaps and Fire Eater (2026-10-17)
 
 135 Goldtusk Inn Breakfast Buffet166703/289533 has one ordinary source149876/90570 table: faction35/flags0, empty click/AI/script fields, DisplayScale0.5/Probability0 and M2 FDID963107 (`6hu_magetower_table01.m2`). Source instant cast,47/radius15=3yd,300000ms duration and600000ms item recovery. Maintained-importer RED atcc3fa6fc omits149876 (1 failure,4.539s); real bag-learning/UseToy RED refuses `effect 28, missing summon creature 149876` (1 failure,39.14s). Exact one-entry scenery admission at e860a60d preserves the authentic template/model rather than synthesizing table flags, food or interaction.
@@ -12,7 +37,7 @@ Importer identity/scale/idempotence passes1/1,2.554s; actual learned use passes1
 
 Atb697271b/protocol7a3f9c0, final bounded9 tests pass zero ignored147.33s:135 table, six holiday hearthstones including139,136 bowl and126 Personal Anchor refusal. Maintained importer preservation/idempotence/rollback controls pass3/3,6.268s; package/tests check2m04s, fmt/manual changed-line readability clean without warnings. No whole-Toy repeat or native certificate. Exact RED/GREEN/final commands/revisions remain in `breakfast135-{proof-ledger,final-proof-ledger,protocol-alignment}.json`, use/import/final-contracts/check/fmt logs and `hearth139-visual-source.json`.
 
-COPY-only dry-run receipt `breakfast135-canonical-copy-receipt.json` starts at canonical SHA25648e60d673ac15e6b4403c95f6c1e8f82708680f402d9e47cc310d23c985098b4 and produces8f27e3923fc8539042627d38098fe5aae6ef482078528ef9cb1f72bbd3c2ca18. Exactly149876 and its one90570/0.5/0.0 model row are added; no existing runtime template/model/addon/item rows are removed or changed, and no addon/item rows are added. Integrity check passes; canonical hash remains48e60d67. Canonical publication remains lead-owned and pending landing, not performed by this agent.
+COPY-only dry-run receipt `breakfast135-canonical-copy-receipt.json` starts at canonical SHA25648e60d673ac15e6b4403c95f6c1e8f82708680f402d9e47cc310d23c985098b4 and produces8f27e3923fc8539042627d38098fe5aae6ef482078528ef9cb1f72bbd3c2ca18. Exactly149876 and its one90570/0.5/0.0 model row are added; no existing runtime template/model/addon/item rows are removed or changed, and no addon/item rows are added. At dry-run time integrity passed and the original canonical remained48e60d67. After lead gate432 (270 passed), the lead independently reproduced the receipt hash and published8f27e392, with backup `world.db.pre-toy135-20261017` (channel635). Agent read-only hash/model verification matches the copy's output and exact149876/90570/0.5/0.0 row; `breakfast135-publication-ack.json` records that acknowledgment. Canonical publication was performed by the lead, not this agent.
 
 ## Source130–134: companion/weapon/healer/corpse/music boundaries (2026-10-17)
 
