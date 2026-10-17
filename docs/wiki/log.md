@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source180–184 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source180184-retained-midnightsign-proof-and-equipment-gaps-2026-10-17): retain earlier Shadescale learned-use/aura/cancel and both warning-sign actor/native expiry scopes without claiming native midnight or sign message carving/extended visibility. Dining/naga-equipment procedural payloads remain gaps. No runtime/data admission, native recertification or duplicate gate.
+
 ## 2026-10-17 — Memory178–179 lifecycle acceptance
 
 [Exact175–179 matrix](../toy-effects14-coverage.md#source175179-retained-props-collection-gap-and-memory-transforms-2026-10-17): existing runtime Unshackled/Ankoan transforms gain actual-learning/source-pool/ordinary600000ms restoration and inherited3600000ms recovery acceptance. Eight tests/12IDs120.25s, native check33.49s/no compiler warnings and fmt/readability pass at59d1527ce. No production/data change or fabricated RED. Heart/Trophy earlier scopes retained; Mechagon collection action/native/all-model proof remain separate.
