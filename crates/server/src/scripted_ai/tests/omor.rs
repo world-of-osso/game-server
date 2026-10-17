@@ -24,7 +24,8 @@ fn encounter_coverage_omor_orbital_two_candidates_knocks_one_and_clears_its_thre
     let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let players = [h.players[0].0, h.players[1].0];
-    for (player, gap) in players.into_iter().zip([3.0, 8.0]) {
+    // Outside the source4.5yd contact-retreat boundary, still within20yd Orbital.
+    for (player, gap) in players.into_iter().zip([5.0, 8.0]) {
         h.app.world_mut().entity_mut(player).insert((
             map,
             Position {
@@ -556,11 +557,12 @@ fn encounter_coverage_omor_caster_retreats_from_contact_without_melee() {
 
 #[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
-    let (mut h, boss, map) = bound_boss(17308, 543, 0);
+    let (mut h, boss, map) = orbital_fixture();
     let origin = *h.app.world().get::<Position>(boss).unwrap();
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(Position {
-        x: origin.x + 3.0,
+        // Source melee range, but outside4.5yd caster retreat; dedicated3yd case covers retreat.
+        x: origin.x + 5.0,
         ..origin
     });
     let mut visibility = crate::interest::NetworkVisibility::default();

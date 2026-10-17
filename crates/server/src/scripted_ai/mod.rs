@@ -18,6 +18,7 @@
 pub(crate) mod azure_vault;
 pub mod boss_ai;
 pub mod bossmod;
+pub(crate) mod caster_chase;
 pub mod creature_text;
 pub mod event_map;
 pub(crate) mod hellfire_ramparts;
@@ -109,6 +110,9 @@ impl Plugin for ScriptedAiPlugin {
                         .after(movement::point_movement_system)
                         .after(waypoint_path::path_movement_system)
                         .before(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
+                    caster_chase::advance
+                        .after(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
                     kings_rest::update_gold_follows
                         .after(update_creature_ai)
