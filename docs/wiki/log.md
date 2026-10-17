@@ -1,6 +1,6 @@
 ## 2026-10-17 — Literal world-state source boundary
 
-[Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN/integration pending, missing Mephistroth/Warfront/raid availability unclaimed.
+[Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN2bcef1424/4 proves both full-five-spell grants/reopened dates plus false/pin/Gilneas controls. Final integration pending; missing Mephistroth/Warfront/raid availability unclaimed.
 
 ## 2026-10-17 — Launch Rocket setup and launch
 

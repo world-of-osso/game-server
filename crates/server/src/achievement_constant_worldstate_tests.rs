@@ -18,7 +18,12 @@ const ALLIANCE: [(u32, u32); 5] = [
     (314319, 42138),
 ];
 
-fn spawn_casts(db: redb::Database, character: u64, race: u8, casts: &[(u32, u32)]) -> Harness {
+fn spawn_leader_cast_harness(
+    db: redb::Database,
+    character: u64,
+    race: u8,
+    casts: &[(u32, u32)],
+) -> Harness {
     let saved = persistence::load_achievements(&db, character);
     let spells: Vec<_> = casts.iter().map(|(spell, _)| *spell).collect();
     let mut h = harness_with_plugins(vec![], &spells, 1, false, |app| {
@@ -60,7 +65,7 @@ fn achievements_criteria_constant67_native_full_leaders_keep_companions_and_date
         let (character, _) =
             persistence::create_character(&db, 17, "Leaderproof", race, 1).unwrap();
         let (foreign, _) = persistence::create_character(&db, 18, "Nonleader", race, 1).unwrap();
-        let mut h = spawn_casts(db, character, race, &casts);
+        let mut h = spawn_leader_cast_harness(db, character, race, &casts);
         assert!(!crate::spell_cast::try_cast_triggered(
             h.app.world_mut(),
             h.caster,
@@ -144,7 +149,7 @@ fn achievements_criteria_constant67_native_full_leaders_keep_companions_and_date
                 .criteria_progress
                 .is_empty()
         );
-        let h = spawn_casts(db, character, race, &casts);
+        let h = spawn_leader_cast_harness(db, character, race, &casts);
         assert_eq!(
             h.app
                 .world()
