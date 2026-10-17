@@ -11,6 +11,10 @@ lightyear = { version = "0.28", features = ["client", "netcode", "replication", 
 clap = { version = "4", features = ["derive"] }
 dirs = "6"
 
+[dev-dependencies]
+# Inspect the owning player's replicated position for the private combat workload.
+bevy_replicon = { version = "0.41.1", default-features = false, features = ["client"] }
+
 [[bin]]
 name = "game-cli"
 path = "src/bin/game_cli.rs"

@@ -34,6 +34,7 @@ struct Participant {
 
 pub(super) fn update_battleground_objectives(world: &mut World) {
     let actors = read_participants(world);
+    let arathi_resources = super::honor::read_arathi_resource_counters(world);
     let isle_resources = super::honor::read_isle_resource_counters(world);
     let alterac_towers = super::honor::read_alterac_tower_counters(world);
     let changed = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
@@ -45,6 +46,7 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
             })
             .collect::<Vec<_>>()
     });
+    super::honor::award_arathi_resource_gains(world, arathi_resources);
     super::honor::award_isle_resource_gains(world, isle_resources);
     super::honor::award_alterac_tower_changes(world, alterac_towers);
     credit_objective_events(world);
