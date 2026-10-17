@@ -1,6 +1,6 @@
 ## 2026-10-16 — Eligible victim class52
 
-[Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN pending.
+[Victim class reward](systems/dungeon-achievements.md#eligible-victim-class52): native missing2359 and account max-vs-sum RED; batched35/53/52 with exact1..13 catalog support. Full thirteen-class GREEN2/2; structural5530/1841 adds245 only.
 
 ## 2026-10-16 — Eligible victim race53
 
