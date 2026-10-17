@@ -1,8 +1,12 @@
+- [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Remaining geometry scans](investigations/server-tick-lag.md#remaining-geometry-scans-2026-10-16) — dormant wake-aware detection/resize and live collision membership indexing; bounded 50-control proof.
 - [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
+
+- [Bench pet resurrection112](systems/pet-battle-engine.md#bench-resurrection112--2026-10-16) — bounded2347/2348, real persisted-dead-state boundary, RED4→GREEN4 and both-skin2347; native2348 remains unproved.
+- [Azure Frost Bomb hooks](investigations/follower-data.md#azure-frost-bomb--2026-10-16) — sourced finite hit/expiry chain and target-derived ground; native6+3 controls/check/fmt pass, full Telash/Leymor phases and full-Azure acceptance open.
 
 - [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
 
@@ -24,6 +28,8 @@
 
 - [Follower group reward receipts](investigations/follower-data.md#group-reward-receipts--2026-10-15) — actual generated loot/roll diagnostics distinguish eligible empty results from unclaimed native UI offers.
 - [Autoattack-only critical chance](systems/auras.md#autoattack-only-critical-chance-2026-10-16) — native334 signed caster-only consumer, ordinary-cast RED→GREEN4 plus36 adjacent controls; Avenging Wrath290 remains separate, full talents/fresh UDP open.
+- [Stampwhistle assistant/mailbox](systems/toys.md#stampwhistle-source-assistant-and-mailbox-2026-10-16) — authentic132969/Assistant35 mailbox service/600s simulation expiry;143 Toy+49 affected+3 importer controls pass, canonical template publication/native rendering separate.
+
 - [Sightless detection consumer](systems/toys.md#sightless-detection-consumer-2026-10-16) — actual journal152 RED→GREEN; existing native12yd/7yd hostile acquisition and source10min lifecycle proof, wire/rendering separate.
 
 - [Waywatcher source lifecycle](systems/toys.md#waywatcher-source-lifecycle-2026-10-16) — current99572 learned-use acceptance1/1, source Val'sharah/15s/900s behavior and private18-asset closure; canonical publication/rendering separate.
