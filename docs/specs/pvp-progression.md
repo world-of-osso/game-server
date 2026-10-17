@@ -39,7 +39,7 @@ Pinned raw sources (prefix `https://raw.githubusercontent.com/TrinityCore/Trinit
 
 ## Sourced weekly counters — 70391
 
-Honor1792 and Conquest1602 both author MaxEarnablePerWeek0 and do not set ComputedWeeklyMaximum0x4. Following TC Player::GetCurrencyWeeklyCap/ModifyCurrency, zero means no static weekly allowance and new gains must not increment week_earned. Positive weekly caps still clamp accepted gains and count only the actual accepted amount. Existing historical counters are preserved; no unsourced weekly reset clock or Conquest season limit is introduced. The shared wallet implements this rule; persistence must retain zero counters for new uncapped PvP entries.
+Honor1792 and Conquest1602 both author MaxEarnablePerWeek0 and do not set ComputedWeeklyMaximum0x4. Following TC Player::GetCurrencyWeeklyCap/ModifyCurrency, zero means no static weekly ceiling and new gains must not increment week_earned. Positive weekly caps still clamp accepted gains and count only the actual accepted amount. Existing historical counters are preserved; no unsourced weekly reset clock or Conquest season limit is introduced. The shared wallet implements this rule; persistence must retain zero counters for new uncapped PvP entries.
 
 Authority: TC a352b1fa Player.cpp7131–7166/7357–7360, DBCEnums.h currency flags, current authenticated70391 CurrencyTypes. Exact source hashes/commands and the expected300-versus0 RED are in game-engine `data/diagnostics/pvp-progression-2026-10-16/earned-awards/`.
 
