@@ -2,6 +2,10 @@
 
 [Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. [94–98 continuation](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retains nearby reaction, spectral/headwear procedural, corpse ritual and return/catch gaps. [99–103 matrix](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) retains historical Cooler/Gong proof and exact missing Kovork/procedural gaps. No runtime admission; merged55-case proof unchanged.
 
+## 2026-10-17 — Oomgut source lifecycle
+
+[Actual learned use](systems/toys.md#oomgut-source-transform-lifecycle-2026-10-17) proves existing transform/ordinary ten-minute expiry and longer recovery without a production change. New plus existing transform2/2 and bounded source-contract14/14 pass; check/fmt clean. Native/all17/wall-clock claims remain excluded; RC105–106 and procedural107 remain gaps.
+
 ## 2026-10-17 — Forlorn/charge merge
 
 [Focused merge proof](../toy-effects14-coverage.md#forlorncharge-master-integration-2026-10-17): preserve effect96 movement-duration hit ordering and destination-only flight/front47; merged55/55 pass with actual protocol master. Lead published matching Forlorn template receipt; no new full-suite/native-parity claim.

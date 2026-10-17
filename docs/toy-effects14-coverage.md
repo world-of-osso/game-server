@@ -725,3 +725,21 @@ Root/visual/procedural sources: `rows94-98-readonly-source.json`, `rows94-98-act
 |103 Molok Morion163775/280133 | Self dummy4/visual80534; aura kit103447 includes procedural357590 type17/Value1=9859. Ordinary head model attachments do not establish this operation; retain explicit procedural gap. |
 
 Source/proof records: `rows99-103-{readonly-source,action-source,source-proof-ledger}.json`. The two existing real-ID tests pass in retained85 whole-Toy150 proof (`forlorn85-final-whole-toys.log`, codea6605052); that is not a new post-merge all-Toy/native certificate. Current merged55 focused proof remains separate. No runtime/canonical change or duplicate broad gate.
+
+## Oomgut104 existing transform lifecycle (2026-10-17)
+
+163795/280308 already admits authentic132902 Oomgut Transform; no importer/runtime fix or fabricated RED. Pinned TDB model rows author17 choices, each weight1/scale1:32087/32090/32089/32088/37141/32093/32096/32095/32094/87994/32102/32100/32099/32113/32116/32115/32114. Source self transform56/misc[132902,8], instant cast, duration600000ms and item recovery7200000ms.
+
+New actual bag-learning/UseToy test at12e5b021 observes a source display, exact ten-minute aura duration and two-hour cooldown report. Ordinary50ms frames retain that same display just before expiry, then remove the aura/restore prior model with unchanged health; recovery refuses use both immediately and after appearance expiry. Focused new test plus existing transform-cancel control pass2/2,39.08s. Bounded final batch14/14 zero ignored155.06s covers Oomgut plus actual caster-art contracts (including Cooler100) and all12 Group28 source cases (including Gong101). Package/tests check1m13s and fmt/manual new-test readability pass, no warnings. Production unchanged; no full-Toy repeat or invented fix. `oomgut104-{active-goal,action-source,proof-ledger}.json`, `oomgut104-focused.log`, `oomgut104-final-source-contracts.log`, `oomgut104-check.log` retain scope.
+
+One model observed per run is not all17 sampling or native body/animation/wire/pixels/audio acceptance. Ten minutes here is simulation time, not wall-clock certification; natural two-hour recovery passage remains untested. Canonical data untouched.
+
+## Source105–108 control/headwear/banner boundaries (2026-10-17)
+
+| Source row | Exact boundary / proof level |
+|---|---|
+|105–106 Toy Siege Tower163828/280190 and Toy War Machine163829/280196 | Summons143744/143749/property3629 Control3/faction1616/Title0/flags4; both also author self auras25/321/37, misc85. Description requires remote control/action-bar attacks against other toys. Ordinary source actors or caster immobility do not implement possession/combat; retain `summon control3 title0` refusal. |
+|107 Whiskerwax Candle163924/280632 | Dummy aura4/misc[132902,8], not Oomgut's transform56 despite matching misc values. Conditional visuals80684/80685 author aura kits103667/103668 with procedural357608/357609 type17/Value1=163922/163923. No generic candle attachment or copied Oomgut transformation substitutes for this payload. |
+|108 Orgrimmar Hero's War Banner163986/280827 | Existing actual bag-learning/source144025/display88125 test includes wrong-faction refusal, source47/player-reach front placement and ordinary actor lifecycle alongside Alliance/seasonal controls. Retained85 whole-Toy150 log contains that contract; the new14-case batch does not re-certify banner108 or native presentation. |
+
+Exact root/action records `rows104-108-readonly-source.json`, `rows105-108-action-source.json`; unsupported RC/headwear cases remain open, not full-toy completion.

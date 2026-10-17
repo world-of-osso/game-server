@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Oomgut source transform lifecycle (2026-10-17)
+
+Actual163795 learned use already works with132902; new test proves source display membership, ten-minute ordinary-frame expiry/model restoration and reported two-hour recovery remaining active afterward. No production patch or invented RED. [Exact scoped14-case proof and exclusions](../../toy-effects14-coverage.md#oomgut104-existing-transform-lifecycle-2026-10-17) distinguish simulation acceptance from all17 native appearances and wall-clock recovery. [105–108 boundaries](../../toy-effects14-coverage.md#source105108-controlheadwearbanner-boundaries-2026-10-17) retain RC possession/headwear gaps and prior Hero Banner proof.
+
 ## Forlorn Toll destination-only flight (2026-10-16)
 
 163463/279223 triggers279222 after source1.5s cast+3s fixed missile flight, then one143222 source soul. Genuine importer RED precedes exact one-entry/ten-model admission; actual learned-use RED finds early arrival because front47 was unrecognized and unit-only delay storage discarded unitless destination flight. The existing scheduler now retains that delay without a fake target or toy-ID special case. Real cast/flight, source display membership/front,30s recovery/reuse and coexisting independent60s lifetimes pass. Whole-Toy150/150, affected49/49, importer3/3 and check/fmt pass. [Exact revisions, current-copy publication receipt and boundaries](../../toy-effects14-coverage.md#forlorn-toll85-source-summon-2026-10-16) distinguish server timing from all-ten native appearances, ghost/wandering semantics and complete-toy parity; canonical template publication remains lead-owned.
