@@ -20,9 +20,13 @@
 ## 2026-10-16 — Bench pet resurrection112
 
 [Sourced Raise Dead/Mass Resurrection](../pet-battle-effect-coverage.md#bench-resurrection112--implementation2026-10-16): four actual112 rows, inactive-slot routing and zero-HP owned-load state. RED3+persisted-redb1→GREEN4;1756→1760/2829 rows (62.07→62.21%),1006→1008 graphs. Both-skin private5961 actual2347 shows both78/1563 reserves, pointer swap and real147-damage win; eight fullHD originals inspected. Canonical78-asset closure/strict loader readback and final lib91/wild-PvP22/UI12/check/fmt pass; stale sibling `/hug` compilation drift resolved by lead-authorized fast-forward, no gameplay patch. Generic resurrection semantics remain gated.
+## 2026-10-16 — Leymor intro and non-following formation depletion
+
+[Source boundary](investigations/follower-data.md#azure-leymor-intro--2026-10-16): genuine startup/NPC RED4, then startup1PASS/actual-depletion3RED, then source groupAI0 membership/per-copy key4/one-second wake375749 and NPC mask pass. At6ae44dc0, five intro cases include removed leader and copy/reinitialize isolation; three Brand and six Frost controls pass14/14,0ignored. Independent source/artifact/readability and both format gates pass; scopedcheck/protocol unit control pending. Historical70391 proof, not70448 native acceptance or full boss phases.
+
 ## 2026-10-16 — Leymor Brand expiry hook
 
-[Source boundary](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16): native Brand374567 applied/expired but omitted374570 in genuine8049cebc RED; two controls passed. Finite source expiry hook5f1418c2 passes native3/3, fmt and independent source/artifact gate; shared Frost controls/check queued. Complete Leymor/native acceptance pending.
+[Source boundary](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16): native Brand374567 applied/expired but omitted374570 in genuine8049cebc RED; two controls passed. Finite source expiry hook5f1418c2 passes native3/3, fmt and independent source/artifact gate; six shared Frost controls and zero-warning server check pass. Complete Leymor/native acceptance pending.
 
 ## 2026-10-16 — Azure finite Frost Bomb chain
 
@@ -1708,4 +1712,9 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Content268 integrated gate at a8d4d866 passes217/0/1existingignored +site1/1; serverworkspace/alltargetcheckEXIT0/noRustwarnings. Native100 grants908/909 and strengthened89participation guard pass; readability/independentartifactPASS.
 - 2026-10-16: Final geometry proof: 50 controls pass, warning-free check, unchanged 187770-creature idle debug sustains 19.9–20.0 ticks/s; detection 1.891 ms/step, resize/collision out of top15; private published-schema refresh recorded in [[server-tick-lag]].
 
+- 2026-10-16: Five residual idle systems reproduced with full-population/layout REDs before production changes; existing exclusive queries cached for three topology-discovery costs in [[server-tick-lag]].
+
+- 2026-10-16: All five residual idle microbenchmarks GREEN (6.2–7.4 µs/five updates); merged 86/86 controls pass with b701f32 protocol, live release acceptance pending in [[server-tick-lag]].
+
+- 2026-10-16: Residual idle release acceptance: b701f32/11 real UDP peers/full187770-creature population holds20.0–20.1Hz,weightedmean19.93ms; all5RED→GREEN+86controls/check retained, pressure-heavy first run documented in [[server-tick-lag]].
 - 2026-10-16: [Corgi and Rezan source boundaries](systems/toys.md#corgi-and-rezan-source-boundaries-2026-10-16): corrected sparse-fixture learned-use proof; genuine effect3 refusal before exact272071 cosmetic admission; native catalog source resolution, not audible playback. Chili/Enthralling stay named gaps; whole-Toy144/144 and current check/fmt/readability pass. Canonical393 classification includes separate lead template publication, not393 complete toys.
