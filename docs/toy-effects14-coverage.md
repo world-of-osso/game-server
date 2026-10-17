@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source205–209: area/vision/companion boundaries and retained Aqir proof (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|205 Void-Touched Souvenir Totem174924/317938 | Cursor87 missile32 triggers317217, whose source78 effect179 creates area trigger19143 for120000ms; root inherits1800000ms spell recovery. This is not an ordinary summon28 totem. Area-trigger placement and described critter growth/anger remain unproved; no generic NPC or visual substitute. |
+|206 Overly Sensitive Void Spectacles174926/317222 | Self aura233/misc4653/157 lasts600000ms with1800000ms item recovery; visual94081 includes procedural360113/type17/Value1=34847. Specific void-threat perception/headgear behavior remains unresolved; raw aura/model metadata does not authorize a caster cosmetic, blanket model replacement or invented detection rules. |
+|207 Rotten Apple174928/317252 | Source78 summon163068/property4819/120000ms with1800000ms item recovery. Runtime content163068 is absent; source94231/94232 alternatives both have scale2/weight1, and4819 is Control1/Title2/flags67592. Actual source actor/routing/lifecycle remains unproved; no ordinary stationary apple substitute or extra interaction invented from the description. |
+|208 Void Tendril Pet Leash174995/317219 | Permanent dummy4 targets90, with1500ms item recovery. Pinned90 is target-minipet, distinct from own-critter150. Specific minipet selection/ownership/leash presentation remains unproved; no self aura, player-body attachment or generic pet-viewer substitute. |
+|209 Aqir Egg Cluster175063/318453 | Source25 missile32 triggers318452's target25 dummy4/15000ms, inheriting60000ms spell recovery. Retain existing source10 actual-learning/missile-trigger/selected-target/ordinary15s-aura fixture. This source-order revisit adds no new target swarm/native body/audio certificate or full-Toy proof. |
+
+Exact roots, reachable children, properties/durations, visual/procedural data and actual runtime-content/source model rows: `rows205-209-{readonly-source,action-source}.json`. Pinned `SharedDefines.h` identifies179 as create-area-trigger and90 as target-minipet; current source10 fixture preserves209's earlier bounded CPU contract. Read-only source/documentation only, with no new runtime/data/importer/canonical admission or repeated unchanged gate.
+
 ## Source200–204: pending Mogu acceptance and companion/equipment/game boundaries (2026-10-17)
 
 201 Trans-mogu-rifier174873/305123 already has runtime156286 with authentic92868/92880/92874/92871 choices. Source self transform56/misc8 lasts600000ms with3600000ms item/spell recovery. Test/spec924bcde11 adds this exact pool to the existing actual-learning/ordinary-expiry/restoration/health/recovery fixture, now six disguise IDs. Fmt/manual changed-line readability/diffcheck pass; owned native-helper disguise/Oomgut tests are still running and package/tests check is pending in `mogu201-proof-ledger.json`. This is not passing201 acceptance, native all-four presentation or full one-hour recovery proof; no production patch or manufactured RED.

@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source205–209 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source205209-areavisioncompanion-boundaries-and-retained-aqir-proof-2026-10-17):205 creates area trigger19143, not a generic totem NPC; vision233, Control1/Title2 scale2 apple and minipet-target leash remain gaps.209 retains the earlier actual missile/selected-target/15s-aura CPU scope; no fresh native proof, runtime/data admission or duplicate gate.
+
 ## 2026-10-17 — Toy source200–204 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source200204-pending-mogu-acceptance-and-companionequipmentgame-boundaries-2026-10-17):201 exact Mogu pool/lifecycle test/spec924bcde11 remains pending execution/check, fmt/readability pass. Companion-control description reference is not an executable child edge; headgear/shaving/skull-game actions remain gaps. Existing163441/95179 half-scale content is not missing publication or successful interaction. No production/data change or fabricated RED/native proof.
