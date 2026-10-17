@@ -14,6 +14,7 @@
 // Criteria SHA256 5c63e0bcb9b6f77a9bf4d2f562109acf373fa7d1ce97f749a20612a6152e67eb.
 // ModifierTree SHA256 9afe5f7734828630b7088be5c5f1f5c36f954a86ea85305927b298a502bb5b90.
 // Difficulty SHA256 e5ca0536f7488bd637bff55329ed94eb191ddbe19015929633d9594c1fb8468d.
+// WorldStateExpression SHA256 69416ba7fa70a8ab36945239bafc02661abe1541d3cbc7edd45e4ec0f7415af8.
 use super::{CompiledConditions, DifficultyRule};
 
 pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<CompiledConditions> {
@@ -145,10 +146,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[],
-        }),
-        (3693, 33) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 5719)],
         }),
         (3701, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -393,51 +390,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(8, 26274)],
         }),
-        (3881, 785) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 65607), (16, 0), (67, 4546)],
-        }),
         (3882, 630) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 48890)],
-        }),
-        (3936, 1899) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 44827), (67, 1368)],
-        }),
-        (3937, 1893) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 44825), (67, 1368)],
-        }),
-        (3938, 1896) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 44824), (67, 1368)],
-        }),
-        (4071, 54) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 45123), (67, 7523)],
-        }),
-        (4090, 254) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 1368)],
-        }),
-        (4230, 407) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 55000), (67, 1368)],
-        }),
-        (4240, 464) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 5818)],
-        }),
-        (4244, 1511) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 5820)],
         }),
         (4948, 68) => Some(CompiledConditions::All {
             difficulty: None,
@@ -778,10 +733,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (5272, 3316) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 36648), (67, 1368)],
-        }),
         (5274, 242) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(17, 1637)],
@@ -867,14 +818,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (5542, 339) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(24, 3), (60, 0)],
-        }),
-        (5601, 333) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 2304)],
-        }),
-        (5603, 482) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 2303)],
         }),
         (5608, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -1042,98 +985,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (6142, 341) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(15, 4)],
-        }),
-        (6225, 2116) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 5661), (67, 1368)],
-        }),
-        (6226, 2110) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 26044), (67, 1368)],
-        }),
-        (6228, 1156) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 739), (67, 1368)],
-        }),
-        (6229, 1153) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 927), (67, 1368)],
-        }),
-        (6230, 1150) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 1444), (67, 1368)],
-        }),
-        (6231, 1144) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 8140), (67, 1368)],
-        }),
-        (6232, 1138) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 5489), (67, 1368)],
-        }),
-        (6233, 1141) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 12336), (67, 1368)],
-        }),
-        (6234, 1147) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 1351), (67, 1368)],
-        }),
-        (6235, 1159) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 5484), (67, 1368)],
-        }),
-        (6237, 500) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 2), (28, 6), (67, 1368)],
-        }),
-        (6238, 515) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 1), (28, 1), (67, 1368)],
-        }),
-        (6239, 530) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 6), (28, 7), (67, 1368)],
-        }),
-        (6240, 510) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 4), (28, 11), (67, 1368)],
-        }),
-        (6241, 505) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 5), (28, 4), (67, 1368)],
-        }),
-        (6242, 520) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 8), (28, 3), (67, 1368)],
-        }),
-        (6243, 525) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 7), (28, 8), (67, 1368)],
-        }),
-        (6244, 535) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 3), (28, 2), (67, 1368)],
-        }),
-        (6245, 490) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 10), (28, 9), (67, 1368)],
-        }),
-        (6246, 495) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(5, 0), (27, 11), (28, 5), (67, 1368)],
-        }),
-        (6247, 254) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 1368)],
-        }),
-        (6248, 254) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 1368)],
-        }),
-        (6249, 254) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 1368)],
         }),
         (6302, 94) => Some(CompiledConditions::All {
             difficulty: None,
@@ -1312,10 +1163,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(41, 1519)],
         }),
-        (6662, 2113) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 31261), (67, 1368)],
-        }),
         (6789, 637) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 6686)],
@@ -1330,13 +1177,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[(29, 9)],
-        }),
-        (6803, 2485) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6230)],
         }),
         (6805, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -1857,278 +1697,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[(29, 9)],
         }),
-        (7231, 1335) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6312)],
-        }),
-        (7264, 2131) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6319)],
-        }),
-        (7265, 1188) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6323)],
-        }),
-        (7316, 1369) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6327)],
-        }),
-        (7317, 1185) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6328)],
-        }),
-        (7318, 1651) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6330)],
-        }),
-        (7320, 2035) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6331)],
-        }),
-        (7321, 2482) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6333)],
-        }),
-        (7323, 1191) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6334)],
-        }),
-        (7324, 1960) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6335)],
-        }),
-        (7325, 542) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6336)],
-        }),
-        (7328, 602) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6352)],
-        }),
-        (7329, 1242) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6353)],
-        }),
-        (7330, 1660) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6354)],
-        }),
-        (7331, 1948) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6352)],
-        }),
-        (7332, 1235) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6353)],
-        }),
-        (7333, 2038) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6354)],
-        }),
-        (7359, 1341) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6362)],
-        }),
         (7494, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[2, 4, 39],
             }),
             facts: &[],
-        }),
-        (7548, 1311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6319)],
-        }),
-        (7549, 1486) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6323)],
-        }),
-        (7567, 1741) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6414)],
-        }),
-        (7568, 1963) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6414)],
-        }),
-        (7577, 1320) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6421)],
-        }),
-        (7579, 1716) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6420)],
-        }),
-        (7583, 1489) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6423)],
-        }),
-        (7587, 1447) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6424)],
-        }),
-        (7590, 1249) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6425)],
-        }),
-        (7593, 1363) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6427)],
-        }),
-        (7595, 1508) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6429)],
-        }),
-        (7598, 1939) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6428)],
-        }),
-        (7600, 1719) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6431)],
-        }),
-        (7601, 1730) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6431)],
-        }),
-        (7604, 1492) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6433)],
-        }),
-        (7605, 2119) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6433)],
-        }),
-        (7612, 1323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6436)],
-        }),
-        (7613, 1326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6436)],
-        }),
-        (7614, 1344) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6438)],
-        }),
-        (7615, 1945) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6438)],
         }),
         (7625, 1554) => Some(CompiledConditions::All {
             difficulty: None,
@@ -2145,14 +1719,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (7634, 1594) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(67, 6448)],
-        }),
-        (7636, 1826) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6450)],
-        }),
-        (7666, 1828) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6452)],
         }),
         (7704, 1822) => Some(CompiledConditions::All {
             difficulty: None,
@@ -2173,10 +1739,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (7708, 1820) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 49719)],
-        }),
-        (7740, 1808) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6451)],
         }),
         (7805, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -2587,10 +2149,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(122, 2)],
         }),
-        (9058, 1571) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6577)],
-        }),
         (9118, 1596) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(17, 543)],
@@ -2772,14 +2330,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[2, 4, 39],
             }),
             facts: &[],
-        }),
-        (9838, 3316) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 36648), (67, 1368)],
-        }),
-        (9839, 3316) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 36648), (67, 1368)],
         }),
         (9939, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -2998,20 +2548,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (10044, 1618) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6917)],
-        }),
-        (10045, 1372) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6917)],
-        }),
         (10046, 1252) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -3053,245 +2589,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[2, 4, 39],
             }),
             facts: &[(8, 62309)],
-        }),
-        (10054, 737) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6916)],
-        }),
-        (10055, 1302) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6916)],
-        }),
-        (10056, 1404) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6919)],
-        }),
-        (10057, 961) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6918)],
-        }),
-        (10058, 1591) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6920)],
-        }),
-        (10059, 1409) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6918)],
-        }),
-        (10060, 1131) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6920)],
-        }),
-        (10061, 1412) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6919)],
-        }),
-        (10062, 958) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6900)],
-        }),
-        (10063, 1793) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6900)],
-        }),
-        (10068, 1036) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6977)],
-        }),
-        (10069, 1314) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6977)],
-        }),
-        (10074, 1203) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6913)],
-        }),
-        (10075, 1517) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6913)],
-        }),
-        (10082, 661) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6971)],
-        }),
-        (10083, 661) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6971)],
-        }),
-        (10084, 661) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6971)],
-        }),
-        (10085, 1093) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6971)],
-        }),
-        (10086, 1093) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6971)],
-        }),
-        (10087, 1093) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6971)],
-        }),
-        (10088, 954) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(8, 58501), (67, 6971)],
-        }),
-        (10089, 947) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(8, 58501), (67, 6971)],
-        }),
-        (10090, 1308) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6972)],
-        }),
-        (10091, 1332) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6972)],
-        }),
-        (10095, 2052) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6878)],
-        }),
-        (10099, 1585) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6886)],
-        }),
-        (10133, 798) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6888)],
-        }),
-        (10173, 1197) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6889)],
-        }),
-        (10184, 1200) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6929)],
-        }),
-        (10185, 605) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6892)],
-        }),
-        (10187, 679) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(4, 33134), (67, 6791)],
-        }),
-        (10189, 1238) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(4, 33134), (67, 6792)],
-        }),
-        (10218, 1027) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6921)],
-        }),
-        (10219, 1030) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6921)],
-        }),
-        (10220, 1170) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 24216)],
         }),
         (10223, 1050) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -3335,34 +2632,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[(8, 62807), (8, 62821)],
         }),
-        (10243, 1176) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6823)],
-        }),
-        (10279, 780) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6785)],
-        }),
-        (10285, 2049) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6878)],
-        }),
-        (10286, 1579) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6886)],
-        }),
         (10287, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -3377,47 +2646,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (10290, 1375) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6888)],
-        }),
-        (10296, 1317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6892)],
-        }),
         (10304, 1062) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[(8, 62320)],
-        }),
-        (10305, 3032) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6895)],
-        }),
-        (10306, 923) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6889)],
-        }),
-        (10309, 1179) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6895)],
         }),
         (10311, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -3439,52 +2673,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[2, 4, 39],
             }),
             facts: &[(8, 62320)],
-        }),
-        (10321, 614) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6760)],
-        }),
-        (10322, 608) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6761)],
-        }),
-        (10323, 611) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6762)],
-        }),
-        (10324, 816) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6760)],
-        }),
-        (10325, 819) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6761)],
-        }),
-        (10326, 822) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6762)],
-        }),
-        (10388, 918) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6909)],
         }),
         (10394, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -3514,20 +2702,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (10399, 1173) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6823)],
-        }),
-        (10400, 676) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6930)],
-        }),
         (10405, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -3541,104 +2715,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[],
-        }),
-        (10409, 1393) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6968)],
-        }),
-        (10410, 1033) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6969)],
-        }),
-        (10412, 734) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6785)],
-        }),
-        (10414, 777) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6969)],
-        }),
-        (10415, 1099) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6909)],
-        }),
-        (10416, 1102) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6968)],
-        }),
-        (10418, 954) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(8, 58501), (67, 6971)],
-        }),
-        (10419, 954) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(8, 58501), (67, 6971)],
-        }),
-        (10420, 947) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(8, 58501), (67, 6971)],
-        }),
-        (10421, 947) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(8, 58501), (67, 6971)],
-        }),
-        (10422, 1308) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6972)],
-        }),
-        (10423, 1308) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6972)],
-        }),
-        (10424, 1332) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6972)],
-        }),
-        (10425, 1332) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6972)],
         }),
         (10430, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -3654,157 +2730,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (10440, 813) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6676)],
-        }),
-        (10441, 134) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 42928), (67, 1368)],
-        }),
-        (10442, 134) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 42928), (67, 1368)],
-        }),
-        (10443, 134) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 42928), (67, 1368)],
-        }),
-        (10445, 1264) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6926)],
-        }),
-        (10447, 1096) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6980)],
-        }),
-        (10448, 1576) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6981)],
-        }),
-        (10449, 670) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6982)],
-        }),
-        (10450, 718) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6853)],
-        }),
-        (10451, 1548) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6983)],
-        }),
-        (10457, 695) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6676)],
-        }),
-        (10459, 926) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6980)],
-        }),
-        (10460, 1105) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6981)],
-        }),
-        (10461, 724) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6982)],
-        }),
-        (10462, 1194) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6983)],
-        }),
-        (10463, 1387) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6853)],
-        }),
         (10542, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[2, 4, 39],
             }),
             facts: &[],
-        }),
-        (10543, 906) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6883)],
-        }),
-        (10544, 909) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6885)],
-        }),
-        (10545, 912) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6884)],
-        }),
-        (10546, 792) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6883)],
-        }),
-        (10547, 795) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6885)],
-        }),
-        (10548, 789) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6884)],
         }),
         (10558, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -3875,34 +2806,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[2, 4, 39],
             }),
             facts: &[],
-        }),
-        (10678, 1390) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7000)],
-        }),
-        (10758, 1073) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6926)],
-        }),
-        (10800, 813) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6676)],
-        }),
-        (10801, 695) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6676)],
         }),
         (10999, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -4258,49 +3161,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(10, 65403)],
         }),
-        (11238, 727) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7091)],
-        }),
-        (11420, 1126) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7384)],
-        }),
-        (11779, 683) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7289)],
-        }),
-        (11780, 664) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7290)],
-        }),
-        (11789, 810) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7291)],
-        }),
-        (11801, 667) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7290)],
-        }),
-        (11802, 686) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7289)],
-        }),
         (11803, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -4315,215 +3175,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (11838, 1041) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7303)],
-        }),
-        (11839, 1108) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7304)],
-        }),
         (11858, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[2, 4, 39],
             }),
             facts: &[],
-        }),
-        (11861, 1044) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7303)],
-        }),
-        (11862, 1111) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7304)],
-        }),
-        (11863, 876) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7307)],
-        }),
-        (11904, 828) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7308)],
-        }),
-        (11905, 879) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7309)],
-        }),
-        (11906, 882) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7310)],
-        }),
-        (11907, 831) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7311)],
-        }),
-        (11908, 885) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7312)],
-        }),
-        (11909, 834) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7313)],
-        }),
-        (11910, 837) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7314)],
-        }),
-        (11911, 840) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7315)],
-        }),
-        (11912, 888) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7316)],
-        }),
-        (11913, 843) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7317)],
-        }),
-        (11914, 846) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7318)],
-        }),
-        (11915, 891) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7319)],
-        }),
-        (11916, 849) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7320)],
-        }),
-        (11917, 852) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7321)],
-        }),
-        (11918, 855) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7322)],
-        }),
-        (11919, 894) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7323)],
-        }),
-        (11920, 858) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7324)],
-        }),
-        (11921, 861) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7325)],
-        }),
-        (11922, 897) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7326)],
-        }),
-        (11923, 864) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7327)],
-        }),
-        (11924, 867) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7328)],
-        }),
-        (11925, 870) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7329)],
-        }),
-        (11926, 900) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7330)],
-        }),
-        (11927, 873) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7331)],
         }),
         (12018, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -4568,10 +3225,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (12230, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
         (12231, 139) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -4593,10 +3246,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (12236, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
         (12237, 43) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -4611,20 +3260,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (12240, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
         (12241, 43) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[5],
             }),
             facts: &[],
-        }),
-        (12242, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
         }),
         (12243, 139) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -4633,20 +3274,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (12244, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
         (12245, 43) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[5],
             }),
             facts: &[],
-        }),
-        (12246, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
         }),
         (12247, 139) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -4683,29 +3316,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (12298, 1118) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7385)],
-        }),
-        (12299, 1120) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7386)],
-        }),
-        (12300, 1122) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7387)],
-        }),
-        (12301, 1124) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7388)],
-        }),
-        (12320, 649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7386)],
-        }),
         (12350, 825) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -4726,69 +3336,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[6],
             }),
             facts: &[(2, 924), (67, 3785)],
-        }),
-        (12538, 801) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7384)],
-        }),
-        (12539, 658) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7384)],
-        }),
-        (12540, 1208) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7388)],
-        }),
-        (12541, 655) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7388)],
-        }),
-        (12542, 804) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7387)],
-        }),
-        (12543, 652) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7387)],
-        }),
-        (12544, 689) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7385)],
-        }),
-        (12545, 646) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7385)],
-        }),
-        (12546, 692) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7386)],
         }),
         (12548, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -4839,38 +3386,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (12562, 307) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7427)],
-        }),
-        (12565, 1514) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7441)],
-        }),
-        (12566, 951) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7442)],
-        }),
-        (12568, 1128) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7441)],
-        }),
-        (12569, 1842) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7442)],
-        }),
         (12658, 1785) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(4, 86832)],
@@ -4903,68 +3418,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(4, 17468)],
         }),
-        (12752, 1523) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7860)],
-        }),
-        (12757, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12758, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12759, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12760, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12761, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12762, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12763, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12764, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12770, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12771, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12772, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12773, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (12775, 2961) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7704)],
-        }),
         (12776, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -4972,260 +3425,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (12777, 2457) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7873)],
-        }),
-        (12778, 1902) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7869)],
-        }),
-        (12780, 2251) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 71949), (67, 7453)],
-        }),
-        (12822, 2530) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7834)],
-        }),
-        (12823, 1678) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7889)],
-        }),
-        (12909, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12945, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12946, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12947, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12948, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12949, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12950, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12951, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12952, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12953, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12954, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12955, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (12962, 1782) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7704)],
-        }),
-        (12966, 2063) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7817)],
-        }),
-        (12967, 1836) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7824)],
-        }),
-        (12968, 1799) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7826)],
-        }),
-        (12969, 2264) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7867)],
-        }),
-        (12971, 1805) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7827)],
-        }),
-        (12972, 1813) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7834)],
-        }),
-        (12976, 2689) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7812)],
-        }),
-        (12977, 2174) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7824)],
-        }),
-        (12978, 2159) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7827)],
-        }),
-        (12979, 2162) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7827)],
-        }),
-        (12980, 1802) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7827)],
-        }),
-        (12981, 1796) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7826)],
-        }),
-        (12982, 1833) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7824)],
-        }),
-        (12983, 2066) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7817)],
-        }),
-        (12984, 1882) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7817)],
-        }),
-        (12985, 1879) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7817)],
-        }),
-        (12986, 2171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7824)],
-        }),
-        (12987, 2314) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7826)],
-        }),
-        (12988, 2311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7826)],
-        }),
-        (12989, 1810) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7834)],
-        }),
-        (12993, 2539) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7858)],
-        }),
-        (12994, 1957) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7859)],
-        }),
         (12995, 43) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[5],
             }),
             facts: &[],
-        }),
-        (12996, 2527) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7834)],
         }),
         (12997, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -5240,81 +3445,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[6],
             }),
             facts: &[],
-        }),
-        (13011, 2254) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 70871), (67, 7453)],
-        }),
-        (13012, 2492) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 71949), (67, 7454)],
-        }),
-        (13013, 2495) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 70871), (67, 7454)],
-        }),
-        (13032, 2267) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7867)],
-        }),
-        (13033, 1642) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7867)],
-        }),
-        (13034, 1645) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7867)],
-        }),
-        (13035, 1905) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7869)],
-        }),
-        (13036, 2104) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7895)],
-        }),
-        (13037, 2107) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7895)],
-        }),
-        (13079, 2454) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7873)],
-        }),
-        (13080, 2463) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7873)],
-        }),
-        (13081, 2466) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7873)],
         }),
         (13090, 43) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -5484,20 +3614,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (13163, 1675) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7889)],
-        }),
-        (13164, 2148) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7889)],
-        }),
         (13166, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -5609,41 +3725,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[2, 4, 39],
             }),
             facts: &[],
-        }),
-        (13243, 2145) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7889)],
-        }),
-        (13244, 2168) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 7946)],
-        }),
-        (13245, 2165) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7946)],
-        }),
-        (13246, 2014) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 7946)],
-        }),
-        (13247, 2017) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7946)],
         }),
         (13254, 141) => Some(CompiledConditions::All {
             difficulty: None,
@@ -5891,14 +3972,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (13326, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (13327, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
         (13331, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -6004,14 +4077,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (13347, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
-        (13348, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
         (13351, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -6096,28 +4161,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (13393, 2958) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[5],
-            }),
-            facts: &[(67, 7704)],
-        }),
-        (13394, 1779) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[6],
-            }),
-            facts: &[(67, 7704)],
-        }),
-        (13451, 1640) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7454)],
-        }),
-        (13453, 2273) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7453)],
-        }),
         (13465, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -6194,27 +4237,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(46, 5)],
         }),
-        (15943, 2832) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 8770)],
-        }),
-        (15944, 3393) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 8772)],
-        }),
-        (15947, 2139) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 8773)],
-        }),
         (15989, 2838) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -6277,10 +4299,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (16040, 398) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(268, 818)],
-        }),
-        (16082, 2343) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 8831)],
         }),
         (16187, 2702) => Some(CompiledConditions::All {
             difficulty: None,
@@ -7211,50 +5229,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(32, 761)],
         }),
-        (17576, 3065) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 9423)],
-        }),
-        (17780, 3531) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 1637), (67, 1368)],
-        }),
-        (17781, 3534) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 3487), (67, 1368)],
-        }),
-        (17782, 3525) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 1638), (67, 1368)],
-        }),
-        (17783, 3528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 1497), (67, 1368)],
-        }),
-        (17784, 1424) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 1537), (67, 1368)],
-        }),
-        (17785, 1421) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 3557), (67, 1368)],
-        }),
-        (17786, 1415) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 1657), (67, 1368)],
-        }),
-        (17787, 1418) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(17, 1519), (67, 1368)],
-        }),
-        (17792, 3067) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 4708)],
-        }),
-        (17804, 3537) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 9463)],
-        }),
         (17805, 2789) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 96543)],
@@ -7575,30 +5549,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(27, 22), (28, 4)],
         }),
-        (18407, 3182) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 11573)],
-        }),
-        (18500, 3507) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 9906)],
-        }),
         (18545, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[],
-        }),
-        (18546, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
         }),
         (18547, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -7607,26 +5563,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (18548, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
-        }),
         (18549, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[],
-        }),
-        (18550, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
         }),
         (18551, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -7635,26 +5577,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (18552, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
-        }),
         (18553, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[],
-        }),
-        (18554, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
         }),
         (18555, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -7663,13 +5591,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (18556, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
-        }),
         (18557, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -7677,26 +5598,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (18558, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
-        }),
         (18559, 27) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[1, 3, 38, 236],
             }),
             facts: &[],
-        }),
-        (18560, 234) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 9987)],
         }),
         (18561, 43) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -7810,78 +5717,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (18608, 3352) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 9987)],
-        }),
-        (18652, 1114) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 9954)],
-        }),
-        (18672, 2956) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 10014)],
-        }),
-        (18687, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18688, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18689, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18690, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18691, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18692, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18693, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18694, 3171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 10004)],
-        }),
-        (18860, 3523) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 11335)],
-        }),
         (18971, 598) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 861)],
@@ -7906,20 +5741,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (19015, 3354) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 11572)],
-        }),
         (19083, 25) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[2, 4, 39],
             }),
             facts: &[],
-        }),
-        (19105, 3051) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(8, 127762), (67, 12630)],
         }),
         (19109, 4063) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -7949,17 +5776,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (19147, 2041) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 11747)],
-        }),
-        (19212, 7192) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12408)],
-        }),
         (19264, 3706) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(4, 62989)],
@@ -7967,10 +5783,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (19265, 3708) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(4, 62990)],
-        }),
-        (19340, 6400) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12579)],
         }),
         (19361, 4608) => Some(CompiledConditions::All {
             difficulty: None,
@@ -9162,10 +6974,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(8, 128401)],
         }),
-        (20588, 4606) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12282)],
-        }),
         (20675, 641) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(46, 5)],
@@ -9409,17 +7217,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (21023, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
         (21047, 5086) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 128959)],
-        }),
-        (21122, 7182) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12505)],
         }),
         (21165, 30518) => Some(CompiledConditions::All {
             difficulty: None,
@@ -9648,10 +7448,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (21329, 5502) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(4, 65206)],
-        }),
-        (21344, 5514) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12547)],
         }),
         (21345, 354) => Some(CompiledConditions::All {
             difficulty: None,
@@ -10094,38 +7890,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(41, 5840)],
         }),
-        (21499, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
-        (21500, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
-        (21501, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
-        (21502, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
-        (21503, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
-        (21504, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
-        (21505, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
-        (21506, 5741) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12562)],
-        }),
         (21529, 4782) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(41, 406)],
@@ -10384,30 +8148,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(2, 924)],
         }),
-        (21845, 6444) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12583)],
-        }),
-        (21846, 6446) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12585)],
-        }),
-        (21864, 6478) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12604)],
-        }),
-        (21865, 6478) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12604)],
-        }),
-        (21866, 6480) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12606)],
-        }),
-        (21867, 6480) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12606)],
-        }),
         (21872, 4608) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 923)],
@@ -10447,10 +8187,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(2, 18643)],
         }),
-        (22242, 6728) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12671)],
-        }),
         (22274, 4063) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -10483,25 +8219,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (22535, 7255) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 13120)],
-        }),
         (22536, 354) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(67, 3785)],
-        }),
-        (22544, 7270) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 13147)],
-        }),
-        (22545, 7272) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 13146)],
-        }),
-        (22546, 7274) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 13155)],
         }),
         (22578, 7280) => Some(CompiledConditions::All {
             difficulty: None,
@@ -10614,14 +8334,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (22613, 7280) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 132633)],
-        }),
-        (22615, 7282) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 13172)],
-        }),
-        (22616, 7284) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 13173)],
         }),
         (22800, 3651) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -11385,36 +9097,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (23367, 11928) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 14104)],
-        }),
-        (23397, 11932) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 14110)],
-        }),
-        (23398, 11932) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 14110)],
-        }),
-        (23416, 798) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2, 4, 39],
-            }),
-            facts: &[(67, 6888)],
-        }),
-        (23417, 1375) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[1, 3, 38, 236],
-            }),
-            facts: &[(67, 6888)],
-        }),
-        (23422, 56680) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 21051)],
-        }),
         (23423, 11944) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(16, 0), (17, 6665)],
@@ -11562,10 +9244,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (23742, 12595) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 22946)],
-        }),
-        (23771, 12299) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 12630), (67, 14396)],
         }),
         (23785, 4394) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -12282,10 +9960,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(67, 5497)],
         }),
-        (24192, 12712) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 14662)],
-        }),
         (24193, 4394) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -12327,14 +10001,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[6],
             }),
             facts: &[],
-        }),
-        (24582, 13901) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15117)],
-        }),
-        (24595, 13899) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15059)],
         }),
         (24628, 14363) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -12407,13 +10073,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (24682, 14800) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2],
-            }),
-            facts: &[(67, 15278)],
-        }),
         (24683, 14716) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -12434,13 +10093,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[7, 17],
             }),
             facts: &[],
-        }),
-        (24754, 15063) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[2],
-            }),
-            facts: &[(67, 15402)],
         }),
         (24788, 15192) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -13027,10 +10679,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (25746, 17374) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 16068)],
-        }),
         (25788, 4610) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 924)],
@@ -13296,78 +10944,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (27282, 19364) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15529)],
-        }),
-        (27283, 19364) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15529)],
-        }),
-        (27284, 19364) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15529)],
-        }),
-        (27285, 19364) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15529)],
-        }),
-        (27286, 19364) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15529)],
-        }),
-        (27287, 19364) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15529)],
-        }),
-        (27288, 19366) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15530)],
-        }),
-        (27289, 19366) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15530)],
-        }),
-        (27290, 19366) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15530)],
-        }),
-        (27291, 19366) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15530)],
-        }),
-        (27292, 19366) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15530)],
-        }),
-        (27293, 19366) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15530)],
-        }),
-        (27294, 15547) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15531)],
-        }),
-        (27295, 19368) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15531)],
-        }),
-        (27296, 19368) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15531)],
-        }),
-        (27297, 19368) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15531)],
-        }),
-        (27298, 19368) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15531)],
-        }),
-        (27299, 19368) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 15531)],
-        }),
         (27426, 18427) => Some(CompiledConditions::PlayerAuras(&[
             174069, 174454, 174455, 174456, 174457,
         ])),
@@ -13513,30 +11089,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (27542, 20557) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 179256)],
-        }),
-        (27586, 19789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17230)],
-        }),
-        (27587, 19789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17230)],
-        }),
-        (27588, 19789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17230)],
-        }),
-        (27589, 19789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17230)],
-        }),
-        (27590, 19789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17230)],
-        }),
-        (27591, 19789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17230)],
         }),
         (27625, 19889) => Some(CompiledConditions::PlayerAuras(&[
             172762, 188244, 188245, 188246, 188247, 192473,
@@ -14313,13 +11865,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             (17, 5732),
             (41, 4945),
         ])),
-        (28004, 21171) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[7, 17],
-            }),
-            facts: &[(67, 17420)],
-        }),
         (28052, 3651) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: false,
@@ -14429,10 +11974,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (28201, 22111) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17567)],
-        }),
         (28238, 22189) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -14489,13 +12030,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (28289, 22193) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 17573)],
-        }),
         (28309, 22189) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -14537,13 +12071,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[23],
             }),
             facts: &[],
-        }),
-        (28379, 22207) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 17575)],
         }),
         (28401, 22323) => Some(CompiledConditions::All {
             difficulty: None,
@@ -15365,18 +12892,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (30402, 31644) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 19495)],
-        }),
-        (30478, 31860) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 19533)],
-        }),
-        (30479, 31860) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 19533)],
-        }),
         (30562, 35364) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -15428,10 +12943,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(26, 12)],
         }),
-        (30977, 34279) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 19884)],
-        }),
         (31005, 22971) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(17, 267)],
@@ -15450,13 +12961,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[14, 15, 16],
             }),
             facts: &[],
-        }),
-        (31044, 34726) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 20014)],
         }),
         (31310, 34998) => Some(CompiledConditions::All {
             difficulty: None,
@@ -15480,14 +12984,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[23],
             }),
             facts: &[],
-        }),
-        (31370, 35330) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17662), (67, 20104)],
-        }),
-        (31371, 35337) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 20107), (67, 29926)],
         }),
         (31380, 31440) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -15671,13 +13167,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (31446, 35678) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 20152)],
-        }),
         (31454, 14716) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -15747,10 +13236,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[16],
             }),
             facts: &[],
-        }),
-        (31465, 35711) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 20154)],
         }),
         (31592, 36463) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -16365,44 +13850,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (32385, 40031) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[1, 2],
-            }),
-            facts: &[(67, 20382)],
-        }),
         (32452, 33553) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(26, 12)],
-        }),
-        (32453, 53622) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 21794)],
-        }),
-        (32454, 40146) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 22639)],
-        }),
-        (32455, 53617) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 21794)],
-        }),
-        (32456, 40149) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 22639)],
         }),
         (32742, 16425) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -16900,18 +14350,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (33093, 42404) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 20614)],
-        }),
-        (33104, 713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7199)],
-        }),
-        (33105, 1673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7198)],
-        }),
         (33106, 31440) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: false,
@@ -17230,40 +14668,12 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(87, 10460)],
         }),
-        (34536, 34726) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 20014)],
-        }),
         (34552, 15979) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
                 ids: &[2, 8, 23],
             }),
             facts: &[],
-        }),
-        (34613, 47100) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[8, 23],
-            }),
-            facts: &[(67, 20685)],
-        }),
-        (34614, 47102) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[8, 23],
-            }),
-            facts: &[(67, 20686)],
-        }),
-        (34615, 47104) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[8, 23],
-            }),
-            facts: &[(67, 20687)],
         }),
         (34623, 47214) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -17353,10 +14763,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[23],
             }),
             facts: &[],
-        }),
-        (34822, 49263) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 21105)],
         }),
         (34824, 16423) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -17800,20 +15206,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (35488, 339) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(24, 3), (60, 0)],
-        }),
-        (35491, 52873) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 22639)],
-        }),
-        (35493, 52878) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 22639)],
         }),
         (35630, 415662) => Some(CompiledConditions::All {
             difficulty: None,
@@ -18426,17 +15818,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             (17, 8545),
             (17, 8715),
         ])),
-        (36675, 56842) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[1, 2],
-            }),
-            facts: &[(67, 22406)],
-        }),
-        (36699, 57066) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 22426)],
-        }),
         (36840, 22189) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -18483,20 +15864,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (36911, 28727) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 205402)],
-        }),
-        (36973, 59764) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 23775)],
-        }),
-        (36974, 59769) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 23775)],
         }),
         (36987, 16423) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -18958,10 +16325,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (37470, 63340) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 23617)],
-        }),
         (37961, 41314) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(87, 10460)],
@@ -19303,13 +16666,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (38269, 67492) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 24123)],
-        }),
         (38504, 35364) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -19345,10 +16701,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (39306, 69394) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6917)],
-        }),
         (39309, 69396) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 65030)],
@@ -19361,73 +16713,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(8, 62309)],
         }),
-        (39317, 69404) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6916)],
-        }),
-        (39320, 69406) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6919)],
-        }),
-        (39326, 69408) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6918)],
-        }),
-        (39330, 69410) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6920)],
-        }),
-        (39333, 1030) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6921)],
-        }),
-        (39334, 69412) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6900)],
-        }),
-        (39345, 69414) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6977)],
-        }),
-        (39366, 1170) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 24216)],
-        }),
-        (39371, 69420) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6971)],
-        }),
-        (39374, 69420) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6971)],
-        }),
-        (39377, 69420) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6971)],
-        }),
         (39380, 69422) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 58501)],
-        }),
-        (39384, 69424) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6972)],
-        }),
-        (39388, 69426) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6878)],
-        }),
-        (39400, 69432) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6888)],
-        }),
-        (39404, 69434) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6929)],
-        }),
-        (39406, 69436) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6823)],
         }),
         (39420, 69453) => Some(CompiledConditions::All {
             difficulty: None,
@@ -19444,86 +16732,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (39442, 69470) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 62320)],
-        }),
-        (39445, 69472) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6676)],
-        }),
-        (39448, 69474) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6676)],
-        }),
-        (39468, 69476) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6926)],
-        }),
-        (39471, 69478) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6980)],
-        }),
-        (39474, 69480) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6981)],
-        }),
-        (39477, 69482) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6982)],
-        }),
-        (39478, 69484) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6883)],
-        }),
-        (39479, 69486) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6885)],
-        }),
-        (39480, 69488) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6884)],
-        }),
-        (39486, 69490) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6853)],
-        }),
-        (39490, 69494) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6983)],
-        }),
-        (39491, 69496) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 33134), (67, 6792)],
-        }),
-        (39494, 69499) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6969)],
-        }),
-        (39497, 69501) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6909)],
-        }),
-        (39500, 69503) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6968)],
-        }),
-        (39501, 69505) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6785)],
-        }),
-        (39504, 69507) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6892)],
-        }),
-        (39513, 69509) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6761)],
-        }),
-        (39514, 69511) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 6762)],
-        }),
-        (39524, 69513) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 7000)],
         }),
         (39653, 69855) => Some(CompiledConditions::All {
             difficulty: None,
@@ -19736,10 +16944,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (40182, 74630) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17662), (67, 25112)],
-        }),
         (40183, 31440) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: false,
@@ -19892,13 +17096,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[16],
             }),
             facts: &[],
-        }),
-        (40264, 93697) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 27829)],
         }),
         (40308, 354) => Some(CompiledConditions::All {
             difficulty: None,
@@ -20320,10 +17517,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(17, 8721)],
         }),
-        (40921, 80369) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 24550)],
-        }),
         (40922, 79007) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(17, 8567)],
@@ -20681,26 +17874,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(35, 0)],
         }),
-        (41678, 82485) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 16249), (67, 26583)],
-        }),
-        (42134, 82842) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 25429)],
-        }),
-        (42135, 82844) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 25428)],
-        }),
-        (42136, 82848) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 24234)],
-        }),
-        (42137, 82850) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 24233)],
-        }),
         (42138, 12710) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(67, 5497)],
@@ -20747,27 +17920,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (42255, 83799) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[8, 23],
-            }),
-            facts: &[(67, 26832)],
-        }),
-        (43144, 84712) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 16249), (67, 26878)],
-        }),
         (43158, 484) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(35, 0)],
-        }),
-        (43161, 85956) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[1, 2],
-            }),
-            facts: &[(67, 26902)],
         }),
         (43195, 86425) => Some(CompiledConditions::All {
             difficulty: None,
@@ -20809,32 +17964,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(67, 5497)],
         }),
-        (43412, 88708) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 26943)],
-        }),
         (43429, 89136) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(25, 35)],
-        }),
-        (43436, 85956) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[1, 2],
-            }),
-            facts: &[(67, 26902)],
-        }),
-        (43478, 93694) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 18177), (67, 27829)],
-        }),
-        (43479, 82846) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 25097)],
-        }),
-        (43480, 82839) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 25427)],
         }),
         (43511, 486) => Some(CompiledConditions::All {
             difficulty: None,
@@ -20921,27 +18053,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (43929, 93569) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 27804)],
-        }),
         (43952, 30518) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 5703)],
-        }),
-        (43954, 93703) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 18177), (67, 27833)],
-        }),
-        (43955, 93706) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 27833)],
         }),
         (43956, 16423) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -21167,14 +18281,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (44003, 93796) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 16249), (67, 27848)],
-        }),
-        (44004, 93796) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 16249), (67, 27848)],
-        }),
         (44034, 94067) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(17, 9616)],
@@ -21257,17 +18363,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (44056, 93703) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 18177), (67, 27833)],
-        }),
-        (44057, 93706) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 27833)],
-        }),
         (44062, 354) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(67, 3785)],
@@ -21275,13 +18370,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (44063, 30518) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 5703)],
-        }),
-        (44086, 94268) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 27903)],
         }),
         (44093, 94461) => Some(CompiledConditions::All {
             difficulty: None,
@@ -21337,10 +18425,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[17],
             }),
             facts: &[(8, 290453)],
-        }),
-        (44347, 97078) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 28234)],
         }),
         (44832, 16423) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -21796,20 +18880,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (45458, 105920) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[23],
-            }),
-            facts: &[(67, 29216), (67, 29221)],
-        }),
-        (45480, 106233) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: false,
-                ids: &[17],
-            }),
-            facts: &[(67, 29230)],
-        }),
         (45488, 3651) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: false,
@@ -21836,10 +18906,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(17, 10052)],
         }),
-        (45762, 107190) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17662), (67, 29393)],
-        }),
         (45791, 107280) => Some(CompiledConditions::PlayerLocations(&[
             (17, 10052),
             (17, 10290),
@@ -21858,48 +18924,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (45802, 107512) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[149],
-            }),
-            facts: &[(67, 25097)],
-        }),
-        (45803, 107515) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[149],
-            }),
-            facts: &[(67, 24234)],
-        }),
-        (45804, 107518) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[149],
-            }),
-            facts: &[(67, 24233)],
-        }),
-        (45806, 107521) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[149],
-            }),
-            facts: &[(67, 25427)],
-        }),
-        (45813, 107525) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[149],
-            }),
-            facts: &[(67, 25429)],
-        }),
-        (45814, 107528) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[149],
-            }),
-            facts: &[(67, 25428)],
-        }),
         (45818, 4610) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 924)],
@@ -21907,24 +18931,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (45924, 107854) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(19, 169202)],
-        }),
-        (45985, 108190) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 18177), (67, 29454)],
-        }),
-        (45986, 93706) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 27833)],
-        }),
-        (45987, 108193) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 29454)],
         }),
         (45989, 30518) => Some(CompiledConditions::All {
             difficulty: None,
@@ -22163,10 +19169,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[23],
             }),
             facts: &[],
-        }),
-        (46575, 114965) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 24551)],
         }),
         (46608, 16442) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -22703,10 +19705,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (48107, 103252) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 299486)],
-        }),
-        (48114, 134125) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(2, 83446), (67, 31598)],
         }),
         (48115, 134349) => Some(CompiledConditions::All {
             difficulty: None,
@@ -23695,73 +20693,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (51152, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51153, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51154, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51155, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51157, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51158, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51159, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51161, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51163, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51164, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51165, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51166, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51167, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
         (51168, 12710) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(67, 5497)],
-        }),
-        (51169, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51170, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51171, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
         }),
         (51172, 151371) => Some(CompiledConditions::All {
             difficulty: None,
@@ -23771,205 +20705,13 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(8, 343490)],
         }),
-        (51199, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
         (51200, 12710) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(67, 5497)],
         }),
-        (51201, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51202, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51203, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51204, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51205, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51207, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51208, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
-        }),
-        (51209, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51210, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51211, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51212, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51213, 163791) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34307)],
-        }),
-        (51214, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51215, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51216, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51217, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51218, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51219, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51220, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51221, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51222, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51223, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51224, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51225, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51226, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51227, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51228, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51229, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51230, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51231, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51232, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51233, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51234, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51235, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51236, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51237, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51238, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51239, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51240, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51241, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51242, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51244, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51245, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
-        (51246, 163793) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34309)],
-        }),
         (51510, 97933) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(268, 483)],
-        }),
-        (51541, 161100) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(4, 170651), (67, 1368)],
-        }),
-        (51672, 163970) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(2, 83446), (67, 34824)],
-        }),
-        (51673, 163789) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 34306)],
         }),
         (52191, 30518) => Some(CompiledConditions::All {
             difficulty: None,
@@ -24119,14 +20861,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (52374, 169947) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 18177), (67, 35392)],
-        }),
-        (52375, 169950) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 14806), (67, 35392)],
-        }),
         (52377, 16423) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -24274,13 +21008,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (52422, 171294) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[23],
-            }),
-            facts: &[(67, 35274)],
-        }),
         (52430, 22189) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -24291,13 +21018,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (52432, 171521) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 356860)],
-        }),
-        (52456, 171294) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[23],
-            }),
-            facts: &[(67, 35274)],
         }),
         (52460, 22189) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -25017,905 +21737,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (53276, 339) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(24, 3), (60, 0)],
-        }),
-        (53514, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53515, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53516, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53517, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53518, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53519, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53520, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53521, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53522, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53523, 190649) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53524, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53525, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53526, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53527, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53528, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53529, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53530, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53531, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53532, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53533, 190677) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53534, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53535, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53536, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53537, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53538, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53539, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53540, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53541, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53542, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53544, 190685) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36385)],
-        }),
-        (53547, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53548, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53549, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53550, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53551, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53552, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53553, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53554, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53555, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53556, 190688) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53558, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53559, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53560, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53561, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53562, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53563, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53564, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53565, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53566, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53567, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53570, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53571, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53572, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53573, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53574, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53575, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53576, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53577, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53578, 190736) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53579, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53580, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53581, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53582, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53583, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53584, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53585, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53586, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53587, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53588, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53589, 190768) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53590, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53591, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53592, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53593, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53594, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53595, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53596, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53597, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53598, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53599, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53600, 190770) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53601, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53602, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53603, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53604, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53605, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53606, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53607, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53608, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53609, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53610, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53611, 190773) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 36387)],
-        }),
-        (53612, 190728) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 36386)],
-        }),
-        (53630, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53631, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53632, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53633, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53634, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53635, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53636, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53637, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53638, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53639, 191214) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36652)],
-        }),
-        (53640, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53641, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53642, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53643, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53644, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53645, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53646, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53647, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53648, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53649, 191216) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36653)],
-        }),
-        (53650, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53651, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53652, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53653, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53654, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53655, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53656, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53657, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53658, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53659, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53660, 191218) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36654)],
-        }),
-        (53692, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53693, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53694, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53695, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53696, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53697, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53698, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53699, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53700, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53701, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53702, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53703, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53704, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53705, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53706, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53707, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53708, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53709, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53710, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53711, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53712, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53713, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53714, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53715, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53716, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53717, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53718, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53719, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53720, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53721, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
-        }),
-        (53722, 191220) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 36651)],
         }),
         (53728, 191257) => Some(CompiledConditions::All {
             difficulty: None,
@@ -27532,14 +23353,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(19, 186685)],
         }),
-        (62217, 266119) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 40367)],
-        }),
-        (62218, 266119) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 40367)],
-        }),
         (62680, 239885) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 2681)],
@@ -27555,10 +23368,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (62763, 236793) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 2664)],
-        }),
-        (63019, 241547) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17502)],
         }),
         (63063, 241856) => Some(CompiledConditions::All {
             difficulty: None,
@@ -28195,535 +24004,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (64925, 265274) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(41, 33)],
-        }),
-        (64929, 265305) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64930, 265305) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64931, 265305) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64932, 265305) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64933, 265305) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64934, 265305) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64935, 265305) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64937, 265290) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64938, 265290) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64939, 265290) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64940, 265290) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64941, 265290) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64942, 265290) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64943, 265290) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42187)],
-        }),
-        (64945, 265323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42187), (69, 70), (71, 70)],
-        }),
-        (64946, 265323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42187), (69, 70), (71, 70)],
-        }),
-        (64947, 265323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42187), (69, 70), (71, 70)],
-        }),
-        (64948, 265323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42187), (69, 70), (71, 70)],
-        }),
-        (64949, 265323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42187), (69, 70), (71, 70)],
-        }),
-        (64950, 265323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42187), (69, 70), (71, 70)],
-        }),
-        (64951, 265323) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42187), (69, 70), (71, 70)],
-        }),
-        (64957, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64958, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64959, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64960, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64961, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64962, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64963, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64964, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64965, 265311) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64966, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64967, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64968, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64969, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64970, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64971, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64972, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64973, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64974, 265295) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42188)],
-        }),
-        (64975, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64976, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64977, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64978, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64979, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64980, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64981, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64982, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64983, 265326) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42188), (69, 70), (71, 70)],
-        }),
-        (64986, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64987, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64988, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64989, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64990, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64991, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64992, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64993, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64994, 265317) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[14, 15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64995, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64996, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64997, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64998, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (64999, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (65000, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (65001, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (65002, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (65003, 265300) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[15, 16],
-            }),
-            facts: &[(67, 42189)],
-        }),
-        (65004, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65005, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65006, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65007, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65008, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65009, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65010, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65011, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65012, 265329) => Some(CompiledConditions::All {
-            difficulty: Some(DifficultyRule {
-                allowed: true,
-                ids: &[16],
-            }),
-            facts: &[(67, 42189), (69, 70), (71, 70)],
-        }),
-        (65246, 266250) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 42036)],
         }),
         (65249, 382407) => Some(CompiledConditions::All {
             difficulty: None,
@@ -30881,18 +26161,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             facts: &[(2, 120189), (4, 219227)],
         }),
         (66949, 280119) => Some(CompiledConditions::EventItems(&[217997, 217998])),
-        (67009, 282119) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41996), (67, 43696)],
-        }),
-        (67010, 282044) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41996), (67, 43042)],
-        }),
-        (67011, 282046) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41996), (67, 43094)],
-        }),
         (67179, 282539) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(69, 10)],
@@ -32040,126 +27308,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(32, 2683)],
         }),
-        (68307, 287312) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 41996), (67, 43666)],
-        }),
-        (68308, 287331) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 41996), (67, 43094)],
-        }),
-        (68309, 287334) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 41996), (67, 43094)],
-        }),
-        (68310, 287337) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2679), (67, 41996), (67, 43094)],
-        }),
-        (68311, 287340) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 41996), (67, 43094)],
-        }),
-        (68312, 287343) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 41996), (67, 43094)],
-        }),
-        (68314, 287351) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 41996), (67, 43094)],
-        }),
-        (68316, 287359) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 41996), (67, 43094)],
-        }),
-        (68317, 287362) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 41996), (67, 43094)],
-        }),
-        (68318, 287365) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 41996), (67, 43094)],
-        }),
-        (68319, 287368) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 41996), (67, 43042)],
-        }),
-        (68320, 287371) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 41996), (67, 43042)],
-        }),
-        (68321, 287374) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 41996), (67, 43042)],
-        }),
-        (68322, 287377) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2679), (67, 41996), (67, 43042)],
-        }),
-        (68323, 287380) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 41996), (67, 43042)],
-        }),
-        (68324, 287383) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 41996), (67, 43042)],
-        }),
-        (68326, 287391) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 41996), (67, 43042)],
-        }),
-        (68328, 287399) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 41996), (67, 43042)],
-        }),
-        (68329, 287402) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 41996), (67, 43042)],
-        }),
-        (68330, 287405) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 41996), (67, 43042)],
-        }),
-        (68331, 287408) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 41996), (67, 43093)],
-        }),
-        (68332, 287411) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 41996), (67, 43093)],
-        }),
-        (68333, 287414) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 41996), (67, 43093)],
-        }),
-        (68334, 287417) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2679), (67, 41996), (67, 43093)],
-        }),
-        (68335, 287420) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 41996), (67, 43093)],
-        }),
-        (68336, 287423) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 41996), (67, 43093)],
-        }),
-        (68338, 287431) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 41996), (67, 43093)],
-        }),
-        (68340, 287439) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 41996), (67, 43093)],
-        }),
-        (68341, 287442) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 41996), (67, 43093)],
-        }),
-        (68342, 287445) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 41996), (67, 43093)],
-        }),
         (68378, 287838) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -32425,53 +27573,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(32, 2682)],
         }),
-        (68635, 287952) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 41996), (67, 43666)],
-        }),
-        (68636, 287312) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 41996), (67, 43666)],
-        }),
-        (68637, 287960) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 41996), (67, 43666)],
-        }),
-        (68638, 287956) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 41996), (67, 43666)],
-        }),
-        (68639, 287964) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 41996), (67, 43666)],
-        }),
-        (68640, 287968) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 41996), (67, 43666)],
-        }),
-        (68641, 287972) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 41996), (67, 43666)],
-        }),
-        (68642, 287976) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2679), (67, 41996), (67, 43666)],
-        }),
-        (68643, 287980) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 41996), (67, 43666)],
-        }),
-        (68644, 287984) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 41996), (67, 43666)],
-        }),
         (68647, 239891) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 2682)],
-        }),
-        (68654, 288052) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43362)],
         }),
         (68656, 288082) => Some(CompiledConditions::All {
             difficulty: None,
@@ -32566,154 +27670,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (68751, 288601) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(4, 216058)],
-        }),
-        (68752, 288615) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 43182)],
-        }),
-        (68753, 288605) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 43183)],
-        }),
-        (68754, 288607) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 43184)],
-        }),
-        (68755, 288603) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 43182)],
-        }),
-        (68756, 288631) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 43183)],
-        }),
-        (68757, 288634) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 43184)],
-        }),
-        (68758, 288637) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 43182)],
-        }),
-        (68759, 288640) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 43183)],
-        }),
-        (68760, 288643) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 43184)],
-        }),
-        (68761, 288646) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 43182)],
-        }),
-        (68762, 288649) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 43183)],
-        }),
-        (68763, 288652) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 43184)],
-        }),
-        (68764, 288655) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 43182)],
-        }),
-        (68765, 288658) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 43183)],
-        }),
-        (68766, 288661) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 43184)],
-        }),
-        (68767, 288664) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 43182)],
-        }),
-        (68768, 288667) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 43183)],
-        }),
-        (68769, 288670) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 43184)],
-        }),
-        (68770, 288673) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2679), (67, 43182)],
-        }),
-        (68771, 288676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2679), (67, 43183)],
-        }),
-        (68772, 288609) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2679), (67, 43185)],
-        }),
-        (68773, 288680) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2687), (67, 43182)],
-        }),
-        (68774, 288683) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2687), (67, 43184)],
-        }),
-        (68775, 288686) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2687), (67, 43185)],
-        }),
-        (68776, 288689) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 43182)],
-        }),
-        (68777, 288692) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 43183)],
-        }),
-        (68778, 288695) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 43185)],
-        }),
-        (68779, 288698) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 43182)],
-        }),
-        (68780, 288701) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 43183)],
-        }),
-        (68781, 288704) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 43184)],
-        }),
-        (68782, 288707) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 43185)],
-        }),
-        (68783, 288710) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2689), (67, 43182)],
-        }),
-        (68784, 288713) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2689), (67, 43183)],
-        }),
-        (68785, 288716) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2689), (67, 43184)],
-        }),
-        (68786, 288719) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 43182)],
-        }),
-        (68787, 288722) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 43183)],
-        }),
-        (68788, 288732) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 43184)],
         }),
         (68818, 289152) => Some(CompiledConditions::All {
             difficulty: None,
@@ -33186,10 +28142,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(2, 5703)],
         }),
-        (69607, 434456) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 40916)],
-        }),
         (69754, 295188) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 127332), (69, 20)],
@@ -33310,30 +28262,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (70886, 239899) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 2686)],
-        }),
-        (70985, 307476) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2815), (67, 43182)],
-        }),
-        (70986, 307479) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2815), (67, 43183)],
-        }),
-        (70987, 307482) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2815), (67, 43184)],
-        }),
-        (70988, 307485) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2826), (67, 43182)],
-        }),
-        (70989, 307488) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2826), (67, 43183)],
-        }),
-        (70990, 307491) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2826), (67, 43184)],
         }),
         (70991, 307494) => Some(CompiledConditions::All {
             difficulty: None,
@@ -33730,93 +28658,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(32, 2831)],
         }),
-        (102785, 241547) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17502)],
-        }),
-        (102786, 241547) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 17502)],
-        }),
         (102951, 392762) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 2706)],
-        }),
-        (102954, 379809) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2815), (67, 41996), (67, 43093)],
-        }),
-        (102955, 379797) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2826), (67, 41996), (67, 43093)],
-        }),
-        (102956, 379805) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2826), (67, 41996), (67, 43042)],
-        }),
-        (102957, 379817) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2815), (67, 41996), (67, 43042)],
-        }),
-        (102958, 379801) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2826), (67, 41996), (67, 43094)],
-        }),
-        (102959, 379813) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2815), (67, 41996), (67, 43094)],
-        }),
-        (102963, 379848) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 43185)],
-        }),
-        (102964, 379856) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2680), (67, 45079)],
-        }),
-        (102965, 379861) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2664), (67, 45695)],
-        }),
-        (102966, 379864) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2689), (67, 45696)],
-        }),
-        (102967, 379867) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2681), (67, 45697)],
-        }),
-        (102968, 379870) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2683), (67, 45698)],
-        }),
-        (102969, 379873) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2684), (67, 45699)],
-        }),
-        (102970, 379876) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2687), (67, 45700)],
-        }),
-        (102971, 379879) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 43185)],
-        }),
-        (102972, 379882) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2685), (67, 45701)],
-        }),
-        (102973, 379885) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2688), (67, 45698)],
-        }),
-        (102974, 379888) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2690), (67, 45702)],
-        }),
-        (102975, 379904) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2686), (67, 45704)],
         }),
         (103074, 380242) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -35879,18 +30723,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(32, 2803)],
         }),
-        (105908, 404700) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2803), (67, 41996), (67, 43094)],
-        }),
-        (105909, 404704) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2803), (67, 41996), (67, 43042)],
-        }),
-        (105910, 404708) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2803), (67, 41996), (67, 43093)],
-        }),
         (106007, 289132) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -35913,30 +30745,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (106219, 405102) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 1244279)],
-        }),
-        (106370, 406657) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41996), (67, 43696)],
-        }),
-        (106371, 406660) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41996), (67, 43107)],
-        }),
-        (106401, 406715) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2803), (67, 43182)],
-        }),
-        (106402, 406718) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2803), (67, 43183)],
-        }),
-        (106403, 406721) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2803), (67, 43184)],
-        }),
-        (106404, 406724) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2803), (67, 43185)],
         }),
         (106427, 283898) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -38055,293 +32863,9 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(32, 3003)],
         }),
-        (110854, 424300) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2979), (67, 41996), (67, 43094)],
-        }),
-        (110855, 424290) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2952), (67, 41996), (67, 43094)],
-        }),
-        (110856, 424292) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2962), (67, 41996), (67, 43094)],
-        }),
-        (110857, 424298) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2963), (67, 41996), (67, 43094)],
-        }),
-        (110858, 424304) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2953), (67, 41996), (67, 43094)],
-        }),
-        (110859, 424286) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3003), (67, 41996), (67, 43094)],
-        }),
-        (110860, 424296) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2933), (67, 41996), (67, 43094)],
-        }),
-        (110861, 424302) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2965), (67, 41996), (67, 43094)],
-        }),
-        (110862, 424294) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2964), (67, 41996), (67, 43094)],
-        }),
-        (110863, 424288) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2961), (67, 41996), (67, 43094)],
-        }),
-        (110864, 424338) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2979), (67, 41996), (67, 43042)],
-        }),
-        (110865, 424328) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2952), (67, 41996), (67, 43042)],
-        }),
-        (110866, 424330) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2962), (67, 41996), (67, 43042)],
-        }),
-        (110867, 424336) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2963), (67, 41996), (67, 43042)],
-        }),
-        (110868, 424342) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2953), (67, 41996), (67, 43042)],
-        }),
-        (110869, 424324) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3003), (67, 41996), (67, 43042)],
-        }),
-        (110870, 424334) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2933), (67, 41996), (67, 43042)],
-        }),
-        (110871, 424340) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2965), (67, 41996), (67, 43042)],
-        }),
-        (110872, 424332) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2964), (67, 41996), (67, 43042)],
-        }),
-        (110873, 424326) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2961), (67, 41996), (67, 43042)],
-        }),
-        (110874, 424378) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2979), (67, 41996), (67, 50340)],
-        }),
-        (110875, 424368) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2952), (67, 41996), (67, 50340)],
-        }),
-        (110877, 424376) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2963), (67, 41996), (67, 50340)],
-        }),
-        (110878, 424382) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2953), (67, 41996), (67, 50340)],
-        }),
-        (110879, 424364) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3003), (67, 41996), (67, 50340)],
-        }),
-        (110880, 424374) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2933), (67, 41996), (67, 50340)],
-        }),
-        (110881, 424380) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2965), (67, 41996), (67, 50340)],
-        }),
-        (110882, 424372) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2964), (67, 41996), (67, 50340)],
-        }),
-        (110883, 424366) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2961), (67, 41996), (67, 50340)],
-        }),
-        (110907, 424370) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2962), (67, 41996), (67, 50340)],
-        }),
-        (110982, 424893) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2963), (67, 43182)],
-        }),
-        (110983, 424923) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2963), (67, 43183)],
-        }),
-        (110984, 424953) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2963), (67, 43184)],
-        }),
-        (110985, 424899) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2953), (67, 43182)],
-        }),
-        (110986, 424929) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2953), (67, 43183)],
-        }),
-        (110987, 424959) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2953), (67, 43184)],
-        }),
-        (110988, 424897) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2965), (67, 43182)],
-        }),
-        (110989, 424927) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2965), (67, 43183)],
-        }),
-        (110990, 424957) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2965), (67, 43184)],
-        }),
-        (110991, 424895) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2979), (67, 43182)],
-        }),
-        (110992, 424925) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2979), (67, 43183)],
-        }),
-        (110993, 424955) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2979), (67, 43184)],
-        }),
-        (110994, 424891) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2933), (67, 43182)],
-        }),
-        (110995, 424921) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2933), (67, 43183)],
-        }),
-        (110996, 424951) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2933), (67, 43184)],
-        }),
-        (110997, 424889) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2964), (67, 43182)],
-        }),
-        (110998, 424919) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2964), (67, 43183)],
-        }),
-        (110999, 424949) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2964), (67, 43184)],
-        }),
-        (111000, 424887) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2962), (67, 43182)],
-        }),
-        (111001, 424917) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2962), (67, 43183)],
-        }),
-        (111002, 424947) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2962), (67, 43184)],
-        }),
-        (111003, 424885) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2952), (67, 43182)],
-        }),
-        (111004, 424915) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2952), (67, 43183)],
-        }),
-        (111005, 424945) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2952), (67, 43184)],
-        }),
-        (111006, 424883) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2961), (67, 43182)],
-        }),
-        (111007, 424913) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2961), (67, 43183)],
-        }),
-        (111008, 424943) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2961), (67, 43184)],
-        }),
-        (111009, 424881) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3003), (67, 43182)],
-        }),
-        (111010, 424911) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3003), (67, 43183)],
-        }),
-        (111011, 424941) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3003), (67, 43184)],
-        }),
         (111052, 424272) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 2966)],
-        }),
-        (111065, 292782) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43696)],
-        }),
-        (111066, 292780) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43107)],
-        }),
-        (111067, 292778) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43106)],
-        }),
-        (111068, 292774) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41986)],
-        }),
-        (111069, 292772) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41985)],
-        }),
-        (111070, 292770) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41984)],
-        }),
-        (111071, 292768) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41983)],
-        }),
-        (111072, 288547) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43021)],
-        }),
-        (111073, 291163) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43020)],
-        }),
-        (111074, 290398) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41492)],
-        }),
-        (111075, 292776) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 41987)],
         }),
         (111095, 240) => Some(CompiledConditions::All {
             difficulty: None,
@@ -38943,526 +33467,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (115076, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115077, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115078, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115079, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115101, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115102, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115103, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115104, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115105, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115106, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115107, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115108, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115109, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115110, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115111, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115112, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115113, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115114, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115115, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115116, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115117, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115118, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115119, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115120, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115121, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115122, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115123, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115124, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115153, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115154, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115155, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115156, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115157, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115158, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115159, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115160, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115161, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115162, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115163, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115164, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115165, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115166, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115167, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115168, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115169, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115170, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115171, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115172, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115173, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115174, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115175, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115176, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115177, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115178, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115179, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115180, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115181, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115182, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115183, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115184, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115185, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115186, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115187, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115188, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115189, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115190, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115191, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115192, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115193, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115194, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115195, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115196, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115197, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115198, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115199, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115200, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115201, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115202, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115203, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115204, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
-        (115205, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115206, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115207, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115208, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115209, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115210, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115211, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115212, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115213, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115214, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115215, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115216, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115217, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115218, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115219, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115220, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115221, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115222, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115223, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115224, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115225, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115226, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115227, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115228, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115229, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115230, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115231, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115232, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115233, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115234, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115235, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115248, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115250, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115251, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115252, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115253, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115254, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115255, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115256, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115257, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115258, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115259, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115260, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115261, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115262, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115263, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115264, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115265, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115266, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115343, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
         (115350, 452656) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(8, 1287647)],
@@ -39626,154 +33630,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (115720, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115721, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115730, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115731, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115732, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115733, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115734, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115735, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115736, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115737, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115738, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115739, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115740, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115741, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115742, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115743, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115744, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115745, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115746, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115747, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115748, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115749, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115750, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115751, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115752, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115753, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115754, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115755, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115756, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115757, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115758, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115759, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115760, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115761, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115762, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115763, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
-        (115764, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
         (115788, 30518) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 5703)],
@@ -39786,22 +33642,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             difficulty: None,
             facts: &[(2, 5703)],
         }),
-        (115796, 450676) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52808)],
-        }),
-        (115797, 450679) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3075), (67, 52123)],
-        }),
-        (115798, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
-        }),
-        (115799, 450685) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52123)],
-        }),
         (115833, 454428) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 3038)],
@@ -39809,54 +33649,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
         (115834, 454430) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(32, 3077)],
-        }),
-        (115835, 454432) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3038), (67, 41996), (67, 43094)],
-        }),
-        (115839, 454451) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3038), (67, 41996), (67, 43042)],
-        }),
-        (115843, 454470) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3038), (67, 41996), (67, 50340)],
-        }),
-        (115847, 454489) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3077), (67, 41996), (67, 43094)],
-        }),
-        (115851, 454508) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3077), (67, 41996), (67, 43042)],
-        }),
-        (115855, 454527) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3077), (67, 41996), (67, 50340)],
-        }),
-        (115862, 454560) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3038), (67, 43182)],
-        }),
-        (115863, 454566) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3038), (67, 43183)],
-        }),
-        (115864, 454569) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3038), (67, 43184)],
-        }),
-        (115865, 454563) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3077), (67, 43182)],
-        }),
-        (115866, 454572) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3077), (67, 43183)],
-        }),
-        (115867, 454575) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3077), (67, 43184)],
         }),
         (115919, 454578) => Some(CompiledConditions::All {
             difficulty: None,
@@ -39868,34 +33660,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[16],
             }),
             facts: &[],
-        }),
-        (116104, 455087) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2933), (67, 50691)],
-        }),
-        (116105, 455095) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2952), (67, 50691)],
-        }),
-        (116106, 455098) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2953), (67, 50691)],
-        }),
-        (116107, 455101) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2962), (67, 50691)],
-        }),
-        (116108, 455104) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2961), (67, 50691)],
-        }),
-        (116109, 455107) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2963), (67, 50691)],
-        }),
-        (116110, 455110) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 2979), (67, 50691)],
         }),
         (116111, 16442) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
@@ -40226,10 +33990,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (116528, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
         (116607, 30518) => Some(CompiledConditions::All {
             difficulty: None,
             facts: &[(2, 5703)],
@@ -40339,10 +34099,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
             }),
             facts: &[],
         }),
-        (116835, 450311) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 52125)],
-        }),
         (116993, 460009) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
                 allowed: true,
@@ -40356,10 +34112,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[233],
             }),
             facts: &[],
-        }),
-        (117001, 450682) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(32, 3047), (67, 52808)],
         }),
         (117047, 461230) => Some(CompiledConditions::All {
             difficulty: None,
@@ -40383,10 +34135,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[15],
             }),
             facts: &[],
-        }),
-        (117162, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
         }),
         (117207, 462299) => Some(CompiledConditions::All {
             difficulty: None,
@@ -40427,46 +34175,6 @@ pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<Compil
                 ids: &[15],
             }),
             facts: &[],
-        }),
-        (117850, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117851, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117852, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117853, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117854, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117855, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117856, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117857, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117858, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
-        }),
-        (117869, 464528) => Some(CompiledConditions::All {
-            difficulty: None,
-            facts: &[(67, 43042)],
         }),
         (118147, 289132) => Some(CompiledConditions::All {
             difficulty: Some(DifficultyRule {
