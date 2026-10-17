@@ -32,6 +32,8 @@
 
 - [Toy source boundaries89–93](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17) — child scripts, owned-critter150 and procedural headwear remain unresolved; [94–98](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) adds source-action/procedural boundaries; [99–103](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) separates existing contracts from missing actions.
 
+- [Lunar/Peddlefeet hearthstone learned use](systems/toys.md#lunarpeddlefeet-hearthstone-learned-use-2026-10-17) — persisted bind/source cast/shared2309 charge;5 scoped tests pass, native presentation separate.
+
 - [Source disguise recovery precedence](systems/toys.md#source-disguise-recovery-precedence-2026-10-17) — three actual learned-use/lifetime cases; item overrides versus inherited spell recovery, native bodies separate.
 
 - [Oomgut source transform lifecycle](systems/toys.md#oomgut-source-transform-lifecycle-2026-10-17) — actual ten-minute expiry/restoration and two-hour recovery report; scoped14-case acceptance, native appearances separate.
