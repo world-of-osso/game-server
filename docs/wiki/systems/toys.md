@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Forlorn Toll destination-only flight (2026-10-16)
+
+163463/279223 triggers279222 after source1.5s cast+3s fixed missile flight, then one143222 source soul. Genuine importer RED precedes exact one-entry/ten-model admission; actual learned-use RED finds early arrival because front47 was unrecognized and unit-only delay storage discarded unitless destination flight. The existing scheduler now retains that delay without a fake target or toy-ID special case. Real cast/flight, source display membership/front,30s recovery/reuse and coexisting independent60s lifetimes pass. Whole-Toy150/150, affected49/49, importer3/3 and check/fmt pass. [Exact revisions, current-copy publication receipt and boundaries](../../toy-effects14-coverage.md#forlorn-toll85-source-summon-2026-10-16) distinguish server timing from all-ten native appearances, ghost/wandering semantics and complete-toy parity; canonical template publication remains lead-owned.
+
 ## Akunda source child and visible trap (2026-10-16)
 
 163211/279076 first refuses linked trap302746; exact source type6/display16675 profile now joins31442/display0 without generic trap admission. A separate genuine child-position RED finds279077 at the caster rather than clicked point; existing effect64/32 unit-trigger routing now retains the parent's explicit destination/item level through its depth-checked loader/launcher. Actual learned-use root/child/visible-source trap, ordinary recipe consumption/output, environmental CozyFire refresh, five source-drift refusals and ordinary300s cleanup pass. Whole-Toy149/149, affected29/29 and check/fmt/manual readability pass. [Exact proofs and source boundaries](../../toy-effects14-coverage.md#akunda84-visible-linked-trap-boundary-2026-10-16) separate server behavior from native pixels/audio, broad trigger completeness and full-retail parity;82 missing ItemSparse/83 specialized title27 remain named gaps.

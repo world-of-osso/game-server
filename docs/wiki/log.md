@@ -1578,3 +1578,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: [Gnoll Barrel source pair](systems/toys.md#gnoll-barrel-source-pair-2026-10-16): authentic paired template import RED→GREEN, real area/cursor/source300s simulation lifecycle,147/147 Toy gate; target-dummy combat and missing native533501 body remain separate.
 
 - 2026-10-16: [Akunda source child and visible trap](systems/toys.md#akunda-source-child-and-visible-trap-2026-10-16): separate catalog/child-position REDs, exact302746/display16675, actual cooking/CozyFire/source300s cleanup and source-drift refusals;149 Toy+29 affected gates pass, native appearance/full trigger parity separate.
+
+- 2026-10-16: [Forlorn Toll destination-only flight](systems/toys.md#forlorn-toll-destination-only-flight-2026-10-16): exact ten-model source identity, retained unitless destination flight after genuine early-arrival RED;150 Toy+49 affected+3 importer controls pass, native appearances/publication separate.
