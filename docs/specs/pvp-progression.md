@@ -49,13 +49,25 @@ Explicit Lead authorization normalizes each per-map completion hook to one invoc
 
 Current callbacks: Arathi2107 OnEnd574–585 and Eye566 OnEnd437–448 each grant a winning participant one bonus-kill equivalent, then grant every eligible participant one equivalent. Each call rounds separately using `ceil(min(instance PVPDifficulty maximum,80) ×1.55)`:30–39 winners receive61+61=122; other present participants receive61. Inactive/minimum-XP-level checks remain; dead accepted participants receive the team award, departed/unaccepted players do not. Null-victim team awards do not apply kill-only group/aura/rest modifiers and do not emit type35 honorable-kill criteria. Terminal resource-tick replay must not duplicate rewards; both wallet and separate lifetime XP persist.
 
-This checkpoint implements Arathi and Eye completion only. Resource-threshold/objective awards, other per-map callbacks, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+This checkpoint's OnEnd callbacks cover Arathi and Eye. Other per-map/resource/objective callbacks not described below, holiday/random completions and Arena/Conquest remain open; no generic completion amount is substituted.
+
+## Alterac captain/general Honor
+
+Pinned TC AV enum69–72, HonorKillBonus535–539 and OnUnitKilled653–684 give the opposing team three bonus-kill equivalents for captain11949/11947 and four for general11948/11946. Use `ceil(kills × min(instance PVPDifficulty maximum,80) ×1.55)`, preserving the source float multiplication order and rounding the whole grant once. The admitted20–79 bracket gives captain368 and general490, as separate events totaling858 before any still-unimplemented end/tower bonuses; neither recipient level20 nor `kills × ceil(one-kill bonus)` substitutes for the source rule.
+
+Only a source battle-accepted death triggers the award, scoped to its accepted, present opposing roster. Other-copy deaths and mine-owner changes do not mint this bonus; captain alive-state and terminal general transition reject replay. Keep the common positive-Honor eligibility, full XP/wallet mirror, cap and durable updates. Tower destruction and survivor OnEnd awards remain separate unfinished callbacks; these NPC credits do not claim full AV reward parity.
 
 ## Isle commander Honor
 
 Pinned TC Isle `HonorRewards`193–197 and `OnUnitKilled`383–394 grant a literal500 Honor to the opposite team when commander34924 or34922 dies, before ending the match. This is not a bonus-kill multiplier, a generic completion award, or the500 Conquest spell definition. Only an actual source battle-accepted commander death triggers it; the battle's terminal transition rejects dead-target replay. Credit only the winning accepted roster still present in that map copy, with the same positive Honor minimum-level/Inactive checks. Dead eligible recipients remain allowed. Preserve the existing1:1 XP/wallet mirror, holding cap, zero-weekly rule and durable updates.
 
-Resource-node12-per45s awards remain separate unfinished work; winning by reinforcement depletion must not be relabeled as a commander kill. This event does not resolve Arena/Conquest or the lifetime-level curve.
+Winning by reinforcement depletion must not be relabeled as a commander kill. This event does not resolve Arena/Conquest or the lifetime-level curve.
+
+## Isle resource Honor
+
+Pinned TC Isle OnUpdate324–334 grants12 Honor to a resource node's team whenever the existing45s resource clock increments its reinforcement. Only owned, uncontested Refinery and Quarry qualify; neutral/contested nodes and non-resource bases grant nothing. Both teams use their actual assigned BG roster, not character race. Each qualifying resource/tick remains a separate12-point award, with the same positive-Honor eligibility, durable lifetime XP and wallet mirror. No new clock starts on capture and no player-death reinforcement loss counts as income.
+
+Two owned resource nodes produce24 per45s; contesting one pauses its contribution, and transferring ownership moves its12-point contribution to the other team. Honor is not granted merely for opening/capturing the banner. Holding caps do not truncate XP, and weekly0 accounting remains unchanged.
 
 ## Sourced weekly counters — 70391
 
