@@ -1753,3 +1753,5 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-17: area31 on canonical70448 at18856aaf passes controlled native full50, accountSUM, ancestry/timer and pinned census4/4(13.70s); no registered BG policy/credit added. Required integration/check gates pending.
 
 - 2026-10-17: area31/current70448 final integration1c67a39c passes required workspace four-filter228/0/1existing ignored(345.74s), site-export1/1, workspace/all-target check, three-repo fmt/diff. Importer/predicate70448 source reconciliation precedes native GREEN. No new BG policy/playability certificate; lead landing/rendered/fresh UDP remain separate.
+
+- 2026-10-17: [Lifetime HK113](systems/dungeon-achievements.md#lifetime-honorable-kills113) implements explicit LIFETIME_HK_TRACKING_STARTS_AT_ZERO and separate persisted count before absolute113. Full100/native40+60/policy RED0/3; GREEN pending. Active70448 structural5544/1843 adds11ordinary/2stats only, same seven source hashes; all thresholds retained.
