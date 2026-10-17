@@ -479,6 +479,82 @@ fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
 }
 
 #[test]
+#[ignore = "source AttackStartCaster100 hold acceptance pending implementation"]
+fn encounter_coverage_omor_caster_holds_inside_authored_range() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    let target = Position {
+        x: origin.x + 20.0,
+        ..origin
+    };
+    h.app.world_mut().entity_mut(player).insert((map, target));
+    let ground = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, Vec3::new(target.x, target.y, target.z));
+    assert!(
+        matches!(ground, crate::ground::GroundProbe::Supported(_)),
+        "authentic20yd target support: {ground:?}"
+    );
+    h.engage(boss);
+    h.advance(15.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .filter(|go| go.caster == boss.to_bits() && go.spell_id == 30686)
+            .count()
+            >= 2,
+        "real source ranged casting, not paused AI"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        (position.x - origin.x).abs() < 0.01 && (position.z - origin.z).abs() < 0.01,
+        "source100yd caster must hold at20yd, not generic melee chase: {origin:?} -> {position:?}"
+    );
+}
+
+#[test]
+#[ignore = "source AttackStartCaster100 retreat acceptance pending implementation"]
+fn encounter_coverage_omor_caster_retreats_from_contact_without_melee() {
+    let (mut h, boss, map) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        Position {
+            x: origin.x + 3.0,
+            ..origin
+        },
+    ));
+    h.engage(boss);
+    h.advance(5.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 30686),
+        "real source cast completes before movement resumes"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        position.x < origin.x - 0.05,
+        "ChaseRange100 minRange0 plus reach-sum4.5 requires retreat from3yd: {origin:?} -> {position:?}"
+    );
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(boss.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()),
+        "source Attack(victim,false) must not produce melee swings"
+    );
+}
+
+#[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let (mut h, boss, map) = bound_boss(17308, 543, 0);
     let origin = *h.app.world().get::<Position>(boss).unwrap();
