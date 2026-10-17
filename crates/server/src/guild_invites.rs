@@ -70,9 +70,15 @@ mod tests {
             .unwrap()
             .validate(design)
             .unwrap();
-        let before = persistence::load_inventory(&db, owner).gold;
+        let mut record = persistence::inventory_store::load_inventory_record(&db, owner).unwrap();
+        let original_gold = record.inventory.gold;
+        // Finance one authored fee in this private fixture, not claimed earned gold.
+        record.inventory.gold += u64::from(shared::guild_creation::TABARD_COST);
+        let before = record.inventory.gold;
+        persistence::inventory_store::save_inventory_record(&db, owner, &record);
         persistence::guild_tabards::register(&db, owner, design).unwrap();
         let after = persistence::load_inventory(&db, owner).gold;
+        assert_eq!(after, original_gold);
         assert_eq!(
             before - after,
             u64::from(shared::guild_creation::TABARD_COST)
