@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::MessageSender;
 use shared::components::{CurrentPvpFaction, Health, Level, Player, Position, UnitScale};
-use shared::protocol::{PvpChannel, PvpStateUpdate};
+use shared::currency::{CurrencyWallet, HONOR_CURRENCY_ID, currency_by_id};
+use shared::protocol::{CurrencyChannel, CurrencyStateUpdate, PvpChannel, PvpStateUpdate};
 
 use super::{PlayerPvpState, pvp_support};
 use crate::auras::ActiveAuras;
@@ -26,9 +27,43 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
     };
     let recipients = read_world_kill_recipients(world, killer, victim, map);
     for &player in &recipients {
-        let amount = calculate_kill_xp(world, player, victim, victim_level, recipients.len());
-        award_lifetime_xp(world, player, amount);
+        let Some(level) = eligible_kill_level(world, player, victim, victim_level) else {
+            continue;
+        };
+        // TC RewardHonor updates35 before AddHonorXP's minimum-level/zero-XP checks.
+        crate::achievement::record_world_honorable_kill(world, player, victim);
+        let amount = calculate_kill_xp(world, player, level, victim_level, recipients.len());
+        award_honor(world, player, amount);
     }
+}
+
+/// BG_END_BONUS_ONCE_PER_MATCH normalizes TC's per-player OnEnd placement.
+/// Arathi OnEnd574–585: one winner bonus, then one completion bonus for everyone.
+pub(super) fn award_battleground_completion(
+    world: &mut World,
+    player: Entity,
+    map_id: u32,
+    bracket: shared::battleground::LevelBracket,
+    won: bool,
+) {
+    if map_id != 2107 {
+        return; // Other per-map callbacks remain unimplemented, not generic rewards.
+    }
+    let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
+        return;
+    };
+    let inactive = world
+        .get::<ActiveAuras>(player)
+        .is_some_and(|auras| auras.has_spell(INACTIVE));
+    if level < MIN_HONOR_PLAYER_LEVEL || inactive {
+        return;
+    }
+    // RewardHonor(nullptr,...) does not apply victim-only group/aura/rest modifiers.
+    let bonus = (f32::from(bracket.max_level.min(80)) * 1.55).ceil() as u32;
+    if won {
+        award_honor(world, player, bonus);
+    }
+    award_honor(world, player, bonus);
 }
 
 fn world_kill_map(world: &World, killer: Entity, victim: Entity) -> Option<InMap> {
@@ -76,35 +111,35 @@ fn read_world_kill_recipients(
         .collect()
 }
 
-fn calculate_kill_xp(
+fn eligible_kill_level(
     world: &World,
     player: Entity,
     victim: Entity,
     victim_level: u8,
-    group_size: usize,
-) -> u32 {
-    let Some(killer_team) = world.get::<CurrentPvpFaction>(player) else {
-        return 0;
-    };
-    let Some(victim_team) = world.get::<CurrentPvpFaction>(victim) else {
-        return 0;
-    };
+) -> Option<u8> {
+    let killer_team = world.get::<CurrentPvpFaction>(player)?;
+    let victim_team = world.get::<CurrentPvpFaction>(victim)?;
     if killer_team == victim_team {
-        return 0;
+        return None;
     }
-    let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
-        return 0;
-    };
+    let level = world.get::<Level>(player)?.0;
     let inactive = world
         .get::<ActiveAuras>(player)
         .is_some_and(|aura| aura.has_spell(INACTIVE));
-    if level < MIN_HONOR_PLAYER_LEVEL || inactive {
+    (!inactive && victim_level > gray_level(level)).then_some(level)
+}
+
+fn calculate_kill_xp(
+    world: &World,
+    player: Entity,
+    level: u8,
+    victim_level: u8,
+    group_size: usize,
+) -> u32 {
+    if level < MIN_HONOR_PLAYER_LEVEL {
         return 0;
     }
     let gray = gray_level(level);
-    if victim_level <= gray {
-        return 0;
-    }
     let base =
         (f32::from(level) * 1.55 * f32::from(victim_level - gray) / f32::from(level - gray)).ceil();
     let divided = base / group_size as f32;
@@ -152,29 +187,74 @@ fn maximum_honor_modifier(world: &World, player: Entity, kind: u32, kill_only: b
         .fold(0.0, f32::max)
 }
 
-fn award_lifetime_xp(world: &mut World, player: Entity, amount: u32) {
-    if amount == 0 {
+/// HONOR_WALLET_MIRRORS_HONOR_XP is our binding, not TC wallet behavior.
+/// Callers supply the final TC-derived amount; the holding cap never reduces XP.
+pub(super) fn award_honor(world: &mut World, player: Entity, amount: u32) {
+    if amount == 0 || world.get::<PlayerPvpState>(player).is_none() {
         return;
     }
-    let Some(mut state) = world.get_mut::<PlayerPvpState>(player) else {
-        return;
-    };
-    state.progress.lifetime_honor_xp += u64::from(amount);
-    let progress = state.progress.clone();
-    let update = PvpStateUpdate {
-        snapshot: Some(pvp_support::build_pvp_snapshot(&state)),
-        message: None,
-        error: None,
+    let (wallet, added) = credit_honor_wallet(world, player, amount);
+    let progress = {
+        let mut state = world
+            .get_mut::<PlayerPvpState>(player)
+            .expect("honor recipient state");
+        state.progress.lifetime_honor_xp += u64::from(amount);
+        super::sync_progress_currencies_from_wallet(&mut state.progress, &wallet);
+        state.progress.clone()
     };
     let character = world
         .get::<ClientId>(player)
         .expect("reward recipient identity")
         .0;
     let db = world.resource::<GameDatabase>();
+    persistence::save_currencies(&db.db, character, &wallet);
     persistence::save_pvp(&db.db, character, &progress);
-    if let Some(connection) = crate::spell_cast::owner_connection(world, player)
-        && let Some(mut sender) = world.get_mut::<MessageSender<PvpStateUpdate>>(connection)
-    {
-        sender.send::<PvpChannel>(update);
+    send_honor_updates(world, player, &wallet, added);
+    if added > 0 {
+        crate::achievement::record_player_event(
+            world,
+            player,
+            crate::achievement::CriteriaEvent::CurrencyGained(HONOR_CURRENCY_ID, added),
+        );
+    }
+}
+
+fn credit_honor_wallet(world: &mut World, player: Entity, amount: u32) -> (CurrencyWallet, u32) {
+    let mut wallet = world
+        .get_mut::<crate::currency::PlayerCurrencies>(player)
+        .expect("honor recipient currency wallet");
+    let definition = currency_by_id(HONOR_CURRENCY_ID).expect("source Honor1792 definition");
+    let added = wallet
+        .0
+        .add(HONOR_CURRENCY_ID, amount, definition)
+        .expect("known Honor identity must accept an authoritative award");
+    (wallet.0.clone(), added)
+}
+
+fn send_honor_updates(world: &mut World, player: Entity, wallet: &CurrencyWallet, added: u32) {
+    let Some(connection) = crate::spell_cast::owner_connection(world, player) else {
+        return;
+    };
+    let snapshot = pvp_support::build_pvp_snapshot(
+        world
+            .get::<PlayerPvpState>(player)
+            .expect("honor recipient state"),
+    );
+    if let Some(mut sender) = world.get_mut::<MessageSender<PvpStateUpdate>>(connection) {
+        sender.send::<PvpChannel>(PvpStateUpdate {
+            snapshot: Some(snapshot),
+            message: None,
+            error: None,
+        });
+    }
+    if added == 0 {
+        return;
+    }
+    if let Some(mut sender) = world.get_mut::<MessageSender<CurrencyStateUpdate>>(connection) {
+        sender.send::<CurrencyChannel>(CurrencyStateUpdate {
+            snapshot: Some(crate::currency::build_currency_snapshot(wallet)),
+            message: Some(format!("earned {added} Honor")),
+            error: None,
+        });
     }
 }

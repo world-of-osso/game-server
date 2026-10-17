@@ -16,6 +16,9 @@ mod effects4_tests;
 #[path = "effects5_tests.rs"]
 mod effects5_tests;
 
+#[path = "effects6_tests.rs"]
+mod effects6_tests;
+
 fn fixture_db() -> Connection {
     // Copy only battle tables; corruption tests must never mutate shipped world.db.
     let db = Connection::open_in_memory().unwrap();
@@ -48,7 +51,7 @@ fn fixture_db() -> Connection {
 fn pet_battle_locked_ability_slots_cannot_be_used() {
     let catalog = catalog();
     let stats = calculate_stats(&catalog, 39, 3, 3, 1).unwrap();
-    let pet = Pet::new(&catalog, stats, 9, [110, 0, 0], States::new()).unwrap();
+    let pet = Pet::new(&catalog, 39, stats, 9, [110, 0, 0], States::new()).unwrap();
     let team = Team {
         pets: [pet.clone(), pet.clone(), pet],
         active: 0,
@@ -98,9 +101,10 @@ fn battle(catalog: &Catalog, family: usize, target_family: usize, abilities: [u3
         power: 100,
         speed: 100,
     };
-    let caster = Pet::new(catalog, stats, family, abilities, States::new()).unwrap();
+    let caster = Pet::new(catalog, 39, stats, family, abilities, States::new()).unwrap();
     let target = Pet::new(
         catalog,
+        39,
         stats,
         target_family,
         [110, 119, 123],

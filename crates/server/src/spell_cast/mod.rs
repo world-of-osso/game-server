@@ -44,6 +44,7 @@ mod casting_restriction;
 mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
+pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
@@ -129,6 +130,8 @@ mod hit;
 #[cfg(test)]
 mod readiness_lifetime_tests;
 #[cfg(test)]
+mod summon_lifetime_tests;
+#[cfg(test)]
 mod touch_of_death_tests;
 #[cfg(test)]
 mod warrior_stun_tests;
@@ -182,7 +185,7 @@ pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
@@ -191,7 +194,7 @@ use shared::casting::{CastState, CastTickResult, CastType};
 use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast, WitnessRay,
+    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 use shared::spell_data::CastFailReason;
 
@@ -271,6 +274,7 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<summon::SummonPropertiesStore>()
             .add_systems(Startup, summon::load_summon_properties_startup)
             .add_systems(Startup, powers::load_power_type_table_startup)
+            .add_systems(FixedPreUpdate, charge::release_finished)
             .add_systems(
                 Update,
                 (receive_cast_requests, receive_stop_requests).chain(),
@@ -284,6 +288,7 @@ impl Plugin for SpellCastPlugin {
                     runes::regenerate_runes,
                     sync_charge_recovery,
                     advance_casts.after(crate::networking::process_player_inputs),
+                    charge::advance,
                     missiles::resolve_due_hits,
                     start_queued_casts,
                     powers::sync_unit_powers,
@@ -423,30 +428,106 @@ impl CastFailure {
     }
 }
 
-/// Charge state of one charge category.
+/// One consumed charge: the flat-adjusted base selected at use and its deadline.
 #[derive(Debug, Clone, Copy, PartialEq)]
+struct ChargeRecovery {
+    /// Flat-adjusted recovery at consumption, before the changeable rate.
+    recovery_ms: f32,
+    ready_at: f64,
+}
+
+/// TC SpellHistory::ConsumeCharge keeps separately timed, insertion-ordered uses.
+#[derive(Debug, Clone, PartialEq)]
 struct ChargeState {
-    /// The spell that last used a charge: the charge updates name it.
     spell_id: u32,
-    /// Its `ChargeCategory` (the `SpellHistory::charges` key).
     category: u32,
     max: u8,
-    used: u8,
-    recharge_secs: f64,
-    /// When the next used charge returns (valid while `used > 0`).
-    next_ready_at: f64,
-    /// Exact time the last missing charge returned, not the next observed frame.
+    /// Flat-adjusted base for new uses; existing uses retain their recorded bases.
+    recovery_ms: f32,
+    recovery_mult: f32,
+    pending: VecDeque<ChargeRecovery>,
+    /// Exact time the final missing charge returned, not the observed frame.
     fully_ready_at: f64,
 }
 
 impl ChargeState {
+    fn used(&self) -> u8 {
+        u8::try_from(self.pending.len()).expect("charge queue fits its source u8 count")
+    }
+
+    fn next_ready_at(&self) -> f64 {
+        self.pending.front().map_or(0.0, |charge| charge.ready_at)
+    }
+
     fn refresh(&mut self, now: f64) {
-        while self.used > 0 && now >= self.next_ready_at {
-            self.used -= 1;
-            if self.used == 0 {
-                self.fully_ready_at = self.next_ready_at;
+        while self
+            .pending
+            .front()
+            .is_some_and(|charge| now >= charge.ready_at)
+        {
+            let recovered = self.pending.pop_front().unwrap();
+            if self.pending.is_empty() {
+                self.fully_ready_at = recovered.ready_at;
             }
-            self.next_ready_at += self.recharge_secs;
+        }
+    }
+
+    fn consume(&mut self, now: f64, ready_credit: u32) {
+        // TC ConsumeCharge834–853: nonpositive recovery/max consumes nothing.
+        let duration = Self::calculate_recovery_seconds(self.recovery_ms, self.recovery_mult);
+        if self.max == 0 || duration <= 0.0 {
+            return;
+        }
+        let ready_at = self.pending.back().map_or_else(
+            || now + (duration - f64::from(ready_credit) / 1000.0).max(0.0),
+            |previous| previous.ready_at + duration,
+        );
+        self.pending.push_back(ChargeRecovery {
+            recovery_ms: self.recovery_ms,
+            ready_at,
+        });
+    }
+
+    fn retime(&mut self, now: f64, multiplier: f32) {
+        // Recompute from each use's base: multiplying an already floored timer
+        // loses milliseconds when removing or refreshing a rate modifier.
+        let mut previous_end = now;
+        for (index, charge) in self.pending.iter_mut().enumerate() {
+            let old_duration =
+                Self::calculate_recovery_seconds(charge.recovery_ms, self.recovery_mult);
+            let new_duration = Self::calculate_recovery_seconds(charge.recovery_ms, multiplier);
+            let remaining = if index == 0 {
+                (charge.ready_at - now) * new_duration / old_duration
+            } else {
+                new_duration
+            };
+            charge.ready_at = previous_end + remaining;
+            previous_end = charge.ready_at;
+        }
+    }
+
+    fn calculate_recovery_seconds(base_ms: f32, multiplier: f32) -> f64 {
+        f64::from((base_ms * multiplier).max(0.0).floor()) / 1000.0
+    }
+
+    fn reduce_recovery(&mut self, now: f64, seconds: f64) {
+        for charge in &mut self.pending {
+            charge.ready_at -= seconds;
+        }
+        self.refresh(now);
+    }
+
+    fn snapshot(&self, now: f64) -> SpellChargesUpdate {
+        let next = self.pending.front();
+        let base_ms = next.map_or(self.recovery_ms, |charge| charge.recovery_ms);
+        let duration = Self::calculate_recovery_seconds(base_ms, self.recovery_mult);
+        SpellChargesUpdate {
+            spell_id: self.spell_id,
+            category: self.category,
+            current: self.max.saturating_sub(self.used()),
+            max: self.max,
+            recharge_ms: (duration * 1000.0) as u32,
+            remaining_ms: ((self.next_ready_at() - now).max(0.0) * 1000.0) as u32,
         }
     }
 }
@@ -513,10 +594,7 @@ impl SpellHistory {
         }
         let max =
             (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
-        let recharge_ms = ((categories.charge_recovery_ms as f32 + mods.recovery_flat_ms)
-            * mods.recovery_mult)
-            .max(0.0)
-            .floor();
+        let recovery_ms = categories.charge_recovery_ms as f32 + mods.recovery_flat_ms;
         let state = self
             .charges
             .entry(categories.charge_category)
@@ -524,20 +602,19 @@ impl SpellHistory {
                 spell_id: spell.id,
                 category: categories.charge_category,
                 max,
-                used: 0,
-                recharge_secs: 0.0,
-                next_ready_at: 0.0,
+                recovery_ms: 0.0,
+                recovery_mult: mods.recovery_mult,
+                pending: VecDeque::new(),
                 fully_ready_at: 0.0,
             });
         state.max = max;
         state.refresh(now);
-        let recharge_secs = f64::from(recharge_ms) / 1000.0;
-        if state.used > 0 && state.recharge_secs != recharge_secs {
-            // TC UpdateChargeRecoveryRate preserves completed progress, not elapsed time.
-            let ratio = recharge_secs / state.recharge_secs;
-            state.next_ready_at = now + (state.next_ready_at - now) * ratio;
+        if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
+            state.retime(now, mods.recovery_mult);
         }
-        state.recharge_secs = recharge_secs;
+        // Aura453 has no immediate handler: only future consumption changes.
+        state.recovery_ms = recovery_ms;
+        state.recovery_mult = mods.recovery_mult;
         Some(state)
     }
 }
@@ -577,14 +654,15 @@ pub(crate) fn publish_known_charge_snapshot(world: &mut World, unit: Entity) {
     let now = history_now(world);
     for spell in spells.into_values() {
         let mods = charge_mods(world, unit, &spell);
-        let charges = *world
+        let charges = world
             .entity_mut(unit)
             .entry::<SpellHistory>()
             .or_default()
             .get_mut()
             .charges_mut(&spell, now, mods)
-            .unwrap();
-        send_charges(world, unit, &charges, now);
+            .unwrap()
+            .snapshot(now);
+        send_to_owner(world, unit, charges);
     }
 }
 
@@ -619,10 +697,16 @@ fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
         world.entity_mut(unit).insert(SpellHistory::default());
     }
     let mut history = world.get_mut::<SpellHistory>(unit).unwrap();
-    let before = history.charges.get(&category).copied();
-    let after = *history.charges_mut(&spell, now, mods).unwrap();
-    if before != Some(after) {
-        send_charges(world, unit, &after, now);
+    let before = history
+        .charges
+        .get(&category)
+        .map(|charges| charges.snapshot(now));
+    let after = history
+        .charges_mut(&spell, now, mods)
+        .unwrap()
+        .snapshot(now);
+    if before.as_ref() != Some(&after) {
+        send_to_owner(world, unit, after);
     }
 }
 
@@ -1085,7 +1169,7 @@ fn cast_granted_with_item_context(
                     .get_or_insert_with(Default::default)
                     .category_recovery_ms = cooldown.category_ms;
             }
-            start_cast(world, caster, &spell, target, None)
+            start_cast(world, caster, &spell, target)
         });
     debug!(caster = ?caster, spell_id, result = ?result, "Granted cast acceptance result");
     if let Err(failure) = &result {
@@ -1199,7 +1283,7 @@ pub(crate) fn cast_toy_spell(
             .get_or_insert_with(Default::default)
             .category = toy.category;
     }
-    let result = start_cast(world, caster, &spell, target, request.witness);
+    let result = start_cast(world, caster, &spell, target);
     if let Err(failure) = &result {
         let (reason, detail) = failure.to_contract();
         send_to_owner(
@@ -1315,7 +1399,6 @@ fn request_cast(
         world.entity_mut(caster).insert(QueuedSpellCast {
             spell: requested_spell,
             explicit,
-            witness: request.witness,
         });
         return Ok(());
     }
@@ -1323,8 +1406,7 @@ fn request_cast(
         // A newer executable request supersedes the held request too.
         world.entity_mut(caster).remove::<QueuedSpellCast>();
     }
-    start_cast(world, caster, &spell, explicit, request.witness)
-        .map_err(|failure| (spell.id, failure))
+    start_cast(world, caster, &spell, explicit).map_err(|failure| (spell.id, failure))
 }
 
 /// One request in the last 750 ms. TrinityCore a352b1fa Player.cpp:31545-31559 and Retail
@@ -1336,7 +1418,6 @@ const SPELL_QUEUE_WINDOW_SECS: f32 = 0.75;
 struct QueuedSpellCast {
     spell: SpellInfo,
     explicit: Option<Entity>,
-    witness: Option<WitnessRay>,
 }
 
 fn cast_queue_delay(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
@@ -1372,13 +1453,7 @@ fn start_queued_casts(world: &mut World) {
             .clone();
         effective_spell.cast_destination = queued.spell.cast_destination;
         effective_spell.cast_target_item_guid = queued.spell.cast_target_item_guid;
-        if let Err(failure) = start_cast(
-            world,
-            caster,
-            &effective_spell,
-            queued.explicit,
-            queued.witness,
-        ) {
+        if let Err(failure) = start_cast(world, caster, &effective_spell, queued.explicit) {
             let (reason, detail) = failure.to_contract();
             send_to_owner(
                 world,
@@ -1449,7 +1524,6 @@ fn validate_start(
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
-    witness: Option<WitnessRay>,
     ignore_cast_in_progress: bool,
 ) -> Result<Option<Entity>, CastFailure> {
     if !targets::is_alive(world, caster) {
@@ -1484,7 +1558,7 @@ fn validate_start(
             "implicit target {id} not supported"
         )));
     }
-    let target = validate_target(world, caster, spell, explicit, Sight::Start(witness))?;
+    let target = validate_target(world, caster, spell, explicit, Sight::Start)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
@@ -1541,7 +1615,7 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
     let mut history = history.clone();
     if history
         .charges_mut(spell, now, mods)
-        .is_some_and(|charges| charges.used >= charges.max)
+        .is_some_and(|charges| charges.used() >= charges.max)
     {
         return Err(CastFailure::NoCharges);
     }
@@ -1551,21 +1625,23 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
 /// Line of sight evidence when a cast checks its unit target (docs/specs/line-of-sight.md).
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Sight {
-    /// Cast start: a creature searches; a player's cast carries its witness ray.
-    Start(Option<WitnessRay>),
-    /// Cast finish: a creature searches again; a player's witness was checked at start.
+    /// Cast start: search using the caster and target's authoritative positions.
+    Start,
+    /// Cast finish: a creature searches again; player sight was checked at start.
     Finish,
 }
 
-/// `Spell::CheckCast` → `IsWithinLOS` (Spell.cpp:5996-6013, 9259-9272): a creature's ray
-/// search, a player's witness ray.
+/// `Spell::CheckCast` → `IsWithinLOS` (Spell.cpp:5996-6013, 9259-9272):
+/// authoritative target visibility, never a client endpoint that aged in transit.
 fn in_line_of_sight(world: &World, caster: Entity, target: Entity, sight: Sight) -> bool {
     if world.get::<Npc>(caster).is_some() {
         return crate::line_of_sight::sees_in_world(world, caster, target);
     }
     match sight {
-        Sight::Start(witness) => {
-            crate::line_of_sight::witness_holds(world, caster, target, witness)
+        Sight::Start => {
+            let held = crate::line_of_sight::sees_in_world(world, caster, target);
+            debug!(?caster, ?target, held, "Authoritative cast LOS checked");
+            held
         }
         Sight::Finish => true,
     }
@@ -1800,9 +1876,8 @@ fn start_cast(
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
-    witness: Option<WitnessRay>,
 ) -> Result<(), CastFailure> {
-    let target = validate_start(world, caster, spell, explicit, witness, false)?;
+    let target = validate_start(world, caster, spell, explicit, false)?;
     begin_validated_cast(world, caster, spell, target)
 }
 
@@ -2804,13 +2879,9 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .insert(category, now + category_ms as f64 / 1000.0);
     }
     let charges = history.charges_mut(spell, now, mods).map(|charges| {
-        if charges.used == 0 {
-            let recovery = charges.recharge_secs - f64::from(ready_credit) / 1000.0;
-            charges.next_ready_at = now + recovery.max(0.0);
-        }
-        charges.used = (charges.used + 1).min(charges.max);
+        charges.consume(now, ready_credit);
         charges.spell_id = spell.id;
-        *charges
+        charges.snapshot(now)
     });
     let cooldown_ms = recovery_ms.max(if category != 0 { category_ms } else { 0 });
     if cooldown_ms > 0 {
@@ -2827,29 +2898,8 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         );
     }
     if let Some(charges) = charges {
-        send_charges(world, caster, &charges, now);
+        send_to_owner(world, caster, charges);
     }
-}
-
-fn send_charges(world: &mut World, unit: Entity, charges: &ChargeState, now: f64) {
-    // TC SendSetSpellCharges leaves NextRecoveryTime zero for an empty queue.
-    let remaining = if charges.used > 0 {
-        ((charges.next_ready_at - now).max(0.0) * 1000.0) as u32
-    } else {
-        0
-    };
-    send_to_owner(
-        world,
-        unit,
-        SpellChargesUpdate {
-            spell_id: charges.spell_id,
-            category: charges.category,
-            current: charges.max - charges.used,
-            max: charges.max,
-            recharge_ms: (charges.recharge_secs * 1000.0) as u32,
-            remaining_ms: remaining,
-        },
-    );
 }
 
 /// `SpellHistory::RestoreCharge` (a352b1fa SpellHistory.cpp:831-840) `count` times: give back the
@@ -2863,15 +2913,16 @@ pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: 
         return;
     };
     charges.refresh(now);
-    if charges.used == 0 || count == 0 {
+    if charges.pending.is_empty() || count == 0 {
         return;
     }
-    charges.used = charges.used.saturating_sub(count);
-    if charges.used == 0 {
+    let retained = charges.pending.len().saturating_sub(usize::from(count));
+    charges.pending.truncate(retained);
+    if charges.pending.is_empty() {
         charges.fully_ready_at = now;
     }
-    let charges = *charges;
-    send_charges(world, unit, &charges, now);
+    let update = charges.snapshot(now);
+    send_to_owner(world, unit, update);
 }
 
 // --- Cast progress ---
