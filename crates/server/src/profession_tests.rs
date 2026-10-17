@@ -330,6 +330,98 @@ fn prepare_achievement_goggle_db(destination: &std::path::Path) {
 }
 
 #[test]
+fn recraft_297_refuses_owned_item_before_inventory_currency_or_skill_mutation() {
+    const RECRAFT: u32 = 389195; // ProfessionExpansion11, Leatherworking2830.
+    let mut h = harness(80).unwrap();
+    h.give(22658, "Glacial Cloak", 1);
+    h.give(193222, "Lustrous Scaled Hide", 2);
+    // Explicit test grants, not recipe acquisition, recharge-origin or item-eligibility proof.
+    let professions = PlayerProfessions {
+        lines: vec![shared::profession::ProfessionSkillLine {
+            skill_line: 2830,
+            step: 1,
+            rank: 25,
+            max_rank: 100,
+        }],
+        spells: vec![RECRAFT],
+    };
+    let wallet = shared::currency::CurrencyWallet {
+        entries: vec![shared::currency::CurrencyEntry {
+            id: 3049,
+            amount: 137,
+            week_earned: 0,
+        }],
+    };
+    persistence::save_professions(h.db(), h.character_id, &professions);
+    persistence::save_currencies(h.db(), h.character_id, &wallet);
+    h.app.world_mut().entity_mut(h.player).insert((
+        professions.clone(),
+        crate::currency::PlayerCurrencies(wallet.clone()),
+    ));
+    h.app.update();
+    let before = persistence::load_inventory(h.db(), h.character_id);
+    let item_guid = before
+        .items
+        .iter()
+        .find(|item| item.item_id == 22658)
+        .unwrap()
+        .item_guid;
+    assert_ne!(item_guid, 0, "the cast targets a real owned instance");
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(RECRAFT)
+        .unwrap()
+        .clone();
+    assert!(spell.effects.iter().any(|effect| effect.effect == 297));
+    let Err(CastFailure::Unsupported(reason)) = check_cast_items(h.app.world(), h.player, &spell)
+    else {
+        panic!("unsourced recrafting must refuse before any owned-item mutation");
+    };
+    assert!(
+        reason.contains("CRAFTING_OPERATION_COMPOSITION"),
+        "{reason}"
+    );
+    h.send::<SpellCastIntent, CombatChannel>(SpellCastIntent {
+        destination: None,
+        spell_id: Some(RECRAFT),
+        spell: String::new(),
+        target_entity: None,
+        target_item_guid: Some(item_guid),
+        witness: None,
+    });
+    h.finish_crafting();
+    let failed = h.take::<CastFailed>();
+    assert_eq!(failed.len(), 1);
+    assert_eq!(failed[0].spell_id, RECRAFT);
+    assert_eq!(failed[0].reason, CastFailReason::NotSupported);
+    assert!(
+        failed[0]
+            .detail
+            .as_deref()
+            .unwrap()
+            .contains("CRAFTING_OPERATION_COMPOSITION")
+    );
+    assert!(!h.casting());
+    assert_eq!(persistence::load_inventory(h.db(), h.character_id), before);
+    assert_eq!(h.professions(), professions);
+    assert_eq!(
+        persistence::load_professions(h.db(), h.character_id),
+        professions
+    );
+    assert_eq!(persistence::load_currencies(h.db(), h.character_id), wallet);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::currency::PlayerCurrencies>(h.player)
+            .unwrap()
+            .0,
+        wallet
+    );
+}
+
+#[test]
 fn quality_crafting_refuses_before_any_reagent_or_skill_mutation() {
     let mut h = harness(80).unwrap();
     h.learn_tailoring();

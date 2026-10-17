@@ -24,6 +24,19 @@ const PLAYER_COMBAT_REACH: f32 = 1.5;
 const ISLE_COMMANDER_HONOR: u32 = 500;
 // TC Isle OnUpdate324–334: each source resource reinforcement also grants12.
 const ISLE_RESOURCE_HONOR: u32 = 12;
+// TC AV HonorKillBonus535–539 / OnUnitKilled653–684.
+const AV_CAPTAIN_KILL_EQUIVALENTS: u32 = 3;
+const AV_GENERAL_KILL_EQUIVALENTS: u32 = 4;
+// TC AV EventPlayerDestroyedPoint813–817 / HonorKillBonus539.
+const AV_TOWER_KILL_EQUIVALENTS: u32 = 3;
+// TC AV OnEnd755–790: accumulate two equivalents per controlled tower/living captain.
+const AV_SURVIVOR_KILL_EQUIVALENTS: u32 = 2;
+// TC WSG557 / TwinPeaks526: unconditional reward on actual flag capture.
+const FLAG_CAPTURE_KILL_EQUIVALENTS: u32 = 2;
+// TC WSG571: type1014 resolves HOLIDAY_NONE, so final-capture victory grants20.
+const WARSONG_CAPTURE_VICTORY_HONOR: u32 = 20;
+// TC AB34/185–187: current type1018→HOLIDAY_NONE selects the normal160 threshold.
+const ARATHI_RESOURCE_HONOR_POINTS: u32 = 160;
 
 pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim: Entity) {
     let Some(map) = world_kill_map(world, killer, victim) else {
@@ -37,6 +50,8 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
         let Some(level) = eligible_kill_level(world, player, victim, victim_level) else {
             continue;
         };
+        // TC Player6752 increments actual lifetime state before evaluating113.
+        increment_and_save_lifetime_kills(world, player);
         // TC RewardHonor updates35 before AddHonorXP's minimum-level/zero-XP checks.
         crate::achievement::record_world_honorable_kill(world, player, victim);
         let amount = calculate_kill_xp(world, player, level, victim_level, recipients.len());
@@ -44,8 +59,24 @@ pub(crate) fn reward_world_player_kill(world: &mut World, killer: Entity, victim
     }
 }
 
+fn increment_and_save_lifetime_kills(world: &mut World, player: Entity) {
+    let Some(mut state) = world.get_mut::<PlayerPvpState>(player) else {
+        return; // Without actual PvP state, there is no lifetime authority to project.
+    };
+    state.progress.lifetime_honorable_kills =
+        state.progress.lifetime_honorable_kills.saturating_add(1);
+    let progress = state.progress.clone();
+    drop(state);
+    let character = world
+        .get::<ClientId>(player)
+        .expect("honor recipient identity")
+        .0;
+    persistence::save_pvp(&world.resource::<GameDatabase>().db, character, &progress);
+}
+
 /// BG_END_BONUS_ONCE_PER_MATCH normalizes TC's per-player OnEnd placement.
-/// Arathi OnEnd574–585 / Eye OnEnd437–448: winner1, then everyone1.
+/// Arathi/Eye: winner1/everyone1; current WSG type1014: winner1/everyone2.
+/// TC BGTypeToWeekendHolidayId maps1014 to NONE; this is not a guessed calendar.
 pub(super) fn award_battleground_completion(
     world: &mut World,
     player: Entity,
@@ -53,14 +84,20 @@ pub(super) fn award_battleground_completion(
     bracket: shared::battleground::LevelBracket,
     won: bool,
 ) {
-    if !matches!(map_id, 2107 | 566) {
-        return; // Other per-map callbacks remain unimplemented, not generic rewards.
-    }
-    let bonus = (f32::from(bracket.max_level.min(80)) * 1.55).ceil() as u32;
+    let (winner_kills, end_kills) = match map_id {
+        2106 => (1, 2), // Only current Warsong1014 is configured for this map.
+        2107 | 566 => (1, 1),
+        _ => return, // Other source hooks do not inherit a generic completion reward.
+    };
     if won {
-        award_battleground_honor(world, player, bonus);
+        award_battleground_honor(world, player, calculate_bonus_honor(bracket, winner_kills));
     }
-    award_battleground_honor(world, player, bonus);
+    award_battleground_honor(world, player, calculate_bonus_honor(bracket, end_kills));
+}
+
+fn calculate_bonus_honor(bracket: shared::battleground::LevelBracket, kills: u32) -> u32 {
+    // Preserve TC Formulas.h's multiplier * level *1.55 order, then ceil once.
+    (kills as f32 * f32::from(bracket.max_level.min(80)) * 1.55).ceil() as u32
 }
 
 fn award_battleground_honor(world: &mut World, player: Entity, amount: u32) {
@@ -86,11 +123,184 @@ pub(super) fn award_isle_commander_honor(world: &mut World, match_id: u64) {
         Some(BgOutcome::Winner(team)) => team,
         _ => panic!("accepted Isle commander death must declare a winner"),
     };
-    award_isle_team_honor(world, match_id, winner, ISLE_COMMANDER_HONOR);
+    award_match_team_honor(world, match_id, winner, ISLE_COMMANDER_HONOR);
 }
 
-fn award_isle_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount: u32) {
-    let (map, roster) = read_isle_team_roster(world, match_id, team);
+/// Only the source battle-accepted captain/general death supplies this callback.
+pub(super) fn award_alterac_npc_honor(world: &mut World, match_id: u64, entry: u32) {
+    let (team, kills) = match entry {
+        11947 => (BgTeam::A, AV_CAPTAIN_KILL_EQUIVALENTS),
+        11949 => (BgTeam::B, AV_CAPTAIN_KILL_EQUIVALENTS),
+        11946 => (BgTeam::A, AV_GENERAL_KILL_EQUIVALENTS),
+        11948 => (BgTeam::B, AV_GENERAL_KILL_EQUIVALENTS),
+        _ => return, // Mine ownership has no matching NPC Honor award in this source hook.
+    };
+    let bracket = world.resource::<PvpServerState>().battleground_matches[&match_id]
+        .instance
+        .bracket;
+    let amount = calculate_bonus_honor(bracket, kills);
+    award_match_team_honor(world, match_id, team, amount);
+}
+
+/// Consume an actual source capture receipt, not pickup/return or a generic score delta.
+pub(super) fn award_flag_capture_honor(
+    world: &mut World,
+    match_id: u64,
+    character: u64,
+    stat: u32,
+) {
+    let (team, amount) = {
+        let state = world.resource::<PvpServerState>();
+        let matched = &state.battleground_matches[&match_id];
+        let map = matched.map.expect("objective receipt has an active map");
+        if !matches!(map.map_id, 2106 | 726) {
+            return;
+        }
+        let flags = matched
+            .flags
+            .as_ref()
+            .expect("source flag map has flag battle");
+        if stat != flags.rules.capture_stat {
+            return;
+        }
+        let team = match (
+            matched.instance.team_a_players.contains(&character),
+            matched.instance.team_b_players.contains(&character),
+        ) {
+            (true, false) => BgTeam::A,
+            (false, true) => BgTeam::B,
+            _ => panic!("flag capturer must belong to exactly one assigned team"),
+        };
+        (
+            team,
+            calculate_bonus_honor(matched.instance.bracket, FLAG_CAPTURE_KILL_EQUIVALENTS),
+        )
+    };
+    award_match_team_honor(world, match_id, team, amount);
+    award_warsong_capture_victory(world, match_id, team);
+}
+
+fn award_warsong_capture_victory(world: &mut World, match_id: u64, team: BgTeam) {
+    let winning_capture = {
+        let state = world.resource::<PvpServerState>();
+        let instance = &state.battleground_matches[&match_id].instance;
+        instance.bg_id == 1014 && instance.phase == shared::battleground::BgPhase::Ended
+    };
+    if winning_capture {
+        award_match_team_honor(world, match_id, team, WARSONG_CAPTURE_VICTORY_HONOR);
+    }
+}
+
+/// Called only at an accepted NPC/player-death or objective terminal transition.
+pub(super) fn award_alterac_survivor_honor(world: &mut World, match_id: u64) {
+    let (bracket, survivors) = {
+        let state = world.resource::<PvpServerState>();
+        let matched = &state.battleground_matches[&match_id];
+        if matched.instance.phase != shared::battleground::BgPhase::Ended {
+            return;
+        }
+        let Some(runtime) = matched.alterac.as_ref() else {
+            return;
+        };
+        let super::pvp_alterac::BannerBattle::Alterac(battle) = &runtime.battle else {
+            return;
+        };
+        (matched.instance.bracket, battle.surviving_honor_units())
+    };
+    for (team, units) in [BgTeam::A, BgTeam::B].into_iter().zip(survivors) {
+        if units > 0 {
+            let amount = calculate_bonus_honor(bracket, units * AV_SURVIVOR_KILL_EQUIVALENTS);
+            award_match_team_honor(world, match_id, team, amount);
+        }
+    }
+}
+
+pub(super) fn read_arathi_resource_counters(world: &World) -> Vec<(u64, [u32; 2])> {
+    world
+        .resource::<PvpServerState>()
+        .battleground_matches
+        .iter()
+        .filter_map(|(id, matched)| {
+            if matched.instance.bg_id != 1018 {
+                return None;
+            }
+            Some((*id, matched.nodes.as_ref()?.earned_resource_points()))
+        })
+        .collect()
+}
+
+pub(super) fn award_arathi_resource_gains(world: &mut World, counters: Vec<(u64, [u32; 2])>) {
+    for (match_id, before) in counters {
+        let (after, amount) = {
+            let state = world.resource::<PvpServerState>();
+            let matched = &state.battleground_matches[&match_id];
+            let nodes = matched
+                .nodes
+                .as_ref()
+                .expect("Arathi resource snapshot has node runtime");
+            (
+                nodes.earned_resource_points(),
+                calculate_bonus_honor(matched.instance.bracket, 1),
+            )
+        };
+        for (index, team) in [BgTeam::A, BgTeam::B].into_iter().enumerate() {
+            let previous_grants = before[index] / ARATHI_RESOURCE_HONOR_POINTS;
+            let current_grants = after[index] / ARATHI_RESOURCE_HONOR_POINTS;
+            let grants = current_grants
+                .checked_sub(previous_grants)
+                .expect("Arathi source resource counters cannot decrease");
+            for _ in 0..grants {
+                award_match_team_honor(world, match_id, team, amount);
+            }
+        }
+    }
+}
+
+pub(super) fn read_alterac_tower_counters(world: &World) -> Vec<(u64, [u32; 2])> {
+    world
+        .resource::<PvpServerState>()
+        .battleground_matches
+        .iter()
+        .filter_map(|(id, matched)| {
+            let runtime = matched.alterac.as_ref()?;
+            let super::pvp_alterac::BannerBattle::Alterac(battle) = &runtime.battle else {
+                return None;
+            };
+            Some((*id, battle.destroyed_towers()))
+        })
+        .collect()
+}
+
+pub(super) fn award_alterac_tower_changes(world: &mut World, before: Vec<(u64, [u32; 2])>) {
+    for (match_id, counts) in before {
+        let (after, amount) = {
+            let state = world.resource::<PvpServerState>();
+            let matched = &state.battleground_matches[&match_id];
+            let runtime = matched
+                .alterac
+                .as_ref()
+                .expect("Alterac tower snapshot has runtime");
+            let super::pvp_alterac::BannerBattle::Alterac(battle) = &runtime.battle else {
+                panic!("Alterac tower snapshot cannot change battle type");
+            };
+            (
+                battle.destroyed_towers(),
+                calculate_bonus_honor(matched.instance.bracket, AV_TOWER_KILL_EQUIVALENTS),
+            )
+        };
+        for (index, team) in [BgTeam::A, BgTeam::B].into_iter().enumerate() {
+            let grants = after[index]
+                .checked_sub(counts[index])
+                .expect("destroyed Alterac towers cannot return");
+            for _ in 0..grants {
+                award_match_team_honor(world, match_id, team, amount);
+            }
+        }
+    }
+}
+
+fn award_match_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount: u32) {
+    let (map, roster) = read_match_team_roster(world, match_id, team);
     let recipients: Vec<_> = world
         .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
         .iter(world)
@@ -104,7 +314,7 @@ fn award_isle_team_honor(world: &mut World, match_id: u64, team: BgTeam, amount:
     }
 }
 
-fn read_isle_team_roster(world: &World, match_id: u64, team: BgTeam) -> (InMap, Vec<u64>) {
+fn read_match_team_roster(world: &World, match_id: u64, team: BgTeam) -> (InMap, Vec<u64>) {
     let state = world.resource::<PvpServerState>();
     let matched = &state.battleground_matches[&match_id];
     let members = match team {
@@ -116,7 +326,10 @@ fn read_isle_team_roster(world: &World, match_id: u64, team: BgTeam) -> (InMap, 
         .filter(|character| matched.accepted.contains(character))
         .copied()
         .collect();
-    (matched.map.expect("accepted Isle match has a map"), roster)
+    (
+        matched.map.expect("accepted battleground match has a map"),
+        roster,
+    )
 }
 
 /// A/B counters around the exclusive objective advance, not across combat/death systems.
@@ -164,7 +377,7 @@ fn award_isle_resource_team(
         .checked_sub(before)
         .expect("Isle objective advance only adds resource reinforcements");
     for _ in 0..grants {
-        award_isle_team_honor(world, match_id, team, ISLE_RESOURCE_HONOR);
+        award_match_team_honor(world, match_id, team, ISLE_RESOURCE_HONOR);
     }
 }
 

@@ -8,7 +8,7 @@ const BOMB_AURA: u32 = 386881;
 const BOMB_DAMAGE: u32 = 386910;
 const FROZEN_GROUND: u32 = 387149;
 
-fn fixture() -> (Harness, Entity) {
+pub(super) fn fixture() -> (Harness, Entity) {
     let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
     // Native138 projects the destination onto authored map geometry.
     let wdt = h
@@ -35,7 +35,7 @@ fn fixture() -> (Harness, Entity) {
         ),
         "native Azure floor fixture must be available"
     );
-    // No engagement/AI schedule: exercise the real authored actor's cast boundary.
+    // No explicit fixture pull; ordinary proximity engagement can run alongside manual casts.
     h.players[0].2.log.clear();
     (h, telash)
 }

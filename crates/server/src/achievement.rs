@@ -21,6 +21,9 @@ pub(crate) use catalog::{
 };
 #[path = "achievement_account.rs"]
 mod account_store;
+#[path = "achievement_publication.rs"]
+mod publication;
+pub(crate) use publication::flush_updates as flush_achievement_updates;
 #[path = "dungeon_progress.rs"]
 mod dungeon;
 #[path = "achievement_kills.rs"]
@@ -108,6 +111,12 @@ impl Plugin for AchievementPlugin {
         app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(PostUpdate, kills::publish_rewarded_creature_kills);
         app.add_systems(
+            PostUpdate,
+            flush_achievement_updates
+                .after(kills::publish_rewarded_creature_kills)
+                .before(MessageSystems::Send),
+        );
+        app.add_systems(
             Update,
             (
                 send_initial_achievement_snapshot.after(InitializeSpellKnowledge),
@@ -151,6 +160,10 @@ fn send_initial_achievement_snapshot(world: &mut World) {
             player,
             toasts.iter().map(|toast| toast.achievement_id),
         );
+        world.entity_mut(connection).remove::<(
+            publication::AchievementPublication,
+            crate::adventure_guide::GuidePublication,
+        )>();
         send_updates(world, connection, snapshot, Vec::new());
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
@@ -163,6 +176,11 @@ fn send_initial_achievement_snapshot(world: &mut World) {
 fn load_login_events(world: &World, character: u64, account: u64, level: u8) -> Vec<CriteriaEvent> {
     let mut events = vec![CriteriaEvent::Login, CriteriaEvent::ReachLevel(level)];
     if let Some(db) = world.get_resource::<GameDatabase>() {
+        // TC CriteriaHandler748/4989: login projects persisted character lifetime HK.
+        let pvp = persistence::load_pvp(&db.db, character);
+        events.push(CriteriaEvent::LifetimeHonorableKills(
+            pvp.lifetime_honorable_kills,
+        ));
         // TC BankTabPurchased login case: current tab counts of both banks.
         let tabs = [
             (
@@ -908,11 +926,17 @@ pub(crate) fn record_world_honorable_kill(world: &mut World, player: Entity, vic
         .expect("validated world honor victim");
     let race = victim.race;
     let class = victim.class;
-    let mut events = vec![
+    let mut events = Vec::new();
+    if let Some(state) = world.get::<crate::pvp::PlayerPvpState>(player) {
+        events.push(CriteriaEvent::LifetimeHonorableKills(
+            state.progress.lifetime_honorable_kills,
+        ));
+    }
+    events.extend([
         CriteriaEvent::EarnHonorableKill,
         CriteriaEvent::HonorableKillRace(race),
         CriteriaEvent::HonorableKillClass(class),
-    ];
+    ]);
     // TC RewardHonor6756 reads this recipient's area, independently of the victim.
     if let Some((area, _)) = load_player_terrain_area(world, player) {
         events.push(CriteriaEvent::HonorableKillInArea(area));
@@ -1315,26 +1339,11 @@ fn send_updates(
     toasts: Vec<AchievementToastSnapshot>,
 ) {
     crate::adventure_guide::refresh_for_connection(world, connection);
-    let Some(mut sender) = world.get_mut::<MessageSender<AchievementStateUpdate>>(connection)
-    else {
-        return;
-    };
-    if toasts.is_empty() {
-        sender.send::<AchievementChannel>(AchievementStateUpdate {
-            snapshot: Some(snapshot),
-            completed: None,
-            message: Some("achievement progress updated".into()),
-            error: None,
-        });
-        return;
-    }
-    for toast in toasts {
-        sender.send::<AchievementChannel>(AchievementStateUpdate {
-            snapshot: Some(snapshot.clone()),
-            completed: Some(toast),
-            message: Some("achievement completed".into()),
-            error: None,
-        });
+    if world
+        .get::<MessageSender<AchievementStateUpdate>>(connection)
+        .is_some()
+    {
+        publication::queue_update(world, connection, snapshot, toasts);
     }
 }
 
@@ -1678,3 +1687,7 @@ mod tests;
 #[cfg(test)]
 #[path = "achievement_unknown_spell_tests.rs"]
 mod unknown_spell_tests;
+
+#[cfg(test)]
+#[path = "achievement_send_perf_tests.rs"]
+mod send_perf_tests;

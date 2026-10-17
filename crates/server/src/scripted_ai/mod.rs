@@ -286,7 +286,7 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
         return smart_ai::creature_ai(world, creature);
     }
     if azure_vault::is_creature_script(script_name) {
-        return azure_vault::creature_ai(world, creature);
+        return azure_vault::creature_ai(world, creature, script_name);
     }
     if murder_row::is_creature_script(script_name) {
         return murder_row::creature_ai(world, creature, script_name);
