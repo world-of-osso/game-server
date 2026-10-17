@@ -1,8 +1,12 @@
+- [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Remaining geometry scans](investigations/server-tick-lag.md#remaining-geometry-scans-2026-10-16) — dormant wake-aware detection/resize and live collision membership indexing; bounded 50-control proof.
 - [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
 - [Razorlash source binding](systems/boss-scripts.md#maraudon-razorlash-source-binding--2026-10-16) — pinned TC/Journal70391 primary12258→423/bit1, copy-only; authored chance/timer casts, auras/damage and isolated controlled credit proven; native acceptance separate.
 # Wiki Index
+
+- [Bench pet resurrection112](systems/pet-battle-engine.md#bench-resurrection112--2026-10-16) — bounded2347/2348, real persisted-dead-state boundary, RED4→GREEN4 and both-skin2347; native2348 remains unproved.
+- [Azure Frost Bomb hooks](investigations/follower-data.md#azure-frost-bomb--2026-10-16) — sourced finite hit/expiry chain and target-derived ground; native6+3 controls/check/fmt pass, full Telash/Leymor phases and full-Azure acceptance open.
 
 - [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
 
@@ -54,7 +58,7 @@
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — member-scoped six-action/founder ledger, separate from bank/news history.
 - [Guild news](systems/guild-news.md) — actual qualified producers, durable member query/sticky authority and native proof ledger.
-- [Guild perks](systems/guild-perks.md) — installed definitions and membership-derived knowledge; effect coverage remains distinct.
+- [Guild perks](systems/guild-perks.md) — membership knowledge, landed172/211/map suppression and native mounted/removal proof; Hasty consumed-charge boundary and remaining effect gaps explicit.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
 
