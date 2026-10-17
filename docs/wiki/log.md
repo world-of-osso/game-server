@@ -1,6 +1,6 @@
 ## 2026-10-16 — Native target aura-type admission
 
-[Spell casting](systems/spell-casting.md#native-target-aura-type-admission--2026-10-16): ordinary scripted-unit required69/39 and excluded485 RED2pass/5fail6.21s precede the shared type consumer. Native shield, recipient and expiry controls; no invented indicator client ability or unhandled effect registration. GREEN/final gates pending; caster/area/full-trigger/health-state boundaries remain open.
+[Spell casting](systems/spell-casting.md#native-target-aura-type-admission--2026-10-16): ordinary scripted-unit required69/39 and excluded485 RED2pass/5fail6.21s precede the shared type consumer. Native shield, recipient and expiry controls; no invented indicator client ability or unhandled effect registration. Merged master0bf173f4 as2db43289; current66/0/0 in28.63s includes seven new and59 adjacent/LOS controls. Workspace/all-target check51.794s/0warnings, fmt and independent read-only artifact/readability verification pass. Player/completion type transitions remain source/shared-wiring proof; caster/area/full-trigger/health-state boundaries remain open.
 
 ## 2026-10-16 — Health aura-state source qualification
 
