@@ -52,7 +52,8 @@ fn native_trigger64_zero_ms_child_is_not_reentrant_and_follows_parent_applicatio
 #[test]
 fn native_trigger64_callbacks_dispatch_by_due_time_not_parent_call_order() {
     let mut h = native_fixture();
-    let caster = h.npc;
+    // Aura receipts go to their owner's connection; NPCs have no owner inbox.
+    let caster = h.caster;
     for parent in [STACK_PARENT, LUNAR_PARENT] {
         super::creature::creature_cast(h.app.world_mut(), caster, parent, Some(caster), false)
             .unwrap();
