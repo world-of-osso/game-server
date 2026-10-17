@@ -1,6 +1,16 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_honor_account_contributions_sum_not_max() {
+    let contributions = [3, 4].into_iter().map(|count| PlayerAchievementState {
+        criteria_progress: [(3826, count)].into(),
+        ..Default::default()
+    });
+    let aggregate = catalog().aggregate(contributions);
+    assert_eq!(aggregate.criteria_progress.get(&3826), Some(&7));
+}
+
+#[test]
 fn achievements_criteria_content268_requires_complete_inclusive_authored_range() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER, MinLevelWithDelta INTEGER);
