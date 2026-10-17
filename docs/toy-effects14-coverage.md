@@ -1,5 +1,18 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source200–204: pending Mogu acceptance and companion/equipment/game boundaries (2026-10-17)
+
+201 Trans-mogu-rifier174873/305123 already has runtime156286 with authentic92868/92880/92874/92871 choices. Source self transform56/misc8 lasts600000ms with3600000ms item/spell recovery. Test/spec924bcde11 adds this exact pool to the existing actual-learning/ordinary-expiry/restoration/health/recovery fixture, now six disguise IDs. Fmt/manual changed-line readability/diffcheck pass; owned native-helper disguise/Oomgut tests are still running and package/tests check is pending in `mogu201-proof-ledger.json`. This is not passing201 acceptance, native all-four presentation or full one-hour recovery proof; no production patch or manufactured RED.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|200 Mayhem Mind Melder174871/316937 | Root uses dummy3/target150 for advertised companion control,1500ms cast/120000ms item recovery. Description references316932's30000ms; that record combines possess aura2/target25 and self dummy4, but the root has no executable trigger edge here. Companion ownership/control/restoration remain unproved; no pet-viewer or player-body substitution. |
+|202 Budget K'thir Disguise174874/298948 | Self dummy4/900000ms with3600000ms item recovery. Visuals87131/138363/138365 author procedural358669/368360/368361 type17/Value1=62814. Specific head-top friend/equipment presentation remains unproved; no ordinary transform or generic attachment admission. |
+|203 Coifcurl's Close Shave Kit174920/317204 | Source47 summon163441/property4493,1000ms cast/120000ms actor and inherited3600000ms spell recovery. Runtime163441/95179/scale0.5 already exists; property4493 is Control1/Title2/flags67592, source npcflag0/empty AI/script. Existing kit metadata does not establish advertised per-user shaving/appearance consequences; no generic stationary actor or invented barber interaction. |
+|204 Void-Touched Skull174921/317210 | Friendly target35 dummy3 with1800000ms spell recovery. Throw/pass/timer/void-energy game state remains unresolved; no generic missile, friendly aura or ignored script completes that game. |
+
+`rows200-204-{readonly-source,action-source}.json` retains exact roots, reference records, properties/durations, visual/procedural mapping and actual runtime-content models.201 is test/spec only and still pending execution/check; the other named action gaps remain intact. No runtime-policy/importer/canonical/data changes or new native/full-Toy/master certificate.
+
 ## Source195–199: motion/faction/appearance/action boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
