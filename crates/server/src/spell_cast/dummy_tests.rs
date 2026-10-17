@@ -50,29 +50,36 @@ fn dummy_channel_destination_uses_live_channel_not_unrelated_explicit_unit() {
         .iter()
         .find(|effect| effect.index == 0)
         .unwrap();
-    let destination = |h: &Harness| {
-        super::targets::effect_dest(h.app.world(), h.caster, Some(h.caster), effect, None)
+    let destination = |h: &Harness, explicit| {
+        super::targets::effect_dest(h.app.world(), h.caster, explicit, effect, None)
     };
     assert!(
-        destination(&h).is_none(),
+        destination(&h, Some(h.caster)).is_none(),
         "no destination without a channel"
     );
     h.cast_and_deliver(47540, Some(h.npc));
     let target_position = super::targets::position(h.app.world(), h.npc).unwrap();
-    assert_eq!(destination(&h).unwrap().position, target_position);
+    assert_eq!(
+        destination(&h, Some(h.caster)).unwrap().position,
+        target_position
+    );
     // An actual channel destination takes priority over its unit target.
     let requested = super::targets::position(h.app.world(), h.caster).unwrap();
+    assert_ne!(
+        requested, target_position,
+        "distinct existing native unit positions"
+    );
     h.app
         .world_mut()
         .get_mut::<super::PendingCastSpell>(h.caster)
         .unwrap()
         .0
         .cast_destination = Some(requested.to_array());
-    assert_eq!(destination(&h).unwrap().position, requested);
+    assert_eq!(destination(&h, Some(h.npc)).unwrap().position, requested);
     let caster = h.caster;
     super::cancel_cast(h.app.world_mut(), caster);
     assert!(
-        destination(&h).is_none(),
+        destination(&h, Some(h.caster)).is_none(),
         "ended channels supply no destination"
     );
 }
