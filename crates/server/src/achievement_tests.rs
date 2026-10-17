@@ -42,17 +42,17 @@ fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart(
         PlayerLink(player),
     ));
     let held = world.resource::<GameDatabase>().db.begin_write().unwrap();
-    let release = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+    let (release, blocked) = std::sync::mpsc::channel();
+    let holder = std::thread::spawn(move || {
+        let signal = blocked.recv_timeout(std::time::Duration::from_secs(5));
         held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
     });
-    let started = std::time::Instant::now();
     let (_, toasts) =
         update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(50)], None).unwrap();
-    let elapsed = started.elapsed();
     assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "cold achievement producer took {elapsed:?}"
+        !holder.is_finished(),
+        "producer must return before the held writer is released"
     );
     assert!(
         crate::guild_news::query(&world.resource::<GameDatabase>().db, character)
@@ -72,7 +72,8 @@ fn guild_news_real_flagged_player_achievement_commits_once_and_survives_restart(
             "achievement/news pair remains uncommitted"
         );
     }
-    release.join().unwrap();
+    release.send(()).unwrap();
+    holder.join().unwrap();
     crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     assert!(
         toasts.iter().any(|toast| toast.achievement_id == 14782),
