@@ -72,7 +72,6 @@ fn azure_leymor_infused_strike_starts_at_ten_seconds_and_lands_native_effects() 
 }
 
 #[test]
-#[ignore = "RED: source Ley-Line Sprouts schedule not implemented"]
 fn azure_leymor_sprouts_starts_at_three_seconds_with_native_cast_time() {
     const SPROUTS: u32 = 374364;
     let (mut h, leymor) = wake_leymor();
