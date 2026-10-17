@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source advice/riding/sentry/atonement boundaries (2026-10-17)
+
+[Source235–239 matrix](../../toy-effects14-coverage.md#source235239-adviceridingsentryatonement-boundaries-2026-10-17) retains minute-period dummy advice with no named child, wheelbarrow riding/eligibility, unwanted-entity warning and allied atonement gaps. Three authentic TDB actors exist but are absent from runtime content; Racer's VehicleId0 must not be replaced with an invented vehicle. No generic cosmetic/actor admission, new runtime/data write or positive simulation/native proof.
+
 ## Smelly Jelly and hover/mail/tea/moving-area boundaries (2026-10-17)
 
 [Source230–234 matrix](../../toy-effects14-coverage.md#source230234-smelly-jelly-acceptance-and-hovermailteamoving-area-gaps-2026-10-17) adds234's actual authentic five-model transform/ordinary ten-minute restoration/one-hour recovery acceptance. Seven disguises plus Oomgut pass two tests/eight IDs99.85s; shared225/234 check2m25s/fmt/readability pass. Hover meditation, persistent friend-mail, goober tea-serving and moving Bonestorm area-trigger actions remain gaps. Source Sinvyr358569/type10/display67389 exists but is not runtime-published or interaction-proved; no inert-prop admission or new native certificate.

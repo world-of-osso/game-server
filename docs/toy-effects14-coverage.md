@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source235–239: advice/riding/sentry/atonement boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|235 Bondable Sinstone183986/343960 | Self periodic-dummy226/60000ms period with trigger0,900000ms duration, inherited10000ms spell recovery. Source promises questionable advice/insight; neither a zero child nor periodic aura establishes message selection/delivery. No generic cosmetic or invented advice text. |
+|236 Bondable Val'kyr Diadem183988/343963 | Same periodic/duration/recovery shape with separate nitpicky Val'kyr advice contract. Authentic per-source advice/recipient/lifecycle remains unproved; not automatically closed by235 or a silent periodic tick. |
+|237 Dredger Barrow Racer183989/344646 | Source1000ms cast/600000ms summon175142 at target48 with properties1362 (Control0/Title0/flags2048), self dummy4 and effect140→106649/aura26 for1000ms. Source175142/display96515/scale1.15 exists only in TDB here, VehicleId0; inherited3600000ms recovery. Advertised Journeyman Riding eligibility and actual wheelbarrow riding/racing remain unproved. Do not fabricate a vehicle ID or treat the summon as scenery. |
+|238 Stonewrought Sentry184075/344266 | Cursor87 summon175551/properties1362 for600000ms, inherited3600000ms recovery. TDB display94282/scale1 exists; runtime content absent. Actual unwanted-entity warning action remains unresolved, not established by an inert source actor or generic guardian combat. |
+|239 Vulgarity Arbiter184218/344785 | Cursor87 summon175219/properties3973 (Control1/Title0) for600000ms, inherited600000ms recovery. TDB display94615/scale0.4 exists; runtime content absent. Advertised caster/allied atonement action and controlled-summon behavior remain unproved; no stationary prop or invented interaction. |
+
+`rows235-239-{readonly-source,action-source}.json` preserves exact70391 periodic/cast/duration/recovery/child/property records and source/runtime template-model separation. Runtime absence is recorded without admitting missing actors whose advertised actions remain unresolved. No production/data/canonical writes, new admission, positive simulation/native proof or repeated unchanged gate;149865 Tea Set remains lead-required.
+
 ## Source230–234: Smelly Jelly acceptance and hover/mail/tea/moving-area gaps (2026-10-17)
 
 234 Smelly Jelly183903/343827 uses existing174859 with authentic96239/96240/96241/96242/96243 choices. Source self transform56/misc8 lasts600000ms with3600000ms item recovery. Test/spec e651544c adds this exact pool to actual learning/ordinary-expiry/restoration/health/recovery acceptance, now seven disguise IDs. Disguises plus Oomgut pass2/2, zero ignored, eight IDs99.85s after one5m51s maintained native compile. Single shared225/234 package/tests check2m25s/no compiler warnings, fmt/readability/diffcheck pass. No production/data change, manufactured RED or native/weighted-sampling certificate.
