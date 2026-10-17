@@ -788,6 +788,42 @@ fn spawn_saved_player(app: &mut App, name: &str, map_id: u32, x: f32) -> u64 {
 }
 
 #[test]
+fn periodic_save_never_waits_for_a_busy_durable_writer() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
+    app.insert_resource(GameDatabase {
+        db: temp_database(),
+    });
+    let character = spawn_saved_player(&mut app, "Queued", 0, 25.0);
+    for _ in 0..299 {
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    let held = app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = std::time::Instant::now();
+    app.world_mut().run_schedule(FixedUpdate);
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "save tick waited for writer: {elapsed:?}"
+    );
+    assert_eq!(
+        stored_position(&app.world().resource::<GameDatabase>().db, character).0,
+        25.0
+    );
+}
+
+#[test]
 fn periodic_save_writes_every_changed_player_with_map_and_corpse() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);

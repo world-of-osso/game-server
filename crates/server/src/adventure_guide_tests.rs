@@ -63,6 +63,40 @@ fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
 }
 
 #[test]
+fn adventure_guide_month_refresh_never_waits_for_a_busy_durable_writer() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let now = Utc
+        .with_ymd_and_hms(2026, 10, 15, 16, 0, 0)
+        .single()
+        .unwrap()
+        .timestamp();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Guidesave").unwrap();
+    prepare_real_catalog(&mut h, now);
+    let connection = h.connection;
+    let baseline = settle_month_for_connection(h.app.world_mut(), connection).unwrap();
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = std::time::Instant::now();
+    let refreshed = settle_month_for_connection(h.app.world_mut(), connection).unwrap();
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "Guide month settlement tick waited for writer: {elapsed:?}"
+    );
+    assert_eq!(refreshed, baseline);
+}
+
+#[test]
 fn suggested_provider_uses_existing_earned_achievement_authority_for_bonus() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let now = Utc
