@@ -95,11 +95,10 @@ fn encounter_coverage_gargolmar_speech_actual_melee_kill_speaks_once() {
     );
     assert!(
         h.inbox(0).log.iter().any(|event| {
-            event.source == Some(boss.to_bits())
-                && event.target == Some(player.to_bits())
-                && event.kind == CombatLogKind::Damage
-                && event.spell_id.is_none()
-                && event.amount > 0
+            let owned =
+                event.source == Some(boss.to_bits()) && event.target == Some(player.to_bits());
+            let melee_damage = event.kind == CombatLogKind::Damage && event.spell_id.is_none();
+            owned && melee_damage && event.amount > 0
         }),
         "real ordinary melee damage, not a substitute spell or direct kill"
     );
@@ -158,11 +157,10 @@ fn encounter_coverage_gargolmar_speech_surge_casts_have_both_source_chance_outco
     }
     assert!(
         h.inbox(0).log.iter().any(|event| {
-            event.source == Some(boss.to_bits())
-                && event.target == Some(player.to_bits())
-                && event.spell_id == Some(34645)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0
+            let owned =
+                event.source == Some(boss.to_bits()) && event.target == Some(player.to_bits());
+            let surge_damage = event.spell_id == Some(34645) && event.kind == CombatLogKind::Damage;
+            owned && surge_damage && event.amount > 0
         }),
         "actual source Surge impact occurs; misses still retain successful-cast hooks"
     );
