@@ -20,6 +20,7 @@ pub mod boss_ai;
 pub mod bossmod;
 pub mod creature_text;
 pub mod event_map;
+pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 pub(crate) mod jump_movement;
 pub mod kings_rest;
@@ -294,6 +295,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if maraudon::is_creature_script(script_name) {
         return maraudon::creature_ai(world, creature);
     }
+    if hellfire_ramparts::is_creature_script(script_name) {
+        return hellfire_ramparts::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -312,6 +316,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || wailing_caverns::is_creature_script(script_name)
         || maraudon::is_creature_script(script_name)
         || azure_vault::is_creature_script(script_name)
+        || hellfire_ramparts::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
@@ -670,7 +675,11 @@ impl Ctx<'_> {
             .world
             .get::<shared::components::Npc>(self.me)
             .map_or_else(String::new, |npc| npc.name.clone());
-        match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
+        let result =
+            crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered);
+        #[cfg(test)]
+        tests::cast_admission::record(self.world, self.me, spell_id, &result);
+        match result {
             Ok(()) => {
                 info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
                 true

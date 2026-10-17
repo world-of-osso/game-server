@@ -33,6 +33,7 @@ use crate::world_data::{CreatureSpawn, WorldData};
 /// `SSCreatureIds` of the bosses.
 const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 
+pub(super) mod cast_admission;
 mod data_bosses;
 mod dungeonach;
 mod smart_combat;
