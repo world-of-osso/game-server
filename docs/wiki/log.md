@@ -1,6 +1,6 @@
 ## 2026-10-16 — Native queued effect64 integration
 
-[Spell casting](systems/spell-casting.md#queued-effect64-and-required-caster-trigger-integration--2026-10-16): actual native0/1ms parent calls expose inline-child RED0pass/2fail11.81s. Native-delay FIFO callbacks now defer64 without clock edits or early aura activation; required-caster guard and exact retained positive/negative fixtures restored. GREEN/final gates pending;32/140, native64 costs/reagents and general launch-phase parity remain separate.
+[Spell casting](systems/spell-casting.md#queued-effect64-and-required-caster-trigger-integration--2026-10-16): actual native0/1ms parent calls expose inline-child RED0pass/2fail11.81s. Native-delay FIFO callbacks now defer64 without clock edits or early aura activation; required-caster guard and exact retained positive/negative fixtures restored. Current merged106 batch105 passes; its sole due-order fixture used an NPC owner-only log. Test-only correction to the actual player owner's receipts passes1/0/0 in11.00s. Preserve105 unchanged+corrected1 rather than rerunning106; required producer/Stack Timer positives are restored. Workspace/all-target check223.375s/0warnings, fmt and independent artifact/wiring/readability pass.32/140, native64 costs/reagents and general launch-phase parity remain separate.
 
 ## 2026-10-16 — Triggered excluded-caster eligibility and required-ref blocker
 
