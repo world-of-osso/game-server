@@ -249,3 +249,92 @@ fn encounter_coverage_omor_slay_owned_hound_kill_does_not_credit_owner() {
     );
     assert!(h.inbox(1).chat.is_empty());
 }
+
+#[test]
+fn encounter_coverage_omor_slay_revived_transition_does_not_poison_later_fall() {
+    let (mut h, boss, _, _) = ordinary_hound_fixture();
+    let player = h.player();
+    crate::combat::kill_unit(h.app.world_mut(), boss, player);
+    // Cancel this queued death before its corpse transition, then die to a fall.
+    let maximum = h.health(player).max;
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = maximum;
+    h.advance(0.1);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(player)
+            .is_none()
+    );
+    assert_eq!(
+        slay_count(&h, boss),
+        0,
+        "invalid queued death cannot notify killer"
+    );
+    let world = h.app.world_mut();
+    let fall = crate::death::deal_environmental_damage(
+        player,
+        shared::protocol::EnvironmentalKind::Falling,
+        &mut world.get_mut::<Health>(player).unwrap(),
+        maximum,
+    )
+    .expect("later actual environmental damage");
+    crate::spell_cast::log_event(world, fall);
+    world.write_message(crate::death::PlayerDeathTransition { player });
+    h.advance(0.1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(player)
+            .unwrap()
+            .state,
+        shared::death::DeathState::Dead
+    );
+    assert_eq!(
+        slay_count(&h, boss),
+        0,
+        "consumed invalid cause cannot leak into later fall"
+    );
+}
+
+#[derive(Resource, Default)]
+struct DeathOrder(Vec<(&'static str, Entity, bool, f32)>);
+
+struct DeathOrderProbe;
+
+fn record_death_order(ctx: &mut Ctx, victim: Entity, phase: &'static str) {
+    let corpse = ctx.world.get::<crate::combat::Corpse>(victim).is_some();
+    let health = ctx.world.get::<Health>(victim).unwrap().current;
+    ctx.world
+        .resource_mut::<DeathOrder>()
+        .0
+        .push((phase, victim, corpse, health));
+}
+
+impl CreatureAi for DeathOrderProbe {
+    fn killed_unit(&mut self, ctx: &mut Ctx, victim: Entity) {
+        record_death_order(ctx, victim, "killer");
+    }
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        let victim = ctx.me;
+        record_death_order(ctx, victim, "victim");
+    }
+}
+
+#[test]
+fn encounter_coverage_omor_slay_corpse_precedes_killer_before_victim_death_script() {
+    let (mut h, boss, hound, _) = ordinary_hound_fixture();
+    h.app.init_resource::<DeathOrder>();
+    for actor in [boss, hound] {
+        h.app.world_mut().entity_mut(actor).insert(CreatureAiState {
+            ai: Some(Box::new(DeathOrderProbe)),
+            pending: Default::default(),
+        });
+    }
+    crate::combat::kill_unit(h.app.world_mut(), boss, hound);
+    h.advance(0.05);
+    assert_eq!(
+        h.app.world().resource::<DeathOrder>().0,
+        vec![("killer", hound, true, 0.0), ("victim", hound, true, 0.0)],
+        "script-observed corpse/health and notification order follow approved boundary"
+    );
+}
