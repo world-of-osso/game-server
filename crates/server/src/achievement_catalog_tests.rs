@@ -1,6 +1,22 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_honor_area31_authored_ancestry_does_not_enable_timers() {
+    let catalog = catalog();
+    // Real child12213 of10458. Its timed criterion46725 is outside achievement roots.
+    let timed = &catalog.criteria[&46725];
+    assert!(CriteriaEvent::HonorableKillInArea(12213).matches(timed));
+    assert!(CriteriaEvent::HonorableKillInArea(10458).matches(timed));
+    assert!(!CriteriaEvent::HonorableKillInArea(0).matches(timed));
+    assert!(!CriteriaEvent::HonorableKillInArea(9511).matches(timed));
+    assert!(!timed.supported, "timer companion still rejects admission");
+    assert!(
+        !catalog.criteria[&39692].supported,
+        "asset0 is not an all-area alias"
+    );
+}
+
+#[test]
 fn achievements_criteria_honor_area31_account_contributions_sum_not_max() {
     let contributions = [23, 27].into_iter().map(|count| PlayerAchievementState {
         criteria_progress: [(39747, count)].into(),

@@ -196,6 +196,11 @@ Character achievement247 / criterion2379 uses native DoEmote54 TextEmote56. Pres
 - Preserve the full ten distinct one-kill leaves of faction-specific Know Thy Enemy246/1005, including Dracthyr70/52. Nonlethal/friendly/gray/dead/idle replay cannot add race credit; an eligible nearby group recipient must receive its own contribution without dealing the final blow. Persist contributions and account original dates across normal reconstruction. No class52/area31/lifetime113 or new BG/arena policy in this slice.
 
 
+## Eligible recipient area31
+
+- Credit PVPKillInArea31 at the existing eligible world-player death reward using each recipient's current authenticated terrain area. Match a positive authored AreaTable asset or its descendants (TC RewardHonor6756, CriteriaHandler1637–1640). Victim area, another recipient's area, unknown terrain and stale cached positions cannot substitute. Preserve all companions, sum account contributions and do not add BG/arena eligibility policy.
+- Blood and Sand12411 keeps all twelve authored area leaves9511–9522 and the root's fifty-kill sum threshold. Existing Hall achievements224/1151 retain their authored thresholds and alternative areas; structural support does not certify native battleground content. Preserve earned dates and quantities across normal persistence reconstruction.
+
 ## Eligible victim class52
 
 - Credit DeliverKillingBlowToClass52 at the existing eligible world-player death reward, from actual victim Player.class for every eligible recipient, including the living nearby group member without the final blow. Match positive authored class1..13 exactly, retain all companions and sum account contributions. Neither killer class nor victim race may substitute.
