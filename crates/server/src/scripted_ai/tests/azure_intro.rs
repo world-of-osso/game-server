@@ -11,7 +11,6 @@ const ARCANE_ERUPTION: u32 = 375749;
 const IMMUNE_TO_NPC: u32 = 0x0000_0200;
 
 #[test]
-#[ignore = "RED: NPC immunity attack admission GREEN pending"]
 fn azure_leymor_sourced_npc_immunity_rejects_npc_attack_admission() {
     let flags = shared::components::UnitFlags(IMMUNE_TO_NPC);
     assert!(
@@ -35,6 +34,13 @@ fn eruption_count(h: &mut Harness, leymor: Entity) -> usize {
         .iter(h.app.world())
         .filter(|field| field.caster == leymor && field.spell_id == ARCANE_ERUPTION)
         .count()
+}
+
+fn tenders_in(h: &mut Harness, map: InMap) -> Vec<Entity> {
+    h.creatures_of(ARCANE_TENDER)
+        .into_iter()
+        .filter(|e| h.app.world().get::<InMap>(*e) == Some(&map))
+        .collect()
 }
 
 fn source_azure_copy() -> (Harness, Entity, InMap) {
@@ -103,17 +109,12 @@ fn spawn_second_copy(h: &mut Harness) -> (Entity, InMap) {
 }
 
 #[test]
-#[ignore = "RED: copy-local non-following formation depletion GREEN pending"]
 fn azure_leymor_tender_depletion_does_not_wake_another_live_copy() {
     let (mut h, leymor, map) = source_azure_copy();
     let (other_leymor, other_map) = spawn_second_copy(&mut h);
     assert_ne!(map, other_map);
     assert!(h.has_aura(other_leymor, STASIS));
-    let tenders: Vec<_> = h
-        .creatures_of(ARCANE_TENDER)
-        .into_iter()
-        .filter(|e| h.app.world().get::<InMap>(*e) == Some(&map))
-        .collect();
+    let tenders = tenders_in(&mut h, map);
     assert_eq!(tenders.len(), 3);
     let player = h.player();
     for tender in tenders {
@@ -145,14 +146,9 @@ fn azure_leymor_appears_in_native_stasis_until_tender_group_depletion() {
 }
 
 #[test]
-#[ignore = "RED: copy-local non-following formation depletion GREEN pending"]
 fn azure_leymor_last_native_tender_death_wakes_after_one_second_and_stays_awake() {
     let (mut h, leymor, map) = source_azure_copy();
-    let tenders: Vec<_> = h
-        .creatures_of(ARCANE_TENDER)
-        .into_iter()
-        .filter(|e| h.app.world().get::<InMap>(*e) == Some(&map))
-        .collect();
+    let tenders = tenders_in(&mut h, map);
     assert_eq!(tenders.len(), 3, "three authenticated group members");
     assert!(h.has_aura(leymor, STASIS));
     let player = h.player();
@@ -189,4 +185,45 @@ fn azure_leymor_last_native_tender_death_wakes_after_one_second_and_stays_awake(
         "copy intro flag survives actor reinitialization"
     );
     assert_eq!(eruption_count(&mut h, leymor), 1, "wake happens once");
+}
+
+#[test]
+fn azure_leymor_group_identity_survives_dead_leader_entity_removal() {
+    let (mut h, leymor, map) = source_azure_copy();
+    let source = h
+        .app
+        .world()
+        .resource::<WorldData>()
+        .spawns
+        .iter()
+        .find(|spawn| spawn.guid == 29001816)
+        .expect("authenticated tender formation leader");
+    let home =
+        crate::terrain_height::wow_to_bevy(source.position_x, source.position_y, source.position_z);
+    let tenders = tenders_in(&mut h, map);
+    let leader = *tenders
+        .iter()
+        .find(|entity| {
+            let spawn = h
+                .app
+                .world()
+                .get::<crate::creature_ai::SpawnPoint>(**entity)
+                .unwrap();
+            (spawn.x, spawn.y, spawn.z) == home
+        })
+        .expect("leader at its authored home");
+    let player = h.player();
+    crate::combat::kill_unit(h.app.world_mut(), player, leader);
+    h.app.world_mut().despawn(leader);
+    h.advance(1.2);
+    assert!(
+        h.has_aura(leymor, STASIS),
+        "two living members still hold intro"
+    );
+    for tender in tenders.into_iter().filter(|&entity| entity != leader) {
+        crate::combat::kill_unit(h.app.world_mut(), player, tender);
+    }
+    h.advance(1.2);
+    assert!(!h.has_aura(leymor, STASIS));
+    assert_eq!(eruption_count(&mut h, leymor), 1);
 }
