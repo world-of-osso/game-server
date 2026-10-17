@@ -1094,7 +1094,7 @@ fn offset_destination(point: Vec3, angle: f32, distance: f32) -> Vec3 {
 /// TC Spell.cpp:1760–1763: only a TempSummon supplies UNIT_SUMMONER.
 fn find_summoner(world: &World, caster: Entity) -> Option<Entity> {
     let summoner = world.get::<super::summon::SummonedCreature>(caster)?.owner;
-    same_instance(world, caster, summoner).then_some(summoner)
+    same_map(world, caster, summoner).then_some(summoner)
 }
 
 /// The unit the caster channels at (`Spell::m_targets` of its channel).
