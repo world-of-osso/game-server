@@ -164,6 +164,7 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
         }
@@ -504,6 +505,7 @@ fn track_switch_plan(
         dest: None,
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 
@@ -537,6 +539,7 @@ fn chain_heal_plan(
         dest: None,
         chain_multipliers,
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 
@@ -704,6 +707,7 @@ fn pyre_explosion_plan(
         }),
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+        prevent_hit_script: false,
     }]
 }
 

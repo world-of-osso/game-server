@@ -1,5 +1,5 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Telash initial native power is ported; combat/energy/jump/rune phases remain unported.
+//! Telash initial/periodic power is ported; combat clocks, jumps and runes remain unported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -19,6 +19,8 @@ const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
 const LEYMOR_SCRIPT: &str = "boss_leymor";
 const TELASH_SCRIPT: &str = "boss_telash_greywing";
 const TELASH_INITIAL_POWER: f32 = 60.0;
+const ICE_POWER_PERIODIC: u32 = 389453;
+const ICE_POWER_PER_TICK: f32 = 2.0;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -214,6 +216,13 @@ fn read_telash_primary_powers(world: &World, actor: Entity) -> Option<(PowerType
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
+        ICE_POWER_PERIODIC,
+        AuraScript {
+            on_periodic: Some(tick_ice_power),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         EXPLOSIVE_BRAND,
         AuraScript {
             on_remove: Some(explode_expired_brand),
@@ -227,6 +236,33 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// TC389453 effect0/PERIODIC_DUMMY: SetPower(primary, GetPower(ENERGY) +2).
+fn tick_ice_power(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {
+    let periodic_dummy = index == 0
+        && aura
+            .effects
+            .iter()
+            .any(|effect| effect.index == 0 && effect.aura_type == handlers::PERIODIC_DUMMY);
+    if !periodic_dummy {
+        return;
+    }
+    let Some((primary, delta)) = read_ice_power_delta(world, target) else {
+        warn!(
+            ?target,
+            "Ice Power389453 requires native Energy and primary power pools"
+        );
+        return;
+    };
+    crate::spell_cast::powers::change_power(world, target, primary, delta);
+}
+
+fn read_ice_power_delta(world: &World, target: Entity) -> Option<(PowerType, f32)> {
+    let energy = crate::spell_cast::powers::power_value(world, target, PowerType::Energy)?.0;
+    let primary = world.get::<PowerPools>(target)?.order.first().copied()?;
+    let current = crate::spell_cast::powers::power_value(world, target, primary)?.0;
+    Some((primary, energy + ICE_POWER_PER_TICK - current))
 }
 
 /// TC a352b1fa374364 effect0 OnEffectHit: two native missiles per authored origin.

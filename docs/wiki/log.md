@@ -1,6 +1,9 @@
 ## 2026-10-17 — Launch Rocket setup and launch
 
 [Bounded75](../pet-battle-effect-coverage.md#launch-rocket75--implementation2026-10-17): exact293/effect508/aura294, existing charged direct-damage path. Unsupported75 RED3→GREEN4;1777/2829 rows/1015 graphs. Authored owned-team/wild-PvP27 and both strict native skins pass setup/launch win, six inspected fullHD originals/two framed models throughout. Final lib/check pending; no generic object-sharing/timing/VFX claim.
+## 2026-10-17 — Guild effect source authority
+
+[Mobile/resurrection audit](systems/guild-perks.md#mobile-and-resurrection-authority-audit--2026-10-17): existing authenticated faction1168 disproves the missing-reputation-provider assumption. Retrieved and pinned contemporary Mobile and historical resurrection fork candidates; neither establishes Mainline cast/use, resurrection qualification or ghost-stacking policy. No production behavior or effect completion claimed.
 
 ## 2026-10-16 — Armageddon team damage and sacrifice
 
@@ -8,6 +11,9 @@
 ## 2026-10-17 — Guild invitation appearance delivery
 
 [Invitation appearance](systems/guild-lifecycle.md#invitation-appearance-delivery): real optional registered design uses one delivery loader without changing invitation storage. Request/reopen controls and independent368 gate pass. Both-skin actual UDP/native proof covers four invitations/physical declines and both optional states with identical artifacts, source-qualified paid private setup and four inspected full-HD originals; persisted-invitation replay remains a separate backend proof boundary.
+## 2026-10-17 — Omor Orbital source hooks
+
+[Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
 
 ## 2026-10-16 — Eligible victim class52
 
@@ -17,7 +23,7 @@
 [Haymaker762 / Gift989](../pet-battle-effect-coverage.md#miss-only-self-outcomes194--implementation2026-10-16): bounded actual-miss gate and self selector, preserving block/success/unrelated-miss separation. Real RED2→GREEN8 includes owned loadouts/persisted injury. Both-skin actual self-stun/59–68 healing, successful-hit controls, ten fullHD originals and canonical strict readback pass. Final integrated lib111/wild-PvP25/UI12/check2m05/fmt pass without warnings.
 ## 2026-10-17 — Telash startup prerequisites
 
-[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test reached genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; native primary-pool binding exposes actual61.5vs60 from unauthored generic regeneration; authored-flag consumer preserves the controlled path and passes native2/2 at933bb833. Both regressions enabled after GREEN;958289d1 affected19+17resource+11guardian cases pass47, check/fmt pass with zero warnings and confirmed48e6 before/after. Nextnative389453 periodic+2/sec test reaches genuine60vs62 RED31.32s and stays ignored until GREEN. Rune startup/combat phases remain unported.
+[Source boundary](investigations/follower-data.md#telash-startup-prerequisites--2026-10-17): independent initialEnergy60 test reached genuine native RED (missing pool, native100 preflight passes). Native max100/source unit_class4 retained. Missing runtime rune197204 and jump-charge parameters are named gaps, not invented fixtures; native primary-pool binding exposes actual61.5vs60 from unauthored generic regeneration; authored-flag consumer preserves the controlled path and passes native2/2 at933bb833. Both regressions enabled after GREEN;958289d1 affected19+17resource+11guardian cases pass47, check/fmt pass with zero warnings and confirmed48e6 before/after. Nextnative389453 periodic+2/sec test reaches genuine60vs62 RED31.32s; effect0/PERIODIC_DUMMY hook passes native1/1 at37f4821e (30.49s, strict48e6 before/after), with no baseline/tick/capacity override. Enabled only after GREEN; periodic2b839e99 controls20/2nextignored, check/fmt and strict48e6 before/after pass. Nextautomaticengagement/3.5sFrost tests reach genuine RED2/22.78s after floor/living-victim prerequisites, and remain ignored until GREEN. Rune startup/combat phases remain unported.
 
 ## 2026-10-17 — Leymor native Sprouts destination boundary
 
