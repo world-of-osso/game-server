@@ -107,7 +107,7 @@ fn achievements_criteria_honor_class52_full_thirteen_classes_and_reopen() {
         assert_eq!(reopened.criteria_progress.get(&criterion), Some(&1));
     }
     world.entity_mut(killer).insert(reopened);
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     crate::achievement::record_player_event(
         &mut world,
         killer,

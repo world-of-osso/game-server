@@ -117,7 +117,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
     h.app.insert_resource(shared_world_data(&path));
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app.init_resource::<crate::gold::GoldUpdateQueue>();
     h.app.add_systems(
         Update,
@@ -331,7 +331,7 @@ fn toys_learn_favourite_and_reopen_on_another_character() {
     assert_ne!(other, character);
     let mut h = harness(Vec::new(), &[TRANSFORM], 8).unwrap();
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app
         .world_mut()

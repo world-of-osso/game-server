@@ -107,7 +107,7 @@ fn setup_app_with(db: Database, extra: impl FnOnce(&mut App)) -> App {
     app.register_message::<SetTradeItem>();
     app.register_message::<ConfirmTrade>();
     app.register_message::<TradeStateUpdate>();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.init_resource::<GoldUpdateQueue>();
     app.insert_resource(test_templates());
     // This inventory fixture contains no toy definitions; item use still needs

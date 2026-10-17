@@ -241,7 +241,33 @@ impl Plugin for PersistencePlugin {
 
 #[derive(Resource)]
 pub struct GameDatabase {
-    pub db: Database,
+    pub db: std::sync::Arc<Database>,
+    pub(crate) writer: crate::persistence_writer::PersistenceWriter,
+    pub(crate) accounts: crate::achievement::AccountProgressCache,
+}
+
+impl GameDatabase {
+    #[cfg(test)]
+    pub(crate) fn into_database(self) -> Database {
+        let Self {
+            db,
+            writer,
+            accounts,
+        } = self;
+        drop(writer);
+        drop(accounts);
+        std::sync::Arc::try_unwrap(db)
+            .unwrap_or_else(|_| panic!("database remains shared after writer drain"))
+    }
+
+    pub(crate) fn new(db: Database) -> Self {
+        let db = std::sync::Arc::new(db);
+        Self {
+            writer: crate::persistence_writer::PersistenceWriter::start(std::sync::Arc::clone(&db)),
+            db,
+            accounts: Default::default(),
+        }
+    }
 }
 
 fn try_open_database_once(path: &Path) -> Result<Database, redb::DatabaseError> {
@@ -288,7 +314,7 @@ fn open_database(mut commands: Commands) {
     }
     commands.insert_resource(motd);
     info!("Database opened at {}", path.display());
-    commands.insert_resource(GameDatabase { db });
+    commands.insert_resource(GameDatabase::new(db));
 }
 
 fn game_database_path() -> PathBuf {
@@ -762,6 +788,8 @@ pub fn save_currencies(
     txn.commit().expect("Failed to commit currencies save");
 }
 
+/// Offline/test migration helper. Runtime readers use the owned account cache.
+#[cfg(test)]
 pub fn load_achievements(
     db: &Database,
     character_id: u64,
@@ -790,6 +818,7 @@ pub fn load_achievements(
     }
 }
 
+#[cfg(test)]
 pub fn save_achievements(
     db: &Database,
     character_id: u64,

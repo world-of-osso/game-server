@@ -77,7 +77,7 @@ fn achievements_criteria_absent_aura_native_marks_and_kills_persist() {
             app.add_plugins(AchievementPlugin);
         })
         .unwrap();
-        h.app.insert_resource(GameDatabase { db });
+        h.app.insert_resource(GameDatabase::new(db));
         h.app
             .insert_resource(crate::test_data::achievement_catalog());
         h.app.world_mut().entity_mut(h.caster).insert((
