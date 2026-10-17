@@ -901,6 +901,22 @@ fn personal_arena_rating_event(
     Some(CriteriaEvent::PersonalArenaRating { bracket, rating })
 }
 
+/// TC RewardHonor6755-6757: the validated world victim supplies race to every eligible recipient.
+pub(crate) fn record_world_honorable_kill(world: &mut World, player: Entity, victim: Entity) {
+    let race = world
+        .get::<Player>(victim)
+        .expect("validated world honor victim")
+        .race;
+    record_criteria_events(
+        world,
+        player,
+        &[
+            CriteriaEvent::EarnHonorableKill,
+            CriteriaEvent::HonorableKillRace(race),
+        ],
+    );
+}
+
 pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {
     record_criteria_event(world, player, event);
 }

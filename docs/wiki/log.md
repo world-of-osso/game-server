@@ -1,3 +1,7 @@
+## 2026-10-16 — Eligible victim race53
+
+[Native reward](systems/dungeon-achievements.md#eligible-victim-race53): genuine both-faction missing race credit despite native35 and account max-vs-sum RED; batched35/53 implementation. Native/account GREEN3/3 proves both full ten-race grants and group/reopened date. Census5529/1841 adds246/1005; post-master filter224/0/1existingignored+site1/1, workspace/all-targetcheck/fmt/diff pass and independent artifact/readability complete.
+
 ## 2026-10-16 — Same-species pet damage370
 
 [Dragon's Call2283](../pet-battle-effect-coverage.md#same-species-dragons-call370--implementation2026-10-16): explicit species identity from the owned/wild factory, existing direct-damage reuse and bounded real root; test-only templates rejected. Actual owned-team unsupported370 RED→GREEN6,1761/2829 rows (62.25%)/1009 graphs. Both-skin private5961 actual2283 deals85/77 with two matching reserves, HP/cooldown3 and strict-mode/tripwire0; four fullHD originals inspected. Adopted70448 canonical model closure/readback pass; final96/23/12/check/fmt and focused post-gate matrix1 pass, with no redundant broad rerun or blanket parity claim.
