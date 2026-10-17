@@ -1,6 +1,10 @@
 ## 2026-10-17 — Literal world-state source boundary
 
 [Constant67](systems/dungeon-achievements.md#constant-world-state-expressions67): enabled signed-literal comparisons only;21 exact results/10true, false3785 remains impossible. Full-companion native fifth-cast RED at ea92c91a; explicit decoded-source compiler context corrects initial overbroad admission, Python54/54. Structural census+21ordinary/+1stat; native GREEN2bcef1424/4 proves both full-five-spell grants/reopened dates plus false/pin/Gilneas controls. Integrated4bcd410a affected workspace240/0/1ignored+site1, one-hour-later relog dates, workspace/all-target check/no Rust warnings and3repo/native-Godot fmt/diff pass. Independent boundedModeB/readability PASS; missing Mephistroth/Warfront/raid availability unclaimed.
+## 2026-10-17 — Level-based pet maximum health
+
+[Bounded state2](../pet-battle-effect-coverage.md#level-based-maximum-health--implementation2026-10-17): explicit actual level1..25,5/5/10HP per level, existing percentage/floor/cap and owned-health persistence boundary. Core/owned unsupported-state RED and missing-metadata no-RNG RED precede GREEN; obsolete576 negative removed with remaining negatives retained. All ten fixture tables match active70448; fresh1797/2829/1023 census preserves historical70391. Library139 unchanged passes plus corrected negative1/1, wild/PvP29 plus real-ground configured achievement1/1, check51.00s/no warnings and fmt pass. Initial failures remain documented rather than claiming one all-green broad run. Native proof remains ordered after lead landing.
+
 ## 2026-10-17 — Lock-On target charge
 
 [Bounded77](../pet-battle-effect-coverage.md#lock-on77--implementation2026-10-17): target-worn300/one-round duration, ordinary second-use direct blast, GM722 remains gated. Actual unsupported77 RED5→GREEN6 plus Rocket4/Wind-Up1 regressions pass;1779/2829 rows/1017 graphs. Authored wild-PvP29 and both strict skins pass enemy lock/no damage→145/143 blast/expiry, six inspected fullHD originals and canonical3-mesh loader. Final lib132/check1m02/no warnings/bothfmt pass; prior unchanged UI12 retained. Two fixture namespace compile mistakes corrected with actual library import; failed logs preserved. No cross-caster sharing or full timing/VFX claim.
@@ -29,6 +33,14 @@
 ## 2026-10-17 — Omor Orbital source hooks
 
 [Boss scripts](systems/boss-scripts.md#omor-orbital-hooks--2026-10-17): native543 floor/parent publication and real30637 FALLING prerequisites reach two source REDs at860f0dfa. Port cast-local singleton continuation, exact2D selection, selected threat reduction and Whip's falling-player periodic replacement. Corrected Whip damage observer has genuine default-path RED95f9a4fa; explicit strict GREEN3/3 passes89.14s at8d16bd8e before ignore removal. Server pull124/native obstacle/full encounter proof remains separate.
+## 2026-10-17 — Scarab scatter oracle correction
+
+[Gate412 source-ground metric](systems/toys.md#scarab-source-scatter-metric-2026-10-17): unchanged merged artifact fails2/30; actual778027 outer-ring RED confirms the3D-versus-horizontal mismatch. Keep5.001, exact first destination and separate secondary ground-height assertions. Six focused controls pass; final tightened two-case check/check/fmt pass. Runtime and prior native proof scopes unchanged; lead owns the next merge gate.
+
+## 2026-10-17 — Dragon costume lifecycle118–123
+
+[Six source costumes](systems/toys.md#dragon-costume-simulation-lifecycle-2026-10-17) pass actual learned-use/fifteen-minute ordinary expiry and natural recovery/reuse. Six new cases plus two related transform controls pass8/8 across72.48s; check/fmt clean. No production change; expected-refusal fixture failure is not runtime RED, native presentation remains open.
+
 ## 2026-10-17 — Toy source boundaries89–93
 
 [Exact retained gaps](../toy-effects14-coverage.md#source-scriptcompanionheadwear-boundaries8993-2026-10-17): Poking child279545, three owned-critter150 roots and Brazier Cap conditional procedural payloads. [94–98 continuation](../toy-effects14-coverage.md#source-actionprocedural-boundaries9498-2026-10-17) retains nearby reaction, spectral/headwear procedural, corpse ritual and return/catch gaps. [99–103 matrix](../toy-effects14-coverage.md#source99103-existing-contracts-versus-missing-actions-2026-10-17) retains historical Cooler/Gong proof and exact missing Kovork/procedural gaps. No runtime admission; merged55-case proof unchanged.
