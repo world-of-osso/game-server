@@ -659,3 +659,7 @@ Source template/model publication does not prove the description's target-dummy 
 - Party Totem163210/279072 uses effect28 entry143125/property4492 Control1/Title27/Slot-1/flags8390656, destination138, plus effect77. TDB source identity/display46458/model scale0.4 and empty AI/ScriptName do not establish specialized title27/effect77 gameplay. Native admission remains unsupported, not a generic assistant/guardian replacement.
 
 Exact root/NPC sources: `rows80-84-readonly-source.json`, `rows81-83-readonly-npc.json`; pinned4066 root-script bindings include none of279063/279072/279076/279077. Next84 uses source279076→279077, with visible linked trap302746/display16675, not invisible31442/display0. Source profile/chain and actual learning tests are separate requirements.
+
+## Akunda84 visible linked-trap boundary (2026-10-16)
+
+163211/279076 actual learned-use first genuinely refuses unsupported linked cooking trap302746 (0/1,27.65s, `akunda84-root-red.log`). Source root creates decorative296451 then effect64 triggers279077→cooking296450; source2s cast/300s duration/item300s recovery. Linked source302746 is type6/display16675/faction35 with Data2=10/CozyFire7353, empty AI/script/zero flags/remaining data; unlike existing31442 it is visibly authored, not display0. Both exact profile entries now load by entry, preserving their source display. No generic trap admission or forced invisibility. Actual child cursor propagation/CozyFire/cooking/source expiry and source-drift controls remain pending; no native image/audio/full-parity claim.
