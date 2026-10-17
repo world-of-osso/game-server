@@ -1,6 +1,6 @@
 ## 2026-10-16 — Armageddon team damage and sacrifice
 
-[Armageddon1025](../pet-battle-effect-coverage.md#armageddon1025--bounded-proof2026-10-16): actual team-route rejection RED1→GREEN8, ordinary typed all-enemy routing and bounded self-kill/Failsafe suppression. Authored Rascal-Bot owned loadout covered;1776/2829 rows/1013 graphs. Native/final gates pending.
+[Armageddon1025](../pet-battle-effect-coverage.md#armageddon1025--bounded-proof2026-10-16): actual team-route rejection RED1→GREEN8, ordinary typed all-enemy routing and bounded self-kill/Failsafe suppression. Authored Rascal-Bot owned loadout covered;1776/2829 rows/1013 graphs. Both-skin strict native61/58 damage/caller321→0/forced reserve/actual use, eight fullHD originals and canonical loader pass. Final gates pending.
 
 ## 2026-10-16 — Eligible victim class52
 
