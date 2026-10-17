@@ -152,6 +152,70 @@ fn source_start_facing_is_used_on_login_without_repositioning_saved_characters()
 }
 
 #[test]
+fn character_relogin_reads_owned_achievements_while_default_or_migration_write_is_pending() {
+    for legacy_row in [false, true] {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let raw = redb::Database::create(file.path()).unwrap();
+        persistence::create_tables(&raw);
+        let db = GameDatabase::new(raw);
+        let (character, _) =
+            persistence::create_character(&db.db, 1, "Relogpending", 1, 1).unwrap();
+        // Initialize unrelated login tables before isolating the achievement reader.
+        load_selected_character_state(&db, character, 1, 1);
+        let txn = db.db.begin_write().unwrap();
+        {
+            let mut rows = txn.open_table(persistence::ACHIEVEMENTS).unwrap();
+            if legacy_row {
+                rows.insert(
+                    character,
+                    br#"{"earned_ids":[10],"earned_at":{"10":90}}"#.as_slice(),
+                )
+                .unwrap();
+            } else {
+                rows.remove(character).unwrap();
+            }
+        }
+        txn.commit().unwrap();
+        let mut pending = crate::achievement::PlayerAchievementState::default();
+        pending.earned_ids.extend([10, 14782]);
+        pending.earned_at.insert(14782, 100);
+        pending.criteria_progress.insert(162, 41);
+        let held = db.db.begin_write().unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            held.abort().unwrap();
+        });
+        crate::achievement::save_monthly_contribution(&db, 1, character, &pending);
+        let started = std::time::Instant::now();
+        let (app, player) = select_character_in_world(db, 1, character);
+        let elapsed = started.elapsed();
+        release.join().unwrap();
+        let loaded = app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap();
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "login ran raw initialization/migration; legacy={legacy_row}: {elapsed:?}"
+        );
+        assert!(
+            loaded.earned_ids.contains(&14782),
+            "login lost queued achievement; legacy={legacy_row}"
+        );
+        assert_eq!(loaded.earned_at[&14782], 100);
+        assert_eq!(loaded.criteria_progress[&162], 41);
+        drop(app);
+        let reopened = redb::Database::open(file.path()).unwrap();
+        let saved = persistence::load_achievements(&reopened, character);
+        assert!(
+            saved.earned_ids.contains(&14782),
+            "stale default/migration must not overwrite pending progress"
+        );
+        assert_eq!(saved.criteria_progress[&162], 41);
+    }
+}
+
+#[test]
 fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     let db = test_db();
     let character_id = 55;
