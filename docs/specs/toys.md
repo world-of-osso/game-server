@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- Azerite Firework Launcher166877/290627 retains its existing caster-ground62 one-shot cast without gameplay aura, summon, health/body/position changes. Enforce the source600000ms item recovery: refuse immediate and near-expiry reuse, then allow reuse after ordinary simulation passage. Actual terrain/learning/recovery acceptance is separate from native skyward animation, particles, audio and wall-clock timing.
+
 - Goldtusk Inn Breakfast Buffet166703/289533 requires authentic149876/display90570 with model DisplayScale0.5, source faction35 and unchanged empty interaction/AI/script fields. Maintained additive import preserves the exact TDB model row, including its zero probability. Real learned use places one non-pet/non-follow table at source47's3yd XZ offset for300000ms; preserve600000ms item recovery after ordinary expiry, owner/map and player body/health. Source47 collision/elevation, food/loot interactions and native appearance are not established by this bounded template/lifecycle contract.
 
 - [ ] Establish Citizens Brigade166247/287080 child287079's permanent Personal Anchor action before admitting its linked summon. Authentic148048 model availability alone must not discard the unresolved dummy effect; preserve explicit refusal without cast, actor or recovery spending. [Source126 boundary](../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17).
@@ -143,7 +145,7 @@ Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actio
 
 - Roar of Rezan160509/272071 emits the real cast event for authored caster sound/animation visual77572, preserves health/global appearance and creates no summon or aura. Preserve item recovery90000ms and ordinary rejection/reuse. This bounded server contract does not certify native audio/animation playback.
 
-- Greatfather Winter162973/278244, Headless Horseman163045/278559, Lunar Elder165669/285362, Peddlefeet165670/285424, Noble Gardener165802/286031, Fire Eater166746/286331 and Brewfest Reveler166747/286353 hearthstones use the persisted HomeBind through their real learned UseToy path, source10s cast and shared charge category2309 (one charge,1800000ms recharge). Missing bind refuses without fabricated destination or spent charge; one variant spends the charge shared with the other. Same-map CPU acceptance does not certify cross-map wire/presentation or natural30min recharge.
+- Greatfather Winter162973/278244, Headless Horseman163045/278559, Lunar Elder165669/285362, Peddlefeet165670/285424, Noble Gardener165802/286031, Fire Eater166746/286331, Brewfest Reveler166747/286353 and Holographic Digitalization168907/298068 hearthstones use the persisted HomeBind through their real learned UseToy path, source10s cast and shared charge category2309 (one charge,1800000ms recharge). Missing bind refuses without fabricated destination or spent charge; one variant spends the charge shared with the other. Same-map CPU acceptance does not certify cross-map wire/presentation or natural30min recharge.
 
 - Gnoll Targeting Barrel163201/279063 retains authentic source143119/143120 templates and displays38854/38857 through maintained additive import, including source faction35/flags/AI rather than invented training-dummy flags. Template admission is distinct from actual source-limited UseToy behavior and target-dummy combat/taunt parity.
 

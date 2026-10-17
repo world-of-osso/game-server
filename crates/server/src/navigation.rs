@@ -158,6 +158,11 @@ impl Navigation {
             .map(|route| route.destination)
     }
 
+    /// Drop an interrupted chase corridor before it can resume from stale corners.
+    pub(crate) fn cancel_route(&mut self, entity: Entity) {
+        self.routes.remove(&entity);
+    }
+
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {
         let from = point(request.from);
         let to = point(request.to);
