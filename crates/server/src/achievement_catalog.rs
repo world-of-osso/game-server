@@ -1559,7 +1559,13 @@ fn load_criteria_facts(
             30 => small
                 .filter(|kind| (1..=15).contains(kind))
                 .map(CriteriaFact::KilledCreatureType),
-            67 => node_counts::required_owned_nodes(asset).map(CriteriaFact::EitherTeamNodeCount),
+            67 => match node_counts::constant_expression(asset) {
+                Some(true) => continue, // Proven literal truth needs no live world-state authority.
+                Some(false) => return Ok(None),
+                None => {
+                    node_counts::required_owned_nodes(asset).map(CriteriaFact::EitherTeamNodeCount)
+                }
+            },
             78 => load_battle_pet_type_fact(conn, asset)?,
             46 => small
                 .filter(|percent| (1..=100).contains(percent))
@@ -1718,9 +1724,15 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
             .filter(|_| modifier_asset.is_none());
         let resolved = match compiled {
-            Some(CompiledConditions::All { difficulty, facts }) => {
+            Some(CompiledConditions::All { difficulty, facts })
+                if matches!(kind, 1 | 130)
+                    || facts.iter().all(|(fact_kind, asset)| {
+                        *fact_kind != 67 || node_counts::constant_expression(*asset).is_some()
+                    }) =>
+            {
                 load_criteria_facts(conn, facts, &area_children)?.map(|facts| (difficulty, facts))
             }
+            Some(CompiledConditions::All { .. }) => None,
             Some(CompiledConditions::TargetCreatures(entries)) => Some((
                 None,
                 vec![CriteriaFact::TargetCreatures(entries.iter().copied().collect())],

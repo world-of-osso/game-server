@@ -44,6 +44,34 @@ class NodeCountExpressions(unittest.TestCase):
         struct.pack_into('<i', asymmetric, 23, 2)
         self.assertIsNone(node_counts.decode_node_count_expression(asymmetric.hex()))
 
+    def test_signed_literal_comparisons_evaluate_all_six_tc_operators(self):
+        for comparison, expected in [(1, False), (2, True), (3, True),
+                                     (4, True), (5, False), (6, False)]:
+            expression = bytes([1]) + node_counts.CLAUSE.pack(1, -2147483648, 0, comparison,
+                                                            1, 2147483647, 0, 0)
+            with self.subTest(comparison=comparison):
+                self.assertEqual(node_counts.decode_constant_expression(expression.hex()), expected)
+        self.assertTrue(node_counts.decode_constant_expression('010101000000000101010000000000'))
+        self.assertFalse(node_counts.decode_constant_expression('010100000000000101010000000000'))
+
+    def test_literals_never_substitute_unknown_state_function_arithmetic_or_disabled_input(self):
+        valid = '010101000000000101010000000000'
+        for offset, value in [(0, 0), (1, 2), (1, 3), (6, 1), (7, 0),
+                              (7, 7), (8, 2), (8, 3), (13, 1), (14, 1)]:
+            changed = bytearray.fromhex(valid)
+            changed[offset] = value
+            with self.subTest(offset=offset, value=value):
+                self.assertIsNone(node_counts.decode_constant_expression(changed.hex()))
+        for expression in ('', valid[:-2], valid + '00', FULL_COVERAGE):
+            self.assertIsNone(node_counts.decode_constant_expression(expression))
+        self.assertEqual(node_counts.qualified_constant_expressions({
+            5497: {'Expression': valid},
+            3785: {'Expression': '010100000000000101010000000000'},
+            8656: {'Expression': FULL_COVERAGE},
+        }), {5497: True, 3785: False})
+        with self.assertRaisesRegex(ValueError, 'WorldStateExpression67'):
+            node_counts.qualified_constant_expressions({67: {'Expression': 'not-hex'}})
+
     def test_only_complete_known_expressions_are_returned_and_malformed_hex_fails_loudly(self):
         expressions = {8656: {'Expression': FULL_COVERAGE}, 5717: {'Expression': FIVE_BASES},
                        1: {'Expression': '000000'}, 2: {'Expression': FULL_COVERAGE + '01'}}

@@ -16,7 +16,8 @@ DIFFICULTY_TYPES = {LEGACY_DUNGEON_DIFFICULTY, DUNGEON_DIFFICULTY}
 # (1890), LessThanTappers29 (1902), PlayerMap32 (1922), EarnedAchievementOnPlayer87 (2200–2204),
 # PlayerLevelEqualOrGreaterThan69 (2094),
 # PlayerLevelEqualOrLessThan71 (2102), PlayerKnowsSpell104 (2282–2285).
-PLAYER_FACTS = {2, 8, 17, 25, 26, 29, 32, 41, 69, 71, 87, 104}
+# Positive67 remains load-bounded to generated literal comparisons or native node counts.
+PLAYER_FACTS = {2, 8, 17, 25, 26, 29, 32, 41, 67, 69, 71, 87, 104}
 # HasTimeEventPassed289 (CriteriaHandler.cpp3578-3611): TC hard-codes these event
 # timestamps; every other event defaults to the current time, so it has always passed.
 HAS_TIME_EVENT_PASSED = 289
@@ -297,7 +298,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, output):
         '// Native earned-level160 BattlePetType78 resolves actual changed-pet species;0 is Humanoid.',
         '// Native kill78 CreatureType30 preserves the actual eligible victim type.',
         '// Native participation15 PlayerLevelWithinContentTuning268 uses authored inclusive min/max.',
-        '// Native battleground-win1/130 WorldStateExpression67 is load-bounded to sourced occupied-node equality OR.',
+        '// Positive WorldStateExpression67 is load-bounded to exact literal comparisons; native battleground-win1/130 also admits occupied-node equality OR.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
         f'// Difficulty SHA256 {hashlib.sha256(difficulty_path.read_bytes()).hexdigest()}.',
