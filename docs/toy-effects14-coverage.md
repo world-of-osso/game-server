@@ -743,3 +743,19 @@ One model observed per run is not all17 sampling or native body/animation/wire/p
 |108 Orgrimmar Hero's War Banner163986/280827 | Existing actual bag-learning/source144025/display88125 test includes wrong-faction refusal, source47/player-reach front placement and ordinary actor lifecycle alongside Alliance/seasonal controls. Retained85 whole-Toy150 log contains that contract; the new14-case batch does not re-certify banner108 or native presentation. |
 
 Exact root/action records `rows104-108-readonly-source.json`, `rows105-108-action-source.json`; unsupported RC/headwear cases remain open, not full-toy completion.
+
+## Source109–113: banner/script boundary and disguise lifecycles (2026-10-17)
+
+109 Stormwind Champion's War Banner163987/280828 already has the paired Hero Banner contract:144026/display88126, wrong-faction refusal, source47 front placement and60s ordinary stationary expiry. Retain the historical85 whole-Toy proof; no new banner/native certificate.110 Glorious Pennant164310/281194 remains effect77/self with no source SpellXSpellVisual binding or trigger child; do not substitute another pennant by name or treat the script as a no-op cosmetic.
+
+New actual learned-use acceptance covers these already-admitted source transforms without changing production:
+
+| Source row | Item / spell / template | Source display pool | Reported recovery |
+|---|---|---|---:|
+|111 Trogg Disguise |164373 /281298 /121865 |11611,976,765,4905 |7200000ms item override |
+|112 Hozen Around |164374 /281302 /144261 |41083,78767,76947,41724 |3600000ms spell recovery; item-1 |
+|113 Skeletal Monkey Mask |164375 /281303 /144262 |88011,88009,88016,88012 |7200000ms item override |
+
+All three have source instant self transform56/misc1=8 and600000ms duration. A real bag-learning/use fixture per ID verifies source display membership, ten-minute aura duration, the exact recovery precedence above, same display just before ordinary50ms-frame expiry, prior model restoration/aura removal afterward, unchanged health and recovery still refusing use. Their shared SpellCooldowns recovery is3600000ms; only Hozen inherits it, so item overrides are not ignored.
+
+Development test1/1 (three IDs) passes51.41s. Final bounded serial comparison with Oomgut104 passes2/2 (four actual IDs), zero ignored69.43s at9e12559d; package/tests check4m31s, fmt/manual new-test readability clean/no warnings. No production fix or invented RED; no full-Toy repeat. One choice per ID/run does not prove weighted distribution or all native bodies; appearance/native wire/pixels/audio and full one/two-hour recovery passage remain separate. Source/proof files `rows109-113-readonly-source.json`, `disguises111-113-{action-source,proof-ledger}.json` and focused/final-contracts/check/fmt logs retain exact scopes.

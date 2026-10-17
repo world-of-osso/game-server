@@ -22,6 +22,8 @@ Facing-only requirements225826/406870 use pinned FacingCasterFlags1: player cast
 
 ## Contract
 
+- [x] Source disguises164373/281298,164374/281302 and164375/281303 use authentic121865/144261/144262 model choices for600000ms, then restore the previous model without health change. Report7200000/3600000/7200000ms recovery respectively: item overrides win; Hozen's item-1 preserves spell recovery. Recovery remains active after appearance expiry. Actual three-ID acceptance: `crates/server/src/toys_disguise_tests.rs`; native bodies/weighted sampling and full recovery passage remain separate.
+
 - [x] Oomgut Ritual Drum163795/280308 uses an authentic132902 display for600000ms. Ordinary expiry restores the previous model and preserves health; report7200000ms item recovery and retain its refusal after appearance expiry. Actual learned-use acceptance: `crates/server/src/toys_oomgut_tests.rs`. Native appearance/all-model sampling and full two-hour passage remain separate.
 
 - Katy's Stampwhistle156833/261602 requires authentic132969/display68512 and property4203 Control1/Assistant35. Use native default TempSummon lifetime, not a pet/minion body or following actor: one stationary source47/3yd-front actor for600000ms. Preserve source GOSSIP|MAILBOX flags, faction35, caster identity,10800000ms item/category2066 recovery and ordinary despawn. Existing mailbox service must open from the real actor, retain distance/death/despawn guards and reject requests after closure; no invented gossip option. Server interaction does not certify native body/rendering or wall lifetime.
