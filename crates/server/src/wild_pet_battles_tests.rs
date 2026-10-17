@@ -39,6 +39,58 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_launch_rocket_uses_unlocked_lil_bling_setup_and_launch() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 1320), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 20, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 3, 293)
+        .unwrap();
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    assert_eq!(allies.pets[0].species, 1320);
+    assert_eq!(allies.pets[0].abilities[2], 293);
+    let enemies = build_team(&catalog, &identities, &states).unwrap();
+    let initial = Battle::new([allies, enemies]).unwrap();
+    let actions = [Action::Ability(293), Action::Pass];
+    let (ready, _) = initial
+        .step(&catalog.turns, actions, &mut Fixed(500_000))
+        .unwrap();
+    assert_eq!(
+        ready.teams[1].pets[0].health,
+        initial.teams[1].pets[0].health
+    );
+    assert_eq!(ready.auras[0].ability, 294);
+    let (launched, events) = ready
+        .step(&catalog.turns, actions, &mut Fixed(500_000))
+        .unwrap();
+    assert!(launched.teams[1].pets[0].health < initial.teams[1].pets[0].health);
+    assert!(
+        events
+            .iter()
+            .any(|event| matches!(event, Event::Damage { .. }))
+    );
+    assert!(launched.auras.is_empty());
+    for slot in 1..3 {
+        assert_eq!(
+            launched.teams[1].pets[slot].health,
+            initial.teams[1].pets[slot].health
+        );
+        assert_eq!(
+            launched.teams[0].pets[slot].health,
+            initial.teams[0].pets[slot].health
+        );
+    }
+}
+
+#[test]
 fn wild_pet_battles_armageddon_uses_legal_rascal_bot_loadout_without_mechanical_revival() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
