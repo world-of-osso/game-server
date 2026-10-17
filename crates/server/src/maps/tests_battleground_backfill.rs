@@ -1,5 +1,47 @@
 use super::*;
 
+#[path = "tests_battleground_backfill_release.rs"]
+mod release;
+
+#[test]
+fn bg_backfill_reserves_real_map_ownership_atomically_including_unaccepted_invitations() {
+    let store = map_store().expect("source map store");
+    let mut instances = InstanceManager::default();
+    let map = instances
+        .create_battleground_map(store, 2107, &(1..=30).collect::<Vec<_>>(), 30, at(0.0))
+        .unwrap();
+    assert!(
+        instances.reserve_battleground_players(map, &[31]).is_err(),
+        "all thirty unaccepted invitations reserve the full copy"
+    );
+    assert!(
+        instances
+            .create_map(store, 2107, entrant(31, None), at(1.0))
+            .is_err()
+    );
+    instances.unassign_battleground_player(map, 30);
+    instances.reserve_battleground_players(map, &[31]).unwrap();
+    let entry = instances
+        .create_map(store, 2107, entrant(31, None), at(2.0))
+        .unwrap();
+    assert_eq!(entry.map, map);
+    assert!(!entry.created);
+    instances.unassign_battleground_player(map, 29);
+    instances.unassign_battleground_player(map, 28);
+    assert!(
+        instances
+            .reserve_battleground_players(map, &[32, 2])
+            .is_err(),
+        "ownership conflict refuses the entire group"
+    );
+    assert!(
+        instances
+            .create_map(store, 2107, entrant(32, None), at(3.0))
+            .is_err(),
+        "failed group reservation did not leak its first member"
+    );
+}
+
 fn spawn_backfill_parties(
     entered: &mut EnteredMatch,
     first: u64,
@@ -33,7 +75,12 @@ fn spawn_backfill_parties(
     players
 }
 
-fn queue_and_enter_existing(entered: &mut EnteredMatch, players: Vec<Traveler>, queue_id: u32) {
+fn queue_and_enter_existing(
+    entered: &mut EnteredMatch,
+    players: Vec<Traveler>,
+    queue_id: u32,
+    before_acceptance: impl FnOnce(&mut EnteredMatch),
+) {
     for leader in players.iter().step_by(5) {
         entered
             .h
@@ -45,6 +92,15 @@ fn queue_and_enter_existing(entered: &mut EnteredMatch, players: Vec<Traveler>, 
                 battleground_id: queue_id,
             });
     }
+    enter_existing_invitations(entered, players, queue_id, before_acceptance);
+}
+
+fn enter_existing_invitations(
+    entered: &mut EnteredMatch,
+    players: Vec<Traveler>,
+    queue_id: u32,
+    before_acceptance: impl FnOnce(&mut EnteredMatch),
+) {
     let updates = entered.h.receive_pvp_updates(5);
     let invitations: Vec<_> = players.iter().map(|who| {
         let state = entered.h.app.world().get::<crate::pvp::PlayerPvpState>(who.player).unwrap();
@@ -53,6 +109,7 @@ fn queue_and_enter_existing(entered: &mut EnteredMatch, players: Vec<Traveler>, 
         assert_eq!(invitation.map_id, entered.copy.map_id);
         invitation
     }).collect();
+    before_acceptance(entered);
     for who in &players {
         entered
             .h
@@ -118,7 +175,7 @@ fn bg_backfill_waiting_arathi_five_v_five_later_parties_enter_same_twenty_player
         BgPhase::Waiting
     );
     let later = spawn_backfill_parties(&mut entered, 11, 10, 25);
-    queue_and_enter_existing(&mut entered, later, 32);
+    queue_and_enter_existing(&mut entered, later, 32, |_| {});
     assert_eq!(entered.players.len(), 20);
     for who in &entered.players {
         let snapshot = battleground(&entered.h, who);
@@ -164,8 +221,10 @@ fn bg_backfill_running_arathi_preserves_real_banner_score_and_mixed_queue_origin
     let later = spawn_backfill_parties(&mut entered, 21, 10, 25);
     let point = source_battleground_objects(template.map_id).0.remove(0);
     let (object, _) = objects_in(&mut entered.h, entered.copy, point.info.entry)[0];
+    use_second_frames(&mut entered.h);
     entered.h.walk_to(&entered.players[0], point.position);
     use_object(&mut entered.h, &entered.players[0], object);
+    entered.h.advance(30);
     let before = battleground(&entered.h, &entered.players[0])
         .players
         .clone();
@@ -175,7 +234,32 @@ fn bg_backfill_running_arathi_preserves_real_banner_score_and_mixed_queue_origin
             .iter()
             .any(|row| row.objective_scores.contains(&(assault_stat, 1)))
     );
-    queue_and_enter_existing(&mut entered, later, 32);
+    let rules = node_rules(template.map_id).unwrap();
+    let node = rules
+        .nodes
+        .iter()
+        .find(|node| node.entry == point.info.entry)
+        .unwrap();
+    let actor_team = battleground(&entered.h, &entered.players[0]).team;
+    let widget = if actor_team == BgTeam::A {
+        node.alliance_widget
+    } else {
+        node.horde_widget
+    };
+    assert!(
+        battleground(&entered.h, &entered.players[0])
+            .world_states
+            .contains(&(widget, 1))
+    );
+    queue_and_enter_existing(&mut entered, later, 32, |entered| {
+        entered.h.advance(30);
+        assert!(
+            battleground(&entered.h, &entered.players[0])
+                .world_states
+                .contains(&(widget, 2)),
+            "real source60s banner capture deadline was not restarted by backfill"
+        );
+    });
     for who in &entered.players[..20] {
         let character = entered.h.app.world().get::<ClientId>(who.player).unwrap().0;
         assert_eq!(
