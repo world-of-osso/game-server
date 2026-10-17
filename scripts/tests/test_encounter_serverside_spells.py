@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 import encounter_serverside_spells
@@ -38,7 +39,7 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         self.root = Path(self.directory.name)
         self.db = self.root / 'private.sqlite'
         self.dump = self.root / 'source.sql'
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.execute('CREATE TABLE unrelated (id INTEGER PRIMARY KEY, value TEXT)')
             connection.execute('INSERT INTO unrelated VALUES (1, "retained")')
         write_dump(self.dump)
@@ -46,7 +47,7 @@ class EncounterServersideSpellsTests(unittest.TestCase):
     def test_preserves_actual_source_spell_effects_and_unrelated_data_idempotently(self):
         encounter_serverside_spells.import_spells(self.db, self.dump)
         encounter_serverside_spells.import_spells(self.db, self.dump)
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             self.assertEqual(connection.execute("SELECT name FROM sqlite_master WHERE name LIKE 'tdb_serverside%' ORDER BY name").fetchall(),
                              [('tdb_serverside_spell',), ('tdb_serverside_spell_effect',)])
             self.assertEqual(connection.execute('SELECT count(*) FROM tdb_serverside_spell').fetchone(), (6,))
@@ -72,7 +73,7 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         write_dump(self.dump, fixture=fixture)
         for _ in range(2):
             encounter_serverside_spells.import_spells(self.db, self.dump, encounter='gargolmar')
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.row_factory = sqlite3.Row
             source = json.loads(fixture.read_text())['rows']
             for table, expected in source.items():
@@ -87,7 +88,7 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         write_dump(self.dump, fixture=fixture)
         for _ in range(2):
             encounter_serverside_spells.import_spells(self.db, self.dump, encounter='omor')
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.row_factory = sqlite3.Row
             source = json.loads(fixture.read_text())['rows']
             for table, expected in source.items():
@@ -106,7 +107,7 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         )
 
     def read_herald_tables(self):
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.row_factory = sqlite3.Row
             return {
                 'serverside_spell': [dict(row) for row in connection.execute(
@@ -124,7 +125,7 @@ class EncounterServersideSpellsTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(self.read_herald_tables(), expected,
                              'All seven actual spell/effect records and every field survive the real CLI')
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             self.assertEqual(connection.execute('SELECT value FROM unrelated').fetchone(), ('retained',))
         before_failure = self.db.read_bytes()
         write_dump(self.dump, missing=('serverside_spell_effect', 30698), fixture=fixture)
@@ -138,7 +139,7 @@ class EncounterServersideSpellsTests(unittest.TestCase):
         write_dump(self.dump, missing=('serverside_spell_effect', 119426))
         with self.assertRaisesRegex(ValueError, '119426'):
             encounter_serverside_spells.import_spells(self.db, self.dump)
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             self.assertEqual(connection.execute("SELECT name FROM sqlite_master WHERE name LIKE 'tdb_serverside%'").fetchall(), [])
             self.assertEqual(connection.execute('SELECT value FROM unrelated').fetchone(), ('retained',))
 
