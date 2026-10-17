@@ -70,34 +70,24 @@ fn arathi_late_party_arrival_gets_one_score_row_without_resetting_existing_score
             }
             let snapshot = battleground(h, &players[0]);
             assert_eq!(snapshot.phase, BgPhase::InProgress);
-            let actor_team = snapshot.team;
-            let enemy = players
-                .iter()
-                .find(|who| battleground(h, who).team != actor_team)
-                .unwrap();
-            crate::combat::deal_direct_damage(
-                h.app.world_mut(),
-                players[0].player,
-                enemy.player,
-                7.0,
-            );
-            h.receive_pvp_updates(5);
-            previous = h
-                .app
-                .world()
-                .resource::<crate::pvp::PvpServerState>()
-                .battleground_matches[&battleground(h, &players[0]).match_id]
-                .scoreboard
-                .rows
-                .clone();
+            let point = source_battleground_objects(template.map_id).0.remove(0);
+            let copy = h.map_of(&players[0]).unwrap();
+            let (object, _) = objects_in(h, copy, point.info.entry)[0];
+            h.walk_to(&players[0], point.position);
+            use_object(h, &players[0], object);
+            previous = battleground(h, &players[0]).players.clone();
             let actor_id = h.app.world().get::<ClientId>(players[0].player).unwrap().0;
             assert_eq!(
                 previous
                     .iter()
                     .find(|row| row.character_id == actor_id)
                     .unwrap()
-                    .damage_done,
-                7
+                    .objective_scores
+                    .iter()
+                    .find(|(stat, _)| *stat == node_rules(template.map_id).unwrap().assault_stat)
+                    .unwrap()
+                    .1,
+                1
             );
             let late_id = h
                 .app
