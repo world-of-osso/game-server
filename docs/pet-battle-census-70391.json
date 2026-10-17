@@ -1,10 +1,10 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "d4bfaf1c",
+  "validator_revision": "dec61f97",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1777,
+  "admitted_effect_rows": 1778,
   "effect_rows": 2829,
-  "admitted_abilities": 1015,
+  "admitted_abilities": 1016,
   "abilities": 1404,
   "properties": [
     {
@@ -1703,13 +1703,11 @@
       "rejected_graph_effect_ids": []
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 1,
+      "handler": true,
       "property": 67,
       "rows": 1,
-      "rejected_graph_effect_ids": [
-        493
-      ]
+      "rejected_graph_effect_ids": []
     },
     {
       "admitted_rows": 0,
@@ -1919,7 +1917,6 @@
     436,
     444,
     468,
-    471,
     475,
     482,
     483,
@@ -2415,7 +2412,6 @@
     "258": "ability 258: undetermined team target routing",
     "262": "ability 262: unsupported turn 1311 kind1 event2",
     "263": "ability 262: unsupported turn 1311 kind1 event2",
-    "277": "unsupported property 67 at effect 493",
     "279": "ability 280: unsupported turn 1309 kind1 event1",
     "280": "ability 280: unsupported turn 1309 kind1 event1",
     "285": "ability 285: unsupported aura state 1 Is_Dead",
