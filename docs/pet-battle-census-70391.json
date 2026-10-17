@@ -1,10 +1,10 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "52b6ef56",
+  "validator_revision": "11ae48f4",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1761,
+  "admitted_effect_rows": 1764,
   "effect_rows": 2829,
-  "admitted_abilities": 1009,
+  "admitted_abilities": 1010,
   "abilities": 1404,
   "properties": [
     {
@@ -390,7 +390,7 @@
       ]
     },
     {
-      "admitted_rows": 155,
+      "admitted_rows": 156,
       "handler": true,
       "property": 26,
       "rows": 241,
@@ -443,7 +443,6 @@
         2441,
         2502,
         2518,
-        2722,
         2735,
         2736,
         2832,
@@ -1638,14 +1637,11 @@
       ]
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 2,
+      "handler": true,
       "property": 223,
       "rows": 2,
-      "rejected_graph_effect_ids": [
-        2723,
-        2724
-      ]
+      "rejected_graph_effect_ids": []
     },
     {
       "admitted_rows": 0,
@@ -2181,7 +2177,6 @@
     1813,
     2026,
     2235,
-    2246,
     2247,
     2250,
     2260,
@@ -2612,7 +2607,6 @@
     "1120": "ability 1120: unsupported turn 1809 kind1 event2",
     "1121": "ability 1121: unsupported turn 4063 kind1 event2",
     "1337": "unsupported parameters for property 107 effect 2711: [0, 0, 0, 0, 0, 0]",
-    "1344": "unsupported property 223 at effect 2723",
     "1345": "ability 1348: unsupported turn 2250 kind1 event1",
     "1348": "ability 1348: unsupported turn 2250 kind1 event1",
     "1354": "ability 1355: unsupported object/team aura",
