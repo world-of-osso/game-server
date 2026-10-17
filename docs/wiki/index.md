@@ -6,6 +6,7 @@
 # Wiki Index
 
 - [Bench pet resurrection112](systems/pet-battle-engine.md#bench-resurrection112--2026-10-16) — bounded2347/2348, real persisted-dead-state boundary, RED4→GREEN4 and both-skin2347; native2348 remains unproved.
+- [Azure Frost Bomb hooks](investigations/follower-data.md#azure-frost-bomb--2026-10-16) — sourced finite hit/expiry chain and target-derived ground; native6+3 controls/check/fmt pass, full Telash/Leymor phases and full-Azure acceptance open.
 
 - [Thermaplugg source binding and bombs](systems/boss-scripts.md#gnomeregan-thermaplugg-source-binding-and-bombs--2026-10-16) — Journal70391-authenticated7800→382/bit5, ordinary spell damage/controlled credit and exact linked7915 spawn-boundary proof; native/bomb explosion remain open.
 
