@@ -2796,6 +2796,14 @@ fn plan_triggered_spell(
 ) -> Result<TargetPlan, CastFailure> {
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
+    // Non-unit objects have no Health and do not take this unit-only check.
+    let target_dead = explicit
+        .and_then(|target| world.get::<Health>(target))
+        .is_some_and(|health| health.current <= 0.0);
+    if target_dead && !spell.allows_dead_target() {
+        return Err(CastFailure::InvalidTarget);
+    }
     aura_spell_restrictions::check_target(world, explicit, spell)?;
     plan_targets(world, caster, spell, explicit, true)
 }

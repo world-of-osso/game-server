@@ -2,6 +2,14 @@
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Shared full-trigger dead-recipient admission — 2026-10-17
+
+`plan_triggered_spell` bypassed all explicit unit-life checks. Native Death Touch5 leaves a present corpse; a subsequent shared full-trigger188389 admitted and applied Flame Shock. Source `SpellInfo.cpp:1842–1857,2455` checks `IsAllowingDeadTarget`: Attr2 bit1, raw Targets corpse-enemy0x200/unit-dead0x400/corpse-ally0x8000, or active-effect corpse-object selectors93/119/121. The shared route now applies this unit-life predicate before target aura checks/planning. It does not classify non-unit objects without Health as dead units.
+
+Genuine RED7551ec5f includes two Flame Shock failures and a passing living/cost control. The fourth test initially demanded Freeze9454 persist on a corpse, incorrectly conflating AllowDeadTarget with AllowAuraWhileDead. Corrected bcd4bde9 retains successful admission but asserts no aura and no resurrection; focused positive1/1 passes11.24s before production changes. Existing `auras/mod.rs` explicitly rejects that persistence. Both genuine negative fixtures remain unchanged. GREEN/final gates pending; receipts `data/class-completeness6-2026-10-12/full-trigger-dead-target-{goal,source,proof-ledger}.json`.
+
+A wholesale normal `validate_target` graft was rejected during independent source qualification: a reflected Frostbolt's parent plan redirects to its mage, then effect32 calls the shared helper for native228597 (selector6). Ordinary relation validation would reject that current self-hit. This change leaves that relation bypass and all range/LOS/auto-self/actor-death behavior untouched; it is not whole source FULL_MASK compatibility. Source `Spell.cpp:3488–3492` only exempts BAD_TARGETS for special IGNORE_TARGET_CHECK, never TARGETS_DEAD. Native9454 is an internal metadata control, not a learned/class-legal spell claim.
+
 ## Creature-script triggered aura metadata — 2026-10-17
 
 The distinct `creature_cast(..., triggered=true)` branch already validated recipients but skipped every caster/target aura metadata checker, unlike the shared full-trigger and queued routes. Native bool-true UnitAI casts use FULL_MASK0x0007FFFF; its generic CC exemption is not IGNORE_CASTER_AURASTATE0x00200000 or IGNORE_TARGET_CHECK0x00100000 (`Spell.cpp:5873–5889`, `SpellInfo.cpp:2507–2517`, `SpellDefines.h:293–302`).

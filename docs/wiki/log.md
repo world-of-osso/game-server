@@ -1,3 +1,7 @@
+## 2026-10-17 — Shared full-trigger dead recipients
+
+[Spell casting](systems/spell-casting.md#shared-full-trigger-dead-recipient-admission--2026-10-17): actual Death Touch5→present corpse→full-trigger Flame Shock188389 reproduces illegal admission and aura. Source IsAllowingDeadTarget predicate now gates explicit unit life; reflection/relation and other eligibility remain unchanged. Freeze9454 admission/persistence control corrected to match distinct native flags and passes before production. GREEN pending; no raw health/mana/row/flag/clock/RNG/budget edits.
+
 ## 2026-10-17 — Creature-script triggered aura metadata
 
 [Spell casting](systems/spell-casting.md#creature-script-triggered-aura-metadata--2026-10-17): distinct creature bool-true branch bypassed all six implemented fields, native RED2pass/6fail9.38s. Shared caster/target checkers now surround existing recipient admission before success/launch; real producer matrix and generic-stun-exempt Frostbolt controls pass in RED. Merged ce17d43e/master d1957002 passes165/0/0 in49.88s plus5 creature-script controls in11.65s; workspace/all-target check10.323s/0warnings and fmt pass. Independent read-only artifact/wiring/source/readability passes; main confirms the actual diff and byte-identical RED fixture. No row/clock/budget/NoOp changes, no whole-ability/flag/legal-build claim.
