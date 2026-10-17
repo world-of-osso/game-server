@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 import encounter_cpp_bindings
@@ -38,7 +39,7 @@ class HeraldBindingCliTests(unittest.TestCase):
                 writer.writerows(rows)
 
     def create_database(self):
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.executescript('''
                 CREATE TABLE dungeon_encounter(ID INTEGER,MapID INTEGER,Bit INTEGER);
                 CREATE TABLE tdb_creature_template(entry INTEGER,ScriptName TEXT);
@@ -67,16 +68,16 @@ class HeraldBindingCliTests(unittest.TestCase):
         )
 
     def test_70448_cli_exports_primary_only_and_preserves_existing_credit_and_population(self):
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             population = connection.execute('SELECT * FROM content_creature ORDER BY guid').fetchall()
         for _ in range(2):
             before = self.db.read_bytes()
             result = self.run_binding()
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(self.db.read_bytes(), before, 'Generator never mutates its input database')
-            with sqlite3.connect(self.db) as connection:
+            with closing(sqlite3.connect(self.db)) as connection, connection:
                 connection.executescript(self.sql.read_text())
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             self.assertEqual(connection.execute(
                 'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
                 'FROM raid_encounter_creature WHERE map_id=543 ORDER BY bit').fetchall(),
