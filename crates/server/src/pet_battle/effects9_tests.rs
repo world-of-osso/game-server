@@ -37,6 +37,35 @@ fn pet_battle_level_health_constructor_validates_and_records_actual_level() {
 }
 
 #[test]
+fn pet_battle_level_health_missing_rule_metadata_rejects_before_rng() {
+    for state in [2, 17] {
+        let mut catalog = catalog();
+        let initial = level_health_battle(&catalog, 576, 7);
+        catalog.states.remove(&state);
+        assert!(
+            initial
+                .step(&catalog, [Action::Pass; 2], &mut NoDraw)
+                .is_err()
+        );
+    }
+}
+
+#[test]
+fn pet_battle_level_health_unqualified_owners_remain_rejected() {
+    let mut catalog = catalog();
+    for ability in [88, 289] {
+        assert!(validate_ability(&catalog, ability).is_err());
+    }
+    catalog.ability_states.insert(110, [(2, 500)].into());
+    let initial = level_health_battle(&catalog, 110, 7);
+    assert!(
+        initial
+            .step(&catalog, [Action::Ability(110), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
+}
+
+#[test]
 fn pet_battle_level_health_bonus_uses_authored_points_per_level_before_healing() {
     let catalog = catalog();
     for (ability, aura, points, healing) in
