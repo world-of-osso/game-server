@@ -1103,7 +1103,7 @@ pub enum RemoveReason {
     Interrupted,
     Death,
     ChannelEnded,
-    /// Charges or absorb points used up.
+    /// Stacks, charges or absorb points used up.
     Consumed,
     /// The passive spell is no longer known.
     Unlearned,
@@ -1274,6 +1274,22 @@ pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
     if aura.charges == 0 {
         remove_instance(world, unit, instance_id, RemoveReason::Consumed);
     } else {
+        auras_changed(world, unit);
+    }
+}
+
+/// TC Aura::ModStackAmount(-1), SpellAuras.cpp:1093–1128: no timer refresh on loss.
+pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return;
+    };
+    let Some(aura) = auras.get_mut(instance_id) else {
+        return;
+    };
+    if aura.stacks <= 1 {
+        remove_instance(world, unit, instance_id, RemoveReason::Consumed);
+    } else {
+        aura.stacks -= 1;
         auras_changed(world, unit);
     }
 }

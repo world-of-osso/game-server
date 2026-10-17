@@ -5,7 +5,7 @@ const ARCANE_POWER: u32 = 374736;
 const SPROUT: u32 = 190509;
 
 #[test]
-#[ignore = "RED: native sprout death does not decrement summoner Arcane Power"]
+#[ignore = "requires authentic native Azure Sprouts and imported world.db"]
 fn azure_leymor_sprout_death_removes_one_owner_stack_once_until_final_aura_removal() {
     let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     assert_eq!(
