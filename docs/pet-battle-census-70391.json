@@ -1,10 +1,10 @@
 {
   "build": "12.1.5.70391",
-  "validator_revision": "a7dfb33e",
+  "validator_revision": "52b6ef56",
   "boundary": "Graph admission only; a supported property ID is not full semantic or Retail proof. Rejected graph rows can contain individually supported effects. State references remain raw, not blanket interpreted-state coverage.",
-  "admitted_effect_rows": 1760,
+  "admitted_effect_rows": 1761,
   "effect_rows": 2829,
-  "admitted_abilities": 1008,
+  "admitted_abilities": 1009,
   "abilities": 1404,
   "properties": [
     {
@@ -1543,14 +1543,13 @@
       ]
     },
     {
-      "admitted_rows": 0,
-      "handler": false,
+      "admitted_rows": 1,
+      "handler": true,
       "property": 370,
       "rows": 3,
       "rejected_graph_effect_ids": [
         4060,
-        4140,
-        4161
+        4140
       ]
     },
     {
@@ -2303,7 +2302,6 @@
     3811,
     3812,
     3813,
-    3815,
     3818,
     3825,
     3829,
@@ -2708,17 +2706,16 @@
     "2252": "unsupported property 360 at effect 4042",
     "2253": "ability 543: unsupported turn 773 kind1 event2",
     "2254": "ability 2254: unsupported turn 3782 kind1 event2",
-    "2259": "unsupported property 370 at effect 4060",
+    "2259": "unsupported parameters for property 370 effect 4060: [16, 0, 3, 0, 0, 0]",
     "2260": "unsupported property 362 at effect 4061",
     "2261": "unsupported parameters for property 111 effect 4063: [100, 100, 0, 1, 0, 0]",
     "2262": "ability 2262: unsupported aura state 124 Special_TypeOverride",
     "2263": "unsupported property 363 at effect 4077",
     "2264": "ability 2264: unsupported aura state 306 Special_Redirect_Healing",
     "2265": "ability 2264: unsupported aura state 306 Special_Redirect_Healing",
-    "2280": "unsupported property 370 at effect 4140",
+    "2280": "unsupported parameters for property 370 effect 4140: [20, 100, 3, 0, 0, 0]",
     "2281": "ability 2281: unsupported aura state 313 Special_Intercept_Damage",
     "2282": "ability 2281: unsupported aura state 313 Special_Intercept_Damage",
-    "2283": "unsupported property 370 at effect 4161",
     "2285": "unsupported property 249 at effect 4164",
     "2292": "unsupported property 363 at effect 4175",
     "2295": "ability 2295: unsupported aura state 306 Special_Redirect_Healing",
