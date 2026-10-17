@@ -231,3 +231,39 @@ fn current_victim_within_two_yards_but_blocked_by_server_los_does_not_stop() {
         "this bounded path step must not cross the wall"
     );
 }
+
+#[test]
+#[ignore = "requires real Stockade navigation and server LOS bake"]
+fn current_victim_wrong_copy_does_not_advance_a_cached_route() {
+    let (mut app, victim, chaser, from) = fixture();
+    app.world_mut()
+        .entity_mut(victim)
+        .insert(crate::maps::InMap::continent(0));
+    step(&mut app);
+    assert_eq!(*app.world().get::<Position>(chaser).unwrap(), from);
+}
+
+#[test]
+#[ignore = "requires real Stockade navigation and server LOS bake"]
+fn current_victim_ghost_with_positive_health_is_not_chased() {
+    let (mut app, victim, chaser, from) = fixture();
+    app.world_mut()
+        .entity_mut(victim)
+        .insert(crate::death::PlayerDeathState {
+            state: shared::death::DeathState::Ghost,
+            ..Default::default()
+        });
+    step(&mut app);
+    assert_eq!(*app.world().get::<Position>(chaser).unwrap(), from);
+}
+
+#[test]
+#[ignore = "requires real Stockade navigation and server LOS bake"]
+fn current_victim_smaller_existing_reach_is_not_increased_to_two_yards() {
+    let (mut app, _, chaser, from) = fixture();
+    app.world_mut()
+        .entity_mut(chaser)
+        .insert(crate::followers::FollowerReach(0.5));
+    step(&mut app);
+    assert!(app.world().get::<Position>(chaser).unwrap().x > from.x);
+}
