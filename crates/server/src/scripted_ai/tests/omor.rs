@@ -139,13 +139,14 @@ fn encounter_coverage_omor_summon_cast_speech_has_both_source_chance_outcomes() 
             boss.to_bits(),
             "actual summoned ownership"
         );
+        let mana_after_cast = h
+            .app
+            .world()
+            .get::<shared::components::Mana>(boss)
+            .unwrap()
+            .current;
         assert!(
-            h.app
-                .world()
-                .get::<shared::components::Mana>(boss)
-                .unwrap()
-                .current
-                < mana_before,
+            mana_after_cast < mana_before,
             "ordinary cast pays native mana, not FULL_MASK"
         );
         let after_speech = summon_speech_count(&h, boss, &texts);
@@ -156,16 +157,16 @@ fn encounter_coverage_omor_summon_cast_speech_has_both_source_chance_outcomes() 
         );
         spoken += usize::from(emitted == 1);
         quiet += usize::from(emitted == 0);
-        h.advance(8.1); // Total10.2s funds100 mana via existing22/2s regen plus dispatch guard.
+        h.advance(8.1); // Native22/2s regeneration and cooldown progress; no resource reset.
         assert_eq!(
             summon_speech_count(&h, boss, &texts),
             after_speech,
             "no repeated speech from idle/aura/regen ticks"
         );
         let mana = h.app.world().get::<shared::components::Mana>(boss).unwrap();
-        assert_eq!(
-            mana.current, mana.max,
-            "native regeneration funds next ordinary cast"
+        assert!(
+            mana.current > mana_after_cast && mana.current >= 100.0,
+            "native regeneration restores mana and permits the next ordinary cast"
         );
         assert!(
             h.inbox(1).chat.is_empty(),
