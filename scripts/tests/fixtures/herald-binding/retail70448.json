@@ -1,0 +1,80 @@
+{
+  "source": {
+    "build": "12.1.5.70448",
+    "active_resolved": "/home/osso/Projects/world-of-osso/game-engine/data/db2/12.1.5.70448",
+    "full_csv_sha256": {
+      "DungeonEncounter.csv": "bd9f8d04017cbb600b05e6be4bd48e894baf0c22eb6092cdc37a9ec25491fd39",
+      "JournalEncounter.csv": "1cd2701ca8b54a6015fc8e421ed59617e7c4fa425a30275bc575168a6408f0f3",
+      "JournalEncounterCreature.csv": "bbfcdc97230300be327d53d979613fe5a5bab87c9d3ed073faca4e3c982d534c",
+      "JournalInstance.csv": "5aa53bb89376efba7ee264b80ef1c235861658fbdf62f14c28c7101632909a96"
+    },
+    "tc_revision": "a352b1fa",
+    "tc_source_sha256": {
+      "Outland/HellfireCitadel/HellfireRamparts/boss_vazruden_the_herald.cpp": "7a79dab1f28d5915d77c4d972c5f8f611e95a8bed5640374a490fc73a0806bba",
+      "Outland/HellfireCitadel/HellfireRamparts/hellfire_ramparts.h": "9896de99ab8f2049a445af5168b152387bdd019315d898a44e8bf83d72967bce",
+      "Outland/HellfireCitadel/HellfireRamparts/instance_hellfire_ramparts.cpp": "7f907d01ba05818b1dd4f2e945353433569f56a79773722f5d05a622009af49e"
+    }
+  },
+  "rows": {
+    "DungeonEncounter.csv": [
+      {
+        "Name_lang": "Vazruden the Herald",
+        "ID": "1892",
+        "MapID": "543",
+        "DifficultyID": "0",
+        "OrderIndex": "1000",
+        "CompleteWorldStateID": "4700",
+        "Bit": "1",
+        "Flags": "4",
+        "SpellIconFileID": "0",
+        "Faction": "-1",
+        "ItemSequenceLevel": "0",
+        "RelationMapID": "543"
+      }
+    ],
+    "JournalEncounter.csv": [
+      {
+        "Name_lang": "Vazruden the Herald",
+        "Description_lang": "Vazruden guards the vital line of supplies, messages, and forces flowing between Hellfire Citidel and the Black Temple.  Astride his magnificent nether drake Nazan, Vazruden presents an unstoppable aerial force of fire, claws, and shrieking terror.",
+        "Map_0": "0.355190992",
+        "Map_1": "0.827868998",
+        "ID": "529",
+        "JournalInstanceID": "248",
+        "DungeonEncounterID": "1892",
+        "OrderIndex": "3",
+        "FirstSectionID": "5064",
+        "UiMapID": "347",
+        "MapDisplayConditionID": "0",
+        "Flags": "0",
+        "DifficultyMask": "-1"
+      }
+    ],
+    "JournalEncounterCreature.csv": [
+      {
+        "Name_lang": "Vazruden the Herald",
+        "Description_lang": "",
+        "ID": "1106",
+        "JournalEncounterID": "529",
+        "CreatureDisplayInfoID": "18944",
+        "FileDataID": "607803",
+        "OrderIndex": "0",
+        "UiModelSceneID": "9"
+      }
+    ],
+    "JournalInstance.csv": [
+      {
+        "ID": "248",
+        "Name_lang": "Hellfire Ramparts",
+        "Description_lang": "At the heart of Outland's barren Hellfire Peninsula stands Hellfire Citadel, a nearly impenetrable bastion that served as the Horde's base of operations throughout the First and Second Wars.",
+        "MapID": "543",
+        "BackgroundFileDataID": "608168",
+        "ButtonFileDataID": "608207",
+        "ButtonSmallFileDataID": "136338",
+        "LoreFileDataID": "608246",
+        "Flags": "0",
+        "AreaID": "0",
+        "CovenantID": "0"
+      }
+    ]
+  }
+}
