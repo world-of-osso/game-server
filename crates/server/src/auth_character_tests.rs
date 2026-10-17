@@ -181,29 +181,30 @@ fn character_relogin_reads_owned_achievements_while_default_or_migration_write_i
         pending.earned_at.insert(14782, 100);
         pending.criteria_progress.insert(162, 41);
         let held = db.db.begin_write().unwrap();
-        let release = std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(250));
+        let (release, blocked) = std::sync::mpsc::channel();
+        let holder = std::thread::spawn(move || {
+            let signal = blocked.recv_timeout(Duration::from_secs(5));
             held.abort().unwrap();
+            signal.expect("fixture explicitly releases the held writer");
         });
         crate::achievement::save_monthly_contribution(&db, 1, character, &pending);
-        let started = std::time::Instant::now();
         let (app, player) = select_character_in_world(db, 1, character);
-        let elapsed = started.elapsed();
-        release.join().unwrap();
+        assert!(
+            !holder.is_finished(),
+            "selection must return while the writer is held; legacy={legacy_row}"
+        );
         let loaded = app
             .world()
             .get::<crate::achievement::PlayerAchievementState>(player)
             .unwrap();
-        assert!(
-            elapsed < Duration::from_millis(50),
-            "login ran raw initialization/migration; legacy={legacy_row}: {elapsed:?}"
-        );
         assert!(
             loaded.earned_ids.contains(&14782),
             "login lost queued achievement; legacy={legacy_row}"
         );
         assert_eq!(loaded.earned_at[&14782], 100);
         assert_eq!(loaded.criteria_progress[&162], 41);
+        release.send(()).unwrap();
+        holder.join().unwrap();
         drop(app);
         let reopened = redb::Database::open(file.path()).unwrap();
         let saved = persistence::load_achievements(&reopened, character);
