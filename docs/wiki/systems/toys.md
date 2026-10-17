@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source scouting-map discovery boundaries (2026-10-17)
+
+[Source295–299 matrix](../../toy-effects14-coverage.md#source295299-exact-scouting-map-discovery-boundaries-2026-10-17) retains five distinct source flight-point/map-reveal contracts: Broken Isles, Draenor, Pandaria, Cataclysm-established maps and Northrend. Shared zero-payload self script3/source2s cast does not authorize cosmetic success, broad geography-to-node guesses or copied eligibility/progress. Actual authored discovery/fog/persistence remains unproved for each; no player-progress/data admission or new positive proof.
+
 ## Source banner/wings/ride/metadata/scouting boundaries (2026-10-17)
 
 [Source290–294 matrix](../../toy-effects14-coverage.md#source290294-retained-banner-proof-and-wingsridemetadatascouting-gaps-2026-10-17) retains290's [earlier exact banner CPU proof](#toy-effects9-stationary-banners-and-sign-2026-10-10), not new native certification. Night Fae-OR-renown80 wings, outdoor Control4 rolling ride, unresolved187861 item metadata/seed action and flight-node/map-reveal script remain gaps.187861 has Toy/Item/on-use rows but no current ItemSparse/runtime item; no invented name, fallback definition or Flags2 meaning. No runtime/data admission or new positive proof.

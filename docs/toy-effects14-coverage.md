@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source295–299: exact scouting-map discovery boundaries (2026-10-17)
+
+All five roots are source2000ms self script3 with zero base/misc/trigger payload, item cooldown-1 and spell RecoveryTime0/StartRecoveryTime1500. Matching shape is not a cosmetic contract: each source promises flight-point discovery AND map reveal in its own geography.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|295 Scouting Map: United Fronts of the Broken Isles187875/360532 | Source explicitly names Broken Isles flight points/maps. Authored node/fog sets, eligibility, real discovery and persisted/relogged state remain unproved; no guessed all-Legion node set or borrowed Shadowlands certificate. |
+|296 Scouting Map: The Dangers of Draenor187895/360578 | Source explicitly names Draenor flight points/maps. Exact authored discovery and persisted fog remain unproved; no Warlords-wide ID guess or generic script success. |
+|297 Scouting Map: A Stormstout's Guide to Pandaria187896/360579 | Source explicitly names Pandaria flight points/maps. Exact node/reveal/eligibility/persistence contract remains unproved; the item narrative is not an executable mapping or authority to reveal unrelated regions. |
+|298 Scouting Map: Cataclysm's Consequences187897/360581 | Source explicitly says flight points/maps established during the Cataclysm. Exact authored subset remains unresolved; do not equate that description with all Eastern Kingdoms/Kalimdor nodes or invent map-fog completion. |
+|299 Scouting Map: True Cost of the Northrend Campaign187898/360582 | Source explicitly names Northrend flight points/maps. Actual source-qualified discovery, map reveal and persistent client/server state remain unproved, not a caster visual or no-op. |
+
+`rows295-299-{readonly-source,action-source}.json` preserves exact70391 roots, first TriggerType0 selection ordered by LegacySlotIndex/ID, every on-use candidate and cast/recovery/description records. No player-progress/data/canonical mutation, invented node list, generic script admission or positive simulation/native proof.240/lead472 and279 pending acceptance remain separate;149865 Tea Set stays lead-required.
+
 ## Source290–294: retained banner proof and wings/ride/metadata/scouting gaps (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |
