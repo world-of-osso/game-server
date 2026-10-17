@@ -17,6 +17,8 @@ mod azure_mechanic_power;
 mod azure_sprout_death;
 #[path = "azure_sprout_fields.rs"]
 mod azure_sprout_fields;
+#[path = "azure_sprout_field_actions.rs"]
+mod azure_sprout_field_actions;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
