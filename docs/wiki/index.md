@@ -1,7 +1,9 @@
+- [World honorable-kill35](systems/dungeon-achievements.md#native-world-honorable-kills35) — separate eligible kill credit from Honor XP; native/account RED→GREEN3/3, real candy/ten zero-XP kills and reopened date.
 - [Content-tuning battleground participation](systems/dungeon-achievements.md#content-tuning-participation) — positive268 on native15, authored483 range90..90, full companions and100-settlement roots retained; native/catalog3/3 and both faction grants/reopened dates.
 - [Authoritative target LOS](systems/spell-casting.md#authoritative-target-los--2026-10-16) — moving-target receipt boundary replaces stale client endpoint validation; native release acceptance remains separate.
 - [Leymor Brand expiry](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16) — native6000ms expiry-only374570; genuine RED→native3PASS; shared controls/check queued, full phases/native acceptance pending.
 - [Leymor Brand expiry](investigations/follower-data.md#azure-leymor-brand-expiry--2026-10-16) — native6000ms expiry-only374570; genuine RED→native3PASS; six shared controls/check/fmt pass, full phases/native acceptance pending.
+- [Residual idle indexing](investigations/server-tick-lag.md#residual-idle-indexing-2026-10-16) — five full-population RED→GREEN work bounds and 86 targeted behavior controls; release peer acceptance separate.
 - [Remaining geometry scans](investigations/server-tick-lag.md#remaining-geometry-scans-2026-10-16) — dormant wake-aware detection/resize and live collision membership indexing; bounded 50-control proof.
 - [Current full-population tick profile](investigations/server-tick-lag.md#current-full-population-profile-2026-10-16) — idle-debug catch-up collapse, release eleven-peer comparison and health-aura membership indexing.
 - [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) — event/criterion dependency indexes, disposable root results, complete snapshots and preserved completion boundaries.
@@ -65,7 +67,7 @@
 
 - [Guild lifecycle history](systems/guild-lifecycle.md) — member-scoped six-action/founder ledger, separate from bank/news history.
 - [Guild news](systems/guild-news.md) — actual qualified producers, durable member query/sticky authority and native proof ledger.
-- [Guild perks](systems/guild-perks.md) — membership knowledge, landed172/211/map suppression and native mounted/removal proof; Hasty consumed-charge boundary and remaining effect gaps explicit.
+- [Guild perks](systems/guild-perks.md) — membership knowledge, landed172/211/map suppression and native mounted/removal proof; Hasty Human mixed-charge queue and actual both-skin25/10-minute item proof, with remaining effects explicit.
 
 - [Demolisher spellclick publication](systems/mounts.md#demolisher-spellclick-publication--implementation2026-10-15) — general map628+559 promotion RED→GREEN4/4; all spawned-entry source rows refreshed, unrelated-entry/idempotence and source-table rollback pass; canonical publication pending.
 
