@@ -461,7 +461,14 @@ fn alterac_channel_survivor_honor_counts_controlled_towers_and_living_captains()
         kill_alterac_source_npc(&mut entered.h, opponent, entered.copy, own_captain);
         entered.h.receive_pvp_updates(5);
         assert_team_honor(&entered, 368, 368);
-        kill_alterac_source_npc(&mut entered.h, actor, entered.copy, enemy_general);
+        let (general, health) =
+            find_alterac_source_npc(&mut entered.h, entered.copy, enemy_general);
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            general,
+            health + 1.0,
+        );
         entered.h.receive_pvp_updates(5);
         let snapshot = battleground(&entered.h, actor);
         assert_eq!(snapshot.phase, BgPhase::Ended);
@@ -474,7 +481,12 @@ fn alterac_channel_survivor_honor_counts_controlled_towers_and_living_captains()
             [1103, 1838]
         };
         assert_team_honor(&entered, expected[0], expected[1]);
-        kill_alterac_source_npc(&mut entered.h, actor, entered.copy, enemy_general);
+        crate::combat::deal_direct_damage(
+            entered.h.app.world_mut(),
+            actor.player,
+            general,
+            health + 1.0,
+        );
         entered.h.advance(300);
         assert_team_honor(&entered, expected[0], expected[1]);
         let world = entered.h.app.world();
