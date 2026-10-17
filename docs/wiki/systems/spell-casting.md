@@ -2,7 +2,7 @@
 
 ## Self hits alongside destination missiles (2026-10-17)
 
-TC a352b1fa `Spell.cpp:2486–2521,4096–4138` keeps caster-targeted hits at zero delay even when other effects have a traveling destination. `missiles::hit_delays` preserves that separation; unitless effects land at the destination delay, not alongside the early self hit. Native Recuperate1231411 combines a self trigger1231418 with a destination scene and Speed10: delaying the self trigger broke its immediate aura application and full-health termination tests. Shared aura-stack slots are unchanged. Scene playback remains unsupported; this fix addresses timing only.
+TC a352b1fa `Spell.cpp:2486–2521,4096–4138` keeps caster-targeted hits at zero delay even when other effects have a traveling destination. `missiles::hit_delays` preserves that separation; unitless effects land at the destination delay, not alongside the early self hit. Native Recuperate1231411 combines a self trigger1231418 with destination effect179 (`CREATE_AREATRIGGER`, properties38187) and Speed10: delaying the self trigger broke its immediate aura application and full-health termination tests. Shared aura-stack slots are unchanged. This fix addresses hit timing only; these tests do not certify area-trigger behavior or visuals.
 
 ## Native damage prerequisite fixtures — 2026-10-16
 

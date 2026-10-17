@@ -297,6 +297,10 @@ impl<R: BattleRng> Runtime<'_, R> {
                     .insert(p[0] as u32, value);
                 Ok(true)
             }
+            23 if matches!(ability, 258 | 979) => {
+                let recipient = other_team_slot(caster, effect.order - 3);
+                self.heal_recipient(caster, recipient, effect)
+            }
             23 | 53 => self.heal_effect(caster, effect),
             31 => {
                 let control = matches!(p[0], 22 | 35 | 36 | 64);
@@ -397,12 +401,19 @@ impl<R: BattleRng> Runtime<'_, R> {
         {
             return Ok(false);
         }
-        let previous = self.healing_target;
-        self.healing_target = Some(recipient);
         let mut heal = effect.clone();
         heal.property = 23;
         heal.params[2] = p[4];
-        let result = self.heal_effect(caster, &heal);
+        self.heal_recipient(caster, recipient, &heal)
+    }
+    fn heal_recipient(
+        &mut self,
+        caster: PetRef,
+        recipient: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let previous = self.healing_target.replace(recipient);
+        let result = self.heal_effect(caster, effect);
         self.healing_target = previous;
         result
     }

@@ -105,3 +105,8 @@ fn toyfx125_noble_gardener_hearthstone_learned_use_returns_to_bind_and_blocks_lu
 fn toyfx139_fire_eater_hearthstone_learned_use_returns_to_bind_and_blocks_noble_gardener() {
     assert_toy_hearthstone_bind_and_shared_charge(166746, 286331, 165802);
 }
+
+#[test]
+fn toyfx140_brewfest_reveler_hearthstone_learned_use_returns_to_bind_and_blocks_fire_eater() {
+    assert_toy_hearthstone_bind_and_shared_charge(166747, 286353, 166746);
+}
