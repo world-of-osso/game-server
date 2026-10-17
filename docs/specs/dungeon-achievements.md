@@ -184,3 +184,8 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 ### Native targeted Hug247
 
 Character achievement247 / criterion2379 uses native DoEmote54 TextEmote56. Preserve the complete positive TargetIsPlayer5, TargetIsDead6 and TargetIsOppositeFaction7 conjunction against the requested live unit on the actor's exact map copy. Missing target, health or faction authority cannot satisfy a qualifier. Use actor-to-target native hostility, not faction-name guesses, attack eligibility, honour credit or current selection. Credit belongs only to the entered-world sender and persists with its completion date without idle/login replay. Hug is text-only (installed EmotesText56 EmoteID0); leave animation and stance unchanged. No generic Boolean or negative target expansion.
+
+## Native world honorable kills35
+
+- EarnHonorableKill35 increments once per eligible native world-player death for existing living, in-range recipients. Same-team, gray, inactive, no-credit, self and wrong-copy victims reject; no new battleground/arena policy. Eligibility precedes Honor XP: a below-minimum-level recipient may earn kill credit while receiving zero XP. Account contributions sum, not max.
+- G.N.E.R.D. Rage1261 retains authored criterion3882/aura48890 and the installed ten-kill threshold. Actual item37583 use must finish its authored1000ms cast before supplying the aura. Nonlethal damage, idle/dead replay and kills after aura removal cannot add its counter. Persist quantity and original earned date. Lifetime113, area31, class52 and race53 remain separate.

@@ -415,16 +415,18 @@ fn update_creature_ai(world: &mut World) {
 /// The head of `Creature::Update`: `JustAppeared` once after AddToMap or Respawn.
 /// `Map::Update` updates objects before relocation notifies, so this precedes the
 /// tick's sight and aggro.
-fn trigger_just_appeared(world: &mut World) {
-    let creatures: Vec<Entity> = world
-        .query_filtered::<Entity, (
-            With<TriggerJustAppeared>,
-            With<CreatureAiState>,
-            Without<DeathState>,
-            Without<GridDormant>,
-        )>()
-        .iter(world)
-        .collect();
+type AppearingCreatures = QueryState<
+    Entity,
+    (
+        With<TriggerJustAppeared>,
+        With<CreatureAiState>,
+        Without<DeathState>,
+        Without<GridDormant>,
+    ),
+>;
+
+fn trigger_just_appeared(world: &mut World, appearing: &mut AppearingCreatures) {
+    let creatures: Vec<Entity> = appearing.iter(world).collect();
     for creature in creatures {
         // An earlier creature's hook may have despawned this one.
         let Ok(mut entity) = world.get_entity_mut(creature) else {
@@ -880,3 +882,15 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn idle_just_appeared_full_population_is_bounded() {
+    let mut app = App::new();
+    app.add_systems(Update, trigger_just_appeared);
+    crate::test_data::populate_idle_world(app.world_mut(), || crate::grid_activity::GridDormant);
+    crate::test_data::assert_idle_updates_are_bounded(
+        &mut app,
+        "idle_just_appeared_full_population_is_bounded",
+    );
+}
