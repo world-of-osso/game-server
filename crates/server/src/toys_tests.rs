@@ -10,6 +10,8 @@ mod akunda;
 mod bashiok;
 #[path = "toys_disguise_tests.rs"]
 mod disguises;
+#[path = "toys_dragon_head_tests.rs"]
+mod dragon_head;
 #[path = "toys_flute_tests.rs"]
 mod flute;
 #[path = "toys_force_forward_tests.rs"]
