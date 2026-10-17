@@ -20,8 +20,63 @@ fn uncrit_damage(event: &CombatLogEvent) -> f64 {
     f64::from(event.amount) / if event.crit { 2.0 } else { 1.0 }
 }
 
+fn cast_native_brand_damage(h: &mut Harness, leymor: Entity) -> CombatLogEvent {
+    const BRAND_CHILD: u32 = 374582;
+    h.players[0].2.log.clear();
+    crate::spell_cast::creature_cast(h.app.world_mut(), leymor, BRAND_CHILD, None, true)
+        .expect("native nonmatching Brand damage child");
+    h.advance(0.1);
+    let damage: Vec<_> = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| event.spell_id == Some(BRAND_CHILD) && event.kind == CombatLogKind::Damage)
+        .cloned()
+        .collect();
+    assert_eq!(damage.len(), 1);
+    damage[0].clone()
+}
+
 #[test]
-#[ignore = "RED: native276 mechanic damage modifier is not consumed"]
+fn azure_leymor_sprout_mechanic_power_does_not_amplify_nonmatching_brand() {
+    const BRAND_CHILD: u32 = 374582;
+    let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(BRAND_CHILD)
+        .unwrap();
+    assert_eq!(spell.categories.as_ref().unwrap().mechanic, 0);
+    assert!(
+        spell
+            .effects
+            .iter()
+            .all(|effect| effect.mechanic == 0 && effect.variance == 0.0)
+    );
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        14
+    );
+    let buffed = cast_native_brand_damage(&mut h, leymor);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        leymor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == ARCANE_POWER,
+    );
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        0
+    );
+    let baseline = cast_native_brand_damage(&mut h, leymor);
+    assert!(
+        (uncrit_damage(&buffed) - uncrit_damage(&baseline)).abs() <= 1.0,
+        "nonmatching mechanic must not gain ArcanePower: {buffed:?} vs {baseline:?}"
+    );
+}
+
+#[test]
 fn azure_leymor_sprout_mechanic_power_amplifies_ordinary_stomp_from_native_stacks() {
     let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     assert_eq!(
