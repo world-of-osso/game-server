@@ -5,7 +5,7 @@ const LEYMOR: u32 = 186644;
 const TENDER: u32 = 191164;
 const INFUSED_STRIKE: u32 = 374789;
 
-fn wake_leymor() -> (Harness, Entity) {
+pub(super) fn wake_leymor() -> (Harness, Entity) {
     let (mut h, _, map) =
         encounter_fixture(LEYMOR, 2515, 0, 205, None, EncounterState::NotStarted, true);
     h.advance(0.1);
