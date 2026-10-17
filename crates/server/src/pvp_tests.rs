@@ -440,6 +440,41 @@ fn arathi_multiple_players_finish_at_authored_resource_limit() {
 }
 
 #[test]
+fn battleground_admission_retains_source_bracket_without_mixing_queued_players() {
+    let mut state = PvpServerState::default();
+    queue_for_battleground(&mut PlayerPvpState::default(), &mut state, 1, 29, 1018, 0).unwrap();
+    for character in 2..=17 {
+        let level = if character % 2 == 0 { 30 } else { 39 };
+        queue_for_battleground(
+            &mut PlayerPvpState::default(),
+            &mut state,
+            character,
+            level,
+            1018,
+            0,
+        )
+        .unwrap();
+    }
+    let id = form_battleground_invitation(&mut state, 1018).unwrap();
+    let invitation = &state.battleground_matches[&id];
+    assert_eq!(
+        invitation.instance.bracket,
+        shared::battleground::LevelBracket::new(30, 39)
+    );
+    let mut roster: Vec<_> = invitation
+        .instance
+        .team_a_players
+        .iter()
+        .chain(&invitation.instance.team_b_players)
+        .copied()
+        .collect();
+    roster.sort_unstable();
+    assert_eq!(roster, (2..=17).collect::<Vec<_>>());
+    assert!(state.battleground_queue.is_queued(1));
+    assert!(form_battleground_invitation(&mut state, 1018).is_none());
+}
+
+#[test]
 fn objective_tick_without_matches_needs_no_world_object_catalog() {
     let mut world = World::new();
     world.init_resource::<PvpServerState>();
@@ -483,6 +518,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
     let template = shared::battleground::warsong_gulch();
     let matched = BgMatch {
         bg_id: template.id,
+        bracket: template.bracket,
         team_a: vec![1, 3, 5, 7, 9],
         team_b: vec![2, 4, 6, 8, 10],
     };
@@ -794,6 +830,7 @@ fn native_flag_match_in_world(
     world.insert_resource(GameObjectSpawns(homes));
     let matched = BgMatch {
         bg_id: template.id,
+        bracket: template.bracket,
         team_a: players.iter().step_by(2).map(|p| p.0).collect(),
         team_b: players.iter().skip(1).step_by(2).map(|p| p.0).collect(),
     };
