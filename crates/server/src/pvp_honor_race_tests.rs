@@ -152,7 +152,19 @@ fn prove_race_achievement(owner_race: u8, achievement: u32, opposite: u32, races
 }
 
 pub(super) fn race_world(owner_race: u8) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
-    let (mut world, players, file) = native_flag_match(&shared::battleground::warsong_gulch());
+    race_world_in_world(owner_race, World::new(), |index| index)
+}
+
+pub(super) fn race_world_in_world(
+    owner_race: u8,
+    world: World,
+    account_for_index: impl Fn(u64) -> u64,
+) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
+    let (mut world, players, file) = native_flag_match_in_world(
+        &shared::battleground::warsong_gulch(),
+        world,
+        account_for_index,
+    );
     world.init_resource::<Time>();
     world.insert_resource(
         crate::spell_cast::test_harness::world_db()
