@@ -131,7 +131,19 @@ fn entered(
     }
     if run.count.load(Ordering::SeqCst) == PEER_COUNT && run.all_entered.is_none() {
         run.all_entered = Some(Instant::now());
+        println!(
+            "MEASUREMENT_STARTED {} unix_ms={}",
+            run.username,
+            read_unix_millis()
+        );
     }
+}
+
+fn read_unix_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("wall clock before Unix epoch")
+        .as_millis()
 }
 
 fn finish(
@@ -153,10 +165,11 @@ fn finish(
         .all_entered
         .is_some_and(|start| start.elapsed() >= MEASUREMENT)
     {
+        let completed_unix_ms = read_unix_millis();
         if let Some(combat) = combat {
             combat.assert_complete(&run.username);
         }
-        println!("PEER_COMPLETE {}", run.username);
+        println!("PEER_COMPLETE {} unix_ms={completed_unix_ms}", run.username);
         exit.write(AppExit::Success);
     }
 }
