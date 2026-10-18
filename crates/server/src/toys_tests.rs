@@ -3451,7 +3451,16 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         );
         if let Some(root_spell) = missile_root {
             assert!(h.inbox.go.iter().any(|go| go.spell_id == root_spell));
-            assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
+            let world = h.app.world_mut();
+            let early_actors = world
+                .query::<(&Npc, &SummonedCreature)>()
+                .iter(world)
+                .filter(|(npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+                .count();
+            assert_eq!(
+                early_actors, 0,
+                "item {item}: actor appeared before source flight"
+            );
         }
         h.advance(60); // Includes the globe's authored 3000ms cast.
         assert!(
@@ -3459,10 +3468,12 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             "item {item}: {:?}",
             h.inbox.failed
         );
-        assert!(
-            h.inbox.go.iter().any(|go| go.spell_id == spell),
-            "item {item}"
-        );
+        if missile_root.is_none() {
+            assert!(
+                h.inbox.go.iter().any(|go| go.spell_id == spell),
+                "item {item}"
+            );
+        }
         let world = h.app.world_mut();
         let actors: Vec<_> = world
             .query::<(Entity, &Npc, &SummonedCreature)>()

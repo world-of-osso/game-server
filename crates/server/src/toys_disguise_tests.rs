@@ -190,7 +190,8 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
 }
 
 #[test]
-fn toyfx387_chewed_wand_self_polymorph_and_confusion_expire_without_health_change() {
+fn toyfx387_chewed_wand_self_transform_and_confusion_preserve_ordinary_health_regeneration() {
+    use crate::spell_cast::powers::PlayerHealthRegen;
     use shared::components::{Health, ModelDisplay, UnitAuras};
     const ITEM: u32 = 200249;
     const SPELL: u32 = 389324;
@@ -214,6 +215,11 @@ fn toyfx387_chewed_wand_self_polymorph_and_confusion_expire_without_health_chang
     let caster = h.caster;
     h.app.world_mut().get_mut::<Health>(caster).unwrap().current = DAMAGED_HEALTH;
     let health = *h.app.world().get::<Health>(caster).unwrap();
+    let regen = *h.app.world().get::<PlayerHealthRegen>(caster).unwrap();
+    let level = *h.app.world().get::<Level>(caster).unwrap();
+    let combat = *h.app.world().get::<CombatStatus>(caster).unwrap();
+    // Same clock and regen phase, but never targeted by the toy.
+    let regen_control = h.app.world_mut().spawn((health, regen, level, combat)).id();
     let native_display = h.app.world().get::<ModelDisplay>(caster).copied();
     learn_effect_toy(&mut h, character, ITEM);
     assert_eq!(activate(&mut h, ITEM)[0].error, None);
@@ -238,7 +244,10 @@ fn toyfx387_chewed_wand_self_polymorph_and_confusion_expire_without_health_chang
     assert_eq!(aura.duration_ms, DURATION_MS);
     let expiry = aura.expires_at.unwrap();
     assert!(crate::auras::cast_blocker(h.app.world(), caster, &frostbolt).is_some());
-    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert_eq!(
+        h.app.world().get::<Health>(caster),
+        h.app.world().get::<Health>(regen_control)
+    );
     assert_eq!(
         h.inbox
             .cooldowns
@@ -276,7 +285,11 @@ fn toyfx387_chewed_wand_self_polymorph_and_confusion_expire_without_health_chang
             .iter()
             .any(|aura| aura.spell_id == SPELL)
     );
-    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert_eq!(
+        h.app.world().get::<Health>(caster),
+        h.app.world().get::<Health>(regen_control)
+    );
+    assert!(h.app.world().get::<Health>(regen_control).unwrap().current > DAMAGED_HEALTH);
     assert_eq!(
         activate(&mut h, ITEM)[0].error.as_deref(),
         Some("OnCooldown")
