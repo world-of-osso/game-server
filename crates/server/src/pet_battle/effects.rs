@@ -299,12 +299,15 @@ impl<R: BattleRng> Runtime<'_, R> {
                 }
                 let amount =
                     f64::from(self.state(caster, "Last_HitDealt")) * f64::from(p[0]) / 100.0;
-                let recipient = if ability == 2457 {
-                    other_team_slot(caster, effect.order / 2)
+                if ability == 2457 {
+                    let recipient = other_team_slot(caster, effect.order / 2);
+                    if self.battle.pet(recipient).health <= 0 {
+                        return Ok(false);
+                    }
+                    self.heal_between(caster, recipient, amount);
                 } else {
-                    caster
-                };
-                self.heal_pet(recipient, amount);
+                    self.heal_pet(caster, amount);
+                }
                 Ok(true)
             }
             79 => {
