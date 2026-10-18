@@ -453,6 +453,46 @@ mod copy_tests {
     }
 
     #[test]
+    fn tank_pull_history_keeps_a_missing_admitted_member_in_health_coverage() {
+        let (mut app, owner, run) = fixture();
+        let missing = run.members[0];
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(50),
+        ));
+        app.world_mut().entity_mut(owner).insert((
+            run,
+            shared::components::Health {
+                current: 1000.0,
+                max: 1000.0,
+            },
+        ));
+        for _ in 0..102 {
+            app.update();
+            super::super::pull_history::sample_all(app.world_mut());
+        }
+        assert!(
+            super::super::pull_history::snapshot(app.world(), owner)
+                .unwrap()
+                .party_stable
+        );
+        app.world_mut().despawn(missing);
+        // Production ordering: remove the entity, then outlive both named history windows.
+        for _ in 0..202 {
+            app.update();
+            super::super::pull_history::sample_all(app.world_mut());
+        }
+        let after = super::super::pull_history::snapshot(app.world(), owner).unwrap();
+        assert!(
+            !after.party_stable,
+            "a known admitted member is missing, not healthy"
+        );
+        assert!(
+            super::super::ai::party_units(app.world_mut(), owner).contains(&missing),
+            "the admitted roster survives entity disappearance"
+        );
+    }
+
+    #[test]
     fn follower_copy_group_formation_keeps_same_map_teleport_in_the_admitted_copy() {
         let (mut app, owner, run) = fixture();
         let admitted = *app.world().get::<InMap>(owner).unwrap();
