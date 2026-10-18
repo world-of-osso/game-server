@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source345–349: slide/wyrmhole/recalibration/private-environment/perception gaps (2026-10-17)
+
+All five retain distinct unresolved actions, not generic cosmetics. Local runtime content templates/models for195667 and194993 are absent; earlier scenery census explicitly keeps Wyrmhole198156 blocked. Source graph/restrictions do not establish a usable implementation. No runtime/data admission, new positive/native certificate or own heavy duplicate; [pending lead478 scope](#lead-integration-receipt-2026-10-17) is unchanged.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|345 Jar of Excess Slime198090/382452 | Instant self373/104/312(set1047)/23→383129/263 for3000ms; child383129 is self dummy effect3. Inherited15000ms recovery. Sliding movement/animation/control restoration and actual child action remain gaps; amplitude0 does not authorize an invented tick schedule, generic speed boost or ignored child/payload. |
+|346 Wyrmhole Generator: Dragon Isles198156/386379 | Source5000ms target47 summon195667/property3539/base1 for120000ms; Control0/Title0/flags16779280, inherited1800000ms recovery/1000ms start recovery. Item requires skill2827/rank1/level1. Actual random Dragon Isles travel, specialization/triangulation-specific choices, access and teleport lifecycle remain gaps; no hardcoded destinations, inferred engineering bypass or inert portal actor. |
+|347 Atomic Recalibrator198173/384911 | Source1500ms target47 effect179/base1/misc27706 for180000ms; inherited43200000ms recovery. Actual step-on area-trigger eligibility/genetic transformation/expiry and recipient isolation remain unresolved. No single summon substitute, guessed race/model pool or aura applied only to the caster. |
+|348 Environmental Emulator198206/385085 | Source5000ms target47 summon194993/property5453 for7200000ms, inherited7200000ms recovery. Control0/Title55/flags raw-1811735808 are preserved, not coerced into ordinary scenery. Advertised outdoors-only use and party/raid-only machine/effects, environment selection/restoration and lifecycle remain gaps; no owner-only or public substitute, dropped privacy/outdoor rule or generic actor import. |
+|349 Giggle Goggles198227/384585 | Instant self233/base550/misc6409/170 for900000ms; item3600000ms recovery. Source changes perception of the world to gnolls. Exact observer-scoped model/visual selection and restoration remain unproved; no self-only player costume, global NPC mutation or guessed gnoll model pool. |
+
+Evidence: private `rows345-349-{readonly-source,action-source,active-goal}.json`, exact item skill restrictions and preserved signed summon flags. Tea Set149865 remains untouched.
+
 ## Source340–344: mailbox/whelps/holiday/feast boundaries and retained sign proof (2026-10-17)
 
 Read-only70391 metadata and runtime/TDB comparison retain exact service/mixed-action contracts.341 keeps its existing bounded source9 sign witness, not a new current/native result. [Gate477 proof and queued478 scope](#lead-integration-receipt-2026-10-17) remain distinct from this source review; no runtime/data changes or own heavy duplicate.

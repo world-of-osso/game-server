@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Slide/wyrmhole/recalibration/private-environment/perception boundaries (2026-10-17)
+
+[Source345–349 matrix](../../toy-effects14-coverage.md#source345349-slidewyrmholerecalibrationprivate-environmentperception-gaps-2026-10-17) preserves mixed slide373/104/312set1047/periodic23-child/263, engineering2827/rank1 Wyrmhole access/travel/triangulation, recalibrator area-trigger179/27706, outdoors party/raid-private Title55 environment and observer-scoped233 gnoll perception. Wyrmhole195667/environment194993 runtime templates are absent, and the existing Wyrmhole census remains blocked. No guessed cadence/destinations/race pools, privacy reduction, inert imports or new positive/native proof; pending lead478 is not duplicated.
+
 ## Mailbox/whelps/holiday/feast boundaries and retained sign proof (2026-10-17)
 
 [Source340–344 matrix](../../toy-effects14-coverage.md#source340344-mailboxwhelpsholidayfeast-boundaries-and-retained-sign-proof-2026-10-17) keeps Ohuna Control1/Title5 mail/recall, five-whelp mixed106/105/104/506 movement/presentation, Murglasses233/misc6379/169 holiday recovery and four-model appreciative-critter feast actions unresolved. Source341 retains exact earlier sign193182/108105/2s/5min/ground-placement/owner/map/expiry CPU scope, not a new native certificate. Ohuna/critter TDB identities exist but runtime templates do not; no inert admission or guessed service/physics/holiday/product behavior.
