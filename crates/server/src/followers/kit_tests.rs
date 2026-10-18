@@ -62,7 +62,6 @@ fn uses_spell(h: &mut Harness, unit: Entity, spell: u32) {
 }
 
 #[test]
-#[ignore = "RED: four-slot Garrick never selects Lay on Hands"]
 fn follower_kit_garrick32_emergency_heal() {
     let (mut h, unit) = level32(209057);
     wounded(&mut h, unit, 0.15);
@@ -71,7 +70,6 @@ fn follower_kit_garrick32_emergency_heal() {
 }
 
 #[test]
-#[ignore = "RED: four-slot Crenna never maintains Rejuvenation"]
 fn follower_kit_crenna32_rejuvenation() {
     let (mut h, unit) = level32(209072);
     let patient = h.caster;
@@ -81,14 +79,12 @@ fn follower_kit_crenna32_rejuvenation() {
 }
 
 #[test]
-#[ignore = "RED: Breka has no multi-enemy Thunder Clap priority"]
 fn follower_kit_breka32_area_attack() {
     let (mut h, unit) = level32(215517);
     uses_spell(&mut h, unit, 6343);
 }
 
 #[test]
-#[ignore = "RED: Henry never prioritizes Holy Word Serenity"]
 fn follower_kit_henry32_serenity() {
     let (mut h, unit) = level32(215011);
     let patient = h.caster;
@@ -97,21 +93,18 @@ fn follower_kit_henry32_serenity() {
 }
 
 #[test]
-#[ignore = "RED: Shuja has no Flame Shock maintenance priority"]
 fn follower_kit_shuja32_damage_over_time() {
     let (mut h, unit) = level32(209053);
     uses_spell(&mut h, unit, 470411);
 }
 
 #[test]
-#[ignore = "RED: Meredy previously only used Fireball and Fire Blast"]
 fn follower_kit_meredy32_combustion() {
     let (mut h, unit) = level32(209059);
     uses_spell(&mut h, unit, 190319);
 }
 
 #[test]
-#[ignore = "RED: Austin previously lacked a self-heal priority"]
 fn follower_kit_austin32_exhilaration() {
     let (mut h, unit) = level32(209065);
     wounded(&mut h, unit, 0.2);
@@ -119,7 +112,6 @@ fn follower_kit_austin32_exhilaration() {
 }
 
 #[test]
-#[ignore = "RED: Kybel previously lacked a party-heal priority"]
 fn follower_kit_kybel32_verdant_embrace() {
     let (mut h, unit) = level32(215240);
     wounded(&mut h, unit, 0.2);
@@ -127,21 +119,18 @@ fn follower_kit_kybel32_verdant_embrace() {
 }
 
 #[test]
-#[ignore = "RED: Bo previously lacked Blackout Kick"]
 fn follower_kit_bo32_blackout_kick() {
     let (mut h, unit) = level32(227734);
     uses_spell(&mut h, unit, 100784);
 }
 
 #[test]
-#[ignore = "RED: Ralia previously lacked Ferocious Bite"]
 fn follower_kit_ralia32_ferocious_bite() {
     let (mut h, unit) = level32(232800);
     uses_spell(&mut h, unit, 22568);
 }
 
 #[test]
-#[ignore = "RED: Lantha previously lacked Dreadstalkers priority"]
 fn follower_kit_lantha32_dreadstalkers() {
     let (mut h, unit, _prepared) = lantha32();
     uses_spell(&mut h, unit, 104316);
@@ -172,7 +161,6 @@ fn lantha32() -> (
 }
 
 #[test]
-#[ignore = "RED: follower lacks native spec identity for Shadow Bolt generation"]
 fn follower_kit_lantha32_shadow_bolt_regenerates_spent_shards() {
     let (mut h, unit, _prepared) = lantha32();
     uses_spell(&mut h, unit, 104316);
@@ -196,7 +184,6 @@ fn follower_kit_lantha32_shadow_bolt_regenerates_spent_shards() {
 }
 
 #[test]
-#[ignore = "RED: Garrick previously lacked Word of Glory"]
 fn follower_kit_garrick32_word_of_glory() {
     let (mut h, unit) = level32(209057);
     let power = shared::components::PowerType::HolyPower;
@@ -234,7 +221,6 @@ fn follower_kit_garrick32_word_of_glory() {
 }
 
 #[test]
-#[ignore = "RED: urgent cast restarts every AI tick instead of completing"]
 fn follower_kit_garrick32_finishes_flash_of_light() {
     let (mut h, unit) = level32(209057);
     wounded(&mut h, unit, 0.3);
@@ -282,7 +268,6 @@ fn follower_kit_crenna_does_not_reapply_active_rejuvenation() {
 }
 
 #[test]
-#[ignore = "RED: Garrick previously lacked active mitigation"]
 fn follower_kit_garrick32_shield_of_the_righteous() {
     let (mut h, unit) = level32(209057);
     h.app
@@ -299,7 +284,6 @@ fn follower_kit_garrick32_shield_of_the_righteous() {
 }
 
 #[test]
-#[ignore = "RED: Garrick previously lacked Consecration"]
 fn follower_kit_garrick32_consecration() {
     let (mut h, unit) = level32(209057);
     uses_spell(&mut h, unit, 26573);
@@ -309,7 +293,6 @@ fn follower_kit_garrick32_consecration() {
 }
 
 #[test]
-#[ignore = "RED: Crenna previously lacked Swiftmend"]
 fn follower_kit_crenna32_swiftmend() {
     let (mut h, unit) = level32(209072);
     let patient = h.caster;
@@ -320,7 +303,6 @@ fn follower_kit_crenna32_swiftmend() {
 }
 
 #[test]
-#[ignore = "RED: Crenna previously lacked Ironbark"]
 fn follower_kit_crenna32_ironbark() {
     let (mut h, unit) = level32(209072);
     let patient = h.caster;
@@ -333,7 +315,6 @@ fn follower_kit_crenna32_ironbark() {
 }
 
 #[test]
-#[ignore = "RED: Crenna previously lacked Lifebloom"]
 fn follower_kit_crenna32_lifebloom_on_tank() {
     let (mut h, unit) = level32(209072);
     let profile = h
