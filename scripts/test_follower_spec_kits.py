@@ -34,11 +34,22 @@ class FollowerKitProducerTests(unittest.TestCase):
                 for spec, spells in [(66, [633, 53600, 26573, 85673]), (105, [774, 18562, 102342, 33763])]:
                     rows = db.execute('SELECT spell_id FROM follower_spec_kit WHERE spec_id=? AND min_level<=32 AND max_level>=32', (spec,)).fetchall()
                     self.assertTrue(set(spells).issubset({row[0] for row in rows}), (spec, rows))
+                for spec, root_spell, child in [(103, 8921, 164812), (105, 8921, 164812), (105, 93402, 164815)]:
+                    conditions = db.execute('SELECT conditions FROM follower_spec_kit WHERE spec_id=? AND spell_id=?', (spec, root_spell)).fetchone()[0]
+                    self.assertEqual(json.loads(conditions)['missing_aura'], child)
                 self.assertFalse(db.execute('SELECT 1 FROM follower_spec_kit WHERE min_level>max_level').fetchone())
                 self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
             report = json.loads(receipt.read_text())
             self.assertEqual(report['build'], '12.1.5.70448')
             self.assertEqual(len(report['chosen_loadouts']), 11 * 90)
+            links = report['aura_reference_rows']
+            self.assertEqual({(row['spec_id'], row['spell_id'], row['child_spell_id']) for row in links},
+                             {(103, 8921, 164812), (105, 8921, 164812), (105, 93402, 164815)})
+            for row in links:
+                self.assertIn(f"${row['child_spell_id']}", row['description'])
+                self.assertEqual(row['fact'], 'ROOT_CHILD_LINK_DESCRIPTION_ONLY')
+                self.assertTrue(row['child_periodic_effect_rows'])
+                self.assertTrue(all(effect['EffectTriggerSpell'] == 0 for effect in row['root_effect_rows']))
             delta = diff.read_text()
             self.assertEqual(report['changed_tables'], ['follower_spec_kit'] if delta.strip() else [])
             # The input can already contain published core kits. Replay the real

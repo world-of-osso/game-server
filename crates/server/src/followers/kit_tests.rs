@@ -79,6 +79,25 @@ fn follower_kit_crenna32_rejuvenation() {
 }
 
 #[test]
+#[ignore = "DOT_CHILD_AURA_MAINTENANCE: reproduce on published kit before COPY fix"]
+fn follower_kit_crenna32_maintains_child_dots_then_casts_wrath() {
+    let (mut h, unit) = level32(209072);
+    uses_spell(&mut h, unit, 93402);
+    uses_spell(&mut h, unit, 5176);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 164812));
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 164815));
+    for spell in [8921, 93402] {
+        let casts = h
+            .inbox
+            .go
+            .iter()
+            .filter(|go| go.caster == unit.to_bits() && go.spell_id == spell)
+            .count();
+        assert_eq!(casts, 1, "maintained child aura must prevent root recast");
+    }
+}
+
+#[test]
 fn follower_kit_breka32_area_attack() {
     let (mut h, unit) = level32(215517);
     uses_spell(&mut h, unit, 6343);
