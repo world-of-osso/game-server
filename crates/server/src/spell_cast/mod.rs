@@ -23,6 +23,8 @@ pub mod area_trigger;
 #[cfg(test)]
 mod attack_power_tests;
 #[cfg(test)]
+mod attack_restriction_tests;
+#[cfg(test)]
 mod attack_speed_tests;
 mod aura_spell_restrictions;
 #[cfg(test)]
