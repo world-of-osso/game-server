@@ -1,6 +1,6 @@
 ## 2026-10-17 — Ordinary context refusal and fixture source repair
 
-[Level context](systems/level-scaling.md#gate486-fixture-source-audit): gate486 exposed cached Lesser Voidwalker20 versus actual area279/CT11/native30 and unsupported Lucifron map409 difficulty3 versus actual spawn9/18. Three-case reproduction at7763d065a confirms both failures and missing-context panic. Spawn boundary now logs/refuses unresolved actors before entity creation and continues valid population; criterion below/equal/above coverage uses29/30/31, lifecycle uses source9. Focused3/3 PASS60.13s and affected54/54 PASS150.97s (55 pre-existing ignored), fmt0 at5a2c2d449; package check/push remain pending. No canonical or Herald lifecycle changes.
+[Level context](systems/level-scaling.md#gate486-fixture-source-audit): gate486 exposed cached Lesser Voidwalker20 versus actual area279/CT11/native30 and unsupported Lucifron map409 difficulty3 versus actual spawn9/18. Three-case reproduction at7763d065a confirms both failures and missing-context panic. Spawn boundary now logs/refuses unresolved actors before entity creation and continues valid population; criterion below/equal/above coverage uses29/30/31, lifecycle uses source9. Focused3/3 PASS60.13s and affected54/54 PASS150.97s (55 pre-existing ignored), fmt0 at5a2c2d449; package check0/warning-free32.05s at docs-only41e030bf1. LEAD re-gate/landing pending. No canonical or Herald lifecycle changes.
 
 ## 2026-10-17 — Bounded Augmentation support stats
 
