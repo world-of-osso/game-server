@@ -1,8 +1,22 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source545–549: pending Shroud acceptance and selected-pet/paid-elixir/guard-radius/pennant boundaries (2026-10-17)
+
+548 test/spec7463a1090 appends226810/459531/228081/three valid displays/source1500ms cast/1200s appearance/3600s recovery to the count-free disguise registry, now14 rows plus separate Oomgut15 identities. Existing cast_ms pending-cast phase and old13 data stay unchanged. Format/manual readability/diffcheck pass; behavior needs a newer covering head, not498c013. Lead confirms498 LANDED/master8707ac0ea, independently checked c013 ancestry exit0; newer11-object/18-caster/14-disguise scopes remain unverified. No further runtime/data/own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|545 Web Pet Leash226191/458182 | Instant target90 dummy4/permanent-1, item1500ms recovery. Pinned90 is selected-target minipet, distinct from caster/own-critter150. Actual eligible creepy-crawly pet/leash relation/attachment/selection/cleanup remains unaudited; no caster aura, arbitrary pet substitute or invented pet taxonomy filter. |
+|546 Everlasting Noggenfogger Elixir226373/458812 | Instant self script3/zero payload; item normal recovery0/category79 recovery3000ms. Source charges50silver per gulp and promises transformations. Actual charge/effect selection/eligibility/currency/result lifecycle remains gap; no free cosmetic aura, guessed classic proc weights or deduction without its real outcome. |
+|547 General's Expertise226519/458175 | Source1500ms self dummy4/permanent-1, item recovery0. Exact City-of-Threads guard-detection-radius visualization/guard selection/current observer state/cleanup remains unresolved; no generic self aura, guessed radius, global overlay or changed guard aggro behavior. |
+|548 Infiltrator's Shroud226810/459531 | Source1500ms self transform56/base1→existing228081/misc8 for1200000ms; valid124738/123949/125914 choices/weight1/scale1, inherited3600000ms recovery. Own pending-cast/valid-model/ordinary expiry/native-display/full-health/recovery acceptance committed, proof pending newer head. No invented stealth/invisibility/player scale, weighted-pool/native or natural-hour reuse certificate. |
+|549 Unbound Legend's Pennant227538/460082 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Exact achievement pennant art/eligibility/cleanup remains unaudited; no zero-dummy admission or earlier season's visual certificate. |
+
+Evidence: private `rows545-549-{readonly-source,action-source,runtime-source,active-goal}.json`, `shroud548-{active-goal,proof-ledger}.json`, pinned target90 and lead498 landing/ancestry receipt.149865 Tea Set remains untouched.
+
 ## Lead498 scoped PASS;newer expansions still pending (2026-10-17)
 
-Inspected498 throughc013eafdd PASS306passed/0failed/1ignored545.19s/client9/EXIT0/FMT0, compile5m37s/no warnings. Exact corrected11-disguise/Claw and473Stasis fixtures, all19 hearthstones through503,16 stationary sources/all7minis,16 caster/Cinder and10 transmitted objects/Nightmare have explicit ok lines. Ignored case remains `zones::world_db_tests::summon_enabler_stalker_spawns_invisible_and_not_selectable`, not new toy acceptance. Landing/master is not established until lead confirms.517eleventh object,524/538eighteen casters and540/542thirteen disguise rows are AFTER498 and unverified; no borrowed larger-scope certificate. Private `lead-gate498-inspected.json` reconciles exact scope; no own heavy duplicate.
+Inspected498 throughc013eafdd PASS306passed/0failed/1ignored545.19s/client9/EXIT0/FMT0, compile5m37s/no warnings. Exact corrected11-disguise/Claw and473Stasis fixtures, all19 hearthstones through503,16 stationary sources/all7minis,16 caster/Cinder and10 transmitted objects/Nightmare have explicit ok lines. Ignored case remains `zones::world_db_tests::summon_enabler_stalker_spawns_invisible_and_not_selectable`, not new toy acceptance. Lead confirms498 LANDED/master8707ac0ea; local `merge-base --is-ancestor c013eafdd 8707ac0ea` exits0.517eleventh object,524/538eighteen casters and540/542thirteen disguise rows are AFTER498 and unverified; no borrowed larger-scope certificate. Private `lead-gate498-inspected.json` reconciles exact scope; no own heavy duplicate.
 
 ## Source540–544: pending Kobyss/Pileus acceptance and reading/pennant/corpse-flag boundaries (2026-10-17)
 
