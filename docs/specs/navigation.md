@@ -24,7 +24,7 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [ ] Preserve ordinary query success/unbaked/error results. Log worker panic/exit, explicitly fail outstanding and future requests, and never leave them Pending forever or restart silently.
 - [ ] A test-only drain supports synchronous fixtures; production never drains or joins the worker during ticks. A held actual tile read cannot stop ticks; after release the real path publishes.
 
-Design/caller inventory: [navigation worker](../wiki/design/navigation-worker.md). Worker/types and the Navigation::advance consumer group are implemented; remaining raw-query callers and integrated proof remain pending.
+Design/caller inventory: [navigation worker](../wiki/design/navigation-worker.md). Worker/types and Navigation::advance have held-read/route GREEN proof. Follower approach probes and eight-candidate escape batches now use deferred queries; a pending probe retains prior actor state and cannot become a clear approach or replace a current route. Fear/waypoint conversions and raw-query GREEN proof remain pending.
 
 ## C++ script ground waypoints
 

@@ -9,7 +9,9 @@ use std::sync::Mutex;
 const REPATH_DISTANCE: f32 = 1.0;
 const TELEPORT_DISTANCE: f32 = 2.0;
 
+mod deferred;
 mod requests;
+use deferred::PendingQuery;
 use requests::{PendingRoute, publish_navigation_results};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,6 +19,9 @@ pub enum Goal {
     Chase(u64),
     Follow(u64),
     Hazard(u64),
+    Approach(u64),
+    FearCollision,
+    FearPath,
     Point,
     Home,
     Waypoint(u32, usize),
@@ -75,6 +80,7 @@ pub struct Navigation {
     routes: EntityHashMap<Route>,
     worker: navigation::worker::Worker,
     pending: EntityHashMap<PendingRoute>,
+    queries: EntityHashMap<PendingQuery>,
     unbaked: HashSet<u32>,
     next_id: u64,
     #[cfg(test)]
@@ -89,6 +95,7 @@ impl Navigation {
             routes: EntityHashMap::default(),
             worker: navigation::worker::Worker::new(dir.to_path_buf()),
             pending: EntityHashMap::default(),
+            queries: EntityHashMap::default(),
             unbaked: HashSet::new(),
             next_id: 0,
             #[cfg(test)]
@@ -190,7 +197,7 @@ impl Navigation {
     pub(crate) fn cancel_route(&mut self, entity: Entity) {
         let had_route = self.routes.remove(&entity).is_some();
         let had_request = self.pending.remove(&entity).is_some();
-        if had_route || had_request {
+        if (had_route || had_request) && !self.query_pending(entity) {
             self.worker.cancel(entity.to_bits());
         }
     }
@@ -409,11 +416,13 @@ mod request_tests;
 
 fn prune_routes(
     mut nav: ResMut<Navigation>,
+    actors: Query<(Option<&crate::maps::InMap>, Option<&Position>)>,
     creatures: Query<
         (Entity, Option<&crate::maps::InMap>, Option<&Position>),
         With<crate::creature_ai::CreatureState>,
     >,
 ) {
+    deferred::prune_queries(&mut nav, &actors);
     let obsolete: Vec<_> = nav
         .pending
         .iter()

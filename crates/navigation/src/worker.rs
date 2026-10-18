@@ -30,7 +30,7 @@ pub enum Query {
     Panic,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Output {
     Path(Vec<Vec3>),
     Collision(Vec3),

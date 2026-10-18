@@ -10,12 +10,17 @@ pub(super) struct PendingRoute {
 
 impl Navigation {
     pub(crate) fn route_pending(&self, entity: Entity) -> bool {
-        self.pending
-            .get(&entity)
-            .is_some_and(|pending| !pending.done)
+        self.query_pending(entity)
+            || self
+                .pending
+                .get(&entity)
+                .is_some_and(|pending| !pending.done)
     }
 
     pub(super) fn request_route(&mut self, entity: Entity, request: MoveRequest) {
+        if self.query_pending(entity) {
+            return;
+        }
         if self
             .pending
             .get(&entity)
@@ -23,11 +28,7 @@ impl Navigation {
         {
             return;
         }
-        self.next_id = self
-            .next_id
-            .checked_add(1)
-            .expect("navigation request ID exhausted");
-        let id = self.next_id;
+        let id = self.allocate_id();
         self.pending.insert(
             entity,
             PendingRoute {
@@ -52,6 +53,11 @@ impl Navigation {
         self.applied.clear();
         for response in self.worker.poll() {
             let entity = Entity::from_bits(response.entity);
+            if self.publish_query(&response) {
+                #[cfg(test)]
+                self.applied.push((entity, response.id));
+                continue;
+            }
             let Some(pending) = self.pending.get_mut(&entity) else {
                 continue;
             };
@@ -117,6 +123,28 @@ impl Navigation {
         if invalid {
             self.cancel_route(entity);
         }
+    }
+
+    pub(crate) fn continue_route(
+        &mut self,
+        entity: Entity,
+        map_id: u32,
+        from: Position,
+        distance: f32,
+    ) -> Step {
+        let Some(route) = self.routes.get(&entity) else {
+            return Step::Pending;
+        };
+        let request = MoveRequest {
+            map_id,
+            from,
+            distance,
+            goal: route.goal,
+            to: position(route.last_target),
+            reach: route.reach,
+        };
+        self.invalidate_moved_route(entity, &request);
+        self.advance_published_route(entity, request, true)
     }
 
     pub(super) fn advance_published_route(
