@@ -1,3 +1,7 @@
+## 2026-10-17 — Ordinary context refusal and fixture source repair
+
+[Level context](systems/level-scaling.md#gate486-fixture-source-audit): gate486 exposed cached Lesser Voidwalker20 versus actual area279/CT11/native30 and unsupported Lucifron map409 difficulty3 versus actual spawn9/18. Three-case reproduction at7763d065a confirms both failures and missing-context panic. Spawn boundary now logs/refuses unresolved actors before entity creation and continues valid population; criterion below/equal/above coverage uses29/30/31, lifecycle uses source9. Focused GREEN and affected/check/fmt remain pending; no canonical or Herald lifecycle changes.
+
 ## 2026-10-17 — Bounded Augmentation support stats
 
 [Augmentation](systems/auras.md#augmentation-support-stats-2026-10-17): active70448 Prescience409311→410089 recipient crit and Shifting Sands413984 caster-mastery Versatility; exact spell-specific SimC76f8118 semantics, no generic540. Genuine native RED4→merged5ed1b656 GREEN4/4 in5.52s; initial functional observer mismatch corrected test-only, native zero-variance damage assertion tightened to exact. Docs-only0114bbf7 retains native timer control1/1, scoped server-bin check91s and fmt check pass warning-free; independent lead gate pending. Automatic targeting, E202/dummies, empower grants, Ebon and full-ability/legal/UDP acceptance remain open.

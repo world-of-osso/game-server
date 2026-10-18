@@ -300,7 +300,7 @@ fn spawn_creatures<'a>(
                     spawn.guid, spawn.template_entry
                 )
             });
-        let entity = spawn_creature(
+        let Some(entity) = spawn_creature(
             commands,
             world_data,
             template,
@@ -308,7 +308,9 @@ fn spawn_creatures<'a>(
             replicate,
             spawn,
             &mut rng,
-        );
+        ) else {
+            continue;
+        };
         if difficulty_id != 0 {
             commands
                 .entity(entity)
@@ -329,7 +331,7 @@ pub(crate) struct CreatureSpawnContext<'a> {
     pub temporary: bool,
 }
 
-/// Spawn one creature of `template` with its AI, addon and script components.
+/// Spawn one creature with AI/addon/script state, or log and refuse unknown level context.
 pub(crate) fn spawn_creature(
     commands: &mut Commands,
     world_data: &WorldData,
@@ -338,11 +340,20 @@ pub(crate) fn spawn_creature(
     replicate: bool,
     spawn: &CreatureSpawn,
     rng: &mut impl rand::Rng,
-) -> Entity {
+) -> Option<Entity> {
     let map = context.map;
     {
-        let scaling = read_spawn_tuning(world_data, template, spawn, context)
-            .map(|(range, stats)| (roll_spawn_scaling(range, rng), stats));
+        let tuning = match read_spawn_tuning(world_data, template, spawn, context) {
+            Ok(tuning) => tuning,
+            Err(MissingSpawnLevelContext) => {
+                error!(
+                    "CREATURE_LEVEL_CONTEXT_GAP: refusing creature{} spawn{} map{} copy{} difficulty{}",
+                    template.entry, spawn.guid, map.map_id, map.instance_id, context.difficulty_id,
+                );
+                return None;
+            }
+        };
+        let scaling = tuning.map(|(range, stats)| (roll_spawn_scaling(range, rng), stats));
         let (level, health, armor) = match &scaling {
             Some((scaling, tuning)) => {
                 let level = scaling.native_level();
@@ -425,7 +436,7 @@ pub(crate) fn spawn_creature(
         if let Some(addon) = addon {
             insert_addon_components(&mut entity, addon);
         }
-        entity.id()
+        Some(entity.id())
     }
 }
 
@@ -519,7 +530,7 @@ pub(crate) fn summon_creature(
             replicate,
             &spawn,
             &mut rand::thread_rng(),
-        );
+        )?;
         commands
             .entity(summon)
             .insert(TempSummon { summoner })
@@ -825,15 +836,17 @@ fn random_valid_model<'a>(
     models.get(index)
 }
 
+struct MissingSpawnLevelContext;
+
 /// Creature::ApplyLevelScaling: template, map difficulty, then actual terrain ancestry.
 fn read_spawn_tuning(
     data: &WorldData,
     template: &CreatureTemplate,
     spawn: &CreatureSpawn,
     context: &mut CreatureSpawnContext<'_>,
-) -> Option<(GuardianLevelRange, Arc<LevelStats>)> {
+) -> Result<Option<(GuardianLevelRange, Arc<LevelStats>)>, MissingSpawnLevelContext> {
     if data.authored_templates.contains(&template.entry) {
-        return None;
+        return Ok(None);
     }
     if let Some(tuning) = &template.tuning {
         let range = GuardianLevelRange {
@@ -841,17 +854,17 @@ fn read_spawn_tuning(
             range: (template.min_level, template.max_level),
             delta: tuning.delta,
         };
-        return Some((range, tuning.stats.clone()));
+        return Ok(Some((range, tuning.stats.clone())));
     }
     if context.temporary {
-        return None;
+        return Ok(None);
     }
-    let range = read_regional_spawn_range(data, template, spawn, context);
+    let range = read_regional_spawn_range(data, template, spawn, context)?;
     if range.content_tuning_id == 0 {
-        return None;
+        return Ok(None);
     }
     let stats = build_regional_spawn_stats(data, template, range.content_tuning_id);
-    Some((range, Arc::new(stats)))
+    Ok(Some((range, Arc::new(stats))))
 }
 
 fn build_regional_spawn_stats(
@@ -875,7 +888,7 @@ fn read_regional_spawn_range(
     template: &CreatureTemplate,
     spawn: &CreatureSpawn,
     context: &mut CreatureSpawnContext<'_>,
-) -> GuardianLevelRange {
+) -> Result<GuardianLevelRange, MissingSpawnLevelContext> {
     let map = context.map;
     let difficulty_id = context.difficulty_id;
     let resolve = |area| {
@@ -885,16 +898,7 @@ fn read_regional_spawn_range(
     // Do not load terrain when template/critter/map data already selects the source range.
     resolve(None)
         .or_else(|| resolve(read_spawn_area(context, spawn)))
-        .unwrap_or_else(|| {
-            panic!(
-                "CREATURE_LEVEL_CONTEXT_GAP: creature{} spawn{} map{} copy{} difficulty{}",
-                template.entry,
-                spawn.guid,
-                context.map.map_id,
-                context.map.instance_id,
-                context.difficulty_id,
-            )
-        })
+        .ok_or(MissingSpawnLevelContext)
 }
 
 fn read_spawn_area(context: &mut CreatureSpawnContext<'_>, spawn: &CreatureSpawn) -> Option<u32> {

@@ -72,6 +72,7 @@ fn spawn_doomwalker(server: &mut App) -> Entity {
                 &spawn,
                 &mut rand::thread_rng(),
             )
+            .expect("source Doomwalker level context")
         })
         .unwrap()
 }

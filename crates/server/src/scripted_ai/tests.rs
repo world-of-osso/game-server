@@ -374,7 +374,8 @@ fn spawn_boss(app: &mut App, data: &Data, entry: u32, map: InMap) -> Entity {
         false,
         spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("authored boss level context");
     queue.apply(app.world_mut());
     boss
 }

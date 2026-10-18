@@ -13,9 +13,13 @@ Tuned creatures (`ContentTuningID` != 0, 4,563 of the 4,824 templates spawned on
 
 ### Ordinary source context — 2026-10-17
 
-`CreatureSpawnContext` carries the actual map copy, difficulty and terrain cache. `read_spawn_tuning` first honors [authored template source selection](world-data.md#template-source-selection), then explicit template tuning. Ordinary non-critter CT0 uses existing `SummonLevels` map/area ancestry and source deltas; `read_spawn_area` probes actual MCNK data rather than trusting the spawn's zone field. Known zero tuning remains fixed; missing input fails with `CREATURE_LEVEL_CONTEXT_GAP`, including actor/spawn/map/copy/difficulty. Temporary/script summons keep their existing separate initialization; no new owner-level policy is introduced.
+`CreatureSpawnContext` carries the actual map copy, difficulty and terrain cache. `read_spawn_tuning` first honors [authored template source selection](world-data.md#template-source-selection), then explicit template tuning. Ordinary non-critter CT0 uses existing `SummonLevels` map/area ancestry and source deltas; `read_spawn_area` probes actual MCNK data rather than trusting the spawn's zone field. Known zero tuning remains fixed; missing input logs `CREATURE_LEVEL_CONTEXT_GAP`, including actor/spawn/map/copy/difficulty, then returns no entity before any spawn commands. Population fill continues with other resolvable creatures; it does not panic or substitute legacy stats. Temporary/script summons keep their existing separate initialization; no new owner-level policy is introduced.
 
 Continent population waits for `ground::open_ground_map` and its deferred resource publication in PostStartup. Real production-order startup reaches missing-context RED before this dependency and strict GREEN1/1 at1050147f after it; the fixture uses sourced17536 at an actual imported continent position, not a canonical Nazan placement. Seven enabled context/source/startup cases plus affected controls pass54/54 in177.24s at33dcb7b6; 55 existing ignored cases are not acceptance evidence. [Herald boundary and remaining morph gap](../../specs/ramparts-herald.md).
+
+### Gate486 fixture source audit
+
+The controlled Lesser Voidwalker418 placement at WoW(3,0) samples MCNK area279 (Dalaran Crater), whose CT11 range7..30 plus source delta0 yields native30 under TC `ApplyLevelScaling`/`SelectLevel`. Cache20 is not its native level there; criterion21 uses29/30/31 to retain below/equal/above coverage. Lucifron's real map409 spawn20056605 supports9/18; installed MapDifficulty9 supplies CT1004. The lifecycle fixture's legacy3 had no map row and could not establish source context; it now uses actual9. Neither correction changes canonical data. [Requirements/tests](../../specs/level-scaling.md).
 
 ### Damage path
 

@@ -54,7 +54,8 @@ fn geomancer() -> (Harness, Entity) {
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("source geomancer level context");
     queue.apply(app.world_mut());
     // Outside proximity aggro until explicitly engaged; inside Fireball's range.
     let (player, connection) = spawn_player(
