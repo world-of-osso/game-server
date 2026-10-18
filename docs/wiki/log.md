@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source325–329 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source325329-audiolaunchwisdomanimationoffering-boundaries-2026-10-17): surrounding audio509, mixed98/base1200 launch, wisdom189951/properties5348/Title27,312 animation set61 and ground377204/type3 offering retain named action/presentation gaps. Runtime wisdom/GO templates absent despite TDB107044/74995; no inert import, invented stealth/physics/loot/advice or new positive/native proof. Exact cast/duration/item-versus-inherited recovery preserved; lead-owned pending acceptance gates not duplicated.
+
 ## 2026-10-17 — Toy source320–324 pending Harpy acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source320324-pending-harpy-acceptance-and-fruitcorestar-mode-gaps-2026-10-17): eb02827f3 adds actual learned191891/371470→existing187854/display104851/source600000ms/item1800000ms to10disguises+Oomgut11IDs. Format/manual readability/diffcheck pass; new-head covering behavioral gate requested,477 throughd4 does not contain322. Fruit periodic child, four living-core model attachments/positioner and paired star mode/catch/knockback contracts remain gaps. NPC model1.5 is retained without inventing player-scale responsibility; no runtime/data/native admission or own heavy duplicate.

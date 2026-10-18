@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source325–329: audio/launch/wisdom/animation/offering boundaries (2026-10-17)
+
+Read-only70391 source inspection establishes the following exact contracts, not new positive acceptance or generic cosmetic admission. No runtime/data changes or own heavy gates; pending Harpy/Cube/caster/hearthstone fixtures retain their separately recorded proof scopes.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|325 Earpieces of Tranquil Focus192099/370568 | Self aura509 for3600000ms, inherited300000ms recovery. Source describes tuning out surrounding musical/vocal projections. Actual audio filtering/recipient scope and restoration remain unproved; pinned TC HandleNULL for509 does not prove an audible client result or authorize ignoring the payload. |
+|326 Element-Infused Rocket Helmet192443/372573 | Instant self knockback effect98/base1200 plus dummy aura4 for3000ms; item86400000ms recovery. Authored launch/movement and safety/landing behavior remain gaps; neither dropped98 nor guessed velocity/height/damage immunity is a valid cosmetic substitute. |
+|327 Stored Wisdom Device192485/373230 | Source500ms cast, target47 summon189951/properties5348 for300000ms; Control0/Title27/Slot0/flags75704584, item1800000ms recovery. TDB189951/display107044/scale1/probability1 exists, runtime content template/model absent. Advice/speech/action and specialized-title lifecycle remain unresolved; no inert-body import or invented quote set. |
+|328 Malfunctioning Stealthman 54 (192495/373351) | Source2000ms cast, self aura312/misc61 for1800000ms, inherited300000ms recovery. Pinned TC labels312 animation replacement set, implemented clientside. Source explicitly describes formerly functioning stealth; actual set61 animation/presentation remains unverified, not authority to grant invisibility/stealth or treat it as a plain attachment. |
+|329 Jeweled Offering193032/374893 | Source2000ms cast, effect50→377204 at target138 (pinned ground destination),300000ms lifetime, item86400000ms recovery. TDB377204 is chest/type3/display74995/size1.3, runtime gameobject template absent. Recipient acceptance/open interaction and cleanup remain gaps; no guessed possession transfer/loot or decorative-only admission. |
+
+Evidence: private `rows325-329-{readonly-source,action-source,active-goal}.json`; local source `SpellInfo.cpp`, `SpellAuraEffects.cpp`, `SharedDefines.h`. TDB availability and lack of a root script binding do not certify complete behavior. Tea Set149865 remains untouched.
+
 ## Source320–324: pending Harpy acceptance and fruit/core/star-mode gaps (2026-10-17)
 
 322 test/spec eb02827f3 adds191891/371470→existing187854/display104851, source600000ms transform56/misc8 and1800000ms item recovery to the actual learned-use/ordinary expiry/restoration/health/recovery fixture. Ten disguise IDs plus Oomgut now make11IDs. Format/manual readability/diffcheck pass; new-head covering behavioral verification is requested, not passed. Lead477 throughd4a4a716c contains the earlier nine-disguise/Cube,14-caster and13-hearthstone fixtures, not this new Harpy tuple.
