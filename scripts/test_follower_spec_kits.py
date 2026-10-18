@@ -1,4 +1,5 @@
 """Copy-only follower-kit producer behavioral tests against native 70448 inputs."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,16 +15,19 @@ SOURCE = Path(os.environ['FOLLOWER_KIT_SOURCE_OUTPUT'])
 
 
 class FollowerKitProducerTests(unittest.TestCase):
-    def command(self, output, receipt, diff):
+    def command(self, output, receipt, diff, world_db=None, source=None):
         return [sys.executable, str(ROOT / 'scripts/follower_spec_kits.py'),
-                '--world-db', str(ROOT / 'data/world.db'), '--db2-root', str(DB2),
-                '--source-json', str(SOURCE), '--output-db', str(output),
+                '--world-db', str(world_db or ROOT / 'data/world.db'), '--db2-root', str(DB2),
+                '--source-json', str(source or SOURCE), '--output-db', str(output),
                 '--receipt', str(receipt), '--sqldiff', str(diff)]
 
     def test_copy_contains_level_gated_garrick_and_crenna_kits(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             output, receipt, diff = [root / name for name in ['world.db', 'receipt.json', 'kit.sql']]
+            source = (ROOT / 'data/world.db').resolve()
+            with source.open('rb') as stream:
+                original_sha = hashlib.file_digest(stream, 'sha256').hexdigest()
             result = subprocess.run(self.command(output, receipt, diff), capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             with sqlite3.connect(output) as db:
@@ -35,10 +39,36 @@ class FollowerKitProducerTests(unittest.TestCase):
             report = json.loads(receipt.read_text())
             self.assertEqual(report['build'], '12.1.5.70448')
             self.assertEqual(len(report['chosen_loadouts']), 11 * 90)
-            self.assertEqual(report['changed_tables'], ['follower_spec_kit'])
-            self.assertIn('CREATE TABLE follower_spec_kit', diff.read_text())
-            with sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as db:
-                self.assertFalse(db.execute("SELECT 1 FROM sqlite_master WHERE name='follower_spec_kit'").fetchone())
+            delta = diff.read_text()
+            self.assertEqual(report['changed_tables'], ['follower_spec_kit'] if delta.strip() else [])
+            # The input can already contain published core kits. Replay the real
+            # SQL delta instead of assuming it must CREATE an absent table.
+            with sqlite3.connect(source.as_uri() + '?mode=ro', uri=True) as original, sqlite3.connect(root / 'replayed.db') as replayed:
+                original.backup(replayed)
+                replayed.executescript(delta)
+                with sqlite3.connect(output) as expected:
+                    self.assertEqual(replayed.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall(), expected.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall())
+            with source.open('rb') as stream:
+                self.assertEqual(hashlib.file_digest(stream, 'sha256').hexdigest(), original_sha)
+
+    def test_rebuilds_existing_kit_only_in_copy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / 'first.db'
+            result = subprocess.run(self.command(first, root / 'first.json', root / 'first.sql'), capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            source = json.loads(SOURCE.read_text())
+            source['world_db'] = str(first)
+            source_path = root / 'source.json'
+            source_path.write_text(json.dumps(source))
+            second = root / 'second.db'
+            result = subprocess.run(self.command(second, root / 'second.json', root / 'second.sql', first, source_path), capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with sqlite3.connect(first) as before, sqlite3.connect(second) as after:
+                self.assertEqual(before.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall(), after.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall())
+                self.assertEqual(before.execute('SELECT * FROM follower_profiles ORDER BY entry').fetchall(), after.execute('SELECT * FROM follower_profiles ORDER BY entry').fetchall())
+            self.assertEqual((root / 'second.sql').read_text(), '')
+            self.assertEqual(json.loads((root / 'second.json').read_text())['changed_tables'], [])
 
     def test_refuses_source_database_output(self):
         with tempfile.TemporaryDirectory() as directory:
