@@ -1,3 +1,7 @@
+## 2026-10-17 — Normal-cast remaining-timer clamp
+
+[Native pushback cap](systems/auras.md#normal-cast-remaining-timer-cap--2026-10-17): actual Omor30686/native damage at350ms, delivered by existing50ms event step at400ms, leaves3.1s remaining on3s bar (RED0/1/36.85s). TCSpell.cpp7994–8028 caps remaining time at original cast duration; fixed duration plus elapsed rewind implements that algebra without new state/wire fields. Two-hit/reduction/channel behaviour retained; late-hit controls observe actual deadlines. Targeted proof pending; no imported-clock/RNG/actor-budget changes.
+
 ## 2026-10-17 — Ebon simultaneous source snapshot
 
 [Ebon](systems/auras.md#ebon-might-baseline-2026-10-17): original native6 GREEN at224e0300; two same-frame ordinary HostClient casts additionally reproduce11.671872 versus12.72 before the first tick. FixedUpdate aura modifiers preceded normal Update CharacterStats production. Reuse the existing cached native producer before the Ebon snapshot; no formula duplication, fallback, timer or global schedule change. At06b2d6cd7 expanded Ebon8/8 passes12.93s, prior support4/4 +legacy Eruption2/2 +native timer1/1 pass (15/15,0 ignored); source coefficient/variance unchanged. Scoped server-bin check28.73s/fmt pass warning-free; independent lead gate pending.

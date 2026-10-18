@@ -118,6 +118,12 @@ fn incoming_fire(h: &mut Harness, periodic: bool) {
     h.advance(1);
 }
 
+fn observe_cast_deadline(h: &Harness) -> f64 {
+    let cast = h.app.world().get::<CastState>(h.caster).unwrap();
+    h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64()
+        + f64::from(cast.duration - cast.elapsed)
+}
+
 fn pushback_with(spell_id: Option<u32>, expected: f32) {
     let mut ids = vec![FIREBALL];
     ids.extend(spell_id);
@@ -128,12 +134,13 @@ fn pushback_with(spell_id: Option<u32>, expected: f32) {
     }
     h.cast_and_deliver(FIREBALL, Some(h.npc));
     assert!(h.inbox.failed.is_empty());
-    let before = h.app.world().get::<CastState>(caster).unwrap().duration;
+    h.advance(20); // Real progress beyond500ms allows the full reduced delay.
+    let before = observe_cast_deadline(&h);
     incoming_fire(&mut h, false);
-    let cast = h.app.world().get::<CastState>(caster).unwrap();
+    let delay = observe_cast_deadline(&h) - before;
     assert!(
-        (cast.duration - before - expected).abs() < 0.0001,
-        "{cast:?}"
+        (delay - f64::from(expected)).abs() < 0.0001,
+        "actual pushback delay={delay}"
     );
 }
 
