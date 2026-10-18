@@ -217,7 +217,9 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 }
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
-    (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION && effect_index == 0)
+    super::augmentation::consumes_field(spell_id, effect_index)
+        || (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION
+            && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
@@ -447,6 +449,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         MONSTER_RISING,
         AuraScript {
             on_periodic: Some(toggle_monster_rising),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        super::augmentation::SHIFTING_SANDS,
+        AuraScript {
+            on_periodic: Some(super::augmentation::refresh_sands),
             ..Default::default()
         },
     );
