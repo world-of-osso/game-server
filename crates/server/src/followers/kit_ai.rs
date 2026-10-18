@@ -126,9 +126,33 @@ fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
-    if condition.combat && enemies.is_empty() {
+    if !health_and_auras_allow(world, unit, target, party, entry)
+        || !combat_allows(world, unit, target, enemies, entry)
+    {
         return false;
     }
+    let enough_injured = party
+        .iter()
+        .filter(|member| {
+            world.get::<InMap>(**member) == world.get::<InMap>(unit)
+                && health_fraction(world, **member)
+                    .is_some_and(|health| health < condition.health_below.unwrap_or(1.0))
+        })
+        .count()
+        >= condition.min_injured;
+    enough_injured
+        && (condition.min_enemies == 0
+            || super::kit_area::allows(world, unit, target, enemies, entry))
+}
+
+fn health_and_auras_allow(
+    world: &World,
+    unit: Entity,
+    target: Entity,
+    party: &[Entity],
+    entry: &Entry,
+) -> bool {
+    let condition = &entry.conditions;
     if condition.health_below.is_some_and(|threshold| {
         health_fraction(world, target).is_none_or(|health| health >= threshold)
     }) {
@@ -154,6 +178,20 @@ fn conditions_met(
     {
         return false;
     }
+    true
+}
+
+fn combat_allows(
+    world: &World,
+    unit: Entity,
+    target: Entity,
+    enemies: &[(Entity, Option<Entity>)],
+    entry: &Entry,
+) -> bool {
+    let condition = &entry.conditions;
+    if condition.combat && enemies.is_empty() {
+        return false;
+    }
     let protected = if entry.slot == Slot::Mitigation {
         unit
     } else {
@@ -173,20 +211,7 @@ fn conditions_met(
     if entry.slot == Slot::Interrupt && world.get::<CastState>(target).is_none() {
         return false;
     }
-    if condition.min_injured > 0
-        && party
-            .iter()
-            .filter(|member| {
-                world.get::<InMap>(**member) == world.get::<InMap>(unit)
-                    && health_fraction(world, **member)
-                        .is_some_and(|health| health < condition.health_below.unwrap_or(1.0))
-            })
-            .count()
-            < condition.min_injured
-    {
-        return false;
-    }
-    condition.min_enemies == 0 || super::kit_area::allows(world, unit, target, enemies, entry)
+    true
 }
 
 fn attempt_cast(
