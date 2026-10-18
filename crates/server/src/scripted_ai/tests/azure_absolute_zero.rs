@@ -181,3 +181,74 @@ fn azure_telash_natural_energy_phase_waits_for_casting_and_uses_native_cost_once
     );
     assert!(!h.has_aura(telash, ICE_POWER));
 }
+
+#[test]
+#[ignore = "next natural parent-hit outbound-jump callback RED"]
+fn azure_telash_natural_absolute_zero_hit_launches_source_outbound_jump() {
+    let (mut h, telash) = super::azure_frost_bomb::fixture();
+    assert_eq!(h.creatures_of(197204).len(), 3);
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(telash).insert(visibility);
+    h.engage(telash);
+    assert!(h.has_aura(telash, ICE_POWER));
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((60.0, PHASE_ENERGY))
+    );
+    h.advance(19.0);
+    super::azure_telash::assert_living_victim(&mut h, telash);
+    let preceding = h
+        .app
+        .world()
+        .get::<CastState>(telash)
+        .expect("actual preceding Icy channel before the ordinary Energy phase");
+    assert_eq!(preceding.spell_id, 387151);
+    assert_eq!(preceding.cast_type, shared::casting::CastType::Channel);
+    let at = *h.app.world().get::<Position>(telash).unwrap();
+    let from = Vec3::new(at.x, at.y, at.z);
+    // TC boss_telash_greywing.cpp:85,390–397: authored center and387928 HIT.
+    let center = Vec3::new(-5336.8003, 344.32678, -1066.6493);
+    assert!(
+        from.distance(center) > 1.0,
+        "actual spawn is not already the center"
+    );
+    advance_until_phase_or_ready_deadline(&mut h, telash);
+    assert_eq!(completed_casts(&h, telash, ABSOLUTE_ZERO), 1);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((0.0, PHASE_ENERGY)),
+        "real100Energy phase cost, never a manually filled or reset pool"
+    );
+    assert!(h.has_aura(telash, ZERO_SHIELD));
+    assert_eq!(
+        h.app.world().get::<ReactState>(telash),
+        Some(&ReactState::Passive)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::scripted_ai::waypoint_path::GravityDisabled>(telash)
+            .is_some()
+    );
+    h.advance(0.25);
+    let at = *h.app.world().get::<Position>(telash).unwrap();
+    let mid = Vec3::new(at.x, at.y, at.z);
+    let toward_center = Vec2::new(center.x - from.x, center.z - from.z);
+    let moved = Vec2::new(mid.x - from.x, mid.z - from.z);
+    let progress = moved.dot(toward_center) / toward_center.length_squared();
+    assert!(
+        progress > 0.0 && progress < 1.0,
+        "natural387928 effect0 must launch387981 mid-flight, not remain idle or teleport: from={from:?}, at={mid:?}, progress={progress}"
+    );
+    let linear_height = from.y + (center.y - from.y) * progress;
+    assert!(
+        mid.y > linear_height,
+        "actual outbound source parabola above its linear segment"
+    );
+    assert_eq!(
+        completed_casts(&h, telash, 387981),
+        0,
+        "TC uses a full-mask triggered child, not an ordinary child SpellGo"
+    );
+}
