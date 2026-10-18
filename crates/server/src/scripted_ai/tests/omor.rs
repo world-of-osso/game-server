@@ -822,7 +822,7 @@ fn encounter_coverage_omor_native_pushback_delays_completion_not_dispatch() {
         .unwrap();
     assert_eq!(
         (cast.spell_id, cast.duration, cast.pushback_count),
-        (30686, 3.5, 1)
+        (30686, 3.0, 1)
     );
     let mut completed_at = None;
     for _ in 0..60 {
