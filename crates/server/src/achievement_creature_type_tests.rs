@@ -295,7 +295,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
         let scaling = h
             .app
             .world()
-            .get::<crate::level_scaling::LevelScaling>(target);
+            .get::<shared::level_scaling::LevelScaling>(target);
         let area = crate::test_data::ground_map().area_at(0, bevy::math::Vec3::new(0.0, 0.0, -3.0));
         eprintln!(
             "GATE486 LesserVoidwalker scaling={:?} actual_area={area:?}",
