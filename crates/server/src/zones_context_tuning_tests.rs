@@ -5,6 +5,98 @@ use rusqlite::{Connection, OpenFlags};
 const NAZAN: u32 = 17_536;
 const RAMPARTS: u32 = 543;
 
+#[test]
+#[ignore = "RED: PostStartup ordinary spawn must wait for actual ground publication"]
+fn herald_context_startup_publishes_ground_before_ordinary_continent_stats() {
+    let mut data = sourced_nazan_fixture();
+    // A sourced17536 fixture at an actual imported continent spawn, not a canonical Nazan placement.
+    let source_spawn = crate::test_data::world_data()
+        .spawns
+        .iter()
+        .find(|spawn| spawn.template_entry == 60 && spawn.map == 0)
+        .unwrap()
+        .clone();
+    data.spawns = vec![CreatureSpawn {
+        template_entry: NAZAN,
+        ..source_spawn
+    }];
+    data.spawns_by_map = HashMap::from([(0, vec![0])]);
+    let connection = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&connection).unwrap();
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.add_plugins(shared::protocol::ProtocolPlugin);
+    app.insert_resource(maps).insert_resource(data);
+    // Same plugin ordering as production; ground is published by a deferred command in PostStartup.
+    app.add_plugins((crate::ground::GroundPlugin, ZonePlugin));
+    app.finish();
+    app.cleanup();
+    assert!(!app.world().contains_resource::<crate::ground::GroundMap>());
+    app.update();
+    let world = app.world_mut();
+    let actor = fixture_actor(world);
+    let scaling = world.get::<LevelScaling>(actor).unwrap();
+    assert_eq!(
+        scaling.content_tuning_id, 73,
+        "actual Elwynn/Northshire terrain, not templateCT0"
+    );
+    assert_eq!(
+        world.get::<UnitLevel>(actor).unwrap().0,
+        scaling.native_level()
+    );
+    assert!(world.get::<ScaledStats>(actor).is_some());
+    assert_eq!(
+        world.resource::<WorldData>().spawns.len(),
+        1,
+        "fixture population only"
+    );
+}
+
+#[test]
+fn herald_context_authored_yala_keeps_provenance_selected_fixed_stats() {
+    let data = crate::test_data::world_data();
+    let spawn = data
+        .spawns
+        .iter()
+        .find(|spawn| spawn.template_entry == 249363)
+        .unwrap();
+    let template = &data.templates[&249363];
+    assert_eq!(template.min_level, 5);
+    assert!(
+        template.tuning.is_none(),
+        "authored CT0, like unresolved Retail CT0"
+    );
+    let mut world = World::new();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, &world);
+    let actor = spawn_creature(
+        &mut commands,
+        data,
+        template,
+        &mut CreatureSpawnContext {
+            map: crate::maps::InMap::continent(2991),
+            difficulty_id: 0,
+            ground: None,
+            temporary: false,
+        },
+        false,
+        spawn,
+        &mut rand::thread_rng(),
+    );
+    queue.apply(&mut world);
+    assert_eq!(world.get::<UnitLevel>(actor).unwrap().0, 5);
+    assert_eq!(world.get::<Health>(actor).unwrap().max, 102.0);
+    assert!(world.get::<LevelScaling>(actor).is_none());
+    assert!(world.get::<ScaledStats>(actor).is_none());
+}
+
 fn sourced_nazan_fixture() -> WorldData {
     let source = crate::test_data::world_db_path();
     let connection = Connection::open_with_flags(source, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();

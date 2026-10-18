@@ -989,6 +989,7 @@ fn harness_with_content_and(extra: impl FnOnce(&mut App)) -> Option<Harness> {
     let bossmod = crate::scripted_ai::bossmod::load_catalog(&conn).expect("boss-mod catalog");
     harness_with(move |app| {
         app.insert_resource(world_data);
+        app.insert_resource(crate::test_data::ground_map());
         app.insert_resource(objects);
         app.insert_resource(bossmod);
         extra(app);
