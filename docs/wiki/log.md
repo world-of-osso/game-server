@@ -1,6 +1,6 @@
 ## Vault Rune phase activation
 
-[Native390209](systems/spell-casting.md#vault-rune-phase-activation): separate test-onlycd90c9091, ordinary60-to100 Energy phase and exact source-selected Rune hit sets; native2 missing388065 RED77.10s/compile3m18s, pinned protocol4be/worldce. Handler only skips390238 and makes the Rune cast388065 with implicit self. GREEN pending; no strip/AfterCast/return/counter/ordinary-budget/full-Azure claim.
+[Native390209](systems/spell-casting.md#vault-rune-phase-activation): separate test-onlycd90c9091, ordinary60-to100 Energy phase and exact source-selected Rune hit sets; native2 missing388065 RED77.10s/compile3m18s, pinned protocol4be/worldce. Handler only skips390238 and makes the Rune cast388065 with implicit self. Production305512cf7 freshly passes native2+retained natural3/Frost2:7PASS258.97s/compile1m57s; actual owner/unchanged inactive/copy controls. Scoped check22.51s/fmt4.31s pass; guards stable, independent lead gate pending. No strip/AfterCast/return/counter/ordinary-budget/full-Azure claim.
 
 ## Vault Rune scripted field implementation
 
