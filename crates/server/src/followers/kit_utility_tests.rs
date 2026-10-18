@@ -6,7 +6,7 @@ use bevy::time::TimeUpdateStrategy;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
-fn wait_for_native_school_unlock(h: &mut Harness, interrupt: u32) {
+pub(super) fn wait_for_native_school_unlock(h: &mut Harness, interrupt: u32) {
     let spell = h
         .app
         .world()

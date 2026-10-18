@@ -129,6 +129,8 @@ mod defensive_tests;
 #[cfg(test)]
 mod hazard_tests;
 #[cfg(test)]
+mod kit_interrupt_tests;
+#[cfg(test)]
 mod kit_source_tests;
 #[cfg(test)]
 mod kit_tests;
