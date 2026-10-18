@@ -1,4 +1,5 @@
 use super::*;
+use crate::guild::guild_ranks::snapshot;
 use crate::persistence::banks::{load_guild, load_guild_member_rank, save_guild_member_rank};
 use crate::persistence::{create_tables, temp_database};
 use crate::persistence_character::{create_character, set_character_guild_by_id};
