@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source330–334: pending Timewalker acceptance and prism/tent/seat/pall boundaries (2026-10-17)
+
+333 test/spec4ee545b9f adds193588/375357 to the existing actual learned-use/saved-bind/refusal/shared-charge helper, making14hearthstone variants. Exact source10s/effect252/self→homebind9/shared2309/one1800000ms charge is unchanged. Format/manual readability/diffcheck pass; explicitly covering new-head behavioral proof is requested, not passed. Lead477 throughd4 contains13earlier variants, not333. No production/runtime/data changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|330 Convergent Prism193033/376088 | Self auras293/misc2164/1,26,321 and60/misc127 for600000ms, inherited5000ms recovery. Existing `toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel` covers actual activation, Frostbolt blocking and cancel restoration. Party/raid-only guided beam/precise targeting presentation and full mixed payload remain separate gaps; no borrowed current/native certificate or dropped action restrictions. |
+|331 Gnoll Tent193476/398159 | Source3000ms cast/self linked428 for900000ms→398162/permanent200391/properties3911 (Control0/Title0/flags67241992), targets18/79. Runtime111084 exists. Existing `toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle` covers actual source cast, one owner actor2yd behind, rotated second owner, refresh deduplication, cancel/death cleanup. Natural15-minute linked expiry/rest/recreation/native presentation remain outside that witness; item120000ms recovery retained. |
+|332 Tuskarr Beanbag193478/376751 | Instant target47 summon191909/properties64/base1 for120000ms; item120000ms recovery/category1153. TDB191909/display108950 exists but runtime content template/model absent. Existing scenery census keeps this interaction toy blocked. Actual seating/recipient access and lifecycle remain unresolved; no decorative-only import or removal of seat semantics. |
+|333 Timewalker's Hearthstone193588/375357 | Actual learned193588 use/saved-bind and shared sibling190237 refusal acceptance committed, behavioral gate pending new-head coverage. Source StartRecoveryCategory133/1500ms start recovery is retained. No new covenant/other eligibility, cross-map wire/native presentation or natural30-minute recharge certificate. |
+|334 Forlorn Funeral Pall194052/383503 | Source500ms cast/target25 transform56→existing194400/display108530/misc8, permanent duration and item600000ms recovery/charges-1. Recently deceased recipient selection and corpse transformation/cleanup remain gaps; no caster-only disguise substitute, living-target permission or invented resurrection/consumption rule. |
+
+Evidence: private `rows330-334-{readonly-source,action-source}.json`, `timewalker333-{active-goal,proof-ledger}.json`; exact existing fixtures above are historical bounded witnesses, not newly rerun proofs. Tea Set149865 remains untouched.
+
 ## Source325–329: audio/launch/wisdom/animation/offering boundaries (2026-10-17)
 
 Read-only70391 source inspection establishes the following exact contracts, not new positive acceptance or generic cosmetic admission. No runtime/data changes or own heavy gates; pending Harpy/Cube/caster/hearthstone fixtures retain their separately recorded proof scopes.

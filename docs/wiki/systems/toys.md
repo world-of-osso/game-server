@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Timewalker acceptance and prism/tent/seat/pall boundaries (2026-10-17)
+
+[Source330–334 matrix](../../toy-effects14-coverage.md#source330334-pending-timewalker-acceptance-and-prismtentseatpall-boundaries-2026-10-17) adds acceptance-only4ee545b9f:193588/375357/source10s252/savedbind/shared2309one1800000mscharge, now14hearthstone variants. Format/manual readability/diffcheck pass; new-head behavioral coverage requested,477 throughd4 has only13. Existing prism activation/action-block/cancel and linked-tent source placement/refresh/owner/cancel/death witnesses remain bounded; guided party beam/native/natural linked expiry remain separate. Beanbag seating stays blocked despite TDB108950, and permanent dead-recipient Pall108530 needs actual recipient/corpse lifecycle. No runtime/data/native admission or own heavy duplicate.
+
 ## Audio/launch/wisdom/animation/offering boundaries (2026-10-17)
 
 [Source325–329 matrix](../../toy-effects14-coverage.md#source325329-audiolaunchwisdomanimationoffering-boundaries-2026-10-17) preserves509 audio-filtering scope, mixed98/base1200 launch,189951/properties5348/Title27 wisdom actor,312/set61 animation replacement and377204/type3 offering interaction. Wisdom/display107044 and offering/display74995 exist in TDB but not runtime templates; availability does not prove advice or acceptance action. Source cast/duration/item-versus-inherited recovery remains exact. No new positive/native proof, inert import, guessed stealth/launch/loot behavior or own heavy duplicate.
