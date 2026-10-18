@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source515–519 pending colorful-chair acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source515519-pending-colorful-chair-acceptance-and-wingtwo-person-cracker-boundaries-2026-10-17):66ca57ee0 adds218112/441839/type7/434317/89277/size1.5/source2yd/cast3s/300s to transmitted-object helper, now11 identities, old ten unchanged. Format/manual readability/diffcheck pass, newer head AFTER498c013 required; seating/native/recharge remain separate. Distinct eight-hour/20s-period Yu'lon/Niuzao wings and paired Cracker/one-recipient surprise retain exact action/cadence/eligibility gaps. Draconic Banner existing seasonal CPU scope retained. No further runtime/data/own heavy duplicate.
+
 ## 2026-10-17 — Toy496 ordering corrections;source510–514;498 queued
 
 [Current proof/source matrix](../toy-effects14-coverage.md#gate496-fixture-order-failures-corrected498-pending-2026-10-17):496 FAILED303/2/1ignored536.82s/client9/EXIT101/FMT0,2m16s/no warnings.450 saw active GCD,473 saw combat after restored Frostbolt; lead-approvedc013eafdd test-only natural1500ms wait and pre-Frostbolt recovery check preserve all assertions without resets/clears.498c013 queued including503/missile filters.16 stationary/16 caster/10 object/18 hearthstone scoped successes are not aggregate/landing proof. Source510–514 retains critter128/beam/figurine, missing interactive duck egg, unnamed216887 faction chest and distinct occasional Xuen/Chi-Ji eight-hour/20s-period/category2272 wings. No new runtime/data/native/own heavy duplicate.

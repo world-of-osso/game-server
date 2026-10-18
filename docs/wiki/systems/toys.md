@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending colorful-chair acceptance and wing/two-person-cracker boundaries (2026-10-17)
+
+[Source515–519 matrix](../../toy-effects14-coverage.md#source515519-pending-colorful-chair-acceptance-and-wingtwo-person-cracker-boundaries-2026-10-17) adds acceptance-only66ca57ee0:218112/441839→434317/type7/89277/size1.5/source2yd/300s, now11 transmitted-object identities, old ten unchanged. Format/manual readability/diffcheck pass; future head AFTER498c013 required, no seated/native/recharge proof. Distinct Yu'lon/Niuzao occasional eight-hour/20s-period wings and paired Cracker/one surprise recipient remain gaps; no guaranteed proc, name-derived combat buff or solo/both-recipient reward. Draconic Banner exact seasonal CPU witness retained. No further runtime/data/own heavy duplicate.
+
 ## Gate496 ordering corrections and source510–514 boundaries (2026-10-17)
 
 [Current496/498 proof and source matrix](../../toy-effects14-coverage.md#gate496-fixture-order-failures-corrected498-pending-2026-10-17) supersedes earlier running496 entries.496 FAILED303/2/1ignored536.82s/client9/EXIT101/FMT0,2m16s/no warnings:450 checked longer recovery during GCD,473 checked item recovery after restored Frostbolt started combat. Lead-approved test-onlyc013eafdd waits ordinary1500ms and reorders Stasis check before Frostbolt; no reset/clear/weakened assertion, corrected behavior pending498 including503.16 stationary/16 caster/10 object/18 hearthstone fixtures have scoped individual successes, not whole-gate/landing proof.
