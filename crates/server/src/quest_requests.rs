@@ -1011,7 +1011,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         let Some(gold) = gold else {
             return Err(failed(quest_id, QuestFailedReason::NotEnoughMoney));
         };
-        if self.free_cells() < items.len() {
+        if !items.is_empty() && self.free_cells() < items.len() {
             return Err(failed(quest_id, QuestFailedReason::InventoryFull));
         }
         let knowledge = self.load_reward_knowledge(quest, numeric.as_ref())?;
