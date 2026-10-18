@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Corewarden hearthstone and corpse ritual, mail, viewer, current-location travel boundaries (2026-10-18)
+
+[Source670–674 matrix](../../toy-effects14-coverage.md#source670674-pending-corewarden-hearthstone-and-corpse-ritual-mail-viewer-current-location-travel-boundaries-2026-10-18) adds acceptance-onlyf30ff0f2c:actual slot1 265100/1273401/source10s/shared2309 blocks Preyseeker263933 through unchanged helper, now25 hearthstones/old24 retained; behavior awaits lead successor. Corpse25 ritual/-100 scale/two9000 payloads, missing mailbox257683/base0/shared2066, Brann viewer233/base550/9049/251 and qualified current-Abundant3+77 travel remain gaps. No self-disguise, inert rift, stat buff or guessed destination substitute; no runtime/data/native change or own heavy work.
+
 ## Pending Dominating Victory and missing metadata, qualified flare, corpse flag/rod boundaries (2026-10-18)
 
 [Source665–669 matrix](../../toy-effects14-coverage.md#source665669-pending-dominating-victory-and-missing-metadata-qualified-flare-corpse-flagrod-boundaries-2026-10-18) adds acceptance-only9470e4859:264413/1271973/30-minute aura via unchanged caster helper, now20 identities/old19 retained; behavior awaits lead successor. Unnamed264368/1271857 lacks item/spell metadata; missing257541 flare retains32/64/32 chain, distinct area groups and base0; corpse flag22/93 and Rod25/mixed395/shrink/two5000 payloads/permanent corpse transform remain gaps. No substituted metadata, static helper or caster disguise. No runtime/data/native change or own heavy work.

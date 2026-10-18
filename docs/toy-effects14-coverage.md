@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source670–674: pending Corewarden hearthstone and corpse ritual, mail, viewer, current-location travel boundaries (2026-10-18)
+
+Acceptance-onlyf30ff0f2c appends actual slot1 Corewarden265100/1273401 to unchanged saved-bind/shared2309 helper, now25 hearthstones/old24 retained; sibling Preyseeker263933 is blocked after spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after cancelled509. No runtime/data/native change or own heavy jobs.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|670 Cosmic Ritual Stone264672/1272307 | Source3000ms target25 dummy4, scale61/base-100/misc9000 and64→1272410/misc9000 for10000ms, inherited600000ms recovery. Child permanent target25 transform56→existing257665/misc8/display140345/scale1. Actual player-corpse qualification/ritual sequencing/shrink/appearance restoration remains gap. Preserve non-self recipient and both9000 payloads; no caster disguise, erased corpse or guessed zero-scale timing. |
+|671 Interdimensional Parcel Signal264695/1272463 | Instant base0 summon257683/property64/Control0/flags0 with targets1/47 for600000ms; explicit item10800000ms normal and category2066 recovery. Runtime actor/model absent. Actual send/receive-mail interaction, qualified recipient/placement/lifecycle remains gap; no inert rift, generic mail pet, assumed one actor or separate three-hour sibling timer. |
+|672 Brann-O-Vision 3000264805/1272576 | Instant self aura233/base550/misc9049/251 for600000ms, explicit item1800000ms recovery. Actual authored viewer/appearance/filter/cleanup remains unaudited; no caster stat550, creature transform or generic cosmetic from flavor. All payload values retained literally. |
+|673 Corewarden's Hearthstone265100/1273401 | Actual TriggerType0 LegacySlot1, source10000ms252/targets1/9, normal recovery0/start1500ms/shared2309/max1/recharge1800000ms. Own absent-bind refusal/no charge spending, persisted-bind pending return, health/model preservation and sibling charge refusal acceptance committed, behavior pending successor. No slot0 substitute, independent timer or native/cross-map/natural-recharge certificate. |
+|674 Dundun's Abundant Travel Method266370/1278093 | Source10000ms self dummy3 plus script77, inherited1800000ms recovery/start1500ms; RequiredAreas9083, PreventionType1/DefenseType1 retained. Actual current Abundant destination selection and Midnight eligibility/travel authority remain unresolved. No random Delve destination, ordinary homebind, guessed coordinates or dropping one script slot. |
+
+Evidence: private `rows670-674-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `hearth673-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, exact2066/2309 and9083 joins. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source665–669: pending Dominating Victory and missing metadata, qualified flare, corpse flag/rod boundaries (2026-10-18)
 
 Acceptance-only9470e4859 appends264413/1271973/1800000ms to unchanged audited caster helper, now20 identities/old19 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor after cancelled509. No runtime/data/native change or own heavy jobs.
