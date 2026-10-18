@@ -1,3 +1,7 @@
+## 2026-10-18 — Gate543 GREEN/landed Masquerade697
+
+[Exact proof/landing](../toy-effects14-coverage.md#gate543-green-and-landed-masquerade697-cast-boundary-2026-10-18): lead receipt/ancestry confirmsa8b96f8d9 on master3accdf1a1;543server318/0/1ignored635.32s/EXIT0/FMT0/CHECK0, exact697 learned pre/post-cast test OK. No exact timing/interruption/hour-expiry/native/all-five/full1166 certificate or duplicate jobs.
+
 ## 2026-10-18 — Masquerade697 authored cast timing acceptance pending
 
 [Exact acceptance/limits](../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 learned600ms cast with no early appearance/SpellGo/category recovery, then source145134/misc267626,8/one-hour aura/2513 recovery and Idol refusal. Old fixtures unchanged; format/manual only, uncompiled/unexecuted AFTER541. No runtime/data/protocol/new CancelCast, exact-timing/native/hour-expiry/all-five certificate or own jobs.

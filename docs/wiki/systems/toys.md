@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gate543 Masquerade697 landed (2026-10-18)
+
+[Exact proof/landing](../../toy-effects14-coverage.md#gate543-green-and-landed-masquerade697-cast-boundary-2026-10-18): lead receipt/ancestry confirmsa8b96f8d9 on master3accdf1a1;543server318/0/1ignored635.32s/EXIT0/FMT0/CHECK0 with exact697 test OK. Prior pending labels are historical; exact timing/interruption/hour-expiry/native/all-five/full1166 limits persist.
+
 ## Masquerade697 authored cast timing acceptance pending (2026-10-18)
 
 [Exact acceptance/limits](../../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 with learned-use pre/post source600ms cast boundary: no early SpellGo/appearance/category recovery, then145134/misc267626,8/one-hour aura/shared2513 and Idol refusal. Prior fixtures unchanged. Format/manual only; uncompiled/unexecuted AFTER541. No new CancelCast/runtime/data/protocol or native/exact-timing/hour-expiry/all-five claim.

@@ -1,5 +1,9 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate543 GREEN and landed: Masquerade697 cast boundary (2026-10-18)
+
+Lead explicit receipt confirmsa8b96f8d9 on server master3accdf1a1f4236b1fecc5696d9b713ece99bfbf6; ancestry independently passes. Gate543server318 passed/0 failed/1 ignored in635.32s, EXIT0/FMT0/CHECK0, with exact Masquerade697 learned pre/post-cast test OK. Its [bounded contract](#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18) now has executed/landed CPU proof. Earlier pending labels below are historical; no exact millisecond scheduling/interruption/hour-expiry/native/all-five/full1166 certificate follows. No own duplicate jobs.
+
 ## Masquerade697 authored cast pre/post-completion acceptance pending after541 (2026-10-18)
 
 Test/spec35168319d adds `toyfx697_masquerade_learned_cast_defers_transform_and_shared_recovery_until_completion`, extending existing Full1166 item276207/root1298957. Active70448/key88d5e8ef05ec5a8446cdec93d142d7c6 ItemEffect234767/slot0/TriggerType0 selects CastTime36=600ms, single self56/misc267626,8/display145134/Duration42=3600000ms, category2513/recovery600000ms. Actual learned use's initial seven50ms frames must leave model/aura/SpellGo/category recovery uncommitted; after completion, the test asserts one root SpellGo/source appearance/aura/recovery and learned Idol276925 refusal without another cast/model/deadline change, preserving health. Prior shared-five, Pango, Royal and old misc8 fixtures remain unchanged.
