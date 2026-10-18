@@ -265,6 +265,7 @@ fn encounter_fixture(
         12201 => Some(prepare_encounter_database("theradras")),
         17306 => Some(prepare_encounter_database("gargolmar")),
         17308 => Some(prepare_encounter_database("omor")),
+        186737 => Some(prepare_encounter_database("telash")),
         _ => None,
     };
     let path = prepared
@@ -312,6 +313,7 @@ fn encounter_fixture(
             || (entry == 12201 && *id == 12238)
             || (entry == 17306 && *id == 17309)
             || (entry == 17308 && *id == 17540)
+            || (entry == 186737 && *id == 197204)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
