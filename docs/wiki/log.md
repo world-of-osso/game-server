@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source395–399 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source395399-invocationeggscloak-servicerandom-talismanalcohol-boundaries-2026-10-17): invocation/script base1200, three eggs/named Rowdy-Onion-Blitz versus script base4, cloak service, literal392200/392209 random-Talisman references and alcohol100/base5 retain distinct action/state/cleanup gaps. Existing25204/109750 and source child transforms do not prove hatchlings, cloak access, executable base fields or visual-only alcohol; invisible11686 weight0 retained. No producer/runtime/data/new positive/native claim or own heavy duplicate.484's older head does not cover new387/393 fixtures.
+
 ## 2026-10-17 — Toy source390–394 pending Ohn'ir acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source390394-pending-ohnir-return-home-acceptance-and-peltcatchorbeight-trigger-boundaries-2026-10-17):00ee4d3e3 adds learned200630/391042/source10s252/savedbind/shared2309one1800000mscharge, now15hearthstone variants. Format/manual readability/diffcheck pass; future covering head beyond484afad required, not yet passed. Pile/orb runtime identities absent, bouquet missile/cursor-centered friendly1yd catch unresolved, and Palooza retains all eight effect-index trigger/misc pairs and distinct area-triggers26829–26836, including both misc300 children. No inferred must-be-outside-Assembly gate, guessed timing, one-actor substitute, runtime/data/new native or full-recharge claim.
