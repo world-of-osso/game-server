@@ -33,7 +33,7 @@ def read_actual_source():
                     active = False
             if statement.startswith(f'INSERT INTO `{TABLE}`'):
                 statements.append(statement)
-                rows.extend(row for _, row in mysql_dump.dump_rows(statement, TABLE, DUMP))
+                rows.extend(list(row) for _, row in mysql_dump.dump_rows(statement, TABLE, DUMP))
     return ''.join(statements), sorted(rows, key=lambda row: row[0])
 
 
