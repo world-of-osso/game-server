@@ -6,6 +6,10 @@ Creature spawn orientation is loaded from `creature.orientation` (WoW heading ra
 
 Static, read-only world data loaded from SQLite at server startup. Two Bevy resources: `WorldData` (creatures, spawns, waypoints) and `SpellStore` / `ClassSpells` (Retail DB2 spells and class lists, see [[spell-info]]).
 
+## Template source selection
+
+Verified2026-10-17: `zephras_content.py::OverlayWriter.insert` records authored overlay provenance in `zephras_row_source`. `world_data::load_authored_template_ids` reads only `table_name='content_creature_template'`, `kind='reconstructed'` and the JSON `row_key.entry`, retaining those IDs in `WorldData.authored_templates`. Ordinary spawning selects their authored fixed stats before considering regional Retail tuning. This is source selection, not a fallback: absence of tuning, level shape and absence of a TDB row never classify a template. Yala Windwatcher249363 has the actual reconstructed marker and retains level5/102HP; Retail source17536CT0 still requires real map/area context. [Scaling contract](../../specs/level-scaling.md).
+
 ## Database
 
 File: `data/world.db` (132 MB). Regenerate with `scripts/import-azerothcore.sh`.

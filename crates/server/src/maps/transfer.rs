@@ -342,18 +342,20 @@ pub(crate) fn spawn_map_content(world: &mut World, map: InMap) {
         map,
     );
     let mut queue = CommandQueue::default();
-    {
+    world.init_resource::<crate::ground::GroundMap>();
+    world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
         let mut commands = Commands::new(&mut queue, world);
         queue_map_content(
             &mut commands,
             world.get_resource::<crate::world_data::WorldData>(),
             world.get_resource::<crate::game_objects::GameObjectSpawns>(),
             content,
+            Some(&mut ground),
         );
         if let Some(housing) = world.get_resource::<crate::housing::HousingAvailability>() {
             crate::housing::spawn_neighborhood_objects(&mut commands, housing, map);
         }
-    }
+    });
     queue.apply(world);
 }
 
@@ -363,11 +365,12 @@ pub(crate) fn queue_map_content(
     world_data: Option<&crate::world_data::WorldData>,
     objects: Option<&crate::game_objects::GameObjectSpawns>,
     content: crate::zones::MapContent,
+    ground: Option<&mut crate::ground::GroundMap>,
 ) {
     let map = content.map;
     let difficulty_id = content.difficulty_id;
     if let Some(world_data) = world_data {
-        crate::zones::spawn_map_creatures(commands, world_data, content, true);
+        crate::zones::spawn_map_creatures(commands, world_data, content, true, ground);
     }
     if let Some(objects) = objects {
         crate::game_objects::spawn_map_game_objects(

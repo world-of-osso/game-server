@@ -36,6 +36,7 @@ const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 pub(super) mod cast_admission;
 mod data_bosses;
 mod dungeonach;
+mod rainfire_visibility;
 mod smart_combat;
 mod wailing_caverns;
 const NPC_LORD_OVERHEAT: u32 = 46264;
@@ -364,11 +365,17 @@ fn spawn_boss(app: &mut App, data: &Data, entry: u32, map: InMap) -> Entity {
         &mut commands,
         world_data,
         template,
-        map,
+        &mut crate::zones::CreatureSpawnContext {
+            map: map,
+            difficulty_id: crate::zones::map_difficulty_id(app.world(), map),
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("authored boss level context");
     queue.apply(app.world_mut());
     boss
 }

@@ -125,3 +125,48 @@ fn toyfx190_eternal_traveler_hearthstone_learned_use_returns_to_bind_and_blocks_
 fn toyfx225_necrolord_hearthstone_learned_use_returns_to_bind_and_blocks_eternal_traveler() {
     assert_toy_hearthstone_bind_and_shared_charge(182773, 340200, 172179);
 }
+
+#[test]
+fn toyfx311_dominated_hearthstone_learned_use_returns_to_bind_and_blocks_necrolord() {
+    assert_toy_hearthstone_bind_and_shared_charge(188952, 363799, 182773);
+}
+
+#[test]
+fn toyfx313_enlightened_hearthstone_learned_use_returns_to_bind_and_blocks_dominated() {
+    assert_toy_hearthstone_bind_and_shared_charge(190196, 366945, 188952);
+}
+
+#[test]
+fn toyfx314_broker_matrix_learned_use_returns_to_bind_and_blocks_enlightened() {
+    assert_toy_hearthstone_bind_and_shared_charge(190237, 367013, 190196);
+}
+
+#[test]
+fn toyfx333_timewalker_hearthstone_learned_use_returns_to_bind_and_blocks_broker_matrix() {
+    assert_toy_hearthstone_bind_and_shared_charge(193588, 375357, 190237);
+}
+
+#[test]
+fn toyfx393_ohnir_windsage_hearthstone_learned_use_returns_to_bind_and_blocks_timewalker() {
+    assert_toy_hearthstone_bind_and_shared_charge(200630, 391042, 193588);
+}
+
+#[test]
+fn toyfx457_path_of_naaru_learned_use_returns_to_bind_and_blocks_ohnir_windsage() {
+    assert_toy_hearthstone_bind_and_shared_charge(206195, 412555, 200630);
+}
+
+#[test]
+fn toyfx477_deepdweller_hearthstone_learned_use_returns_to_bind_and_blocks_path_of_naaru() {
+    assert_toy_hearthstone_bind_and_shared_charge(208704, 420418, 206195);
+}
+
+#[test]
+fn toyfx482_flame_hearthstone_learned_use_returns_to_bind_and_blocks_deepdweller() {
+    assert_toy_hearthstone_bind_and_shared_charge(209035, 422284, 208704);
+}
+
+#[test]
+fn toyfx503_stone_of_hearth_learned_use_returns_to_bind_and_blocks_flame() {
+    assert_toy_hearthstone_bind_and_shared_charge(212337, 401802, 209035);
+}

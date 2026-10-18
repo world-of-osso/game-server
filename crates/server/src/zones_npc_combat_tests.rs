@@ -93,6 +93,7 @@ fn fight_app(spawns: Vec<CreatureSpawn>) -> Option<App> {
                 0,
                 false,
                 spawns.iter(),
+                Some(&mut crate::test_data::ground_map()),
             );
             let entities = spawns.iter().map(|spawn| spawned[&spawn.guid]).collect();
             commands.insert_resource(Spawned(entities));

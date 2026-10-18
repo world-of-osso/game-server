@@ -52,7 +52,7 @@ fn templates() -> Option<HashMap<u32, CreatureTemplate>> {
 fn open_db(path: &Path) -> GameDatabase {
     let db = redb::Database::create(path).expect("redb");
     persistence::create_tables(&db);
-    GameDatabase { db }
+    GameDatabase::new(db)
 }
 
 fn db_path() -> PathBuf {

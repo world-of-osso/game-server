@@ -34,7 +34,7 @@ fn spawn_leader_cast_harness(
     let source = Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(load_achievement_catalog(&source).unwrap());
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .entity_mut(h.connection)

@@ -133,7 +133,7 @@ fn new_gnerd_eater(path: &std::path::Path) -> Eater {
     let (character, _) = persistence::create_character(&db, 1, "Eater", 1, MAGE).unwrap();
     assert_eq!(character, eater.character_id);
     persistence::save_inventory(&db, character, &inventory);
-    eater.h.app.insert_resource(GameDatabase { db });
+    eater.h.app.insert_resource(GameDatabase::new(db));
     let conn = rusqlite::Connection::open(world_db()).unwrap();
     eater
         .h

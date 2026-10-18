@@ -2,8 +2,9 @@
 //!
 //! A creature's cast with no explicit target takes its victim when the spell needs
 //! a unit target (`Spell::InitExplicitTargets`). A triggered cast
-//! (`TRIGGERED_FULL_MASK`) resolves at once without cast time, costs, cooldowns or
-//! caster aura checks. Creatures have no global cooldown (`start_gcd`). A
+//! (`TRIGGERED_FULL_MASK`) skips cast time, costs, cooldowns and generic crowd
+//! control, but still checks implemented caster/target aura metadata. Creatures
+//! have no global cooldown (`start_gcd`). A
 //! creature's melee spells (`DefenseType` MELEE) miss hostile units by its melee
 //! miss chance (`Unit::MeleeSpellHitResult` miss row; dodge, parry and block are
 //! not modelled), which MOD_HIT_CHANCE lowers.
@@ -40,10 +41,10 @@ pub(crate) fn creature_cast(
     if !triggered {
         return start_cast(world, caster, &spell, explicit);
     }
-    if !targets::is_alive(world, caster) {
-        return Err(CastFailure::CasterDead);
-    }
+    // Bool FULL_MASK has no triggering aura: TC CheckCast permits a dead caster.
+    super::aura_spell_restrictions::check_caster(world, caster, &spell)?;
     let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;
+    super::aura_spell_restrictions::check_target(world, explicit, &spell)?;
     let plan = plan_targets(world, caster, &spell, explicit, false)?;
     log_event(
         world,

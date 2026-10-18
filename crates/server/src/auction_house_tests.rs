@@ -126,7 +126,7 @@ mod bounded_slice {
         state.auctions.insert(3, cancelled);
         assert!(cancel_auction(&db, &mut state, 3, 3).success);
         assert_eq!(mail_store::load_mailbox(&db, 3)[0].money, 0);
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         app.insert_resource(state);
         app.init_resource::<crate::maps::ServerClock>();
         app.add_systems(Update, super::super::handlers::expire_auctions);

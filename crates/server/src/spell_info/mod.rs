@@ -10,6 +10,8 @@
 //!
 //! `crate::spell_cast` resolves casts from these records.
 
+#[cfg(test)]
+mod aura_restrictions_tests;
 mod class_data;
 mod immunity;
 #[cfg(test)]
@@ -84,6 +86,7 @@ pub struct SpellInfo {
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
+    pub aura_restrictions: Option<Box<SpellAuraRestrictions>>,
     pub categories: Option<Box<SpellCategories>>,
     pub cooldowns: Option<Box<SpellCooldownInfo>>,
     pub levels: Option<Box<SpellLevels>>,
@@ -295,6 +298,23 @@ pub struct SpellInterrupts {
     pub channel_interrupt_flags: [u32; 2],
 }
 
+/// Raw required/excluded state, spell and aura-type IDs from `spell_aura_restrictions`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellAuraRestrictions {
+    pub caster_aura_state: u32,
+    pub target_aura_state: u32,
+    pub exclude_caster_aura_state: u32,
+    pub exclude_target_aura_state: u32,
+    pub caster_aura_spell: u32,
+    pub target_aura_spell: u32,
+    pub exclude_caster_aura_spell: u32,
+    pub exclude_target_aura_spell: u32,
+    pub caster_aura_type: u32,
+    pub target_aura_type: u32,
+    pub exclude_caster_aura_type: u32,
+    pub exclude_target_aura_type: u32,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct SpellTargetRestrictions {
     pub cone_degrees: f32,
@@ -327,6 +347,34 @@ pub struct SpellStore {
 }
 
 impl SpellInfo {
+    /// TC SpellInfo.cpp:1842–1857: cast eligibility, not aura persistence after death.
+    pub(crate) fn allows_dead_target(&self) -> bool {
+        const ALLOW_DEAD_TARGET: u32 = 0x0000_0001;
+        // TARGET_FLAG_CORPSE_ENEMY | TARGET_FLAG_UNIT_DEAD | TARGET_FLAG_CORPSE_ALLY.
+        const DEAD_TARGET_FLAGS: u32 = 0x0000_0200 | 0x0000_0400 | 0x0000_8000;
+        // TARGET_CORPSE_SRC_AREA_ENEMY, TARGET_CORPSE_SRC_AREA_RAID, TARGET_CORPSE_TARGET_ALLY.
+        const CORPSE_SELECTORS: [u32; 3] = [93, 119, 121];
+
+        let attributes = self.misc.as_ref().map_or(0, |misc| misc.attributes[2]);
+        if attributes & ALLOW_DEAD_TARGET != 0 {
+            return true;
+        }
+        let target_flags = self
+            .target_restrictions
+            .as_ref()
+            .map_or(0, |targets| targets.targets);
+        if target_flags & DEAD_TARGET_FLAGS != 0 {
+            return true;
+        }
+        self.effects.iter().any(|effect| {
+            effect.effect != 0
+                && effect
+                    .implicit_targets
+                    .iter()
+                    .any(|target| CORPSE_SELECTORS.contains(target))
+        })
+    }
+
     /// Full school bitmask; 0 without a `spell_misc` row.
     pub fn school_mask(&self) -> u32 {
         self.misc.as_ref().map_or(0, |misc| misc.school_mask)
