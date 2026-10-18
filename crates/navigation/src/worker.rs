@@ -284,7 +284,9 @@ fn supervise_worker(
     stop: Arc<AtomicBool>,
 ) {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        run_worker(&root, &mailbox, receiver, &stop);
+        // Publish the panic reason before dropping the receiver; disconnection
+        // must not race ahead of the explicit worker failure.
+        run_worker(&root, &mailbox, &receiver, &stop);
     }));
     if let Err(panic) = result {
         let detail = panic
@@ -301,7 +303,7 @@ fn supervise_worker(
     }
 }
 
-fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: Receiver<()>, stop: &AtomicBool) {
+fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: &Receiver<()>, stop: &AtomicBool) {
     let mut maps = BTreeMap::new();
     while receiver.recv().is_ok() {
         loop {
