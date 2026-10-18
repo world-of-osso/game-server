@@ -213,6 +213,66 @@ fn toyfx419_doomsday_triggered_effect_cap_preserves_original_product_guid() {
 }
 
 #[test]
+fn toyfx419_doomsday_full_bags_keep_inventory_full_not_item_cap_error() {
+    const TOY: u32 = 202309;
+    const SPELL: u32 = 398572;
+    const PRODUCT: u32 = 202310;
+    const FILLER: u32 = 25; // Worn Shortsword: stack1, MaxCount0.
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("doomsday-full.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    h.app
+        .insert_resource(crate::profession::load_profession_data(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::persistence::ClientId(character));
+    learn_effect_toy(&mut h, character, TOY);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let templates = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    let slots = crate::inventory::free_bag_cells(db, templates, character) as u32;
+    assert!(slots > 0);
+    crate::inventory::grant_item(
+        db,
+        templates,
+        h.app.world().resource::<crate::merchant::VendorCatalog>(),
+        character,
+        (FILLER, slots),
+    )
+    .unwrap();
+    assert_eq!(
+        crate::inventory::free_bag_cells(db, templates, character),
+        0
+    );
+    let before = persistence::load_inventory(db, character);
+    assert_eq!(
+        activate(&mut h, TOY)[0].error.as_deref(),
+        Some("InventoryFull")
+    );
+    assert!(h.inbox.inventory_errors.is_empty());
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::InventoryFull
+    );
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == SPELL));
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(persistence::load_inventory(db, character), before);
+    assert_eq!(load_created_item_count(&h, character, PRODUCT), 0);
+}
+
+#[test]
 fn toyfx419_defective_doomsday_creates_one_persisted_product_after_source_cast() {
     const TOY: u32 = 202309;
     const SPELL: u32 = 398572;

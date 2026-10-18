@@ -600,7 +600,12 @@ pub(crate) fn check_cast_items(
                 .new_item(item, count)
                 .map_err(CastFailure::Unsupported)?;
             bags.store(&mut model, item)
-                .map_err(|_| CastFailure::InventoryFull)?;
+                .map_err(|error| match error.reason {
+                    shared::protocol::InventoryErrorReason::ItemMaxCount => {
+                        CastFailure::Inventory(error)
+                    }
+                    _ => CastFailure::InventoryFull,
+                })?;
         }
         Ok(())
     })

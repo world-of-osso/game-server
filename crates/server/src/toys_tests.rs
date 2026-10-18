@@ -4241,7 +4241,7 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
             let failure = crate::spell_cast::cast_granted(h.app.world_mut(), h.caster, spell, None)
                 .unwrap_err();
             assert_eq!(
-                failure.to_contract(),
+                failure.to_contract().unwrap(),
                 (
                     shared::spell_data::CastFailReason::IncorrectArea,
                     Some(format!("Requires area group{}", group.as_u64().unwrap()))

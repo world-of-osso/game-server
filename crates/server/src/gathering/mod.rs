@@ -13,7 +13,7 @@ use data::{Ability, OPEN_LOCK, SKIN, SKINNING};
 pub(crate) use data::{GatheringData, load_data};
 use rand::Rng;
 use shared::components::{CombatStatus, Health, Npc, Player, Position};
-use shared::protocol::{CastFailed, GameObjectInfo, GatherableResource};
+use shared::protocol::{GameObjectInfo, GatherableResource};
 use std::collections::HashSet;
 
 #[derive(Component, Clone)]
@@ -211,18 +211,7 @@ pub(crate) fn use_resource(world: &mut World, caster: Entity, target: Entity) {
         Ok(ability) => {
             let _ = crate::spell_cast::cast_granted(world, caster, ability.spell, Some(target));
         }
-        Err(failure) => {
-            let (reason, detail) = failure.to_contract();
-            crate::spell_cast::send_to_owner(
-                world,
-                caster,
-                CastFailed {
-                    spell_id: 0,
-                    reason,
-                    detail,
-                },
-            );
-        }
+        Err(failure) => crate::spell_cast::send_cast_rejection(world, caster, 0, &failure),
     }
 }
 
