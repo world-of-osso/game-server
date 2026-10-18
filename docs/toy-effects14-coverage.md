@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source615–619: pending Sea-Blessed Shrine and kill-proc/scripted-memory/rolling-snowball/Royal Visage boundaries (2026-10-17)
+
+Acceptance-only4a0133a68 appends245942/1240082/246037/display129958/180s plus cursor selection to unchanged stationary-source fixture, now17 identities/old16 retained. Format/manual literal readability/diffcheck pass; behavior needs head AFTER50776a8426bf. Expiry uses the fixture's existing explicit simulation-time leap, not ordinary50ms/wall-duration acceptance. No runtime/data/new native proof or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|615 Echo of Xal'atath244888/1238260 | Instant self proc aura42/trigger0 for3600000ms, inherited60000ms recovery. ProcTypeMask2/chance10/ProcCategoryRecovery120000ms/charges0 retained literally. Actual foe-kill-triggered occasional authored voice/attachment/recipient conditions/cleanup remains gap; trigger0 is not permission for an inert proc, guessed child/sound or generic attack proc. |
+|616 K'aresh Memory Crystal245567/1239717 | Instant self script3/zero payload, inherited1800000ms recovery; no duration index. Actual K'areshi appearance selection/duration/restoration remains unresolved; no invented creature ID or ten-minute transform/aura-only success from description. |
+|617 Rolling Snowball245580/1239176 | Source4000ms target18 summon245763/property3608/Control4/flags2048 for30000ms, inherited600000ms recovery with Winter Veil reduction described; runtime creature/model absent. Actual jump-on/rolling/control/exit/holiday recovery remains gap; no inert snowball scenery, generic damage ball or guessed holiday reduction. |
+|618 Royal Visage245631/1239480 | Instant self transform56→existing236348/misc1=0 for600000ms, inherited1800000ms recovery; authentic Arthas display121918/scale1/weight1. Source/model metadata established, actual learned-use/expiry/recovery/native appearance unverified. Do not borrow misc8 disguise fixture assertions or infer prince/king selection/quest eligibility from flavor. |
+|619 Sea-Blessed Shrine245942/1240082 | Instant target87 summon246037/property2910/flags256 for180000ms, inherited300000ms recovery/start1500ms; authentic display129958/scale1. Own exact learned cursor placement/model/owner/map/non-pet/non-follow/stationary/expiry acceptance committed, behavior pending AFTER507. Explicit simulation-time expiry method preserved; no native shrine/combat blessing/full five-minute reuse certificate. |
+
+Evidence: private `rows615-619-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `seashrine619-{active-goal,proof-ledger}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6.507 earlier16 stationary/18 caster/12 object scopes remain pending final result, while new17/19/13 scopes are AFTER507.149865 Tea Set untouched;498 last confirmed landed/master8707ac0ea.
+
 ## Source610–614: pending Etheric Victory and portal/void/snowman/mixed-transmorpher boundaries (2026-10-17)
 
 Acceptance-onlyb7df42b22 appends244470/1237584/1800000ms via the existing audited caster-attachment helper, now19 identities with old18 retained. Format/manual changed-line readability/diffcheck pass; behavior needs a head AFTER50776a8426bf, like603 thirteenth object.507 earlier18 casters/12 objects/16 disguises still lacks observed final result/landing. No runtime/data/new native proof or own heavy duplicate.
