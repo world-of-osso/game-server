@@ -27,11 +27,11 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 
 ## Tests asserting this spec
 - `scripts/tests/test_jump_charge_params.py` — real-copy producer CLI/source preservation and refusal boundary.
-- Native254 motion cases are pending the published source table; existing Gordoth controls remain required regression proof.
+- `crates/server/src/scripted_ai/tests/azure_jump_charge.rs` — test-first actual387981/388082 source-destination launch/midpoint/landing cases; ignored until the repaired-master RED queue. No movement components or synthetic arrival hooks. Existing Gordoth controls remain required regression proof.
 
 ## Known gaps (current cycle)
-- [ ] Producer first: source-backed COPY preparation and scoped proof complete at fba6fb2b; push/gate and lead publication pending.
-- [ ] Runtime only after publication: genuine no-teleport RED, bounded motion implementation and scoped controls/check/fmt.
+- [x] Producer first: source-backed COPY preparation and scoped proof at fba6fb2b, pushed2399bcd06; lead gate510 landed and published5f225535 with byte-identical whole-database delta49b238f5.
+- [ ] Native RED queue waits the master two-caller compilation repair; then genuine no-teleport RED, bounded motion implementation and scoped controls/check/fmt.
 
 ## Out of scope
 - Parent387928 hit, Telash landing reaction, AfterCast return selection, post-phase counters and rune scripts: later independent REDs.
