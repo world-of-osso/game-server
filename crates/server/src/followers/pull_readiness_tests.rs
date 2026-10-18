@@ -46,31 +46,19 @@ fn mana_cost(h: &Harness, healer: Entity, id: u32) -> f32 {
         .sum()
 }
 
-fn print_native_readiness(h: &mut Harness, healer: Entity, tank: Entity, spells: &[u32]) {
-    for &id in spells {
-        let spell = h
-            .app
-            .world()
-            .resource::<SpellStore>()
-            .get(id)
-            .unwrap()
-            .clone();
-        let (_, base_range) = crate::spell_cast::targets::spell_range(&spell, false);
-        let range = crate::auras::spell_mods::modify(
-            h.app.world(),
-            healer,
-            &spell,
-            crate::auras::spell_mods::SpellModOp::Range,
-            base_range,
-        );
-        let costs = spell_costs(h.app.world(), healer, &spell);
-        let readiness =
-            crate::spell_cast::validate_start(h.app.world_mut(), healer, &spell, Some(tank), true);
-        eprintln!(
-            "native readiness spell{id}: {readiness:?}, costs={costs:?}, range={base_range}->{range}, cast={:?}",
-            h.app.world().get::<CastState>(healer)
-        );
+fn advance_native_gcd(h: &mut Harness, healer: Entity, spell_id: u32) {
+    for _ in 0..200 {
+        let world = h.app.world();
+        let spell = world.resource::<SpellStore>().get(spell_id).unwrap();
+        let locked = world
+            .get::<crate::spell_cast::SpellHistory>(healer)
+            .is_some_and(|history| history.on_gcd(spell, crate::spell_cast::history_now(world)));
+        if !locked {
+            return;
+        }
+        h.advance(1);
     }
+    panic!("native healer GCD did not clear");
 }
 
 #[test]
@@ -119,11 +107,22 @@ fn tank_pull_healer_ready_does_not_veto_or_cancel_an_admitted_native_cast() {
     let cast = h.app.world().get::<CastState>(healer).unwrap();
     assert_eq!((cast.spell_id, cast.target), (8936, tank.to_bits()));
     let before = h.app.world().get::<Mana>(healer).unwrap().current;
-    print_native_readiness(&mut h, healer, tank, &[774, 8936]);
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()
             .is_some()
+    );
+    assert!(
+        matches!(
+            crate::spell_cast::creature_cast_interrupting_self(
+                h.app.world_mut(),
+                healer,
+                774,
+                Some(tank)
+            ),
+            Err(crate::spell_cast::CastFailure::OnGlobalCooldown)
+        ),
+        "capability must not clear native combat GCD"
     );
     let after = h.app.world().get::<CastState>(healer).unwrap();
     assert_eq!((after.spell_id, after.target), (8936, tank.to_bits()));
@@ -141,13 +140,19 @@ fn tank_pull_healer_ready_requires_sourced_range_and_same_copy() {
     );
     let from = *h.app.world().get::<Position>(healer).unwrap();
     let spell = h.app.world().resource::<SpellStore>().get(774).unwrap();
-    let (_, range) = crate::spell_cast::targets::spell_range(spell, false);
+    let (_, base_range) = crate::spell_cast::targets::spell_range(spell, false);
+    let range = crate::auras::spell_mods::modify(
+        h.app.world(),
+        healer,
+        spell,
+        crate::auras::spell_mods::SpellModOp::Range,
+        base_range,
+    );
     let tank_at = *h.app.world().get::<Position>(tank).unwrap();
     h.app.world_mut().entity_mut(healer).insert(Position {
         x: tank_at.x + range + 1.0,
         ..from
     });
-    print_native_readiness(&mut h, healer, tank, &[774]);
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()
@@ -224,7 +229,7 @@ fn tank_pull_healer_ready_honors_real_level_and_consumed_native_cooldown() {
     let party = [h.caster, tank, healer];
     creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
     h.advance(1);
-    print_native_readiness(&mut h, healer, tank, &[18562]);
+    advance_native_gcd(&mut h, healer, 18562);
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()
@@ -256,15 +261,43 @@ fn tank_pull_healer_ready_honors_real_level_and_consumed_native_cooldown() {
     let charges = swiftmend_charge_count(&h, healer);
     assert!(charges > 0);
     for _ in 0..charges {
+        advance_native_gcd(&mut h, healer, 774);
         creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
+        advance_native_gcd(&mut h, healer, 18562);
         creature_cast(h.app.world_mut(), healer, 18562, Some(tank), false).unwrap();
         h.advance(1);
     }
+    advance_native_gcd(&mut h, healer, 774);
     // Restore the real target prerequisite, so refusal must still honor recovery.
     creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
     h.advance(1);
     let spell = h.app.world().resource::<SpellStore>().get(18562).unwrap();
     assert!(spell_costs(h.app.world(), healer, spell).is_ok());
+    assert!(
+        pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn tank_pull_healer_ready_does_not_ignore_school_lockout() {
+    let (mut h, tank, healer) = fixture(&[774]);
+    let party = [h.caster, tank, healer];
+    creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
+    assert!(
+        pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
+            .unwrap()
+            .is_some()
+    );
+    let spell = h.app.world().resource::<SpellStore>().get(774).unwrap();
+    let school = spell.school_mask();
+    let until = crate::spell_cast::history_now(h.app.world()) + 10.0;
+    h.app
+        .world_mut()
+        .get_mut::<crate::spell_cast::SpellHistory>(healer)
+        .unwrap()
+        .lock_schools(school, until);
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()

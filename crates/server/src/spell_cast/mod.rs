@@ -635,7 +635,7 @@ impl SpellHistory {
                     .is_some_and(|&at| at > now))
     }
 
-    fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)
     }
@@ -1598,12 +1598,75 @@ fn check_ordinary_caster_life(
 
 /// Validate everything checked before a cast starts; returns the explicit
 /// target the spell will use.
-pub(crate) fn validate_start(
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum StartCheck {
+    Native,
+    IgnoreCastInProgress,
+    TankHealCapability,
+}
+
+fn validate_start(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
     ignore_cast_in_progress: bool,
+) -> Result<Option<Entity>, CastFailure> {
+    let check = if ignore_cast_in_progress {
+        StartCheck::IgnoreCastInProgress
+    } else {
+        StartCheck::Native
+    };
+    validate_start_with_policy(world, caster, spell, explicit, check)
+}
+
+/// Planner capability only: no cast, no spend, and no mutation of native GCD clocks.
+/// All native checks remain except the in-progress veto and a bounded transient GCD.
+pub(crate) fn read_tank_heal_capability(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    tank: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(tank),
+        StartCheck::TankHealCapability,
+    )
+}
+
+pub(crate) fn read_targets_include(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<bool, CastFailure> {
+    for effect in handled_effects(spell) {
+        let units = targets::select_targets(
+            world,
+            caster,
+            Some(target),
+            spell,
+            effect,
+            max_targets(spell),
+            false,
+        )
+        .map_err(|id| CastFailure::Unsupported(format!("implicit target {id} not supported")))?;
+        if units.contains(&target) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn validate_start_with_policy(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    check: StartCheck,
 ) -> Result<Option<Entity>, CastFailure> {
     check_ordinary_caster_life(world, caster, spell)?;
     casting_restriction::check_cast(world, caster, spell)?;
@@ -1618,10 +1681,10 @@ pub(crate) fn validate_start(
     mobile_banking::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
-    if !ignore_cast_in_progress && world.get::<CastState>(caster).is_some() {
+    if check == StartCheck::Native && world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
     }
-    validate_history(world, caster, spell)?;
+    validate_history(world, caster, spell, check)?;
     let cast_blocked_by_moving =
         cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(world, caster, spell);
     let channel_blocked_by_moving =
@@ -1672,7 +1735,12 @@ fn validate_caster_state(
     Ok(())
 }
 
-fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<(), CastFailure> {
+fn validate_history(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    check: StartCheck,
+) -> Result<(), CastFailure> {
     let Some(history) = world.get::<SpellHistory>(caster) else {
         return Ok(());
     };
@@ -1682,7 +1750,14 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
     if !spell.cast_ignore_cooldowns && history.school_locked(spell.school_mask(), now) {
         return Err(CastFailure::SchoolLockedOut);
     }
-    if history.on_gcd(spell, now) {
+    let gcd_ready_at = history
+        .gcd_ready_at
+        .get(&gcd_category(spell))
+        .copied()
+        .unwrap_or(now);
+    if history.on_gcd(spell, now)
+        && !permits_transient_gcd(world, caster, spell, check, gcd_ready_at)
+    {
         return Err(CastFailure::OnGlobalCooldown);
     }
     if spell.cast_ignore_cooldowns {
@@ -1700,6 +1775,20 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
         return Err(CastFailure::NoCharges);
     }
     Ok(())
+}
+
+fn permits_transient_gcd(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    check: StartCheck,
+    ready_at: f64,
+) -> bool {
+    if check != StartCheck::TankHealCapability {
+        return false;
+    }
+    let duration = f64::from(gcd_duration_ms(world, caster, spell)) / 1000.0;
+    ready_at <= history_now(world) + duration
 }
 
 /// Line of sight evidence when a cast checks its unit target (docs/specs/line-of-sight.md).
@@ -2076,25 +2165,7 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     {
         return;
     }
-    let base_gcd_ms = spell
-        .cooldowns
-        .as_ref()
-        .map_or(0, |cd| cd.start_recovery_ms);
-    let gcd_ms = modify(
-        world,
-        caster,
-        spell,
-        SpellModOp::StartCooldown,
-        base_gcd_ms as f32,
-    )
-    .max(0.0)
-    .round() as u32;
-    // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
-    let gcd_ms = if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
-        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
-    } else {
-        gcd_ms
-    };
+    let gcd_ms = gcd_duration_ms(world, caster, spell);
     let category = gcd_category(spell);
     if gcd_ms == 0 || category == 0 {
         return;
@@ -2118,6 +2189,28 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
             is_gcd: true,
         },
     );
+}
+
+fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
+    let base_gcd_ms = spell
+        .cooldowns
+        .as_ref()
+        .map_or(0, |cd| cd.start_recovery_ms);
+    let gcd_ms = modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::StartCooldown,
+        base_gcd_ms as f32,
+    )
+    .max(0.0)
+    .round() as u32;
+    // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
+    if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
+        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
+    } else {
+        gcd_ms
+    }
 }
 
 /// Recheck, plan targets, spend, start cooldowns, log CastSuccess, resolve.

@@ -63,12 +63,8 @@ fn read_spell_readiness(
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or_else(|| format!("Tank heal readiness lacks sourced spell {spell_id}"))?;
-    // Reuse ordinary creature validation without starting, replacing or cancelling a cast.
-    // Health-based kit priorities select patients; they do not limit healing capability.
-    match spell_cast::validate_start(world, healer, &spell, Some(tank), true) {
-        Ok(Some(target)) if target == tank => {}
-        Err(CastFailure::Unsupported(reason)) => return Err(reason),
-        _ => return Ok(None),
+    if !read_heal_capability(world, healer, tank, &spell)? {
+        return Ok(None);
     }
     let costs = spell_cast::spell_costs(world, healer, &spell)
         .map_err(|error| format!("Tank heal readiness spell {spell_id}: {error:?}"))?;
@@ -77,4 +73,20 @@ fn read_spell_readiness(
         spell_id,
         costs,
     }))
+}
+
+fn read_heal_capability(
+    world: &mut World,
+    healer: Entity,
+    tank: Entity,
+    spell: &crate::spell_info::SpellInfo,
+) -> Result<bool, String> {
+    // Patient health priorities do not limit capability. Native GCD clocks stay intact.
+    match spell_cast::read_tank_heal_capability(world, healer, spell, tank) {
+        Ok(Some(target)) if target == tank => {}
+        Err(CastFailure::Unsupported(reason)) => return Err(reason),
+        _ => return Ok(false),
+    }
+    spell_cast::read_targets_include(world, healer, spell, tank)
+        .map_err(|error| format!("Tank heal readiness spell {}: {error:?}", spell.id))
 }
