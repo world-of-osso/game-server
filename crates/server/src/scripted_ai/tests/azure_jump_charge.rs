@@ -45,8 +45,9 @@ fn assert_native_jump(spell_id: u32, parameter: u32, wow_destination: Vec3) {
         (254, parameter as i32)
     );
     assert_eq!(effect.trigger_spell, 0);
-    assert_eq!(spell.attributes[9], 0x0010_0000);
-    assert_eq!(spell.speed, 0.0, "no missile flight before native movement");
+    let misc = spell.misc.as_ref().expect("native SpellMisc prerequisite");
+    assert_eq!(misc.attributes[9], 0x0010_0000);
+    assert_eq!(misc.speed, 0.0, "no missile flight before native movement");
     let (x, y, z) =
         crate::terrain_height::wow_to_bevy(wow_destination.x, wow_destination.y, wow_destination.z);
     let destination = Vec3::new(x, y, z);
