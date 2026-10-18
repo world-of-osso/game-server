@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source505–509: mount-randomization/quest-credit/colored-parasol/fallen-player burial boundaries (2026-10-17)
+
+No new acceptance/runtime/data changes or own heavy duplicate.496 currently marks expanded disguise and Stasis fixtures failed, with final diagnostics still pending; no new passing gate/landing inferred. These sources retain their literal mixed behavior rather than shortcutting through cosmetics or ordinary living-target transforms.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|505 Vial of Endless Draconic Scales212518/431709 | Instant self dummy4 plus effect16/quest80201 for3600000ms; item3600000ms recovery/start1000ms. Source randomizes customizable Dragonflight skyriding mount appearance on each mount. Actual mount eligibility/per-mount customization/qualified quest completion/persistence/restore remain gaps; no cosmetic-only aura, guessed random pool or dropped quest-credit sibling. |
+|506 Delicate Jade Parasol212523/431994 | Source1500ms self periodic-dummy226/every1000ms→431995 for900000ms; normal300000ms/category1470 recovery180000ms. Child15000ms carries105/misc917504→431982,409/base100,312/set1133 and remove164 referencing WHITE parent431949, not Jade431994. Literal mismatch is unresolved, not silently repaired; actual next-fall qualification/transition/turning/descent/art/cleanup remains gap. |
+|507 Delicate Crimson Parasol212524/431998 | Same source timing/recovery with distinct child431999 and crimson presentation; child's remove164 also references431949, not own431998. Preserve mixed105/409/312/431982 payload and literal removal target. No sibling certificate, guessed parent substitution or always-on featherfall. |
+|508 Delicate Ebony Parasol212525/432001 | Same source timing/recovery with distinct child432002 and ebony presentation; remove164 again references431949, not432001. Full conditional next-fall/turning/descent/cleanup remains gap; removal is not a parent recast/recursive trigger and shared child431982 is not whole-toy proof. |
+|509 Remembrance Stone215145/435792 | Source1000ms target25 transform56→existing217846/Gravestone/display117236/misc9, permanent-1; inherited300000ms recovery. Source explicitly offers respectful burial to a fallen player. Actual dead-player eligibility/corpse appearance/lifecycle remains unverified; no living-player/self transform surrogate, resurrection, loot mutation or inferred player scale. |
+
+Evidence: private `rows505-509-{readonly-source,action-source,runtime-source,active-goal}.json`, literal colored-parent removal IDs and pinned16/164/409 semantics.149865 Tea Set remains untouched.
+
 ## Source500–504: pending Stone-of-Hearth acceptance and pennant/table/conditional-parasol boundaries (2026-10-17)
 
 503 test/specd68256325 adds212337/401802 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now19 hearthstones with Flame209035 sibling refusal. Format/manual readability/diffcheck pass; new behavior is AFTER4964df7af2e6 and requires a newer covering head. No further runtime/data/producer change or own heavy duplicate.
