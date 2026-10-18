@@ -39,6 +39,45 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_magma_wave_uses_legal_molten_hatchling_level_four_option() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 428), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let states = owned_states(&catalog, &journal);
+    assert_eq!(states[&41].selected_abilities[2], 319);
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 428);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 47);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(319), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [23]);
+    assert_eq!(state.teams[1].pets[0].health, 124);
+    for slot in 0..3 {
+        assert_eq!(
+            state.teams[0].pets[slot].health,
+            encounter.battle.teams[0].pets[slot].health
+        );
+    }
+}
+
+#[test]
 fn wild_pet_battles_primal_cry_uses_legal_meadowstomper_level_two_pair() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
