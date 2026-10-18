@@ -21,6 +21,7 @@ import db2
 import retail_content
 
 CRAFTING_SOURCE = SCRIPTS.parent / "data/reference/crafting/12.1.0.69933"
+FOREVER_SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
 
 AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azerothcore/data/sql/base/db_world"))
 
@@ -147,7 +148,7 @@ def dump_tables():
 
 def run_db2_import(csv_root, db_path):
     return subprocess.run(
-        [sys.executable, str(SCRIPTS / "db2.py"), "import", "--csv-root", str(csv_root), "--db", str(db_path)],
+        [sys.executable, str(SCRIPTS / "db2.py"), "import", "--source-dir", str(FOREVER_SOURCE), "--csv-root", str(csv_root), "--db", str(db_path)],
         capture_output=True,
         text=True,
         timeout=600,
@@ -267,10 +268,6 @@ class CreatureEventImportTests(unittest.TestCase):
             "kind,source_id,retail_id,source_name,retail_name,reason\n"
         )
         (scripts / "derived-merchants.json").write_text("[]\n")
-        shutil.copytree(
-            SCRIPTS / "reference/forever-1.60.1.70205",
-            scripts / "reference/forever-1.60.1.70205",
-        )
         capture = (
             self.root
             / "data/reference/wowhead/forever-zephras-20261004/zephras-content.json"
@@ -428,6 +425,8 @@ class CreatureEventImportTests(unittest.TestCase):
         args = [
             sys.executable,
             str(self.root / "scripts/content_policy.py"),
+            "--source-dir",
+            str(FOREVER_SOURCE),
             "--db",
             str(self.db),
             "--csv-root",
@@ -896,7 +895,7 @@ class CreatureEventImportTests(unittest.TestCase):
             conn.execute("DELETE FROM content_item WHERE ID IN (35, 40582)")
             conn.execute("DELETE FROM db2_build WHERE table_name IN"
                          " ('character_loadout', 'character_loadout_item', 'item_effect', 'item_x_item_effect')")
-        result = subprocess.run([sys.executable, str(SCRIPTS / "add_player_create_info.py"), "--db", str(self.db),
+        result = subprocess.run([sys.executable, str(SCRIPTS / "add_player_create_info.py"), "--source-dir", str(FOREVER_SOURCE), "--db", str(self.db),
                                  "--csv-root", str(self.csv), "--tdb-dir", str(self.tdb)],
                                 capture_output=True, text=True, timeout=60, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -1840,10 +1839,10 @@ class AzerothCoreContentTests(unittest.TestCase):
             + [f"{name}={AZEROTHCORE_SQL / (name + '.sql')}" for name in cls.TABLES],
             [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(cls.db), "--schema", str(SCRIPTS / "tdb_schema.sql"),
              "--prefix", "tdb_"] + [f"{name}={TDB_DIR / (name + '.sql')}" for name in tdb_tables()],
-            [sys.executable, str(SCRIPTS / "db2.py"), "import", "--csv-root", str(PINNED_CSV_ROOT), "--db", str(cls.db)],
+            [sys.executable, str(SCRIPTS / "db2.py"), "import", "--source-dir", str(FOREVER_SOURCE), "--csv-root", str(PINNED_CSV_ROOT), "--db", str(cls.db)],
             [sys.executable, str(SCRIPTS / "crafting_data.py"), "--db", str(cls.db),
              "--source-dir", str(CRAFTING_SOURCE)],
-            [sys.executable, str(SCRIPTS / "content_policy.py"), "--db", str(cls.db), "--report", str(cls.report),
+            [sys.executable, str(SCRIPTS / "content_policy.py"), "--source-dir", str(FOREVER_SOURCE), "--db", str(cls.db), "--report", str(cls.report),
              "--csv-root", str(PINNED_CSV_ROOT)],
         ]
         for command in commands:

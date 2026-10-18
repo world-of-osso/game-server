@@ -1,17 +1,19 @@
 """Decode pinned readable Forever creature rows, without fabricating Zephras displays."""
 
+import os
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
 
 
 class CreatureDecodeTest(unittest.TestCase):
     def test_known_names_displays_and_relationships(self):
         import zephras_creatures
 
-        catalog, report = zephras_creatures.load_catalog()
+        catalog, report = zephras_creatures.load_catalog(SOURCE)
         squirrel = catalog[2671]
         self.assertEqual(squirrel["name"], "Mechanical Squirrel")
         self.assertEqual(squirrel["type"], 1)
@@ -34,7 +36,7 @@ class CreatureDecodeTest(unittest.TestCase):
             root = Path(directory)
             for fdid in (841631, 1864302):
                 shutil.copyfile(
-                    zephras_creatures.DEFAULT_SOURCE / f"{fdid}.db2",
+                    SOURCE / f"{fdid}.db2",
                     root / f"{fdid}.db2",
                 )
             path = root / "841631.db2"

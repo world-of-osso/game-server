@@ -39,7 +39,7 @@ DDL = (
 )
 
 
-def load_input(path=DEFAULT_CONTENT):
+def load_input(path=DEFAULT_CONTENT, *, source_dir):
     content = json.loads(path.read_text())
     if content.get("map") != MAP_ID or content.get("reconstructed") is not True:
         raise ValueError(f"{path}: expected labelled map-2991 reconstruction")
@@ -47,7 +47,7 @@ def load_input(path=DEFAULT_CONTENT):
         ids = [record["id"] for record in content[group]]
         if len(ids) != len(set(ids)):
             raise ValueError(f"{path}: duplicate {group} IDs")
-    catalog, decoded = zephras_creatures.load_catalog()
+    catalog, decoded = zephras_creatures.load_catalog(source_dir)
     decoded["normalized_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
     return content, catalog, decoded
 
@@ -492,11 +492,12 @@ def write_report(path, report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--content", type=Path, default=DEFAULT_CONTENT)
+    parser.add_argument("--source-dir", type=Path, required=True)
     parser.add_argument("--db", type=Path)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    content, catalog, decoded = load_input(args.content)
+    content, catalog, decoded = load_input(args.content, source_dir=args.source_dir)
     if args.check:
         return
     if args.db is None or args.report is None:

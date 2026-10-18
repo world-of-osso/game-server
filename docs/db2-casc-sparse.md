@@ -28,7 +28,8 @@ Other sparse flags/compressions/widths fail explicitly.
 
 ## Concrete evidence and targeted tests
 
-`tests/fixtures/item_sparse_6fcc3191_selected.db2` retains exact bytes of the
+The untracked engine cache `data/db2/fixtures/item_sparse_6fcc3191_selected.db2`
+retains exact bytes of the
 17 selected clear records plus original field metadata from FDID `1572924`.
 Only header counts, section offsets, and offset/ID lists were reduced/relocated;
 no record values were changed. Original SHA-256:
@@ -39,9 +40,15 @@ Schema: engine `data/forever-1.60.1.70205/definitions/ItemSparse.dbd`.
 
 Run from server checkout (no extraction, database import, or services):
 
-```text
+```sh
+export FOREVER_DB2_SOURCE=/home/osso/Projects/world-of-osso/game-engine/data/db2/forever-1.60.1.70205
+export ITEM_SPARSE_SELECTED_FIXTURE=/home/osso/Projects/world-of-osso/game-engine/data/db2/fixtures/item_sparse_6fcc3191_selected.db2
 python3 -m unittest scripts.tests.test_db2_casc_sparse scripts.tests.test_skyborne_data.SkyborneDecodeTest
 ```
+
+Both paths are required: missing environment variables fail explicitly. Raw DB2s
+are not tracked; the [reference README](../scripts/reference/forever-1.60.1.70205/README.md)
+owns cache layout and provenance. Decoded JSON and schema text remain in the repo.
 
 Set `ITEM_SPARSE_SOURCE` to the original absolute DB2 path to additionally
 assert all 17 concrete records against the original multi-section file.
