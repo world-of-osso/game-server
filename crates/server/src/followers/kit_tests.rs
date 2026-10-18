@@ -4,7 +4,7 @@ use super::*;
 use crate::spell_cast::test_harness::Harness;
 use shared::components::{Health, Level};
 
-fn level32(entry: u32) -> (Harness, Entity) {
+pub(super) fn level32(entry: u32) -> (Harness, Entity) {
     level32_with_plugins(entry, |_| {})
 }
 
@@ -38,7 +38,7 @@ fn wounded(h: &mut Harness, unit: Entity, fraction: f32) {
     health.current = health.max * fraction;
 }
 
-fn uses_spell(h: &mut Harness, unit: Entity, spell: u32) {
+pub(super) fn uses_spell(h: &mut Harness, unit: Entity, spell: u32) {
     for _ in 0..600 {
         update_ai(h.app.world_mut());
         h.advance(1);
@@ -76,6 +76,24 @@ fn follower_kit_crenna32_rejuvenation() {
     wounded(&mut h, patient, 0.7);
     uses_spell(&mut h, unit, 774);
     assert!(crate::auras::has_aura(h.app.world(), patient, 774));
+}
+
+#[test]
+fn follower_kit_crenna32_maintains_child_dots_then_casts_wrath() {
+    let (mut h, unit) = level32(209072);
+    uses_spell(&mut h, unit, 93402);
+    uses_spell(&mut h, unit, 5176);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 164812));
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 164815));
+    for spell in [8921, 93402] {
+        let casts = h
+            .inbox
+            .go
+            .iter()
+            .filter(|go| go.caster == unit.to_bits() && go.spell_id == spell)
+            .count();
+        assert_eq!(casts, 1, "maintained child aura must prevent root recast");
+    }
 }
 
 #[test]

@@ -1,6 +1,13 @@
 ## 2026-10-18 — Direct member-rank assignment
 
 [Authority](systems/guild-lifecycle.md#direct-member-rank-assignment): source TC1894–1930 direction/self and source UI hierarchy/index mapping qualified first. Actual typed-request RED2/2 refused legitimate GM/multirank and promote-only assignments; earlier snapshot import compilation failure unclaimed. One direct validated rank/member transaction, recipient refresh and no synthetic step events; existing explicit step history preserved. GREEN/transport/joint/native proof remains pending.
+## 2026-10-18 — Sunshell2410
+
+[Sunshell](systems/pet-battle-engine.md#sunshell--2026-10-18): ONLY2410registry/reuse404+403; b273core5+nonownedNPCRED→194804production/9130GREEN5+1, nineactivepairs/30×3/misses+allmissweather/deadreserves/all6maximumHPwithoutcurrentHPincrease/globalhealing25/replacement/expiry. Crystalsnap3068ONLYguidNoneenemyteam1,neverplayerjournal;controlledlevel1/Common/breed3/source174HP/12power/7speed→12×3/max261/current174/CD3. MissingNPCcomposition andsourceBoss1/runtimeBoss0 retained as namedgaps;initialfixtureBossruntime1 overclaimcorrectedbeforeGREEN. Integrated2203lib177/main43/check18.27s/no warnings/fmt/shared11aclean/ten-table70448census1858/2829=65.68%/1035graphs,ONLY+4/+1;historical70391/1051/1762retained. LEADacceptsCPUenemyproof2410;native `NPC_PET_BATTLE_ENCOUNTER_SERVICE_ABSENT` (no liveNPCtrainer/teamcompositionservice),NOprivatehook/nevermake3068wildorowned. Asset-only13canonicalfileshashlinks;no nativeNPC/fullboss/Retailtiming/VFXclaim.
+
+## 2026-10-18 — Shell Rush1989 native proof
+
+[Shell Rush](systems/pet-battle-engine.md#shell-rush--2026-10-18) after539: legalGlimmershell2687/4 physicalslot3bothskins. Modern36/Rabbit111/highestbench300→275afterScratch25;Forever37/Rabbit110/retainedhighestbench275→250afterScratch25. Original344caster/other200benchunchanged;controlledcurrentHP not acquisition/history proof. Four individually inspected1920×1080 `shell-rush-{modern,forever}-{before,applied}.png` originals in AgentShared2026-10-18/petbattle-effects;twoframedmodels/ExtractedOnly/tripwire0,geometry91/96onlyHPfills. Existing15canonicalassets/links/strict2+1meshloadersPASS,nopublication. Coverage report owns exact0e658server+seeder/approvedee951engine/shared11a and pre/posthashes;not current Sunshell source. Physicalforfeitconfirm/Closeboth,ownedPIDsabsent/sliceinactive/5961unbound/windowcleared. Nativeenemyreserves/misses/ties/locks/finalfaintCPU-only;independentRetailtiming/rounding/VFXunproved.
 
 ## 2026-10-18 — Shell Rush1989
 
@@ -9,10 +16,43 @@
 ## 2026-10-18 — Rays of Light2378 native proof
 
 [Rays of Light](systems/pet-battle-engine.md#rays-of-light--2026-10-18) after531: legalRiverpaw4450/15physicalPass→slot2bothskins. Modern929→902(Scratch27),110damage/Rabbit37,+27cappedheal−Scratch30→899;Foreverretained899→870(Scratch29),112/Rabbit35,+53heal−Scratch27→896. Fullbenchheals0; injuredbench/miss/finalfaintcontrolsCPU-only. Four individually inspected1920×1080 `rays-of-light-{modern,forever}-{before,applied}.png` originals in AgentShared2026-10-18/petbattle-effects;all4phases2framedmodels/ExtractedOnly/tripwire0,geometry95/104onlyHPfills/timedfloats. LocalCASC6/6→lead8productfiles+fragment;9canonicalhashes/links/actual1meshstrictloaderPASS. Freshfc1server/seeder fromlanded506/shared11acleanbeforeafter;leadexplicitlyaccepts frozenengineee951 after exact003e35233 protocol/petbattleUI unchanged versus17unrelatedUI-model changes+networkWorldServerInforeceive. Fullpatches/actualhashes retained;workingShell650notruntimecohort. All3hashesunchangedthroughShellCPUandnative. Bothphysicalforfeitconfirm/Close;knownPIDsabsent/sliceinactive/5961unbound/windowcleared. Coverage report owns exactreceipts/limits;functional/visualonly,noindependentRetailrounding/timing/VFXcertification. Leadacceptednative;closingdocs-onlyhead doesnotchangeproductionorcensus.
+## 2026-10-18 — Masquerade697 authored cast timing acceptance pending
+
+[Exact acceptance/limits](../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 learned600ms cast with no early appearance/SpellGo/category recovery, then source145134/misc267626,8/one-hour aura/2513 recovery and Idol refusal. Old fixtures unchanged; format/manual only, uncompiled/unexecuted AFTER541. No runtime/data/protocol/new CancelCast, exact-timing/native/hour-expiry/all-five certificate or own jobs.
+
+## 2026-10-18 — Gate541 GREEN/landed Singed593 and Pango684
+
+[Exact gate/landing proof](../toy-effects14-coverage.md#gate541-green-and-landed-singed593-repair-plus-pango684-lifecycle-2026-10-18): explicit lead receipt plus ancestry confirmsa6f8505f7 on master312f5aebd.541server317/0/1ignored469.98s/EXIT0/FMT0/CHECK0 with exact593/Pango tests OK.535's real runtime admission failure repaired by named Singed slot, not fixture change or blanketdummy. Native/full1166/all-five/hour-expiry/distribution limits remain; no duplicate jobs.
+
+## 2026-10-18 — Singed593 repair/Pango684 owned CPU GREEN
+
+[Exact proof/limits](../toy-effects14-coverage.md#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18): real535RED→runtime5ea7efcaa at6b54512a0/canonical shared11a058cf, own focused5931/0/25.16s; toys197/0/337.82s includes593, PangoCancelAura/ordinary600sSaptorreuse and unchanged Citizens/generic dummy refusals. Workspace all-targets check1m24s/fmt pass. Only audited Singed slot admitted; sourceTC76/4836–5117, not blanketdummy. Initial old-interface build failures resolved by absolute current shared path without protocol/cache mutation. Lead successor/landing/native/full1166 proof remains pending.
+
+## 2026-10-18 — Gate535 genuine RED; Singed repair pending
+
+[Exact failure/source-grounded repair](../toy-effects14-coverage.md#gate535-genuine-red-narrow-singed-admission-repair-pending-verification-2026-10-18):535server315/1/1ignored477.06s/EXIT101/FMT0/CHECK0 rejects593child aura4 before cast; no landing/fixture correction. Authorized5ea7efcaa admits only1220867/slot0 under zero-payload visual-aura guard, preserving unrelated script refusal. TC `SpellAuraEffects.cpp:76,4836–5117` contains named dummy actions, not generic no-op authority. Merged landed baselined0e0d7fc3 for queued64 fidelity, Pango stacked; own focused compile/test running, no GREEN/native proof yet.
+
+## 2026-10-18 — Pango684 cancellation and shared recovery pending
+
+[Exact acceptance/limits](../toy-effects14-coverage.md#pango684-cancellation-and-ordinary-shared-recovery-pending-after535-2026-10-18): test/spec223d0916c extends existing Full1166 Pango with real CancelAura/model restoration/no2513 bypass, Saptor refusal near580 simulated seconds and own learned success after600 ordinary seconds. No timer/cooldown edit or prior shared-five change. Format/manual only; uncompiled/unexecuted AFTER535, not all-five lifecycle/wall/hour-expiry/native/distribution proof. No runtime/data/own jobs.
+
+## 2026-10-18 — Mycomancer664 landed after532; Explosive593 queued535
+
+[Current proof/landing](../toy-effects14-coverage.md#mycomancer664-gate532-passed-and-landed-explosive593-queued535-2026-10-18): lead receipt plus ancestry confirms8af454985 on server masterd0e0d7fc3.532server315/0/1ignored673.31s/EXIT0/FMT0/CHECK0 includes exact Mycomancer learned-root CPU test. Native/cross-map/missing-bind/natural-recharge limits persist. Explosive38ced31bd separately queued535; no535result or landing claimed, no own jobs.
+
+## 2026-10-18 — Explosive593 mixed hearthstone and Singed acceptance pending
+
+[Exact acceptance and limits](../toy-effects14-coverage.md#explosive593-mixed-hearthstone-and-singed-cpu-acceptance-pending-after532-2026-10-18): test/specbb325c6a4 preserves actual236687/root1220729 ten-second bind252 plus queued self64→1220867/5000ms dummy4 Singed, shared2309 and Corewarden refusal. Ordinary child expiry tested without replacing/dropping child; native explosive/Singed presentation remains gap, no guessed damage. Original25/helper/Mycomancer unchanged. Format/manual only; uncompiled/unexecuted AFTER532, whose candidatefb2bd5a88 is not landing. No runtime/data/native/own heavy jobs.
+## 2026-10-18 — Native follower utility conditions
+
+[Dispel/control conditions](investigations/follower-data.md#native-dispel-and-caster-control-conditions--2026-10-18): effect38/native ordinary eligibility, patient-first filtering; native Crenna/Henry Magic cures and2negative/1retained controls GREEN. Native702 harmful=false isolated/routed as AURA_POSITIVITY_702; approved334275 fixture uses source area/range and old core DATA-RED, as does Bo's Leg Sweep. Corrected source-duration/category-CD wait gives genuine Meredy Poly RED. COPY refresh existing-table RED→GREEN; source-immutable SQL replay tests updated after core publication. New data b90 native8PASS/1fixture CreatureType failure; real template6 authority fixes that sparse fixture, giving0ffa24/24 core23+PolyPASS238.69s. Post-nav/jump-master6a979ee2f selected native32/0FAIL/1namedignoredPASS319.97s; producer3PASS39.833s, servercheck0/25.73s/zero warnings, fmt/diff0. COPY380f90da/delta00ddfc95/canonical-input2c836975 hashes verified; proofs retained across final docs-only changes.702 +three joint interrupt REDs remain ignored; independent lead gate/publication pending. Interrupt provider/removal reserved for joint9468 gate. Core530 landed4bc7cc15e with byte-identical lead publication2c836975; broader full-kit/live acceptance remains open.
 
 ## 2026-10-18 — Rays of Light2378
 
 [Rays of Light](systems/pet-battle-engine.md#rays-of-light--2026-10-18): six interleaved24damage12/7/7 and23heal5/Variance20 rows; ONLY2378registry+boundedceil2damage/order2heal selection reuses existinghelpers/math. Actual8fa1d7f3dcore5+owned4450/15unsupportedRED→aa44158cdcore5+owned1GREEN; parameterized258/979controls, nine active pairs/asymmetricenemyhits/distinct3allyheals/caps/eachmiss+allmissheals/deadbothreserves/finalenemyfaintstillheals. Legal Remembered Riverpaw4450/15slot2power180/max929 deals120/Rabbit27 and heals100/200/300→150/250/350; no fixture correction or fabricatedstats. Integrated84395c5b7lib166/main41PASS/shared11acleanbeforeafter; fresh ten-table-reconciled70448census1850/2829=65.39%/1033graphs (+6/+1/no removals); packagecheck27.01s/no warnings/fmtPASS/manualchanged-lineRustreadability no new violations (metrics unavailable). Historical70391/1051/1762/otherrejections retained; onlydocs/censusafterproof. Native-after-landing and independent Retail rounding/timing/VFX remain unproved.
+## 2026-10-18 — Main-thread economy fsync capture and bounded FIFO implementation
+
+[FIFO cycle publication](systems/bot-economy.md#fifo-cycle-publication): ce0/protocol11a private owned-pressure stack proves main fdatasync→next_id→economy gatherer cycle; separate writer idle. Real FileBackend sync-held structural regression genuinely RED. Bounded high-water reservation/market receipts and expected-state conflict handling implemented; economic-vendor requests retained in owned FIFO until receipt resolution. Real concurrentbuyout RED erased11-coppermail; exact expected-mailbox guard preserves it and nextscheduledcollection. Final scoped coverage57economy(56+1fixturecorrection)/1admin/7peer; workspacealltargetscheck/fmt0/no warnings; independent verifierPASS. Whole-row inputs audited; leadgate pending, no performancePASS. MAIN_THREAD_ASSET_READS named/excluded; dormant A/B parked. Historical privateworld schema setup failure retained separately; current reproduction uses read-only SQLite backup/private mutable store.
 
 ## 2026-10-18 — Tidal Wave X2309 and Shadow Bolt Volley2523 native proofs
 
@@ -2735,3 +2775,8 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 ## Native Mobile Banking acceptance complete
 
 [Native proof](systems/guild-perks.md#native-mobile-banking-proof): both-skin cast/bank/nonmember refusal/despawn and actual post2h accepted casts pass on identical artifacts. Forever7242700ms complements the retained Modern-origin7311223ms interval. Fifteen inspected unchanged full-HD originals published; owned runtimes stopped and owner-checked window cleared. Earlier interrupted overall results remain intact; countdown labels are not timing oracles.
+
+## 2026-10-18 — Follower dummy-root periodic maintenance
+
+[Investigation](investigations/follower-data.md#dummy-root-periodic-maintenance--2026-10-18): genuine repeated8921/starved93402 RED→native two-child-aura/Wrath GREEN; three-row COPY only, source-description references and native CSV fields verified, ROOT_CHILD_LINK_DESCRIPTION_ONLY per-row receipt. Producer3 integration+4 validation passes across explicit runs; scoped check/fmt pass. Lead gate/publication pending; full-kit/live/joint interrupt gates remain open.
+- 2026-10-18: Native143 SpellLabel cooldown recovery reuses286 start/remaining lifecycle. Normal Autumn leaf RED2/3→native7+retained10GREEN; label2960-only native row absent,143refresh/source-only, Seasons/charge/time-rate/fullability excluded. See [auras](systems/auras.md#cooldown-recovery-rates).

@@ -11,9 +11,12 @@ use std::sync::{
     mpsc,
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use supervision::{Event, Live};
 
 #[path = "tick_perf_peers/combat.rs"]
 mod combat;
+#[path = "tick_perf_peers/supervision.rs"]
+mod supervision;
 
 const PEER_COUNT: usize = 11;
 const MEASUREMENT: Duration = Duration::from_secs(90);
@@ -26,7 +29,8 @@ struct Run {
     sent: bool,
     entered: bool,
     count: Arc<AtomicUsize>,
-    ready: mpsc::Sender<usize>,
+    live: Option<Live>,
+    ready: mpsc::Sender<Event>,
     index: usize,
     all_entered: Option<Instant>,
 }
@@ -120,8 +124,10 @@ fn entered(
             if let Some(combat) = combat.as_mut() {
                 combat.owner = reply.player_entity;
             }
-            run.count.fetch_add(1, Ordering::SeqCst);
-            run.ready.send(run.index).expect("profiling supervisor");
+            run.live = Some(Live::enter(&run.count));
+            run.ready
+                .send(Event::Entered(run.index))
+                .expect("profiling supervisor");
             println!(
                 "ENTERED {} elapsed={:.3}",
                 run.username,
@@ -215,45 +221,38 @@ fn read_private_endpoint() -> SocketAddr {
     server
 }
 
-fn spawn_profile_peers(server: SocketAddr) -> Vec<std::thread::JoinHandle<bool>> {
-    let count = Arc::new(AtomicUsize::new(0));
-    let (sender, receiver) = mpsc::channel();
-    let mut workers = Vec::new();
-    for index in 1..=PEER_COUNT {
-        let run = Run {
-            server,
-            username: format!("fb_perf_live{index}"),
-            started: Instant::now(),
-            sent: false,
-            entered: false,
-            count: count.clone(),
-            ready: sender.clone(),
-            index,
-            all_entered: None,
-        };
-        workers.push(std::thread::spawn(move || run_peer(run)));
-        assert_eq!(
-            receiver
-                .recv_timeout(Duration::from_secs(60))
-                .expect("peer entry"),
-            index
-        );
-        if index < PEER_COUNT {
-            std::thread::sleep(Duration::from_secs(10));
-        }
-    }
-    workers
-}
-
 fn main() {
     let server = read_private_endpoint();
     let mut logging = App::new();
     logging.add_plugins(bevy::log::LogPlugin::default());
-    let workers = spawn_profile_peers(server);
+    let count = Arc::new(AtomicUsize::new(0));
+    let (events, receiver) = mpsc::channel();
+    let workers = supervision::ramp(
+        PEER_COUNT,
+        Duration::from_secs(10),
+        Duration::from_secs(60),
+        &receiver,
+        |index| {
+            let run = Run {
+                server,
+                username: format!("fb_perf_live{index}"),
+                started: Instant::now(),
+                sent: false,
+                entered: false,
+                count: count.clone(),
+                live: None,
+                ready: events.clone(),
+                index,
+                all_entered: None,
+            };
+            supervision::spawn_peer(index, events.clone(), move || run_peer(run))
+        },
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+    supervision::confirm_all_entered(&count, &workers, PEER_COUNT)
+        .unwrap_or_else(|error| panic!("{error}"));
     println!("ALL_ENTERED {PEER_COUNT}");
-    for worker in workers {
-        assert!(worker.join().expect("peer panicked"), "peer failed");
-    }
+    supervision::measure(workers, &receiver).unwrap_or_else(|error| panic!("{error}"));
     println!(
         "MEASUREMENT_COMPLETE peers={PEER_COUNT} seconds={}",
         MEASUREMENT.as_secs()

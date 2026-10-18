@@ -1,11 +1,14 @@
 //! Persistent bot supply, crafting businesses and simulated local consumption.
 mod cycle;
+mod ids;
 pub mod model;
+mod publication;
 pub mod store;
 
 use crate::auction_house::{AuctionHouseState, unix_now};
 use crate::persistence::GameDatabase;
 use bevy::prelude::*;
+#[cfg(test)]
 pub use cycle::run_cycle;
 use model::{EconomyState, MarketItem, MerchantConfig, MerchantState};
 use serde::{Deserialize, Serialize};
@@ -189,6 +192,8 @@ impl Config {
 pub struct Economy {
     pub state: EconomyState,
     initialized: bool,
+    pending: Option<publication::PendingCycle>,
+    last_attempt: Option<u64>,
 }
 
 /// Snapshot only: do not initialize, cycle, persist or read the clock.
@@ -232,10 +237,17 @@ pub(crate) fn admin_status(
 
 pub struct EconomyPlugin;
 impl Economy {
+    pub(crate) fn market_commit_pending(&self) -> bool {
+        matches!(self.pending, Some(publication::PendingCycle::Commit { .. }))
+    }
+
     pub fn from_state(state: EconomyState) -> Self {
+        let last_attempt = (state.last_cycle != 0).then_some(state.last_cycle);
         Self {
             state,
             initialized: true,
+            pending: None,
+            last_attempt,
         }
     }
 }
@@ -245,6 +257,10 @@ impl Plugin for EconomyPlugin {
         app.init_resource::<Economy>()
             .add_systems(Startup, load_config)
             .add_systems(Update, initialize_economy)
+            .add_systems(
+                Update,
+                publish_economy_market.before(crate::merchant::MerchantRequests),
+            )
             .add_systems(FixedUpdate, update_economy);
     }
 }
@@ -299,6 +315,17 @@ fn initialize_economy(
     *economy = Economy::from_state(std::mem::take(&mut economy.state));
 }
 
+pub(crate) fn publish_economy_market(
+    db: Option<Res<GameDatabase>>,
+    mut economy: ResMut<Economy>,
+    mut auctions: ResMut<AuctionHouseState>,
+    mut gold: ResMut<crate::gold::GoldUpdateQueue>,
+) {
+    if let Some(db) = db {
+        publication::publish_ready(&db, &mut economy, &mut auctions, &mut gold);
+    }
+}
+
 fn update_economy(
     db: Option<Res<GameDatabase>>,
     config: Res<Config>,
@@ -310,23 +337,17 @@ fn update_economy(
     if !economy.initialized || !auctions.initialized {
         return;
     }
-    let mut draw = || rand::random::<u64>();
-    match run_cycle(
-        &db.db,
-        &mut auctions,
-        &mut economy.state,
+    publication::advance_cycle(
+        &db,
         &config,
+        &mut economy,
+        &mut auctions,
+        &mut gold,
         unix_now(),
-        &mut draw,
-    ) {
-        Ok(changed) => {
-            for id in changed {
-                crate::gold::record_persisted_gold(&db.db, id, &mut gold);
-            }
-        }
-        Err(error) => error!("economy cycle aborted: {error}"),
-    }
+    );
 }
 
+#[cfg(test)]
+pub(crate) mod fifo_tests;
 #[cfg(test)]
 mod tests;
