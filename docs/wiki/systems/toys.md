@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Potatoad disguise and pet-command, bundle, egg, Arcantina boundaries (2026-10-18)
+
+[Source635–639 matrix](../../toy-effects14-coverage.md#source635639-pending-potatoad-disguise-and-pet-command-bundle-egg-arcantina-boundaries-2026-10-18) adds acceptance-onlye29972e08 for252265/1254376/251887/five exact source displays/10-minute appearance/20-minute recovery:17 disguise rows plus separate Oomgut18 identities, old16/helper unchanged. Behavior pending lead successor;509 cancelled before start for unrelated master compile interaction. Exact vanity-pet90/87 move/stay, missing bundle251069/base0/target32, unaudited Potatoad Egg and two distinct Arcantina script base-point payloads remain gaps. No combat-pet substitute, assumed summon count or invented travel destination; no runtime/data/native change.
+
 ## Broker disguise, shared grafts, mixed stall and updraft boundaries (2026-10-18)
 
 [Source630–634 matrix](../../toy-effects14-coverage.md#source630634-broker-disguise-shared-grafts-mixed-stall-and-updraft-boundaries-2026-10-18) preserves Cartel Xy transform56/misc0 without invented creature, distinct Void/Light marks sharing category2433/50-minute recovery, missing outdoor stall249056 plus effect164→carried-crate removal, and full updraft105/104/106/506 movement contract. No zero-dummy cosmetic admission, independent graft timer, static stall or flight substitute. Metadata only; lead509 queued without result/landing, no own heavy work.

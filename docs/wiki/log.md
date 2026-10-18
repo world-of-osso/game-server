@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source635–639 pending Potatoad acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source635639-pending-potatoad-disguise-and-pet-command-bundle-egg-arcantina-boundaries-2026-10-18):e29972e08 appends252265/1254376/251887/five displays/10min/20min to unchanged disguise helper, now17 rows plus separate Oomgut18 identities. Format/manual readability/diffcheck pass, behavior pending lead successor.509 cancelled before start for separate master compile interaction; not a toy RED. Pet90/87 move/stay, missing bundle251069/base0, unaudited Egg and distinct Arcantina script payloads1255786/1246474 remain gaps. No runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source630–634 exact mixed contracts
 
 [Exact source matrix](../toy-effects14-coverage.md#source630634-broker-disguise-shared-grafts-mixed-stall-and-updraft-boundaries-2026-10-18): Cartel Xy misc0 transform has no encoded creature; unaudited Void/Light marks share category2433/3000000ms recovery. Missing249056 outdoor stall retains effect164→1221382 removal edge; updraft retains105/104/106/506. Metadata only, no fabricated actor, ordinary trigger substitution, independent graft timer or cosmetic movement success.509 queued; no new acceptance/runtime/data/native proof or own heavy jobs.
