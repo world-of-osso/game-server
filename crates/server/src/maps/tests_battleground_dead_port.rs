@@ -81,7 +81,7 @@ fn assert_dead_battleground_enters_alive(queue_id: u32) {
 }
 
 fn kill_invited_player(h: &mut Harness, who: &Traveler, attacker: &Traveler) {
-    assert!(battleground(h, who).invitation_time_left_secs.is_some());
+    assert!(!battleground(h, who).accepted);
     h.app.world_mut().entity_mut(who.player).insert((
         PlayerDeathState::default(),
         Mana {
