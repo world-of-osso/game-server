@@ -369,9 +369,7 @@ fn encounter_coverage_herald_intro2_copy_and_duplicate_notifications_do_not_repl
     );
 }
 
-#[test]
-#[ignore = "RED: prove target32 obeys grounded caster gravity before INTRO2 implementation"]
-fn encounter_coverage_herald_intro2_30717_target32_grounds_the_real_summon_before_ai_moves() {
+fn elevated_nazan_for_target32() -> (Harness, InMap, Entity) {
     let (mut h, map, herald, sentries) = prepared_ramparts(1);
     reach_center(&mut h, herald, &sentries);
     // Isolate the existing entry primitive and real30717 cast before any INTRO2 code.
@@ -408,6 +406,13 @@ fn encounter_coverage_herald_intro2_30717_target32_grounds_the_real_summon_befor
         .entity_mut(herald)
         .insert((WEST, ReactState::Passive))
         .remove::<crate::scripted_ai::waypoint_path::GravityDisabled>();
+    (h, map, herald)
+}
+
+#[test]
+#[ignore = "RED: target32 must ignore radius, clamp to reach and ground before AI movement"]
+fn encounter_coverage_herald_target32_30717_uses_source_reach_and_ground_before_ai_moves() {
+    let (mut h, map, herald) = elevated_nazan_for_target32();
     let spell = h.app.world().resource::<SpellStore>().get(30717).unwrap();
     assert_eq!(spell.effects[0].implicit_targets, [32, 0]);
     let destination = crate::spell_cast::targets::effect_dest(
@@ -432,5 +437,51 @@ fn encounter_coverage_herald_intro2_30717_target32_grounds_the_real_summon_befor
     let summoned = actors_in_copy(&mut h, VAZRUDEN, map);
     assert_eq!(summoned.len(), 1);
     // Check at spawn, before a later chase/grounding tick can mask bad placement.
+    let position = h.app.world().get::<Position>(summoned[0]).unwrap();
+    let horizontal = Vec2::new(position.x - WEST.x, position.z - WEST.z).length();
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), herald)
+        .expect("source Nazan model combat reach");
+    assert_eq!(reach, 10.0, "actual18812 source model metadata");
+    assert!(
+        (horizontal - reach.max(1.0)).abs() < 0.001,
+        "target32 ignores3yd spell radius: distance=max(PET_FOLLOW_DIST1,reach), got{horizontal}"
+    );
     assert_grounded(h.app.world_mut(), map, summoned[0]);
+}
+
+#[test]
+#[ignore = "RED: flying target32 must preserve altitude above floor but raise it from below"]
+fn encounter_coverage_herald_target32_gravity_disabled_preserves_above_and_raises_below() {
+    let (mut h, map, herald) = elevated_nazan_for_target32();
+    h.app
+        .world_mut()
+        .entity_mut(herald)
+        .insert(crate::scripted_ai::waypoint_path::GravityDisabled);
+    crate::spell_cast::creature_cast(h.app.world_mut(), herald, 30717, Some(herald), false)
+        .expect("normal30717 with source gravity disabled");
+    let first = actors_in_copy(&mut h, VAZRUDEN, map)[0];
+    let position = *h.app.world().get::<Position>(first).unwrap();
+    assert_eq!(
+        position.y, WEST.y,
+        "CanFly must not be forced down to ground"
+    );
+    let feet = Vec3::new(position.x, position.y, position.z);
+    let crate::ground::GroundProbe::Supported(floor) = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, feet)
+    else {
+        panic!("real source destination floor");
+    };
+    h.app.world_mut().entity_mut(herald).insert(Position {
+        y: floor - 0.5,
+        ..WEST
+    });
+    crate::spell_cast::creature_cast(h.app.world_mut(), herald, 30717, Some(herald), false)
+        .expect("normal30717 when flying caster is below the surface");
+    let summoned = actors_in_copy(&mut h, VAZRUDEN, map);
+    assert_eq!(summoned.len(), 2);
+    let second = summoned.into_iter().find(|actor| *actor != first).unwrap();
+    assert_grounded(h.app.world_mut(), map, second);
 }
