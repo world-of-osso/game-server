@@ -67,7 +67,7 @@ fn native_label_recovery143_scales_matching_category_cooldown() {
     h.cast_and_deliver(HAMMER_OF_JUSTICE, Some(h.npc));
     h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    // Native label16, category24's45000ms ×100/130.
+    // Native label16, category32's45000ms ×100/130.
     assert_eq!(cooldown(&h, HAMMER_OF_JUSTICE).duration_ms, 34_615);
 }
 
