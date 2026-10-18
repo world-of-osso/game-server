@@ -183,7 +183,6 @@ fn azure_telash_natural_energy_phase_waits_for_casting_and_uses_native_cost_once
 }
 
 #[test]
-#[ignore = "next natural parent-hit outbound-jump callback RED"]
 fn azure_telash_natural_absolute_zero_hit_launches_source_outbound_jump() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     assert_eq!(h.creatures_of(197204).len(), 3);

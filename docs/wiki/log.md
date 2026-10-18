@@ -41,6 +41,10 @@
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
+## 2026-10-17 — Natural phase-hit outbound jump GREEN
+
+[Telash natural phase hit](investigations/follower-data.md#telash-natural-phase-hit--2026-10-17): source387928effect0→fullmask387981 exact-center bridge d622ea9b passes actual natural callback and original Energyphase controls2/2 in57.23s; exact70source/HEADclean/protocol11a058cf/published5f/private62403 guards stable. Test enabled afterward; no primitive/class reruns. Scoped check/fmt pending; natural landing/return/runes/counters/budgets/pixels remain separate.
+
 ## 2026-10-17 — Natural phase-hit outbound jump RED
 
 [Telash natural phase hit](investigations/follower-data.md#telash-natural-phase-hit--2026-10-17):9937b8dd actual60→100Energy/Icy/channel/ordinary phase/cost/shield/gravity prerequisites pass, then missing outbound motion1FAIL27.52s (unchangedpose/progress0). Exact source/HEAD/protocol/published-input guards stable. Only sourced387928effect0→triggered387981 exact-center hit bridge added; GREEN pending. No manual jump/spell/hook or new stats/HP/resource priming; landing/return/runes/counters remain separate. Primitiveb72 gate head unchanged remotely.
