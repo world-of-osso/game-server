@@ -12,9 +12,9 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 ### Initial runtime subset
 - [x] Apply only pinned TC SpellMgr.cpp4940–4956 load-time corrections:387981/388082 effect0 TargetA87, retaining authored destinations. Raw SQL remains unchanged; no generic target46 support.
 - [x] Actual Telash387981/388082 effect254 casts move asynchronously to their exact source-authored destinations, including elevated endpoints; no launch teleport, ground snap or LOS-clamped replacement destination.
-- [ ] Source time mode, applicable speed cap, nullable-height semantics and facing options determine the motion. Missing parameters or unsupported options fail explicitly, never by teleport fallback.
-- [ ] Reuse real movement ownership, interpolation and arrival1004 dispatch; effect41 and existing Gordoth movement remain unchanged.
-- [ ] Native tests observe launch, mid-flight arc and source-derived landing time/position without constructing movement components or dispatching synthetic landing hooks.
+- [x] Source time mode, applicable speed cap and nullable-height semantics determine the supported motion. Missing parameters or unsupported options (including special facing) fail explicitly, never by teleport fallback.
+- [x] Reuse real movement ownership, interpolation and arrival1004 dispatch; effect41 and existing Gordoth movement remain unchanged. Natural Telash landing reactions remain separate.
+- [x] Native tests observe launch, mid-flight arc and source-derived landing time/position without constructing movement components or dispatching synthetic landing hooks.
 
 ## How it works
 - [Telash source and proof coverage](../wiki/investigations/follower-data.md#telash-first-energy-phase--2026-10-17)
@@ -30,14 +30,14 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 - `scripts/tests/test_jump_charge_params.py` — real-copy producer CLI/source preservation and refusal boundary.
 - `crates/server/src/scripted_ai/tests/azure_jump_charge.rs` — actual387981/388082 source-destination launch/midpoint/landing GREEN at5aa9f58a; enabled afterward. No movement components or synthetic arrival hooks.
 - `spell_cast/jump_charge.rs` tests — missing-source refusal/no movement and actual unsupported source options. Native pair+missing control3PASS138.15s, retained unsupported1PASS; not a fresh4-case run.
-- `spell_cast/dummy10_tests.rs`, `dummy14_tests.rs`, `teleport_tests.rs` — named player-displacement refusals preserve parent success, bite/transform/damage/CC, cooldowns and native zero resource costs. Reconciled old teleport-placeholder assertions; scoped proof pending.
-- Existing Gordoth arrival/death/lower-point ownership and Harpoon41 controls remain required regression proof.
+- `spell_cast/dummy10_tests.rs`, `dummy14_tests.rs`, `teleport_tests.rs` — named player-displacement refusals preserve parent success, bite/transform/damage/CC, cooldowns and native zero resource costs. Reconciled old teleport-placeholder assertions;7 retained affected passes at22e59598 plus corrected Feral1PASS30.55s at74080cef. No fresh8-case run.
+- Existing Gordoth arrival/death/lower-point ownership3 and Harpoon41 controls pass in the retained affected batch.
 
 ## Known gaps (current cycle)
 - [x] Producer first: source-backed COPY preparation and scoped proof at fba6fb2b, pushed2399bcd06; lead gate510 landed and published5f225535 with byte-identical whole-database delta49b238f5.
 - [x] Merge repaired masterefd627da1 (gate511) and record separate source-target planning RED:2FAIL60.53s at1b5370e7, missing destination versus wrong caster destination. Initial test compilation failure is not behavioral proof.
 - [x] After exact source target fixes, observe genuine launch-teleport RED:2FAIL58.95s at985d91f3 after planning/native inputs/floor/LOS prerequisites. Outbound also ground-snapped to0; return to340.57086 instead of340.5709.
-- [ ] Prove bounded254 movement implementation and missing/unsupported controls, preserve41/Gordoth, then scoped check/fmt/readability/independent proof. First GREEN attempt:1PASS/3fixture-startup failures; relative database reopening removed in favor of the existing `WorldData` load and prepared-copy connection.
+- [x] Bounded254 movement and missing/unsupported controls, preserved41/Gordoth/class effects, scoped server check0/38.20s/zero compilation warnings, fmt0 and independent read-only source/wiring verification. Composite11 distinct cases across retained scopes, not a fresh11-case run; full Azure is still open.
 
 ## Named unsupported displacement gaps
 
