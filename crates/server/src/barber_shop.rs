@@ -408,7 +408,7 @@ mod tests {
             items: Vec::new(),
         };
         crate::persistence::save_inventory(&db, character_id, &poor);
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         app.finish();
         app.cleanup();
         let player = app

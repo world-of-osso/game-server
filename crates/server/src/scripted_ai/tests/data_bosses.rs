@@ -15,6 +15,8 @@ mod azure_leymor_children;
 mod azure_mechanic_power;
 #[path = "azure_sprout_death.rs"]
 mod azure_sprout_death;
+#[path = "azure_sprout_fields.rs"]
+mod azure_sprout_fields;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
@@ -5093,9 +5095,9 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
     for (entry, map_id, bit, encounter) in [(6910, 70, 0, 547), (12118, 409, 0, 663)] {
         let (mut h, boss, map) = bound_boss(entry, map_id, bit);
         let database_file = tempfile::NamedTempFile::new().unwrap();
-        h.app.insert_resource(crate::persistence::GameDatabase {
-            db: redb::Database::create(database_file.path()).unwrap(),
-        });
+        h.app.insert_resource(crate::persistence::GameDatabase::new(
+            redb::Database::create(database_file.path()).unwrap(),
+        ));
         h.engage(boss);
         h.advance(0.05);
         assert_eq!(
@@ -5212,7 +5214,7 @@ fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     h.app
-        .insert_resource(crate::persistence::GameDatabase { db });
+        .insert_resource(crate::persistence::GameDatabase::new(db));
     let player = h.player();
     let character = h
         .app
@@ -5316,9 +5318,9 @@ fn assert_copy_difficulty_credit(
     h.app
         .insert_resource(crate::test_data::achievement_catalog());
     let database_file = tempfile::NamedTempFile::new().unwrap();
-    h.app.insert_resource(crate::persistence::GameDatabase {
-        db: redb::Database::create(database_file.path()).unwrap(),
-    });
+    h.app.insert_resource(crate::persistence::GameDatabase::new(
+        redb::Database::create(database_file.path()).unwrap(),
+    ));
     crate::persistence::create_tables(
         &h.app
             .world()

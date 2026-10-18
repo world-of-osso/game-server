@@ -21,7 +21,7 @@ fn application_harness() -> Harness {
 
 fn application_harness_db(db: redb::Database) -> Harness {
     let mut h = harness_with(HUMAN_TEMPLATE, |app| {
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         add_inbox::<TransmogFailed>(app);
         add_inbox::<TransmogState>(app);
         add_inbox::<shared::protocol::TransmogOutfitFailed>(app);
