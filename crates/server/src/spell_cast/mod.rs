@@ -1643,22 +1643,54 @@ pub(crate) fn read_targets_include(
     spell: &SpellInfo,
     target: Entity,
 ) -> Result<bool, CastFailure> {
-    for effect in handled_effects(spell) {
-        let units = targets::select_targets(
-            world,
-            caster,
-            Some(target),
-            spell,
-            effect,
-            max_targets(spell),
-            false,
-        )
-        .map_err(|id| CastFailure::Unsupported(format!("implicit target {id} not supported")))?;
-        if units.contains(&target) {
-            return Ok(true);
+    let mut pending = vec![(spell.clone(), Some(target))];
+    let mut visited = std::collections::HashSet::new();
+    while let Some((spell, explicit)) = pending.pop() {
+        if !visited.insert((spell.id, explicit)) {
+            continue;
+        }
+        for effect in handled_effects(&spell) {
+            let units = targets::select_targets(
+                world,
+                caster,
+                explicit,
+                &spell,
+                effect,
+                max_targets(&spell),
+                false,
+            )
+            .map_err(|id| {
+                CastFailure::Unsupported(format!("implicit target {id} not supported"))
+            })?;
+            if units.contains(&target) {
+                return Ok(true);
+            }
+            if let Some(child) = read_periodic_trigger(world, effect)? {
+                pending.extend(units.into_iter().map(|unit| (child.clone(), Some(unit))));
+            }
         }
     }
     Ok(false)
+}
+
+fn read_periodic_trigger(
+    world: &World,
+    effect: &crate::spell_info::SpellEffect,
+) -> Result<Option<SpellInfo>, CastFailure> {
+    if effect.aura != crate::auras::handlers::PERIODIC_TRIGGER_SPELL || effect.trigger_spell == 0 {
+        return Ok(None);
+    }
+    world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(effect.trigger_spell))
+        .cloned()
+        .map(Some)
+        .ok_or_else(|| {
+            CastFailure::Unsupported(format!(
+                "periodic healing trigger {} lacks source metadata",
+                effect.trigger_spell
+            ))
+        })
 }
 
 fn validate_start_with_policy(
