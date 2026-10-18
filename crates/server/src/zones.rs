@@ -20,6 +20,16 @@ use crate::world_data::{
 };
 use shared::level_scaling::LevelScaling;
 
+mod entry;
+pub(crate) use entry::read_entry_projection;
+
+/// Original ordinary population identity, independent of a temporary entry change.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct CreatureOrigin {
+    pub guid: u32,
+    pub original_entry: u32,
+}
+
 pub struct ZonePlugin;
 
 impl Plugin for ZonePlugin {
@@ -1007,6 +1017,10 @@ mod npc_combat_tests;
 #[cfg(test)]
 #[path = "zones_context_tuning_tests.rs"]
 mod context_tuning_tests;
+
+#[cfg(test)]
+#[path = "zones_entry_tests.rs"]
+mod entry_tests;
 
 #[cfg(test)]
 mod tests {
