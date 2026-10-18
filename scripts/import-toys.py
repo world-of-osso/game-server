@@ -12,12 +12,25 @@ def main():
     parser.add_argument("csv", type=Path)
     parser.add_argument("database", type=Path)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument(
+        "--item-id", type=int, action="append",
+        help="Add or refresh only this source item; repeat for a selected batch",
+    )
     args = parser.parse_args()
     with args.csv.open() as handle:
         rows = list(csv.DictReader(handle))
+    if args.item_id:
+        requested = set(args.item_id)
+        rows = [row for row in rows if int(row["ItemID"]) in requested]
+        missing = sorted(requested - {int(row["ItemID"]) for row in rows})
+        if missing:
+            parser.error(f"requested toy items absent from source: {missing}")
     with sqlite3.connect(args.database) as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS toy (ID INTEGER PRIMARY KEY, ItemID INTEGER UNIQUE NOT NULL, Flags INTEGER NOT NULL, SourceTypeEnum INTEGER NOT NULL, SourceText_lang TEXT NOT NULL)")
-        conn.execute("DELETE FROM toy")
+        if args.item_id:
+            conn.executemany("DELETE FROM toy WHERE ItemID=?", [(item,) for item in args.item_id])
+        else:
+            conn.execute("DELETE FROM toy")
         conn.executemany("INSERT INTO toy VALUES (?,?,?,?,?)", [
             (int(row['ID']), int(row['ItemID']), int(row['Flags']),
              int(row['SourceTypeEnum']), row['SourceText_lang']) for row in rows
