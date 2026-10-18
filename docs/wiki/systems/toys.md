@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Claw/Nightmare-banner acceptance and wisdom/audio/attraction boundaries (2026-10-17)
+
+[Source450–454 matrix](../../toy-effects14-coverage.md#source450454-pending-clawnightmare-banner-acceptance-and-wisdomaudioattraction-boundaries-2026-10-17) adds acceptance-only1c5afda02: Claw205904/410931/205296/four valid models/source600s/category2177 one-hour recovery as11th disguise; Nightmare206008/411653→402852/type5/82612/size1/180s as tenth cursor object. Existing helper assertions retained; new behavioral head beyond4920c77 required. Senegos yes/no body/action, week-long listener-specific sniff audio suppression and friend-attraction area trigger remain gaps, not inert bodies/generic visual auras/teleport guesses. Local format/manual readability/diffcheck pass; no runtime/data/native/pool-sampling/full-recovery or own heavy duplicate.
+
 ## Pending Cinder acceptance and drum/ritual/glitter/lava-pack boundaries (2026-10-17)
 
 [Source445–449 matrix](../../toy-effects14-coverage.md#source445449-pending-cinder-acceptance-and-drumritualglitterlava-pack-boundaries-2026-10-17) adds acceptance-only184f9874d: exact205418/409891/source600s in unchanged learned/cancel caster fixture, now16 identities, pending later head beyond4920c77. Mixed45s drum/property3911/flags67241992 and10s ritual/property5664 retain missing actor/behavior gaps. Friendly glitter child395 creates an area trigger, not generic visual aura. Lava Pack's override2525 grants410609→410641 through actual actionbar metadata; source PowerDisplay127 absent, full grant/toss/restoration remains gap. Format/manual readability/diffcheck pass; no runtime/data/producer/native/new behavioral certificate or own heavy duplicate.
