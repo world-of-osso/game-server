@@ -1,3 +1,7 @@
+## 2026-10-18 — Explosive593 mixed hearthstone and Singed acceptance pending
+
+[Exact acceptance and limits](../toy-effects14-coverage.md#explosive593-mixed-hearthstone-and-singed-cpu-acceptance-pending-after532-2026-10-18): test/specbb325c6a4 preserves actual236687/root1220729 ten-second bind252 plus queued self64→1220867/5000ms dummy4 Singed, shared2309 and Corewarden refusal. Ordinary child expiry tested without replacing/dropping child; native explosive/Singed presentation remains gap, no guessed damage. Original25/helper/Mycomancer unchanged. Format/manual only; uncompiled/unexecuted AFTER532, whose candidatefb2bd5a88 is not landing. No runtime/data/native/own heavy jobs.
+
 ## 2026-10-18 — Mycomancer664 triggered hearthstone acceptance pending
 
 [Exact acceptance and limits](../toy-effects14-coverage.md#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18): test/spec37a6c0598 adds learned264367/actual1299014 ten-second root→1286909/252 saved-bind, shared2309/1800000ms charge and Corewarden refusal. No child-direct substitute or change to25 direct cases/helper. Format/manual readability only; no own compilation/test job, behavior pending lead gate afterst526. No runtime/data/native or missing-bind/cross-map/natural-recharge claim.
