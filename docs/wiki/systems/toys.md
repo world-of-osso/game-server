@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Observer/party-private perspective/fixed-Gilneas/water-boat boundaries and retained banner (2026-10-17)
+
+[Source495–499 matrix](../../toy-effects14-coverage.md#source495499-observerparty-private-perspectivefixed-gilneaswater-boat-boundaries-and-retained-banner-2026-10-17) retains Eyes' caster-and-summons/periodic/two perception payloads, outdoors party-or-raid-private Date Modulator, fixed Gilneas252+77 travel and permanent controlled four-seat water cruise/radius20yd with literal base430489. No global/owner-only audience swap, saved-bind substitution or executable base/count guess. Dreaming Banner211424 retains exact seasonal fixture CPU scope, not new pixels/recharge. No further runtime/data/new proof/own heavy duplicate;496 missile-expanded gate running.
+
 ## Monument/raid-aura/pennant/moving-trail/owl-rest/sleep boundaries (2026-10-17)
 
 [Source490–494 matrix](../../toy-effects14-coverage.md#source490494-monumentraid-aurapennantmoving-trailowl-restsleep-boundaries-2026-10-17) preserves Murkmorpher missing body/interaction plus raid-area65 child;425843 description reference is not a root trigger. Permanent nonzero Verdant pennant, Socks500ms periodic→1s persistent-area27 trail, Owl Post nearby rest and missing Leafbed usable sleep/pose remain unaudited. No automatic shape/one-aura trail/inert bed substitution or guessed multiplicity. No further runtime/data/new proof/own heavy duplicate;496 lead-owned/pending.
