@@ -1,3 +1,7 @@
+## 2026-10-18 — Stationary70448 cosmetics admission RED and scoped repair
+
+[Source/RED/publication matrix](../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-membership-and-admission-red-2026-10-18): rebase761→3ded411f0 onto rewrittenac36572bb with verified new ancestry. New-master learned-use RED0/3/78.01s; lead's exact threeToy INSERTs/34fresh-CASC files published; canonical aura4 admission RED0/3/59.41s. Minimal three-ID strict cosmetic admission plus same-branch published-census triples; targetedGREEN/all13census pending. Source30min/1h/cancel contract only; no genericdummy/native/full-duration/other-five claim.
+
 ## 2026-10-18 — Published70448 extras census oracle correction
 
 [Current regression/correction](../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg57812 and st57413 census failures come from one stale1166 assertion after twoToy-row publication. Shared oracle now retains Full1166 plus the two explicitly published item/name/spell triples; future batches append the list after publication. Exact748a5ad78 merge, no runtime/data change, batch2 RED isolated; requested13census+3batch1 targets pending.

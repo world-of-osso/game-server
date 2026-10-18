@@ -70,6 +70,9 @@ const FULL1166_BASELINE_COUNT: usize = 1166;
 const PUBLISHED_70448_TOYS: &[(u32, &str, u32)] = &[
     (281136, "Hiveborne Hearthstone", 1310234),
     (281615, "Shadeweaver's Hearthstone", 1311934),
+    (280820, "Loa-Blessed Victory", 1309827),
+    (280822, "Nalorakk's Strength Charm", 1309830),
+    (280823, "Feathers of Akil'zon", 1309831),
 ];
 
 fn setup(path: &std::path::Path) -> (Harness, u64) {
