@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy lead477 landed /478 queued
+
+[Current receipt](../toy-effects14-coverage.md#lead-integration-receipt-2026-10-17) supersedes earlier pending477 entries below: lead reports477 LANDED/“280 passed”/master15bef300d throughd4a4a716c (14caster/13hearthstone/nine-disguise+Oomgut10-ID revision). Per-fixture details requested, not independently inspected here. Expanded three-tent/14-hearthstone/ten-disguise+Oomgut11-ID head28f1ce365 is explicitly queued in478, not yet passed; no own heavy duplicate or new native/full-recovery claim.
+
 ## 2026-10-17 — Toy source335–339 pending linked-tent acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source335339-pending-linked-tent-acceptance-and-napseat-boundaries-2026-10-17):28f1ce365 extracts existing Gnoll fixture into four identity parameters and adds Market/Expedition source3s/15minlinked/permanent-child actual-use cases. Real SpellStore replaces the old selective setup only inside this helper to include new roots/children. Three source placement/model/rotation/refresh/owner/cancel/death tests await new-head proof; format/manual readability/diffcheck pass. Duck Lovie nap/pose and both cushion presentation/interaction remain gaps; runtime cushions absent despite TDB109046/109053. No runtime/data/native/natural-expiry/commerce certificate or own heavy duplicate.
