@@ -7,6 +7,7 @@ const TURTLE: u32 = 186_265;
 const TURTLE_PACIFY: u32 = 205_769;
 const STEADY_SHOT: u32 = 56_641;
 const PHALANX: u32 = 287_353;
+const CHEETAH: u32 = 186_257;
 
 #[test]
 fn native_attack_restriction264_turtle_rejects_ranged_cast_before_pacify() {
@@ -30,6 +31,90 @@ fn native_attack_restriction264_turtle_rejects_ranged_cast_before_pacify() {
             .world()
             .get::<shared::casting::CastState>(h.caster)
             .is_none()
+    );
+}
+
+#[test]
+fn native_attack_restriction264_turtle_allows_real_cheetah_utility() {
+    let mut h =
+        harness(Vec::new(), &[TURTLE, TURTLE_PACIFY, CHEETAH], 3).expect("native Hunter spells");
+    h.cast_and_deliver(TURTLE, Some(h.caster));
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        TURTLE_PACIFY
+    ));
+    h.advance(31);
+    h.cast_and_deliver(CHEETAH, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, CHEETAH));
+}
+
+#[test]
+fn native_attack_restriction264_gained_mid_steady_shot_rejects_completion() {
+    let mut h = harness(Vec::new(), &[PHALANX, STEADY_SHOT], 3).expect("native spells");
+    h.cast_and_deliver(STEADY_SHOT, Some(h.npc));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .is_some()
+    );
+    super::cast_triggered(h.app.world_mut(), h.caster, PHALANX, Some(h.caster), 0);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, PHALANX));
+    h.advance(45);
+    assert_eq!(h.inbox.failed.len(), 1, "{:?}", h.inbox.failed);
+    assert_eq!(h.inbox.failed[0].reason, CastFailReason::CantDoThatRightNow);
+    assert!(h.inbox.go.is_empty());
+    assert!(!h.inbox.log.iter().any(|event| event.spell_id == Some(STEADY_SHOT)
+        && event.kind == CombatLogKind::Damage));
+}
+
+#[test]
+fn native_attack_restriction264_expiry_restores_real_steady_shot() {
+    let mut h = harness(Vec::new(), &[PHALANX, STEADY_SHOT], 3).expect("native spells");
+    super::cast_triggered(h.app.world_mut(), h.caster, PHALANX, Some(h.caster), 0);
+    let duration_ms = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == PHALANX)
+        .unwrap()
+        .duration_ms;
+    assert!(duration_ms > 0);
+    h.advance(duration_ms as usize / 50 + 2);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, PHALANX));
+    h.cast_and_deliver(STEADY_SHOT, Some(h.npc));
+    h.advance(60);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|cast| cast.spell_id == STEADY_SHOT));
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(STEADY_SHOT)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+}
+
+#[test]
+fn native_attack_restriction264_full_trigger_still_lands_real_steady_shot() {
+    let mut h = harness(Vec::new(), &[PHALANX, STEADY_SHOT], 3).expect("native spells");
+    super::cast_triggered(h.app.world_mut(), h.caster, PHALANX, Some(h.caster), 0);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, PHALANX));
+    super::cast_triggered(h.app.world_mut(), h.caster, STEADY_SHOT, Some(h.npc), 0);
+    h.advance(30);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(STEADY_SHOT)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
     );
 }
 
