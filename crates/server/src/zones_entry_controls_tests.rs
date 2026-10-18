@@ -290,3 +290,54 @@ fn herald_entry_missing_or_mismatched_origin_refuses_before_actor_mutation() {
         assert_eq!(world.query::<&Npc>().iter(&world).count(), 1);
     }
 }
+
+#[test]
+fn herald_entry_nonzero_original_mount_and_emote_reload_authored_values() {
+    let (mut data, _) = source_fixture();
+    let canonical = crate::test_data::world_data();
+    // Actual Morna and Risen Drudge spawn addons, not invented Nazan fields.
+    for (guid, mount, emote) in [(20_043_201, 14_337, 0), (20_125_769, 0, 64)] {
+        let spawn = canonical
+            .spawns
+            .iter()
+            .find(|spawn| spawn.guid == guid)
+            .unwrap();
+        data.templates.insert(
+            spawn.template_entry,
+            canonical.templates[&spawn.template_entry].clone(),
+        );
+        let addon = data.addon_for(spawn).unwrap();
+        assert_eq!((addon.mount, addon.emote_state), (mount, emote));
+        let map = crate::maps::InMap::continent(u32::from(spawn.map));
+        let mut world = World::new();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let actor = spawn_creature(
+            &mut Commands::new(&mut queue, &world),
+            &data,
+            &data.templates[&spawn.template_entry],
+            &mut CreatureSpawnContext {
+                map,
+                difficulty_id: 0,
+                ground: None,
+                temporary: false,
+            },
+            false,
+            spawn,
+            &mut rand::thread_rng(),
+        )
+        .unwrap();
+        queue.apply(&mut world);
+        world.entity_mut(actor).remove::<Mounted>();
+        world.get_mut::<UnitPose>(actor).unwrap().emote_state = 0;
+        assert!(update_target(&data, &mut world, actor, spawn, 17307, None));
+        assert_eq!(world.get::<Npc>(actor).unwrap().template_id, 17307);
+        assert_eq!(
+            world
+                .get::<Mounted>(actor)
+                .map_or(0, |mount| mount.mount_display_id),
+            mount
+        );
+        assert_eq!(world.get::<UnitPose>(actor).unwrap().emote_state, emote);
+        assert_eq!(world.get::<CreatureOrigin>(actor).unwrap().guid, guid);
+    }
+}
