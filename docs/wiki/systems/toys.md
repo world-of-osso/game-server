@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Audio/launch/wisdom/animation/offering boundaries (2026-10-17)
+
+[Source325–329 matrix](../../toy-effects14-coverage.md#source325329-audiolaunchwisdomanimationoffering-boundaries-2026-10-17) preserves509 audio-filtering scope, mixed98/base1200 launch,189951/properties5348/Title27 wisdom actor,312/set61 animation replacement and377204/type3 offering interaction. Wisdom/display107044 and offering/display74995 exist in TDB but not runtime templates; availability does not prove advice or acceptance action. Source cast/duration/item-versus-inherited recovery remains exact. No new positive/native proof, inert import, guessed stealth/launch/loot behavior or own heavy duplicate.
+
 ## Pending Harpy acceptance and fruit/core/star-mode boundaries (2026-10-17)
 
 [Source320–324 matrix](../../toy-effects14-coverage.md#source320324-pending-harpy-acceptance-and-fruitcorestar-mode-gaps-2026-10-17) records acceptance-only eb02827f3:191891/371470→existing187854/104851/source10-minute transform/30-minute item recovery. Ten disguises plus Oomgut make11IDs; format/manual readability/diffcheck pass, new-head behavioral proof requested. Lead477 throughd4 contains the older nine-disguise fixture, not Harpy. NPC model1.5/probability1 stays metadata, not an automatic player-scale requirement. Fruit periodic child, living-core back attachment/positioner and paired star-flinger/catcher modes/actions remain explicit gaps; no runtime/data/native admission.
