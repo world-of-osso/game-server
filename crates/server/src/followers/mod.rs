@@ -6,11 +6,9 @@ mod kit;
 mod kit_ai;
 mod kit_area;
 mod party;
-#[cfg(test)]
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
-#[cfg(test)]
 mod pull_budget;
 #[cfg(test)]
 mod pull_budget_tests;
@@ -21,15 +19,12 @@ pub(crate) mod pull_history;
 mod pull_history_tests;
 #[cfg(test)]
 mod pull_movement_tests;
-#[cfg(test)]
 mod pull_readiness;
 #[cfg(test)]
 mod pull_readiness_tests;
-#[cfg(test)]
 mod pull_route;
 #[cfg(test)]
 mod pull_route_tests;
-#[cfg(test)]
 mod pull_sources;
 #[cfg(test)]
 mod pull_sources_tests;

@@ -384,7 +384,9 @@ pub(super) fn pursue(
     spell_id: u32,
     melee: bool,
 ) -> bool {
-    if super::tank_planner::apply_admitted_position(world, unit, Some(target)) {
+    if super::tank_planner::apply_admitted_position(world, unit, Some(target))
+        || super::tank_planner::hold_unbudgeted_pursuit(world, unit, target)
+    {
         return true;
     }
     let reach = if melee {

@@ -31,7 +31,6 @@ mod fear;
 mod fel_devastation;
 mod fixate;
 mod fleeing;
-#[cfg(test)]
 pub(crate) mod forecast;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;

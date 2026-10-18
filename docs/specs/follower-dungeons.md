@@ -35,6 +35,10 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 ## Shared tank pull project policies
 
+`TANK_IDLE_FOLLOWS_OWNER_PACE` — user decision, relayed by the lead: follow the owner's pace. With the owner idle out of combat, tanks must not autonomously pull. Chaining additional packs is allowed only during an active engagement and within `TANK_PULL_BUDGET`. Owner selection alone remains insufficient to start combat.
+
+Kit pursuit must project the complete authored route before starting native chase. Exposure outside already-engaged formations requires current-run source, history, healer and budget admission; missing inputs or refusal holds movement while leaving native in-range attacks available. Movement exposing only already-engaged formations is defense and must not require new-pull healer readiness. This pursuit gate is not acceptance of production goal generation, stacking or frontal positioning.
+
 `TANK_PULL_BUDGET` USER-approved values (verbatim):
 - observation window for measured group DPS and healing: 10 s
 - HP reserve: the forecast must leave ≥ 30% of tank max HP untouched

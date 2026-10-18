@@ -2091,7 +2091,6 @@ fn broadcast_events(
     }
 }
 
-#[cfg(test)]
 #[path = "combat_forecast.rs"]
 pub(crate) mod forecast;
 

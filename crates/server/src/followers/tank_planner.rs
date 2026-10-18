@@ -1,5 +1,4 @@
 //! Shared planner owns candidate collection and movement, never interrupt casts.
-#[cfg(test)]
 use super::Follower;
 use bevy::prelude::*;
 
@@ -9,6 +8,98 @@ pub(super) struct AdmittedPosition(pub Vec3);
 
 #[derive(Component)]
 struct AppliedMovementAt(f64);
+
+/// Refusal lives at the kit's final pursuit boundary, not an overwritten early guard.
+/// In-place attacks still use the ordinary native cast/range/GCD checks.
+pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: Entity) -> bool {
+    let Some(follower) = world.get::<Follower>(tank).cloned() else {
+        return false;
+    };
+    if follower.profile.role != shared::group::GroupRole::Tank
+        || !crate::spell_cast::targets::is_hostile(world, tank, target)
+    {
+        return false;
+    }
+    match read_pursuit_admission(world, tank, target, &follower) {
+        Ok(true) => return false,
+        Ok(false) => debug!(?tank, ?target, "Tank pursuit held by pull budget"),
+        Err(error) => debug!(?tank, ?target, %error, "Tank pursuit admission unavailable"),
+    }
+    world
+        .entity_mut(tank)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert((
+            crate::creature_ai::CreatureState::Idle,
+            crate::networking::CombatTarget(Some(target)),
+        ));
+    if let Some(position) = world.get::<shared::components::Position>(tank).copied() {
+        crate::creature_ai::move_follower(world, tank, position, 0.0);
+    }
+    true
+}
+
+fn read_pursuit_admission(
+    world: &mut World,
+    tank: Entity,
+    target: Entity,
+    follower: &Follower,
+) -> Result<bool, String> {
+    let history = super::pull_history::snapshot(world, follower.owner)
+        .ok_or("Tank pursuit lacks current authoritative run history")?;
+    let difficulty = world
+        .get::<crate::zones::CreatureDifficulty>(target)
+        .ok_or("Tank pursuit target lacks native creature difficulty")?
+        .0;
+    let difficulty = super::population_difficulty(difficulty);
+    let target_guid = world
+        .get::<crate::zones::CreatureOrigin>(target)
+        .ok_or("Tank pursuit target lacks authored source identity")?
+        .guid;
+    let route = super::pull_route::read_route(
+        world,
+        &super::pull_route::Request {
+            tank,
+            target_guid,
+            difficulty,
+            cleared: &history.cleared_spawns,
+        },
+    )?;
+    debug!(
+        ?tank,
+        corners = route.points.len(),
+        packs = route.pack_count,
+        "Tank pursuit route projected"
+    );
+    let map = *world
+        .get::<crate::maps::InMap>(tank)
+        .ok_or("Tank pursuit lacks a map copy")?;
+    let sources =
+        super::pull_sources::read_present_sources(world, map, difficulty, &history.cleared_spawns)?;
+    let party = super::ai::party_units(world, follower.owner);
+    let engaged = super::ai::engaged_enemies(world, follower, tank, &party);
+    let mut engaged_packs = std::collections::BTreeSet::new();
+    for (enemy, _) in engaged {
+        let origin = world
+            .get::<crate::zones::CreatureOrigin>(enemy)
+            .ok_or("Engaged enemy lacks authored source identity")?;
+        let source = sources
+            .get(&origin.guid)
+            .ok_or("Engaged source is not present")?;
+        engaged_packs.insert(source.pack_guid);
+    }
+    // Moving only within already-engaged formations is defense, not another pull.
+    if route.spawns.iter().all(|guid| {
+        sources
+            .get(guid)
+            .is_some_and(|source| engaged_packs.contains(&source.pack_guid))
+    }) {
+        return Ok(true);
+    }
+    Ok(matches!(
+        super::pull_admission::read_pull_budget(world, tank, &route.spawns, difficulty)?,
+        super::pull_budget::Decision::Allow { .. }
+    ))
+}
 
 /// Consume the same admitted point at both kit pursuit and idle regroup boundaries.
 pub(super) fn apply_admitted_position(
