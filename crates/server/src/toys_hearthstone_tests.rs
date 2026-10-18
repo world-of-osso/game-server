@@ -155,3 +155,8 @@ fn toyfx393_ohnir_windsage_hearthstone_learned_use_returns_to_bind_and_blocks_ti
 fn toyfx457_path_of_naaru_learned_use_returns_to_bind_and_blocks_ohnir_windsage() {
     assert_toy_hearthstone_bind_and_shared_charge(206195, 412555, 200630);
 }
+
+#[test]
+fn toyfx477_deepdweller_hearthstone_learned_use_returns_to_bind_and_blocks_path_of_naaru() {
+    assert_toy_hearthstone_bind_and_shared_charge(208704, 420418, 206195);
+}
