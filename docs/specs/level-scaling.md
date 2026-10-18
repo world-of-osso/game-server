@@ -5,6 +5,7 @@ The creatures are Retail spawns ([retail-spawn-source](retail-spawn-source.md)),
 ## What it must do
 
 Data
+- [ ] Template provenance selects stat authority: `zephras_row_source` records with `table_name='content_creature_template'` and `kind='reconstructed'` identify authored Zephras/Skyborn templates. Those retain their authored fixed levels/stats. Never infer authored origin from missing ContentTuning, level shape or absent TDB rows; Retail CT0 still requires real context. This is source selection, not a legacy-stat fallback.
 - [x] `db2.py extract` decodes ExpectedStat (FDID 1937326), ExpectedStatMod (1969773) and ContentTuningXExpected (2976765) from local CASC into `expected_stat`, `expected_stat_mod` and `content_tuning_x_expected`. The ID comes from the file's ID list (first column) and the parent field from its relationship map (last column).
 - [x] A tuned `content_creature_template` row carries its ContentTuning range as `minlevel`/`maxlevel`, plus TrinityCore's difficulty-0 values:
   - `HealthScalingExpansion`;
@@ -15,7 +16,7 @@ Data
 Level
 - [x] A tuned creature's own level is its range maximum plus a delta, rolled once per spawn from `LevelScalingDeltaMin..=Max` (Creature::SelectLevel, Creature.cpp:1611-1618; ApplyLevelScaling, :3122-3171).
 - [x] Its level against a unit of level L is `clamp(L, min, max) + delta`, clamped to 1..=126 (Creature::GetLevelForTarget, :3226-3257). The rule lives once, in `shared::level_scaling::LevelScaling::level_for_target`, which server and client both call.
-- [ ] Ordinary non-critter CT0 spawns resolve ContentTuning from their actual map difficulty, then the terrain area's parent chain, reusing the existing `SummonLevels` inputs. Explicit template tuning takes precedence; critters do not inherit regional tuning. Missing area/tuning/delta context must be reported explicitly, never replaced with legacy levels or guessed tuning.
+- [ ] Ordinary Retail/non-authored non-critter CT0 spawns resolve ContentTuning from their actual map difficulty, then the terrain area's parent chain, reusing the existing `SummonLevels` inputs. Explicit template tuning takes precedence; critters do not inherit regional tuning. Missing area/tuning/delta context must be reported explicitly, never replaced with legacy levels or guessed tuning.
 - [ ] Regional ordinary spawning uses the resolved range and the selected source difficulty's own delta, HealthScalingExpansion and health/armor/damage modifiers before initializing native level, health, armor and scaled stats. Existing guardian/wild level selection remains unchanged.
 - [x] A creature known to have no template or regional tuning keeps its fixed `minlevel` for everyone.
 
