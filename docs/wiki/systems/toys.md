@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending linked-tent acceptance and nap/seat boundaries (2026-10-17)
+
+[Source335–339 matrix](../../toy-effects14-coverage.md#source335339-pending-linked-tent-acceptance-and-napseat-boundaries-2026-10-17) adds acceptance-only28f1ce365: distinct Market194059/398329→398328/111097 and Expedition194060/398334→398333/111099 through the existing Gnoll source-cast/placement/rotation/refresh/owner/cancel/death fixture. Three tests now await explicit new-head coverage; format/manual readability/diffcheck pass. No native/rest/natural15-minute-expiry or commerce certificate. Permanent Duck Lovie nap/pose and cushions195980/109046,196013/109053 remain exact presentation/interaction gaps; runtime cushion templates absent, no inert imports or invented mechanics. [Contract](../../specs/toys.md).
+
 ## Pending Timewalker acceptance and prism/tent/seat/pall boundaries (2026-10-17)
 
 [Source330–334 matrix](../../toy-effects14-coverage.md#source330334-pending-timewalker-acceptance-and-prismtentseatpall-boundaries-2026-10-17) adds acceptance-only4ee545b9f:193588/375357/source10s252/savedbind/shared2309one1800000mscharge, now14hearthstone variants. Format/manual readability/diffcheck pass; new-head behavioral coverage requested,477 throughd4 has only13. Existing prism activation/action-block/cancel and linked-tent source placement/refresh/owner/cancel/death witnesses remain bounded; guided party beam/native/natural linked expiry remain separate. Beanbag seating stays blocked despite TDB108950, and permanent dead-recipient Pall108530 needs actual recipient/corpse lifecycle. No runtime/data/native admission or own heavy duplicate.

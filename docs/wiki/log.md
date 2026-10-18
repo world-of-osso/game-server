@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source335–339 pending linked-tent acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source335339-pending-linked-tent-acceptance-and-napseat-boundaries-2026-10-17):28f1ce365 extracts existing Gnoll fixture into four identity parameters and adds Market/Expedition source3s/15minlinked/permanent-child actual-use cases. Real SpellStore replaces the old selective setup only inside this helper to include new roots/children. Three source placement/model/rotation/refresh/owner/cancel/death tests await new-head proof; format/manual readability/diffcheck pass. Duck Lovie nap/pose and both cushion presentation/interaction remain gaps; runtime cushions absent despite TDB109046/109053. No runtime/data/native/natural-expiry/commerce certificate or own heavy duplicate.
+
 ## 2026-10-17 — Toy source330–334 pending Timewalker acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source330334-pending-timewalker-acceptance-and-prismtentseatpall-boundaries-2026-10-17):4ee545b9f adds actual learned193588/375357/source10s/savedbind/shared2309one1800000mscharge, now14hearthstone variants. Format/manual readability/diffcheck pass, explicitly covering new-head behavioral proof requested;477 throughd4 only has13. Existing prism activation/block/cancel and tent source-owner/refresh/cancel/death witnesses retained without new native/natural-expiry certificate. Beanbag seating remains blocked; permanent target25 Pall108530 recipient/corpse lifecycle remains a gap. No runtime/data/new admission or own heavy duplicate.
