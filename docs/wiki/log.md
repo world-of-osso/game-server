@@ -1,6 +1,6 @@
 ## 2026-10-18 — Native attack restriction264
 
-[Native264](systems/auras.md#native-attack-restriction264--2026-10-18): actual Turtle producer yields wrong Pacified priority; native Phalanx NPC with264/no25 still swings. Genuinebc5a0c05e RED2→312234334 consumer; native/retained22GREEN, fresh-master4457dcfe9 expanded24/24 GREEN7.06s/146566ms. Eight new cases exercise real attack predicates, Cheetah/Fireball, midcast gain, natural expiry, full-trigger damage and NPC swing removal; real263 family controls retained. No row/clock/RNG/budget/producer/wire changes; no264 positive offensive-family input qualified or whole-ability claim. Check/fmt pending.
+[Native264](systems/auras.md#native-attack-restriction264--2026-10-18): actual Turtle producer yields wrong Pacified priority; native Phalanx NPC with264/no25 still swings. Genuinebc5a0c05e RED2→312234334 consumer; native/retained22GREEN, fresh-master4457dcfe9 expanded24/24 GREEN7.06s/146566ms. Eight new cases exercise real attack predicates, Cheetah/Fireball, midcast gain, natural expiry, full-trigger damage and NPC swing removal; real263 family controls retained. No row/clock/RNG/budget/producer/wire changes; no264 positive offensive-family input qualified or whole-ability claim. All-target check107.438s/0warnings and fmt/manual Rust readability pass.
 
 ## 2026-10-18 — Skyriding native-child fixture regression
 
