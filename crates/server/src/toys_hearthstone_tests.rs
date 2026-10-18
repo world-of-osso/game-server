@@ -150,3 +150,8 @@ fn toyfx333_timewalker_hearthstone_learned_use_returns_to_bind_and_blocks_broker
 fn toyfx393_ohnir_windsage_hearthstone_learned_use_returns_to_bind_and_blocks_timewalker() {
     assert_toy_hearthstone_bind_and_shared_charge(200630, 391042, 193588);
 }
+
+#[test]
+fn toyfx457_path_of_naaru_learned_use_returns_to_bind_and_blocks_ohnir_windsage() {
+    assert_toy_hearthstone_bind_and_shared_charge(206195, 412555, 200630);
+}
