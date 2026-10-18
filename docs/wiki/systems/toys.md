@@ -2,6 +2,66 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
+
+[Source270–274 matrix](../../toy-effects14-coverage.md#source270274-mirrorfatemixed-guiseshadowdead-party-boundaries-2026-10-17) retains action-copy mirror/movement removal, authentic rune fate output, mixed Changeling transform/-45/312 payload, selected-player shadow child and recently-deceased party judgment gaps. Existing176673/two-model appearance is not ordinary-disguise acceptance for a mixed graph; target35 is party, not a generic enemy corpse. No actor/model/payload substitution, runtime/data admission or new positive proof.
+
+## Source pet-chase/flight/destruction/drag/mixed-shade boundaries (2026-10-17)
+
+[Source265–269 matrix](../../toy-effects14-coverage.md#source265269-pet-chaseflightdestructiondragmixed-shade-boundaries-2026-10-17) keeps companion/golem chasing, permanent minipet flight payload, Minigrue toy destruction, controlled linked dragging and mixed shade/screen/periodic child contracts unproved. Existing Ball179941/39353 and Shade180048/97411 are not missing publication or complete gameplay proof. Shade-child180054's repeated101526 display has distinct scales/weights that must not be collapsed. No runtime/data admission, source-payload discard or new positive certificate.
+
+## Source paired-trophy/oracle/dance/leash/anima-service boundaries (2026-10-17)
+
+[Source260–264 matrix](../../toy-effects14-coverage.md#source260264-paired-trophyoracledanceleashanima-service-boundaries-2026-10-17) retains paired Doomwalker actor placement/lifecycle, authentic oracle fortunes, nearby haunting-melody dancing, permanent companion leash and outside-Torghast anima service gaps.264's selected source model is invisible11686/scale2, not zero-weight visible52318; no source slot/model/recipient substitution or metadata-only admission. No runtime/data write or new positive proof.
+
+## Source return/music/disturbance/minipet-leash boundaries (2026-10-17)
+
+[Source255–259 matrix](../../toy-effects14-coverage.md#source255259-returnmusicdisturbanceminipet-leash-boundaries-2026-10-17) keeps returning gormling destination/movement, ten-minute rooted harp music, pipe script/sound, disturbable casing and permanent minipet leash contracts unproved. Exact TDB actor presence/root support/zero dummy shape is not those combined actions or native sound. No inert actor/caster attachment/script no-op admission, runtime/data write or new positive proof.
+
+## Source stacking/death-view/minipet/chase/multi-slime boundaries (2026-10-17)
+
+[Source250–254 matrix](../../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17) retains coordinated steward stacking, death-only viewer spirit-healer replacement, slime-minipet party appearance, ground-laser chasing and exact four-slime source-pool lifecycle gaps. Authentic source models and generic aura/summon support do not establish these combined contracts. No actor/viewer/minipet/script admission, runtime/data write or new positive proof;240 remains the single tracked pending job.
+
+## Source critter/passenger/reflection boundaries and retained hearth/vesper proof (2026-10-17)
+
+[Source245–249 matrix](../../toy-effects14-coverage.md#source245249-critterpassengerreflection-gaps-and-retained-hearthvesper-proof-2026-10-17) retains authentic half-critter destruction, wounded-ally carrying and chained reflection-summon gaps. Stretcher properties5075 is Control0, with one zero-probability source model; no fabricated vehicle or arbitrary visible selection.246 linked cooking and249 stationary Vesper retain earlier exact CPU witnesses, not new per-toy native/audio proof. No runtime/data admission or repeated unchanged gate.
+
+## Pending Dominated helm and coin/launch/linked/covenant boundaries (2026-10-17)
+
+[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17) adds240 test/spec c8feec2e for existing175221/nine-display actual learning/ten-minute restoration/inherited recovery; tests/check remain pending under the capacity-gated job. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
+
+## Source advice/riding/sentry/atonement boundaries (2026-10-17)
+
+[Source235–239 matrix](../../toy-effects14-coverage.md#source235239-adviceridingsentryatonement-boundaries-2026-10-17) retains minute-period dummy advice with no named child, wheelbarrow riding/eligibility, unwanted-entity warning and allied atonement gaps. Three authentic TDB actors exist but are absent from runtime content; Racer's VehicleId0 must not be replaced with an invented vehicle. No generic cosmetic/actor admission, new runtime/data write or positive simulation/native proof.
+
+## Smelly Jelly and hover/mail/tea/moving-area boundaries (2026-10-17)
+
+[Source230–234 matrix](../../toy-effects14-coverage.md#source230234-smelly-jelly-acceptance-and-hovermailteamoving-area-gaps-2026-10-17) adds234's actual authentic five-model transform/ordinary ten-minute restoration/one-hour recovery acceptance. Seven disguises plus Oomgut pass two tests/eight IDs99.85s; shared225/234 check2m25s/fmt/readability pass. Hover meditation, persistent friend-mail, goober tea-serving and moving Bonestorm area-trigger actions remain gaps. Source Sinvyr358569/type10/display67389 exists but is not runtime-published or interaction-proved; no inert-prop admission or new native certificate.
+
+## Necrolord and retained cooking/quill boundaries (2026-10-17)
+
+[Source225–229 matrix](../../toy-effects14-coverage.md#source225229-necrolord-source-acceptance-and-retained-cookingquill-scope-2026-10-17) adds225 test/spec e2d1b991 for the actual learned saved-bind/shared-charge path: ten variants pass52.90s; one shared final package check2m25s/fmt/readability pass.226 linked cooking/versatility and227 quill retain earlier exact CPU scope, not new native certificates.228 Venthyr pledge and229 Necrolord/Maldraxxus reduced-recovery acceptance remain gaps despite existing229 runtime model94055. No runtime/data admission or invented covenant rule.
+
+## Source conditional-fall and reagent/random-action boundaries (2026-10-17)
+
+[Source220–224 matrix](../../toy-effects14-coverage.md#source220224-conditional-fall-and-reagentrandom-action-boundaries-2026-10-17) retains black-parasol negative periodic-tick/refusal proof, not actual falling acceptance. Purple/green readiness consumption, Plume's combined slow-fall/turn/area contract and Necronom-i-nom's one-vellum/random-effect action remain gaps. No unconditional trigger, invented random pool, new runtime/data admission or repeated unchanged gate.
+
+## Source stack/bobber/area/vehicle boundaries and vessel proof (2026-10-17)
+
+[Source215–219 matrix](../../toy-effects14-coverage.md#source215219-retained-vessel-proof-and-stackbobberareavehicle-gaps-2026-10-17) keeps215's stack-conditioned shoulders/proc,217's actual bobber override,218's nearby forced-cry area action and219's mixed vehicle/motion/party-devouring graph open. Existing166086/display100400 content is not a missing-template fix.216 retains Batch3's exact learning/use/aura/cancel CPU scope without a fresh per-toy native certificate. No new admission or repeated unchanged gate; Tea Set149865 remains lead-required.
+
+## Source visual/motion/return/class/covenant boundaries (2026-10-17)
+
+[Source210–214 matrix](../../toy-effects14-coverage.md#source210214-visualmotionreturnclasscovenant-boundaries-2026-10-17) retains multi-visual eyes, water-walk/hover, player throw-return, class-armor payload and advertised Night Fae eligibility gaps. Shared2309/homebind metadata or ItemEffect condition0 is not complete Night Fae proof; no invented covenant rule or borrowed earlier hearthstone certificate. No runtime/data admission or new native result.
+
+## Source area/vision/companion boundaries and Aqir proof (2026-10-17)
+
+[Source205–209 matrix](../../toy-effects14-coverage.md#source205209-areavisioncompanion-boundaries-and-retained-aqir-proof-2026-10-17) distinguishes an area-trigger totem, void-perception payload, Control1/Title2 scale2 apple and minipet-target leash from generic scenery/caster cosmetics. Aqir retains earlier actual missile/selected-target/15s-aura CPU proof without new native certification. No runtime/data admission or repeated gate.
+
+## Mogu and companion/equipment/game boundaries (2026-10-17)
+
+[Source200–204 matrix](../../toy-effects14-coverage.md#source200204-mogu-source-acceptance-and-companionequipmentgame-boundaries-2026-10-17) records201's actual exact-source four-model transform/lifecycle/recovery acceptance: two affected tests/seven IDs, native check and fmt/readability pass. Companion possession, headgear procedural, shaving action and skull-game state remain gaps; existing half-scale shaving-kit runtime content is not that interaction. No runtime/data admission, generic substitute or new native certificate.
+
 ## Source motion/faction/appearance/action boundaries (2026-10-17)
 
 [Source195–199 matrix](../../toy-effects14-coverage.md#source195199-motionfactionappearanceaction-boundaries-2026-10-17) retains self-launch/safe-fall, language/faction/self-sacrifice, soul appearance, cocoon action and nonzero shadow-disguise payload gaps. Scroll314988 is the actual TriggerType0 on-use; auxiliary314407/TriggerType7 must not replace it. No cosmetic/actor/transform substitutes, runtime/data admission or new native proof.

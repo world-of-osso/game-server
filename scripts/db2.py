@@ -118,6 +118,7 @@ TABLES = [
     "ItemDamageTwoHand",
     "ItemDamageTwoHandCaster",
     "ItemSquishEra",
+    "Curve",
     "CurvePoint",
     "DurabilityCosts",
     "DurabilityQuality",

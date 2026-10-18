@@ -2129,7 +2129,7 @@ class PinnedBuildImportTests(unittest.TestCase):
         return self.conn.execute(sql, params).fetchall()
 
     def test_every_table_records_the_pinned_build(self):
-        self.assertEqual(self.one("SELECT DISTINCT build FROM db2_build"), [("12.1.0.69933",)])
+        self.assertEqual(self.one("SELECT DISTINCT build FROM db2_build"), [("12.1.5.70448",)])
         self.assertEqual(self.one("SELECT count(*) FROM db2_build"), [(len(db2.TABLES),)])
 
     def test_crusader_strike_is_a_paladin_class_skill_ability(self):
