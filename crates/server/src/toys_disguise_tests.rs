@@ -1,5 +1,5 @@
 //! Source111–113,178–179,201,234,240,317,322,387,402,450,540,542,548,553,573,638,644 and690: transforms and recovery.
-//! Source684/685/697/702/710: bounded shared2513 use/refusal, not one-hour expiry proof.
+//! Source618: misc0 Royal Visage;684/685/697/702/710: bounded shared2513 use/refusal.
 use super::*;
 
 const TEN_MINUTES_MS: u32 = 600_000;
@@ -315,6 +315,113 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             "item{item} recovery outlives its appearance"
         );
     }
+}
+
+#[test]
+fn toyfx618_royal_visage_learned_misc0_expiry_and_recovery_restore_model() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    const ITEM: u32 = 245631;
+    const SPELL: u32 = 1239480;
+    const CREATURE: i32 = 236348;
+    const DISPLAY: u32 = 121918;
+    const DURATION_MS: u32 = 600_000;
+    const RECOVERY_MS: u32 = 1_800_000;
+    const FRAME_SECONDS: f64 = 0.05;
+    let directory = tempfile::tempdir().unwrap();
+    let path = toyfx8_world();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("royal-visage.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    let caster = h.caster;
+    let native = h.app.world().get::<ModelDisplay>(caster).copied();
+    let health = *h.app.world().get::<Health>(caster).unwrap();
+    learn_effect_toy(&mut h, character, ITEM);
+    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|event| event.spell_id == SPELL));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(caster)
+            .unwrap()
+            .display_id,
+        DISPLAY
+    );
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SPELL)
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == SPELL)
+        .unwrap();
+    assert_eq!(aura.duration_ms, DURATION_MS);
+    assert_eq!(aura.effects[0].misc_values, [CREATURE, 0]);
+    let expiry = aura.expires_at.unwrap();
+    let recovery = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|update| update.spell_id == SPELL && !update.is_gcd)
+        .unwrap();
+    assert_eq!(recovery.duration_ms, RECOVERY_MS);
+    h.advance(30);
+    assert_eq!(
+        activate(&mut h, ITEM)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    let remaining = expiry - crate::auras::aura_now(h.app.world());
+    h.advance((remaining / FRAME_SECONDS).floor() as usize - 2);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(caster)
+            .unwrap()
+            .display_id,
+        DISPLAY
+    );
+    h.advance(6);
+    assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), native);
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SPELL)
+    );
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert_eq!(
+        activate(&mut h, ITEM)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|event| event.spell_id == SPELL)
+            .count(),
+        1
+    );
 }
 
 #[test]
