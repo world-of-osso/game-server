@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source695–699: pending Corrosive Victory and mixed Effigy, short-category mask, stand, companion-command boundaries (2026-10-18)
+
+Acceptance-onlyad2f092f7 appends Full1166 Corrosive275988/1298433/1800000ms to unchanged audited caster helper, now21 identities/old20 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor after cancelled509. No runtime/data/native change or own heavy jobs; no source-only extra admitted.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|695 Corrosive Victory275988/1298433 | Instant self audited dummy4/zero payload for1800000ms, inherited3600000ms recovery. Own actual bag learning/UseToy/replicated exact aura/cancellation/unchanged health-model/no-creature acceptance committed, behavior pending successor. No copied Dominating/Etheric native imagery, boss-combat effect, full-hour reuse or acquisition-qualification certificate. |
+|696 Effigy of Dundun276189/1298951 | Instant self dummy4 for2000ms plus64→1298943/misc1250, inherited3600000ms recovery. Child1800000ms self transform56→existing267575/misc8/display128490/NPC scale0.6 plus periodic23/200ms→1299019; leaf179/misc43255/target18 for1000ms. Actual brief Dundun presentation/linked verdant transformation/periodic area/lifecycle remains gap. No pure child-transform certificate, discarded1250 payload or player scale0.6 inferred from NPC metadata. |
+|697 Preyhunter's Masquerade276207/1298957 | Source600ms self transform56/misc267626/8 for3600000ms, normal recovery0/category2513 recovery600000ms; existing display145134/scale1/weight1. Actual learned mask/restoration/shared category behavior unverified. No pure long-recovery helper certificate, independent timer or altered one-hour duration; same category as Pango/Saptor retained. |
+|698 Preyhunter's Trophy Stand276229/1299034 | Source2000ms base0 summon existing267634/property64/Control0/flags0 with targets47/138 for120000ms, inherited300000ms recovery; display145135/NPC scale1.5/weight1. Actual stand/target selection/trophy presentation/lifecycle remains unaccepted. Preserve target138 and base0; not target47-only stationary fixture, guaranteed one actor or invented trophy reward. |
+|699 Companion Command Crystal276258/1299193 | Source1000ms dummy4/zero payload on target150 for5000ms, inherited60000ms recovery. Actual companion authority/nearby-critter selection/kill/anguish collection and cleanup remain gap. No caster cosmetic, generic combat-pet attack command or free anguish grant from aura text. |
+
+Evidence: private `rows695-699-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `corrosive695-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source690–694: pending Pearl disguise, throne, loot-bot, kill-rain and one excluded source-only identity (2026-10-18)
 
 These are raw continuation inspection slots, not absolute Toy indices: five source rows contain four Full1166 runtime identities plus explicitly excluded Curse of the Aqir275039. Runtime universe remains1166; no import, admission or acceptance for the extra. Acceptance-only83c3de3d2 appends Full1166 Pearl274921 to unchanged disguise helper, now19 rows plus separate Oomgut20 identities/old18 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor. No runtime/data/native change or own heavy jobs.

@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Corrosive Victory and mixed Effigy, short-category mask, stand, companion-command boundaries (2026-10-18)
+
+[Source695–699 matrix](../../toy-effects14-coverage.md#source695699-pending-corrosive-victory-and-mixed-effigy-short-category-mask-stand-companion-command-boundaries-2026-10-18) adds acceptance-onlyad2f092f7:275988/1298433/30-minute aura via unchanged caster helper, now21 identities/old20 retained; behavior awaits lead successor. Effigy retains1250 trigger payload plus transform/200ms area chain; NPC scale0.6 is not player scale. Mask retains one-hour appearance/shared2513 ten-minute recovery; Stand retains47/138/base0; Companion Crystal retains150/critter kill authority. No flattened child, stationary-only stand or combat-pet shortcut. No runtime/data/native change or own heavy work.
+
 ## Pending Pearl disguise, throne, loot-bot, kill-rain and excluded source-only identity (2026-10-18)
 
 [Raw source690–694 matrix](../../toy-effects14-coverage.md#source690694-pending-pearl-disguise-throne-loot-bot-kill-rain-and-one-excluded-source-only-identity-2026-10-18) adds acceptance-only83c3de3d2 for Full1166 Pearl274921/1295623/265732/ten displays/5min/1hr:19 disguise rows plus separate Oomgut20 identities, old18/helper unchanged; behavior pending lead successor. This raw block has four runtime identities plus named275039 Curse of the Aqir, explicitly SOURCE-ONLY/OUTSIDE Full1166 with no admission/import/acceptance. Missing target87/base0 Throne260074, resource-gated corpse loot bot and kill-proc enemy-player rain remain gaps. No static throne/free loot/inert rain substitute; no runtime/data/native change or own heavy jobs.
