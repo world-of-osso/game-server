@@ -706,11 +706,15 @@ fn record_swing(
     world: &mut World,
     attacker_entity: Entity,
     target_entity: Entity,
-    mut outcome: SwingOutcome,
+    receipt: SwingCommitReceipt,
 ) {
-    if !commit_melee_loss(world, attacker_entity, target_entity, &mut outcome) {
+    let Some(outcome) = *receipt
+        .0
+        .get()
+        .expect("swing health must commit before publication")
+    else {
         return;
-    }
+    };
     crate::combat_refs::set_in_combat_with(world, attacker_entity, target_entity);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
@@ -1082,6 +1086,28 @@ fn roll_critical_block_damage(
     }
 }
 
+/// The health commit is queued by try_swing even when its caller discards this
+/// receipt. Publication reads the actual committed result, never a second hit.
+struct SwingCommitReceipt(std::sync::Arc<std::sync::OnceLock<Option<SwingOutcome>>>);
+
+fn queue_swing_commit(
+    commands: &mut Commands,
+    attacker: Entity,
+    target: Entity,
+    mut outcome: SwingOutcome,
+) -> SwingCommitReceipt {
+    let receipt = std::sync::Arc::new(std::sync::OnceLock::new());
+    let committed = std::sync::Arc::clone(&receipt);
+    commands.queue(move |world: &mut World| {
+        let result = commit_melee_loss(world, attacker, target, &mut outcome).then_some(outcome);
+        committed
+            .set(result)
+            .expect("each swing commits exactly once");
+    });
+    SwingCommitReceipt(receipt)
+}
+
+#[derive(Debug, Clone, Copy)]
 struct SwingOutcome {
     hand: Hand,
     kind: MeleeOutcome,
@@ -1157,7 +1183,7 @@ fn try_swing(
     auto_attack: &mut AutoAttack,
     commands: &mut Commands,
     redirect_health: &mut HashMap<Entity, f32>,
-) -> Option<SwingOutcome> {
+) -> Option<SwingCommitReceipt> {
     let timer = match hand {
         Hand::Main => auto_attack.timer,
         Hand::Off => auto_attack.off_hand_timer,
@@ -1317,7 +1343,7 @@ fn try_swing(
     // Commit health-sensitive limits and real rescue children in swing order.
     let incoming_loss = health_loss(training_dummy, scaled_loss);
     reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon));
-    Some(SwingOutcome {
+    let outcome = SwingOutcome {
         hand,
         kind,
         immune,
@@ -1331,7 +1357,13 @@ fn try_swing(
         npc_died: false,
         player_died: false,
         duel_defeated: false,
-    })
+    };
+    Some(queue_swing_commit(
+        commands,
+        attacker.entity,
+        target_entity,
+        outcome,
+    ))
 }
 
 /// Restart `hand`'s timer and hold the other hand at least
