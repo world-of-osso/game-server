@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Singed593 repair and Pango684 CPU verification GREEN; successor landing pending (2026-10-18)
+
+Runtime5ea7efcaa verified at6b54512a0 with absolute canonical shared11a058cfb818947e63f0e3f9ce0e99513a563609. Existing535 is the real RED reproduction; no ignored test or weakened assertion. Owned agent-run focused593 compiles in7m03s and passes1/0 in25.16s. Owned `toys::` sweep passes197/0 in337.82s, explicitly including Explosive593, Pango684 cancellation/ordinary600s Saptor reuse, Citizens unresolved-anchor refusal and generic unsupported-dummy refusal. Workspace all-targets check passes in1m24s; fmt check passes. No later code change invalidates this proof.
+
+The one-slot source-audited admission described below remains the entire runtime change. Initial compile attempts encountered an old shared interface from sibling/native-path configuration; explicit absolute current shared path compiled, without protocol source or cache mutation. Earlier pending labels below describe source-stage history:593 and Pango now have bounded CPU behavior proof, not native/full1166/landing proof. Lead successor gate/landing receipt remains required; nothing from535 was landed. [Contract](specs/toys.md), [guard](../crates/server/src/spell_cast/cosmetic.rs), [mixed593 fixture](../crates/server/src/toys_hearthstone_tests.rs), [Pango fixture](../crates/server/src/toys_disguise_tests.rs).
+
 ## Gate535 genuine RED; narrow Singed admission repair pending verification (2026-10-18)
 
 Lead535 covered38ced31bd and failed actual learned Explosive593 before cast: `unsupported toy spell: aura 4` at hearthstone test239; server315 passed/1 failed/1 ignored/477.06s, EXIT101/FMT0/CHECK0. This is missing runtime support, not a fixture error; nothing from535 is landed. Prior acceptance-only reasoning incorrectly assumed this child was admitted.
