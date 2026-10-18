@@ -1,3 +1,7 @@
+## Telash AfterCast return/counters
+
+[Native return](systems/spell-casting.md#telash-aftercast-return-and-counters): separatecc62 RED1PASS(no-victim)/3FAIL121.09s, compile9m05s, qualified native parent/current-reference versus numeric-rival state; no-target test stops at missing-action prerequisite. Source AI/reference guards then action1/nearest3/native388082; actual714 landing resumption and3/2 counters implemented before GREEN/required1af merge. Source Icy2000+3000ms, addon bars corroboration only; no synthetic arrival, gravity reset, HP/resource priming or full-Azure claim.
+
 ## Absolute Zero Rune strip
 
 [388008 effect1](systems/spell-casting.md#absolute-zero-rune-strip): separate9efa1PASS(cancel)/1genuineFAIL(205 completed strip)56.08s/compile2m11s, qualified ordinary activation/Player entry/native8s cast/exact hits/real damage;23 downstream. Ordered388065 then390201 handler only, no synthetic unoccupied shield producer. Production2d2996e47 merged required418 as26c397763/protocol029: fresh native strip2+retained activation2 GREEN4/0ignored116.75s, compile3m14s, stable source/HEAD/protocol/worldce guards. Completed205+23, occupied-only Mythic consequence and cancellation pass. Independent lead gate owns check/fmt; AfterCast/return/counters excluded.
