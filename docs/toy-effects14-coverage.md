@@ -1,5 +1,48 @@
 # Toy effects14 — active whole-goal coverage
 
+## Post-guild merge: codec and bounded MaxCount proof GREEN (2026-10-18)
+
+After the explicit gr567 landing announcement, merged protocol029a927, server41856b72b and enginef26cc691e into the three MaxCount branches. Engine's sole wiki-index conflict keeps both sides' entries; no enum/runtime conflict was resolved by dropping either feature.
+
+| Current code scope | Executed proof |
+|---|---|
+| Protocola2b07a6 | Existing new-variant wire targets2/0 plus combined codec/discriminant targets2/0. All prior inventory/guild request tags remain pinned; appended ItemMaxCount21 and SetMemberRank13 each round-trip through bincode and JSON. |
+| Server33c9d2eb2 | Five original regressions plus MaxCount model/quest/Doomsday targets17/0 in47.77s, no ignored cases. |
+| Engine6c00abbf4 | Exact typed owner-error account-dispatch target1/0, no native-pixel claim. |
+| Remaining gate | Lead owns combined mc548b rerun/check/fmt and coordinated landing; no whole-suite/landing/full1166 certificate from these bounded targets. |
+
+Final pushed revisions after this proof contain documentation-only additions. Source weights/data and existing test oracles remain unchanged; toy batch5efec9c6f remains stacked with its earlier individual mc548b PASS. [Mechanism/limits](wiki/systems/inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18).
+
+## mc548b five-regression recovery targeted GREEN; rerun pending (2026-10-18)
+
+Lead mc548b server2644c24f2 was RED771/5/13ignored816.87s, protocol stage passed. Exact requested cfdfc3ee6 merge356d4493a/protocol999b52e reproduced0/5; final repairf97c118e4 passes all unchanged five cases5/0/25.95s. [Authoritative roots/repairs/proof](wiki/systems/inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): one InventoryError inbox consumer fixes three item-use fixture adapters; authentic quest metadata is retained for valid references; empty item batches/capacity checks are no-ops for XP-only rewards. No oracle counts, source data, MaxCount checks, source qualification or typed full-bag distinction were weakened.
+
+This is not a broad mc548b success or landing. Lead owns the combined rerun; server changes are protocol999b52e-aligned, engine error-dispatch implementation remains unchanged. Toy batch5efec9c6f stays stacked; its exact Saptor/Idol/Badge cancellation/recovery test individually passed mc548b, but that aggregate was RED. Whole1166/native completion and landing remain unclaimed.
+
+## Gate548 MaxCount defect: coordinated repair targeted GREEN; integration pending (2026-10-18)
+
+548 is genuine RED319/1/1ignored749.69s/EXIT101/FMT0/CHECK0: real Doomsday repeat persisted a second202310 GUID. Authorized repair now propagates source MaxCount and enforces it at all shared store entries, includes passive personal-bank ownership, removes the quest starter/reward direct-push bypass and reports typed owner ItemMaxCount without mislabeling a true full bag. [Mechanism, caller scope, source citations and exact proof matrix](wiki/systems/inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18) are authoritative.
+
+Targeted proof: shared-model RED0/2→5/0 at1a811a183; quest RED0/2→3/0 at23749fa05; production-profession Doomsday RED2/1→4/0 atc67ea2596, including genuine-full and triggered-effect controls. Protocol2a5307c wire1/0 and engined73fa72e6 account-dispatch1/0 preserve Retail GlobalStrings10918/ERR_ITEM_MAX_COUNT. Source clarification supersedes the earlier two-SpellGo assumption: regular preflight (`Spell.cpp:7648–7656`) refuses the second use with equip error/DONT_REPORT; triggered effects separately test the lower storage bound (`SpellEffects.cpp:1426–1440`). Original GUID/count, inventory/gold/log and closed-bank access guards are asserted.
+
+Lead owns one combined three-repo broad gate; no own broad rerun, no final integration/landing/native/full1166 claim. Toy batch5efec9c6f is retained: all three cancellation/recovery cases individually passed mc548b, whose aggregate remains RED pending the corrected rerun. Earlier pending labels below are source-stage history; no source weights/data were changed. [Contracts](specs/inventory.md), [quest scope](specs/quests.md), [toy scope](specs/toys.md).
+
+## Three-item batch: Saptor685, Idol702, Badge710 cancellation/recovery pending after548 (2026-10-18)
+
+Test/spec604c35311 adds `toyfx_shared_saptor_idol_badge_cancel_and_recover_without_bypassing_category`, extending three existing Full1166 identities in one future gate tip:268728/1283502/misc260346,276925/1301489/misc268496,280419/1308693/misc271558. Each uses actual learned use/source display pool/self56/misc8/3600000ms aura, reports shared2513/600000ms recovery, then real CancelAura must restore the prior model/remove the replicated aura. Both own item and learned Pango refuse immediately; Pango still refuses near580 ordinary simulated seconds, then succeeds once after600 seconds with its own source pool/misc260345,8/one-hour aura and unchanged health. No source weights or deadline/category state are rewritten; Saptor's0.1 row and Badge4/2/1/2/1 weights remain untouched.
+
+Format/manual readability only, UNCOMPILED/UNEXECUTED AFTER548; current548 covers only8877979e3/Doomsday, not this three-item batch. Existing Pango, shared-five, Masquerade, Royal and old misc8 fixtures are unchanged. No runtime/data/native edits or own jobs; Masquerade cancellation, ordinary one-hour expiry, exact wall timing, native art and weighted frequencies remain unproved. [Contract](specs/toys.md), [test](../crates/server/src/toys_disguise_tests.rs).
+
+## Doomsday419 ordinary recovery and unique-product repeat pending after543 (2026-10-18)
+
+Test/speccb46a33f9 adds `toyfx419_doomsday_repeat_after_ordinary_recovery_preserves_unique_product`, extending Full1166 toy202309/root398572 rather than substituting same-name product202310. Source/runtime202310 has stack1/MaxCount1/LimitCategory0; root source3000ms CreateItem24/base1 and300000ms recovery remain unchanged. The fixture learns/creates the first persisted product, keeps its real GUID in bags, checks refusal near295 ordinary simulated seconds, then completes a second actual learned root after300 seconds. Persisted inventory must still contain exactly the original GUID/one unit, never a duplicate/replacement or new toy202309. It does not force a cast failure merely for a product cap: pinned TC `SpellEffects.cpp:1426–1440` reduces creatable quantity through CanStoreNewItem/ITEM_MAX_COUNT.
+
+Format/manual readability only; UNCOMPILED/UNEXECUTED AFTER543, lead covering gate required. No clock/cooldown/bag mutation, runtime/data change or own jobs; original first-product and Offering Kit fixtures unchanged. Product use/gameplay/native presentation and bank/account cap coverage remain gaps, not certified by this bag-held repeat. [Contract](specs/toys.md), [test](../crates/server/src/toys_offering_kit_tests.rs).
+
+## Gate543 GREEN and landed: Masquerade697 cast boundary (2026-10-18)
+
+Lead explicit receipt confirmsa8b96f8d9 on server master3accdf1a1f4236b1fecc5696d9b713ece99bfbf6; ancestry independently passes. Gate543server318 passed/0 failed/1 ignored in635.32s, EXIT0/FMT0/CHECK0, with exact Masquerade697 learned pre/post-cast test OK. Its [bounded contract](#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18) now has executed/landed CPU proof. Earlier pending labels below are historical; no exact millisecond scheduling/interruption/hour-expiry/native/all-five/full1166 certificate follows. No own duplicate jobs.
+
 ## Masquerade697 authored cast pre/post-completion acceptance pending after541 (2026-10-18)
 
 Test/spec35168319d adds `toyfx697_masquerade_learned_cast_defers_transform_and_shared_recovery_until_completion`, extending existing Full1166 item276207/root1298957. Active70448/key88d5e8ef05ec5a8446cdec93d142d7c6 ItemEffect234767/slot0/TriggerType0 selects CastTime36=600ms, single self56/misc267626,8/display145134/Duration42=3600000ms, category2513/recovery600000ms. Actual learned use's initial seven50ms frames must leave model/aura/SpellGo/category recovery uncommitted; after completion, the test asserts one root SpellGo/source appearance/aura/recovery and learned Idol276925 refusal without another cast/model/deadline change, preserving health. Prior shared-five, Pango, Royal and old misc8 fixtures remain unchanged.

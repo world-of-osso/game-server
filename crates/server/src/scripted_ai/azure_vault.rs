@@ -1,6 +1,7 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
 //! Telash power/rune startup/first-loop clocks, first100Energy poll and outbound
-//! jump hit/first center landing are ported; return phases and rune interactions remain open.
+//! jump hit/first center landing, Rune activation and effect1 strip are ported;
+//! AfterCast/return phases remain open.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -35,10 +36,13 @@ const ABSOLUTE_ZERO_POLL_MS: u64 = 500;
 const ABSOLUTE_ZERO_POWER: f32 = 100.0;
 pub(crate) const ABSOLUTE_ZERO_CAST: u32 = 387928;
 const ABSOLUTE_ZERO_JUMP: u32 = 387981;
-const ABSOLUTE_ZERO_DAMAGE: u32 = 388008;
+pub(crate) const ABSOLUTE_ZERO_DAMAGE: u32 = 388008;
 const TELASH_JUMP_POSITION_WOW: Vec3 = Vec3::new(-5336.8003, 1066.6493, 344.32678);
 const ABSOLUTE_ZERO_SHIELD: u32 = 388084;
-const ACTIVATE_VAULT_RUNE: u32 = 390209;
+pub(crate) const ACTIVATE_VAULT_RUNE: u32 = 390209;
+const VAULT_RUNE_AT_AURA: u32 = 388065;
+const VAULT_RUNE_SHIELD: u32 = 390201;
+const INACTIVE_VAULT_RUNE: u32 = 390238;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -494,6 +498,34 @@ pub(crate) fn cast_absolute_zero_outbound_jump(
         Vec3::new(x, y, z),
         depth + 1,
     );
+}
+
+/// TC a352b1fa390209 effect0/DUMMY: source entry conditions select the Rune;
+/// inactive Runes are skipped, otherwise the hit Rune casts with implicit self.
+pub(crate) fn activate_vault_rune(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    if crate::auras::has_aura(world, target, INACTIVE_VAULT_RUNE) {
+        return;
+    }
+    if let Err(error) =
+        crate::spell_cast::creature_cast(world, target, VAULT_RUNE_AT_AURA, None, true)
+    {
+        warn!(
+            ?target,
+            ?error,
+            "Vault Rune activation could not cast native388065"
+        );
+    }
+}
+
+/// TC a352b1fa388008 effect1/DUMMY: source entry conditions select197204.
+/// Remove the field aura before the shield so native OnRemove sees live membership.
+pub(crate) fn strip_vault_rune(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    crate::auras::remove_auras(world, target, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == VAULT_RUNE_AT_AURA
+    });
+    crate::auras::remove_auras(world, target, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == VAULT_RUNE_SHIELD
+    });
 }
 
 /// OnEffectHitTarget, effect0/SPELL_EFFECT_DUMMY.

@@ -1,11 +1,11 @@
 {
   "build": "12.1.5.70448",
   "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
-  "validator_revision": "2be80bcec5969c27ae0de1be296a2032b04dcf43",
+  "validator_revision": "63f67710b10b58e0178c91b461e5483ed7ca8162",
   "boundary": "Graph admission only; supported property ID is not full semantic or Retail proof. Fresh validator census over fixture tables reconciled content-identical against all ten active70448 CSVs; historical70391 remains separate.",
-  "admitted_effect_rows": 1865,
+  "admitted_effect_rows": 1875,
   "effect_rows": 2829,
-  "admitted_abilities": 1036,
+  "admitted_abilities": 1038,
   "abilities": 1404,
   "properties": [
     {
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "admitted_rows": 615,
+      "admitted_rows": 621,
       "handler": true,
       "property": 24,
       "rows": 945,
@@ -361,9 +361,6 @@
         4298,
         4318,
         4333,
-        4335,
-        4336,
-        4337,
         4359,
         4360,
         4364,
@@ -385,9 +382,6 @@
         4636,
         4695,
         4701,
-        4721,
-        4723,
-        4725,
         4797,
         4799,
         4801,
@@ -571,7 +565,7 @@
       ]
     },
     {
-      "admitted_rows": 13,
+      "admitted_rows": 16,
       "handler": true,
       "property": 32,
       "rows": 25,
@@ -584,10 +578,7 @@
         4199,
         4201,
         4203,
-        4304,
-        4722,
-        4724,
-        4726
+        4304
       ]
     },
     {
@@ -1253,13 +1244,12 @@
       ]
     },
     {
-      "admitted_rows": 12,
+      "admitted_rows": 13,
       "handler": true,
       "property": 139,
       "rows": 15,
       "rejected_graph_effect_ids": [
         4013,
-        4338,
         4570
       ]
     },
@@ -6724,7 +6714,7 @@
     },
     {
       "ability": 2351,
-      "error": "ability 2351: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 2352,
@@ -7124,7 +7114,7 @@
     },
     {
       "ability": 2457,
-      "error": "ability 2457: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 2458,

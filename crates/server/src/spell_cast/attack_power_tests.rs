@@ -156,21 +156,34 @@ fn class_completeness_native_ap_derived_spell_and_healing_power_stay_melee_owned
     assert!(after.spell_power > before.spell_power);
 }
 
-fn one_melee_hit(h: &mut Harness) -> f32 {
+fn first_normal_melee_hit(h: &mut Harness) -> f32 {
     h.app
         .world_mut()
         .get_mut::<CharacterStats>(h.caster)
         .unwrap()
         .crit_pct = 0.0;
-    let before = h.health(h.npc);
+    let start = h.inbox.log.len();
     h.app
         .world_mut()
         .entity_mut(h.caster)
         .insert(crate::combat::AutoAttack::new(h.npc));
+    // Nine native attempts fit18s. P(no unblocked Normal)=0.17^9;
+    // both phases together fail below2.38e-7, without extending the window.
     for _ in 0..360 {
         h.advance(1);
-        let damage = before - h.health(h.npc);
-        if damage > 0.0 {
+        let damage = h.inbox.log[start..]
+            .iter()
+            .find(|event| {
+                event.source == Some(h.caster.to_bits())
+                    && event.target == Some(h.npc.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && !event.crit
+                    && !event.glancing
+                    && event.blocked == 0
+            })
+            .map(|event| event.amount as f32);
+        if let Some(damage) = damage {
             h.app
                 .world_mut()
                 .entity_mut(h.caster)
@@ -178,7 +191,7 @@ fn one_melee_hit(h: &mut Harness) -> f32 {
             return damage;
         }
     }
-    panic!("no actual damaging melee swing in18s");
+    panic!("no actual unblocked Normal melee swing in18s");
 }
 
 #[test]
@@ -186,11 +199,11 @@ fn class_completeness_native_melee_ap_percent_changes_actual_autoattack_damage()
     let mut h = harness_with(Vec::new(), &[81420], 1, true).unwrap();
     h.advance(5);
     let before = stats(&h).attack_power;
-    let baseline_damage = one_melee_hit(&mut h);
+    let baseline_damage = first_normal_melee_hit(&mut h);
     let caster = h.caster;
     apply_mask(&mut h, 81420, caster, 1);
     assert_power(stats(&h).attack_power, before * 0.70);
-    let reduced_damage = one_melee_hit(&mut h);
+    let reduced_damage = first_normal_melee_hit(&mut h);
     assert!(
         reduced_damage < baseline_damage,
         "native166 -30% AP: actual swings {baseline_damage}→{reduced_damage}"

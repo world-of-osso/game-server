@@ -17,6 +17,12 @@ mod azure_jump_charge;
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
 mod azure_mechanic_power;
+#[path = "azure_rune_callbacks.rs"]
+mod azure_rune_callbacks;
+#[path = "azure_rune_fields.rs"]
+mod azure_rune_fields;
+#[path = "azure_rune_strip.rs"]
+mod azure_rune_strip;
 #[path = "azure_sprout_death.rs"]
 mod azure_sprout_death;
 #[path = "azure_sprout_field_actions.rs"]
@@ -39,6 +45,8 @@ mod gizlock;
 mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "herald_intro.rs"]
+mod herald_intro;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]

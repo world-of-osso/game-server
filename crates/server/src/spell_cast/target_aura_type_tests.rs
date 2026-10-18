@@ -56,7 +56,7 @@ fn apply_native_self_spell(h: &mut Harness, unit: Entity, spell_id: u32) {
 
 fn assert_target_type_failure(result: Result<(), super::CastFailure>) {
     let failure = result.expect_err("native target aura-type restriction");
-    let (reason, detail) = failure.to_contract();
+    let (reason, detail) = failure.to_contract().unwrap();
     assert_eq!(reason, CastFailReason::InvalidTarget);
     assert_eq!(detail.as_deref(), Some("SPELL_FAILED_TARGET_AURASTATE"));
 }
