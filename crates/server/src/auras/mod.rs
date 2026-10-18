@@ -841,10 +841,14 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
     }
     let factor = 1.0 - reduction / 100.0;
     cast.pushback_count += 1;
-    cast.duration = match cast.cast_type {
-        CastType::Normal => cast.duration + CAST_DELAY * factor,
-        CastType::Channel => (cast.duration * (1.0 - CHANNEL_FRACTION * factor)).max(cast.elapsed),
-    };
+    match cast.cast_type {
+        // TC Spell::Delayed caps remaining time at the original cast time.
+        // Remaining=duration-elapsed: adding delay with that cap rewinds progress to zero.
+        CastType::Normal => cast.elapsed = (cast.elapsed - CAST_DELAY * factor).max(0.0),
+        CastType::Channel => {
+            cast.duration = (cast.duration * (1.0 - CHANNEL_FRACTION * factor)).max(cast.elapsed);
+        }
+    }
     crate::spell_cast::mark_dirty(world, target);
 }
 

@@ -26,8 +26,8 @@ mod scourge_strike;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
-pub(crate) use batch9::hostile_ground_fields;
 pub(super) use batch9::update_ground_pulses;
+pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
@@ -182,6 +182,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
+        }
+        (crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_CAST, 0) => {
+            Some(crate::scripted_ai::azure_vault::cast_absolute_zero_outbound_jump)
         }
         (crate::seething_parachute::PARACHUTE, 1) => {
             Some(crate::seething_parachute::reset_fall_information)
@@ -749,6 +752,29 @@ fn blackout_kick(world: &mut World, caster: Entity, _target: Entity, _depth: u8)
 fn cobra_shot(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     let seconds = script_effect_value(world, caster, COBRA_SHOT, 2);
     reduce_cooldown(world, caster, KILL_COMMAND, f64::from(seconds));
+}
+
+/// SimC76f8118 monk4002–4070 uses result_total, including overheal.
+/// Native115129 selects its own caster-centered20yd area; no explicit unit/range override.
+pub(super) fn cast_expel_harm_damage(
+    world: &mut World,
+    ctx: &super::effects::EffectCtx,
+    total: f32,
+) {
+    const EXPEL_HARM: u32 = 322101;
+    const EXPEL_HARM_DAMAGE: u32 = 115129;
+    if ctx.spell.id != EXPEL_HARM {
+        return;
+    }
+    let percent = script_effect_value(world, ctx.caster, EXPEL_HARM, 1);
+    super::cast_triggered_with_effect0_amount(
+        world,
+        ctx.caster,
+        EXPEL_HARM_DAMAGE,
+        None,
+        ctx.depth + 1,
+        total * percent / 100.0,
+    );
 }
 
 pub(crate) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
