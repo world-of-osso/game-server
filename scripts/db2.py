@@ -248,10 +248,10 @@ def reapply_zephras_factions(conn):
         )
 
 
-def import_tables(build, csv_root, db_path):
+def import_tables(build, csv_root, db_path, source_dir):
     csv_dir = csv_root / build
     check_csvs(csv_dir)
-    skyborne_rows = skyborne_data.load_rows(skyborne_data.DEFAULT_SOURCE)
+    skyborne_rows = skyborne_data.load_rows(source_dir)
     conn = sqlite3.connect(db_path, isolation_level=None)
     try:
         conn.executescript("BEGIN;\n" + SCHEMA_SQL.read_text())
@@ -290,14 +290,19 @@ def main():
     parser.add_argument("--build")
     parser.add_argument("--csv-root", type=Path, default=DEFAULT_CSV_ROOT)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
+    parser.add_argument(
+        "--source-dir", type=Path, help="Forever DB2 directory; required for import"
+    )
     args = parser.parse_args()
+    if args.command == "import" and args.source_dir is None:
+        parser.error("--source-dir is required for import")
     if args.build is None:
         receipt = json.loads((args.csv_root / 'active/receipt.json').read_text())
         args.build = receipt['identity']['build']
     if args.command == "check":
         check_csvs(args.csv_root / args.build)
     else:
-        import_tables(args.build, args.csv_root, args.db)
+        import_tables(args.build, args.csv_root, args.db, args.source_dir)
 
 
 if __name__ == "__main__":

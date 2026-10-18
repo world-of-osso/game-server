@@ -46,12 +46,31 @@ fn apply_invitation_response(
     if invitation.match_id != request.match_id {
         return Err("battleground invitation is no longer available".into());
     }
-    let map = state
+    let matched = state
         .battleground_matches
         .get(&request.match_id)
-        .and_then(|matched| matched.map);
-    respond_to_battleground_invitation(state, request.match_id, character_id, request.accepted)?;
-    if request.accepted {
+        .ok_or("battleground invitation is no longer available")?;
+    let map = matched.map;
+    let maximum_level = matched.instance.bracket.max_level;
+    // TC Handler359–365 / Battleground1528–1533: use the retained bracket, not BML max.
+    let above_maximum = if request.accepted && invitation.arena.is_none() {
+        let level = world
+            .get::<shared::components::Level>(player)
+            .ok_or("player level is unavailable")?;
+        level.0 > maximum_level
+    } else {
+        false
+    };
+    // TC BattleGroundHandler.cpp347–358 turns a late BG Deserter accept into a decline.
+    let deserter_error = if request.accepted && invitation.arena.is_none() {
+        super::validate_no_deserter(world.get::<crate::auras::ActiveAuras>(player)).err()
+    } else {
+        None
+    };
+    let port_allowed = deserter_error.is_none() && !above_maximum;
+    let accepted = request.accepted && port_allowed;
+    respond_to_battleground_invitation(state, request.match_id, character_id, accepted)?;
+    if accepted {
         return accept_and_teleport(
             world,
             state,
@@ -72,6 +91,9 @@ fn apply_invitation_response(
         if !state.battleground_matches.contains_key(&request.match_id) {
             close_match_map(world, map)?;
         }
+    }
+    if let Some(error) = deserter_error {
+        return Err(error);
     }
     Ok(format!("declined {} invitation", invitation.name))
 }
