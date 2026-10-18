@@ -385,6 +385,10 @@ Native Counterspell/Quick Witted tests prove25s→20s recovery with real blocked
 
 ## Cooldown recovery rates
 
+Aura143 (`MOD_RECOVERY_RATE_BY_SPELL_LABEL`) shares the286 timer machinery but selects the affected spell by native `SpellLabel`: primary MiscValue OR nonzero MiscValueB, without the class-mask restriction. Source: pinned TC a352b1fa `SpellHistory.cpp448–451` and `SpellAuraEffects.cpp6271–6284`. Existing aura apply/refresh/remove hooks retime running spell/category deadlines; no new polling or alternate clock.
+
+Normal native Blessing of Autumn388010 leaf casts produce its30% effect. Matching Divine Protection498 starts60000→46153ms; Hammer of Justice853 category32 starts45000→34615ms. Seven real-App controls cover those starts, already-running application, player cancellation, natural expiry plus actual blocked/successful recast, unlabelled Healing Potion439 and foreign recipient. Initial matching-start RED2/3 became GREEN7; all ten286 controls remain GREEN. Native rows contain no2960-labelled spell without16: the secondary-only selector and143-specific unchanged refresh are source-wired, not independently native-certified. The full Seasons cycle, Autumn's charge173, global ModTimeRate, legal loadout and rendered/full-ability coverage remain open. [Contract](../../specs/auras.md).
+
 Aura286 matches native class masks and multiplies cooldowns by100/(100+amount), clamping the amount to−99. `spell_cast::recovery_rate` applies the factor after haste and before341 offsets. Aura apply/remove rescales only remaining time; unchanged refreshes do nothing, while changed native amounts undo/reapply the factor. Expiry follows the same removal path. Source: TC SpellHistory.cpp432–455/608–628 and SpellAuraEffects.cpp6258.
 
 `SpellHistory.category_spell_ids` stores the spell that started each category timer: Sprint has only a category timer, so its class-mask association cannot be recovered from `spell_ready_at`. Active spell/category deadlines are updated once each and owner messages report the remaining maximum. Existing charge timers and GCDs are untouched.

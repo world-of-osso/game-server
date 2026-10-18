@@ -247,6 +247,8 @@ pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
 /// Percent faster/slower cooldown recovery, matched by the native class mask.
 pub const MOD_RECOVERY_RATE: u32 = 286;
+/// Percent cooldown recovery selected by either native SpellLabel misc value.
+pub const MOD_RECOVERY_RATE_BY_SPELL_LABEL: u32 = 143;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
@@ -397,7 +399,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
         | MOD_COOLDOWN_BY_HASTE_REGEN
         | MOD_SPELL_CATEGORY_COOLDOWN
-        | MOD_RECOVERY_RATE => SpellMod,
+        | MOD_RECOVERY_RATE
+        | MOD_RECOVERY_RATE_BY_SPELL_LABEL => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
