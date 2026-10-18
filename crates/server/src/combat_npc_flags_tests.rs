@@ -1,4 +1,4 @@
-//! Native victim flags, TC a352b1fa Unit.cpp2749–2861/CreatureData.h323–325.
+//! Native victim flags, TC a352b1fa Unit.cpp2749–2861/CreatureData.h346–348.
 use bevy::prelude::*;
 use shared::components::{Level, UnitLevel};
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
