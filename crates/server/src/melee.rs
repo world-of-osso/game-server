@@ -136,9 +136,9 @@ pub struct MeleeChances {
     pub crit_sitting: bool,
 }
 
-/// An auto-attack's chances. Facing is not modelled: every swing lands in front, so
-/// the victim can always parry and block, unless `can_avoid` is false (a victim
-/// casting or controlled avoids nothing, Unit.cpp:2408-2413). Only a player glances,
+/// Front-facing base chances; combat applies direction and cached NPC masks.
+/// `can_avoid` is false when a casting or controlled victim avoids nothing
+/// (Unit.cpp:2408-2413). Only a player glances,
 /// against a creature 4 or more levels above (Unit.cpp:2440-2450).
 pub fn swing_chances(swinger: Swinger, victim: Victim, can_avoid: bool) -> MeleeChances {
     let (miss, crit, player) = match swinger {
