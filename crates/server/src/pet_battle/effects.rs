@@ -347,6 +347,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 Ok(true)
             }
             50 if !self.required_states(caster, target, p[4], p[5]) => Ok(false),
+            50 if ability == 2365 => self.add_aura_effect(caster, caster, effect),
             26 | 28 | 50 | 52 | 54 | 63 => {
                 let target = if matches!(ability, 527 | 920 | 1010) && effect.property == 50 {
                     other_team_slot(target, effect.order.div_ceil(2))
